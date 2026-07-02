@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: csquiz
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/csquiz?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true
+    username: ${DB_USERNAME:csquiz}
+    password: ${DB_PASSWORD:csquiz1234}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # Flyway가 스키마 소유. JPA는 검증만 (엔티티↔테이블 불일치 시 부팅 실패).
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100   # N+1 완화 (로드맵1에서 QueryDSL로 본격 처리)
+    open-in-view: false                  # 지연로딩 경계를 서비스 계층으로 명확히
+    show-sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true            # 기존 DB에도 안전하게 적용
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html               # http://localhost:8080/swagger-ui.html
+
+# 커스텀 JWT 설정 (MVP는 access 토큰만 — ADR-0001)
+jwt:
+  secret: ${JWT_SECRET:local-dev-secret-please-change-this-to-a-256bit-or-longer-key}
+  access-token-validity-seconds: 3600    # 1시간
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace   # 바인딩 파라미터 값 출력 (개발용)
