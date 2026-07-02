@@ -14,6 +14,17 @@ java {
     }
 }
 
+// ── 한글(비ASCII) 프로젝트 경로 우회 ────────────────────────────────
+// Windows 사용자명이 한글이면(예: C:\Users\박민수\...) Gradle 테스트 워커 JVM이
+// 클래스패스의 비ASCII 경로를 디코딩하지 못해 ClassNotFoundException으로 테스트가
+// 실행조차 안 된다. 프로젝트 경로에 비ASCII 문자가 있을 때만 빌드 출력(컴파일된
+// 클래스·리소스)을 ASCII 경로로 옮겨 이 문제를 피한다.
+//   - 경로가 전부 ASCII인 환경(다른 PC/CI)에서는 이 블록이 건너뛰어져 기본 build/ 사용 → 이식성 유지.
+//   - 의존성(jar)은 GRADLE_USER_HOME을 ASCII 경로로 두어 함께 해결한다(README/07 참고).
+if (!(projectDir.absolutePath ==~ /\p{ASCII}+/)) {
+    layout.buildDirectory.set(file("C:/Users/Public/gradle-builds/${rootProject.name}"))
+}
+
 repositories {
     mavenCentral()
 }
