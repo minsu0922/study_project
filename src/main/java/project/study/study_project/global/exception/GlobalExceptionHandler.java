@@ -8,6 +8,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import project.study.study_project.global.response.ApiError;
 import project.study.study_project.global.response.ApiResponse;
@@ -45,6 +46,20 @@ public class GlobalExceptionHandler {
                 ErrorCode.VALIDATION_ERROR.getCode(),
                 ErrorCode.VALIDATION_ERROR.getDefaultMessage(),
                 fieldErrors);
+        return build(ErrorCode.VALIDATION_ERROR, error);
+    }
+
+    /**
+     * 쿼리/경로 파라미터 타입 변환 실패 → VALIDATION_ERROR.
+     * 대표 예: enum 파라미터에 허용되지 않는 값(예 {@code ?domain=FOO}) → 400 (docs/02).
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        FieldError fieldError = new FieldError(e.getName(), "허용되지 않는 값입니다: " + e.getValue());
+        ApiError error = ApiError.of(
+                ErrorCode.VALIDATION_ERROR.getCode(),
+                ErrorCode.VALIDATION_ERROR.getDefaultMessage(),
+                List.of(fieldError));
         return build(ErrorCode.VALIDATION_ERROR, error);
     }
 

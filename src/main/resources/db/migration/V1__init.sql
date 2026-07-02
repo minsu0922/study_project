@@ -16,6 +16,8 @@
 -- User : 회원. 로그인 ID는 email, 비밀번호는 BCrypt 해시만 저장.
 -- ---------------------------------------------------------------------
 CREATE TABLE `user` (
+
+
     id            BIGINT       NOT NULL AUTO_INCREMENT,
     email         VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,                 -- BCrypt 해시 (원문 비번은 저장 안 함)

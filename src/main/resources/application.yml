@@ -23,6 +23,13 @@ spring:
     enabled: true
     baseline-on-migrate: true            # 기존 DB에도 안전하게 적용
 
+  # 목록 API 페이징 기본값/상한 (docs/03: 기본 20, 최대 100)
+  data:
+    web:
+      pageable:
+        default-page-size: 20
+        max-page-size: 100               # size 초과 요청은 100으로 잘림(과도한 조회 방지)
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html               # http://localhost:8080/swagger-ui.html
