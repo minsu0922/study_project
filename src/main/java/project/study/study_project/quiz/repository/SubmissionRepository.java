@@ -64,4 +64,37 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             @Param("domain") Domain domain,
             Pageable pageable
     );
+
+    /** 관리자 문제 삭제 전 검사용 — 제출 이력이 있으면 삭제 불가(QUIZ_003, FK RESTRICT 정책과 일치). */
+    boolean existsByProblemId(Long problemId);
+
+    /**
+     * 대시보드 문제별 정답률 — 제출이 0건인 문제도 보여야 하므로 Problem 기준 LEFT JOIN.
+     * (INNER JOIN이면 아무도 안 푼 문제가 통계에서 사라져 "안 풀리는 문제"를 발견할 수 없다)
+     * 집계는 SQL(GROUP BY)에서 끝낸다 — 전 제출을 자바로 끌어와 세는 것보다 훨씬 싸다.
+     * 별칭(problemId 등)이 인터페이스 getter와 매핑되는 네이티브 프로젝션.
+     */
+    @Query(value = """
+            SELECT p.id            AS problemId,
+                   p.domain        AS domain,
+                   p.type          AS type,
+                   p.question      AS question,
+                   COUNT(s.id)     AS attempts,
+                   COALESCE(SUM(s.is_correct), 0) AS correctCount
+            FROM problem p
+            LEFT JOIN submission s ON s.problem_id = p.id
+            GROUP BY p.id, p.domain, p.type, p.question
+            ORDER BY attempts DESC, p.id
+            """, nativeQuery = true)
+    java.util.List<ProblemStatRow> aggregateProblemStats();
+
+    /** {@link #aggregateProblemStats} 결과 행. */
+    interface ProblemStatRow {
+        Long getProblemId();
+        String getDomain();
+        String getType();
+        String getQuestion();
+        long getAttempts();
+        long getCorrectCount();
+    }
 }

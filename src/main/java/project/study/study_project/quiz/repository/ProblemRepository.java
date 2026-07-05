@@ -1,8 +1,13 @@
 package project.study.study_project.quiz.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import project.study.study_project.global.common.Difficulty;
+import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 
 import java.util.List;
@@ -44,4 +49,36 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             @Param("type") String type,
             @Param("size") int size
     );
+
+    /**
+     * 관리자용 문제 목록 — 최신 등록 순, 도메인/유형 필터(선택).
+     * 퀴즈 조회와 달리 랜덤이 아니고(관리 화면은 예측 가능한 순서가 편함),
+     * ESSAY 제외도 없다(관리자는 전부 봐야 함). JPQL이라 enum 파라미터를 그대로 받는다.
+     */
+    @Query("""
+            select p from Problem p
+            where (:domain is null or p.domain = :domain)
+              and (:type is null or p.type = :type)
+            order by p.id desc
+            """)
+    Page<Problem> findForAdmin(
+            @Param("domain") Domain domain,
+            @Param("type") ProblemType type,
+            Pageable pageable
+    );
+
+    /** 대시보드 현황판: 도메인×난이도별 문제 수. 인터페이스 프로젝션(별칭→getter 매핑)으로 받는다. */
+    @Query("""
+            select p.domain as domain, p.difficulty as difficulty, count(p) as cnt
+            from Problem p
+            group by p.domain, p.difficulty
+            """)
+    List<DomainDifficultyCount> countGroupByDomainAndDifficulty();
+
+    /** {@link #countGroupByDomainAndDifficulty} 결과 행 — select 별칭과 getter 이름이 매핑 규약이다. */
+    interface DomainDifficultyCount {
+        Domain getDomain();
+        Difficulty getDifficulty();
+        long getCnt();
+    }
 }

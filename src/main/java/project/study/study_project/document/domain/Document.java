@@ -86,4 +86,36 @@ public class Document {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    private Document(Domain domain, String title, String slug, String contentMd,
+                     String source, Set<Tag> tags) {
+        this.domain = domain;
+        this.title = title;
+        this.slug = slug;
+        this.contentMd = contentMd;
+        this.source = source;
+        this.tags = new LinkedHashSet<>(tags);
+    }
+
+    /** 관리자 등록용 팩터리. slug 중복 검사는 서비스 책임(DOC_002). */
+    public static Document create(Domain domain, String title, String slug, String contentMd,
+                                  String source, Set<Tag> tags) {
+        return new Document(domain, title, slug, contentMd, source, tags);
+    }
+
+    /**
+     * 관리자 수정용 — 폼 전체 제출 방식이라 내용 필드를 통째로 교체한다.
+     * 태그도 컬렉션을 갈아끼우면 JPA가 조인 테이블(document_tag)의 diff를 알아서 반영한다.
+     * {@code updated_at}은 @LastModifiedDate가 자동 갱신.
+     */
+    public void update(Domain domain, String title, String slug, String contentMd,
+                       String source, Set<Tag> tags) {
+        this.domain = domain;
+        this.title = title;
+        this.slug = slug;
+        this.contentMd = contentMd;
+        this.source = source;
+        this.tags.clear();
+        this.tags.addAll(tags);
+    }
 }

@@ -39,6 +39,12 @@ jwt:
   secret: ${JWT_SECRET:local-dev-secret-please-change-this-to-a-256bit-or-longer-key}
   access-token-validity-seconds: 3600    # 1시간
 
+# 초기 관리자 계정 (AdminAccountInitializer가 ADMIN 부재 시 생성)
+# 로컬 기본값이며, 실 배포에서는 환경변수로 반드시 교체한다.
+admin:
+  email: ${ADMIN_EMAIL:admin@csquiz.local}
+  password: ${ADMIN_PASSWORD:admin1234}
+
 logging:
   level:
     org.hibernate.SQL: debug

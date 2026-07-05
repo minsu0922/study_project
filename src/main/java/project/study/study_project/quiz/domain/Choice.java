@@ -51,4 +51,19 @@ public class Choice {
     /** 보기 순서(1..N). Problem 쪽 {@code @OrderBy("seq ASC")}가 이 값으로 정렬한다. */
     @Column(nullable = false)
     private int seq;
+
+    private Choice(Problem problem, String text, boolean correct, int seq) {
+        this.problem = problem;
+        this.text = text;
+        this.correct = correct;
+        this.seq = seq;
+    }
+
+    /**
+     * 관리자 등록용 팩터리. seq는 서비스가 입력 순서대로 1..N을 부여한다
+     * (관리자가 순서 번호를 직접 관리하게 하면 중복·건너뜀 실수만 늘어난다).
+     */
+    public static Choice of(Problem problem, String text, boolean correct, int seq) {
+        return new Choice(problem, text, correct, seq);
+    }
 }

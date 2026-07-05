@@ -57,6 +57,10 @@ public class SecurityConfig {
                         // 보호: 답안 제출 / 내 정보(오답노트 등)
                         .requestMatchers(HttpMethod.POST, "/api/quiz/submit").authenticated()
                         .requestMatchers("/api/me/**").authenticated()
+                        // 관리자 전용: 콘텐츠 등록/수정/삭제·대시보드. hasRole("ADMIN")은
+                        // JWT의 role 클레임으로 만든 "ROLE_ADMIN" 권한(JwtTokenProvider)과 대응된다.
+                        // 경로 한 곳에서 일괄 통제 — admin 컨트롤러에 API를 추가해도 권한이 자동 적용된다.
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // 나머지는 기본적으로 인증 요구
                         .anyRequest().authenticated())
                 // 인증/인가 실패를 공통 응답 봉투로 변환

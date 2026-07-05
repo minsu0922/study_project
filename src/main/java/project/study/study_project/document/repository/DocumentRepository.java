@@ -17,4 +17,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, JpaSp
 
     /** slug로 문서 단건 조회(없으면 DOC_001). */
     Optional<Document> findBySlug(String slug);
+
+    /** 관리자 문서 등록/수정 시 slug 중복 검사(DOC_002)용. */
+    boolean existsBySlug(String slug);
 }

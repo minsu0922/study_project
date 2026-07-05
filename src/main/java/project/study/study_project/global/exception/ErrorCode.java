@@ -25,9 +25,13 @@ public enum ErrorCode {
     // 퀴즈
     QUIZ_001("QUIZ_001", HttpStatus.NOT_FOUND, "문제를 찾을 수 없습니다."),
     QUIZ_002("QUIZ_002", HttpStatus.BAD_REQUEST, "지원하지 않는 문제 타입입니다."),
+    // 관리자 문제 관리(콘텐츠 등록 기능)에서 사용
+    QUIZ_003("QUIZ_003", HttpStatus.CONFLICT, "제출 이력이 있는 문제는 삭제할 수 없습니다."),
+    QUIZ_004("QUIZ_004", HttpStatus.BAD_REQUEST, "문제 유형별 입력 규칙에 맞지 않습니다."),
 
     // 문서
-    DOC_001("DOC_001", HttpStatus.NOT_FOUND, "문서를 찾을 수 없습니다.");
+    DOC_001("DOC_001", HttpStatus.NOT_FOUND, "문서를 찾을 수 없습니다."),
+    DOC_002("DOC_002", HttpStatus.CONFLICT, "이미 사용 중인 slug입니다.");
 
     private final String code;
     private final HttpStatus httpStatus;

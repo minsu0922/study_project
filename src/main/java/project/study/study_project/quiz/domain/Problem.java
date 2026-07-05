@@ -88,14 +88,58 @@ public class Problem {
 
     /**
      * 객관식 보기. 객관식이 아닌 문제는 빈 리스트.
-     * cascade/orphanRemoval은 걸지 않았다 — MVP는 시드 데이터 읽기 전용이라
-     * 엔티티를 통한 보기 추가/삭제 시나리오 자체가 없기 때문(DDL의 ON DELETE CASCADE로 충분).
+     *
+     * <p>{@code cascade = ALL, orphanRemoval = true}: 보기는 문제에 완전히 종속된
+     * 자식(생명주기가 문제와 같음)이라, 문제를 저장/삭제하면 보기도 따라간다.
+     * 수정 시에도 리스트에서 빼기만 하면 orphanRemoval이 DELETE를 날려 줘서
+     * 별도 ChoiceRepository 없이 문제 하나만 다루면 된다. (관리자 등록 기능에서 사용)
      */
-    @OneToMany(mappedBy = "problem", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "problem", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("seq ASC")
     private List<Choice> choices = new ArrayList<>();
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    private Problem(Domain domain, Difficulty difficulty, ProblemType type,
+                    String question, String answer, String explanation) {
+        this.domain = domain;
+        this.difficulty = difficulty;
+        this.type = type;
+        this.question = question;
+        this.answer = answer;
+        this.explanation = explanation;
+    }
+
+    /**
+     * 관리자 등록용 팩터리. <b>타입별 규칙 검증(객관식=answer 없음 등)은 서비스가 끝낸 뒤</b>
+     * 호출한다 — 엔티티는 저장 형태만 책임지고, 규칙 판단은 한 곳(AdminProblemService)에 모은다.
+     */
+    public static Problem create(Domain domain, Difficulty difficulty, ProblemType type,
+                                 String question, String answer, String explanation) {
+        return new Problem(domain, difficulty, type, question, answer, explanation);
+    }
+
+    /** 관리자 수정용 — id/created_at만 남기고 내용 필드를 통째로 교체한다(부분 수정 없음: 폼 전체 제출 방식). */
+    public void update(Domain domain, Difficulty difficulty, ProblemType type,
+                       String question, String answer, String explanation) {
+        this.domain = domain;
+        this.difficulty = difficulty;
+        this.type = type;
+        this.question = question;
+        this.answer = answer;
+        this.explanation = explanation;
+    }
+
+    /**
+     * 보기 전체 교체. 기존 리스트를 비우면 orphanRemoval이 기존 행을 지우고,
+     * 새 보기를 추가하면 cascade가 INSERT한다 — "수정 = 전부 지우고 다시 넣기" 전략.
+     * 보기별 부분 수정보다 단순하고, 보기 수가 최대 5개 수준이라 성능 손해도 무시할 만하다.
+     */
+    public void replaceChoices(List<Choice> newChoices) {
+        this.choices.clear();
+        this.choices.addAll(newChoices);
+    }
 }
