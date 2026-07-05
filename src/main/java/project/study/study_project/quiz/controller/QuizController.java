@@ -1,7 +1,11 @@
 package project.study.study_project.quiz.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,12 +14,13 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.quiz.dto.QuizResponse;
+import project.study.study_project.quiz.dto.QuizSubmitRequest;
+import project.study.study_project.quiz.dto.QuizSubmitResponse;
 import project.study.study_project.quiz.service.QuizService;
 
 /**
- * 퀴즈 API — 풀이용 문제 조회. 명세는 docs/03. 인증 없이 공개(SecurityConfig의 GET /api/quiz).
- *
- * <p>제출/채점(POST /api/quiz/submit)은 다음 단계에서 이 컨트롤러에 추가한다.
+ * 퀴즈 API — 풀이용 문제 조회(공개) + 답안 제출·채점(인증 필요). 명세는 docs/03.
+ * 경로별 인증 규칙은 SecurityConfig: GET /api/quiz는 permitAll, POST /api/quiz/submit은 authenticated.
  */
 @RestController
 @RequestMapping("/api/quiz")
@@ -39,5 +44,20 @@ public class QuizController {
             @RequestParam(required = false, defaultValue = "" + QuizService.DEFAULT_SIZE) int size
     ) {
         return ApiResponse.ok(quizService.getQuiz(domain, level, type, size));
+    }
+
+    /**
+     * 답안 제출 → 즉시 채점 + 해설 반환. 예: {@code POST /api/quiz/submit} (Bearer 토큰 필수)
+     *
+     * <p>{@code @AuthenticationPrincipal Long userId}: JWT 필터가 SecurityContext에 심어 둔
+     * principal(사용자 id, JwtTokenProvider 참고)을 꺼낸다. 제출자를 요청 바디가 아니라
+     * <b>서명된 토큰에서</b> 가져오므로 다른 사람 명의로 제출을 위조할 수 없다.
+     */
+    @PostMapping("/submit")
+    public ApiResponse<QuizSubmitResponse> submit(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody QuizSubmitRequest request
+    ) {
+        return ApiResponse.ok(quizService.submit(userId, request));
     }
 }
