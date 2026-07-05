@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container" style="max-width:1000px">
+  <h1>관리자</h1>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <!-- 탭: 한 페이지 안에서 섹션만 바꿔 보여준다 (페이지 3개로 쪼개는 것보다 관리 도구답게) -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">대시보드</button>
+      <button class="tab-btn" data-tab="problems">문제 관리</button>
+      <button class="tab-btn" data-tab="documents">문서 관리</button>
+    </div>
+
+    <!-- ═══ 대시보드 ═══ -->
+    <section id="tab-dashboard">
+      <div class="stat-row" id="totals"></div>
+
+      <h3>도메인 × 난이도 문제 현황 <span class="meta">(흐린 0 = 출제가 비어 있는 칸)</span></h3>
+      <div class="table-wrap"><table class="grid" id="matrixTable"></table></div>
+
+      <h3>문제별 정답률 <span class="meta">(정답률이 낮으면 너무 어렵거나 문제 오류 후보)</span></h3>
+      <div class="table-wrap"><table class="grid" id="statsTable"></table></div>
+    </section>
+
+    <!-- ═══ 문제 관리 ═══ -->
+    <section id="tab-problems" hidden>
+      <div class="card">
+        <h3 id="pFormTitle">새 문제 등록</h3>
+        <div id="pMessage"></div>
+        <div class="filters">
+          <div class="field"><label>도메인</label><select id="pDomain"></select></div>
+          <div class="field"><label>난이도</label><select id="pDifficulty"></select></div>
+          <div class="field"><label>유형</label><select id="pType"></select></div>
+        </div>
+        <div class="field"><label>문제 지문</label><textarea id="pQuestion" rows="3" style="width:100%"></textarea></div>
+
+        <!-- 유형에 따라 아래 두 블록 중 하나만 보인다 (객관식=보기 편집기, OX/단답형=answer 입력) -->
+        <div class="field" id="pAnswerField">
+          <label id="pAnswerLabel">정답</label>
+          <input type="text" id="pAnswer" style="max-width:420px">
+        </div>
+        <div id="pChoicesField" hidden>
+          <label class="meta">보기 (라디오로 정답 1개 선택)</label>
+          <div id="pChoices"></div>
+          <button type="button" class="btn-outline" id="addChoiceBtn" style="margin-top:6px">+ 보기 추가</button>
+        </div>
+
+        <div class="field" style="margin-top:14px"><label>해설 (선택)</label><textarea id="pExplanation" rows="2" style="width:100%"></textarea></div>
+        <button id="pSubmitBtn">등록</button>
+        <button id="pCancelBtn" class="btn-outline" hidden>수정 취소</button>
+      </div>
+
+      <h3>문제 목록</h3>
+      <div class="table-wrap"><table class="grid" id="problemTable"></table></div>
+      <div class="pager" id="pPager" hidden>
+        <button id="pPrevBtn" class="btn-outline">이전</button>
+        <span class="info" id="pPageInfo"></span>
+        <button id="pNextBtn" class="btn-outline">다음</button>
+      </div>
+    </section>
+
+    <!-- ═══ 문서 관리 ═══ -->
+    <section id="tab-documents" hidden>
+      <div class="card">
+        <h3 id="dFormTitle">새 문서 등록</h3>
+        <div id="dMessage"></div>
+        <div class="filters">
+          <div class="field"><label>도메인</label><select id="dDomain"></select></div>
+          <div class="field"><label>slug (영문 소문자·숫자·하이픈)</label><input type="text" id="dSlug" placeholder="tcp-3-way-handshake"></div>
+        </div>
+        <div class="field"><label>제목</label><input type="text" id="dTitle"></div>
+        <div class="field"><label>본문 (마크다운)</label><textarea id="dContent" rows="12" style="width:100%; font-family:Consolas,monospace"></textarea></div>
+        <div class="filters">
+          <div class="field"><label>태그 (쉼표 구분, 없는 태그는 자동 생성)</label><input type="text" id="dTags" placeholder="tcp, network"></div>
+          <div class="field"><label>출처 URL (선택)</label><input type="text" id="dSource"></div>
+        </div>
+        <button id="dSubmitBtn">등록</button>
+        <button id="dCancelBtn" class="btn-outline" hidden>수정 취소</button>
+      </div>
+
+      <h3>문서 목록</h3>
+      <div class="table-wrap"><table class="grid" id="documentTable"></table></div>
+    </section>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+/* 관리자 페이지 — 대시보드 / 문제 CRUD / 문서 CRUD.
+ *
+ * 접근 제어 이중 구조(중요):
+ *   1) 이 화면: isAdmin()으로 안내만 한다 — JWT payload는 조작 가능하므로 "장식"이다.
+ *   2) 진짜 방어: 서버 SecurityConfig가 /api/admin/** 를 hasRole(ADMIN)으로 검사.
+ *      role을 조작한 토큰은 서명 검증에서 걸리므로 API는 절대 뚫리지 않는다. */
+renderNav("admin");
+
+/* 페이지 상태 변수 — 반드시 아래 init/load 호출보다 먼저 선언한다.
+ * let은 선언 줄이 실행되기 전에 접근하면 ReferenceError(TDZ)가 난다.
+ * 실제로 이 선언이 loadProblems() 호출보다 아래 있던 버전에서
+ * "Cannot access pPage before initialization"으로 목록이 안 뜨는 버그가 있었다. */
+let editingProblemId = null;  // null=등록 모드, 값 있으면 수정 모드
+let pPage = 0;                // 문제 목록 현재 페이지
+let editingDocumentId = null;
+
+if (!isAdmin()) {
+  document.getElementById("guard").innerHTML =
+    `<div class="alert error">관리자 전용 페이지입니다. 관리자 계정으로 <a href="/login.html">로그인</a>해 주세요.</div>`;
+} else {
+  document.getElementById("adminUi").hidden = false;
+  initTabs();
+  loadDashboard();
+  initProblemForm();
+  loadProblems();
+  initDocumentForm();
+  loadDocuments();
+}
+
+/* ── 탭 전환 ── */
+function initTabs() {
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+    ["dashboard", "problems", "documents"].forEach(t =>
+      document.getElementById("tab-" + t).hidden = (t !== btn.dataset.tab));
+  }));
+}
+
+/* ── 위험 동작(삭제) 2단계 확인 ──
+ * confirm() 같은 브라우저 팝업 대신 "버튼을 한 번 더 누르면 실행" 방식.
+ * 팝업은 흐름을 끊고, 자동화 도구·테스트도 막는다. 3초 지나면 원래대로 돌아간다. */
+function armedDelete(btn, onConfirm) {
+  if (btn.dataset.armed) { onConfirm(); return; }
+  btn.dataset.armed = "1";
+  const original = btn.textContent;
+  btn.textContent = "정말 삭제?";
+  setTimeout(() => { delete btn.dataset.armed; btn.textContent = original; }, 3000);
+}
+
+function showError(el, e) {
+  const details = (e.fieldErrors || []).map(f => `<li>${escapeHtml(f.reason)}</li>`).join("");
+  el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}${details ? `<ul style="margin:6px 0 0">${details}</ul>` : ""}</div>`;
+}
+function showOk(el, text) {
+  el.innerHTML = `<div class="alert info">${escapeHtml(text)}</div>`;
+  setTimeout(() => { el.innerHTML = ""; }, 2500);
+}
+function cut(s, n) { return s.length > n ? s.substring(0, n) + "…" : s; }
+
+/* ═══════════ 대시보드 ═══════════ */
+async function loadDashboard() {
+  try {
+    const d = await api("/api/admin/dashboard");
+
+    document.getElementById("totals").innerHTML = [
+      ["회원", d.totals.users], ["문서", d.totals.documents],
+      ["문제", d.totals.problems], ["제출", d.totals.submissions],
+    ].map(([label, num]) => `<div class="stat"><div class="num">${num}</div><div class="label">${label}</div></div>`).join("");
+
+    // 현황판: 행=도메인(전체 10개 고정), 열=난이도. 데이터 없는 칸도 0으로 그려서 "빈 곳"을 드러낸다.
+    const cellMap = {};
+    d.problemMatrix.forEach(c => cellMap[c.domain + "|" + c.difficulty] = c.count);
+    document.getElementById("matrixTable").innerHTML =
+      `<tr><th>도메인</th>${DIFFICULTIES.map(([, l]) => `<th>${l}</th>`).join("")}<th>합계</th></tr>` +
+      DOMAINS.map(([dv, dl]) => {
+        let sum = 0;
+        const cells = DIFFICULTIES.map(([lv]) => {
+          const n = cellMap[dv + "|" + lv] || 0; sum += n;
+          return `<td class="${n === 0 ? "zero" : ""}">${n}</td>`;
+        }).join("");
+        return `<tr><td>${dl}</td>${cells}<td><b>${sum}</b></td></tr>`;
+      }).join("");
+
+    document.getElementById("statsTable").innerHTML =
+      `<tr><th>ID</th><th>문제</th><th>도메인</th><th>유형</th><th>제출</th><th>정답</th><th>정답률</th></tr>` +
+      d.problemStats.map(s => `
+        <tr>
+          <td>${s.problemId}</td>
+          <td class="wrap">${escapeHtml(cut(s.question, 40))}</td>
+          <td>${escapeHtml(domainLabel(s.domain))}</td>
+          <td>${escapeHtml(typeLabel(s.type))}</td>
+          <td>${s.attempts}</td>
+          <td>${s.correctCount}</td>
+          <td>${s.correctRate === null ? '<span class="meta">기록 없음</span>' : s.correctRate + "%"}</td>
+        </tr>`).join("");
+  } catch (e) {
+    document.getElementById("guard").innerHTML = `<div class="alert error">대시보드 로딩 실패: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+/* ═══════════ 문제 관리 ═══════════ */
+
+function initProblemForm() {
+  fillSelect(document.getElementById("pDomain"), DOMAINS);
+  fillSelect(document.getElementById("pDifficulty"), DIFFICULTIES);
+  fillSelect(document.getElementById("pType"), TYPES);
+
+  const typeSel = document.getElementById("pType");
+  typeSel.addEventListener("change", renderTypeFields);
+  renderTypeFields();
+
+  document.getElementById("addChoiceBtn").addEventListener("click", () => addChoiceRow());
+  document.getElementById("pSubmitBtn").addEventListener("click", submitProblem);
+  document.getElementById("pCancelBtn").addEventListener("click", resetProblemForm);
+  document.getElementById("pPrevBtn").addEventListener("click", () => { pPage--; loadProblems(); });
+  document.getElementById("pNextBtn").addEventListener("click", () => { pPage++; loadProblems(); });
+}
+
+/** 유형 선택에 따라 입력 UI를 바꾼다 — 서버의 타입별 검증 규칙(QUIZ_004)과 짝을 맞춘 화면 규칙. */
+function renderTypeFields() {
+  const type = document.getElementById("pType").value;
+  const isMc = type === "MULTIPLE_CHOICE";
+  document.getElementById("pChoicesField").hidden = !isMc;
+  document.getElementById("pAnswerField").hidden = isMc;
+  document.getElementById("pAnswerLabel").textContent =
+    type === "OX" ? "정답 (O 또는 X)" : "정답 (복수 정답은 | 구분, 예: arp|address resolution protocol)";
+  if (isMc && document.querySelectorAll("#pChoices .choice-row").length === 0) {
+    addChoiceRow(); addChoiceRow(); addChoiceRow(); addChoiceRow(); // 기본 4칸
+  }
+}
+
+function addChoiceRow(text = "", correct = false) {
+  const row = document.createElement("div");
+  row.className = "choice-row";
+  row.style.cssText = "display:flex; gap:8px; align-items:center; margin-bottom:6px";
+  row.innerHTML = `
+    <input type="radio" name="pCorrect" title="정답으로 선택" ${correct ? "checked" : ""}>
+    <input type="text" class="choice-text" placeholder="보기 내용" style="flex:1">
+    <button type="button" class="btn-outline" style="padding:4px 10px">✕</button>`;
+  row.querySelector(".choice-text").value = text;
+  row.querySelector("button").addEventListener("click", () => row.remove());
+  document.getElementById("pChoices").appendChild(row);
+}
+
+function collectProblemBody() {
+  const type = document.getElementById("pType").value;
+  const body = {
+    domain: document.getElementById("pDomain").value,
+    difficulty: document.getElementById("pDifficulty").value,
+    type,
+    question: document.getElementById("pQuestion").value,
+    answer: type === "MULTIPLE_CHOICE" ? null : document.getElementById("pAnswer").value || null,
+    explanation: document.getElementById("pExplanation").value || null,
+    choices: [],
+  };
+  if (type === "MULTIPLE_CHOICE") {
+    body.choices = [...document.querySelectorAll("#pChoices .choice-row")]
+      .filter(r => r.querySelector(".choice-text").value.trim() !== "") // 빈 칸은 제출에서 제외
+      .map(r => ({
+        text: r.querySelector(".choice-text").value,
+        correct: r.querySelector("input[type=radio]").checked,
+      }));
+  }
+  return body;
+}
+
+async function submitProblem() {
+  const msg = document.getElementById("pMessage");
+  try {
+    const body = JSON.stringify(collectProblemBody());
+    if (editingProblemId) {
+      await api("/api/admin/problems/" + editingProblemId, { method: "PUT", body });
+      showOk(msg, "수정 완료");
+    } else {
+      await api("/api/admin/problems", { method: "POST", body });
+      showOk(msg, "등록 완료");
+    }
+    resetProblemForm();
+    loadProblems();
+    loadDashboard(); // 현황판 숫자 갱신
+  } catch (e) {
+    showError(msg, e); // QUIZ_004의 "무엇을 고치라"는 메시지가 그대로 표시된다
+  }
+}
+
+function resetProblemForm() {
+  editingProblemId = null;
+  document.getElementById("pFormTitle").textContent = "새 문제 등록";
+  document.getElementById("pSubmitBtn").textContent = "등록";
+  document.getElementById("pCancelBtn").hidden = true;
+  document.getElementById("pQuestion").value = "";
+  document.getElementById("pAnswer").value = "";
+  document.getElementById("pExplanation").value = "";
+  document.getElementById("pChoices").innerHTML = "";
+  renderTypeFields();
+}
+
+async function loadProblems() {
+  const data = await api("/api/admin/problems?page=" + pPage);
+  document.getElementById("problemTable").innerHTML =
+    `<tr><th>ID</th><th>문제</th><th>도메인</th><th>난이도</th><th>유형</th><th>정답</th><th></th></tr>` +
+    data.content.map(p => `
+      <tr>
+        <td>${p.id}</td>
+        <td class="wrap">${escapeHtml(cut(p.question, 40))}</td>
+        <td>${escapeHtml(domainLabel(p.domain))}</td>
+        <td>${escapeHtml(difficultyLabel(p.difficulty))}</td>
+        <td>${escapeHtml(typeLabel(p.type))}</td>
+        <td>${escapeHtml(cut(displayAnswer(p), 20))}</td>
+        <td class="row-actions">
+          <button onclick="editProblem(${p.id})">수정</button>
+          <button class="danger" onclick="deleteProblem(this, ${p.id})">삭제</button>
+        </td>
+      </tr>`).join("");
+  const pager = document.getElementById("pPager");
+  pager.hidden = data.totalPages <= 1;
+  document.getElementById("pPageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
+  document.getElementById("pPrevBtn").disabled = data.page === 0;
+  document.getElementById("pNextBtn").disabled = !data.hasNext;
+}
+
+function displayAnswer(p) {
+  if (p.type === "MULTIPLE_CHOICE") {
+    const c = p.choices.find(c => c.correct);
+    return c ? c.text : "?";
+  }
+  return p.answer ?? "";
+}
+
+async function editProblem(id) {
+  const p = await api("/api/admin/problems/" + id);
+  editingProblemId = id;
+  document.getElementById("pFormTitle").textContent = `문제 수정 (ID ${id})`;
+  document.getElementById("pSubmitBtn").textContent = "수정 저장";
+  document.getElementById("pCancelBtn").hidden = false;
+  document.getElementById("pDomain").value = p.domain;
+  document.getElementById("pDifficulty").value = p.difficulty;
+  document.getElementById("pType").value = p.type;
+  document.getElementById("pQuestion").value = p.question;
+  document.getElementById("pAnswer").value = p.answer ?? "";
+  document.getElementById("pExplanation").value = p.explanation ?? "";
+  document.getElementById("pChoices").innerHTML = "";
+  p.choices.forEach(c => addChoiceRow(c.text, c.correct));
+  renderTypeFields();
+  window.scrollTo({ top: 0, behavior: "smooth" }); // 폼이 위에 있으니 올려 보낸다
+}
+
+async function deleteProblem(btn, id) {
+  armedDelete(btn, async () => {
+    try {
+      await api("/api/admin/problems/" + id, { method: "DELETE" });
+      loadProblems();
+      loadDashboard();
+    } catch (e) {
+      // QUIZ_003: 제출 이력이 있는 문제 — 이력 보존 정책(ADR-0002·FK RESTRICT)이라 삭제 불가
+      showError(document.getElementById("pMessage"), e);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  });
+}
+
+/* ═══════════ 문서 관리 ═══════════ */
+
+function initDocumentForm() {
+  fillSelect(document.getElementById("dDomain"), DOMAINS);
+  document.getElementById("dSubmitBtn").addEventListener("click", submitDocument);
+  document.getElementById("dCancelBtn").addEventListener("click", resetDocumentForm);
+}
+
+async function submitDocument() {
+  const msg = document.getElementById("dMessage");
+  try {
+    const body = JSON.stringify({
+      domain: document.getElementById("dDomain").value,
+      title: document.getElementById("dTitle").value,
+      slug: document.getElementById("dSlug").value.trim(),
+      contentMd: document.getElementById("dContent").value,
+      source: document.getElementById("dSource").value || null,
+      tags: document.getElementById("dTags").value.split(",").map(s => s.trim()).filter(Boolean),
+    });
+    if (editingDocumentId) {
+      await api("/api/admin/documents/" + editingDocumentId, { method: "PUT", body });
+      showOk(msg, "수정 완료");
+    } else {
+      await api("/api/admin/documents", { method: "POST", body });
+      showOk(msg, "등록 완료");
+    }
+    resetDocumentForm();
+    loadDocuments();
+    loadDashboard();
+  } catch (e) {
+    showError(msg, e);
+  }
+}
+
+function resetDocumentForm() {
+  editingDocumentId = null;
+  document.getElementById("dFormTitle").textContent = "새 문서 등록";
+  document.getElementById("dSubmitBtn").textContent = "등록";
+  document.getElementById("dCancelBtn").hidden = true;
+  ["dTitle", "dSlug", "dContent", "dTags", "dSource"].forEach(id => document.getElementById(id).value = "");
+}
+
+async function loadDocuments() {
+  // 조회는 공개 API 재사용(관리 전용 목록 API를 따로 두지 않은 이유는 AdminDocumentService 주석 참고)
+  const data = await api("/api/documents?size=100");
+  document.getElementById("documentTable").innerHTML =
+    `<tr><th>ID</th><th>제목</th><th>도메인</th><th>slug</th><th>태그</th><th></th></tr>` +
+    data.content.map(d => `
+      <tr>
+        <td>${d.id}</td>
+        <td class="wrap">${escapeHtml(d.title)}</td>
+        <td>${escapeHtml(d.domainLabel)}</td>
+        <td>${escapeHtml(d.slug)}</td>
+        <td>${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}</td>
+        <td class="row-actions">
+          <button onclick="editDocument('${escapeHtml(d.slug)}', ${d.id})">수정</button>
+          <button class="danger" onclick="deleteDocument(this, ${d.id})">삭제</button>
+        </td>
+      </tr>`).join("");
+}
+
+async function editDocument(slug, id) {
+  const d = await api("/api/documents/" + encodeURIComponent(slug)); // 본문은 단건 API에만 있다
+  editingDocumentId = id;
+  document.getElementById("dFormTitle").textContent = `문서 수정 (ID ${id})`;
+  document.getElementById("dSubmitBtn").textContent = "수정 저장";
+  document.getElementById("dCancelBtn").hidden = false;
+  document.getElementById("dDomain").value = d.domain;
+  document.getElementById("dTitle").value = d.title;
+  document.getElementById("dSlug").value = d.slug;
+  document.getElementById("dContent").value = d.contentMd;
+  document.getElementById("dTags").value = d.tags.join(", ");
+  document.getElementById("dSource").value = d.source ?? "";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function deleteDocument(btn, id) {
+  armedDelete(btn, async () => {
+    try {
+      await api("/api/admin/documents/" + id, { method: "DELETE" });
+      loadDocuments();
+      loadDashboard();
+    } catch (e) {
+      showError(document.getElementById("dMessage"), e);
+    }
+  });
+}
+</script>
+</body>
+</html>

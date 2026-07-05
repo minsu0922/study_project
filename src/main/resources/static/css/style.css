@@ -22,6 +22,12 @@
 
 * { box-sizing: border-box; }
 
+/* hidden 속성이 항상 이기게 하는 전역 규칙.
+   hidden의 기본 display:none은 "브라우저 기본 스타일"이라, 우리가 .btn{display:inline-block}
+   .pager{display:flex}처럼 display를 지정한 요소에서는 작성자 스타일이 이겨 hidden이 무시된다.
+   (실제로 페이저·수정취소 버튼이 안 숨겨지는 버그가 두 번 났다) !important로 항상 우선시킨다. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif; /* 한글 기본 폰트 우선 */
@@ -134,12 +140,33 @@ button:disabled { background: #cbd5e1; cursor: default; }
 .doc-body img { max-width: 100%; }
 
 /* ── 페이지 이동(이전/다음) ── */
+/* hidden으로 숨기는 동작은 파일 상단의 전역 [hidden] 규칙이 보장한다 */
 .pager { display: flex; gap: 8px; justify-content: center; margin-top: 20px; align-items: center; }
-/* hidden 속성은 브라우저 기본 display:none인데, 위의 display:flex(작성자 스타일)가
-   기본 스타일보다 우선이라 hidden이 무시된다. 아래 한 줄로 hidden이 항상 이기게 한다.
-   (1페이지뿐일 때 JS가 pager.hidden=true로 숨기는 동작의 전제 조건) */
-.pager[hidden] { display: none; }
 .pager .info { color: var(--muted); font-size: 0.85rem; }
 
 /* 로그인/회원가입처럼 좁은 폼 페이지 */
 .narrow { max-width: 400px; }
+
+/* ── 관리자 페이지 ── */
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.tab-btn { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+.tab-btn:hover { background: #eff6ff; }
+.tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* 대시보드 요약 타일 */
+.stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
+.stat .num { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
+.stat .label { color: var(--muted); font-size: 0.85rem; }
+
+/* 표(현황판·정답률·목록) — 넓은 표는 .table-wrap이 가로 스크롤을 담당 */
+.table-wrap { overflow-x: auto; margin-bottom: 24px; }
+table.grid { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); font-size: 0.9rem; }
+table.grid th, table.grid td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+table.grid td.wrap { white-space: normal; }
+table.grid th { background: #f1f5f9; color: var(--muted); font-weight: 600; }
+table.grid td.zero { color: #cbd5e1; }  /* 문제 0개인 칸은 흐리게 — 빈 곳이 한눈에 보이게 */
+
+.row-actions button { padding: 4px 10px; font-size: 0.8rem; margin-left: 4px; }
+.danger { background: var(--wrong); }
+.danger:hover { background: #b91c1c; }

@@ -33,6 +33,28 @@ function clearLogin() {
 function isLoggedIn() { return !!getToken(); }
 
 /**
+ * JWT payload에서 role(USER/ADMIN)을 읽는다 — 관리자 메뉴 표시 여부 판단용.
+ *
+ * <p>원리: JWT의 가운데 조각(payload)은 암호화가 아니라 base64url <b>인코딩</b>이라
+ * 브라우저에서 그냥 풀어 읽을 수 있다(문서 session-vs-jwt 참고).
+ * <b>이 값은 UI 편의용일 뿐 보안 장치가 아니다</b> — 값을 조작해 관리자 메뉴를 띄워도
+ * 서버(SecurityConfig의 hasRole)가 서명된 토큰의 role로 다시 검사하므로 API는 뚫리지 않는다.
+ * "화면은 속일 수 있어도 서버는 못 속인다"가 권한 설계의 기본 전제다.
+ */
+function getRole() {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    // base64url → base64 변환(-→+, _→/) 후 디코딩
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.role || null;
+  } catch (e) {
+    return null; // 형식이 깨진 토큰은 비로그인 취급
+  }
+}
+function isAdmin() { return getRole() === "ADMIN"; }
+
+/**
  * 백엔드 API 호출 공통 함수.
  * - 토큰이 있으면 Authorization: Bearer 헤더를 자동으로 붙인다.
  * - 응답 봉투 { success, data, error }를 해석해서, 성공이면 data만 돌려주고
@@ -123,6 +145,7 @@ function renderNav(active) {
     <a class="${cls("docs")}" href="/">문서</a>
     <a class="${cls("quiz")}" href="/quiz.html">퀴즈</a>
     <a class="${cls("wrong")}" href="/wrong-answers.html">오답노트</a>
+    ${isAdmin() ? `<a class="${cls("admin")}" href="/admin.html">관리자</a>` : ""}
     <span class="spacer"></span>
     ${authArea}`;
   const logout = document.getElementById("logoutLink");
