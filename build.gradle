@@ -56,9 +56,8 @@ dependencies {
     // Swagger / OpenAPI (Boot 3.x 대응 2.x)
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 
-    // ── 레이어 추가 시 주석 해제 ────────────────
-    // [캐싱 레이어 / 로드맵2] Redis
-    // implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    // [캐싱 레이어 / 로드맵2] Redis — 문서 캐싱 + refresh 토큰 저장소
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // [최적화 레이어 / 로드맵1] QueryDSL — SQL을 자바 코드로 타입 안전하게 작성하는 도구.
     // 문서 목록의 N+1 제거 + 목록 프로젝션(본문 제외)에 사용 (docs/08 실측 근거).

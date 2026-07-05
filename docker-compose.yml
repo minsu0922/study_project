@@ -23,12 +23,15 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── 로드맵 2(Redis 캐싱) 진입 시 주석 해제 ──
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: csquiz-redis
-  #   ports:
-  #     - "6379:6379"
+  # 로드맵 2에서 활성화 (캐싱 + refresh 토큰 저장소)
+  # 참고: Docker가 없는 개발 PC에서는 WSL에 설치해 사용 중 —
+  #   설치:  wsl -u root -e sh -c "apt-get install -y redis-server"
+  #   기동:  wsl -u root -e service redis-server start
+  redis:
+    image: redis:7-alpine
+    container_name: csquiz-redis
+    ports:
+      - "6379:6379"
 
 volumes:
   mysql-data:

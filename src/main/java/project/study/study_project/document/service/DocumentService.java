@@ -1,9 +1,11 @@
 package project.study.study_project.document.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.global.config.CacheConfig;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.dto.DocumentListItem;
@@ -41,7 +43,14 @@ public class DocumentService {
 
     /** slug로 문서 단건. 없으면 {@link ErrorCode#DOC_001}(404).
      * 단건은 본문·태그가 전부 필요해서 엔티티 조회 그대로 둔다(open-in-view=false라
-     * LAZY 태그 접근은 이 트랜잭션 안에서 끝낸다). */
+     * LAZY 태그 접근은 이 트랜잭션 안에서 끝낸다).
+     *
+     * <p>{@code @Cacheable}(로드맵 2): 같은 slug 재요청은 DB 대신 Redis에서 응답 DTO를 꺼낸다.
+     * 캐싱 대상 선정 이유·TTL·직렬화는 CacheConfig 주석 참고. 무효화는 관리자
+     * 수정/삭제(AdminDocumentService)가 담당한다. <b>엔티티가 아니라 DTO를 캐싱</b>하는 이유:
+     * 엔티티는 LAZY 프록시·영속성 컨텍스트와 얽혀 직렬화가 위험하고, 캐시에서 꺼낸 뒤의
+     * 변경 감지 오동작 여지도 있다 — 응답 완성본(DTO)이 캐시에 안전한 형태다. */
+    @Cacheable(cacheNames = CacheConfig.DOCUMENT_CACHE, key = "#slug")
     @Transactional(readOnly = true)
     public DocumentDetailResponse getDocument(String slug) {
         Document document = documentRepository.findBySlug(slug)

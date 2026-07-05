@@ -29,15 +29,27 @@ spring:
       pageable:
         default-page-size: 20
         max-page-size: 100               # size 초과 요청은 100으로 잘림(과도한 조회 방지)
+    # Redis (로드맵 2): 문서 캐시 + refresh 토큰 저장소.
+    # 로컬은 WSL의 redis-server(또는 docker compose의 redis).
+    # host를 localhost가 아니라 127.0.0.1로 명시한 이유: JVM이 localhost를 IPv6(::1)로
+    # 해석할 수 있는데, WSL2의 포트 중계는 IPv4 쪽만 안정적이라 연결이 실패했다(실측).
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      # 캐시는 "빨리 실패"가 원칙: 네트워크가 이상하면 2초 안에 포기하고 DB로 간다.
+      # (기본 60초를 그대로 두면 Redis가 어중간하게 죽었을 때 요청이 분 단위로 매달린다 — 실측)
+      timeout: 2000ms          # 명령 응답 대기 한도
+      connect-timeout: 2000ms  # 연결 수립 한도
 
 springdoc:
   swagger-ui:
     path: /swagger-ui.html               # http://localhost:8080/swagger-ui.html
 
-# 커스텀 JWT 설정 (MVP는 access 토큰만 — ADR-0001)
+# 커스텀 JWT 설정 (로드맵 2에서 refresh 토큰 도입 — ADR-0001의 예고 이행)
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-please-change-this-to-a-256bit-or-longer-key}
-  access-token-validity-seconds: 3600    # 1시간
+  access-token-validity-seconds: 3600         # 1시간 (짧게 — 탈취 피해 시간 제한)
+  refresh-token-validity-seconds: 1209600     # 14일 (Redis TTL로 자동 만료)
 
 # 초기 관리자 계정 (AdminAccountInitializer가 ADMIN 부재 시 생성)
 # 로컬 기본값이며, 실 배포에서는 환경변수로 반드시 교체한다.
