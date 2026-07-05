@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로그인 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container narrow">
+  <h1>로그인</h1>
+  <div id="message"></div>
+
+  <form id="loginForm" class="card">
+    <div class="field">
+      <label for="email">이메일</label>
+      <input type="email" id="email" required autocomplete="email">
+    </div>
+    <div class="field">
+      <label for="password">비밀번호</label>
+      <input type="password" id="password" required autocomplete="current-password">
+    </div>
+    <button type="submit" id="submitBtn" style="width:100%">로그인</button>
+  </form>
+
+  <p class="meta">계정이 없으신가요? <a href="/signup.html">회원가입</a></p>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+/* 로그인 페이지 — POST /api/auth/login → accessToken을 localStorage에 저장.
+ * 저장 방식의 트레이드오프는 js/api.js 상단 주석 참고. */
+renderNav();
+
+document.getElementById("loginForm").addEventListener("submit", async e => {
+  e.preventDefault(); // 폼 기본 동작(페이지 새로고침 제출)을 막고 JS로 처리
+  const btn = document.getElementById("submitBtn");
+  const msg = document.getElementById("message");
+  btn.disabled = true; // 더블클릭으로 요청이 두 번 나가는 것 방지
+  msg.innerHTML = "";
+  try {
+    const email = document.getElementById("email").value.trim();
+    const data = await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password: document.getElementById("password").value }),
+    });
+    setLogin(data.accessToken, email);
+    location.href = "/"; // 로그인 성공 → 첫 화면으로
+  } catch (err) {
+    // AUTH_002: "이메일 또는 비밀번호가 올바르지 않습니다" — 서버 메시지를 그대로 보여준다
+    msg.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

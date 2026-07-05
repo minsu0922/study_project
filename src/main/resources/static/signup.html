@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>회원가입 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container narrow">
+  <h1>회원가입</h1>
+  <div id="message"></div>
+
+  <form id="signupForm" class="card">
+    <div class="field">
+      <label for="email">이메일</label>
+      <input type="email" id="email" required autocomplete="email">
+    </div>
+    <div class="field">
+      <label for="password">비밀번호 (8자 이상, 영문+숫자 포함)</label>
+      <input type="password" id="password" required autocomplete="new-password">
+    </div>
+    <button type="submit" id="submitBtn" style="width:100%">가입하기</button>
+  </form>
+
+  <p class="meta">이미 계정이 있으신가요? <a href="/login.html">로그인</a></p>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+/* 회원가입 페이지 — 가입 성공 시 같은 계정으로 곧바로 로그인까지 해 준다.
+ * (가입 → 로그인 화면 → 또 입력의 번거로움 제거. 실패해도 가입은 된 상태라 로그인 페이지로 안내) */
+renderNav();
+
+document.getElementById("signupForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = document.getElementById("submitBtn");
+  const msg = document.getElementById("message");
+  btn.disabled = true;
+  msg.innerHTML = "";
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  try {
+    await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ email, password }) });
+    try {
+      // 가입 직후 자동 로그인
+      const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+      setLogin(data.accessToken, email);
+      location.href = "/";
+    } catch (loginErr) {
+      location.href = "/login.html"; // 자동 로그인만 실패한 드문 경우: 수동 로그인으로
+    }
+  } catch (err) {
+    // 검증 실패(VALIDATION_ERROR)면 어떤 칸이 왜 틀렸는지 필드 단위로 보여준다
+    const details = (err.fieldErrors || []).map(f => `<li>${escapeHtml(f.reason)}</li>`).join("");
+    msg.innerHTML = `<div class="alert error">${escapeHtml(err.message)}${details ? `<ul style="margin:6px 0 0">${details}</ul>` : ""}</div>`;
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

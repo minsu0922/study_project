@@ -1,0 +1,145 @@
+/* =====================================================================
+ * csquiz 공용 스타일
+ * ---------------------------------------------------------------------
+ * 프레임워크(부트스트랩 등) 없이 순수 CSS만 쓴다 — 정적 HTML/JS 방식의 취지
+ * (설치·빌드 없이 static 폴더만으로 동작)와 맞추기 위해서다.
+ * 색은 CSS 변수로 모아 두어 나중에 테마를 바꿀 때 한 곳만 고치면 된다.
+ * ===================================================================== */
+
+:root {
+  --primary: #2563eb;        /* 메인 파랑 (버튼·링크·강조) */
+  --primary-dark: #1d4ed8;
+  --bg: #f8fafc;             /* 페이지 배경 (살짝 회색) */
+  --card: #ffffff;           /* 카드 배경 */
+  --text: #0f172a;           /* 본문 글자 */
+  --muted: #64748b;          /* 보조 글자 (설명·날짜) */
+  --border: #e2e8f0;
+  --correct: #16a34a;        /* 정답 초록 */
+  --wrong: #dc2626;          /* 오답 빨강 */
+  --correct-bg: #f0fdf4;
+  --wrong-bg: #fef2f2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif; /* 한글 기본 폰트 우선 */
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* ── 상단 내비게이션 (모든 페이지 공통, js/api.js의 renderNav가 채움) ── */
+.nav {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 56px;
+}
+.nav .brand { font-weight: 700; font-size: 1.15rem; color: var(--primary); text-decoration: none; }
+.nav a { color: var(--text); text-decoration: none; font-size: 0.95rem; }
+.nav a:hover { color: var(--primary); }
+.nav a.active { color: var(--primary); font-weight: 600; }
+.nav .spacer { flex: 1; }         /* 로그인 메뉴를 오른쪽으로 밀기 */
+.nav .user-email { color: var(--muted); font-size: 0.85rem; }
+
+.container { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+
+h1 { font-size: 1.5rem; margin: 8px 0 16px; }
+
+/* ── 카드(문서·문제·오답 항목 공통) ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+}
+.card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.card a { color: var(--text); text-decoration: none; }
+.card a:hover { color: var(--primary); }
+
+/* 도메인·난이도 등 작은 라벨 */
+.badge {
+  display: inline-block;
+  background: #eff6ff;
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 0.75rem;
+  margin-right: 6px;
+}
+.badge.gray { background: #f1f5f9; color: var(--muted); }
+
+.meta { color: var(--muted); font-size: 0.8rem; }
+
+/* ── 폼(로그인/회원가입/필터) ── */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+input[type=text], input[type=email], input[type=password], select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--card);
+}
+input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+
+.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: end; }
+.filters .field { margin: 0; flex: 1; min-width: 130px; }
+
+button, .btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+button:hover, .btn:hover { background: var(--primary-dark); }
+button:disabled { background: #cbd5e1; cursor: default; }
+.btn-outline { background: var(--card); color: var(--primary); border: 1px solid var(--primary); }
+.btn-outline:hover { background: #eff6ff; }
+
+/* ── 알림/결과 박스 ── */
+.alert { border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 0.9rem; }
+.alert.error { background: var(--wrong-bg); color: var(--wrong); }
+.alert.info { background: #eff6ff; color: var(--primary); }
+
+/* 채점 결과: 정답/오답에 따라 배경색으로 즉시 구분되게 */
+.result { border-radius: 8px; padding: 12px 16px; margin-top: 12px; font-size: 0.92rem; }
+.result.correct { background: var(--correct-bg); border: 1px solid var(--correct); }
+.result.wrong { background: var(--wrong-bg); border: 1px solid var(--wrong); }
+.result .verdict { font-weight: 700; }
+.result.correct .verdict { color: var(--correct); }
+.result.wrong .verdict { color: var(--wrong); }
+
+/* ── 퀴즈 보기(객관식/OX) ── */
+.choice { display: block; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+.choice:hover { border-color: var(--primary); }
+.choice input { margin-right: 8px; }
+
+/* ── 문서 본문(마크다운 렌더링 영역) ── */
+.doc-body { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px 28px; }
+.doc-body pre { background: #f1f5f9; padding: 12px; border-radius: 8px; overflow-x: auto; }
+.doc-body code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+.doc-body img { max-width: 100%; }
+
+/* ── 페이지 이동(이전/다음) ── */
+.pager { display: flex; gap: 8px; justify-content: center; margin-top: 20px; align-items: center; }
+/* hidden 속성은 브라우저 기본 display:none인데, 위의 display:flex(작성자 스타일)가
+   기본 스타일보다 우선이라 hidden이 무시된다. 아래 한 줄로 hidden이 항상 이기게 한다.
+   (1페이지뿐일 때 JS가 pager.hidden=true로 숨기는 동작의 전제 조건) */
+.pager[hidden] { display: none; }
+.pager .info { color: var(--muted); font-size: 0.85rem; }
+
+/* 로그인/회원가입처럼 좁은 폼 페이지 */
+.narrow { max-width: 400px; }

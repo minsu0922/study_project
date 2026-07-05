@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오답노트 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container">
+  <h1>오답노트</h1>
+  <p class="meta">틀린 적 있는 문제를 문제당 1건(가장 최근에 틀린 답 기준)으로 모아 보여줍니다.</p>
+
+  <div class="filters">
+    <div class="field">
+      <label for="domainFilter">도메인</label>
+      <select id="domainFilter"></select>
+    </div>
+  </div>
+
+  <div id="message"></div>
+  <div id="list"></div>
+
+  <div class="pager" id="pager" hidden>
+    <button id="prevBtn" class="btn-outline">이전</button>
+    <span class="info" id="pageInfo"></span>
+    <button id="nextBtn" class="btn-outline">다음</button>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+/* 오답노트 페이지 — GET /api/me/wrong-answers (로그인 필수).
+ * 페이지 진입 시점에 로그인 여부를 확인해 미리 로그인으로 보낸다.
+ * (API를 호출해 401을 받고 나서야 알려주는 것보다 빠르고 친절) */
+renderNav("wrong");
+
+if (!isLoggedIn()) {
+  // 로그인 후 다시 돌아올 수 있게 안내만 하고 자동 이동은 하지 않는다
+  document.getElementById("message").innerHTML =
+    `<div class="alert info">오답노트는 <b>내 계정의 기록</b>이라 로그인이 필요합니다.
+     <a href="/login.html">로그인하기</a></div>`;
+} else {
+  init();
+}
+
+function init() {
+  const domainFilter = document.getElementById("domainFilter");
+  fillSelect(domainFilter, DOMAINS, "전체 도메인");
+  let page = 0;
+
+  async function load() {
+    const msg = document.getElementById("message");
+    msg.innerHTML = "";
+    try {
+      const params = new URLSearchParams({ page });
+      if (domainFilter.value) params.set("domain", domainFilter.value);
+      const data = await api("/api/me/wrong-answers?" + params);
+
+      const list = document.getElementById("list");
+      if (data.content.length === 0) {
+        list.innerHTML = `<div class="card">아직 오답이 없습니다. 🎉
+          <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a></div>`;
+      } else {
+        // 오답노트는 "복습"이 목적이라 내 답·정답·해설을 한 번에 다 보여준다
+        list.innerHTML = data.content.map(w => `
+          <div class="card">
+            <div style="margin-bottom:6px">
+              <span class="badge">${escapeHtml(domainLabel(w.domain))}</span>
+              <span class="badge gray">${escapeHtml(difficultyLabel(w.difficulty))}</span>
+              <span class="badge gray">${escapeHtml(typeLabel(w.type))}</span>
+            </div>
+            <h3>${escapeHtml(w.question)}</h3>
+            <div style="color:var(--wrong)">내 답: ${escapeHtml(w.myAnswer)}</div>
+            <div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer ?? "")}</div>
+            ${w.explanation ? `<div class="meta" style="margin-top:6px">${escapeHtml(w.explanation)}</div>` : ""}
+            <div class="meta" style="margin-top:6px">마지막으로 틀린 날: ${formatDate(w.lastSubmittedAt)}</div>
+          </div>`).join("");
+      }
+
+      const pager = document.getElementById("pager");
+      pager.hidden = data.totalPages <= 1;
+      document.getElementById("pageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
+      document.getElementById("prevBtn").disabled = data.page === 0;
+      document.getElementById("nextBtn").disabled = !data.hasNext;
+    } catch (e) {
+      const text = e.status === 401
+        ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인해 주세요.</a>`
+        : `불러오지 못했습니다: ${escapeHtml(e.message)}`;
+      msg.innerHTML = `<div class="alert error">${text}</div>`;
+    }
+  }
+
+  domainFilter.addEventListener("change", () => { page = 0; load(); });
+  document.getElementById("prevBtn").addEventListener("click", () => { page--; load(); });
+  document.getElementById("nextBtn").addEventListener("click", () => { page++; load(); });
+  load();
+}
+</script>
+</body>
+</html>

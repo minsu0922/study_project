@@ -44,6 +44,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 경로별 접근 권한 (docs/06 표와 일치)
                 .authorizeHttpRequests(auth -> auth
+                        // 공개: 프론트 정적 파일(HTML/CSS/JS). "화면은 누구나 열 수 있고,
+                        // 화면 속 데이터(API)만 토큰으로 보호한다" — 페이지를 잠그면 로그인
+                        // 화면 자체도 못 여는 모순이 생기므로 정적 리소스는 전부 연다.
+                        .requestMatchers("/", "/*.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
                         // 공개: 회원가입/로그인
                         .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
                         // 공개: 문서/퀴즈 읽기

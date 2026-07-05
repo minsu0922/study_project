@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>문서 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+<!-- marked: 마크다운 → HTML 변환 라이브러리(CDN).
+     문서 본문(contentMd)이 마크다운이라 그대로 두면 #, ``` 같은 기호가 날것으로 보인다.
+     직접 파서를 만드는 건 과설계라 검증된 라이브러리를 쓴다.
+     CDN이 안 될 때(오프라인)를 대비해 아래 스크립트에서 폴백(순수 텍스트 표시)을 둔다. -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container">
+  <div id="message"></div>
+  <article id="doc" hidden>
+    <h1 id="title"></h1>
+    <div id="badges" style="margin-bottom:12px"></div>
+    <div class="doc-body" id="body"></div>
+    <p class="meta" id="source" style="margin-top:12px"></p>
+  </article>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+/* 문서 상세 페이지 — URL의 ?slug=... 로 문서 하나를 불러온다.
+ * slug는 사람이 읽는 영문 식별자(예 osi-7-layer)라 URL 공유가 쉽다(docs/01). */
+renderNav("docs");
+
+async function loadDoc() {
+  const slug = new URLSearchParams(location.search).get("slug");
+  const msg = document.getElementById("message");
+  if (!slug) {
+    msg.innerHTML = `<div class="alert error">문서 주소가 올바르지 않습니다. <a href="/">목록으로</a></div>`;
+    return;
+  }
+  try {
+    const d = await api("/api/documents/" + encodeURIComponent(slug));
+    document.title = d.title + " — csquiz";
+    document.getElementById("title").textContent = d.title;
+    document.getElementById("badges").innerHTML =
+      `<span class="badge">${escapeHtml(d.domainLabel)}</span>` +
+      d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("");
+
+    const bodyEl = document.getElementById("body");
+    if (window.marked) {
+      // 마크다운 → HTML. 본문은 우리(관리자)가 시드로 넣은 신뢰 콘텐츠라 그대로 렌더링한다.
+      // (외부 사용자가 문서를 작성하는 기능이 생기면 그때는 sanitize(정화) 라이브러리 필수)
+      bodyEl.innerHTML = marked.parse(d.contentMd);
+    } else {
+      // CDN 실패 폴백: 마크다운 원문을 줄바꿈만 살려 보여준다 (안 예쁘지만 읽을 수는 있게)
+      bodyEl.innerHTML = `<pre style="white-space:pre-wrap">${escapeHtml(d.contentMd)}</pre>`;
+    }
+
+    if (d.source) {
+      document.getElementById("source").innerHTML =
+        `출처: <a href="${escapeHtml(d.source)}" target="_blank" rel="noopener">${escapeHtml(d.source)}</a>`;
+    }
+    document.getElementById("doc").hidden = false;
+  } catch (e) {
+    const text = e.code === "DOC_001" ? "존재하지 않는 문서입니다." : e.message;
+    msg.innerHTML = `<div class="alert error">${escapeHtml(text)} <a href="/">목록으로</a></div>`;
+  }
+}
+loadDoc();
+</script>
+</body>
+</html>
