@@ -60,11 +60,14 @@ dependencies {
     // [캐싱 레이어 / 로드맵2] Redis
     // implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
-    // [최적화 레이어 / 로드맵1] QueryDSL (Spring Boot 3 = jakarta 분류자 필수)
-    // implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
-    // annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
-    // annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
-    // annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+    // [최적화 레이어 / 로드맵1] QueryDSL — SQL을 자바 코드로 타입 안전하게 작성하는 도구.
+    // 문서 목록의 N+1 제거 + 목록 프로젝션(본문 제외)에 사용 (docs/08 실측 근거).
+    // Spring Boot 3(jakarta EE)에서는 :jakarta 분류자가 필수 — 없으면 javax.* 기준이라 컴파일 실패.
+    // annotationProcessor가 컴파일 시 엔티티마다 Q클래스(QDocument 등)를 생성한다.
+    implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+    annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 
     // [모니터링] Actuator (포트폴리오 가점)
     // implementation 'org.springframework.boot:spring-boot-starter-actuator'

@@ -1,10 +1,7 @@
 package project.study.study_project.document.service;
 
-import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.document.domain.Document;
@@ -21,9 +18,9 @@ import java.util.List;
 /**
  * 문서 조회 서비스 — 목록(필터·페이징)과 단건(slug). API 스펙은 docs/03.
  *
- * <p>모든 메서드는 {@code @Transactional(readOnly = true)}. 이유:
- * open-in-view=false라 지연 로딩(태그)은 트랜잭션 안에서만 가능하므로, DTO 변환(태그 접근)을
- * 서비스 트랜잭션 경계 안에서 끝낸 뒤 컨트롤러로 넘긴다.
+ * <p>목록은 처음에 Specification + 엔티티 조회로 구현했다가 <b>로드맵 1에서 QueryDSL
+ * DTO 프로젝션으로 교체</b>했다(태그 N+1 구조 제거 + 본문 미전송 — DocumentRepositoryImpl 주석,
+ * 실측 수치는 docs/08). 서비스는 이제 조립 없이 리포지토리에 위임만 한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,41 +36,16 @@ public class DocumentService {
      */
     @Transactional(readOnly = true)
     public PageResponse<DocumentListItem> getDocuments(Domain domain, List<String> tags, Pageable pageable) {
-        Specification<Document> spec = buildSpec(domain, tags);
-        Page<Document> page = documentRepository.findAll(spec, pageable);
-        // Page.map은 각 요소를 즉시 변환한다 → 트랜잭션 안에서 태그가 로딩됨
-        return PageResponse.from(page.map(DocumentListItem::from));
+        return PageResponse.from(documentRepository.searchListItems(domain, tags, pageable));
     }
 
-    /** slug로 문서 단건. 없으면 {@link ErrorCode#DOC_001}(404). */
+    /** slug로 문서 단건. 없으면 {@link ErrorCode#DOC_001}(404).
+     * 단건은 본문·태그가 전부 필요해서 엔티티 조회 그대로 둔다(open-in-view=false라
+     * LAZY 태그 접근은 이 트랜잭션 안에서 끝낸다). */
     @Transactional(readOnly = true)
     public DocumentDetailResponse getDocument(String slug) {
         Document document = documentRepository.findBySlug(slug)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DOC_001));
         return DocumentDetailResponse.from(document);
-    }
-
-    /**
-     * 있는 조건만 AND로 엮어 동적 쿼리를 만든다.
-     * <ul>
-     *   <li>domain: 같은 도메인만
-     *   <li>tags: 태그 조인 후 {@code name in (...)}. 한 문서가 여러 태그에 걸릴 수 있어 중복이 생기므로
-     *       {@code distinct}로 제거한다.
-     * </ul>
-     */
-    private Specification<Document> buildSpec(Domain domain, List<String> tags) {
-        Specification<Document> spec = Specification.where(null);
-
-        if (domain != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("domain"), domain));
-        }
-        if (tags != null && !tags.isEmpty()) {
-            spec = spec.and((root, query, cb) -> {
-                Join<Object, Object> tagJoin = root.join("tags"); // document_tag를 통한 inner join
-                query.distinct(true);
-                return tagJoin.get("name").in(tags);
-            });
-        }
-        return spec;
     }
 }
