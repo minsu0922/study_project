@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.auth.dto.LoginRequest;
 import project.study.study_project.auth.dto.LoginResponse;
+import project.study.study_project.auth.dto.RefreshRequest;
 import project.study.study_project.auth.dto.SignupRequest;
 import project.study.study_project.auth.dto.SignupResponse;
 import project.study.study_project.auth.service.AuthService;
@@ -35,9 +36,25 @@ public class AuthController {
         return ApiResponse.ok(authService.signup(request));
     }
 
-    /** 로그인. 성공 시 200 + access 토큰. */
+    /** 로그인. 성공 시 200 + access/refresh 토큰 묶음(로드맵 2). */
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.ok(authService.login(request));
+    }
+
+    /**
+     * access 토큰 재발급(로드맵 2). refresh 토큰이 자격 증명이며 응답에서 <b>새 refresh로
+     * 교체(회전)</b>된다 — 이전 refresh는 이 순간부터 무효. 무효 토큰이면 401 AUTH_005.
+     */
+    @PostMapping("/refresh")
+    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.ok(authService.refresh(request.refreshToken()));
+    }
+
+    /** 로그아웃(로드맵 2) — refresh 토큰 폐기. 이미 무효여도 200(멱등: 몇 번 눌러도 같은 결과). */
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@Valid @RequestBody RefreshRequest request) {
+        authService.logout(request.refreshToken());
+        return ApiResponse.ok();
     }
 }

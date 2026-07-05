@@ -47,7 +47,7 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
     try {
       // 가입 직후 자동 로그인
       const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
-      setLogin(data.accessToken, email);
+      setLogin(data.accessToken, data.refreshToken, email);
       location.href = "/";
     } catch (loginErr) {
       location.href = "/login.html"; // 자동 로그인만 실패한 드문 경우: 수동 로그인으로

@@ -18,16 +18,19 @@
  * ===================================================================== */
 
 const TOKEN_KEY = "csquiz_token";
+const REFRESH_KEY = "csquiz_refresh"; // 로드맵 2: access 만료 시 재발급용
 const EMAIL_KEY = "csquiz_email"; // 내비게이션에 "누구로 로그인했는지" 표시용
 
 /* ── 토큰 보관 ── */
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
-function setLogin(token, email) {
-  localStorage.setItem(TOKEN_KEY, token);
+function setLogin(accessToken, refreshToken, email) {
+  localStorage.setItem(TOKEN_KEY, accessToken);
+  if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken); // Redis 장애 시 null일 수 있음
   localStorage.setItem(EMAIL_KEY, email);
 }
 function clearLogin() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem(EMAIL_KEY);
 }
 function isLoggedIn() { return !!getToken(); }
@@ -74,8 +77,14 @@ async function api(path, options = {}) {
   let body = null;
   try { body = await res.json(); } catch (e) { /* 본문 없는 응답(이론상 없음) */ }
 
-  if (res.status === 401) {
-    clearLogin(); // 만료/무효 토큰은 즉시 폐기 (renderNav를 다시 그리진 않음 — 페이지가 판단)
+  // 로드맵 2: access 만료(401) → refresh 토큰으로 조용히 재발급 후 원래 요청을 1번 재시도.
+  // 사용자는 1시간마다 로그아웃당하는 대신 아무것도 못 느낀다. _retried 플래그로
+  // 무한 재시도를 막고, 인증 API 자신(로그인/재발급)의 401은 재시도 대상이 아니다.
+  if (res.status === 401 && !options._retried && !path.startsWith("/api/auth/")) {
+    if (await tryRefresh()) {
+      return api(path, Object.assign({}, options, { _retried: true }));
+    }
+    clearLogin(); // 재발급도 실패 = 진짜 세션 종료 → 재로그인 필요
   }
   if (!res.ok || !body || body.success === false) {
     const errInfo = (body && body.error) || { code: "HTTP_" + res.status, message: "요청에 실패했습니다." };
@@ -86,6 +95,26 @@ async function api(path, options = {}) {
     throw err;
   }
   return body.data;
+}
+
+/** refresh 토큰으로 access 재발급 시도. 성공 시 새 토큰 쌍 저장(회전) 후 true. */
+async function tryRefresh() {
+  const refreshToken = localStorage.getItem(REFRESH_KEY);
+  if (!refreshToken) return false;
+  try {
+    const res = await fetch("/api/auth/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+    const body = await res.json();
+    if (!res.ok || !body.success) return false; // 만료·이미 사용(AUTH_005) → 재로그인 필요
+    localStorage.setItem(TOKEN_KEY, body.data.accessToken);
+    if (body.data.refreshToken) localStorage.setItem(REFRESH_KEY, body.data.refreshToken);
+    return true;
+  } catch (e) {
+    return false; // 네트워크 오류 등 — 호출부가 로그인 만료로 처리
+  }
 }
 
 /* ── enum 표시용 상수 (백엔드 global/common enum과 1:1, 서버가 진실의 원천) ── */
@@ -149,8 +178,20 @@ function renderNav(active) {
     <span class="spacer"></span>
     ${authArea}`;
   const logout = document.getElementById("logoutLink");
-  if (logout) logout.addEventListener("click", e => {
+  if (logout) logout.addEventListener("click", async e => {
     e.preventDefault();
+    // 서버의 refresh 토큰을 먼저 폐기(로드맵 2) — 브라우저만 지우면 서버엔 14일짜리
+    // 출입증이 살아 있는 셈이라, "로그아웃 = 서버에서도 회수"가 올바른 순서다.
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    if (refreshToken) {
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+      } catch (err) { /* 서버 폐기 실패해도 로컬 로그아웃은 진행(TTL이 안전망) */ }
+    }
     clearLogin();
     location.href = "/"; // 로그아웃 후 첫 화면으로
   });

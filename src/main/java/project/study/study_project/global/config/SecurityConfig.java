@@ -48,8 +48,11 @@ public class SecurityConfig {
                         // 화면 속 데이터(API)만 토큰으로 보호한다" — 페이지를 잠그면 로그인
                         // 화면 자체도 못 여는 모순이 생기므로 정적 리소스는 전부 연다.
                         .requestMatchers("/", "/*.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
-                        // 공개: 회원가입/로그인
-                        .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
+                        // 공개: 회원가입/로그인/재발급/로그아웃 — 재발급·로그아웃은 만료된 access를
+                        // 가진 사용자가 쓰는 기능이라 인증을 요구하면 모순이다(자격 증명은 바디의 refresh 토큰)
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/signup", "/api/auth/login",
+                                "/api/auth/refresh", "/api/auth/logout").permitAll()
                         // 공개: 문서/퀴즈 읽기
                         .requestMatchers(HttpMethod.GET, "/api/documents/**", "/api/quiz").permitAll()
                         // 공개: API 문서(Swagger)
