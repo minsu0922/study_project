@@ -134,13 +134,8 @@ public class QuizService {
                 .filter(c -> c.getId() == choiceId)
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_001));
-        // 정답 표기는 정답 보기의 text (MVP는 정답 보기 1개 가정, docs/01)
-        String correctText = problem.getChoices().stream()
-                .filter(Choice::isCorrect)
-                .findFirst()
-                .map(Choice::getText)
-                .orElse(null); // 시드 규칙상 없을 수 없지만, 데이터 오류 시 채점 자체는 계속되게 둔다
-        return new GradingResult(selected.isCorrect(), correctText);
+        // 정답 표기(정답 보기의 text)는 오답노트와 공용 규칙인 AnswerDisplay에 위임
+        return new GradingResult(selected.isCorrect(), AnswerDisplay.correctAnswerOf(problem));
     }
 
     /**
@@ -150,19 +145,18 @@ public class QuizService {
      */
     private GradingResult gradeOx(Problem problem, String userAnswer) {
         boolean correct = problem.getAnswer().equalsIgnoreCase(userAnswer.trim());
-        return new GradingResult(correct, problem.getAnswer());
+        return new GradingResult(correct, AnswerDisplay.correctAnswerOf(problem));
     }
 
     /**
      * 단답형: {@code answer}의 {@code |} 구분 복수 정답 중 하나와
      * {@code trim + toLowerCase} 정규화 후 일치하면 정답(docs/01).
-     * 대표 정답(응답 표기)은 첫 번째 토큰(docs/03).
+     * 대표 정답(응답 표기)은 첫 번째 토큰(docs/03) — AnswerDisplay가 담당.
      */
     private GradingResult gradeShortAnswer(Problem problem, String userAnswer) {
         String normalized = userAnswer.trim().toLowerCase();
-        String[] answers = problem.getAnswer().split("\\|"); // |는 정규식 메타문자라 이스케이프
-        boolean correct = Arrays.stream(answers)
+        boolean correct = Arrays.stream(problem.getAnswer().split("\\|")) // |는 정규식 메타문자라 이스케이프
                 .anyMatch(a -> a.trim().toLowerCase().equals(normalized));
-        return new GradingResult(correct, answers[0].trim());
+        return new GradingResult(correct, AnswerDisplay.correctAnswerOf(problem));
     }
 }
