@@ -52,6 +52,19 @@ jwt:
   refresh-token-validity-seconds: 1209600     # 14일 (Redis TTL로 자동 만료)
 
 # 초기 관리자 계정 (AdminAccountInitializer가 ADMIN 부재 시 생성)
+# 요청 제한 (로드맵 3) — 토큰 버킷. 설계는 docs/09, 결정 배경은 ADR-0003.
+# capacity = 순간 버스트 허용량, refill-tokens/refill-period-seconds = 장기 평균 속도.
+ratelimit:
+  enabled: true                  # 부하 테스트·디버깅 시 false로 임시 해제 가능
+  auth:                          # 로그인/회원가입/재발급 — IP당. 무차별 대입 방어가 목적
+    capacity: 5
+    refill-tokens: 5
+    refill-period-seconds: 60    # = 분당 5회
+  api:                           # 그 외 /api/** — 사용자당(비로그인은 IP당). 폭주만 걸러내는 상한
+    capacity: 60
+    refill-tokens: 60
+    refill-period-seconds: 60    # = 분당 60회
+
 # 로컬 기본값이며, 실 배포에서는 환경변수로 반드시 교체한다.
 admin:
   email: ${ADMIN_EMAIL:admin@csquiz.local}

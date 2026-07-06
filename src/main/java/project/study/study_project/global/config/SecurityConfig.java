@@ -11,8 +11,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.auth.jwt.JwtAuthenticationFilter;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
+import project.study.study_project.global.ratelimit.RateLimitFilter;
+import project.study.study_project.global.ratelimit.RateLimitProperties;
+import project.study.study_project.global.ratelimit.TokenBucketRateLimiter;
 
 /**
  * Spring Security 설정 — 경로별 접근 규칙과 JWT 필터/실패 처리기를 조립한다. 설계는 docs/06.
@@ -32,6 +36,10 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint; // 미인증 → AUTH_003
     private final JwtAccessDeniedHandler accessDeniedHandler;           // 권한부족 → AUTH_004
+    // 요청 제한(로드맵 3) — RateLimitFilter 조립 재료
+    private final TokenBucketRateLimiter rateLimiter;
+    private final RateLimitProperties rateLimitProperties;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -72,7 +80,13 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 // JWT 필터를 아이디/비번 인증 필터 자리 앞에 끼워 넣는다(토큰을 먼저 해석).
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                // 요청 제한 필터(로드맵 3)는 JWT 필터 "뒤" — 로그인 사용자를 IP가 아니라
+                // 사용자 id로 세기 위해 토큰 해석이 먼저 필요하다(상세: RateLimitFilter 주석).
+                // 필터를 @Component/@Bean으로 두지 않고 여기서 직접 생성하는 이유는
+                // JwtAuthenticationFilter와 동일(서블릿 이중 등록 방지).
+                .addFilterAfter(new RateLimitFilter(rateLimiter, rateLimitProperties, objectMapper),
+                        JwtAuthenticationFilter.class);
 
         return http.build();
     }

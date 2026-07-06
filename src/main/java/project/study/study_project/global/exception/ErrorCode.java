@@ -14,6 +14,8 @@ public enum ErrorCode {
     COMMON_001("COMMON_001", HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
     VALIDATION_ERROR("VALIDATION_ERROR", HttpStatus.BAD_REQUEST, "입력값 검증에 실패했습니다."),
     COMMON_404("COMMON_404", HttpStatus.NOT_FOUND, "요청한 리소스를 찾을 수 없습니다."),
+    // 로드맵 3(요청 제한): RateLimitFilter가 사용. 응답에 Retry-After 헤더(재시도 가능 시점) 동반
+    COMMON_429("COMMON_429", HttpStatus.TOO_MANY_REQUESTS, "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."),
     COMMON_500("COMMON_500", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
 
     // 인증/인가
