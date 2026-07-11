@@ -17,6 +17,7 @@ import project.study.study_project.quiz.dto.QuizSubmitRequest;
 import project.study.study_project.quiz.dto.QuizSubmitResponse;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
+import project.study.study_project.review.service.ReviewService;
 
 import java.util.Arrays;
 import java.util.List;
@@ -38,6 +39,7 @@ public class QuizService {
 
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
+    private final ReviewService reviewService;
 
     /**
      * 필터로 문제 N개 무작위 조회(풀이용 — 정답/해설 미포함).
@@ -90,6 +92,11 @@ public class QuizService {
 
         Submission submission = submissionRepository.save(
                 Submission.of(userId, problem, request.userAnswer(), result.correct()));
+
+        // 복습 사다리 반영(로드맵 4, docs/10) — 같은 트랜잭션에 합류시켜 "이력은 남았는데
+        // 복습 상태만 안 바뀐" 상태를 원천 차단. 별도 복습 제출 API 없이 이 한 곳이
+        // ReviewItem의 유일한 쓰기 경로다(갱신 규칙의 정합성 관리 지점 최소화).
+        reviewService.onSubmission(userId, problem, result.correct());
 
         return new QuizSubmitResponse(
                 problem.getId(), result.correct(), result.correctAnswer(),
