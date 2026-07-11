@@ -10,51 +10,60 @@
 <header id="nav"></header>
 
 <main class="container">
-  <h1>퀴즈 풀기</h1>
+  <!-- 화면 1: 설정(필터 고르고 시작) — 시작하면 숨기고 플레이어를 보여준다.
+       v1은 필터+문제 나열이 한 화면에 있었지만, v2는 "설정 → 풀이 → 결과"의
+       단계 구조라 화면을 통째로 전환한다(시험지를 받으면 문제에만 집중). -->
+  <section id="setup">
+    <h1>퀴즈 풀기</h1>
+    <div id="loginNotice"></div>
 
-  <!-- 문제 조회는 공개 API지만 "제출(채점)"은 로그인이 필요하다 —
-       풀기 전에 알 수 있도록 미리 안내 배너를 띄운다 -->
-  <div id="loginNotice"></div>
-
-  <!-- 필터를 고르고 [문제 불러오기]를 누르면 GET /api/quiz 호출 -->
-  <div class="filters card">
-    <div class="field"><label>도메인</label><select id="fDomain"></select></div>
-    <div class="field"><label>난이도</label><select id="fLevel"></select></div>
-    <div class="field"><label>유형</label><select id="fType"></select></div>
-    <div class="field"><label>문제 수</label>
-      <select id="fSize"><option>5</option><option selected>10</option><option>20</option></select>
+    <div class="card">
+      <div class="filters" style="margin-bottom:0">
+        <div class="field"><label>도메인</label><select id="fDomain"></select></div>
+        <div class="field"><label>난이도</label><select id="fLevel"></select></div>
+        <div class="field"><label>유형</label><select id="fType"></select></div>
+        <div class="field"><label>문제 수</label>
+          <select id="fSize"><option>5</option><option selected>10</option><option>20</option></select>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:18px">
+        <button id="startBtn" class="btn-lg">퀴즈 시작 🚀</button>
+      </div>
     </div>
-    <button id="loadBtn">문제 불러오기</button>
-  </div>
+    <div id="message"></div>
+  </section>
 
-  <div id="message"></div>
-  <div id="problems"></div>
+  <!-- 화면 2: 플레이어(js/player.js가 이 안을 통째로 그린다) -->
+  <section id="player" hidden></section>
 </main>
 
 <script src="/js/api.js"></script>
+<script src="/js/player.js"></script>
 <script>
 /* 퀴즈 페이지 — 흐름:
- *   1) 필터로 문제 N개 조회 (정답·해설은 서버가 절대 안 내려줌 — docs/03)
- *   2) 유형별 입력 UI: 객관식=라디오, OX=O/X 라디오, 단답형=텍스트 입력
- *   3) 문제마다 [제출] → POST /api/quiz/submit → 그 자리에서 결과·해설 표시
- * 문제 단위 제출인 이유: API가 1문제=1제출 구조(docs/03)라 UI도 그대로 따른다.
- * 시험지 전체 제출 방식은 프론트에 채점 대기 상태가 생겨 오히려 복잡해진다. */
+ *   1) 설정 화면에서 필터 선택 → [퀴즈 시작] → GET /api/quiz
+ *   2) startPlayer()가 한 문제씩 진행(제출 API는 플레이어가 호출)
+ *   3) 결과 화면의 [새 퀴즈 만들기] → 설정 화면 복귀
+ * 정답·해설은 서버가 절대 미리 안 내려준다(docs/03) — 채점 응답에서만 온다. */
 renderNav("quiz");
 
 fillSelect(document.getElementById("fDomain"), DOMAINS, "전체");
 fillSelect(document.getElementById("fLevel"), DIFFICULTIES, "전체");
 fillSelect(document.getElementById("fType"), TYPES, "전체");
 
-// 로그인 안내 배너 (제출 시점에 실패로 처음 알게 되는 것보다 미리 알려주는 게 친절)
+// 문제 조회는 공개 API지만 채점은 로그인 필수 — 풀기 전에 미리 알려주는 게 친절
 if (!isLoggedIn()) {
   document.getElementById("loginNotice").innerHTML =
     `<div class="alert info">문제는 누구나 볼 수 있지만, <b>채점(제출)은 로그인해야</b> 가능합니다.
      <a href="/login.html">로그인하기</a></div>`;
 }
 
-document.getElementById("loadBtn").addEventListener("click", loadProblems);
+const setupEl = document.getElementById("setup");
+const playerEl = document.getElementById("player");
 
-async function loadProblems() {
+document.getElementById("startBtn").addEventListener("click", start);
+
+async function start() {
   const msg = document.getElementById("message");
   msg.innerHTML = "";
   try {
@@ -65,88 +74,23 @@ async function loadProblems() {
     }
     const data = await api("/api/quiz?" + params);
     if (data.problems.length === 0) {
-      document.getElementById("problems").innerHTML = "";
       msg.innerHTML = `<div class="alert info">조건에 맞는 문제가 없습니다. 필터를 바꿔 보세요.</div>`;
       return;
     }
-    document.getElementById("problems").innerHTML = data.problems.map(renderProblem).join("");
+    // 설정 화면 → 플레이어 화면 전환
+    setupEl.hidden = true;
+    playerEl.hidden = false;
+    startPlayer(playerEl, data.problems, {
+      exitLabel: "새 퀴즈 만들기",
+      onExit: () => {           // 결과 화면에서 복귀: 플레이어를 비우고 설정을 다시 보여준다
+        playerEl.hidden = true;
+        playerEl.innerHTML = "";
+        setupEl.hidden = false;
+        window.scrollTo({ top: 0 });
+      },
+    });
   } catch (e) {
     msg.innerHTML = `<div class="alert error">문제를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
-  }
-}
-
-/** 문제 1개를 카드 HTML로. 유형에 따라 입력 UI가 달라진다. */
-function renderProblem(p, i) {
-  let inputHtml;
-  if (p.type === "MULTIPLE_CHOICE") {
-    // 라디오 name을 문제 id로 분리해 문제끼리 선택이 섞이지 않게 한다
-    inputHtml = p.choices.map(c => `
-      <label class="choice">
-        <input type="radio" name="ans-${p.id}" value="${c.id}"> ${c.seq}. ${escapeHtml(c.text)}
-      </label>`).join("");
-  } else if (p.type === "OX") {
-    inputHtml = ["O", "X"].map(v => `
-      <label class="choice" style="display:inline-block;width:80px;text-align:center">
-        <input type="radio" name="ans-${p.id}" value="${v}"> ${v}
-      </label>`).join(" ");
-  } else { // SHORT_ANSWER
-    inputHtml = `<input type="text" id="ans-${p.id}" placeholder="답을 입력하세요" style="max-width:320px">`;
-  }
-  return `
-    <div class="card" id="card-${p.id}">
-      <div style="margin-bottom:6px">
-        <span class="badge">${escapeHtml(domainLabel(p.domain))}</span>
-        <span class="badge gray">${escapeHtml(difficultyLabel(p.difficulty))}</span>
-        <span class="badge gray">${escapeHtml(typeLabel(p.type))}</span>
-      </div>
-      <h3>Q${i + 1}. ${escapeHtml(p.question)}</h3>
-      <div>${inputHtml}</div>
-      <button style="margin-top:8px" onclick="submitAnswer(${p.id}, '${p.type}')">제출</button>
-      <div id="result-${p.id}"></div>
-    </div>`;
-}
-
-/** 답 제출 → 채점 결과를 문제 카드 안에 표시. */
-async function submitAnswer(problemId, type) {
-  const resultEl = document.getElementById("result-" + problemId);
-
-  // 유형별로 사용자가 고른/입력한 답을 꺼낸다 (API의 userAnswer 규칙: docs/03)
-  let userAnswer;
-  if (type === "SHORT_ANSWER") {
-    userAnswer = document.getElementById("ans-" + problemId).value.trim();
-  } else {
-    const checked = document.querySelector(`input[name="ans-${problemId}"]:checked`);
-    userAnswer = checked ? checked.value : "";
-  }
-  if (!userAnswer) {
-    resultEl.innerHTML = `<div class="alert error">답을 선택(입력)한 뒤 제출해 주세요.</div>`;
-    return;
-  }
-  if (!isLoggedIn()) {
-    resultEl.innerHTML = `<div class="alert error">채점하려면 <a href="/login.html">로그인</a>이 필요합니다.</div>`;
-    return;
-  }
-
-  try {
-    const r = await api("/api/quiz/submit", {
-      method: "POST",
-      body: JSON.stringify({ problemId, userAnswer }),
-    });
-    // 채점 후에는 입력·버튼을 잠근다 — 같은 문제 반복 제출로 이력이 오염되는 것 방지
-    // (다시 풀고 싶으면 [문제 불러오기]로 새로 시작)
-    document.querySelectorAll(`#card-${problemId} input, #card-${problemId} button`)
-      .forEach(el => el.disabled = true);
-    resultEl.innerHTML = `
-      <div class="result ${r.correct ? "correct" : "wrong"}">
-        <span class="verdict">${r.correct ? "⭕ 정답!" : "❌ 오답"}</span>
-        &nbsp;정답: <b>${escapeHtml(r.correctAnswer ?? "")}</b>
-        ${r.explanation ? `<div style="margin-top:6px">${escapeHtml(r.explanation)}</div>` : ""}
-      </div>`;
-  } catch (e) {
-    const text = e.status === 401
-      ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인</a> 후 제출해 주세요.`
-      : escapeHtml(e.message);
-    resultEl.innerHTML = `<div class="alert error">${text}</div>`;
   }
 }
 </script>

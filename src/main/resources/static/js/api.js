@@ -157,7 +157,11 @@ function formatDate(iso) {
 
 /**
  * 공통 상단 메뉴. 각 페이지의 <header id="nav">에 그린다.
- * @param active 현재 페이지 키("docs"|"quiz"|"wrong") — 해당 메뉴를 강조
+ * @param active 현재 페이지 키("home"|"docs"|"quiz"|"review"|"wrong"|"admin") — 해당 메뉴를 강조
+ *
+ * v2 구조: 홈(/)이 문서 목록이 아니라 "시작 화면"이 됐다(퀴즈 사이트 리뉴얼).
+ * 문서 목록은 /documents.html로 이동. 복습 메뉴에는 "오늘 몇 개"인지 배지가 붙는다
+ * (아래 loadReviewBadge — 할 일이 남아 있음을 어느 페이지에서든 보이게 하는 장치).
  */
 function renderNav(active) {
   const el = document.getElementById("nav");
@@ -171,12 +175,15 @@ function renderNav(active) {
   el.className = "nav";
   el.innerHTML = `
     <a class="brand" href="/">csquiz</a>
-    <a class="${cls("docs")}" href="/">문서</a>
+    <a class="${cls("home")}" href="/">홈</a>
     <a class="${cls("quiz")}" href="/quiz.html">퀴즈</a>
+    <a class="${cls("review")}" href="/review.html">복습<span id="reviewBadge"></span></a>
     <a class="${cls("wrong")}" href="/wrong-answers.html">오답노트</a>
+    <a class="${cls("docs")}" href="/documents.html">문서</a>
     ${isAdmin() ? `<a class="${cls("admin")}" href="/admin.html">관리자</a>` : ""}
     <span class="spacer"></span>
     ${authArea}`;
+  loadReviewBadge();
   const logout = document.getElementById("logoutLink");
   if (logout) logout.addEventListener("click", async e => {
     e.preventDefault();
@@ -195,4 +202,24 @@ function renderNav(active) {
     clearLogin();
     location.href = "/"; // 로그아웃 후 첫 화면으로
   });
+}
+
+/**
+ * 복습 메뉴 배지 — "오늘 복습할 문제 N개"를 메뉴에 작은 숫자로 표시한다.
+ *
+ * 이유: 간격 반복(로드맵 4)은 "때가 됐을 때 다시 보는 것"이 핵심이라, 사용자가
+ * 복습 페이지에 일부러 들어가지 않아도 할 일이 있음을 어디서든 알 수 있어야 한다.
+ * size=1로 요청하는 이유: 필요한 건 목록이 아니라 totalElements(개수)뿐이라
+ * 본문 전송을 최소화한다. 실패는 조용히 무시 — 배지는 있으면 좋은 정보일 뿐,
+ * 이것 때문에 페이지가 에러를 띄우면 주객전도다.
+ */
+async function loadReviewBadge() {
+  if (!isLoggedIn()) return;
+  try {
+    const data = await api("/api/me/reviews/today?size=1");
+    const el = document.getElementById("reviewBadge");
+    if (el && data.totalElements > 0) {
+      el.innerHTML = `<span class="nav-badge">${data.totalElements}</span>`;
+    }
+  } catch (e) { /* 배지 실패는 무시(위 주석) */ }
 }

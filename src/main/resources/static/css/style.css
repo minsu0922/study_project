@@ -1,172 +1,333 @@
 /* =====================================================================
- * csquiz 공용 스타일
+ * csquiz 공용 스타일 — v2 (퀴즈 사이트 리뉴얼)
  * ---------------------------------------------------------------------
  * 프레임워크(부트스트랩 등) 없이 순수 CSS만 쓴다 — 정적 HTML/JS 방식의 취지
  * (설치·빌드 없이 static 폴더만으로 동작)와 맞추기 위해서다.
- * 색은 CSS 변수로 모아 두어 나중에 테마를 바꿀 때 한 곳만 고치면 된다.
+ *
+ * v2 리뉴얼 방향:
+ *   - "문서 사이트"가 아니라 "퀴즈 앱" 느낌: 문제 글자를 크게, 보기를 큰 버튼으로,
+ *     진행 상황(진행 바·점수)을 항상 보여준다.
+ *   - 색·그림자·간격은 전부 CSS 변수로 — 테마 교체 시 :root만 고치면 된다.
+ *   - 기존 페이지(admin/login/문서)가 쓰던 클래스(.card .badge .grid …)는 전부
+ *     유지한다 — 클래스 이름을 바꾸면 모든 HTML을 같이 고쳐야 하기 때문.
  * ===================================================================== */
 
 :root {
-  --primary: #2563eb;        /* 메인 파랑 (버튼·링크·강조) */
-  --primary-dark: #1d4ed8;
-  --bg: #f8fafc;             /* 페이지 배경 (살짝 회색) */
-  --card: #ffffff;           /* 카드 배경 */
-  --text: #0f172a;           /* 본문 글자 */
-  --muted: #64748b;          /* 보조 글자 (설명·날짜) */
-  --border: #e2e8f0;
-  --correct: #16a34a;        /* 정답 초록 */
-  --wrong: #dc2626;          /* 오답 빨강 */
+  /* 브랜드: 남색 계열(인디고) — 파랑보다 차분하고 "학습 도구" 인상을 준다 */
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --primary-soft: #eef2ff;       /* 배지·호버 등 옅은 강조 배경 */
+  --accent: #f59e0b;             /* 복습(리마인드) 계열 강조 — 주황 */
+  --accent-soft: #fffbeb;
+
+  --bg: #f5f6fa;                 /* 페이지 배경 */
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  --correct: #16a34a;
+  --wrong: #dc2626;
   --correct-bg: #f0fdf4;
   --wrong-bg: #fef2f2;
+
+  /* 그림자 2단계 — 평상시엔 옅게, 마우스를 올리면 살짝 떠오르게(카드가 "누를 수 있는 것"처럼 보임) */
+  --shadow: 0 1px 3px rgba(17, 24, 39, .06), 0 1px 2px rgba(17, 24, 39, .04);
+  --shadow-lift: 0 8px 24px rgba(17, 24, 39, .10);
+
+  --radius: 14px;                /* 카드 공통 둥글기 */
 }
 
 * { box-sizing: border-box; }
 
 /* hidden 속성이 항상 이기게 하는 전역 규칙.
-   hidden의 기본 display:none은 "브라우저 기본 스타일"이라, 우리가 .btn{display:inline-block}
-   .pager{display:flex}처럼 display를 지정한 요소에서는 작성자 스타일이 이겨 hidden이 무시된다.
-   (실제로 페이저·수정취소 버튼이 안 숨겨지는 버그가 두 번 났다) !important로 항상 우선시킨다. */
+   (display를 지정한 요소에서 hidden이 무시돼 페이저가 안 숨겨지는 버그가 두 번 났었다) */
 [hidden] { display: none !important; }
+
+html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif; /* 한글 기본 폰트 우선 */
+  font-family: "Pretendard", "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── 상단 내비게이션 (모든 페이지 공통, js/api.js의 renderNav가 채움) ── */
 .nav {
-  background: var(--card);
+  position: sticky; top: 0; z-index: 50;   /* 긴 문서를 읽다가도 메뉴는 항상 손에 닿게 */
+  background: rgba(255, 255, 255, .9);
+  backdrop-filter: blur(8px);              /* 스크롤 시 내용이 살짝 비쳐 "떠 있는 바" 느낌 */
   border-bottom: 1px solid var(--border);
   padding: 0 24px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  height: 56px;
+  display: flex; align-items: center; gap: 4px;
+  height: 58px;
 }
-.nav .brand { font-weight: 700; font-size: 1.15rem; color: var(--primary); text-decoration: none; }
-.nav a { color: var(--text); text-decoration: none; font-size: 0.95rem; }
-.nav a:hover { color: var(--primary); }
-.nav a.active { color: var(--primary); font-weight: 600; }
-.nav .spacer { flex: 1; }         /* 로그인 메뉴를 오른쪽으로 밀기 */
-.nav .user-email { color: var(--muted); font-size: 0.85rem; }
+.nav .brand {
+  font-weight: 800; font-size: 1.2rem; color: var(--primary);
+  text-decoration: none; margin-right: 16px; letter-spacing: -.02em;
+}
+.nav a { color: var(--text); text-decoration: none; font-size: .93rem; padding: 6px 10px; border-radius: 8px; }
+.nav a:hover { background: var(--primary-soft); color: var(--primary); }
+.nav a.active { color: var(--primary); font-weight: 700; background: var(--primary-soft); }
+.nav .spacer { flex: 1; }
+.nav .user-email { color: var(--muted); font-size: .85rem; margin-right: 4px; }
 
-.container { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+/* 메뉴 오른쪽 "복습 N" 알림 배지 — 오늘 복습할 게 있으면 주황 점으로 눈에 띄게 */
+.nav .nav-badge {
+  display: inline-block; min-width: 18px; text-align: center;
+  background: var(--accent); color: #fff;
+  border-radius: 999px; font-size: .7rem; font-weight: 700;
+  padding: 0 5px; margin-left: 4px; vertical-align: 2px;
+}
 
-h1 { font-size: 1.5rem; margin: 8px 0 16px; }
+.container { max-width: 860px; margin: 0 auto; padding: 28px 16px 72px; }
+
+h1 { font-size: 1.55rem; margin: 8px 0 18px; letter-spacing: -.02em; }
 
 /* ── 카드(문서·문제·오답 항목 공통) ── */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 20px;
-  margin-bottom: 12px;
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
 }
 .card h3 { margin: 0 0 6px; font-size: 1.05rem; }
 .card a { color: var(--text); text-decoration: none; }
 .card a:hover { color: var(--primary); }
+/* 목록에서 "클릭할 수 있는 카드"는 hover 시 살짝 떠오르게 — 누를 수 있다는 신호 */
+.card.clickable { transition: box-shadow .15s, transform .15s; cursor: pointer; }
+.card.clickable:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px); }
 
 /* 도메인·난이도 등 작은 라벨 */
 .badge {
   display: inline-block;
-  background: #eff6ff;
-  color: var(--primary);
-  border-radius: 999px;
-  padding: 1px 10px;
-  font-size: 0.75rem;
-  margin-right: 6px;
+  background: var(--primary-soft); color: var(--primary);
+  border-radius: 999px; padding: 2px 11px;
+  font-size: .74rem; font-weight: 600; margin-right: 6px;
 }
-.badge.gray { background: #f1f5f9; color: var(--muted); }
+.badge.gray { background: #f3f4f6; color: var(--muted); }
+.badge.orange { background: var(--accent-soft); color: #b45309; }   /* 복습 stage 표시용 */
+.badge.green { background: var(--correct-bg); color: var(--correct); } /* 졸업 표시용 */
 
-.meta { color: var(--muted); font-size: 0.8rem; }
+.meta { color: var(--muted); font-size: .82rem; }
 
 /* ── 폼(로그인/회원가입/필터) ── */
 .field { margin-bottom: 14px; }
-.field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
-input[type=text], input[type=email], input[type=password], select {
-  width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.95rem;
-  background: var(--card);
+.field label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+input[type=text], input[type=email], input[type=password], select, textarea {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: .95rem; background: var(--card); font-family: inherit;
 }
-input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
 
 .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: end; }
 .filters .field { margin: 0; flex: 1; min-width: 130px; }
 
 button, .btn {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 9px 18px;
-  font-size: 0.95rem;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-block;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: 10px;
+  padding: 10px 20px; font-size: .95rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; display: inline-block;
+  font-family: inherit;
+  transition: background .12s, transform .05s;
 }
 button:hover, .btn:hover { background: var(--primary-dark); }
-button:disabled { background: #cbd5e1; cursor: default; }
+button:active, .btn:active { transform: scale(.98); }   /* 눌리는 느낌 */
+button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .btn-outline { background: var(--card); color: var(--primary); border: 1px solid var(--primary); }
-.btn-outline:hover { background: #eff6ff; }
+.btn-outline:hover { background: var(--primary-soft); }
+.btn-lg { padding: 14px 30px; font-size: 1.05rem; border-radius: 12px; }  /* 시작하기 등 핵심 동작 */
 
 /* ── 알림/결과 박스 ── */
-.alert { border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 0.9rem; }
+.alert { border-radius: 10px; padding: 11px 14px; margin: 12px 0; font-size: .9rem; }
 .alert.error { background: var(--wrong-bg); color: var(--wrong); }
-.alert.info { background: #eff6ff; color: var(--primary); }
+.alert.info { background: var(--primary-soft); color: var(--primary); }
 
-/* 채점 결과: 정답/오답에 따라 배경색으로 즉시 구분되게 */
-.result { border-radius: 8px; padding: 12px 16px; margin-top: 12px; font-size: 0.92rem; }
+/* (구)채점 결과 박스 — 오답노트 등에서 계속 사용 */
+.result { border-radius: 10px; padding: 12px 16px; margin-top: 12px; font-size: .92rem; }
 .result.correct { background: var(--correct-bg); border: 1px solid var(--correct); }
 .result.wrong { background: var(--wrong-bg); border: 1px solid var(--wrong); }
 .result .verdict { font-weight: 700; }
 .result.correct .verdict { color: var(--correct); }
 .result.wrong .verdict { color: var(--wrong); }
 
-/* ── 퀴즈 보기(객관식/OX) ── */
+/* (구)라디오형 보기 — admin 미리보기 등 호환용으로 유지 */
 .choice { display: block; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
 .choice:hover { border-color: var(--primary); }
 .choice input { margin-right: 8px; }
 
+/* =====================================================================
+ * 퀴즈 플레이어 (js/player.js) — 한 문제씩 보여주는 화면
+ * ===================================================================== */
+
+/* 상단 진행 영역: "문제 3 / 10" + 진행 바 + 현재 점수 */
+.player-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.player-top .count { font-weight: 700; font-size: .95rem; white-space: nowrap; }
+.player-top .score { color: var(--muted); font-size: .88rem; white-space: nowrap; }
+
+.progress { flex: 1; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.progress > div {
+  height: 100%; background: var(--primary); border-radius: 999px;
+  transition: width .3s ease;    /* 다음 문제로 넘어갈 때 바가 부드럽게 자란다 */
+}
+
+/* 문제 카드 — 지문을 크게, 여백을 넉넉하게(한 화면에 문제 하나만 집중) */
+.player-card { padding: 26px 30px; }
+.player-card .q-text { font-size: 1.18rem; font-weight: 700; margin: 10px 0 20px; line-height: 1.55; }
+
+/* 새 문제가 나타날 때 살짝 떠오르는 등장 효과 — "다음으로 넘어갔다"는 시각 신호 */
+.fade-in { animation: fadeUp .25s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* 보기 버튼(객관식) — 라디오 대신 버튼 전체가 클릭 영역(모바일에서도 누르기 쉽게) */
+.opt {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--card); color: var(--text);
+  border: 2px solid var(--border); border-radius: 12px;
+  padding: 13px 16px; margin-bottom: 10px;
+  font-size: .97rem; font-weight: 500; cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.opt:hover { background: var(--primary-soft); border-color: var(--primary); }
+.opt .key {
+  flex: none; width: 26px; height: 26px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f3f4f6; color: var(--muted); font-size: .8rem; font-weight: 700;
+}
+/* 선택됨(아직 채점 전) */
+.opt.selected { border-color: var(--primary); background: var(--primary-soft); }
+.opt.selected .key { background: var(--primary); color: #fff; }
+/* 채점 후 비활성 — 정답/오답이 아닌 보기는 원래 색 그대로 잠근다.
+   전역 button:disabled의 회색 배경이 .opt에도 먹는 것을 여기서 되돌린다.
+   ※ 순서 중요: 아래 .is-correct/.is-wrong과 명시도가 같아(0,2,0) "나중 규칙"이 이겨야 하므로
+   이 규칙을 반드시 먼저 쓴다. */
+.opt:disabled { background: var(--card); color: var(--text); border-color: var(--border); cursor: default; }
+.opt:disabled:hover { background: var(--card); }
+/* 채점 후: 정답/오답을 보기 자체에 색으로 표시(어떤 보기가 답이었는지 한눈에) */
+.opt.is-correct { border-color: var(--correct); background: var(--correct-bg); }
+.opt.is-correct .key { background: var(--correct); color: #fff; }
+.opt.is-wrong { border-color: var(--wrong); background: var(--wrong-bg); }
+.opt.is-wrong .key { background: var(--wrong); color: #fff; }
+/* 정답/오답 보기 위에 마우스를 올려도 색이 안 바뀌게(위 :hover 규칙들을 최종적으로 눌러 이긴다) */
+.opt.is-correct:disabled:hover { background: var(--correct-bg); }
+.opt.is-wrong:disabled:hover { background: var(--wrong-bg); }
+
+/* OX는 두 개의 큰 정사각 버튼 — 나란히 */
+.ox-row { display: flex; gap: 12px; }
+.ox-row .opt { justify-content: center; font-size: 1.5rem; font-weight: 800; padding: 20px 0; }
+
+/* 채점 피드백 박스(플레이어 안) */
+.feedback { border-radius: 12px; padding: 14px 18px; margin-top: 16px; font-size: .93rem; }
+.feedback.correct { background: var(--correct-bg); border: 1px solid #bbf7d0; }
+.feedback.wrong { background: var(--wrong-bg); border: 1px solid #fecaca; }
+.feedback .verdict { font-weight: 800; font-size: 1.02rem; }
+.feedback.correct .verdict { color: var(--correct); }
+.feedback.wrong .verdict { color: var(--wrong); }
+.feedback .explain { margin-top: 8px; color: #374151; }
+
+/* 하단 동작 버튼 줄(제출/다음) — 오른쪽 정렬, 위 요소와 간격 */
+.player-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+/* 키보드 힌트(1~5 선택, Enter 제출) — 몰라도 되는 정보라 아주 옅게 */
+.kbd-hint { color: #9ca3af; font-size: .78rem; text-align: right; margin-top: 10px; }
+.kbd-hint kbd {
+  background: #f3f4f6; border: 1px solid var(--border); border-bottom-width: 2px;
+  border-radius: 5px; padding: 0 5px; font-size: .75rem; font-family: inherit;
+}
+
+/* ── 결과 화면 ── */
+.score-board { text-align: center; padding: 40px 24px 32px; }
+.score-board .big {
+  font-size: 3.2rem; font-weight: 800; color: var(--primary); line-height: 1.1;
+  letter-spacing: -.03em;
+}
+.score-board .big small { font-size: 1.4rem; color: var(--muted); font-weight: 600; }
+.score-board .msg { font-size: 1.05rem; margin-top: 8px; }
+.score-board .sub { color: var(--muted); font-size: .88rem; margin-top: 4px; }
+.score-board .actions { margin-top: 24px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* 결과 화면의 오답 복기 목록 — 문제·내 답·정답·해설을 한 카드에 */
+.review-list h2 { font-size: 1.1rem; margin: 26px 0 12px; }
+.miss-item .q { font-weight: 600; margin-bottom: 6px; }
+.miss-item .my { color: var(--wrong); font-size: .9rem; }
+.miss-item .ans { color: var(--correct); font-size: .9rem; }
+.miss-item .exp { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+
+/* =====================================================================
+ * 홈(index.html) — 히어로 + 빠른 시작 카드
+ * ===================================================================== */
+.hero { text-align: center; padding: 44px 16px 28px; }
+.hero h1 { font-size: 2rem; margin: 0 0 10px; letter-spacing: -.03em; }
+.hero h1 .accent { color: var(--primary); }
+.hero p { color: var(--muted); margin: 0 0 22px; }
+
+/* 빠른 시작 카드 그리드 — 화면이 좁아지면 자동으로 1열 */
+.quick-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px; margin-top: 10px;
+}
+.quick-card {
+  display: block; text-decoration: none; color: var(--text);
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px;
+  box-shadow: var(--shadow);
+  transition: box-shadow .15s, transform .15s;
+}
+.quick-card:hover { box-shadow: var(--shadow-lift); transform: translateY(-3px); }
+.quick-card .icon { font-size: 1.7rem; }
+.quick-card h3 { margin: 8px 0 4px; font-size: 1.02rem; }
+.quick-card p { margin: 0; color: var(--muted); font-size: .84rem; }
+/* "오늘의 복습" 카드는 할 일이 있을 때 주황 테두리로 살짝 재촉한다 */
+.quick-card.due { border-color: var(--accent); background: var(--accent-soft); }
+
 /* ── 문서 본문(마크다운 렌더링 영역) ── */
-.doc-body { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px 28px; }
-.doc-body pre { background: #f1f5f9; padding: 12px; border-radius: 8px; overflow-x: auto; }
-.doc-body code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+.doc-body { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px 30px; box-shadow: var(--shadow); }
+.doc-body pre { background: #f3f4f6; padding: 12px; border-radius: 8px; overflow-x: auto; }
+.doc-body code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
 .doc-body img { max-width: 100%; }
 
 /* ── 페이지 이동(이전/다음) ── */
-/* hidden으로 숨기는 동작은 파일 상단의 전역 [hidden] 규칙이 보장한다 */
 .pager { display: flex; gap: 8px; justify-content: center; margin-top: 20px; align-items: center; }
-.pager .info { color: var(--muted); font-size: 0.85rem; }
+.pager .info { color: var(--muted); font-size: .85rem; }
 
 /* 로그인/회원가입처럼 좁은 폼 페이지 */
 .narrow { max-width: 400px; }
 
-/* ── 관리자 페이지 ── */
+/* ── 관리자 페이지 (기존 클래스 유지) ── */
 .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
 .tab-btn { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-.tab-btn:hover { background: #eff6ff; }
+.tab-btn:hover { background: var(--primary-soft); }
 .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-/* 대시보드 요약 타일 */
 .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-.stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
+.stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow); }
 .stat .num { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
-.stat .label { color: var(--muted); font-size: 0.85rem; }
+.stat .label { color: var(--muted); font-size: .85rem; }
 
-/* 표(현황판·정답률·목록) — 넓은 표는 .table-wrap이 가로 스크롤을 담당 */
 .table-wrap { overflow-x: auto; margin-bottom: 24px; }
-table.grid { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); font-size: 0.9rem; }
+table.grid { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); font-size: .9rem; }
 table.grid th, table.grid td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
 table.grid td.wrap { white-space: normal; }
-table.grid th { background: #f1f5f9; color: var(--muted); font-weight: 600; }
-table.grid td.zero { color: #cbd5e1; }  /* 문제 0개인 칸은 흐리게 — 빈 곳이 한눈에 보이게 */
+table.grid th { background: #f3f4f6; color: var(--muted); font-weight: 600; }
+table.grid td.zero { color: #d1d5db; }
 
-.row-actions button { padding: 4px 10px; font-size: 0.8rem; margin-left: 4px; }
+.row-actions button { padding: 4px 10px; font-size: .8rem; margin-left: 4px; }
 .danger { background: var(--wrong); }
 .danger:hover { background: #b91c1c; }
+
+/* ── 모바일 보정 — 좁은 화면에서 여백·글자를 줄여 답답하지 않게 ── */
+@media (max-width: 560px) {
+  .nav { padding: 0 12px; gap: 2px; }
+  .nav .user-email { display: none; }   /* 좁으면 이메일은 생략(로그아웃 버튼이 더 중요) */
+  .container { padding-top: 18px; }
+  .player-card { padding: 20px 18px; }
+  .player-card .q-text { font-size: 1.08rem; }
+  .hero { padding-top: 28px; }
+  .hero h1 { font-size: 1.55rem; }
+}

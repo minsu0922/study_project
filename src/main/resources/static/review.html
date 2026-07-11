@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>복습 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container">
+  <!-- 화면 1: 오늘의 복습 요약 + 시작 버튼 + 내 복습 현황 -->
+  <section id="overview">
+    <h1>복습</h1>
+    <p class="meta">틀렸던 문제를 <b>1일 → 3일 → 7일 → 14일 → 30일</b> 간격으로 다시 만나요.
+      맞힐 때마다 간격이 늘고, 다섯 번 통과하면 졸업 🎓 (틀리면 처음부터!)</p>
+
+    <div id="message"></div>
+    <div id="todayBox"></div>
+
+    <div class="review-list">
+      <h2>내 복습 현황</h2>
+      <div class="filters">
+        <div class="field" style="max-width:200px">
+          <label for="statusFilter">상태</label>
+          <select id="statusFilter">
+            <option value="">전체</option>
+            <option value="LEARNING">복습 중</option>
+            <option value="GRADUATED">졸업 🎓</option>
+          </select>
+        </div>
+      </div>
+      <div id="list"></div>
+      <div class="pager" id="pager" hidden>
+        <button id="prevBtn" class="btn-outline">이전</button>
+        <span class="info" id="pageInfo"></span>
+        <button id="nextBtn" class="btn-outline">다음</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 화면 2: 복습 플레이어(js/player.js) — [복습 시작]을 누르면 전환 -->
+  <section id="player" hidden></section>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/player.js"></script>
+<script>
+/* 복습 페이지 (로드맵 4 — docs/10) — 흐름:
+ *   1) GET /api/me/reviews/today 로 "오늘 풀 문제"를 조회 (빈 목록 = 오늘 할 일 없음, 정상)
+ *   2) [복습 시작] → 퀴즈와 같은 플레이어로 진행. 제출도 같은 POST /api/quiz/submit —
+ *      채점 결과가 서버에서 자동으로 사다리 승급/리셋에 반영된다(별도 복습 제출 API 없음).
+ *   3) 아래에는 전체 현황(GET /api/me/reviews) — 문제별로 몇 단계인지, 다음 복습이 언제인지.
+ * 복습은 "내 기록"이라 전부 로그인 필수. */
+renderNav("review");
+
+const overviewEl = document.getElementById("overview");
+const playerEl = document.getElementById("player");
+let page = 0;
+
+if (!isLoggedIn()) {
+  document.getElementById("message").innerHTML =
+    `<div class="alert info">복습은 <b>내 계정의 기록</b>이라 로그인이 필요합니다.
+     <a href="/login.html">로그인하기</a></div>`;
+} else {
+  loadToday();
+  loadStatus();
+}
+
+/* ── 오늘의 복습 박스 ── */
+async function loadToday() {
+  const box = document.getElementById("todayBox");
+  try {
+    // size=50: /today의 최대 페이지 크기(docs/10). 밀린 게 50개를 넘으면 한 판 끝낸 뒤
+    // 다시 들어오면 나머지가 이어서 나온다 — 한 번에 50문제 넘게 푸는 건 어차피 무리다.
+    const data = await api("/api/me/reviews/today?size=50");
+    if (data.totalElements === 0) {
+      box.innerHTML = `
+        <div class="card" style="text-align:center;padding:28px">
+          <div style="font-size:1.6rem">🎉</div>
+          <b>오늘 복습할 문제가 없어요!</b>
+          <div class="meta" style="margin-top:4px">새 문제에 도전해 볼까요?</div>
+          <a class="btn" style="margin-top:12px" href="/quiz.html">퀴즈 풀러 가기</a>
+        </div>`;
+      return;
+    }
+    box.innerHTML = `
+      <div class="card" style="text-align:center;padding:28px">
+        <div style="font-size:1.6rem">📅</div>
+        <b>오늘 복습할 문제가 ${data.totalElements}개 있어요</b>
+        <div class="meta" style="margin-top:4px">오래 밀린 문제부터 차례로 나와요</div>
+        <button id="startReviewBtn" class="btn-lg" style="margin-top:12px">복습 시작 ✍️</button>
+      </div>`;
+    document.getElementById("startReviewBtn").addEventListener("click", () => {
+      overviewEl.hidden = true;
+      playerEl.hidden = false;
+      startPlayer(playerEl, data.content, {
+        reviewMode: true,                 // 문항에 "복습 N단계" 배지 + 승급/리셋 안내 문구
+        exitLabel: "복습 현황으로",
+        onExit: backToOverview,
+      });
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="alert error">복습 목록을 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+/** 플레이어 결과 화면에서 복귀 — 방금 푼 결과가 반영되게 요약·현황·배지를 다시 불러온다. */
+function backToOverview() {
+  playerEl.hidden = true;
+  playerEl.innerHTML = "";
+  overviewEl.hidden = false;
+  page = 0;
+  loadToday();
+  loadStatus();
+  window.scrollTo({ top: 0 });
+}
+
+/* ── 내 복습 현황 표 ── */
+async function loadStatus() {
+  const list = document.getElementById("list");
+  try {
+    const params = new URLSearchParams({ page });
+    const status = document.getElementById("statusFilter").value;
+    if (status) params.set("status", status);
+    const data = await api("/api/me/reviews?" + params);
+
+    if (data.content.length === 0) {
+      list.innerHTML = `<div class="card meta">아직 복습 기록이 없어요.
+        퀴즈에서 문제를 틀리면 자동으로 여기에 올라와요.</div>`;
+    } else {
+      // 표 대신 카드 — 모바일에서 표는 옆으로 잘리기 쉽고, 항목당 정보가 4~5개뿐이라 카드가 읽기 편하다
+      list.innerHTML = data.content.map(r => {
+        const stageBadge = r.status === "GRADUATED"
+          ? `<span class="badge green">졸업 🎓</span>`
+          : `<span class="badge orange">${r.stage + 1}단계</span>`;
+        const dueLabel = r.status === "GRADUATED" ? ""
+          : r.due ? `<span style="color:var(--accent);font-weight:700">지금 복습할 시간!</span>`
+                  : `다음 복습: ${formatDate(r.nextReviewAt)}`;
+        return `
+          <div class="card">
+            <div style="margin-bottom:4px">
+              <span class="badge">${escapeHtml(r.domainLabel)}</span>
+              ${stageBadge}
+              <span class="badge gray">${r.reviewCount}회 풀이</span>
+            </div>
+            <div style="font-weight:600">${escapeHtml(r.question)}</div>
+            <div class="meta" style="margin-top:4px">${dueLabel}</div>
+          </div>`;
+      }).join("");
+    }
+
+    const pager = document.getElementById("pager");
+    pager.hidden = data.totalPages <= 1;
+    document.getElementById("pageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
+    document.getElementById("prevBtn").disabled = data.page === 0;
+    document.getElementById("nextBtn").disabled = !data.hasNext;
+  } catch (e) {
+    const text = e.status === 401
+      ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인해 주세요.</a>`
+      : `불러오지 못했습니다: ${escapeHtml(e.message)}`;
+    list.innerHTML = `<div class="alert error">${text}</div>`;
+  }
+}
+
+document.getElementById("statusFilter").addEventListener("change", () => { page = 0; loadStatus(); });
+document.getElementById("prevBtn").addEventListener("click", () => { page--; loadStatus(); });
+document.getElementById("nextBtn").addEventListener("click", () => { page++; loadStatus(); });
+</script>
+</body>
+</html>

@@ -3,85 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>csquiz — CS 지식베이스</title>
+<title>csquiz — CS 퀴즈로 면접 준비</title>
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<!-- 공통 메뉴: js/api.js의 renderNav()가 채운다 (페이지마다 메뉴 HTML을 복붙하지 않기 위함) -->
 <header id="nav"></header>
 
 <main class="container">
-  <h1>CS 문서</h1>
+  <!-- v2: 홈 = 문서 목록이 아니라 "시작 화면".
+       퀴즈 사이트의 첫 화면은 "무엇을 읽을까"가 아니라 "지금 뭘 풀까"에 답해야 한다.
+       핵심 동작(퀴즈 시작)을 가장 크게, 오늘의 복습은 할 일이 있을 때만 강조(주황). -->
+  <section class="hero">
+    <h1>CS 면접, <span class="accent">매일 조금씩</span></h1>
+    <p>퀴즈로 풀고, 틀린 건 잊어버릴 때쯤 다시 만나요.<br>
+      네트워크 · 운영체제 · 데이터베이스 · 자료구조 등 10개 분야</p>
+    <a href="/quiz.html" class="btn btn-lg">퀴즈 시작하기 🚀</a>
+  </section>
 
-  <!-- 필터: 도메인 선택 시 목록을 다시 불러온다. 태그 필터는 UI 단순화를 위해 생략(API는 지원) -->
-  <div class="filters">
-    <div class="field">
-      <label for="domainFilter">도메인</label>
-      <select id="domainFilter"></select>
-    </div>
-  </div>
-
-  <div id="message"></div>
-  <div id="docList"></div>
-
-  <!-- 이전/다음 페이지 (PageResponse의 page/totalPages/hasNext 사용) -->
-  <div class="pager" id="pager" hidden>
-    <button id="prevBtn" class="btn-outline">이전</button>
-    <span class="info" id="pageInfo"></span>
-    <button id="nextBtn" class="btn-outline">다음</button>
-  </div>
+  <section class="quick-grid" id="quickGrid">
+    <!-- 오늘의 복습 카드: 로그인 + 복습할 게 있을 때만 JS가 맨 앞에 끼워 넣는다 -->
+    <a class="quick-card" href="/quiz.html">
+      <div class="icon">✍️</div>
+      <h3>퀴즈 풀기</h3>
+      <p>도메인·난이도를 골라 한 문제씩 도전</p>
+    </a>
+    <a class="quick-card" href="/wrong-answers.html">
+      <div class="icon">📕</div>
+      <h3>오답노트</h3>
+      <p>내가 뭘 틀렸고 뭐라고 답했는지 한눈에</p>
+    </a>
+    <a class="quick-card" href="/documents.html">
+      <div class="icon">📚</div>
+      <h3>CS 문서</h3>
+      <p>개념 정리를 읽고 나서 문제로 확인</p>
+    </a>
+  </section>
 </main>
 
 <script src="/js/api.js"></script>
 <script>
-/* 문서 목록 페이지
- * GET /api/documents?domain=&page= 를 불러와 카드 목록으로 그린다.
- * 상태는 "현재 페이지 번호 + 선택한 도메인" 두 개뿐이라 전역 변수로 충분하다. */
-renderNav("docs");
+/* 홈 화면 — 정적 카드 3개 + (로그인 시) "오늘의 복습" 카드를 동적으로 추가.
+ * 복습 카드를 서버 개수로 그리는 이유: "복습 0개인데 복습하러 가라"는 카드는
+ * 눌러봤자 허탕이라, 할 일이 실제로 있을 때만 (그리고 주황색으로) 보여준다. */
+renderNav("home");
 
-const domainFilter = document.getElementById("domainFilter");
-fillSelect(domainFilter, DOMAINS, "전체 도메인");
-
-let page = 0; // 0부터 시작 (백엔드 Pageable 규칙과 동일)
-
-async function loadDocs() {
-  const msg = document.getElementById("message");
-  msg.innerHTML = "";
+(async () => {
+  if (!isLoggedIn()) return;
   try {
-    const params = new URLSearchParams({ page });
-    if (domainFilter.value) params.set("domain", domainFilter.value);
-    const data = await api("/api/documents?" + params);
-
-    const list = document.getElementById("docList");
-    if (data.content.length === 0) {
-      list.innerHTML = `<p class="meta">문서가 없습니다.</p>`;
-    } else {
-      // 목록은 본문(contentMd) 없이 요약만 온다 — 본문은 클릭해서 상세에서 읽는다(docs/03)
-      list.innerHTML = data.content.map(d => `
-        <div class="card">
-          <h3><a href="/document.html?slug=${encodeURIComponent(d.slug)}">${escapeHtml(d.title)}</a></h3>
-          <span class="badge">${escapeHtml(d.domainLabel)}</span>
-          ${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}
-          <div class="meta">수정: ${formatDate(d.updatedAt)}</div>
-        </div>`).join("");
-    }
-
-    // 페이지 버튼: 전체가 1페이지면 숨긴다(불필요한 UI 제거)
-    const pager = document.getElementById("pager");
-    pager.hidden = data.totalPages <= 1;
-    document.getElementById("pageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
-    document.getElementById("prevBtn").disabled = data.page === 0;
-    document.getElementById("nextBtn").disabled = !data.hasNext;
-  } catch (e) {
-    msg.innerHTML = `<div class="alert error">문서를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
-  }
-}
-
-domainFilter.addEventListener("change", () => { page = 0; loadDocs(); }); // 필터 바꾸면 1페이지부터
-document.getElementById("prevBtn").addEventListener("click", () => { page--; loadDocs(); });
-document.getElementById("nextBtn").addEventListener("click", () => { page++; loadDocs(); });
-
-loadDocs();
+    const data = await api("/api/me/reviews/today?size=1"); // 개수만 필요 — 본문 최소화
+    if (data.totalElements === 0) return;
+    const card = document.createElement("a");
+    card.className = "quick-card due";
+    card.href = "/review.html";
+    card.innerHTML = `
+      <div class="icon">📅</div>
+      <h3>오늘의 복습 ${data.totalElements}개</h3>
+      <p>잊어버리기 전에 다시 풀 시간이에요</p>`;
+    document.getElementById("quickGrid").prepend(card); // 할 일은 맨 앞에
+  } catch (e) { /* 홈은 복습 카드 없이도 완전한 화면 — 실패는 조용히 넘어간다 */ }
+})();
 </script>
 </body>
 </html>

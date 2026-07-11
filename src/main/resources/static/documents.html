@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS 문서 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<!-- 공통 메뉴: js/api.js의 renderNav()가 채운다 (페이지마다 메뉴 HTML을 복붙하지 않기 위함) -->
+<header id="nav"></header>
+
+<main class="container">
+  <h1>CS 문서</h1>
+
+  <!-- 필터: 도메인 선택 시 목록을 다시 불러온다. 태그 필터는 UI 단순화를 위해 생략(API는 지원) -->
+  <div class="filters">
+    <div class="field">
+      <label for="domainFilter">도메인</label>
+      <select id="domainFilter"></select>
+    </div>
+  </div>
+
+  <div id="message"></div>
+  <div id="docList"></div>
+
+  <!-- 이전/다음 페이지 (PageResponse의 page/totalPages/hasNext 사용) -->
+  <div class="pager" id="pager" hidden>
+    <button id="prevBtn" class="btn-outline">이전</button>
+    <span class="info" id="pageInfo"></span>
+    <button id="nextBtn" class="btn-outline">다음</button>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+/* 문서 목록 페이지 (v2에서 index.html → documents.html로 이동 — 홈은 퀴즈 시작 화면이 됐다)
+ * GET /api/documents?domain=&page= 를 불러와 카드 목록으로 그린다.
+ * 상태는 "현재 페이지 번호 + 선택한 도메인" 두 개뿐이라 전역 변수로 충분하다. */
+renderNav("docs");
+
+const domainFilter = document.getElementById("domainFilter");
+fillSelect(domainFilter, DOMAINS, "전체 도메인");
+
+let page = 0; // 0부터 시작 (백엔드 Pageable 규칙과 동일)
+
+async function loadDocs() {
+  const msg = document.getElementById("message");
+  msg.innerHTML = "";
+  try {
+    const params = new URLSearchParams({ page });
+    if (domainFilter.value) params.set("domain", domainFilter.value);
+    const data = await api("/api/documents?" + params);
+
+    const list = document.getElementById("docList");
+    if (data.content.length === 0) {
+      list.innerHTML = `<p class="meta">문서가 없습니다.</p>`;
+    } else {
+      // 목록은 본문(contentMd) 없이 요약만 온다 — 본문은 클릭해서 상세에서 읽는다(docs/03)
+      list.innerHTML = data.content.map(d => `
+        <div class="card clickable" onclick="location.href='/document.html?slug=${encodeURIComponent(d.slug)}'">
+          <h3><a href="/document.html?slug=${encodeURIComponent(d.slug)}">${escapeHtml(d.title)}</a></h3>
+          <span class="badge">${escapeHtml(d.domainLabel)}</span>
+          ${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}
+          <div class="meta">수정: ${formatDate(d.updatedAt)}</div>
+        </div>`).join("");
+    }
+
+    // 페이지 버튼: 전체가 1페이지면 숨긴다(불필요한 UI 제거)
+    const pager = document.getElementById("pager");
+    pager.hidden = data.totalPages <= 1;
+    document.getElementById("pageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
+    document.getElementById("prevBtn").disabled = data.page === 0;
+    document.getElementById("nextBtn").disabled = !data.hasNext;
+  } catch (e) {
+    msg.innerHTML = `<div class="alert error">문서를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+domainFilter.addEventListener("change", () => { page = 0; loadDocs(); }); // 필터 바꾸면 1페이지부터
+document.getElementById("prevBtn").addEventListener("click", () => { page--; loadDocs(); });
+document.getElementById("nextBtn").addEventListener("click", () => { page++; loadDocs(); });
+
+loadDocs();
+</script>
+</body>
+</html>

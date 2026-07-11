@@ -34,7 +34,7 @@ async function loadDoc() {
   const slug = new URLSearchParams(location.search).get("slug");
   const msg = document.getElementById("message");
   if (!slug) {
-    msg.innerHTML = `<div class="alert error">문서 주소가 올바르지 않습니다. <a href="/">목록으로</a></div>`;
+    msg.innerHTML = `<div class="alert error">문서 주소가 올바르지 않습니다. <a href="/documents.html">목록으로</a></div>`;
     return;
   }
   try {
@@ -62,7 +62,7 @@ async function loadDoc() {
     document.getElementById("doc").hidden = false;
   } catch (e) {
     const text = e.code === "DOC_001" ? "존재하지 않는 문서입니다." : e.message;
-    msg.innerHTML = `<div class="alert error">${escapeHtml(text)} <a href="/">목록으로</a></div>`;
+    msg.innerHTML = `<div class="alert error">${escapeHtml(text)} <a href="/documents.html">목록으로</a></div>`;
   }
 }
 loadDoc();
