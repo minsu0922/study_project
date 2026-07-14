@@ -116,6 +116,10 @@ h1 { font-size: 1.55rem; margin: 8px 0 18px; letter-spacing: -.02em; }
 
 .meta { color: var(--muted); font-size: .82rem; }
 
+/* 한 줄 말줄임 — 목록 카드에서 긴 지문이 카드 높이를 제각각 만들지 않게 자른다.
+ * (복습 현황처럼 "지문은 식별용, 본론은 메타데이터"인 목록에서 사용) */
+.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* ── 폼(로그인/회원가입/필터) ── */
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
