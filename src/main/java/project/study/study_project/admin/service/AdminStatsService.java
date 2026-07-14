@@ -1,6 +1,7 @@
 package project.study.study_project.admin.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminDashboardResponse;
@@ -27,6 +28,14 @@ public class AdminStatsService {
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
 
+    /**
+     * 뷰(domain_stats) 조회용. 뷰는 JPA 엔티티가 아니라서(PK 없음, 수정 불가)
+     * 리포지토리 대신 JdbcClient로 SQL을 직접 실행한다 — 엔티티로 억지 매핑하는 것보다
+     * "읽기 전용 SQL 결과 → DTO" 경로가 정직하다. JdbcClient는 Boot 3.2+의
+     * JdbcTemplate 후속(체이닝 API)으로, 같은 DataSource/트랜잭션에 참여한다.
+     */
+    private final JdbcClient jdbcClient;
+
     @Transactional(readOnly = true)
     public AdminDashboardResponse getDashboard() {
         var totals = new AdminDashboardResponse.Totals(
@@ -40,6 +49,23 @@ public class AdminStatsService {
                 .map(row -> new AdminDashboardResponse.MatrixCell(row.getDomain(), row.getDifficulty(), row.getCnt()))
                 .toList();
 
+        // 도메인별 정답률 — 집계는 뷰가 이미 끝냈으므로 여기선 SELECT * 수준의 단순 조회.
+        // 정렬(정답률 낮은 순)은 화면 요구라 SQL에 두지 않고 프론트가 한다(뷰는 표현 중립 유지).
+        List<AdminDashboardResponse.DomainStat> domainStats = jdbcClient
+                .sql("""
+                        SELECT domain, submission_count, correct_count, accuracy_pct,
+                               attempted_problem_count, solver_count
+                        FROM domain_stats
+                        """)
+                .query((rs, rowNum) -> new AdminDashboardResponse.DomainStat(
+                        rs.getString("domain"),
+                        rs.getLong("submission_count"),
+                        rs.getLong("correct_count"),
+                        rs.getDouble("accuracy_pct"),
+                        rs.getLong("attempted_problem_count"),
+                        rs.getLong("solver_count")))
+                .list();
+
         List<AdminDashboardResponse.ProblemStat> stats = submissionRepository.aggregateProblemStats()
                 .stream()
                 .map(row -> new AdminDashboardResponse.ProblemStat(
@@ -50,6 +76,6 @@ public class AdminStatsService {
                                 : (int) Math.round(row.getCorrectCount() * 100.0 / row.getAttempts())))
                 .toList();
 
-        return new AdminDashboardResponse(totals, matrix, stats);
+        return new AdminDashboardResponse(totals, matrix, domainStats, stats);
     }
 }

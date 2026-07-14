@@ -25,6 +25,9 @@
     <section id="tab-dashboard">
       <div class="stat-row" id="totals"></div>
 
+      <h3>도메인별 정답률 <span class="meta">(낮은 순 — 학습자들이 약한 영역부터. DB 뷰 domain_stats)</span></h3>
+      <div class="card" id="domainChart" style="padding:14px 16px"></div>
+
       <h3>도메인 × 난이도 문제 현황 <span class="meta">(흐린 0 = 출제가 비어 있는 칸)</span></h3>
       <div class="table-wrap"><table class="grid" id="matrixTable"></table></div>
 
@@ -165,6 +168,8 @@ async function loadDashboard() {
       ["문제", d.totals.problems], ["제출", d.totals.submissions],
     ].map(([label, num]) => `<div class="stat"><div class="num">${num}</div><div class="label">${label}</div></div>`).join("");
 
+    renderDomainChart(d.domainStats);
+
     // 현황판: 행=도메인(전체 10개 고정), 열=난이도. 데이터 없는 칸도 0으로 그려서 "빈 곳"을 드러낸다.
     const cellMap = {};
     d.problemMatrix.forEach(c => cellMap[c.domain + "|" + c.difficulty] = c.count);
@@ -194,6 +199,61 @@ async function loadDashboard() {
   } catch (e) {
     document.getElementById("guard").innerHTML = `<div class="alert error">대시보드 로딩 실패: ${escapeHtml(e.message)}</div>`;
   }
+}
+
+/**
+ * 도메인별 정답률 가로 막대 차트 — 데이터 출처는 DB 뷰 domain_stats(R__ 마이그레이션).
+ *
+ * [왜 가로 막대인가] 비교 대상이 "도메인"이라는 범주 6~10개이고 값이 0~100%로
+ * 상한이 있다 — 범주 비교는 막대가 정석이고, 한글 라벨은 가로형이어야 안 잘린다.
+ * 시리즈가 하나(정답률)뿐이라 범례는 두지 않는다(제목이 곧 범례).
+ *
+ * [정렬] 정답률 낮은 순 — 이 화면의 질문이 "어느 영역이 약한가"이기 때문.
+ * 정렬은 화면의 관심사라 서버/뷰가 아니라 여기서 한다.
+ *
+ * [표본 수 표기] 2회 제출에 0%는 통계가 아니라 우연이다. 라벨 옆에 제출 수를
+ * 함께 적어 작은 표본의 극단값을 과신하지 않게 한다.
+ */
+function renderDomainChart(rows) {
+  const box = document.getElementById("domainChart");
+  if (!rows || rows.length === 0) {
+    box.innerHTML = `<div class="meta">아직 제출 데이터가 없습니다. 제출이 쌓이면 도메인별 정답률이 여기 표시됩니다.</div>`;
+    return;
+  }
+  const sorted = [...rows].sort((a, b) => a.accuracyPct - b.accuracyPct);
+  box.innerHTML = sorted.map((r, i) => `
+    <div class="hbar-row" data-i="${i}">
+      <div class="hbar-label">${escapeHtml(domainLabel(r.domain))}<span class="n">${r.submissionCount}회</span></div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${Math.min(Math.max(r.accuracyPct, 0), 100)}%"></div></div>
+      <div class="hbar-value">${r.accuracyPct}%</div>
+    </div>`).join("");
+
+  /* 호버 툴팁 — 화면에 다 적으면 시끄러운 상세 수치(정답/문제/도전자)는 툴팁으로.
+   * 툴팁 하나를 공유하고 행마다 내용만 바꾼다. innerHTML이 아니라 textContent 조립이
+   * 아니어도 되는 이유: 아래 문자열은 전부 숫자와 우리가 만든 라벨뿐(사용자 입력 없음). */
+  let tip = document.getElementById("chartTip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.id = "chartTip";
+    tip.className = "chart-tip";
+    tip.hidden = true;
+    document.body.appendChild(tip);
+  }
+  box.querySelectorAll(".hbar-row").forEach(row => {
+    const r = sorted[Number(row.dataset.i)];
+    row.addEventListener("mouseenter", () => {
+      tip.innerHTML = `<b>${escapeHtml(domainLabel(r.domain))}</b><br>
+        정답 ${r.correctCount} / 제출 ${r.submissionCount} (${r.accuracyPct}%)<br>
+        풀린 문제 ${r.attemptedProblemCount}개 · 도전자 ${r.solverCount}명`;
+      tip.hidden = false;
+    });
+    row.addEventListener("mousemove", e => {
+      // 커서 오른쪽 아래 12px — 커서에 딱 붙이면 툴팁이 커서를 가린다
+      tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + "px";
+      tip.style.top = (e.clientY + 12) + "px";
+    });
+    row.addEventListener("mouseleave", () => { tip.hidden = true; });
+  });
 }
 
 /* ═══════════ 문제 관리 ═══════════ */

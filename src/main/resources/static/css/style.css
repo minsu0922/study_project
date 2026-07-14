@@ -120,6 +120,34 @@ h1 { font-size: 1.55rem; margin: 8px 0 18px; letter-spacing: -.02em; }
  * (복습 현황처럼 "지문은 식별용, 본론은 메타데이터"인 목록에서 사용) */
 .one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ── 가로 막대 차트(관리자 대시보드 — 도메인별 정답률) ──
+ * 0~100%로 상한이 정해진 값이라 트랙(옅은 배경) 위에 채움을 얹는 미터형.
+ * 막대 16px(과하게 두껍지 않게), 데이터 끝(오른쪽)만 4px 라운드, 기준선(왼쪽)은 직각 —
+ * "막대가 어디서 시작하는지"를 직각이 말해준다. 트랙은 같은 색 계열의 옅은 단계
+ * (--primary-soft)를 써서 "전체 100% 중 얼마"가 한 색 계열 안에서 읽히게 한다.
+ * 숫자·라벨은 데이터 색이 아니라 텍스트 색을 쓴다(색은 막대만 입는다). */
+.hbar-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 56px;  /* 라벨 | 막대 | 값 */
+  gap: 10px; align-items: center;
+  padding: 5px 8px; border-radius: 6px;
+}
+.hbar-row:hover { background: var(--bg); }  /* 행 전체가 호버 대상 — 막대보다 큰 히트 영역 */
+.hbar-label { font-size: .85rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbar-label .n { color: var(--muted); font-size: .75rem; margin-left: 4px; }  /* 표본 수 — 2회짜리 0%를 과신하지 않게 */
+.hbar-track { height: 16px; background: var(--primary-soft); border-radius: 0 4px 4px 0; }
+.hbar-fill  { height: 100%; background: var(--primary); border-radius: 0 4px 4px 0; min-width: 2px; }
+.hbar-value { font-size: .85rem; color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 차트 공용 툴팁 — 행 호버 시 상세 수치(제출/정답/도전자 등)를 커서 옆에 띄운다 */
+.chart-tip {
+  position: fixed; z-index: 50; pointer-events: none;  /* 툴팁이 마우스 이벤트를 가로채면 깜빡인다 */
+  background: var(--text); color: #fff;
+  font-size: .78rem; line-height: 1.5;
+  padding: 6px 10px; border-radius: 6px;
+  box-shadow: var(--shadow-lift);
+}
+
 /* ── 폼(로그인/회원가입/필터) ── */
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
