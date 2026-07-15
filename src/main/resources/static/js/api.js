@@ -97,8 +97,42 @@ async function api(path, options = {}) {
   return body.data;
 }
 
-/** refresh 토큰으로 access 재발급 시도. 성공 시 새 토큰 쌍 저장(회전) 후 true. */
-async function tryRefresh() {
+/**
+ * 진행 중인 재발급 Promise(single-flight 공유용). null이면 재발급 중이 아님.
+ *
+ * [왜 필요한가 — 동시 401 경쟁 상태]
+ * access 토큰이 만료된 채 페이지를 열면 요청이 동시에 여러 개 나간다
+ * (renderNav의 복습 배지 + 페이지 본론 API). 둘 다 401을 받고 각자 재발급을
+ * 시도하는데, 서버는 보안상 refresh 토큰 "회전"(한 번 쓴 토큰은 즉시 폐기,
+ * 재사용은 AUTH_005로 거부 — 탈취 감지 장치)을 하므로 두 번째 재발급은
+ * 반드시 실패한다. 그 실패가 api()의 clearLogin()으로 이어져 첫 번째가
+ * 방금 받아둔 멀쩡한 새 토큰까지 지워 버린다 → 영문 모를 로그아웃.
+ *
+ * [해결 — single-flight]
+ * 재발급을 "1개만 띄우고 나머지는 그 결과를 같이 기다리게" 한다.
+ * 먼저 도착한 호출이 Promise를 만들어 이 변수에 걸어두면, 그 사이에 온
+ * 호출들은 새 fetch를 만들지 않고 같은 Promise를 돌려받는다.
+ * (JS는 단일 스레드라 "확인 후 대입" 사이에 다른 코드가 끼어들 수 없어
+ * 이 패턴만으로 안전하다 — 서버였다면 락이 필요했을 일.)
+ * 서버의 회전 정책은 의도된 보안 설계이므로 건드리지 않고 클라이언트만 고친다.
+ */
+let refreshPromise = null;
+
+/**
+ * refresh 토큰으로 access 재발급 시도(single-flight 입구). 성공 시 true.
+ * 실제 네트워크 호출은 doRefresh()에 있고, 여기서는 "이미 진행 중이면
+ * 그 Promise를 재사용"하는 교통정리만 한다.
+ */
+function tryRefresh() {
+  if (refreshPromise) return refreshPromise; // 이미 누가 재발급 중 → 결과만 같이 기다린다
+  // finally로 반드시 비워야 다음 만료 때(1시간 뒤) 새 재발급을 띄울 수 있다.
+  // 실패 결과를 계속 물고 있으면 재로그인 후에도 영영 재발급이 안 되는 버그가 된다.
+  refreshPromise = doRefresh().finally(() => { refreshPromise = null; });
+  return refreshPromise;
+}
+
+/** 재발급 실제 수행. 성공 시 새 토큰 쌍 저장(회전) 후 true. tryRefresh()를 통해서만 호출할 것. */
+async function doRefresh() {
   const refreshToken = localStorage.getItem(REFRESH_KEY);
   if (!refreshToken) return false;
   try {
