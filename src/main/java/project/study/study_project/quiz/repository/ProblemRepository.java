@@ -67,6 +67,50 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             Pageable pageable
     );
 
+    /**
+     * 오늘의 퀴즈 "새 문제 칸"(docs/12): 이 사용자가 <b>한 번도 제출한 적 없는</b> 문제에서 무작위 추출.
+     *
+     * <p>"안 푼 문제"는 NOT EXISTS 상관 서브쿼리로 판정한다 — "내 제출 전체를 IN으로 넘기는"
+     * 방식은 이력이 쌓일수록 파라미터가 무한히 커지지만, NOT EXISTS는 제출 테이블 쪽
+     * 인덱스(user_id 선두)를 타고 문제당 존재 확인 한 번으로 끝난다.
+     *
+     * @param excludeIds 같은 세트에 이미 뽑힌 문제 id들(중복 방지). <b>빈 리스트를 넘기면
+     *                   {@code NOT IN ()}이 SQL 문법 오류</b>이므로, 호출부(DailyQuizService)가
+     *                   비었을 때 존재하지 않는 id(-1) 하나를 채워 넘기는 규약이다.
+     */
+    @Query(value = """
+            SELECT * FROM problem p
+            WHERE p.type <> 'ESSAY'
+              AND p.id NOT IN (:excludeIds)
+              AND NOT EXISTS (SELECT 1 FROM submission s
+                              WHERE s.user_id = :userId AND s.problem_id = p.id)
+            ORDER BY RAND()
+            LIMIT :size
+            """, nativeQuery = true)
+    List<Problem> findRandomUnsolved(
+            @Param("userId") Long userId,
+            @Param("excludeIds") List<Long> excludeIds,
+            @Param("size") int size
+    );
+
+    /**
+     * 오늘의 퀴즈 "취약 칸"(domain 지정)과 "채움 칸"(domain=null) 공용 무작위 추출(docs/12).
+     * 동적 필터 {@code (:x IS NULL OR ...)}와 excludeIds 규약은 위 쿼리들과 동일.
+     */
+    @Query(value = """
+            SELECT * FROM problem p
+            WHERE p.type <> 'ESSAY'
+              AND (:domain IS NULL OR p.domain = :domain)
+              AND p.id NOT IN (:excludeIds)
+            ORDER BY RAND()
+            LIMIT :size
+            """, nativeQuery = true)
+    List<Problem> findRandomExcluding(
+            @Param("domain") String domain,
+            @Param("excludeIds") List<Long> excludeIds,
+            @Param("size") int size
+    );
+
     /** 대시보드 현황판: 도메인×난이도별 문제 수. 인터페이스 프로젝션(별칭→getter 매핑)으로 받는다. */
     @Query("""
             select p.domain as domain, p.difficulty as difficulty, count(p) as cnt

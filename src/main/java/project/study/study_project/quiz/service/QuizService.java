@@ -3,6 +3,7 @@ package project.study.study_project.quiz.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.dailyquiz.service.DailyQuizService;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
@@ -40,6 +41,7 @@ public class QuizService {
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
     private final ReviewService reviewService;
+    private final DailyQuizService dailyQuizService;
 
     /**
      * 필터로 문제 N개 무작위 조회(풀이용 — 정답/해설 미포함).
@@ -97,6 +99,10 @@ public class QuizService {
         // 복습 상태만 안 바뀐" 상태를 원천 차단. 별도 복습 제출 API 없이 이 한 곳이
         // ReviewItem의 유일한 쓰기 경로다(갱신 규칙의 정합성 관리 지점 최소화).
         reviewService.onSubmission(userId, problem, result.correct());
+
+        // 오늘의 퀴즈 세트 반영(로드맵 6, docs/12) — 같은 이유로 같은 트랜잭션에 합류.
+        // 세트에 없는 문제면 서비스가 조용히 무시하므로 일반 풀이 경로에 영향 없다.
+        dailyQuizService.onSubmission(userId, submission);
 
         return new QuizSubmitResponse(
                 problem.getId(), result.correct(), result.correctAnswer(),

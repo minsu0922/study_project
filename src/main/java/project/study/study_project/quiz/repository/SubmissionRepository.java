@@ -88,6 +88,39 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             """, nativeQuery = true)
     java.util.List<ProblemStatRow> aggregateProblemStats();
 
+    /**
+     * 오늘의 퀴즈 "취약 도메인" 판정 재료(docs/12) — <b>이 사용자의</b> 도메인별 제출 수·정답 수.
+     *
+     * <p>⚠️ 기존 {@code domain_stats} 뷰(R__)를 못 쓰는 이유: 뷰는 전체 사용자 합산이라
+     * "내" 정답률이 아니다. 그래서 user_id 조건이 들어간 집계를 따로 둔다.
+     *
+     * <p>HAVING으로 <b>제출 {@code minCount}회 미만 도메인을 제외</b>한다 — 2문제 풀고 1개
+     * 틀렸다고 "취약"이라 단정하는 건 통계가 아니라 소음이다(표본이 작으면 신뢰하지 않는다).
+     * 정답률 계산·정렬은 서비스가 한다 — 어차피 최대 10행(도메인 수)이라 SQL에서
+     * 나눗셈까지 할 이유가 없고, 프로젝션은 원본 숫자만 나르는 게 재사용하기 좋다.
+     */
+    @Query("""
+            select p.domain as domain,
+                   count(s) as total,
+                   sum(case when s.correct = true then 1 else 0 end) as correctCount
+            from Submission s
+            join s.problem p
+            where s.userId = :userId
+            group by p.domain
+            having count(s) >= :minCount
+            """)
+    java.util.List<UserDomainStat> aggregateUserDomainStats(
+            @Param("userId") Long userId,
+            @Param("minCount") long minCount
+    );
+
+    /** {@link #aggregateUserDomainStats} 결과 행. */
+    interface UserDomainStat {
+        Domain getDomain();
+        long getTotal();
+        long getCorrectCount();
+    }
+
     /** {@link #aggregateProblemStats} 결과 행. */
     interface ProblemStatRow {
         Long getProblemId();
