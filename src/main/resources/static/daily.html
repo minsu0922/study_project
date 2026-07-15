@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오늘의 퀴즈 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container">
+  <!-- 화면 1: 오늘 세트 현황(미시작/진행 중/완료) — 시작하면 숨기고 플레이어로 전환.
+       quiz.html의 "설정 → 풀이 → 결과" 단계 구조와 같은 패턴인데, 설정이 없다 —
+       뭘 풀지 시스템이 이미 정해 놨다는 것이 이 기능의 존재 이유(docs/12). -->
+  <section id="status">
+    <h1>오늘의 퀴즈</h1>
+    <div id="statusBody"><div class="alert info">오늘의 세트를 준비하고 있어요…</div></div>
+  </section>
+
+  <!-- 화면 2: 플레이어(js/player.js가 이 안을 통째로 그린다) -->
+  <section id="player" hidden></section>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/player.js"></script>
+<script>
+/* 오늘의 퀴즈 페이지 — 흐름(docs/12):
+ *   1) GET /api/me/daily-quiz — 오늘 세트 조회(서버가 없으면 만들어 줌 = 지연 생성)
+ *   2) 미풀이 문제만 골라 startPlayer()로 진행(제출 API는 플레이어가 그대로 호출 —
+ *      서버 submit이 세트 진행률까지 한 트랜잭션으로 반영하므로 이 페이지는 아무것도 안 해도 됨)
+ *   3) 결과 화면에서 [오늘의 퀴즈로] → 현황 재조회(완료면 완료 카드 + 스트릭)
+ * 어제 세트는 서버가 리셋(새 날짜 = 새 세트)하므로 클라이언트에 날짜 로직이 없다. */
+renderNav("home");
+
+const statusEl = document.getElementById("status");
+const statusBody = document.getElementById("statusBody");
+const playerEl = document.getElementById("player");
+
+// source enum → 문제 배지에 보여줄 한글 라벨. "왜 이 문제가 나에게 나왔는지"의 답이다.
+const SOURCE_LABELS = {
+  REVIEW: "복습 타이밍", WEAK: "취약 보강", NEW: "새 문제", GENERAL: "랜덤",
+};
+
+load();
+
+async function load() {
+  if (!isLoggedIn()) {
+    statusBody.innerHTML =
+      `<div class="alert info">오늘의 퀴즈는 <b>나에게 맞춘 문제 세트</b>라 로그인이 필요해요.
+       <a href="/login.html">로그인하기</a></div>`;
+    return;
+  }
+  try {
+    const data = await api("/api/me/daily-quiz");
+    render(data);
+  } catch (e) {
+    statusBody.innerHTML =
+      `<div class="alert error">오늘의 퀴즈를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+/** 현황 카드 — 완료/진행 중/미시작 3상태를 한 함수가 그린다(상태가 data에 다 있으므로). */
+function render(data) {
+  const { total, solved } = data.progress;
+  const streakHtml = data.streak > 0 ? `<div class="sub">🔥 연속 ${data.streak}일째 완료 중</div>` : "";
+
+  if (data.completed) {
+    // 완료 — 오늘의 정답 수를 세트에서 집계해 보여준다(별도 API 없이 items의 correct로 충분)
+    const correct = data.items.filter(i => i.correct === true).length;
+    statusBody.innerHTML = `
+      <div class="card score-board fade-in">
+        <div class="big">${correct}<small> / ${total}</small></div>
+        <div class="msg">오늘 완료! 내일 또 만나요 🎉</div>
+        ${streakHtml}
+        <div class="actions">
+          <a href="/review.html" class="btn btn-outline">복습 현황 보기</a>
+          <a href="/quiz.html" class="btn">더 풀고 싶다면 자유 퀴즈 →</a>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // 미시작/진행 중 — 남은 문제 수와 구성(어느 칸에서 몇 개)을 보여주고 시작 버튼
+  const remaining = data.items.filter(i => !i.solved);
+  const comp = {};
+  data.items.forEach(i => { comp[i.source] = (comp[i.source] || 0) + 1; });
+  const compHtml = Object.entries(comp)
+    .map(([s, n]) => `<span class="badge gray">${SOURCE_LABELS[s] || s} ${n}</span>`).join(" ");
+
+  statusBody.innerHTML = `
+    <div class="card score-board fade-in">
+      <div class="big">${solved}<small> / ${total}</small></div>
+      <div class="msg">${solved === 0 ? "오늘의 세트가 준비됐어요" : "이어서 풀어볼까요?"}</div>
+      ${streakHtml}
+      <div style="margin-top:14px">${compHtml}</div>
+      <div class="actions">
+        <button id="startBtn" class="btn-lg">${solved === 0 ? "시작하기 🚀" : `이어서 풀기 (${remaining.length}문제) →`}</button>
+      </div>
+    </div>`;
+
+  document.getElementById("startBtn").addEventListener("click", () => {
+    // 플레이어에는 "아직 안 푼 문제"만 넘긴다 — 이어서 풀기가 곧 재시작과 같은 코드가 된다.
+    // badgeText로 출처 라벨을 실어 보내면 플레이어가 문제마다 배지로 보여준다(player.js 참고).
+    const problems = remaining.map(i =>
+      Object.assign({}, i.problem, { badgeText: SOURCE_LABELS[i.source] || i.source }));
+    statusEl.hidden = true;
+    playerEl.hidden = false;
+    startPlayer(playerEl, problems, {
+      exitLabel: "오늘의 퀴즈로",
+      onExit: () => {
+        // 복귀 = 현황 재조회. 방금 제출들이 서버 세트에 반영됐으므로(submit이 한 트랜잭션으로
+        // 처리) 화면을 다시 그리는 게 아니라 서버 상태를 다시 읽는 것이 진실에 가깝다.
+        playerEl.hidden = true;
+        playerEl.innerHTML = "";
+        statusEl.hidden = false;
+        statusBody.innerHTML = `<div class="alert info">오늘의 세트를 확인하고 있어요…</div>`;
+        load();
+        window.scrollTo({ top: 0 });
+      },
+    });
+  });
+}
+</script>
+</body>
+</html>

@@ -88,6 +88,11 @@ function startPlayer(mountEl, problems, opts = {}) {
     // 복습 모드면 지금 사다리 몇 번째 칸인지 보여준다 — "이 문제를 몇 번째 다시 보는지" 맥락 제공
     const reviewBadge = opts.reviewMode && p.stage !== undefined
       ? `<span class="badge orange">복습 ${p.stage + 1}단계</span>` : "";
+    // 문제에 badgeText가 실려 있으면 그대로 배지로 — 오늘의 퀴즈가 "왜 이 문제가 나왔는지"
+    // (복습/취약 보강/새 문제)를 표시하는 데 쓴다. 페이지가 데이터에 라벨을 실어 보내는
+    // 방식이라, 새 모드가 생겨도 플레이어에 모드 분기가 늘지 않는다.
+    const extraBadge = p.badgeText
+      ? `<span class="badge orange">${escapeHtml(p.badgeText)}</span>` : "";
 
     mountEl.innerHTML = `
       <div class="player-top">
@@ -101,7 +106,7 @@ function startPlayer(mountEl, problems, opts = {}) {
           <span class="badge">${escapeHtml(domainLabel(p.domain))}</span>
           <span class="badge gray">${escapeHtml(difficultyLabel(p.difficulty))}</span>
           <span class="badge gray">${escapeHtml(typeLabel(p.type))}</span>
-          ${reviewBadge}
+          ${reviewBadge}${extraBadge}
         </div>
         <div class="q-text">${escapeHtml(p.question)}</div>
         <div id="optArea">${renderInput(p)}</div>

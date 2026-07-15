@@ -42,25 +42,55 @@
 
 <script src="/js/api.js"></script>
 <script>
-/* 홈 화면 — 정적 카드 3개 + (로그인 시) "오늘의 복습" 카드를 동적으로 추가.
- * 복습 카드를 서버 개수로 그리는 이유: "복습 0개인데 복습하러 가라"는 카드는
- * 눌러봤자 허탕이라, 할 일이 실제로 있을 때만 (그리고 주황색으로) 보여준다. */
+/* 홈 화면 — 정적 카드 3개 + (로그인 시) 동적 카드 2개를 앞에 끼워 넣는다.
+ *   ① 오늘의 퀴즈(로드맵 6): 항상 표시 — 이 카드가 데일리 기능의 유일한 입구다(docs/12).
+ *      홈 방문이 곧 GET /api/me/daily-quiz 라서, 그날 첫 방문이 세트를 만든다(지연 생성).
+ *   ② 오늘의 복습: 할 일이 실제로 있을 때만 — "복습 0개인데 복습하러 가라"는 카드는
+ *      눌러봤자 허탕이라, 있을 때만 (그리고 주황색으로) 보여준다.
+ * 두 카드는 독립적으로 실패해도 되도록 try를 분리한다 — 홈은 카드 없이도 완전한 화면. */
 renderNav("home");
 
 (async () => {
   if (!isLoggedIn()) return;
+  const grid = document.getElementById("quickGrid");
+
+  // ② 오늘의 복습 — 먼저 prepend (나중에 prepend되는 ①이 최종 맨 앞이 되도록 순서 고정)
   try {
     const data = await api("/api/me/reviews/today?size=1"); // 개수만 필요 — 본문 최소화
-    if (data.totalElements === 0) return;
+    if (data.totalElements > 0) {
+      const card = document.createElement("a");
+      card.className = "quick-card due";
+      card.href = "/review.html";
+      card.innerHTML = `
+        <div class="icon">📅</div>
+        <h3>오늘의 복습 ${data.totalElements}개</h3>
+        <p>잊어버리기 전에 다시 풀 시간이에요</p>`;
+      grid.prepend(card);
+    }
+  } catch (e) { /* 실패는 조용히 — 위 주석 */ }
+
+  // ① 오늘의 퀴즈 — 미시작/진행 중/완료 3상태 + 스트릭(docs/12)
+  try {
+    const d = await api("/api/me/daily-quiz");
+    const { total, solved } = d.progress;
+    const streak = d.streak > 0 ? ` · 🔥 ${d.streak}일째` : "";
     const card = document.createElement("a");
-    card.className = "quick-card due";
-    card.href = "/review.html";
-    card.innerHTML = `
-      <div class="icon">📅</div>
-      <h3>오늘의 복습 ${data.totalElements}개</h3>
-      <p>잊어버리기 전에 다시 풀 시간이에요</p>`;
-    document.getElementById("quickGrid").prepend(card); // 할 일은 맨 앞에
-  } catch (e) { /* 홈은 복습 카드 없이도 완전한 화면 — 실패는 조용히 넘어간다 */ }
+    card.href = "/daily.html";
+    if (d.completed) {
+      card.className = "quick-card";
+      card.innerHTML = `
+        <div class="icon">✅</div>
+        <h3>오늘의 퀴즈 완료${streak}</h3>
+        <p>내일 새 세트가 준비돼요 — 결과 다시 보기</p>`;
+    } else {
+      card.className = "quick-card due"; // 할 일이 남아 있다 = 주황 강조(복습 카드와 같은 규칙)
+      card.innerHTML = `
+        <div class="icon">🎯</div>
+        <h3>오늘의 퀴즈 ${solved}/${total}${streak}</h3>
+        <p>${solved === 0 ? "나에게 맞춘 오늘의 세트가 준비됐어요" : "이어서 풀면 오늘 완료!"}</p>`;
+    }
+    grid.prepend(card); // 오늘의 할 일 중에서도 맨 앞 — 데일리가 이 사이트의 습관 고리다
+  } catch (e) { /* 실패는 조용히 — 위 주석 */ }
 })();
 </script>
 </body>
