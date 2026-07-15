@@ -207,13 +207,16 @@ function renderNav(active) {
     : `<a href="/login.html">로그인</a>
        <a href="/signup.html" class="btn btn-outline" style="padding:5px 14px">회원가입</a>`;
   el.className = "nav";
+  // 메뉴 이름은 기능명이 아니라 "언제 누르는지"가 드러나게(UX 1단계 개편) —
+  // "퀴즈"만으로는 오늘의 퀴즈와의 차이를 알 수 없어 "자유 퀴즈"로,
+  // "문서"는 무엇의 문서인지 모호해 "개념 문서"로 바꿨다.
   el.innerHTML = `
     <a class="brand" href="/">csquiz</a>
     <a class="${cls("home")}" href="/">홈</a>
-    <a class="${cls("quiz")}" href="/quiz.html">퀴즈</a>
+    <a class="${cls("quiz")}" href="/quiz.html">자유 퀴즈</a>
     <a class="${cls("review")}" href="/review.html">복습<span id="reviewBadge"></span></a>
     <a class="${cls("wrong")}" href="/wrong-answers.html">오답노트</a>
-    <a class="${cls("docs")}" href="/documents.html">문서</a>
+    <a class="${cls("docs")}" href="/documents.html">개념 문서</a>
     ${isAdmin() ? `<a class="${cls("admin")}" href="/admin.html">관리자</a>` : ""}
     <span class="spacer"></span>
     ${authArea}`;
