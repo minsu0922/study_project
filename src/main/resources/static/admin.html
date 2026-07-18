@@ -19,6 +19,8 @@
       <button class="tab-btn active" data-tab="dashboard">대시보드</button>
       <button class="tab-btn" data-tab="problems">문제 관리</button>
       <button class="tab-btn" data-tab="documents">문서 관리</button>
+      <!-- 배지: 검수 대기 건수 — "승인을 기다리는 초안이 있다"는 신호를 탭 이름에 얹는다 -->
+      <button class="tab-btn" data-tab="llm">AI 생성 <span id="llmBadge" class="badge gray" hidden></span></button>
     </div>
 
     <!-- ═══ 대시보드 ═══ -->
@@ -94,6 +96,33 @@
       <h3>문서 목록</h3>
       <div class="table-wrap"><table class="grid" id="documentTable"></table></div>
     </section>
+
+    <!-- ═══ AI 생성 (LLM 문제 생성 — docs/13) ═══ -->
+    <section id="tab-llm" hidden>
+      <div class="card">
+        <h3>AI 문제 생성</h3>
+        <p class="meta">Claude가 문제를 만들어 <b>검수 대기</b>로 저장합니다. 승인해야만 정식 문제로 등록됩니다.
+          도메인·난이도를 "자동"으로 두면 문제가 가장 부족한 칸을 골라 생성합니다.</p>
+        <div id="gMessage"></div>
+        <div class="filters">
+          <div class="field"><label>도메인</label><select id="gDomain"></select></div>
+          <div class="field"><label>난이도</label><select id="gDifficulty"></select></div>
+          <div class="field"><label>유형</label><select id="gType"></select></div>
+          <div class="field"><label>개수 (1~10)</label><input type="number" id="gCount" value="5" min="1" max="10" style="width:80px"></div>
+        </div>
+        <button id="gSubmitBtn">생성 요청</button>
+        <span class="meta" id="gLoading" hidden>생성 중… (수십 초 걸릴 수 있어요)</span>
+      </div>
+
+      <h3>생성 초안
+        <select id="gStatusFilter" style="margin-left:10px">
+          <option value="PENDING">검수 대기</option>
+          <option value="APPROVED">승인됨</option>
+          <option value="REJECTED">거절됨</option>
+        </select>
+      </h3>
+      <div id="draftList"></div>
+    </section>
   </div>
 </main>
 
@@ -126,13 +155,16 @@ if (!isAdmin()) {
   loadProblems();
   initDocumentForm();
   loadDocuments();
+  initLlmTab();
+  loadDrafts();
+  refreshLlmBadge();
 }
 
 /* ── 탭 전환 ── */
 function initTabs() {
   document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
-    ["dashboard", "problems", "documents"].forEach(t =>
+    ["dashboard", "problems", "documents", "llm"].forEach(t =>
       document.getElementById("tab-" + t).hidden = (t !== btn.dataset.tab));
   }));
 }
@@ -140,11 +172,11 @@ function initTabs() {
 /* ── 위험 동작(삭제) 2단계 확인 ──
  * confirm() 같은 브라우저 팝업 대신 "버튼을 한 번 더 누르면 실행" 방식.
  * 팝업은 흐름을 끊고, 자동화 도구·테스트도 막는다. 3초 지나면 원래대로 돌아간다. */
-function armedDelete(btn, onConfirm) {
+function armedDelete(btn, onConfirm, label = "정말 삭제?") {
   if (btn.dataset.armed) { onConfirm(); return; }
   btn.dataset.armed = "1";
   const original = btn.textContent;
-  btn.textContent = "정말 삭제?";
+  btn.textContent = label;
   setTimeout(() => { delete btn.dataset.armed; btn.textContent = original; }, 3000);
 }
 
@@ -503,6 +535,128 @@ async function deleteDocument(btn, id) {
       showError(document.getElementById("dMessage"), e);
     }
   });
+}
+
+/* ═══════════ AI 생성 (LLM 문제 생성 — docs/13) ═══════════ */
+
+function initLlmTab() {
+  // 도메인·난이도의 첫 옵션은 "자동" — 값이 빈 문자열이면 서버에 null로 보내
+  // "가장 부족한 칸 자동 선택"(docs/13의 빈 칸 채우기 전략)을 태운다.
+  const gd = document.getElementById("gDomain");
+  gd.innerHTML = `<option value="">자동 — 가장 부족한 칸</option>`;
+  DOMAINS.forEach(([v, l]) => gd.insertAdjacentHTML("beforeend", `<option value="${v}">${l}</option>`));
+  const gf = document.getElementById("gDifficulty");
+  gf.innerHTML = `<option value="">자동 — 가장 부족한 칸</option>`;
+  DIFFICULTIES.forEach(([v, l]) => gf.insertAdjacentHTML("beforeend", `<option value="${v}">${l}</option>`));
+  fillSelect(document.getElementById("gType"), TYPES);
+
+  document.getElementById("gSubmitBtn").addEventListener("click", generateProblems);
+  document.getElementById("gStatusFilter").addEventListener("change", loadDrafts);
+}
+
+async function generateProblems() {
+  const msg = document.getElementById("gMessage");
+  const btn = document.getElementById("gSubmitBtn");
+  const loading = document.getElementById("gLoading");
+  btn.disabled = true;      // Claude 호출은 수십 초 — 더블클릭으로 중복 요청(=중복 과금)되는 걸 막는다
+  loading.hidden = false;
+  try {
+    const drafts = await api("/api/admin/llm-problems/generate", {
+      method: "POST",
+      body: JSON.stringify({
+        domain: document.getElementById("gDomain").value || null,
+        difficulty: document.getElementById("gDifficulty").value || null,
+        type: document.getElementById("gType").value,
+        count: Number(document.getElementById("gCount").value),
+      }),
+    });
+    showOk(msg, `${drafts.length}건 생성 완료 — 아래에서 검수해 주세요.`);
+    document.getElementById("gStatusFilter").value = "PENDING";
+    loadDrafts();
+    refreshLlmBadge();
+  } catch (e) {
+    showError(msg, e); // LLM_003(API 오류)·LLM_004(키 없음) 메시지가 그대로 표시된다
+  } finally {
+    btn.disabled = false;
+    loading.hidden = true;
+  }
+}
+
+async function loadDrafts() {
+  const status = document.getElementById("gStatusFilter").value;
+  const data = await api("/api/admin/llm-problems?status=" + status + "&size=50");
+  const box = document.getElementById("draftList");
+  if (data.content.length === 0) {
+    box.innerHTML = `<div class="meta">해당 상태의 초안이 없습니다.</div>`;
+    return;
+  }
+  // 초안은 표가 아니라 카드로 — 검수는 지문·보기·해설을 통째로 읽어야 하는 작업이라
+  // 행 하나로 요약하면 결국 펼쳐 보는 클릭만 늘어난다.
+  box.innerHTML = data.content.map(d => {
+    const choices = (d.choices ?? []).map((c, i) =>
+      `<li>${c.correct ? "✅ " : ""}${escapeHtml(c.text)}</li>`).join("");
+    const actions = d.status === "PENDING" ? `
+      <div class="row-actions" style="margin-top:10px">
+        <button onclick="approveDraft(this, ${d.id})">승인 → 문제 등록</button>
+        <button class="danger" onclick="rejectDraft(this, ${d.id})">거절</button>
+      </div>` : `
+      <div class="meta" style="margin-top:10px">
+        ${d.status === "APPROVED" ? `승인됨 → 문제 ID ${d.approvedProblemId}` : `거절됨${d.rejectReason ? " — " + escapeHtml(d.rejectReason) : ""}`}
+      </div>`;
+    return `
+      <div class="card" style="margin-bottom:12px">
+        <div>
+          <span class="badge gray">#${d.id}</span>
+          <span class="badge gray">${escapeHtml(d.domainLabel)}</span>
+          <span class="badge gray">${escapeHtml(difficultyLabel(d.difficulty))}</span>
+          <span class="badge gray">${escapeHtml(typeLabel(d.type))}</span>
+          <span class="meta">${escapeHtml(d.model)}</span>
+        </div>
+        <p style="margin:10px 0 6px; white-space:pre-wrap"><b>${escapeHtml(d.question)}</b></p>
+        ${choices ? `<ul style="margin:6px 0">${choices}</ul>` : ""}
+        ${d.answer ? `<div>정답: <b>${escapeHtml(d.answer)}</b></div>` : ""}
+        ${d.explanation ? `<div class="meta" style="white-space:pre-wrap; margin-top:6px">${escapeHtml(d.explanation)}</div>` : ""}
+        ${actions}
+      </div>`;
+  }).join("");
+}
+
+async function approveDraft(btn, id) {
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/llm-problems/${id}/approve`, { method: "POST" });
+    loadDrafts();
+    refreshLlmBadge();
+    loadProblems();   // 정식 문제 목록·현황판에 즉시 반영
+    loadDashboard();
+  } catch (e) {
+    btn.disabled = false;
+    showError(document.getElementById("gMessage"), e);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+async function rejectDraft(btn, id) {
+  // 삭제와 같은 2단계 확인 — 거절도 이력에 남긴다(초안은 지우지 않는다, docs/13)
+  armedDelete(btn, async () => {
+    try {
+      await api(`/api/admin/llm-problems/${id}/reject`, { method: "POST", body: JSON.stringify({}) });
+      loadDrafts();
+      refreshLlmBadge();
+    } catch (e) {
+      showError(document.getElementById("gMessage"), e);
+    }
+  }, "정말 거절?");
+}
+
+/** 탭 배지 갱신 — "검수 대기 N" 이 0이면 배지를 숨긴다(0을 붙이면 항상 시끄럽다). */
+async function refreshLlmBadge() {
+  try {
+    const { count } = await api("/api/admin/llm-problems/pending-count");
+    const badge = document.getElementById("llmBadge");
+    badge.textContent = count;
+    badge.hidden = count === 0;
+  } catch (e) { /* 배지는 장식 — 실패해도 화면 기능에 영향 없음 */ }
 }
 </script>
 </body>
