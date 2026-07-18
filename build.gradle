@@ -68,6 +68,11 @@ dependencies {
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
     annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 
+    // [LLM 문제 생성 / B안] Anthropic 공식 Java SDK — Claude API 호출.
+    // 구조화 출력(record 클래스 → JSON 스키마 강제)으로 문제를 항상 같은 형태로 받는다.
+    // 설계는 docs/13, 결정 배경은 ADR-0006. API 키는 ANTHROPIC_API_KEY 환경변수로만 주입.
+    implementation 'com.anthropic:anthropic-java:2.34.0'
+
     // [모니터링] Actuator (포트폴리오 가점)
     // implementation 'org.springframework.boot:spring-boot-starter-actuator'
 

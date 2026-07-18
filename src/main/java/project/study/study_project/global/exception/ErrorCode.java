@@ -35,7 +35,14 @@ public enum ErrorCode {
 
     // 문서
     DOC_001("DOC_001", HttpStatus.NOT_FOUND, "문서를 찾을 수 없습니다."),
-    DOC_002("DOC_002", HttpStatus.CONFLICT, "이미 사용 중인 slug입니다.");
+    DOC_002("DOC_002", HttpStatus.CONFLICT, "이미 사용 중인 slug입니다."),
+
+    // LLM 문제 생성 (B안 — docs/13, ADR-0006)
+    LLM_001("LLM_001", HttpStatus.NOT_FOUND, "생성 초안을 찾을 수 없습니다."),
+    LLM_002("LLM_002", HttpStatus.CONFLICT, "이미 처리된 초안입니다."),
+    // 외부 API 실패는 우리 서버 잘못(500)이 아니라 상류 문제라는 의미로 502(BAD_GATEWAY)
+    LLM_003("LLM_003", HttpStatus.BAD_GATEWAY, "문제 생성 요청에 실패했습니다. 잠시 후 다시 시도해 주세요."),
+    LLM_004("LLM_004", HttpStatus.SERVICE_UNAVAILABLE, "ANTHROPIC_API_KEY가 설정되지 않아 문제 생성을 사용할 수 없습니다.");
 
     private final String code;
     private final HttpStatus httpStatus;

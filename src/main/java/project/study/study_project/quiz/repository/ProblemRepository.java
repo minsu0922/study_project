@@ -125,4 +125,13 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
         Difficulty getDifficulty();
         long getCnt();
     }
+
+    /**
+     * LLM 문제 생성(docs/13)의 중복 회피용 — 해당 도메인의 최신 질문 텍스트만 뽑는다.
+     * 엔티티 전체가 아니라 question 컬럼만 프로젝션하는 이유: 프롬프트에 넣을 문자열만
+     * 필요한데 Problem을 통째로 로딩하면 TEXT 본문 + 보기(LAZY) 부담만 커진다.
+     * 개수 제한은 호출부가 Pageable(예: 상위 50건)로 건다 — JPQL엔 LIMIT이 없다.
+     */
+    @Query("select p.question from Problem p where p.domain = :domain order by p.id desc")
+    List<String> findQuestionTextsByDomain(@Param("domain") Domain domain, Pageable pageable);
 }
