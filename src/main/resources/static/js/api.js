@@ -155,7 +155,7 @@ async function doRefresh() {
 const DOMAINS = [
   ["NETWORK", "네트워크"], ["OS", "운영체제"], ["DATABASE", "데이터베이스"],
   ["DS_ALGORITHM", "자료구조·알고리즘"], ["SYSTEM_DESIGN", "시스템설계"], ["SECURITY", "보안"],
-  ["LANGUAGE_RUNTIME", "언어·런타임"], ["CLOUD_INFRA", "클라우드·인프라"],
+  ["LANGUAGE_RUNTIME", "언어·런타임"], ["BACKEND_FRAMEWORK", "스프링·백엔드"], ["CLOUD_INFRA", "클라우드·인프라"],
   ["FRONTEND_CS", "프론트엔드CS"], ["INTEGRATED", "통합시나리오"],
 ];
 const DIFFICULTIES = [["BEGINNER", "초급"], ["INTERMEDIATE", "중급"], ["ADVANCED", "고급"]];
