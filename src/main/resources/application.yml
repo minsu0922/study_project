@@ -22,6 +22,11 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true            # 기존 DB에도 안전하게 적용
+    # V2_1(누락된 기반 시드 보충)이 로컬처럼 이미 V3~V6가 적용된 DB에도 끼워 들어갈 수 있게
+    # 허용한다. 기본값(false)이면 "이미 적용된 버전보다 낮은 버전은 나중에 적용 불가"라
+    # 체크섬 문제 없이 새 마이그레이션을 추가했는데도 validate가 막힌다. 자세한 배경은
+    # V2_1__seed_base_document_tag.sql 상단 주석 참고.
+    out-of-order: true
 
   # 목록 API 페이징 기본값/상한 (docs/03: 기본 20, 최대 100)
   data:
