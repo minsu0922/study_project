@@ -1,0 +1,8 @@
+# Dockerfile이 COPY하는 빌드 컨텍스트에서 불필요한 것들을 빼서 전송량·빌드 시간을 줄인다.
+.git
+.gradle
+.idea
+build
+docs
+*.md
+docker-compose.yml
