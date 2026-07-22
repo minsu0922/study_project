@@ -56,10 +56,21 @@ public class RefreshTokenStore {
      * <p>조회·삭제를 한 번에 하는 이유(회전, rotation): refresh 토큰은 한 번 쓰면 버리고
      * 새것으로 교체한다. 탈취범과 주인이 같은 토큰을 쓰다가 한쪽이 재발급하는 순간 다른 쪽이
      * 무효가 되므로, 탈취가 "영원한 출입증"이 되지 못한다.
+     *
+     * <p>Redis 장애 시에도 null을 반환한다(예외 전파 안 함) — {@link #issue}·{@link #revoke}와
+     * 같은 원칙이다. 이게 없으면 AuthService.refresh()가 이 예외를 못 잡고 500으로 새 나가는데,
+     * 클라이언트 입장에선 "토큰이 무효함(401 AUTH_005, 재로그인)"과 "서버가 지금 확인할 수
+     * 없음"을 구분해 봐야 딱히 할 수 있는 게 다르지 않다(둘 다 재로그인 유도) — 그래서 판단이
+     * 불확실할 땐 더 단순하고 이미 클라이언트가 처리할 줄 아는 쪽(무효 취급)으로 접는다.
      */
     public Long consume(String token) {
-        String userId = redisTemplate.opsForValue().getAndDelete(KEY_PREFIX + token);
-        return userId == null ? null : Long.valueOf(userId);
+        try {
+            String userId = redisTemplate.opsForValue().getAndDelete(KEY_PREFIX + token);
+            return userId == null ? null : Long.valueOf(userId);
+        } catch (DataAccessException e) {
+            log.warn("Redis 장애로 refresh 토큰 검증 불가 — 무효 토큰과 동일하게 취급(재로그인 유도): {}", e.getMessage());
+            return null;
+        }
     }
 
     /** 로그아웃 등 명시적 폐기. 이미 없어도 조용히 성공(멱등). */
