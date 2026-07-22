@@ -40,8 +40,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 롤백되지만, Redis의 refresh 토큰 키는 롤백 대상이 아니다 — 다만 랜덤 값이라 테스트끼리
  * 절대 충돌하지 않고 TTL(14일)로 알아서 청소되므로, 기존 TokenBucketRateLimiterTest와
  * 같은 방식으로 그냥 둔다(별도 정리 코드를 두지 않음).
+ *
+ * <p><b>요청 제한(로드맵 3)은 이 클래스에서만 끈다</b>: {@code /api/auth/login|signup|refresh}는
+ * IP당 분당 5회로 엄격히 제한되는데(RateLimitFilter), 이 클래스는 그 세 경로를 테스트
+ * 메서드마다 여러 번 호출해서 한 번에 20회 넘게 부른다 — 같은 "IP"(MockMvc는 전부
+ * 127.0.0.1)에서 오는 정상적인 시나리오 검증인데 방화벽(요청 제한)에 걸려 429가 섞여
+ * 나오면 무엇을 검증하는 테스트인지 흐려진다. 요청 제한 자체의 동작은 이미
+ * RateLimitFilterTest·TokenBucketRateLimiterTest가 전담해서 보고 있으므로 여기선 끈다.
  */
-@SpringBootTest
+@SpringBootTest(properties = "ratelimit.enabled=false")
 @AutoConfigureMockMvc
 @Transactional
 class AuthFlowIntegrationTest {
