@@ -55,19 +55,28 @@ public class LlmProblemService {
     private final AdminProblemService adminProblemService;
     private final ObjectMapper objectMapper;
     private final String model;
+    /** 배치가 도메인을 "알아서 고를" 때의 후보 — 비어 있으면 전체를 후보로 본다(설정 누락 시 기능 정지 방지). */
+    private final List<Domain> batchDomains;
 
     public LlmProblemService(ProblemGenerator problemGenerator,
                              GeneratedProblemDraftRepository draftRepository,
                              ProblemRepository problemRepository,
                              AdminProblemService adminProblemService,
                              ObjectMapper objectMapper,
-                             @org.springframework.beans.factory.annotation.Value("${llm.generation.model:claude-opus-4-8}") String model) {
+                             @org.springframework.beans.factory.annotation.Value("${llm.generation.model:claude-opus-5}") String model,
+                             // 기본값에 8개를 그대로 적어 둔다: 빈 문자열을 기본값으로 두면 Spring이 이를
+                             // "빈 문자열 원소 1개"로 변환하려다 enum 변환에 실패할 수 있어서다.
+                             @org.springframework.beans.factory.annotation.Value(
+                                     "${llm.generation.batch-domains:NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
+                             List<Domain> batchDomains) {
         this.problemGenerator = problemGenerator;
         this.draftRepository = draftRepository;
         this.problemRepository = problemRepository;
         this.adminProblemService = adminProblemService;
         this.objectMapper = objectMapper;
         this.model = model;
+        this.batchDomains = batchDomains == null || batchDomains.isEmpty()
+                ? List.of(Domain.values()) : List.copyOf(batchDomains);
     }
 
     /* ── 생성 ─────────────────────────────────────────────── */
@@ -111,18 +120,30 @@ public class LlmProblemService {
     /**
      * 가장 부족한 도메인×난이도 칸 선택. 한쪽만 지정된 경우(예: 도메인만 골랐음)는
      * 그 축을 고정하고 나머지 축에서만 최소를 찾는다.
+     *
+     * <p><b>정식 문제 + 검수 대기 초안을 합산</b>한다. 정식 문제만 세면 검수를 미루는 동안
+     * 그 칸의 수가 늘지 않아 매일 같은 칸만 뽑히기 때문이다
+     * (자세한 배경은 {@link GeneratedProblemDraftRepository#countPendingGroupByDomainAndDifficulty}).
+     * 초안은 "아직 문제가 아니지만 이미 그 칸을 채우려고 만들어 둔 재고"라, 재고까지 세야
+     * 다음 칸으로 넘어간다.
+     *
+     * <p>도메인 축을 지정하지 않은 경우 후보는 {@code llm.generation.batch-domains}로 제한된다
+     * — 배치가 관심 밖 도메인을 채우는 데 예산을 쓰지 않게 하려는 것. 반대로 도메인을 명시하면
+     * (관리자 화면에서 직접 고른 경우) 목록 밖이어도 그대로 생성한다.
      */
     private ScarceCell pickScarcestCell(Domain fixedDomain, Difficulty fixedDifficulty) {
         // 집계 결과를 맵으로 — 문제가 0개인 칸은 GROUP BY 결과에 아예 없으므로 getOrDefault(0)로 보정
         Map<Domain, Map<Difficulty, Long>> counts = new EnumMap<>(Domain.class);
-        problemRepository.countGroupByDomainAndDifficulty().forEach(row ->
-                counts.computeIfAbsent(row.getDomain(), d -> new EnumMap<>(Difficulty.class))
-                        .put(row.getDifficulty(), row.getCnt()));
+        accumulate(counts, problemRepository.countGroupByDomainAndDifficulty());
+        accumulate(counts, draftRepository.countPendingGroupByDomainAndDifficulty());
+
+        // 도메인을 명시했으면 그 하나만, 아니면 설정된 후보 목록에서 고른다
+        List<Domain> domainCandidates = fixedDomain != null ? List.of(fixedDomain) : batchDomains;
 
         Domain bestDomain = null;
         Difficulty bestDifficulty = null;
         long min = Long.MAX_VALUE;
-        for (Domain d : fixedDomain != null ? new Domain[]{fixedDomain} : Domain.values()) {
+        for (Domain d : domainCandidates) {
             for (Difficulty diff : fixedDifficulty != null ? new Difficulty[]{fixedDifficulty} : Difficulty.values()) {
                 long cnt = counts.getOrDefault(d, Map.of()).getOrDefault(diff, 0L);
                 if (cnt < min) {
@@ -132,8 +153,17 @@ public class LlmProblemService {
                 }
             }
         }
-        log.info("LLM 생성 대상 칸 선택: {}×{} (현재 {}문제)", bestDomain, bestDifficulty, min);
+        log.info("LLM 생성 대상 칸 선택: {}×{} (정식+대기 {}건, 후보 도메인 {}개)",
+                bestDomain, bestDifficulty, min, domainCandidates.size());
         return new ScarceCell(bestDomain, bestDifficulty);
+    }
+
+    /** 집계 행들을 도메인×난이도 맵에 더한다(merge) — 두 저장소의 결과를 같은 맵에 합치기 위한 것. */
+    private void accumulate(Map<Domain, Map<Difficulty, Long>> counts,
+                            List<ProblemRepository.DomainDifficultyCount> rows) {
+        rows.forEach(row -> counts
+                .computeIfAbsent(row.getDomain(), d -> new EnumMap<>(Difficulty.class))
+                .merge(row.getDifficulty(), row.getCnt(), Long::sum));
     }
 
     private record ScarceCell(Domain domain, Difficulty difficulty) {

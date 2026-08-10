@@ -76,16 +76,27 @@ class LlmProblemServiceTest {
         }
     }
 
+    /** 기본 후보 도메인 — 대부분의 테스트는 도메인을 명시하므로 값 자체는 중요하지 않다. */
+    private static final List<Domain> DEFAULT_BATCH_DOMAINS =
+            List.of(Domain.NETWORK, Domain.OS, Domain.DATABASE, Domain.BACKEND_FRAMEWORK);
+
     @BeforeEach
     void setUp() {
         fakeGenerator = new FakeGenerator();
-        // ObjectMapper는 실물 사용 — JSON 직렬화가 이 서비스의 실제 책임이라 가짜로 대체하면 검증이 빈다
-        service = new LlmProblemService(fakeGenerator, draftRepository, problemRepository,
-                adminProblemService, new ObjectMapper(), "test-model");
+        service = newService(DEFAULT_BATCH_DOMAINS);
         // saveAll은 받은 것을 그대로 돌려준다 — 저장 결과 검증은 인자 캡처로 한다
         lenient().when(draftRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(problemRepository.findQuestionTextsByDomain(any(), any())).thenReturn(List.of());
         lenient().when(draftRepository.findPendingQuestionsByDomain(any())).thenReturn(List.of());
+        // 대기 초안 집계는 기본 "없음" — 필요한 테스트만 덮어쓴다
+        lenient().when(draftRepository.countPendingGroupByDomainAndDifficulty()).thenReturn(List.of());
+    }
+
+    /** 후보 도메인만 바꿔 서비스를 다시 만드는 헬퍼 — batch-domains 동작 검증용. */
+    private LlmProblemService newService(List<Domain> batchDomains) {
+        // ObjectMapper는 실물 사용 — JSON 직렬화가 이 서비스의 실제 책임이라 가짜로 대체하면 검증이 빈다
+        return new LlmProblemService(fakeGenerator, draftRepository, problemRepository,
+                adminProblemService, new ObjectMapper(), "test-model", batchDomains);
     }
 
     /** GROUP BY 집계 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */
@@ -133,6 +144,56 @@ class LlmProblemServiceTest {
             service.generate(new LlmGenerateRequest(Domain.NETWORK, Difficulty.BEGINNER, null, 1));
 
             assertThat(fakeGenerator.calledAvoid).containsExactlyInAnyOrder("기존 문제 질문", "대기 초안 질문");
+        }
+
+        @Test
+        @DisplayName("검수 대기 초안도 칸 개수에 합산된다 — 검수를 미뤄도 같은 칸만 반복해 뽑지 않는다")
+        void pendingDraftsCountTowardCellSize() {
+            // NETWORK 정식 문제: 초급 0, 중급 2, 고급 2. 초안만 보면 초급이 제일 비어 보인다.
+            when(problemRepository.countGroupByDomainAndDifficulty()).thenReturn(List.of(
+                    new CountRow(Domain.NETWORK, Difficulty.INTERMEDIATE, 2),
+                    new CountRow(Domain.NETWORK, Difficulty.ADVANCED, 2)));
+            // 그런데 초급에는 이미 검수 대기 초안 5건이 쌓여 있다 → 합산하면 초급이 가장 많은 칸이 된다
+            when(draftRepository.countPendingGroupByDomainAndDifficulty()).thenReturn(List.of(
+                    new CountRow(Domain.NETWORK, Difficulty.BEGINNER, 5)));
+            fakeGenerator.toReturn = List.of(mcItem("네트워크 문제", 0));
+
+            service.generate(new LlmGenerateRequest(Domain.NETWORK, null, null, 1));
+
+            // 합산하지 않으면 BEGINNER(0건)가 뽑힌다 — 이 단정이 회귀를 막는다
+            assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.INTERMEDIATE);
+        }
+
+        @Test
+        @DisplayName("도메인을 지정하지 않으면 batch-domains 후보 안에서만 고른다 — 후보 밖이 더 비어 있어도 뽑지 않는다")
+        void autoPickStaysWithinBatchDomains() {
+            service = newService(List.of(Domain.NETWORK, Domain.OS));
+            // 후보인 NETWORK·OS는 문제가 꽉 차 있고, 후보가 아닌 FRONTEND_CS는 집계에 없다(=0건)
+            when(problemRepository.countGroupByDomainAndDifficulty()).thenReturn(List.of(
+                    new CountRow(Domain.NETWORK, Difficulty.BEGINNER, 10),
+                    new CountRow(Domain.NETWORK, Difficulty.INTERMEDIATE, 10),
+                    new CountRow(Domain.NETWORK, Difficulty.ADVANCED, 10),
+                    new CountRow(Domain.OS, Difficulty.BEGINNER, 7),
+                    new CountRow(Domain.OS, Difficulty.INTERMEDIATE, 10),
+                    new CountRow(Domain.OS, Difficulty.ADVANCED, 10)));
+            fakeGenerator.toReturn = List.of(mcItem("OS 문제", 0));
+
+            service.generate(new LlmGenerateRequest(null, null, null, 1));
+
+            // 가장 비어 있는 칸은 FRONTEND_CS(0건)지만 후보가 아니므로, 후보 중 최소인 OS×초급이 뽑힌다
+            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.OS);
+            assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.BEGINNER);
+        }
+
+        @Test
+        @DisplayName("도메인을 직접 지정하면 batch-domains 후보 밖이어도 생성한다 — 제한은 자동 선택에만 적용")
+        void explicitDomainIgnoresBatchDomainFilter() {
+            service = newService(List.of(Domain.NETWORK, Domain.OS)); // FRONTEND_CS는 후보가 아님
+            fakeGenerator.toReturn = List.of(mcItem("브라우저 렌더링 문제", 0));
+
+            service.generate(new LlmGenerateRequest(Domain.FRONTEND_CS, Difficulty.BEGINNER, null, 1));
+
+            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.FRONTEND_CS);
         }
 
         @Test
