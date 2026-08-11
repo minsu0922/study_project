@@ -1,0 +1,102 @@
+{
+    "note":  "정식 problem 테이블의 기존 지문 목록. GitHub Actions 생성 배치가 중복 회피 목록으로 읽는다(클라우드에는 DB가 없으므로). docs/14 참고.",
+    "exportedAt":  "2026-08-11",
+    "questions":  [
+                      {
+                          "domain":  "DATABASE",
+                          "question":  "트랜잭션의 ACID 성질 중 A가 뜻하는 것은? (한글 또는 영문)"
+                      },
+                      {
+                          "domain":  "DATABASE",
+                          "question":  "MySQL InnoDB가 인덱스에 기본으로 사용하는 자료구조는?"
+                      },
+                      {
+                          "domain":  "DATABASE",
+                          "question":  "SELECT 검색 속도를 높여 주지만 INSERT/UPDATE 비용을 증가시키는 것은?"
+                      },
+                      {
+                          "domain":  "DATABASE",
+                          "question":  "MySQL InnoDB의 기본 트랜잭션 격리 수준은 REPEATABLE READ 이다."
+                      },
+                      {
+                          "domain":  "DATABASE",
+                          "question":  "다른 트랜잭션이 아직 커밋하지 않은 데이터를 읽는 이상 현상을 무엇이라 하나? (영문)"
+                      },
+                      {
+                          "domain":  "DS_ALGORITHM",
+                          "question":  "퀵 정렬(Quick Sort)의 최악 시간복잡도는 O(n log n)이다."
+                      },
+                      {
+                          "domain":  "DS_ALGORITHM",
+                          "question":  "정렬된 배열에서 이진 탐색(binary search)의 시간복잡도는?"
+                      },
+                      {
+                          "domain":  "DS_ALGORITHM",
+                          "question":  "해시 테이블의 평균 탐색 시간복잡도는? (빅오 표기, 예: O(n))"
+                      },
+                      {
+                          "domain":  "DS_ALGORITHM",
+                          "question":  "스택(Stack)은 먼저 넣은 것이 먼저 나오는 FIFO 자료구조다."
+                      },
+                      {
+                          "domain":  "NETWORK",
+                          "question":  "TCP는 OSI 7계층 중 몇 계층 프로토콜인가?"
+                      },
+                      {
+                          "domain":  "NETWORK",
+                          "question":  "UDP는 연결지향(connection-oriented) 프로토콜이다."
+                      },
+                      {
+                          "domain":  "NETWORK",
+                          "question":  "IP 주소를 물리(MAC) 주소로 변환하는 프로토콜의 이름은? (영문 약어)"
+                      },
+                      {
+                          "domain":  "NETWORK",
+                          "question":  "HTTPS가 HTTP에 추가로 제공하는 것은?"
+                      },
+                      {
+                          "domain":  "NETWORK",
+                          "question":  "TCP 3-way 핸드셰이크의 순서는 SYN → SYN+ACK → ACK 이다."
+                      },
+                      {
+                          "domain":  "NETWORK",
+                          "question":  "TCP 연결을 시작할 때 클라이언트가 가장 먼저 보내는 세그먼트의 플래그 이름은? (영문)"
+                      },
+                      {
+                          "domain":  "NETWORK",
+                          "question":  "다음 중 전송 계층(4계층) 프로토콜끼리 짝지은 것은?"
+                      },
+                      {
+                          "domain":  "OS",
+                          "question":  "같은 프로세스에 속한 스레드끼리 공유하지 않는 메모리 영역은?"
+                      },
+                      {
+                          "domain":  "OS",
+                          "question":  "일반적으로 스레드 간 컨텍스트 스위칭 비용은 프로세스 간 컨텍스트 스위칭보다 작다."
+                      },
+                      {
+                          "domain":  "OS",
+                          "question":  "가상 메모리에서 페이지 폴트(page fault)란?"
+                      },
+                      {
+                          "domain":  "OS",
+                          "question":  "각 프로세스에게 실제 물리 메모리 대신 독립된 큰 주소 공간을 제공하는 메모리 관리 기법은? (한글 또는 영문)"
+                      },
+                      {
+                          "domain":  "OS",
+                          "question":  "뮤텍스는 잠근 스레드만 해제할 수 있는 소유 개념이 있지만, 세마포어는 다른 스레드가 해제(signal)할 수도 있다."
+                      },
+                      {
+                          "domain":  "SECURITY",
+                          "question":  "JWT의 서명(signature) 부분의 역할은?"
+                      },
+                      {
+                          "domain":  "SECURITY",
+                          "question":  "비밀번호는 나중에 복호화할 수 있는 방식으로 암호화해 저장하는 것이 바람직하다."
+                      },
+                      {
+                          "domain":  "SYSTEM_DESIGN",
+                          "question":  "자주 조회되는 데이터를 더 빠른 저장소에 복사해 두고 먼저 찾아보는 기법은? (한글 또는 영문)"
+                      }
+                  ]
+}

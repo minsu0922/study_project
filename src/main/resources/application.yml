@@ -75,23 +75,34 @@ admin:
   email: ${ADMIN_EMAIL:admin@csquiz.local}
   password: ${ADMIN_PASSWORD:admin1234}
 
-# LLM 문제 생성 (B안) — 설계 docs/13, 결정 ADR-0006.
+# LLM 문제 생성 (B안) — 설계 docs/13, 자동화 docs/14, 결정 ADR-0006(개정).
 # API 키는 여기 두지 않는다: SDK가 ANTHROPIC_API_KEY 환경변수를 직접 읽는다(코드/설정 유출 방지).
+# 일일 배치는 더 이상 앱 안에서 돌지 않는다 — GitHub Actions가 매일 생성해 저장소에 커밋하고,
+# 이 앱은 기동할 때 그 파일을 검수 대기함으로 흡수한다(DraftImportRunner).
+# 앱 내부 @Scheduled를 버린 이유: 개인 PC에서 도는 앱이라 06시에 PC가 꺼져 있으면
+# 그날 배치가 통째로 사라졌다(실제로 겪음 — docs/14 "왜 옮겼나").
 llm:
   generation:
     # opus-4-8 → opus-5: 입력 $5 / 출력 $25 per 1M로 가격이 동일한데 성능만 올라가서
-    # 바꾸지 않을 이유가 없다(비용 증가 0). 모델은 언젠가 은퇴하므로 여기 값이 살아 있는지는
-    # 주간 E2E 테스트(ClaudeProblemGeneratorE2ETest)가 감시한다.
+    # 바꾸지 않을 이유가 없다(비용 증가 0). 모델은 언젠가 은퇴하는데, 이제는 매일 도는
+    # 생성 워크플로가 실패하면서 메일이 오므로 별도 감시 테스트가 필요 없다.
+    # 이 값은 워크플로(DraftGeneratorCli)도 그대로 읽는다 — 설정의 단일 출처.
     model: claude-opus-5
-    batch-enabled: true          # 수동 버튼으로 검증을 마쳐 일일 배치를 켠다
-    batch-cron: "0 0 6 * * *"    # 매일 06:00 — 사용자 대면 기능이 아니라 PC가 꺼져 있어도 무해(ADR-0006)
-    batch-count: 5               # 배치 1회당 생성 문제 수(가장 부족한 칸 대상)
+    batch-count: 5               # 배치 1회당 생성 문제 수(그날의 칸 대상)
     # 배치가 "알아서 고를" 때의 후보 도메인. 이 프로젝트의 목적은 백엔드 면접 대비인데
     # (Domain.java 주석: "사용자(백엔드 개발자)의 주력 스택") 전체 11개를 균등하게 채우면
     # 매일 나오는 문제의 상당수가 관심 밖 영역이 된다 — 8개로 좁혀 24칸을 24일에 한 바퀴 돈다.
     # 제외: CLOUD_INFRA, FRONTEND_CS, INTEGRATED.
     # 여기서 빠진 도메인도 관리자 화면에서 "직접 지정"하면 그대로 생성된다(제한은 자동 선택에만 적용).
+    # 이 목록의 순서가 곧 날짜 순환 순서다(GenerationSchedule) — 순서를 바꾸면 그날 나올 칸이 바뀐다.
     batch-domains: NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK
+
+  # 생성 결과 파일 흡수 (docs/14) — 앱 기동 시 generated/*.json을 검수 대기 초안으로 가져온다.
+  import:
+    enabled: true
+    # 저장소 루트 기준 상대 경로. GitHub Actions가 커밋하는 위치와 반드시 같아야 한다.
+    # 앱을 다른 작업 디렉터리에서 띄운다면 절대 경로로 바꿔야 파일을 찾는다.
+    dir: generated
 
 logging:
   level:

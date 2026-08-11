@@ -90,3 +90,28 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// ── 일일 문제 생성 배치 (docs/14) ─────────────────────────────────
+// GitHub Actions(.github/workflows/llm-daily.yml)가 매일 이 태스크를 실행해 문제를 만들고
+// generated/YYYY-MM-DD.json으로 커밋한다. 로컬에서 손으로 돌려볼 수도 있다:
+//   .\gradlew.bat generateDrafts -PdraftArgs="--domain=NETWORK --count=1"
+//
+// bootRun이 아니라 JavaExec인 이유: 이 진입점은 Spring 컨텍스트를 띄우지 않는다(DB 불필요).
+// bootRun으로 돌리면 MySQL 연결을 요구해서 러너에 DB 컨테이너를 붙여야 한다 —
+// "생성만 하는 작업에 DB를 왜 띄우나"라는 문제가 생긴다. 자세한 배경은 DraftGeneratorCli 주석.
+tasks.register('generateDrafts', JavaExec) {
+    group = 'llm'
+    description = 'Claude로 하루치 문제를 생성해 generated/ 아래 JSON으로 저장한다'
+    mainClass = 'project.study.study_project.llm.cli.DraftGeneratorCli'
+    // 메인 소스셋의 런타임 클래스패스 — application.yml(모델·후보 도메인)도 여기 포함된다
+    classpath = sourceSets.main.runtimeClasspath
+
+    // 인자는 한 덩어리 문자열로 받는다. Gradle의 -P는 값 하나만 넘길 수 있어서,
+    // 여러 옵션을 주려면 공백으로 이어 붙인 뒤 여기서 쪼개는 방식이 가장 단순하다.
+    if (project.hasProperty('draftArgs')) {
+        String raw = project.property('draftArgs').toString().trim()
+        if (!raw.isEmpty()) {
+            args raw.split(/\s+/)
+        }
+    }
+}
