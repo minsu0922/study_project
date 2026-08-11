@@ -598,7 +598,20 @@ async function loadDrafts() {
     const actions = d.status === "PENDING" ? `
       <div class="row-actions" style="margin-top:10px">
         <button onclick="approveDraft(this, ${d.id})">승인 → 문제 등록</button>
-        <button class="danger" onclick="rejectDraft(this, ${d.id})">거절</button>
+        <button class="danger" onclick="openReject(${d.id})">거절</button>
+      </div>
+      <div id="rejectForm-${d.id}" hidden style="margin-top:10px">
+        <input id="rejectReason-${d.id}" type="text" maxlength="500"
+               placeholder="거절 사유 (선택) — 예: 부정형 문제라 나머지 보기까지 검증해야 한다"
+               onkeydown="if (event.key === 'Enter') confirmReject(document.getElementById('rejectConfirm-${d.id}'), ${d.id})"
+               style="width:100%">
+        <div class="meta" style="margin:4px 0 6px">
+          사유는 다음 문제 생성 프롬프트에 그대로 반영됩니다(docs/14). 비워도 거절은 되지만, 되먹임에는 쓰이지 않습니다.
+        </div>
+        <div class="row-actions">
+          <button id="rejectConfirm-${d.id}" class="danger" onclick="confirmReject(this, ${d.id})">거절 확정</button>
+          <button onclick="closeReject(${d.id})">취소</button>
+        </div>
       </div>` : `
       <div class="meta" style="margin-top:10px">
         ${d.status === "APPROVED" ? `승인됨 → 문제 ID ${d.approvedProblemId}` : `거절됨${d.rejectReason ? " — " + escapeHtml(d.rejectReason) : ""}`}
@@ -636,17 +649,41 @@ async function approveDraft(btn, id) {
   }
 }
 
-async function rejectDraft(btn, id) {
-  // 삭제와 같은 2단계 확인 — 거절도 이력에 남긴다(초안은 지우지 않는다, docs/13)
-  armedDelete(btn, async () => {
-    try {
-      await api(`/api/admin/llm-problems/${id}/reject`, { method: "POST", body: JSON.stringify({}) });
-      loadDrafts();
-      refreshLlmBadge();
-    } catch (e) {
-      showError(document.getElementById("gMessage"), e);
-    }
-  }, "정말 거절?");
+/* ── 거절: 사유 입력 → 확정 ──
+ * 사유를 받는 이유: 거절 사유는 다음 생성 프롬프트에 되먹여져 같은 실수를 줄인다(docs/14).
+ * 예전에는 빈 바디로 바로 거절해서, 백엔드·DB·표시 코드가 다 준비돼 있는데도 사유가 항상 비었다.
+ *
+ * armedDelete(버튼 두 번 누르기) 대신 입력 폼을 쓰는 이유:
+ *  - 폼이 펼쳐지고 "거절 확정"을 눌러야 하므로 2단계 확인이라는 안전장치는 그대로다.
+ *  - 사유는 한 줄로 끝나지 않을 수 있어 입력란이 필요하고, 그렇다면 3초 후 원복되는
+ *    armed 방식과는 섞이지 않는다(적는 동안 타이머가 끝나 버린다).
+ * brower prompt()를 쓰지 않는 것은 이 프로젝트의 기존 원칙 그대로 — 팝업은 흐름을 끊고
+ * 자동화·테스트를 막는다(admin.html 상단 armedDelete 주석 참고). */
+function openReject(id) {
+  document.getElementById(`rejectForm-${id}`).hidden = false;
+  document.getElementById(`rejectReason-${id}`).focus();
+}
+
+function closeReject(id) {
+  document.getElementById(`rejectForm-${id}`).hidden = true;
+}
+
+async function confirmReject(btn, id) {
+  btn.disabled = true;
+  const reason = document.getElementById(`rejectReason-${id}`).value.trim();
+  try {
+    // 사유가 비면 아예 키를 넘기지 않는다 — 백엔드가 빈 문자열을 null로 정규화하긴 하지만,
+    // "안 적었다"를 빈 문자열로 보내는 것보다 필드를 빼는 쪽이 의도가 분명하다.
+    await api(`/api/admin/llm-problems/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify(reason ? { reason } : {}),
+    });
+    loadDrafts();      // 거절 이력은 남는다(초안을 지우지 않는다, docs/13)
+    refreshLlmBadge();
+  } catch (e) {
+    btn.disabled = false;
+    showError(document.getElementById("gMessage"), e);
+  }
 }
 
 /** 탭 배지 갱신 — "검수 대기 N" 이 0이면 배지를 숨긴다(0을 붙이면 항상 시끄럽다). */
