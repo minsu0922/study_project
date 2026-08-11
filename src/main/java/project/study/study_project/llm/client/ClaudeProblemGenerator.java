@@ -1,7 +1,5 @@
 package project.study.study_project.llm.client;
 
-import com.anthropic.client.AnthropicClient;
-import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.models.messages.MessageCreateParams;
@@ -26,10 +24,8 @@ import java.util.List;
  *   <li><b>구조화 출력</b>: {@code outputConfig(Batch.class)}로 record에서 파생된 JSON 스키마를
  *       API에 보내면, 모델 응답이 스키마에 강제된다. 프롬프트로 "JSON으로 줘"라고 부탁하는 것과
  *       달리 형식이 <b>보장</b>되므로 파싱 실패 처리 코드가 필요 없다.
- *   <li><b>클라이언트 지연 생성(lazy)</b>: 앱 부팅 시 만들지 않고 첫 호출 때 만든다.
- *       {@code fromEnv()}는 ANTHROPIC_API_KEY가 없으면 예외를 던지는데, 부팅 시점에 만들면
- *       키 없는 로컬 환경에서 앱 자체가 안 뜬다. 키가 없어도 앱은 뜨고, 생성 기능만
- *       LLM_004로 안내하는 게 맞다(생성은 부가 기능이지 앱의 전제가 아니다).
+ *   <li><b>클라이언트 지연 생성(lazy)</b>: {@link AnthropicClientHolder}가 첫 호출 때 만들어 공유한다.
+ *       키가 없어도 앱은 뜨고 생성 기능만 LLM_004로 안내한다 — 이유는 그 클래스 주석 참고.
  *   <li><b>어댑티브 사고(thinking)</b>: 문제 출제는 "그럴듯한 오답 만들기"가 어려운 작업이라
  *       모델이 스스로 생각 깊이를 조절하는 adaptive를 켠다. Opus 4.8은 thinking을 생략하면
  *       꺼진 채로 동작하므로 명시적으로 설정해야 한다.
@@ -40,9 +36,6 @@ import java.util.List;
 public class ClaudeProblemGenerator implements ProblemGenerator {
 
     private final String model;
-
-    /** 지연 생성되는 SDK 클라이언트. volatile + synchronized로 이중 초기화만 막는 단순한 보호. */
-    private volatile AnthropicClient client;
 
     public ClaudeProblemGenerator(@Value("${llm.generation.model:claude-opus-4-8}") String model) {
         this.model = model;
@@ -64,7 +57,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                 .build();
 
         try {
-            return client().messages().create(params).content().stream()
+            return AnthropicClientHolder.get().messages().create(params).content().stream()
                     .flatMap(block -> block.text().stream())
                     .findFirst()
                     .map(typed -> typed.text().problems())
@@ -78,26 +71,6 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             log.warn("Claude API 네트워크 오류: {}", e.getMessage());
             throw new BusinessException(ErrorCode.LLM_003, "네트워크 오류로 생성에 실패했습니다.");
         }
-    }
-
-    /**
-     * API 키 확인 후 클라이언트를 지연 생성한다. 키가 없으면 503(LLM_004)으로 기능 비활성을 알린다.
-     * 매 호출마다 만들지 않는 이유: SDK 클라이언트는 커넥션 풀을 가진 무거운 객체라 재사용이 원칙.
-     */
-    private AnthropicClient client() {
-        AnthropicClient c = client;
-        if (c == null) {
-            synchronized (this) {
-                if (client == null) {
-                    if (System.getenv("ANTHROPIC_API_KEY") == null) {
-                        throw new BusinessException(ErrorCode.LLM_004);
-                    }
-                    client = AnthropicOkHttpClient.fromEnv();
-                }
-                c = client;
-            }
-        }
-        return c;
     }
 
     /* ── 프롬프트 ─────────────────────────────────────────────── */

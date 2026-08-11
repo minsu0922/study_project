@@ -24,6 +24,18 @@ on:
   workflow_dispatch:
     # 수동 실행 — 비워 두면 예약 실행과 똑같이(날짜 순환으로) 동작한다.
     inputs:
+      type:
+        description: '무엇을 만들지'
+        type: choice
+        required: false
+        default: 'problem'
+        options:
+          - problem
+          - document
+      topic:
+        description: '문서 주제 (type=document일 때만). 비우면 모델이 기존 문서와 겹치지 않게 자동 선택'
+        required: false
+        default: ''
       domain:
         description: '분야 (예: NETWORK). 비우면 날짜 순환'
         required: false
@@ -104,9 +116,15 @@ jobs:
           # 예약 실행에서는 inputs가 비어 있으므로 force는 항상 꺼진 상태로 넘어간다 —
           # 중단 스위치를 예약 실행이 스스로 무시하는 일은 구조적으로 불가능하다.
           IN_FORCE: ${{ inputs.force }}
+          # 예약 실행에서는 inputs가 비어 type이 넘어가지 않는다 → CLI 기본값 problem.
+          # 즉 매일 도는 배치는 지금까지와 똑같이 문제만 만든다(문서는 수동 실행 전용, docs/15 1단계).
+          IN_TYPE: ${{ inputs.type }}
+          # 주제는 "TCP 혼잡 제어"처럼 공백이 들어간다. -PdraftArgs는 공백으로 인자를 쪼개므로
+          # 거기 실으면 단어 단위로 찢어진다 — CLI가 환경변수로 직접 읽게 한다(DraftGeneratorCli 주석).
+          DRAFT_TOPIC: ${{ inputs.topic }}
         run: |
           ./gradlew generateDrafts --no-daemon --console=plain \
-            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --force=${IN_FORCE}"
+            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --force=${IN_FORCE} --type=${IN_TYPE}"
 
       - name: 결과 커밋 & 푸시
         run: |

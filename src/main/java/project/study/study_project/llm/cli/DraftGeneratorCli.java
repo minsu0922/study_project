@@ -5,10 +5,13 @@ import org.yaml.snakeyaml.Yaml;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
+import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
+import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
 import project.study.study_project.llm.support.GenerationSchedule;
 
@@ -71,6 +74,12 @@ public final class DraftGeneratorCli {
     /** 검수자의 거절 사례 스냅샷. 로컬 앱(RejectionNotesExporter)이 쓰고 여기서 읽는다. */
     private static final String REJECTION_NOTES_FILE = "_rejection-notes.json";
 
+    /** 개념 문서 결과가 쌓이는 하위 디렉터리. 문제 파일과 형식이 달라 폴더로 분리한다(docs/15). */
+    private static final String DOCUMENT_SUBDIR = "documents";
+
+    /** 기존 문서 제목·태그 스냅샷. 문서 주제 중복을 피하고 태그 난립을 막는 데 쓴다. */
+    private static final String EXISTING_DOCUMENTS_FILE = "_existing-documents.json";
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private DraftGeneratorCli() {
@@ -98,11 +107,17 @@ public final class DraftGeneratorCli {
             return; // 종료 코드 0 — "의도된 중단"은 실패가 아니므로 알림 메일이 오면 안 된다
         }
 
-        // ── 3. 오늘 무엇을 만들지 결정 ────────────────────────────
+        // ── 3. 문서 모드 분기 ─────────────────────────────────────
+        // 개념 문서는 대상 선정 방식(칸 순환이 아니라 주제)도, 출력 위치(generated/documents/)도
+        // 다르다. 한 흐름 안에서 if로 갈라면 두 관심사가 뒤엉키므로 아예 따로 뗀다.
+        if ("document".equalsIgnoreCase(opts.getOrDefault("type", "problem"))) {
+            generateDocument(opts, model, batchDomains);
+            return;
+        }
+
+        // ── 4. 오늘 무엇을 만들지 결정 ────────────────────────────
         // 날짜는 한국 기준. 워크플로는 UTC로 도니까 여기서 변환하지 않으면 하루 어긋난다.
-        LocalDate date = opts.containsKey("date")
-                ? LocalDate.parse(opts.get("date"))
-                : LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate date = resolveDate(opts);
 
         GenerationSchedule.Cell cell = GenerationSchedule.cellFor(date, batchDomains);
         // 수동 실행(workflow_dispatch)에서 특정 칸을 지정한 경우만 순환을 덮어쓴다
@@ -116,20 +131,20 @@ public final class DraftGeneratorCli {
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Path outFile = outDir.resolve(date + ".json");
 
-        // ── 4. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
+        // ── 5. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
         // 워크플로를 수동으로 두 번 눌러도 API 요금이 두 번 나가지 않게 하는 안전장치.
         if (Files.exists(outFile)) {
             System.out.println("이미 생성됨, 건너뜀: " + outFile);
             return;
         }
 
-        // ── 5. 중복 회피 목록 + 거절 사례 되먹이기 ────────────────
+        // ── 6. 중복 회피 목록 + 거절 사례 되먹이기 ────────────────
         List<String> avoid = buildAvoidList(outDir, domain);
         List<RejectionNote> rejectionNotes = readRejectionNotes(outDir);
         System.out.printf("생성 시작: %s × %s, %d문제 (모델 %s, 중복 회피 %d건, 거절 사례 %d건)%n",
                 domain, difficulty, count, model, avoid.size(), rejectionNotes.size());
 
-        // ── 6. 실제 호출 ──────────────────────────────────────────
+        // ── 7. 실제 호출 ──────────────────────────────────────────
         List<GeneratedProblemItem> problems = new ClaudeProblemGenerator(model)
                 .generate(domain, difficulty, type, count, avoid, rejectionNotes);
 
@@ -139,7 +154,7 @@ public final class DraftGeneratorCli {
             throw new IllegalStateException("모델이 문제를 하나도 반환하지 않았습니다 — 프롬프트/모델 설정을 확인하세요.");
         }
 
-        // ── 7. 파일로 저장 ────────────────────────────────────────
+        // ── 8. 파일로 저장 ────────────────────────────────────────
         GeneratedBatchFile batch = new GeneratedBatchFile(
                 "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
                 date.toString(), Instant.now().toString(),
@@ -148,6 +163,117 @@ public final class DraftGeneratorCli {
         Files.createDirectories(outDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
         System.out.printf("저장 완료: %s (%d문제)%n", outFile, problems.size());
+    }
+
+    /* ── 개념 문서 생성 ───────────────────────────────────────── */
+
+    /**
+     * 개념 문서 한 편을 만들어 {@code generated/documents/YYYY-MM-DD.json}으로 저장한다(docs/15).
+     *
+     * <p><b>문제 생성과 다른 점 세 가지</b>:
+     * <ul>
+     *   <li><b>난이도가 없다.</b> 문서는 한 편 안에 초급·중급·고급 재료를 모두 담는 것이 목표라
+     *       (프롬프트의 [난이도 재료] 절) 날짜 순환의 난이도 축은 쓰지 않는다. 분야만 쓴다.
+     *   <li><b>주제를 지정할 수 있다.</b> 배치는 모델이 기존 제목을 피해 고르고, 수동 실행은
+     *       {@code --topic}으로 직접 지정한다 — 문제 생성에서 "배치는 순환, 관리자는 직접 지정"으로
+     *       갈라 둔 것과 같은 구조.
+     *   <li><b>하위 디렉터리에 저장한다.</b> 문제 파일과 형식이 달라 같은 폴더에 섞이면
+     *       기존 흡수 코드가 파싱에 실패한다({@code GeneratedDocumentFile} 주석 참고).
+     * </ul>
+     */
+    private static void generateDocument(Map<String, String> opts, String model,
+                                         List<Domain> batchDomains) throws Exception {
+        LocalDate date = resolveDate(opts);
+        Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
+        Path docDir = outDir.resolve(DOCUMENT_SUBDIR);
+        Path outFile = docDir.resolve(date + ".json");
+
+        // 문제 생성과 같은 멱등성 보호 — 수동으로 두 번 눌러도 요금이 두 번 나가지 않는다
+        if (Files.exists(outFile)) {
+            System.out.println("이미 생성됨, 건너뜀: " + outFile);
+            return;
+        }
+
+        // 분야를 지정하지 않으면 그날의 순환 분야를 쓴다(난이도는 문서에 의미가 없어 버린다)
+        Domain domain = opts.containsKey("domain")
+                ? Domain.valueOf(opts.get("domain"))
+                : GenerationSchedule.cellFor(date, batchDomains).domain();
+        String topic = resolveTopic(opts);
+
+        ExistingDocuments snapshot = readExistingDocuments(outDir);
+        List<String> avoidTitles = snapshot.titles();
+        List<String> tags = snapshot.tags();
+
+        System.out.printf("문서 생성 시작: %s / 주제 %s (모델 %s, 기존 문서 %d편, 태그 %d개)%n",
+                domain, topic == null ? "자동 선택" : topic, model, avoidTitles.size(), tags.size());
+
+        GeneratedDocumentItem document =
+                new ClaudeDocumentGenerator(model).generate(domain, topic, avoidTitles, tags);
+
+        // 빈 응답은 성공이 아니다 — job을 실패시켜 메일을 받는 쪽이 낫다(문제 생성과 같은 판단)
+        if (document == null || document.contentMd() == null || document.contentMd().isBlank()) {
+            throw new IllegalStateException("모델이 문서 본문을 반환하지 않았습니다 — 프롬프트/모델 설정을 확인하세요.");
+        }
+
+        GeneratedDocumentFile file = new GeneratedDocumentFile(
+                "GitHub Actions가 자동 생성한 개념 문서 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/15). 승인 전까지는 정식 문서가 아닙니다.",
+                date.toString(), Instant.now().toString(), domain, model, document);
+
+        Files.createDirectories(docDir);
+        Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(file));
+        System.out.printf("저장 완료: %s (\"%s\", 본문 %d자)%n",
+                outFile, document.title(), document.contentMd().length());
+    }
+
+    /**
+     * 기존 문서 제목·태그 스냅샷을 읽는다({@code generated/_existing-documents.json}).
+     *
+     * <p>중복 회피 목록과 같은 경계 문제다 — 클라우드에는 DB가 없으니 저장소에 커밋된 스냅샷으로
+     * 대신한다. 파일이 없어도 진행한다: 첫 실행이거나 아직 내보내지 않았을 수 있고, 이건 정상
+     * 상황이지 오류가 아니다(중복이 날 뿐 생성 자체는 된다).
+     */
+    private static ExistingDocuments readExistingDocuments(Path dir) {
+        Path file = dir.resolve(EXISTING_DOCUMENTS_FILE);
+        if (!Files.exists(file)) {
+            return new ExistingDocuments(null, null, List.of(), List.of());
+        }
+        try {
+            ExistingDocuments snapshot = MAPPER.readValue(file.toFile(), ExistingDocuments.class);
+            return new ExistingDocuments(snapshot.note(), snapshot.exportedAt(),
+                    snapshot.titles() == null ? List.of() : snapshot.titles(),
+                    snapshot.tags() == null ? List.of() : snapshot.tags());
+        } catch (Exception e) {
+            System.out.println("기존 문서 스냅샷을 읽지 못해 건너뜁니다: " + e.getMessage());
+            return new ExistingDocuments(null, null, List.of(), List.of());
+        }
+    }
+
+    /** {@code generated/_existing-documents.json}의 형태 — 이 CLI만 읽으므로 여기 둔다. */
+    private record ExistingDocuments(String note, String exportedAt, List<String> titles, List<String> tags) {
+    }
+
+    /**
+     * 문서 주제 — 환경변수 {@code DRAFT_TOPIC}을 우선하고, 없으면 {@code --topic} 인자를 본다.
+     *
+     * <p><b>왜 환경변수를 먼저 보는가.</b> 주제는 "TCP 혼잡 제어"처럼 공백이 들어간다. Gradle에
+     * 인자를 넘기는 통로({@code -PdraftArgs})는 문자열 하나라서 공백으로 쪼개 쓰는데, 그러면
+     * 주제가 단어 단위로 찢어진다. 환경변수는 값 하나를 통째로 전달하므로 이 문제가 없고,
+     * 사용자 입력을 셸 명령에 끼워 넣지 않아 스크립트 인젝션 위험도 없다.
+     * {@code --topic}은 공백 없는 주제를 로컬에서 빠르게 시험할 때를 위해 남겨 둔다.
+     */
+    private static String resolveTopic(Map<String, String> opts) {
+        String fromEnv = System.getenv("DRAFT_TOPIC");
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv.trim();
+        }
+        return opts.get("topic");
+    }
+
+    /** 기준 날짜 — 한국 기준. 문제·문서 두 흐름이 같은 규칙을 쓰도록 한 곳에 둔다. */
+    private static LocalDate resolveDate(Map<String, String> opts) {
+        return opts.containsKey("date")
+                ? LocalDate.parse(opts.get("date"))
+                : LocalDate.now(ZoneId.of("Asia/Seoul"));
     }
 
     /* ── 중단 스위치 ─────────────────────────────────────────── */
