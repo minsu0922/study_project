@@ -53,14 +53,14 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     @Override
     public GeneratedDocumentItem generate(Domain domain, String topic,
                                           List<String> avoidTitles, List<String> preferredTags) {
-        StructuredMessageCreateParams<GeneratedDocumentItem.Envelope> params = MessageCreateParams.builder()
+        StructuredMessageCreateParams<GeneratedDocumentItem> params = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(MAX_TOKENS)
                 // 개념 문서 쓰기는 "무엇을 넣고 무엇을 뺄지"를 계속 저울질하는 작업이라 사고가 도움이 된다.
                 // 문제 생성과 같은 판단(ClaudeProblemGenerator 주석)이므로 설정도 같게 둔다.
                 .thinking(ThinkingConfigAdaptive.builder().build())
                 .system(SYSTEM_PROMPT)
-                .outputConfig(GeneratedDocumentItem.Envelope.class)
+                .outputConfig(GeneratedDocumentItem.class)
                 .addUserMessage(buildPrompt(domain, topic, avoidTitles, preferredTags))
                 .build();
 
@@ -68,7 +68,7 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
             return AnthropicClientHolder.get().messages().create(params).content().stream()
                     .flatMap(block -> block.text().stream())
                     .findFirst()
-                    .map(typed -> typed.text().document())
+                    .map(typed -> typed.text())
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 문서가 없습니다."));
         } catch (AnthropicServiceException e) {
             log.warn("Claude API 호출 실패(문서 생성): status={}, message={}", e.statusCode(), e.getMessage());

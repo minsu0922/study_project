@@ -38,10 +38,13 @@ public record GeneratedDocumentItem(
         @JsonPropertyDescription("검색용 태그 2~4개. 소문자 영문. 제시된 기존 태그를 우선 재사용한다. 예: ['tcp','network']")
         List<String> tags
 ) {
-    /** 구조화 출력의 최상위 스키마 — 최상위는 객체여야 해서 감싸는 봉투가 필요하다(문제 생성과 같은 이유). */
-    public record Envelope(
-            @JsonPropertyDescription("생성된 개념 문서")
-            GeneratedDocumentItem document
-    ) {
-    }
+    // 문제 생성({@code GeneratedProblemItem.Batch})과 달리 감싸는 봉투가 없다.
+    // 봉투가 필요했던 이유는 "JSON 최상위는 객체여야 하는데 문제는 목록"이었기 때문이고,
+    // 문서는 그 자체가 이미 객체라 봉투를 씌울 이유가 없다.
+    //
+    // 실제로 봉투를 만들었다가 SDK 스키마 검증에서 막혔다:
+    //   "#/properties/document: Expected exactly one of 'type' or 'anyOf' or '$ref'"
+    // 단일 객체 필드에 @JsonPropertyDescription을 붙이면 스키마 생성기가 설명을 얹으려고
+    // allOf로 감싸는데, SDK 검증기는 type/anyOf/$ref 중 하나만 허용한다.
+    // (배열 필드는 {"type":"array", ...}가 되어 이 문제가 없다 — 그래서 문제 쪽은 통과했다.)
 }
