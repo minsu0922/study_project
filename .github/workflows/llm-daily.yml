@@ -102,6 +102,14 @@ jobs:
 
       - name: 결과 커밋 & 푸시
         run: |
+          # 앞의 "gradlew 실행 권한 부여" 스텝(chmod +x)이 파일 모드를 100644 → 100755로
+          # 바꿔 놓는다. git은 실행 권한 비트도 추적하므로 이게 "커밋되지 않은 수정"으로 남고,
+          # 그 상태에서는 rebase가 거부된다 — 첫 실행이 정확히 이걸로 실패했다
+          # ("cannot pull with rebase: You have unstaged changes").
+          # 모드 변경을 추적하지 않게 해서 원인 자체를 없앤다. ci-cd.yml은 커밋을 하지 않아
+          # 같은 chmod를 쓰고도 이 문제가 드러나지 않았다.
+          git config core.fileMode false
+
           # 생성된 게 없으면(같은 날짜 파일이 이미 있어 건너뛴 경우) 조용히 끝낸다 —
           # 빈 커밋을 남기면 히스토리만 지저분해진다.
           if [ -z "$(git status --porcelain generated)" ]; then
@@ -116,7 +124,10 @@ jobs:
 
           # 그 사이 사람이 푸시했을 수 있다. generated/ 아래 새 파일만 추가하므로 내용 충돌은
           # 사실상 없지만, 뒤처진 상태로는 푸시가 거부되므로 rebase로 맞춰 준다.
-          git pull --rebase origin "${GITHUB_REF_NAME}"
+          # --autostash는 보험이다: 빌드가 작업 트리에 무언가를 남겨도 rebase가 멈추지 않는다.
+          # 위 core.fileMode 설정이 알려진 원인을 없애지만, 모르는 원인까지 막아 둔다 —
+          # 이 스텝이 실패하면 이미 지불한 API 요금이 결과 없이 버려지기 때문(첫 실행에서 실제로 겪음).
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
       # 실행 결과를 Actions 요약 화면에 남긴다 — 로그를 뒤지지 않고 무엇이 만들어졌는지 보려고.
