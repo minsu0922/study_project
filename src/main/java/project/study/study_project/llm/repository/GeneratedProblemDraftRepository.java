@@ -54,4 +54,37 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
             group by d.domain, d.difficulty
             """)
     List<ProblemRepository.DomainDifficultyCount> countPendingGroupByDomainAndDifficulty();
+
+    /**
+     * 최근 거절 사례(지문 + 사유) — 생성 프롬프트에 되먹인다(docs/14).
+     *
+     * <p><b>도메인으로 거르지 않는 이유</b>: 거절 사유는 대개 "부정형 문제라 검수가 어렵다",
+     * "단순 암기 확인이다"처럼 <b>분야를 가리지 않는 출제 품질 문제</b>다. 네트워크 문제를
+     * 만들 때도 운영체제 문제가 거절된 이유가 그대로 교훈이 된다. 도메인별로 나누면
+     * 표본이 잘게 쪼개져 대부분의 칸에서 사례가 0건이 되어 기능이 무력해진다.
+     *
+     * <p><b>사유가 없는 거절은 제외</b>: reject 사유는 선택 입력이라 NULL일 수 있는데,
+     * 지문만 있고 이유가 없으면 모델에게 "이건 왜인지 모르지만 나쁘다"는 말이 되어 도움이 안 된다.
+     * (중복 방지 목적이라면 이미 중복 회피 목록이 담당한다.)
+     *
+     * <p>최근 처리 순으로 정렬 — 프롬프트를 개선한 뒤의 최신 판단이 앞에 오게 한다.
+     * 개수 제한은 {@link Pageable}로 호출부가 정한다(입력 토큰 비용과의 균형).
+     */
+    @Query("""
+            select d.question as question, d.rejectReason as reason
+            from GeneratedProblemDraft d
+            where d.status = 'REJECTED' and d.rejectReason is not null
+            order by d.reviewedAt desc
+            """)
+    List<RejectionNoteView> findRecentRejectionNotes(Pageable pageable);
+
+    /**
+     * 거절 사례 조회 결과 프로젝션. 엔티티 전체를 읽지 않는 이유는 필요한 두 컬럼만 가져오기 위해서다
+     * — 초안의 question·explanation·choices_json은 TEXT라 전부 읽으면 쓸데없이 크다.
+     */
+    interface RejectionNoteView {
+        String getQuestion();
+
+        String getReason();
+    }
 }

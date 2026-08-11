@@ -24,8 +24,11 @@ public interface ProblemGenerator {
      * @param type           유형 (필수 — MVP 자동채점 3종만)
      * @param count          생성 개수
      * @param avoidQuestions 중복 회피 목록 — 기존 문제·대기 초안의 질문 텍스트
+     * @param rejectionNotes 과거 검수에서 거절된 사례(지문+사유). 비어 있으면 프롬프트에서 생략된다.
+     *                       사람의 검수 결과를 다음 생성에 되먹이는 통로다(docs/14)
      * @return 생성된 문제 목록(모델이 count보다 적게/많이 줄 수도 있어 호출부가 방어)
      */
     List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
-                                        int count, List<String> avoidQuestions);
+                                        int count, List<String> avoidQuestions,
+                                        List<RejectionNote> rejectionNotes);
 }

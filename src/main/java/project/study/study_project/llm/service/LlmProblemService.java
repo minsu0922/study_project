@@ -19,6 +19,7 @@ import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemGenerator;
+import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.dto.LlmDraftResponse;
@@ -48,6 +49,14 @@ public class LlmProblemService {
 
     /** 중복 회피 목록에 넣을 기존 문제 수 상한 — 프롬프트 토큰 비용과의 균형점. */
     private static final int AVOID_LIST_SIZE = 50;
+
+    /**
+     * 프롬프트에 되먹일 거절 사례 수 상한(docs/14). 회피 목록(50)보다 적게 잡은 이유:
+     * 회피 목록은 "빠지면 중복이 난다"라 많을수록 좋지만, 거절 사례는 <b>패턴을 보여주는 것</b>이
+     * 목적이라 20건이면 반복되는 실수가 충분히 드러난다. 더 넣어 봐야 토큰만 늘고
+     * 오래된 사례가 이미 고쳐진 프롬프트를 다시 지적하는 잡음이 된다.
+     */
+    private static final int REJECTION_NOTE_SIZE = 20;
 
     private final ProblemGenerator problemGenerator;
     private final GeneratedProblemDraftRepository draftRepository;
@@ -105,8 +114,12 @@ public class LlmProblemService {
         }
 
         List<String> avoid = buildAvoidList(domain);
+        // 관리자 수동 생성은 DB를 직접 볼 수 있으므로 거절 사례를 실시간으로 읽는다 —
+        // 방금 거절한 문제가 바로 다음 생성에 반영된다. (배치는 DB가 없어 스냅샷 파일을 쓴다:
+        // RejectionNotesExporter → generated/_rejection-notes.json → DraftGeneratorCli)
+        List<RejectionNote> rejectionNotes = findRecentRejectionNotes();
         List<GeneratedProblemItem> items =
-                problemGenerator.generate(domain, difficulty, type, request.count(), avoid);
+                problemGenerator.generate(domain, difficulty, type, request.count(), avoid, rejectionNotes);
 
         return saveDrafts(domain, difficulty, type, items, model).stream().map(this::toResponse).toList();
     }
@@ -186,6 +199,24 @@ public class LlmProblemService {
     }
 
     private record ScarceCell(Domain domain, Difficulty difficulty) {
+    }
+
+    /**
+     * 최근 거절 사례를 프롬프트용 형태로 읽는다 — 검수 결과를 다음 생성에 되먹이는 통로(docs/14).
+     *
+     * <p><b>공개(public)인 이유</b>: {@code RejectionNotesExporter}가 같은 목록을 스냅샷 파일로
+     * 내보낸다. 조회 조건(거절 + 사유 있음 + 최신순 + 20건)이 두 곳에 따로 적히면 언젠가
+     * 어긋나서 <b>로컬 생성과 배치 생성이 서로 다른 사례를 보게 된다</b> — 같은 메서드를 쓰게 한다.
+     *
+     * <p>{@code @Transactional}을 붙이지 않은 이유: 단일 조회라 Spring Data 저장소 메서드가
+     * 자체적으로 걸어 주는 읽기 전용 트랜잭션이면 충분하다. 게다가 이 메서드는 같은 클래스의
+     * {@link #generate}가 호출하는데, 자기 클래스 메서드 호출은 프록시를 거치지 않아
+     * 애너테이션이 <b>조용히 무시된다</b> — 효과 없는 애너테이션은 붙이지 않는 편이 정직하다.
+     */
+    public List<RejectionNote> findRecentRejectionNotes() {
+        return draftRepository.findRecentRejectionNotes(PageRequest.of(0, REJECTION_NOTE_SIZE)).stream()
+                .map(v -> new RejectionNote(v.getQuestion(), v.getReason()))
+                .toList();
     }
 
     /** 중복 회피 목록 — 정식 문제(최신 50) + 아직 검수 안 된 같은 도메인 초안. */

@@ -50,7 +50,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
 
     @Override
     public List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
-                                               int count, List<String> avoidQuestions) {
+                                               int count, List<String> avoidQuestions,
+                                               List<RejectionNote> rejectionNotes) {
         // 구조화 출력: Batch record가 응답 스키마. create() 결과의 text()가 이미 Batch 타입으로
         // 파싱되어 있다(수동 JSON 파싱 없음 — 이 한 줄이 구조화 출력을 쓰는 이유다).
         StructuredMessageCreateParams<GeneratedProblemItem.Batch> params = MessageCreateParams.builder()
@@ -59,7 +60,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                 .thinking(ThinkingConfigAdaptive.builder().build())
                 .system(SYSTEM_PROMPT)
                 .outputConfig(GeneratedProblemItem.Batch.class)
-                .addUserMessage(buildPrompt(domain, difficulty, type, count, avoidQuestions))
+                .addUserMessage(buildPrompt(domain, difficulty, type, count, avoidQuestions, rejectionNotes))
                 .build();
 
         try {
@@ -138,7 +139,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             """;
 
     private String buildPrompt(Domain domain, Difficulty difficulty, ProblemType type,
-                               int count, List<String> avoidQuestions) {
+                               int count, List<String> avoidQuestions,
+                               List<RejectionNote> rejectionNotes) {
         StringBuilder sb = new StringBuilder();
         sb.append("다음 조건으로 문제 ").append(count).append("개를 만들어라.\n\n");
         sb.append("- 분야: ").append(domain.getDisplayName()).append(domainHint(domain)).append('\n');
@@ -151,10 +153,34 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             sb.append("\n[중복 금지] 아래 기존 문제와 같은 내용·주제의 문제는 만들지 마라:\n");
             for (String q : avoidQuestions) {
                 // 지문이 길 수 있어 앞부분만 — 주제 중복 판단에는 첫 문장이면 충분하고 토큰이 절약된다
-                sb.append("- ").append(q.length() > 150 ? q.substring(0, 150) : q).append('\n');
+                sb.append("- ").append(truncate(q, 150)).append('\n');
+            }
+        }
+
+        // 거절 사례 되먹이기(docs/14) — SYSTEM_PROMPT의 금지 규칙이 "일반론"이라면 이건 "판례"다.
+        // 우리 검수자가 실제로 무엇을 탈락시켰는지는 이 서비스에만 있는 데이터라, 범용 규칙으로는
+        // 얻을 수 없는 신호다. 사유만 주면 무엇을 두고 한 말인지 알 수 없으므로 지문과 짝지어 준다.
+        // 이력이 없으면 블록 자체를 넣지 않는다 — 빈 제목만 남으면 모델이 "사례가 없다"를
+        // "기준이 없다"로 읽을 수 있고, 토큰도 낭비다.
+        if (rejectionNotes != null && !rejectionNotes.isEmpty()) {
+            sb.append("\n[과거 거절 사례] 아래는 검수자가 실제로 거절한 문제와 그 사유다. 같은 실수를 반복하지 마라:\n");
+            for (RejectionNote note : rejectionNotes) {
+                sb.append("- \"").append(truncate(note.question(), 100)).append('"');
+                if (note.reason() != null && !note.reason().isBlank()) {
+                    sb.append(" → 거절 사유: ").append(truncate(note.reason(), 150));
+                }
+                sb.append('\n');
             }
         }
         return sb.toString();
+    }
+
+    /** 프롬프트 토큰 절약용 앞부분 자르기. 잘렸음을 말줄임표로 알려 모델이 문장이 끊긴 것으로 오해하지 않게 한다. */
+    private String truncate(String s, int max) {
+        if (s == null) {
+            return "";
+        }
+        return s.length() > max ? s.substring(0, max) + "…" : s;
     }
 
     /**

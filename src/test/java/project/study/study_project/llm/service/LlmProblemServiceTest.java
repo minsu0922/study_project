@@ -19,6 +19,7 @@ import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemGenerator;
+import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
@@ -64,14 +65,17 @@ class LlmProblemServiceTest {
         Difficulty calledDifficulty;
         ProblemType calledType;
         List<String> calledAvoid;
+        List<RejectionNote> calledRejectionNotes;
 
         @Override
         public List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
-                                                   int count, List<String> avoidQuestions) {
+                                                   int count, List<String> avoidQuestions,
+                                                   List<RejectionNote> rejectionNotes) {
             this.calledDomain = domain;
             this.calledDifficulty = difficulty;
             this.calledType = type;
             this.calledAvoid = avoidQuestions;
+            this.calledRejectionNotes = rejectionNotes;
             return toReturn;
         }
     }
@@ -90,6 +94,8 @@ class LlmProblemServiceTest {
         lenient().when(draftRepository.findPendingQuestionsByDomain(any())).thenReturn(List.of());
         // 대기 초안 집계는 기본 "없음" — 필요한 테스트만 덮어쓴다
         lenient().when(draftRepository.countPendingGroupByDomainAndDifficulty()).thenReturn(List.of());
+        // 거절 사례도 기본 "없음" — 되먹이기를 검증하는 테스트만 덮어쓴다
+        lenient().when(draftRepository.findRecentRejectionNotes(any())).thenReturn(List.of());
     }
 
     /** 후보 도메인만 바꿔 서비스를 다시 만드는 헬퍼 — batch-domains 동작 검증용. */
@@ -97,6 +103,12 @@ class LlmProblemServiceTest {
         // ObjectMapper는 실물 사용 — JSON 직렬화가 이 서비스의 실제 책임이라 가짜로 대체하면 검증이 빈다
         return new LlmProblemService(fakeGenerator, draftRepository, problemRepository,
                 adminProblemService, new ObjectMapper(), "test-model", batchDomains);
+    }
+
+    /** 거절 사례 조회 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */
+    private record NoteRow(String q, String r) implements GeneratedProblemDraftRepository.RejectionNoteView {
+        @Override public String getQuestion() { return q; }
+        @Override public String getReason() { return r; }
     }
 
     /** GROUP BY 집계 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */
@@ -144,6 +156,35 @@ class LlmProblemServiceTest {
             service.generate(new LlmGenerateRequest(Domain.NETWORK, Difficulty.BEGINNER, null, 1));
 
             assertThat(fakeGenerator.calledAvoid).containsExactlyInAnyOrder("기존 문제 질문", "대기 초안 질문");
+        }
+
+        @Test
+        @DisplayName("과거 거절 사례가 생성기로 전달된다 — 검수 결과를 다음 생성에 되먹인다")
+        void rejectionNotesAreFedBackToGenerator() {
+            when(draftRepository.findRecentRejectionNotes(any())).thenReturn(List.of(
+                    new NoteRow("다음 중 옳지 않은 것은?", "부정형 문제라 검수 비용이 크다"),
+                    new NoteRow("Redis 기본 포트는?", "단순 암기 확인이라 원리를 묻지 않는다")));
+            fakeGenerator.toReturn = List.of(mcItem("새 문제", 0));
+
+            service.generate(new LlmGenerateRequest(Domain.NETWORK, Difficulty.BEGINNER, null, 1));
+
+            assertThat(fakeGenerator.calledRejectionNotes)
+                    .extracting(RejectionNote::reason)
+                    .containsExactly("부정형 문제라 검수 비용이 크다", "단순 암기 확인이라 원리를 묻지 않는다");
+            // 사유만 넘기면 모델이 무엇을 두고 한 말인지 모른다 — 지문도 함께 가야 한다
+            assertThat(fakeGenerator.calledRejectionNotes)
+                    .extracting(RejectionNote::question)
+                    .containsExactly("다음 중 옳지 않은 것은?", "Redis 기본 포트는?");
+        }
+
+        @Test
+        @DisplayName("거절 이력이 없으면 빈 목록이 전달된다 — 되먹임이 없다고 생성이 막히면 안 된다")
+        void emptyRejectionNotesDoNotBlockGeneration() {
+            fakeGenerator.toReturn = List.of(mcItem("새 문제", 0));
+
+            service.generate(new LlmGenerateRequest(Domain.NETWORK, Difficulty.BEGINNER, null, 1));
+
+            assertThat(fakeGenerator.calledRejectionNotes).isEmpty();
         }
 
         @Test

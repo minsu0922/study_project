@@ -51,7 +51,8 @@ class ClaudeProblemGeneratorE2ETest {
         List<GeneratedProblemItem> items = new ClaudeProblemGenerator(model).generate(
                 Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 1,               // 비용 통제 — 계약 검증에 1개면 충분하다
-                List.of());      // 중복 회피 목록 없음(입력 토큰 절약)
+                List.of(),       // 중복 회피 목록 없음(입력 토큰 절약)
+                List.of());      // 거절 사례 없음 — 이 테스트는 API 계약만 보므로 프롬프트를 최소로 둔다
 
         assertThat(items).as("모델이 요청한 개수만큼 문제를 반환해야 한다").hasSize(1);
         GeneratedProblemItem item = items.get(0);

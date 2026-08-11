@@ -7,7 +7,9 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
 import project.study.study_project.llm.client.GeneratedProblemItem;
+import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
+import project.study.study_project.llm.dto.RejectionNotesFile;
 import project.study.study_project.llm.support.GenerationSchedule;
 
 import java.io.InputStream;
@@ -66,6 +68,9 @@ public final class DraftGeneratorCli {
     /** 정식 문제 지문을 내보내 둔 파일. 클라우드에는 DB가 없어 이 스냅샷으로 대신한다. */
     private static final String EXISTING_QUESTIONS_FILE = "_existing-questions.json";
 
+    /** 검수자의 거절 사례 스냅샷. 로컬 앱(RejectionNotesExporter)이 쓰고 여기서 읽는다. */
+    private static final String REJECTION_NOTES_FILE = "_rejection-notes.json";
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private DraftGeneratorCli() {
@@ -118,14 +123,15 @@ public final class DraftGeneratorCli {
             return;
         }
 
-        // ── 5. 중복 회피 목록 ─────────────────────────────────────
+        // ── 5. 중복 회피 목록 + 거절 사례 되먹이기 ────────────────
         List<String> avoid = buildAvoidList(outDir, domain);
-        System.out.printf("생성 시작: %s × %s, %d문제 (모델 %s, 중복 회피 %d건)%n",
-                domain, difficulty, count, model, avoid.size());
+        List<RejectionNote> rejectionNotes = readRejectionNotes(outDir);
+        System.out.printf("생성 시작: %s × %s, %d문제 (모델 %s, 중복 회피 %d건, 거절 사례 %d건)%n",
+                domain, difficulty, count, model, avoid.size(), rejectionNotes.size());
 
         // ── 6. 실제 호출 ──────────────────────────────────────────
-        List<GeneratedProblemItem> problems =
-                new ClaudeProblemGenerator(model).generate(domain, difficulty, type, count, avoid);
+        List<GeneratedProblemItem> problems = new ClaudeProblemGenerator(model)
+                .generate(domain, difficulty, type, count, avoid, rejectionNotes);
 
         // 빈 응답은 성공이 아니다 — 조용히 빈 파일을 커밋하면 "돌긴 돌았는데 왜 문제가 없지"가 된다.
         // 예외를 던져 job을 실패시키고 메일을 받는 쪽이 낫다.
@@ -216,6 +222,33 @@ public final class DraftGeneratorCli {
             }
         }
         return avoid;
+    }
+
+    /* ── 거절 사례 되먹이기 ───────────────────────────────────── */
+
+    /**
+     * 검수자의 거절 사례 스냅샷을 읽는다({@code generated/_rejection-notes.json}, docs/14).
+     *
+     * <p>이 파일은 로컬 앱이 내보내고({@code RejectionNotesExporter}) 사용자가 커밋한 것이다.
+     * 클라우드에는 DB가 없으니 <b>사람의 검수 판단이 여기까지 오는 유일한 경로</b>다.
+     *
+     * <p><b>없어도 그냥 진행한다</b>: 거절 이력이 아직 없거나 사용자가 아직 커밋하지 않았을 수 있다.
+     * 이건 정상 상황이지 오류가 아니므로, 파일이 없다고 배치를 실패시키면 안 된다
+     * (되먹임은 품질 개선 장치이지 생성의 전제 조건이 아니다).
+     */
+    private static List<RejectionNote> readRejectionNotes(Path dir) {
+        Path file = dir.resolve(REJECTION_NOTES_FILE);
+        if (!Files.exists(file)) {
+            return List.of();
+        }
+        try {
+            RejectionNotesFile snapshot = MAPPER.readValue(file.toFile(), RejectionNotesFile.class);
+            return snapshot.notes() == null ? List.of() : snapshot.notes();
+        } catch (Exception e) {
+            // 손으로 고치다 깨졌을 수 있다 — 되먹임을 포기할 뿐 생성 자체는 계속한다
+            System.out.println("거절 사례 파일을 읽지 못해 건너뜁니다: " + e.getMessage());
+            return List.of();
+        }
     }
 
     /** {@code generated/_existing-questions.json}의 형태 — 이 CLI만 읽으므로 여기 둔다. */
