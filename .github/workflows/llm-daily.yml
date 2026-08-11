@@ -40,6 +40,11 @@ on:
         description: '기준 날짜(YYYY-MM-DD). 비우면 오늘(한국 시간)'
         required: false
         default: ''
+      force:
+        description: 'batch-enabled=false여도 이번 한 번은 생성'
+        type: boolean
+        required: false
+        default: false
 
 # 최소 권한 원칙 — 결과 파일을 커밋해야 하므로 contents 쓰기만 준다.
 # 기본값에 기대지 않고 명시하는 이유: 저장소 기본 권한 설정이 바뀌어도 이 워크플로가
@@ -96,9 +101,12 @@ jobs:
           IN_DIFFICULTY: ${{ inputs.difficulty }}
           IN_COUNT: ${{ inputs.count }}
           IN_DATE: ${{ inputs.date }}
+          # 예약 실행에서는 inputs가 비어 있으므로 force는 항상 꺼진 상태로 넘어간다 —
+          # 중단 스위치를 예약 실행이 스스로 무시하는 일은 구조적으로 불가능하다.
+          IN_FORCE: ${{ inputs.force }}
         run: |
           ./gradlew generateDrafts --no-daemon --console=plain \
-            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE}"
+            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --force=${IN_FORCE}"
 
       - name: 결과 커밋 & 푸시
         run: |

@@ -47,7 +47,13 @@ import java.util.Map;
  *   --difficulty=BEGINNER    난이도 강제 지정(생략 시 날짜 순환으로 결정)
  *   --count=5                생성 개수(생략 시 application.yml의 batch-count)
  *   --out=generated          출력 디렉터리
+ *   --force=true             batch-enabled=false여도 이번 한 번은 생성(수동 실행 전용)
  * </pre>
+ *
+ * <p><b>중단 스위치</b>: {@code llm.generation.batch-enabled=false}면 API를 부르지 않고 즉시
+ * 정상 종료한다. 급히 멈출 때는 GitHub Actions의 "Disable workflow" 버튼이 더 빠르고,
+ * 이 설정은 <b>중단 사실을 저장소에 기록으로 남기고 싶을 때</b> 쓴다 — 버튼은 눈에 안 보이는
+ * 곳에 있어서 "왜 요즘 문제가 안 들어오지?"의 답을 찾기 어렵다.
  */
 public final class DraftGeneratorCli {
 
@@ -76,7 +82,18 @@ public final class DraftGeneratorCli {
         int defaultCount = (int) generation.getOrDefault("batch-count", 5);
         List<Domain> batchDomains = parseDomains((String) generation.get("batch-domains"));
 
-        // ── 2. 오늘 무엇을 만들지 결정 ────────────────────────────
+        // ── 2. 중단 스위치 ────────────────────────────────────────
+        // 값이 없으면 켜진 것으로 본다 — 설정 키가 사라졌다고 배치가 멈추면
+        // "왜 안 돌지?"를 한참 뒤에 알게 된다(조용한 정지가 조용한 실패보다 낫지 않다).
+        boolean batchEnabled = !Boolean.FALSE.equals(generation.get("batch-enabled"));
+        boolean force = "true".equalsIgnoreCase(opts.getOrDefault("force", "false"));
+        if (!shouldGenerate(batchEnabled, force)) {
+            System.out.println("배치가 꺼져 있어 생성하지 않습니다 "
+                    + "(llm.generation.batch-enabled=false). 수동 실행 시 force=true로 한 번만 무시할 수 있습니다.");
+            return; // 종료 코드 0 — "의도된 중단"은 실패가 아니므로 알림 메일이 오면 안 된다
+        }
+
+        // ── 3. 오늘 무엇을 만들지 결정 ────────────────────────────
         // 날짜는 한국 기준. 워크플로는 UTC로 도니까 여기서 변환하지 않으면 하루 어긋난다.
         LocalDate date = opts.containsKey("date")
                 ? LocalDate.parse(opts.get("date"))
@@ -94,19 +111,19 @@ public final class DraftGeneratorCli {
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Path outFile = outDir.resolve(date + ".json");
 
-        // ── 3. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
+        // ── 4. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
         // 워크플로를 수동으로 두 번 눌러도 API 요금이 두 번 나가지 않게 하는 안전장치.
         if (Files.exists(outFile)) {
             System.out.println("이미 생성됨, 건너뜀: " + outFile);
             return;
         }
 
-        // ── 4. 중복 회피 목록 ─────────────────────────────────────
+        // ── 5. 중복 회피 목록 ─────────────────────────────────────
         List<String> avoid = buildAvoidList(outDir, domain);
         System.out.printf("생성 시작: %s × %s, %d문제 (모델 %s, 중복 회피 %d건)%n",
                 domain, difficulty, count, model, avoid.size());
 
-        // ── 5. 실제 호출 ──────────────────────────────────────────
+        // ── 6. 실제 호출 ──────────────────────────────────────────
         List<GeneratedProblemItem> problems =
                 new ClaudeProblemGenerator(model).generate(domain, difficulty, type, count, avoid);
 
@@ -116,7 +133,7 @@ public final class DraftGeneratorCli {
             throw new IllegalStateException("모델이 문제를 하나도 반환하지 않았습니다 — 프롬프트/모델 설정을 확인하세요.");
         }
 
-        // ── 6. 파일로 저장 ────────────────────────────────────────
+        // ── 7. 파일로 저장 ────────────────────────────────────────
         GeneratedBatchFile batch = new GeneratedBatchFile(
                 "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
                 date.toString(), Instant.now().toString(),
@@ -125,6 +142,26 @@ public final class DraftGeneratorCli {
         Files.createDirectories(outDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
         System.out.printf("저장 완료: %s (%d문제)%n", outFile, problems.size());
+    }
+
+    /* ── 중단 스위치 ─────────────────────────────────────────── */
+
+    /**
+     * 생성을 진행할지 판단한다 — {@code batch-enabled}가 꺼져 있어도 {@code force}면 진행.
+     *
+     * <p><b>왜 force라는 예외 구멍을 두는가.</b> 스위치가 절대적이면, 꺼 둔 상태에서 문제 하나를
+     * 급히 만들려 할 때 "설정을 true로 커밋 → 실행 → 다시 false로 커밋"을 해야 한다. 그 과정에서
+     * 되돌리기를 잊으면 <b>끈 줄 알았던 배치가 계속 돈다</b> — 스위치를 둔 목적이 무너진다.
+     * force는 수동 실행(workflow_dispatch)에서만 켤 수 있고 저장소 설정을 건드리지 않으므로,
+     * "한 번만 예외"가 영구 변경으로 새는 일이 없다. 예약 실행은 force를 넘기지 않는다.
+     *
+     * <p><b>두 줄짜리인데 왜 테스트하는가.</b> 이 판단이 틀리면 증상이 조용하다. {@code &&}를
+     * {@code ||}로 잘못 쓰면 "꺼도 계속 도는" 또는 "켜도 안 도는" 상태가 되는데, 후자는 배치가
+     * 그냥 매일 조용히 아무것도 안 할 뿐이라 몇 주 뒤에야 알게 된다 — 이 프로젝트가 이미 한 번
+     * 겪은 종류의 사고다(docs/14 "왜 옮겼나"). 진리표를 테스트로 못 박아 둔다.
+     */
+    static boolean shouldGenerate(boolean batchEnabled, boolean force) {
+        return batchEnabled || force;
     }
 
     /* ── 중복 회피 목록 ───────────────────────────────────────── */
