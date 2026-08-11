@@ -72,6 +72,16 @@ class ClaudeDocumentGeneratorTest {
     }
 
     @Test
+    @DisplayName("태그 목록을 줄 때는 '새 태그 남발 금지'가 함께 실린다 — 1차 실물이 태그 3개를 전부 새로 만들었다")
+    void limitsNewTagsWhenPreferredTagsGiven() {
+        String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of("tcp", "http"));
+
+        assertThat(prompt).contains("새로 만드는 태그는 1개까지");
+        assertThat(prompt).as("진짜 막아야 하는 건 개수가 아니라 같은 개념이 여러 이름으로 갈라지는 것")
+                .contains("뜻이 겹치는 태그는 절대 새로 만들지 마라");
+    }
+
+    @Test
     @DisplayName("목록이 비어 있으면 그 블록 자체를 넣지 않는다 — 빈 제목만 남으면 토큰 낭비다")
     void omitsEmptyBlocks() {
         String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of());
@@ -90,5 +100,35 @@ class ClaudeDocumentGeneratorTest {
         assertThat(generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of()))
                 .as("경계가 헷갈리지 않는 분야에는 군더더기를 붙이지 않는다")
                 .doesNotContain("제외)");
+    }
+
+    /**
+     * <b>왜 시스템 프롬프트 본문까지 테스트하는가.</b> 보통 프롬프트 문구는 테스트 대상이 아니다.
+     * 여기서 보는 건 문구의 좋고 나쁨이 아니라 <b>두 곳에 적힌 같은 정보가 어긋나는 것</b>이다.
+     *
+     * <p>{@code REQUIRED_SECTIONS}는 1단계-B에서 "이 섹션이 없는 문서는 반려" 검증에 쓸 목록이다.
+     * 누군가 프롬프트의 섹션 제목만 바꾸면 모델은 새 제목으로 쓰고 검증기는 옛 제목을 찾으므로
+     * <b>멀쩡한 문서가 전부 반려된다</b>. 반대로 목록만 바꾸면 빈껍데기가 통과한다.
+     * 둘 다 예외 없이 조용히 일어나서, 이 테스트가 없으면 한참 뒤에야 알게 된다.
+     */
+    @Test
+    @DisplayName("필수 섹션 목록과 프롬프트의 섹션 제목이 일치한다 — 어긋나면 검증기가 헛돈다")
+    void requiredSectionsMatchPrompt() {
+        assertThat(ClaudeDocumentGenerator.REQUIRED_SECTIONS)
+                .allSatisfy(section -> assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+                        .as("프롬프트 [문서 구조]에 '%s'가 있어야 한다", section)
+                        .contains(section));
+    }
+
+    @Test
+    @DisplayName("면접 질문 섹션과 용어 정의 규칙이 프롬프트에 살아 있다 — 1차 실물에서 빠졌던 두 가지")
+    void keepsInterviewQuestionAndTerminologyRules() {
+        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+                .as("면접 질문은 학습용이자 2단계 문제 생성의 재료다")
+                .contains("## 면접에서 이렇게 물어본다")
+                .as("용어를 정의 없이 지나가면 초급 재료가 통째로 비는 셈이 된다")
+                .contains("[용어 다루기]")
+                .as("분량을 올린 건 위 두 절에 지면을 주기 위해서다")
+                .contains("2,500~3,500자");
     }
 }
