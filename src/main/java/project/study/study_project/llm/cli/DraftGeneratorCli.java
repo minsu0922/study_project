@@ -148,7 +148,9 @@ public final class DraftGeneratorCli {
         // ── 5. 근거 문서 찾기(2단계) ──────────────────────────────
         // 못 찾으면 null — 그때는 예전처럼 모델의 지식으로 만든다(폴백). 문서 생성이 실패했거나
         // 검수에서 거절된 주기에도 그날의 문제는 나와야 하기 때문.
-        SourceDocument source = findSourceDocument(outDir, plan, difficulty);
+        ResolvedSource resolved = findSourceDocument(outDir, plan, difficulty);
+        SourceDocument source = resolved == null ? null : resolved.document();
+
         if (source == null && !opts.containsKey("difficulty")) {
             // 근거가 없으면 "이번 주기의 난이도"를 쓸 이유도 없다. 주기가 헛도는 동안
             // 같은 분야·난이도만 반복되지 않게 옛 규칙(매일 분야가 바뀌는 24칸 순환)으로 돌아간다.
@@ -157,6 +159,13 @@ public final class DraftGeneratorCli {
                 domain = fallback.domain();
             }
             difficulty = fallback.difficulty();
+        } else if (resolved != null && !opts.containsKey("domain")) {
+            Domain aligned = alignDomainWithDocument(domain, resolved.domain());
+            if (aligned != domain) {
+                System.out.printf("주기 분야(%s)와 근거 문서 분야(%s)가 달라 문서 쪽으로 맞춥니다%n",
+                        domain, aligned);
+                domain = aligned;
+            }
         }
 
         // ── 6. 중복 회피 목록 + 거절 사례 되먹이기 ────────────────
@@ -188,6 +197,30 @@ public final class DraftGeneratorCli {
         System.out.printf("저장 완료: %s (%d문제)%n", outFile, problems.size());
     }
 
+    /**
+     * 주기가 계산한 분야와 근거 문서의 분야가 어긋나면 <b>문서 쪽으로 맞춘다</b>(2단계).
+     *
+     * <p><b>왜 이런 일이 생기나.</b> 문서는 수동 실행으로도 만들 수 있고(주제·날짜를 직접 지정),
+     * 주기를 도입하기 전에 만들어진 문서도 있다. 실제로 2026-08-11에 손으로 만든 문서
+     * (캐시 전략, SYSTEM_DESIGN)가 OS 주기의 근거로 잡히는 상황이 있었다.
+     *
+     * <p><b>그냥 두면 무슨 일이 벌어지나.</b> "운영체제 문제를 내라"와 "이 캐시 문서 안에서만
+     * 내라"라는 <b>모순된 지시</b>가 한 프롬프트에 함께 실린다. 모델은 오류를 내지 않는다 —
+     * 둘 중 하나를 무시하거나 어정쩡하게 섞은 문제를 만들어 낸다. 검수자는 "왜 OS 칸에
+     * 캐시 문제가 있지?"를 한참 뒤에야 알아차린다.
+     *
+     * <p><b>왜 문서가 이기나.</b> 근거 문서가 곧 그 주기의 주제다. 분야는 그 주제를 분류한
+     * 이름표일 뿐이라, 이름표를 지키자고 실제 내용과 어긋나게 둘 이유가 없다.
+     * (사용자가 {@code --domain}으로 직접 지정한 경우는 호출부에서 이 조정을 건너뛴다.)
+     *
+     * @param planDomain     주기가 계산한 분야
+     * @param documentDomain 근거 문서에 기록된 분야. {@code null}이면 조정하지 않는다
+     *                       (옛 형식 파일 방어 — 알 수 없는 값 때문에 멀쩡한 분야를 버리면 안 된다)
+     */
+    static Domain alignDomainWithDocument(Domain planDomain, Domain documentDomain) {
+        return documentDomain != null ? documentDomain : planDomain;
+    }
+
     /* ── 근거 문서 찾기(2단계) ───────────────────────────────── */
 
     /**
@@ -205,7 +238,7 @@ public final class DraftGeneratorCli {
      * <p><b>아직 검수 안 한 문서는 그냥 쓴다.</b> 미승인은 부정 신호가 아니라 "아직 안 봤다"일 뿐인데,
      * 승인을 며칠 미뤘다고 그 주기를 날리면 사람의 검수 속도에 배치가 인질로 잡힌다.
      */
-    private static SourceDocument findSourceDocument(Path outDir, GenerationSchedule.Plan plan,
+    private static ResolvedSource findSourceDocument(Path outDir, GenerationSchedule.Plan plan,
                                                      Difficulty difficulty) {
         if (difficulty == null) {
             return null; // 문서일에는 근거 문서를 찾을 일이 없다(방어)
@@ -226,12 +259,24 @@ public final class DraftGeneratorCli {
                 System.out.println("근거 문서가 검수에서 거절돼 폴백으로 생성합니다: " + doc.slug());
                 return null;
             }
-            return new SourceDocument(doc.slug(), doc.title(), doc.contentMd());
+            return new ResolvedSource(parsed.domain(),
+                    new SourceDocument(doc.slug(), doc.title(), doc.contentMd()));
         } catch (Exception e) {
             // 문서를 못 읽는 것이 그날 문제 생성을 막을 이유는 없다 — 근거 없이라도 만든다
             System.out.println("근거 문서를 읽지 못해 폴백으로 생성합니다: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 찾아낸 근거 문서와 <b>그 문서가 속한 분야</b>.
+     *
+     * <p>분야를 따로 들고 다니는 이유: 주기가 계산한 분야와 실제 문서의 분야가 어긋날 수 있고,
+     * 그때는 문서 쪽으로 맞춰야 한다(위 호출부 주석). {@link SourceDocument}에 분야를 넣지 않은 것은
+     * 그 record가 <b>프롬프트에 실릴 내용</b>만 담는 그릇이기 때문이다 — 분야는 프롬프트의
+     * 다른 자리(조건 줄)에 이미 들어가므로 문서 블록에 또 넣으면 중복이다.
+     */
+    private record ResolvedSource(Domain domain, SourceDocument document) {
     }
 
     /* ── 개념 문서 생성 ───────────────────────────────────────── */
