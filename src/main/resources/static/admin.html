@@ -651,6 +651,13 @@ async function loadDrafts() {
           <span class="badge gray">${escapeHtml(typeLabel(d.type))}</span>
           <span class="meta">${escapeHtml(d.model)}</span>
         </div>
+        ${d.documentSlug ? `
+        <!-- 근거 문서 링크(2단계) — 검수자가 "이 문제가 문서와 맞나"를 바로 대조할 수 있게 한다.
+             문서가 아직 승인 전이면 링크가 404가 되는데, 그건 정상 상황이라 막지 않는다:
+             초안 문제가 초안 문서보다 먼저 검수될 수 있고, 그 순서를 강제할 이유가 없다. -->
+        <div class="meta" style="margin-top:6px">
+          근거 문서: <a href="/document.html?slug=${encodeURIComponent(d.documentSlug)}" target="_blank">${escapeHtml(d.documentSlug)}</a>
+        </div>` : ""}
         <p style="margin:10px 0 6px; white-space:pre-wrap"><b>${escapeHtml(d.question)}</b></p>
         ${choices ? `<ul style="margin:6px 0">${choices}</ul>` : ""}
         ${d.answer ? `<div>정답: <b>${escapeHtml(d.answer)}</b></div>` : ""}

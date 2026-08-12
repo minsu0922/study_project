@@ -68,8 +68,11 @@ public class DraftImportService {
         // 새 모델 이름으로 둔갑해 승인율 비교가 오염된다. 값이 없는 파일은 정직하게 unknown.
         String model = (batch.model() == null || batch.model().isBlank()) ? "unknown" : batch.model();
 
+        // documentSlug는 2단계에서 추가된 필드라 옛 파일에는 없다 — Jackson이 null로 채우고
+        // 그대로 초안에 기록된다. "근거 문서 없이 만든 문제"와 같은 값이므로 특별 취급이 필요 없다.
         List<GeneratedProblemDraft> drafts = llmProblemService.saveDrafts(
-                batch.domain(), batch.difficulty(), batch.type(), batch.problems(), model);
+                batch.domain(), batch.difficulty(), batch.type(), batch.problems(), model,
+                batch.documentSlug());
 
         String filename = file.getFileName().toString();
         importedFileRepository.save(ImportedDraftFile.of(filename, drafts.size()));

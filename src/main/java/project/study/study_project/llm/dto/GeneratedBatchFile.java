@@ -30,8 +30,11 @@ import java.util.List;
  * @param domain      생성 대상 분야
  * @param difficulty  생성 대상 난이도
  * @param type        문제 유형(현재 배치는 객관식 고정)
- * @param model       실제 호출에 쓴 모델 ID — 초안의 model 컬럼에 그대로 기록해 품질 비교에 쓴다
- * @param problems    모델이 반환한 문제 목록(검증 전 원본)
+ * @param model        실제 호출에 쓴 모델 ID — 초안의 model 컬럼에 그대로 기록해 품질 비교에 쓴다
+ * @param documentSlug 근거로 삼은 개념 문서의 slug(2단계). 문서 없이 만든 날은 {@code null}.
+ *                     <b>맨 뒤에 추가한 필드</b>라 이 값이 없는 옛 파일도 그대로 읽힌다 —
+ *                     Jackson은 없는 필드를 null로 채우므로 2026-08-12 이전 파일도 흡수된다
+ * @param problems     모델이 반환한 문제 목록(검증 전 원본)
  */
 public record GeneratedBatchFile(
         String note,
@@ -41,6 +44,7 @@ public record GeneratedBatchFile(
         Difficulty difficulty,
         ProblemType type,
         String model,
+        String documentSlug,
         List<GeneratedProblemItem> problems
 ) {
 }

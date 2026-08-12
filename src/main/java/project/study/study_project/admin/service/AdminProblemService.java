@@ -54,7 +54,8 @@ public class AdminProblemService {
         validateByType(request);
         Problem problem = Problem.create(
                 request.domain(), request.difficulty(), request.type(),
-                request.question().trim(), normalizeAnswer(request), trimOrNull(request.explanation()));
+                request.question().trim(), normalizeAnswer(request), trimOrNull(request.explanation()),
+                trimOrNull(request.documentSlug()));
         problem.replaceChoices(buildChoices(problem, request));
         return AdminProblemDetail.from(problemRepository.save(problem));
     }
@@ -72,7 +73,8 @@ public class AdminProblemService {
         validateByType(request);
         Problem problem = findProblem(id);
         problem.update(request.domain(), request.difficulty(), request.type(),
-                request.question().trim(), normalizeAnswer(request), trimOrNull(request.explanation()));
+                request.question().trim(), normalizeAnswer(request), trimOrNull(request.explanation()),
+                trimOrNull(request.documentSlug()));
         problem.replaceChoices(buildChoices(problem, request));
         return AdminProblemDetail.from(problem); // 변경 감지(dirty checking)로 커밋 시 자동 UPDATE
     }

@@ -90,6 +90,19 @@ public class GeneratedProblemDraft {
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
+    /**
+     * 근거가 된 개념 문서의 slug — 없으면 {@code null}(V9, 2단계).
+     *
+     * <p>4일 주기의 2·3·4일차에 만들어진 문제는 그 주기 1일차 문서의 slug를 갖는다.
+     * 승인 시 {@code Problem.documentSlug}로 그대로 옮겨진다.
+     *
+     * <p><b>초안 단계부터 들고 있는 이유</b>: 검수자가 "이 문제가 어느 문서에서 나왔는지"를
+     * 보고 판단해야 한다. 승인 시점에 붙이려면 그때 다시 계산해야 하는데, 생성 시점의
+     * 근거를 나중에 복원하는 것은 불가능하다(그날의 주기 계산을 되짚어야 한다).
+     */
+    @Column(name = "document_slug", length = 150)
+    private String documentSlug;
+
     /** 승인으로 생성된 problem.id (FK 아님 — 이력 성격, V6 주석 참고). */
     @Column(name = "approved_problem_id")
     private Long approvedProblemId;
@@ -103,7 +116,7 @@ public class GeneratedProblemDraft {
 
     private GeneratedProblemDraft(Domain domain, Difficulty difficulty, ProblemType type,
                                   String question, String answer, String explanation,
-                                  String choicesJson, String model) {
+                                  String choicesJson, String model, String documentSlug) {
         this.domain = domain;
         this.difficulty = difficulty;
         this.type = type;
@@ -113,14 +126,15 @@ public class GeneratedProblemDraft {
         this.choicesJson = choicesJson;
         this.status = DraftStatus.PENDING;
         this.model = model;
+        this.documentSlug = documentSlug;
     }
 
     /** 생성 직후 저장용 팩터리 — 초안은 항상 PENDING으로 태어난다. */
     public static GeneratedProblemDraft pending(Domain domain, Difficulty difficulty, ProblemType type,
                                                 String question, String answer, String explanation,
-                                                String choicesJson, String model) {
+                                                String choicesJson, String model, String documentSlug) {
         return new GeneratedProblemDraft(domain, difficulty, type,
-                question, answer, explanation, choicesJson, model);
+                question, answer, explanation, choicesJson, model, documentSlug);
     }
 
     /** 승인 처리 — 생성된 problem.id를 이력으로 남긴다. 이미 처리된 초안이면 LLM_002. */

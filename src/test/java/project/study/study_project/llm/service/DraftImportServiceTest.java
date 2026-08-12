@@ -142,6 +142,37 @@ class DraftImportServiceTest {
         verify(importedFileRepository).save(any());
     }
 
+    /**
+     * 2단계: 4일 주기의 문제일에는 파일에 근거 문서 slug가 실려 온다. 그 값이 초안까지 닿지 않으면
+     * 검수 화면에 "근거 문서" 링크가 안 뜨고, 승인해도 문제에 연결이 남지 않는다 —
+     * 값이 조용히 사라지는 종류라 파일→초안 구간을 테스트로 못 박는다.
+     */
+    @Test
+    @DisplayName("파일의 근거 문서 slug가 초안까지 그대로 전달된다")
+    void carriesDocumentSlugFromFileToDraft() throws Exception {
+        Path file = writeBatchFile("2026-08-13.json", "claude-opus-5", "xss-and-csrf",
+                validItem("CSRF 토큰을 넣었는데도 계정이 탈취된 원인으로 옳은 것은?"));
+
+        service.importFile(file);
+
+        assertThat(capturedDrafts()).singleElement()
+                .extracting(GeneratedProblemDraft::getDocumentSlug)
+                .isEqualTo("xss-and-csrf");
+    }
+
+    @Test
+    @DisplayName("근거 문서 없이 만든 파일은 slug가 비어 있다 — 옛 파일도 그대로 흡수돼야 한다")
+    void allowsMissingDocumentSlug() throws Exception {
+        Path file = writeBatchFile("2026-08-14.json", "claude-opus-5",
+                validItem("가상 메모리의 페이지 폴트가 발생하는 시점은?"));
+
+        service.importFile(file);
+
+        assertThat(capturedDrafts()).singleElement()
+                .extracting(GeneratedProblemDraft::getDocumentSlug)
+                .isNull();
+    }
+
     @Test
     @DisplayName("분야가 빠진 파일은 예외를 던지고 이력을 남기지 않는다 — 파일을 고치면 다음 부팅에 다시 시도된다")
     void rejectsFileWithMissingDomain() throws Exception {
@@ -193,11 +224,18 @@ class DraftImportServiceTest {
                         new GeneratedProblemItem.GeneratedChoice("오답 보기 3", false)));
     }
 
-    /** 실제 워크플로가 쓰는 것과 같은 형식으로 파일을 만든다(직렬화 경로까지 테스트에 포함). */
+    /** 근거 문서 없이 만든 파일 — 지금까지의 대부분이 이 형태다. */
     private Path writeBatchFile(String filename, String model, GeneratedProblemItem... items) throws Exception {
+        return writeBatchFile(filename, model, null, items);
+    }
+
+    /** 실제 워크플로가 쓰는 것과 같은 형식으로 파일을 만든다(직렬화 경로까지 테스트에 포함). */
+    private Path writeBatchFile(String filename, String model, String documentSlug,
+                                GeneratedProblemItem... items) throws Exception {
         GeneratedBatchFile batch = new GeneratedBatchFile(
                 "테스트용", filename.replace(".json", ""), "2026-08-12T21:17:00Z",
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, model, List.of(items));
+                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, model,
+                documentSlug, List.of(items));
         Path file = tempDir.resolve(filename);
         objectMapper.writeValue(file.toFile(), batch);
         return file;

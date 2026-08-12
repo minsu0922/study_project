@@ -31,6 +31,8 @@ public record LlmDraftResponse(
         String model,
         String rejectReason,
         Long approvedProblemId,
+        /** 근거가 된 개념 문서의 slug — 검수자가 "무엇을 보고 낸 문제인지" 확인할 수 있게 함께 내린다. */
+        String documentSlug,
         LocalDateTime createdAt,
         LocalDateTime reviewedAt
 ) {

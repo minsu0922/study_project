@@ -78,7 +78,7 @@ class ReviewFlowIntegrationTest {
         userId = user.getId();
         problem = problemRepository.save(Problem.create(
                 Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
-                "TCP는 연결 지향 프로토콜이다.", "O", "3-way handshake로 연결을 만든다."));
+                "TCP는 연결 지향 프로토콜이다.", "O", "3-way handshake로 연결을 만든다.", null));
     }
 
     /** 제출 헬퍼 — 실제 서비스 경로(채점→이력 저장→복습 훅)를 그대로 태운다. */

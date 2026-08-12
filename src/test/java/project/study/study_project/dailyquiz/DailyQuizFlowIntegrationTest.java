@@ -78,7 +78,7 @@ class DailyQuizFlowIntegrationTest {
     /** OX 문제 생성 — 정답 "O" 고정이라 테스트가 정답/오답을 마음대로 만들 수 있다. */
     private Problem newOx(Domain domain, String question) {
         return problemRepository.save(Problem.create(
-                domain, Difficulty.BEGINNER, ProblemType.OX, question, "O", "해설"));
+                domain, Difficulty.BEGINNER, ProblemType.OX, question, "O", "해설", null));
     }
 
     /** 실제 서비스 경로(채점→이력→사다리→세트 반영)를 그대로 태우는 제출. */

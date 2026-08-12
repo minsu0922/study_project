@@ -66,16 +66,20 @@ class LlmProblemServiceTest {
         ProblemType calledType;
         List<String> calledAvoid;
         List<RejectionNote> calledRejectionNotes;
+        /** 2단계에서 추가된 근거 문서 인자. 관리자 즉시 생성 경로는 항상 null이어야 한다. */
+        project.study.study_project.llm.client.SourceDocument calledSourceDocument;
 
         @Override
         public List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
                                                    int count, List<String> avoidQuestions,
-                                                   List<RejectionNote> rejectionNotes) {
+                                                   List<RejectionNote> rejectionNotes,
+                                                   project.study.study_project.llm.client.SourceDocument sourceDocument) {
             this.calledDomain = domain;
             this.calledDifficulty = difficulty;
             this.calledType = type;
             this.calledAvoid = avoidQuestions;
             this.calledRejectionNotes = rejectionNotes;
+            this.calledSourceDocument = sourceDocument;
             return toReturn;
         }
     }
@@ -297,8 +301,8 @@ class LlmProblemServiceTest {
             return GeneratedProblemDraft.pending(
                     Domain.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                     "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.",
-                    "[{\"text\":\"REQUIRED\",\"correct\":true},{\"text\":\"REQUIRES_NEW\",\"correct\":false}]",
-                    "test-model");
+                    "[{\"text\":\"REQUIRED\",\"correct\":true},{\"text\":\"REQUIRES_NEW\",\"correct\":false}]", // choicesJson
+                    "test-model", "spring-transactional-propagation"); // model, documentSlug
         }
 
         @Test

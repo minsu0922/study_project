@@ -121,7 +121,9 @@ public class LlmProblemService {
         List<GeneratedProblemItem> items =
                 problemGenerator.generate(domain, difficulty, type, request.count(), avoid, rejectionNotes);
 
-        return saveDrafts(domain, difficulty, type, items, model).stream().map(this::toResponse).toList();
+        // 관리자 화면의 즉시 생성은 근거 문서 없이 만든다(null). 문서 기반 생성은 4일 주기를
+        // 따르는 배치의 몫이고, 화면에서 문서를 골라 문제를 뽑는 기능은 지금 필요가 없다 — YAGNI.
+        return saveDrafts(domain, difficulty, type, items, model, null).stream().map(this::toResponse).toList();
     }
 
     /**
@@ -136,15 +138,19 @@ public class LlmProblemService {
      * 어길 수 있다 — 어긴 항목은 배치 전체를 실패시키지 않고 건너뛰며 로그만 남긴다(부분 성공 허용).
      * 5문제 중 1개가 이상하다고 나머지 4개를 버리는 것은 손해다.
      *
-     * @param model 초안에 기록할 모델 ID. 파일 흡수 시에는 <b>생성 당시</b>의 모델을 넘긴다 —
-     *              현재 설정값을 쓰면 모델을 교체한 뒤 흡수한 옛 파일이 새 모델 이름으로 기록돼
-     *              "모델별 승인율 비교"라는 model 컬럼의 존재 이유가 무너진다.
+     * @param model        초안에 기록할 모델 ID. 파일 흡수 시에는 <b>생성 당시</b>의 모델을 넘긴다 —
+     *                     현재 설정값을 쓰면 모델을 교체한 뒤 흡수한 옛 파일이 새 모델 이름으로 기록돼
+     *                     "모델별 승인율 비교"라는 model 컬럼의 존재 이유가 무너진다.
+     * @param documentSlug 근거로 삼은 개념 문서의 slug(2단계). 문서 없이 만든 경우 {@code null}.
+     *                     여기서 slug의 실재 여부를 확인하지 않는다 — 근거 문서가 아직 검수
+     *                     대기라 {@code document} 테이블에 없을 수 있고, 그건 정상 상황이다(V9 주석)
      */
     public List<GeneratedProblemDraft> saveDrafts(Domain domain, Difficulty difficulty, ProblemType type,
-                                                  List<GeneratedProblemItem> items, String model) {
+                                                  List<GeneratedProblemItem> items, String model,
+                                                  String documentSlug) {
         List<GeneratedProblemDraft> drafts = new ArrayList<>();
         for (GeneratedProblemItem item : items) {
-            toDraft(item, domain, difficulty, type, model).ifPresent(drafts::add);
+            toDraft(item, domain, difficulty, type, model, documentSlug).ifPresent(drafts::add);
         }
         return draftRepository.saveAll(drafts);
     }
@@ -230,7 +236,7 @@ public class LlmProblemService {
     /** 생성 항목 → 초안 엔티티. 내용 규약 위반은 Optional.empty()로 건너뛴다. */
     private java.util.Optional<GeneratedProblemDraft> toDraft(GeneratedProblemItem item,
                                                               Domain domain, Difficulty difficulty, ProblemType type,
-                                                              String model) {
+                                                              String model, String documentSlug) {
         String question = trimToNull(item.question());
         String answer = trimToNull(item.answer()); // 스키마상 빈 문자열로 오는 "값 없음"을 null로 정규화
         if (question == null) {
@@ -253,7 +259,8 @@ public class LlmProblemService {
             return java.util.Optional.empty();
         }
         return java.util.Optional.of(GeneratedProblemDraft.pending(
-                domain, difficulty, type, question, answer, trimToNull(item.explanation()), choicesJson, model));
+                domain, difficulty, type, question, answer, trimToNull(item.explanation()), choicesJson,
+                model, trimToNull(documentSlug)));
     }
 
     /* ── 검수(목록·승인·거절) ─────────────────────────────── */
@@ -307,7 +314,7 @@ public class LlmProblemService {
         return new AdminProblemRequest(
                 draft.getDomain(), draft.getDifficulty(), draft.getType(),
                 draft.getQuestion(), draft.getAnswer(), draft.getExplanation(),
-                readChoices(draft.getChoicesJson()));
+                readChoices(draft.getChoicesJson()), draft.getDocumentSlug());
     }
 
     /* ── JSON 직렬화 도우미 ───────────────────────────────── */
@@ -346,7 +353,7 @@ public class LlmProblemService {
                 d.getId(), d.getDomain(), d.getDomain().getDisplayName(), d.getDifficulty(), d.getType(),
                 d.getQuestion(), d.getAnswer(), d.getExplanation(), readChoices(d.getChoicesJson()),
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedProblemId(),
-                d.getCreatedAt(), d.getReviewedAt());
+                d.getDocumentSlug(), d.getCreatedAt(), d.getReviewedAt());
     }
 
     private String trimToNull(String s) {

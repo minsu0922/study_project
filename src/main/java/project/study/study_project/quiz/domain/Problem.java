@@ -99,18 +99,29 @@ public class Problem {
     @OrderBy("seq ASC")
     private List<Choice> choices = new ArrayList<>();
 
+    /**
+     * 근거가 된 개념 문서의 slug — 없으면 {@code null}(V9).
+     *
+     * <p>연관관계({@code @ManyToOne Document})가 아니라 문자열인 이유는 V9 주석에 적었다.
+     * 요약하면 <b>문서보다 문제가 먼저 존재할 수 있고</b>, 연결이 끊어져도 손해가
+     * "링크가 안 뜬다"뿐이라 무결성 제약의 경직성을 살 이유가 없다.
+     */
+    @Column(name = "document_slug", length = 150)
+    private String documentSlug;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     private Problem(Domain domain, Difficulty difficulty, ProblemType type,
-                    String question, String answer, String explanation) {
+                    String question, String answer, String explanation, String documentSlug) {
         this.domain = domain;
         this.difficulty = difficulty;
         this.type = type;
         this.question = question;
         this.answer = answer;
         this.explanation = explanation;
+        this.documentSlug = documentSlug;
     }
 
     /**
@@ -118,19 +129,21 @@ public class Problem {
      * 호출한다 — 엔티티는 저장 형태만 책임지고, 규칙 판단은 한 곳(AdminProblemService)에 모은다.
      */
     public static Problem create(Domain domain, Difficulty difficulty, ProblemType type,
-                                 String question, String answer, String explanation) {
-        return new Problem(domain, difficulty, type, question, answer, explanation);
+                                 String question, String answer, String explanation,
+                                 String documentSlug) {
+        return new Problem(domain, difficulty, type, question, answer, explanation, documentSlug);
     }
 
     /** 관리자 수정용 — id/created_at만 남기고 내용 필드를 통째로 교체한다(부분 수정 없음: 폼 전체 제출 방식). */
     public void update(Domain domain, Difficulty difficulty, ProblemType type,
-                       String question, String answer, String explanation) {
+                       String question, String answer, String explanation, String documentSlug) {
         this.domain = domain;
         this.difficulty = difficulty;
         this.type = type;
         this.question = question;
         this.answer = answer;
         this.explanation = explanation;
+        this.documentSlug = documentSlug;
     }
 
     /**

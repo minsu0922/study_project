@@ -21,8 +21,12 @@ import java.util.List;
  *       조건부 검증을 표현할 수 없어서 코드로 검사한다(QUIZ_004).
  * </ul>
  *
- * @param answer  객관식=비움(null), OX="O"/"X", 단답형=정답(복수는 | 구분) — docs/01 규칙 그대로
- * @param choices 객관식만 사용. 순서(seq)는 배열 순서대로 서버가 1..N 부여
+ * @param answer       객관식=비움(null), OX="O"/"X", 단답형=정답(복수는 | 구분) — docs/01 규칙 그대로
+ * @param choices      객관식만 사용. 순서(seq)는 배열 순서대로 서버가 1..N 부여
+ * @param documentSlug 근거가 된 개념 문서의 slug(선택). LLM 초안 승인 시 초안의 값이 그대로 넘어오고,
+ *                     관리자가 손으로 등록할 때도 문서를 붙일 수 있다.
+ *                     형식 정규식을 걸지 않은 이유: 존재하지 않는 slug를 적어도 손해가
+ *                     "링크가 안 뜬다"뿐이라(V9 주석), 오타 하나로 등록을 막을 이유가 없다
  */
 public record AdminProblemRequest(
 
@@ -44,7 +48,10 @@ public record AdminProblemRequest(
         String explanation,
 
         @Valid // 중첩 객체(보기)의 애너테이션 검증까지 타고 들어가게 한다
-        List<ChoiceItem> choices
+        List<ChoiceItem> choices,
+
+        @Size(max = 150, message = "documentSlug는 150자 이하여야 합니다.") // DB VARCHAR(150)
+        String documentSlug
 ) {
     /** 객관식 보기 입력 항목. */
     public record ChoiceItem(
