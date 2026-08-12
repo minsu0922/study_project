@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 
@@ -40,6 +41,18 @@ import java.util.List;
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "llm.import.enabled", havingValue = "true", matchIfMissing = true)
+/*
+ * 스냅샷 내보내기(@Order 20·30·40)보다 <b>먼저</b> 돌아야 한다 — 방금 들어온 초안이
+ * 그날의 스냅샷에 반영되게 하려면 흡수가 앞서야 하기 때문.
+ *
+ * [왜 명시적으로 붙였나 — 실제로 반대로 돌고 있었다]
+ * 순서를 안 붙이면 Spring은 그 러너를 Ordered.LOWEST_PRECEDENCE로 보고 <b>맨 마지막</b>에
+ * 돌린다. 즉 지금까지 "흡수 → 내보내기"라고 적어 둔 주석과 정반대로 "내보내기 → 흡수"가
+ * 실행되고 있었다. 증상이 조용해서 오래 안 드러났다: 흡수가 실제로 일어나는 부팅
+ * (파일이 새로 생긴 날)에만 한 박자 어긋나고, 그 다음 부팅에는 이미 흡수돼 있어
+ * 결과가 같아 보인다. "하루 늦게 반영되는" 종류의 어긋남이라 눈치채기 어렵다.
+ */
+@Order(10)
 @RequiredArgsConstructor
 public class DraftImportRunner implements ApplicationRunner {
 

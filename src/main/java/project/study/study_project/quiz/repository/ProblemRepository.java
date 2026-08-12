@@ -134,4 +134,25 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      */
     @Query("select p.question from Problem p where p.domain = :domain order by p.id desc")
     List<String> findQuestionTextsByDomain(@Param("domain") Domain domain, Pageable pageable);
+
+    /**
+     * 분야 + 지문만 최신순으로 — 클라우드 배치가 읽을 중복 회피 스냅샷을 만드는 데 쓴다(docs/14).
+     *
+     * <p>{@link #findQuestionTextsByDomain}과 달리 <b>분야를 함께</b> 뽑고 전 분야를 한 번에
+     * 가져온다. 스냅샷은 어느 분야가 뽑힐지 모르는 상태에서 미리 만들어 두는 것이라
+     * 분야별로 8번 조회하는 대신 한 번에 읽고 메모리에서 나눈다(부팅당 1회, 수백 건 규모).
+     *
+     * <p>{@code order by p.id desc}가 중요하다 — 내보내기는 <b>내용이 같으면 파일을 다시 쓰지
+     * 않는데</b>, 순서가 흔들리면 같은 목록도 매번 바뀐 것으로 보여 앱을 켤 때마다 git이
+     * 변경으로 인식한다. id 역순이면 "새로 승인된 문제가 앞에" 오는 의미까지 맞는다.
+     */
+    @Query("select p.domain as domain, p.question as question from Problem p order by p.id desc")
+    List<DomainQuestion> findAllDomainQuestions();
+
+    /** 스냅샷용 프로젝션 — 엔티티를 통째로 읽지 않기 위해(본문 TEXT·보기 LAZY 부담 회피). */
+    interface DomainQuestion {
+        Domain getDomain();
+
+        String getQuestion();
+    }
 }
