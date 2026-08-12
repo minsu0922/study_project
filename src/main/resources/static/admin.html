@@ -641,7 +641,13 @@ async function loadDrafts() {
       </div>` : `
       <div class="meta" style="margin-top:10px">
         ${d.status === "APPROVED" ? `승인됨 → 문제 ID ${d.approvedProblemId}` : `거절됨${d.rejectReason ? " — " + escapeHtml(d.rejectReason) : ""}`}
-      </div>`;
+      </div>
+      ${d.status === "REJECTED" ? `
+      <!-- 복구는 거절된 것에만 붙인다. 승인된 초안은 이미 정식 문제를 만들었으므로
+           되돌리면 중복 등록으로 이어진다(서버도 409로 막지만, 애초에 버튼을 안 보여준다). -->
+      <div class="row-actions" style="margin-top:6px">
+        <button class="btn-outline" onclick="restoreDraft(this, ${d.id})">검수함으로 되돌리기</button>
+      </div>` : ""}`;
     return `
       <div class="card" style="margin-bottom:12px">
         <div>
@@ -719,6 +725,25 @@ async function confirmReject(btn, id) {
   }
 }
 
+/* 거절 취소 — 초안을 검수 대기로 되돌린다.
+ *
+ * 되돌린 뒤 목록을 다시 부르면 그 초안은 화면에서 사라진다(지금 보고 있는 필터가 "거절됨"이므로).
+ * 없어진 것처럼 보여 당황스러울 수 있어 필터를 검수 대기로 바꿔 준다 —
+ * 되돌린 것이 어디로 갔는지 눈으로 확인시켜 주는 편이 친절하다. */
+async function restoreDraft(btn, id) {
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/llm-problems/${id}/restore`, { method: "POST" });
+    document.getElementById("gStatusFilter").value = "PENDING";
+    loadDrafts();
+    refreshLlmBadge();
+  } catch (e) {
+    btn.disabled = false;
+    showError(document.getElementById("gMessage"), e);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
 /** 탭 배지 갱신 — "검수 대기 N" 이 0이면 배지를 숨긴다(0을 붙이면 항상 시끄럽다). */
 async function refreshLlmBadge() {
   try {
@@ -789,7 +814,14 @@ async function loadDocDrafts() {
         ${d.status === "APPROVED"
           ? `승인됨 → <a href="/document.html?slug=${encodeURIComponent(d.slug)}">문서 보기</a> (ID ${d.approvedDocumentId})`
           : `거절됨${d.rejectReason ? " — " + escapeHtml(d.rejectReason) : ""}`}
-      </div>`;
+      </div>
+      ${d.status === "REJECTED" ? `
+      <!-- 문서를 되돌리면 배치의 "이 문서로는 문제를 만들지 마라" 목록에서도 빠진다.
+           그래서 안내 문구를 함께 둔다 — 되돌리기의 파급이 검수함 밖까지 미치는 유일한 경우다. -->
+      <div class="row-actions" style="margin-top:6px">
+        <button class="btn-outline" onclick="restoreDocDraft(this, ${d.id})">검수함으로 되돌리기</button>
+        <span class="meta">되돌리면 이 문서로 다시 문제를 만들 수 있게 됩니다</span>
+      </div>` : ""}`;
 
     return `
       <div class="card" style="margin-bottom:12px">
@@ -859,6 +891,19 @@ function alertDocError(e) {
   div.textContent = e.message ?? "요청에 실패했습니다.";
   box.prepend(div);
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function restoreDocDraft(btn, id) {
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/llm-documents/${id}/restore`, { method: "POST" });
+    document.getElementById("gdStatusFilter").value = "PENDING";
+    loadDocDrafts();
+    refreshLlmDocBadge();
+  } catch (e) {
+    btn.disabled = false;
+    alertDocError(e);
+  }
 }
 
 async function refreshLlmDocBadge() {

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -158,6 +159,36 @@ class LlmDocumentFlowIntegrationTest {
     void requiresAdminRole() throws Exception {
         mockMvc.perform(get("/api/admin/llm-documents"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    /**
+     * 복구 로직 자체는 단위 테스트가 보고 있다. 여기서 보는 것은 <b>경로가 실제로 연결됐는가</b>다 —
+     * 서비스가 아무리 옳아도 {@code @PostMapping} 경로에 오타가 있으면 404가 나고, 그건
+     * 단위 테스트가 절대 잡지 못한다.
+     */
+    @Test
+    @DisplayName("거절한 문서를 API로 되돌리면 검수 대기 목록에 다시 나타난다")
+    void restoreEndpointPutsDraftBackInPendingList() throws Exception {
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(), validContent("캐시 전략", "본문"));
+        String token = adminToken();
+
+        mockMvc.perform(post("/api/admin/llm-documents/%d/reject".formatted(draft.getId()))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"실수로 거절\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/llm-documents/%d/restore".formatted(draft.getId()))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+
+        String json = mockMvc.perform(get("/api/admin/llm-documents?status=PENDING&size=100")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(findById(json, draft.getId()))
+                .as("되돌린 초안이 검수 대기 목록으로 돌아와야 한다").isNotNull();
     }
 
     /* ── 도우미 ──────────────────────────────────────────────── */

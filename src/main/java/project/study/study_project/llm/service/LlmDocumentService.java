@@ -158,6 +158,22 @@ public class LlmDocumentService {
         findDraft(draftId).reject(truncate(trimToNull(reason), 500));
     }
 
+    /**
+     * 복구 — 거절한 문서 초안을 검수 대기로 되돌린다.
+     *
+     * <p>규칙은 엔티티에 있다({@link GeneratedDocumentDraft#restore()}). 문서 쪽에서 한 가지 더
+     * 기억할 것: 복구하면 배치의 "쓰지 마라" 목록({@code rejectedSlugs})에서도 빠지므로
+     * <b>그 문서로 다시 문제가 만들어질 수 있다</b>. 스냅샷 파일은 앱을 켤 때 갱신되고
+     * 사용자가 커밋해야 배치에 반영된다({@code ExistingDocumentsExporter}).
+     */
+    @Transactional
+    public void restore(Long draftId) {
+        GeneratedDocumentDraft draft = findDraft(draftId);
+        draft.restore();
+        log.info("문서 초안 복구: \"{}\" — 검수 대기로 되돌림 (배치가 다시 근거로 쓸 수 있게 됨)",
+                draft.getTitle());
+    }
+
     private GeneratedDocumentDraft findDraft(Long id) {
         return draftRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LLM_001));

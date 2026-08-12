@@ -126,6 +126,27 @@ public class GeneratedDocumentDraft {
         this.reviewedAt = LocalDateTime.now();
     }
 
+    /**
+     * 복구 — 거절한 초안을 검수 대기로 되돌린다. 규칙과 근거는
+     * {@link GeneratedProblemDraft#restore()}와 동일하다(거절만 가능, 사유는 남긴다).
+     *
+     * <p>문서에는 한 가지가 더 딸려 온다. 거절된 문서의 slug는 {@code _existing-documents.json}의
+     * {@code rejectedSlugs}로 내보내져 배치가 <b>"이 문서로는 문제를 만들지 마라"</b>로 읽는다.
+     * 그 목록도 {@code status = 'REJECTED'}로 조회하므로, 복구하면 저절로 빠진다 —
+     * 즉 <b>복구한 문서로 다시 문제를 만들 수 있게 된다</b>. 손댈 코드는 없지만
+     * 스냅샷 파일이 갱신되도록 앱을 한 번 켜고 커밋해야 반영된다.
+     *
+     * @throws BusinessException 거절 상태가 아닐 때(LLM_002)
+     */
+    public void restore() {
+        if (this.status != DraftStatus.REJECTED) {
+            throw new BusinessException(ErrorCode.LLM_002,
+                    "거절된 초안만 검수 대기로 되돌릴 수 있습니다. 현재 상태: " + this.status);
+        }
+        this.status = DraftStatus.PENDING;
+        this.reviewedAt = null;
+    }
+
     private void requirePending() {
         if (this.status != DraftStatus.PENDING) {
             throw new BusinessException(ErrorCode.LLM_002);

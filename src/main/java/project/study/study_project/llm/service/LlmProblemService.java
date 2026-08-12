@@ -304,6 +304,21 @@ public class LlmProblemService {
         findDraft(draftId).reject(trimToNull(reason));
     }
 
+    /**
+     * 복구 — 거절한 초안을 검수 대기로 되돌린다(실수 거절 취소용).
+     *
+     * <p>상태 전이 규칙과 그 근거는 전부 엔티티에 있다({@link GeneratedProblemDraft#restore()}).
+     * 서비스가 여기서 다시 검사하지 않는 이유: 규칙이 두 곳에 있으면 언젠가 한쪽만 바뀐다.
+     * 승인 쪽은 "등록 전에 상태를 본다"는 <b>순서</b> 때문에 서비스에도 검사가 있지만,
+     * 복구는 다른 것을 만들지 않으므로 순서 문제가 없어 엔티티에만 둔다.
+     */
+    @Transactional
+    public void restore(Long draftId) {
+        GeneratedProblemDraft draft = findDraft(draftId);
+        draft.restore();
+        log.info("문제 초안 복구: #{} — 검수 대기로 되돌림", draft.getId());
+    }
+
     private GeneratedProblemDraft findDraft(Long id) {
         return draftRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LLM_001));

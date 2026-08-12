@@ -153,6 +153,34 @@ public class GeneratedProblemDraft {
         this.reviewedAt = LocalDateTime.now();
     }
 
+    /**
+     * 복구 — 거절한 초안을 검수 대기로 되돌린다.
+     *
+     * <p><b>왜 거절만 되돌릴 수 있나.</b> 거절된 초안은 <b>아무것도 만들지 않았다</b>.
+     * 대기함에서 빠졌을 뿐이라 되돌려도 잃을 것이 없다. 반면 승인된 초안은 이미 정식
+     * {@code problem}을 만들었으므로, PENDING으로 되돌리면 승인 버튼을 또 누를 수 있고
+     * <b>똑같은 문제가 두 개</b> 생긴다(문서와 달리 문제에는 slug 같은 중복 방지 장치가 없다).
+     * 승인을 취소하고 싶으면 문제 관리에서 그 문제를 지우는 것이 옳은 경로다 —
+     * 그쪽은 제출 이력이 있으면 삭제를 막아 주기까지 한다(QUIZ_003).
+     *
+     * <p><b>거절 사유를 지우지 않는 이유.</b> 남겨 두면 복구한 초안을 다시 볼 때 "저번에
+     * 왜 거절했는지"를 알 수 있다. 게다가 컬럼을 새로 만들지 않고도 복구 여부를 구분할 수 있다 —
+     * {@code status=PENDING}인데 {@code rejectReason}이 있으면 <b>한 번 거절됐다가 복구된 초안</b>이다.
+     *
+     * <p>프롬프트 되먹임에서는 저절로 빠진다: 거절 사례 조회가 {@code status = 'REJECTED'}로
+     * 거르므로, 상태만 되돌려 놓으면 다음 생성에 더는 실리지 않는다(손댈 코드가 없다).
+     *
+     * @throws BusinessException 거절 상태가 아닐 때(LLM_002)
+     */
+    public void restore() {
+        if (this.status != DraftStatus.REJECTED) {
+            throw new BusinessException(ErrorCode.LLM_002,
+                    "거절된 초안만 검수 대기로 되돌릴 수 있습니다. 현재 상태: " + this.status);
+        }
+        this.status = DraftStatus.PENDING;
+        this.reviewedAt = null; // 아직 처리되지 않은 상태로 되돌아간다(NULL = 미처리)
+    }
+
     private void requirePending() {
         if (this.status != DraftStatus.PENDING) {
             throw new BusinessException(ErrorCode.LLM_002);

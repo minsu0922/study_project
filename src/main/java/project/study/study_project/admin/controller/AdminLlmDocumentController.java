@@ -75,4 +75,16 @@ public class AdminLlmDocumentController {
         llmDocumentService.reject(id, body != null ? body.get("reason") : null);
         return ApiResponse.ok();
     }
+
+    /**
+     * 복구 — 거절한 초안을 검수 대기로 되돌린다.
+     *
+     * <p>문서 쪽에는 부수 효과가 하나 있다: 배치의 "이 문서로는 문제를 만들지 마라" 목록에서도
+     * 빠지므로 <b>다시 근거 문서로 쓰일 수 있게 된다</b>(docs/15).
+     */
+    @PostMapping("/{id}/restore")
+    public ApiResponse<Void> restore(@PathVariable Long id) {
+        llmDocumentService.restore(id);
+        return ApiResponse.ok();
+    }
 }

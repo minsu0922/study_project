@@ -77,4 +77,16 @@ public class AdminLlmProblemController {
         llmProblemService.reject(id, body != null ? body.get("reason") : null);
         return ApiResponse.ok();
     }
+
+    /**
+     * 복구 — 거절한 초안을 검수 대기로 되돌린다(실수 거절 취소).
+     *
+     * <p>승인된 초안에는 쓸 수 없다. 이미 만들어진 정식 문제가 있어 되돌리면 중복 등록으로
+     * 이어지기 때문 — 그때는 문제 관리에서 그 문제를 지우는 것이 옳은 경로다(409 LLM_002).
+     */
+    @PostMapping("/{id}/restore")
+    public ApiResponse<Void> restore(@PathVariable Long id) {
+        llmProblemService.restore(id);
+        return ApiResponse.ok();
+    }
 }

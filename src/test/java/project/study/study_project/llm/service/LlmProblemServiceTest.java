@@ -362,5 +362,84 @@ class LlmProblemServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode").isEqualTo(ErrorCode.LLM_001);
         }
+
+        /* ── 복구(실수 거절 취소) ─────────────────────────────── */
+
+        @Test
+        @DisplayName("거절한 초안을 되돌리면 검수 대기로 돌아간다")
+        void restoreRejectedDraft() {
+            GeneratedProblemDraft draft = mcDraft();
+            draft.reject("실수로 거절");
+            when(draftRepository.findById(3L)).thenReturn(Optional.of(draft));
+
+            service.restore(3L);
+
+            assertThat(draft.getStatus()).isEqualTo(DraftStatus.PENDING);
+            assertThat(draft.getReviewedAt()).as("미처리 상태로 돌아간다").isNull();
+        }
+
+        /**
+         * 거절 사유를 남기는 것이 <b>복구 여부를 구분하는 유일한 단서</b>다.
+         * status=PENDING인데 rejectReason이 있으면 "한 번 거절됐다가 복구된 초안"이라는 뜻 —
+         * 컬럼을 새로 만들지 않고 이 조합으로 표현하기로 했으므로 지우면 그 정보가 사라진다.
+         */
+        @Test
+        @DisplayName("복구해도 거절 사유는 남는다 — 왜 거절했었는지가 다음 판단의 재료다")
+        void restoreKeepsRejectReason() {
+            GeneratedProblemDraft draft = mcDraft();
+            draft.reject("보기 3번이 사실과 다름");
+            when(draftRepository.findById(4L)).thenReturn(Optional.of(draft));
+
+            service.restore(4L);
+
+            assertThat(draft.getRejectReason()).isEqualTo("보기 3번이 사실과 다름");
+        }
+
+        /**
+         * <b>이 테스트가 복구 기능의 안전선이다.</b> 승인된 초안을 되돌릴 수 있으면 승인 버튼을
+         * 또 누를 수 있고, 그러면 똑같은 문제가 두 개 등록된다 — 문제에는 문서의 slug 같은
+         * 중복 방지 장치가 없어서 아무도 막아 주지 않는다.
+         */
+        @Test
+        @DisplayName("승인된 초안은 되돌릴 수 없다 — 되돌리면 같은 문제가 두 번 등록된다")
+        void cannotRestoreApprovedDraft() {
+            GeneratedProblemDraft draft = mcDraft();
+            draft.approve(42L);
+            when(draftRepository.findById(5L)).thenReturn(Optional.of(draft));
+
+            assertThatThrownBy(() -> service.restore(5L))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.LLM_002);
+
+            assertThat(draft.getStatus()).as("실패했으면 상태가 그대로여야 한다")
+                    .isEqualTo(DraftStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("검수 대기 중인 초안에 복구를 걸어도 막힌다 — 되돌릴 것이 없다")
+        void cannotRestorePendingDraft() {
+            when(draftRepository.findById(6L)).thenReturn(Optional.of(mcDraft()));
+
+            assertThatThrownBy(() -> service.restore(6L))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.LLM_002);
+        }
+
+        @Test
+        @DisplayName("복구한 뒤에는 다시 승인할 수 있다 — 복구의 목적 그 자체")
+        void canApproveAfterRestore() {
+            GeneratedProblemDraft draft = mcDraft();
+            draft.reject("실수로 거절");
+            when(draftRepository.findById(7L)).thenReturn(Optional.of(draft));
+            when(adminProblemService.create(any())).thenReturn(new AdminProblemDetail(
+                    99L, Domain.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                    "@Transactional 전파 문제", null, "해설", LocalDateTime.now(), List.of()));
+
+            service.restore(7L);
+            service.approve(7L);
+
+            assertThat(draft.getStatus()).isEqualTo(DraftStatus.APPROVED);
+            assertThat(draft.getApprovedProblemId()).isEqualTo(99L);
+        }
     }
 }

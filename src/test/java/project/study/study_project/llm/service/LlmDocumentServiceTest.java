@@ -158,6 +158,57 @@ class LlmDocumentServiceTest {
         assertThat(draft.getStatus()).isEqualTo(DraftStatus.REJECTED);
     }
 
+    /* ── 복구 ────────────────────────────────────────────────── */
+
+    /**
+     * 문서 복구에는 검수함 밖으로 미치는 효과가 하나 있다: 거절된 문서의 slug는 배치가 읽는
+     * "쓰지 마라" 목록으로 나가는데, 그 조회가 {@code status='REJECTED'}로 걸러지므로
+     * 복구하면 저절로 빠진다 — <b>그 문서로 다시 문제를 만들 수 있게 된다</b>.
+     */
+    @Test
+    @DisplayName("거절한 문서를 되돌리면 검수 대기로 돌아간다 — 배치가 다시 근거로 쓸 수 있게 된다")
+    void restoreRejectedDraft() {
+        GeneratedDocumentDraft draft = pendingDraft("캐시 전략", "cache-strategy", validContent("캐시 전략"));
+        draft.reject("실수로 거절");
+        givenDraft(1L, draft);
+
+        service.restore(1L);
+
+        assertThat(draft.getStatus()).isEqualTo(DraftStatus.PENDING);
+        assertThat(draft.getReviewedAt()).isNull();
+        assertThat(draft.getRejectReason()).as("왜 거절했었는지는 다음 판단의 재료다")
+                .isEqualTo("실수로 거절");
+    }
+
+    @Test
+    @DisplayName("승인된 문서는 되돌릴 수 없다 — 이미 정식 문서가 만들어졌다")
+    void cannotRestoreApprovedDraft() {
+        GeneratedDocumentDraft draft = pendingDraft("캐시 전략", "cache-strategy", validContent("캐시 전략"));
+        draft.approve(42L);
+        givenDraft(1L, draft);
+
+        assertThatThrownBy(() -> service.restore(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("거절된 초안만");
+
+        assertThat(draft.getStatus()).isEqualTo(DraftStatus.APPROVED);
+    }
+
+    @Test
+    @DisplayName("복구한 뒤에는 다시 승인할 수 있다")
+    void canApproveAfterRestore() {
+        String slug = "cache-strategy";
+        GeneratedDocumentDraft draft = pendingDraft("캐시 전략", slug, validContent("캐시 전략"));
+        draft.reject("실수로 거절");
+        givenDraft(1L, draft);
+        when(adminDocumentService.create(any())).thenReturn(detail(7L));
+
+        service.restore(1L);
+
+        assertThat(service.approve(1L).id()).isEqualTo(7L);
+        assertThat(draft.getStatus()).isEqualTo(DraftStatus.APPROVED);
+    }
+
     /* ── 도우미 ──────────────────────────────────────────────── */
 
     private void givenDraft(Long id, GeneratedDocumentDraft draft) {
