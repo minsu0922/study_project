@@ -21,6 +21,7 @@
       <button class="tab-btn" data-tab="documents">문서 관리</button>
       <!-- 배지: 검수 대기 건수 — "승인을 기다리는 초안이 있다"는 신호를 탭 이름에 얹는다 -->
       <button class="tab-btn" data-tab="llm">AI 생성 <span id="llmBadge" class="badge gray" hidden></span></button>
+      <button class="tab-btn" data-tab="llmdoc">AI 문서 <span id="llmDocBadge" class="badge gray" hidden></span></button>
     </div>
 
     <!-- ═══ 대시보드 ═══ -->
@@ -123,6 +124,28 @@
       </h3>
       <div id="draftList"></div>
     </section>
+
+    <!-- ═══ AI 문서 (개념 문서 검수 — docs/15) ═══
+         문제 탭과 달리 "생성 요청" 버튼이 없다. 문서 생성은 GitHub Actions에서만 돌린다 —
+         한 편에 1~2분·$0.2가 드는 작업이라 화면에 버튼을 두면 실수로 누르기 쉽고,
+         누른 뒤에는 응답이 올 때까지 화면이 멈춰 있어야 한다. -->
+    <section id="tab-llmdoc" hidden>
+      <div class="card">
+        <h3>AI 개념 문서 검수</h3>
+        <p class="meta">GitHub Actions가 매일 만든 문서를 앱이 켜질 때 가져옵니다.
+          승인해야만 정식 문서가 되어 사이트에 보입니다. 자동 검증에서 <b>차단</b> 항목이 걸린 초안은
+          승인할 수 없고, <b>경고</b>는 보고 판단하시면 됩니다.</p>
+      </div>
+
+      <h3>문서 초안
+        <select id="gdStatusFilter" style="margin-left:10px">
+          <option value="PENDING">검수 대기</option>
+          <option value="APPROVED">승인됨</option>
+          <option value="REJECTED">거절됨</option>
+        </select>
+      </h3>
+      <div id="docDraftList"></div>
+    </section>
   </div>
 </main>
 
@@ -158,13 +181,16 @@ if (!isAdmin()) {
   initLlmTab();
   loadDrafts();
   refreshLlmBadge();
+  initLlmDocTab();
+  loadDocDrafts();
+  refreshLlmDocBadge();
 }
 
 /* ── 탭 전환 ── */
 function initTabs() {
   document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
-    ["dashboard", "problems", "documents", "llm"].forEach(t =>
+    ["dashboard", "problems", "documents", "llm", "llmdoc"].forEach(t =>
       document.getElementById("tab-" + t).hidden = (t !== btn.dataset.tab));
   }));
 }
@@ -691,6 +717,147 @@ async function refreshLlmBadge() {
   try {
     const { count } = await api("/api/admin/llm-problems/pending-count");
     const badge = document.getElementById("llmBadge");
+    badge.textContent = count;
+    badge.hidden = count === 0;
+  } catch (e) { /* 배지는 장식 — 실패해도 화면 기능에 영향 없음 */ }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * AI 문서 검수 (docs/15)
+ * ══════════════════════════════════════════════════════════════ */
+
+function initLlmDocTab() {
+  document.getElementById("gdStatusFilter").addEventListener("change", loadDocDrafts);
+}
+
+/* 문서 초안 목록.
+ *
+ * 본문을 마크다운으로 렌더링하지 않고 <pre>에 원문 그대로 보여주는 것이 의도적 선택이다.
+ *  - 검수자가 봐야 하는 것은 "최종 화면"이 아니라 "저장될 내용"이다. 렌더링하면
+ *    검증기가 지적한 HTML 태그가 눈앞에서 사라져(브라우저가 실행해 버려) 확인할 수가 없다.
+ *  - 무엇보다 승인 전 문서는 아직 검증을 통과하지 않은 남의 글이다. 그걸 innerHTML로
+ *    넣는 순간 관리자 페이지가 XSS 표적이 된다 — 우리가 막으려는 바로 그 문제다.
+ * 마크다운 원문은 어차피 대부분 산문이라 그대로도 잘 읽힌다. */
+async function loadDocDrafts() {
+  const status = document.getElementById("gdStatusFilter").value;
+  const data = await api("/api/admin/llm-documents?status=" + status + "&size=20");
+  const box = document.getElementById("docDraftList");
+  if (data.content.length === 0) {
+    box.innerHTML = `<div class="meta">해당 상태의 초안이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = data.content.map(d => {
+    const blocking = d.checks.filter(c => c.severity === "BLOCKING");
+    const warnings = d.checks.filter(c => c.severity === "WARNING");
+
+    // 차단은 눈에 띄게, 경고는 옆에 조용히 — 둘을 같은 모양으로 보여주면
+    // "빨간 게 늘 있으니 그러려니" 하게 되어 차단의 의미가 사라진다.
+    const blockingBox = blocking.length ? `
+      <div class="alert error" style="margin:10px 0">
+        <b>승인 불가</b><ul style="margin:6px 0 0; padding-left:18px">
+          ${blocking.map(c => `<li>${escapeHtml(c.message)}</li>`).join("")}
+        </ul>
+      </div>` : "";
+    const warningBox = warnings.length ? `
+      <div class="meta" style="margin:8px 0">
+        ${warnings.map(c => `⚠ ${escapeHtml(c.message)}`).join("<br>")}
+      </div>` : "";
+
+    const actions = d.status === "PENDING" ? `
+      <div class="row-actions" style="margin-top:10px">
+        <button onclick="approveDocDraft(this, ${d.id})" ${d.blocked ? "disabled" : ""}>승인 → 문서 등록</button>
+        <button class="danger" onclick="openDocReject(${d.id})">거절</button>
+      </div>
+      <div id="docRejectForm-${d.id}" hidden style="margin-top:10px">
+        <input id="docRejectReason-${d.id}" type="text" maxlength="500"
+               placeholder="거절 사유 (선택) — 예: 캐시 무효화 설명이 사실과 다름"
+               onkeydown="if (event.key === 'Enter') confirmDocReject(document.getElementById('docRejectConfirm-${d.id}'), ${d.id})"
+               style="width:100%">
+        <div class="row-actions" style="margin-top:6px">
+          <button id="docRejectConfirm-${d.id}" class="danger" onclick="confirmDocReject(this, ${d.id})">거절 확정</button>
+          <button onclick="closeDocReject(${d.id})">취소</button>
+        </div>
+      </div>` : `
+      <div class="meta" style="margin-top:10px">
+        ${d.status === "APPROVED"
+          ? `승인됨 → <a href="/document.html?slug=${encodeURIComponent(d.slug)}">문서 보기</a> (ID ${d.approvedDocumentId})`
+          : `거절됨${d.rejectReason ? " — " + escapeHtml(d.rejectReason) : ""}`}
+      </div>`;
+
+    return `
+      <div class="card" style="margin-bottom:12px">
+        <div>
+          <span class="badge gray">#${d.id}</span>
+          <span class="badge gray">${escapeHtml(d.domainName)}</span>
+          ${d.tags.map(t => `<span class="badge gray">${escapeHtml(t)}</span>`).join("")}
+          <span class="meta">${escapeHtml(d.model)} · ${d.contentLength}자</span>
+        </div>
+        <h3 style="margin:10px 0 2px">${escapeHtml(d.title)}</h3>
+        <div class="meta">/${escapeHtml(d.slug)}</div>
+        ${blockingBox}${warningBox}
+        <pre style="white-space:pre-wrap; word-break:break-word; max-height:380px; overflow:auto;
+                    background:#f9fafb; border-radius:8px; padding:12px; margin-top:10px;
+                    font-family:Consolas,monospace; font-size:.85rem">${escapeHtml(d.contentMd)}</pre>
+        ${actions}
+      </div>`;
+  }).join("");
+}
+
+async function approveDocDraft(btn, id) {
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/llm-documents/${id}/approve`, { method: "POST" });
+    loadDocDrafts();
+    refreshLlmDocBadge();
+    loadDocuments();   // 정식 문서 목록에 즉시 반영
+  } catch (e) {
+    btn.disabled = false;
+    // slug 중복(DOC_002)이 여기서 자주 난다 — 같은 주제를 다시 뽑으면 slug도 같아지기 때문.
+    // 메시지를 그대로 띄우고 화면 위로 올려 준다(카드가 길어 아래쪽 오류는 안 보인다).
+    alertDocError(e);
+  }
+}
+
+function openDocReject(id) {
+  document.getElementById(`docRejectForm-${id}`).hidden = false;
+  document.getElementById(`docRejectReason-${id}`).focus();
+}
+
+function closeDocReject(id) {
+  document.getElementById(`docRejectForm-${id}`).hidden = true;
+}
+
+async function confirmDocReject(btn, id) {
+  btn.disabled = true;
+  const reason = document.getElementById(`docRejectReason-${id}`).value.trim();
+  try {
+    await api(`/api/admin/llm-documents/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify(reason ? { reason } : {}),
+    });
+    loadDocDrafts();   // 거절 이력은 남는다(초안을 지우지 않는다)
+    refreshLlmDocBadge();
+  } catch (e) {
+    btn.disabled = false;
+    alertDocError(e);
+  }
+}
+
+/* 오류를 목록 맨 위에 끼워 넣는다. 문제 탭처럼 고정된 메시지 자리(gMessage)가 없는 이유는
+ * 이 탭에 생성 폼이 없어서다 — 그 자리를 만들자고 빈 카드를 두느니 필요할 때 만든다. */
+function alertDocError(e) {
+  const box = document.getElementById("docDraftList");
+  const div = document.createElement("div");
+  div.className = "alert error";
+  div.textContent = e.message ?? "요청에 실패했습니다.";
+  box.prepend(div);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function refreshLlmDocBadge() {
+  try {
+    const { count } = await api("/api/admin/llm-documents/pending-count");
+    const badge = document.getElementById("llmDocBadge");
     badge.textContent = count;
     badge.hidden = count === 0;
   } catch (e) { /* 배지는 장식 — 실패해도 화면 기능에 영향 없음 */ }
