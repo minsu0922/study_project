@@ -32,7 +32,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ImportedDraftFile {
 
-    /** generated/ 아래의 파일명. 예: {@code 2026-08-12.json} */
+    /**
+     * {@code generated/} 기준 상대 경로. 문제는 {@code 2026-08-12.json},
+     * 문서는 {@code documents/2026-08-12.json}이다.
+     *
+     * <p><b>문서에 폴더를 붙이는 이유</b>: 문제와 문서는 같은 날짜 파일명을 쓰므로 파일명만으로는
+     * 구분되지 않는다. 같은 열쇠를 쓰면 먼저 흡수한 쪽이 도장을 찍고 나머지가 "이미 처리함"으로
+     * 조용히 건너뛰어진다({@code DocumentImportService.importKey} 주석 참고).
+     *
+     * <p>문제 쪽 열쇠에 폴더를 붙이지 않는 것은 <b>바꾸면 안 되기</b> 때문이다 — 규칙을 바꾸는
+     * 순간 이미 흡수한 파일이 전부 "처음 보는 파일"이 되어 초안이 통째로 복제된다.
+     */
     @Id
     @Column(length = 100)
     private String filename;

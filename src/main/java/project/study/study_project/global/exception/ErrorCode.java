@@ -42,7 +42,12 @@ public enum ErrorCode {
     LLM_002("LLM_002", HttpStatus.CONFLICT, "이미 처리된 초안입니다."),
     // 외부 API 실패는 우리 서버 잘못(500)이 아니라 상류 문제라는 의미로 502(BAD_GATEWAY)
     LLM_003("LLM_003", HttpStatus.BAD_GATEWAY, "문제 생성 요청에 실패했습니다. 잠시 후 다시 시도해 주세요."),
-    LLM_004("LLM_004", HttpStatus.SERVICE_UNAVAILABLE, "ANTHROPIC_API_KEY가 설정되지 않아 문제 생성을 사용할 수 없습니다.");
+    LLM_004("LLM_004", HttpStatus.SERVICE_UNAVAILABLE, "ANTHROPIC_API_KEY가 설정되지 않아 문제 생성을 사용할 수 없습니다."),
+
+    // 개념 문서 검수(docs/15). 400이 아니라 409인 이유: 요청 형식은 멀쩡하고
+    // "지금 이 초안의 상태로는 승인할 수 없다"는 자원 쪽 사정이라 충돌에 가깝다.
+    // 구체적으로 어떤 검증에 걸렸는지는 BusinessException의 상세 메시지로 함께 내려보낸다.
+    LLM_005("LLM_005", HttpStatus.CONFLICT, "자동 검증에 걸린 초안은 승인할 수 없습니다.");
 
     private final String code;
     private final HttpStatus httpStatus;

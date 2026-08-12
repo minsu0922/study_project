@@ -58,12 +58,16 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     /**
      * 문서에 반드시 있어야 하는 섹션 제목 — {@link #SYSTEM_PROMPT}의 [문서 구조]와 짝을 이룬다.
      *
-     * <p><b>왜 상수로 빼 두는가.</b> 흡수·검수 단계(1단계-B)에서 "이 섹션이 없으면 반려"하는
-     * 검증을 붙일 예정인데, 그때 프롬프트의 제목과 검증기의 제목이 <b>따로 놀면</b> 멀쩡한 문서가
-     * 전부 반려되거나(제목만 바꿨을 때) 빈껍데기가 통과한다. 둘 다 조용히 일어나는 사고라
-     * 한 곳에 적어 두고 테스트로 묶었다({@code ClaudeDocumentGeneratorTest}).
+     * <p><b>왜 상수로 빼 두는가.</b> 흡수·검수 단계(1단계-B)의 {@code DocumentDraftValidator}가
+     * "이 섹션이 없으면 승인 불가"를 판정하는 데 같은 목록을 쓴다. 프롬프트의 제목과 검증기의
+     * 제목이 <b>따로 놀면</b> 멀쩡한 문서가 전부 막히거나(제목만 바꿨을 때) 빈껍데기가 통과한다.
+     * 둘 다 조용히 일어나는 사고라 한 곳에 적어 두고 테스트로 묶었다({@code ClaudeDocumentGeneratorTest}).
+     *
+     * <p>{@code public}인 이유는 그 검증기가 다른 패키지({@code llm.support})에 있어서다.
+     * 생성기와 검증기를 같은 패키지에 두는 대안도 있었지만, "쓰는 쪽(client)"과
+     * "받아들이는 쪽(support)"은 호출 방향이 반대라 섞으면 의존 관계가 흐려진다.
      */
-    static final List<String> REQUIRED_SECTIONS = List.of(
+    public static final List<String> REQUIRED_SECTIONS = List.of(
             "## 왜 필요한가",
             "## 면접에서 이렇게 물어본다",
             "## 면접 한 줄 요약"

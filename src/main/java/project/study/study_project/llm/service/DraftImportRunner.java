@@ -31,6 +31,11 @@ import java.util.List;
  * <p><b>한 파일이 깨져도 나머지는 들어온다</b>: 파일마다 예외를 잡아 로그만 남기고 다음으로
  * 넘어간다. 부팅 자체를 실패시키지 않는 이유는 명확하다 — 문제 생성은 부가 기능이고,
  * 이것 때문에 앱이 안 뜨면 퀴즈 풀이·복습 같은 본 기능까지 죽는다.
+ *
+ * <p><b>문제와 문서를 한 러너가 처리하는 이유</b>(docs/15): 흡수 규칙 — 이미 가져온 파일은
+ * 건너뛰기, 오래된 순 정렬, 한 파일 실패가 나머지를 막지 않기 — 이 셋이 완전히 같다.
+ * 러너를 둘로 나누면 이 규칙이 복사되고, 나중에 한쪽만 고쳐져 <b>문서만 중복 흡수되는</b>
+ * 같은 종류의 버그가 생긴다. 파일을 읽고 해석하는 부분만 서비스 둘로 갈라져 있다.
  */
 @Slf4j
 @Component
@@ -39,6 +44,7 @@ import java.util.List;
 public class DraftImportRunner implements ApplicationRunner {
 
     private final DraftImportService draftImportService;
+    private final DocumentImportService documentImportService;
     private final ImportedDraftFileRepository importedFileRepository;
 
     /** 생성 결과 파일이 쌓이는 디렉터리(저장소 루트 기준). Actions가 커밋하는 위치와 같아야 한다. */
@@ -55,9 +61,37 @@ public class DraftImportRunner implements ApplicationRunner {
             return;
         }
 
-        List<Path> files;
+        // 문제: generated/*.json — 파일명이 곧 이력의 열쇠(V7 이후 그대로 유지해야 한다.
+        // 열쇠 규칙을 바꾸면 이미 흡수한 파일이 "처음 보는 파일"이 되어 전부 다시 들어온다)
+        Result problems = importAll(scan(dir), draftImportService::importFile, name -> name);
+
+        // 문서: generated/documents/*.json — 열쇠에 폴더를 붙인다(DocumentImportService.importKey 주석).
+        // 문제 파일과 이름이 같아서, 파일명만 쓰면 문서가 통째로 건너뛰어진다.
+        Result documents = importAll(scan(dir.resolve(DocumentImportService.DOCUMENT_SUBDIR)),
+                documentImportService::importFile, DocumentImportService::importKey);
+
+        int files = problems.files() + documents.files();
+        if (files > 0) {
+            log.info("생성 결과 흡수 완료: 파일 {}개에서 문제 초안 {}건 + 문서 초안 {}건 — 관리자 화면에서 검수하세요",
+                    files, problems.drafts(), documents.drafts());
+        }
+    }
+
+    /**
+     * 디렉터리에서 흡수 대상 파일을 골라 오래된 순으로 정렬한다. 없거나 못 읽으면 빈 목록.
+     *
+     * <p>{@code Files.list()}는 하위 디렉터리를 파고들지 않는다 — 그래서 {@code generated/}를
+     * 훑을 때 {@code documents/} 폴더는 {@code .json} 필터에서 자연스럽게 걸러진다.
+     * 문서를 접두사가 아니라 <b>폴더</b>로 분리한 것이 여기서 값을 한다(docs/15).
+     */
+    private List<Path> scan(Path dir) {
+        if (!Files.isDirectory(dir)) {
+            // 문서 폴더는 배치가 문서를 한 번도 안 만들었으면 없는 게 정상이다.
+            log.debug("생성 결과 디렉터리 없음, 건너뜀: {}", dir.toAbsolutePath());
+            return List.of();
+        }
         try (var stream = Files.list(dir)) {
-            files = stream
+            return stream
                     .filter(p -> p.getFileName().toString().endsWith(".json"))
                     // '_'로 시작하는 파일은 배치 결과가 아니다(_existing-questions.json 등 보조 파일)
                     .filter(p -> !p.getFileName().toString().startsWith("_"))
@@ -66,19 +100,28 @@ public class DraftImportRunner implements ApplicationRunner {
                     .sorted(Comparator.naturalOrder())
                     .toList();
         } catch (Exception e) {
-            log.warn("생성 결과 디렉터리를 읽지 못했습니다: {}", e.getMessage());
-            return;
+            log.warn("생성 결과 디렉터리를 읽지 못했습니다({}): {}", dir, e.getMessage());
+            return List.of();
         }
+    }
 
+    /**
+     * 파일 목록을 차례로 흡수한다 — 문제와 문서가 공유하는 유일한 반복문.
+     *
+     * @param importer 파일 하나를 흡수하고 저장 건수를 돌려주는 동작(서비스마다 다름)
+     * @param keyOf    파일명 → 흡수 이력의 열쇠(문제는 그대로, 문서는 폴더를 붙임)
+     */
+    private Result importAll(List<Path> files, FileImporter importer,
+                             java.util.function.UnaryOperator<String> keyOf) {
         int importedFiles = 0;
         int importedDrafts = 0;
         for (Path file : files) {
             String filename = file.getFileName().toString();
-            if (importedFileRepository.existsById(filename)) {
+            if (importedFileRepository.existsById(keyOf.apply(filename))) {
                 continue; // 이미 가져온 파일 — 조용히 통과(대부분의 부팅에서 여기로 빠진다)
             }
             try {
-                importedDrafts += draftImportService.importFile(file);
+                importedDrafts += importer.importFile(file);
                 importedFiles++;
             } catch (Exception e) {
                 // 파일 하나의 문제로 나머지를 막지 않는다. 이력을 남기지 않았으므로,
@@ -86,10 +129,18 @@ public class DraftImportRunner implements ApplicationRunner {
                 log.error("초안 흡수 실패(이 파일만 건너뜁니다): {} — {}", filename, e.getMessage());
             }
         }
+        return new Result(importedFiles, importedDrafts);
+    }
 
-        if (importedFiles > 0) {
-            log.info("생성 결과 흡수 완료: 파일 {}개에서 초안 {}건 — 관리자 화면에서 검수하세요",
-                    importedFiles, importedDrafts);
-        }
+    /**
+     * 흡수 동작 — {@code IOException}을 던지므로 {@code Function}으로는 표현할 수 없어 따로 둔다.
+     * 두 서비스의 {@code importFile}이 우연히 같은 모양인 게 아니라, 같은 계약을 지키게 하려는 것.
+     */
+    @FunctionalInterface
+    private interface FileImporter {
+        int importFile(Path file) throws Exception;
+    }
+
+    private record Result(int files, int drafts) {
     }
 }
