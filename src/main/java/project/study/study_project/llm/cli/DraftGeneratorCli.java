@@ -113,18 +113,18 @@ public final class DraftGeneratorCli {
         LocalDate date = resolveDate(opts);
         GenerationSchedule.Plan plan = GenerationSchedule.planFor(date, batchDomains);
 
-        // 4일 주기의 0일차는 문서를 쓰는 날이다(docs/15 2단계). 수동 실행이 --type으로
-        // 명시하면 그쪽이 이긴다 — 사람이 오늘 문서를 뽑겠다면 주기가 막을 이유가 없다.
-        //
         // 개념 문서는 대상 선정 방식도, 출력 위치(generated/documents/)도 다르다.
         // 한 흐름 안에서 if로 갈라면 두 관심사가 뒤엉키므로 아예 따로 뗀다.
-        String requestedType = opts.get("type");
-        boolean documentMode = requestedType != null && !requestedType.isBlank()
-                ? "document".equalsIgnoreCase(requestedType)
-                : plan.documentDay();
-        if (documentMode) {
+        BatchAction action = decideAction(
+                opts.get("type"), (String) generation.get("batch-type"), plan.documentDay());
+        if (action == BatchAction.DOCUMENT) {
             generateDocument(opts, model, batchDomains);
             return;
+        }
+        if (action == BatchAction.SKIP) {
+            System.out.println("오늘은 만들 것이 없습니다 "
+                    + "(llm.generation.batch-type=document인데 문서일이 아님). 요금 0으로 종료합니다.");
+            return; // 종료 코드 0 — "의도된 쉬는 날"은 실패가 아니다
         }
 
         // 수동 실행(workflow_dispatch)에서 특정 칸을 지정한 경우만 주기를 덮어쓴다
@@ -195,6 +195,67 @@ public final class DraftGeneratorCli {
         Files.createDirectories(outDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
         System.out.printf("저장 완료: %s (%d문제)%n", outFile, problems.size());
+    }
+
+    /** 오늘 배치가 할 일. {@link #decideAction}이 결정한다. */
+    enum BatchAction {
+        /** 개념 문서 한 편을 만든다. */
+        DOCUMENT,
+        /** 문제를 만든다. */
+        PROBLEM,
+        /** 아무것도 만들지 않고 정상 종료한다(요금 0). */
+        SKIP
+    }
+
+    /**
+     * 오늘 무엇을 만들지 정한다 — 우선순위는 <b>수동 지정 &gt; 설정 &gt; 날짜 주기</b>다.
+     *
+     * <p><b>수동이 가장 세다</b>: 사람이 워크플로에서 "오늘 문서 뽑아"라고 눌렀는데 주기나 설정이
+     * 막으면 그건 버그처럼 보인다. 수동 실행은 그 한 번만 유효하고 저장소 설정을 건드리지 않으므로
+     * 되돌리는 것을 잊어 사고가 나지도 않는다({@code force} 스위치와 같은 판단).
+     *
+     * <p><b>설정({@code llm.generation.batch-type})의 뜻</b>
+     * <ul>
+     *   <li>{@code auto}(기본): 4일 주기 그대로 — 0일차 문서, 나머지 문제
+     *   <li>{@code problem}: 문서일에도 문제를 만든다. <b>2단계가 사실상 꺼진다</b> —
+     *       문서를 안 만드니 근거로 삼을 문서가 안 생기고, 배치는 계속 폴백으로 돈다
+     *   <li>{@code document}: 문서일에만 문서를 만들고 <b>나머지 사흘은 아무것도 안 한다</b>.
+     *       "매일 문서"가 아닌 이유는 그러면 요금이 네 배가 되기 때문 — 매일 원한다면
+     *       주기 길이를 바꿔야 하고, 그건 이 스위치가 다룰 문제가 아니다
+     * </ul>
+     *
+     * <p><b>모르는 값이 오면 auto로 본다.</b> 오타 하나로 배치가 통째로 멈추는 것보다
+     * 평소대로 도는 편이 낫다 — 이 프로젝트가 겪은 사고는 "안 도는 걸 몇 주 뒤에 알아차린" 쪽이었다.
+     *
+     * @param requestedType  수동 실행의 {@code --type}. 비어 있으면 지정 안 한 것(예약 실행이 그렇다)
+     * @param configuredType {@code application.yml}의 {@code llm.generation.batch-type}
+     * @param documentDay    날짜 주기가 "오늘은 문서일"이라고 했는지
+     */
+    static BatchAction decideAction(String requestedType, String configuredType, boolean documentDay) {
+        // ① 수동 지정 — auto는 "지정 안 함"과 같은 뜻이라 아래로 흘려보낸다(워크플로가 빈 값으로
+        //    바꿔 넘기지만, 사람이 직접 CLI를 부를 때를 위해 여기서도 받아 준다)
+        if (isSet(requestedType) && !"auto".equalsIgnoreCase(requestedType.trim())) {
+            return "document".equalsIgnoreCase(requestedType.trim())
+                    ? BatchAction.DOCUMENT : BatchAction.PROBLEM;
+        }
+
+        // ② 설정
+        if (isSet(configuredType)) {
+            String type = configuredType.trim();
+            if ("problem".equalsIgnoreCase(type)) {
+                return BatchAction.PROBLEM;
+            }
+            if ("document".equalsIgnoreCase(type)) {
+                return documentDay ? BatchAction.DOCUMENT : BatchAction.SKIP;
+            }
+        }
+
+        // ③ 날짜 주기(auto)
+        return documentDay ? BatchAction.DOCUMENT : BatchAction.PROBLEM;
+    }
+
+    private static boolean isSet(String s) {
+        return s != null && !s.isBlank();
     }
 
     /**
