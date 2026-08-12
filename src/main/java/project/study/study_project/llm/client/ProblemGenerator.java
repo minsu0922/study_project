@@ -28,7 +28,25 @@ public interface ProblemGenerator {
      *                       사람의 검수 결과를 다음 생성에 되먹이는 통로다(docs/14)
      * @return 생성된 문제 목록(모델이 count보다 적게/많이 줄 수도 있어 호출부가 방어)
      */
+    default List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
+                                                int count, List<String> avoidQuestions,
+                                                List<RejectionNote> rejectionNotes) {
+        return generate(domain, difficulty, type, count, avoidQuestions, rejectionNotes, null);
+    }
+
+    /**
+     * 근거 문서를 주고 문제를 생성한다 — 2단계(docs/15).
+     *
+     * <p><b>기존 메서드를 지우지 않고 기본 구현으로 남긴 이유</b>: 근거 문서가 있는 생성은
+     * 배치(4일 주기)만의 사정이고, 관리자 화면의 즉시 생성은 앞으로도 근거 없이 만든다.
+     * 호출부 절반이 항상 {@code null}을 넘기게 만드느니 인자 없는 형태를 남겨 두는 편이
+     * 읽기 좋다 — {@code generate(..., null)}이 코드에 흩어지면 그 null이 무엇을 뜻하는지가
+     * 호출부마다 사라진다.
+     *
+     * @param sourceDocument 근거 문서. {@code null}이면 근거 없이(모델의 지식으로) 생성한다
+     */
     List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
                                         int count, List<String> avoidQuestions,
-                                        List<RejectionNote> rejectionNotes);
+                                        List<RejectionNote> rejectionNotes,
+                                        SourceDocument sourceDocument);
 }

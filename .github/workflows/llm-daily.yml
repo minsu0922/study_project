@@ -25,11 +25,12 @@ on:
     # 수동 실행 — 비워 두면 예약 실행과 똑같이(날짜 순환으로) 동작한다.
     inputs:
       type:
-        description: '무엇을 만들지'
+        description: '무엇을 만들지 (auto = 4일 주기가 결정. 예약 실행과 같음)'
         type: choice
         required: false
-        default: 'problem'
+        default: 'auto'
         options:
+          - auto
           - problem
           - document
       topic:
@@ -103,7 +104,10 @@ jobs:
       - name: gradlew 실행 권한 부여
         run: chmod +x gradlew
 
-      - name: 문제 생성
+      # 무엇을 만들지는 CLI가 날짜로 정한다(4일 주기: 0일차 문서, 1~3일차 초·중·고급 문제 — docs/15).
+      # 워크플로가 요일을 계산해 분기하지 않는 이유: 같은 판단이 셸과 자바 두 곳에 생기면
+      # 언젠가 어긋나 "문서일인데 문제가 나오는" 날이 온다. 규칙은 GenerationSchedule 한 곳에만 둔다.
+      - name: 생성 (문서/문제는 주기가 결정)
         env:
           # SDK와 ClaudeProblemGenerator가 이 이름의 환경변수를 직접 읽는다.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -116,9 +120,10 @@ jobs:
           # 예약 실행에서는 inputs가 비어 있으므로 force는 항상 꺼진 상태로 넘어간다 —
           # 중단 스위치를 예약 실행이 스스로 무시하는 일은 구조적으로 불가능하다.
           IN_FORCE: ${{ inputs.force }}
-          # 예약 실행에서는 inputs가 비어 type이 넘어가지 않는다 → CLI 기본값 problem.
-          # 즉 매일 도는 배치는 지금까지와 똑같이 문제만 만든다(문서는 수동 실행 전용, docs/15 1단계).
-          IN_TYPE: ${{ inputs.type }}
+          # 예약 실행에서는 inputs가 비어 type이 빈 문자열로 넘어간다 → CLI가 주기로 판단한다.
+          # 수동 실행에서 'auto'를 고른 경우도 같아야 하므로 빈 값으로 바꿔 넘긴다 —
+          # CLI 입장에서 "지정 안 함"과 "auto"는 같은 뜻이고, 그 판단을 여기서 한 번만 한다.
+          IN_TYPE: ${{ inputs.type == 'auto' && '' || inputs.type }}
           # 주제는 "TCP 혼잡 제어"처럼 공백이 들어간다. -PdraftArgs는 공백으로 인자를 쪼개므로
           # 거기 실으면 단어 단위로 찢어진다 — CLI가 환경변수로 직접 읽게 한다(DraftGeneratorCli 주석).
           DRAFT_TOPIC: ${{ inputs.topic }}
@@ -146,7 +151,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add generated
-          git commit -m "chore(llm): $(TZ=Asia/Seoul date +%F) 문제 초안 자동 생성"
+
+          # 커밋 메시지에 무엇이 만들어졌는지 적는다. 4일 주기라 날마다 다른 것이 나오는데
+          # 메시지가 늘 "문제 초안"이면 로그만 보고는 그날 무엇이 나왔는지 알 수 없다.
+          # 판단 근거는 실제로 추가된 파일 경로다 — 주기를 셸에서 다시 계산하면 어긋날 수 있다.
+          if git diff --cached --name-only | grep -q '^generated/documents/'; then
+            KIND="개념 문서 초안"
+          else
+            KIND="문제 초안"
+          fi
+          git commit -m "chore(llm): $(TZ=Asia/Seoul date +%F) ${KIND} 자동 생성"
 
           # 그 사이 사람이 푸시했을 수 있다. generated/ 아래 새 파일만 추가하므로 내용 충돌은
           # 사실상 없지만, 뒤처진 상태로는 푸시가 거부되므로 rebase로 맞춰 준다.

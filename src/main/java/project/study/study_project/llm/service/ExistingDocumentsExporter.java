@@ -79,6 +79,9 @@ public class ExistingDocumentsExporter implements ApplicationRunner {
                 .sorted() // 태그는 DB 순서가 보장되지 않으므로 이름순으로 못 박는다
                 .toList();
 
+        // 거절된 문서 slug(2단계) — 배치가 이 문서로는 문제를 만들지 않게 한다
+        List<String> rejectedSlugs = draftRepository.findRejectedSlugs();
+
         if (titles.isEmpty() && tags.isEmpty()) {
             // 아직 문서가 하나도 없다 — 빈 파일을 만들면 배치가 빈 블록을 프롬프트에 넣게 되고,
             // 커밋할 것도 없는데 새 파일이 생겨 혼란만 준다.
@@ -87,25 +90,26 @@ public class ExistingDocumentsExporter implements ApplicationRunner {
         }
 
         Path file = dir.resolve(FILE_NAME);
-        if (!hasChanged(file, titles, tags)) {
+        if (!hasChanged(file, titles, tags, rejectedSlugs)) {
             log.debug("기존 문서 스냅샷 변경 없음: 제목 {}건, 태그 {}건", titles.size(), tags.size());
             return false;
         }
 
         ExistingDocumentsFile snapshot = new ExistingDocumentsFile(
                 "정식 document 테이블 + 검수 대기 초안의 제목·태그 스냅샷입니다. "
-                        + "GitHub Actions 문서 생성 배치가 주제 중복 회피와 태그 재사용에 씁니다"
+                        + "GitHub Actions 배치가 주제 중복 회피와 태그 재사용에 쓰고, "
+                        + "rejectedSlugs는 '이 문서로는 문제를 만들지 마라'는 목록입니다"
                         + "(클라우드에는 DB가 없으므로). docs/15 참고. "
                         + "이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.",
-                LocalDate.now().toString(), titles, tags);
+                LocalDate.now().toString(), titles, tags, rejectedSlugs);
 
         Files.createDirectories(dir);
         Files.writeString(file, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(snapshot));
 
         // info로 남긴다 — 사용자가 "커밋해야 한다"는 것을 알아야 하는 유일한 순간이라
         // debug로 묻으면 기능이 조용히 무력해진다.
-        log.info("기존 문서 스냅샷 갱신: {} (제목 {}건, 태그 {}건) — 커밋하면 다음 배치부터 반영됩니다",
-                file, titles.size(), tags.size());
+        log.info("기존 문서 스냅샷 갱신: {} (제목 {}건, 태그 {}건, 거절 {}건) — 커밋하면 다음 배치부터 반영됩니다",
+                file, titles.size(), tags.size(), rejectedSlugs.size());
         return true;
     }
 
@@ -116,13 +120,18 @@ public class ExistingDocumentsExporter implements ApplicationRunner {
      * 파일을 새로 쓰게 되고, 그러면 <b>앱을 켤 때마다 git이 변경으로 인식</b>해서 진짜 바뀐 날을
      * 알아볼 수 없게 된다({@link RejectionNotesExporter}에서 이미 겪은 문제).
      */
-    private boolean hasChanged(Path file, List<String> titles, List<String> tags) {
+    private boolean hasChanged(Path file, List<String> titles, List<String> tags,
+                               List<String> rejectedSlugs) {
         if (!Files.exists(file)) {
             return true;
         }
         try {
             ExistingDocumentsFile existing = objectMapper.readValue(file.toFile(), ExistingDocumentsFile.class);
-            return !titles.equals(existing.titles()) || !tags.equals(existing.tags());
+            // rejectedSlugs는 2단계에서 추가된 필드라 옛 파일에는 없다(null).
+            // 그 경우 "빈 목록과 다른가"로 비교되어, 거절이 하나라도 있으면 파일이 갱신된다.
+            return !titles.equals(existing.titles())
+                    || !tags.equals(existing.tags())
+                    || !rejectedSlugs.equals(existing.rejectedSlugs() == null ? List.of() : existing.rejectedSlugs());
         } catch (Exception e) {
             // 파일이 깨졌거나 형식이 바뀐 경우 — 새로 쓰는 쪽이 안전하다
             log.debug("기존 스냅샷을 읽지 못해 새로 씁니다: {}", e.getMessage());

@@ -43,4 +43,24 @@ public interface GeneratedDocumentDraftRepository extends JpaRepository<Generate
             where d.status = 'PENDING'
             """)
     List<String> findPendingTitles();
+
+    /**
+     * 거절된 문서의 slug — 클라우드 배치가 "이 문서로는 문제를 만들지 마라"를 알기 위한 목록(2단계).
+     *
+     * <p>거절된 문서 파일은 저장소에 그대로 남아 있다(생성 결과는 지우지 않는다). 배치는 날짜만 보고
+     * 그 파일을 근거로 삼으려 하므로, 막지 않으면 <b>검수자가 버린 문서로 사흘치 문제가 나온다</b>.
+     *
+     * <p>승인된 slug 목록을 주는 대안도 있었지만 그러면 "아직 검수 안 한" 문서까지 걸러진다 —
+     * 승인을 며칠 미뤘다고 그 주기를 날리면 배치가 사람의 검수 속도에 인질로 잡힌다.
+     * 거절만 실어 보내면 미검수는 자연스럽게 통과한다(부정 목록이 맞는 자리).
+     *
+     * <p>정렬을 넣은 이유: 스냅샷 파일은 <b>내용이 같으면 다시 쓰지 않는</b>다. DB 순서에 맡기면
+     * 같은 목록이 다른 순서로 나와 파일이 매번 바뀐 것으로 보인다({@code ExistingDocumentsExporter}).
+     */
+    @Query("""
+            select d.slug from GeneratedDocumentDraft d
+            where d.status = 'REJECTED'
+            order by d.slug
+            """)
+    List<String> findRejectedSlugs();
 }

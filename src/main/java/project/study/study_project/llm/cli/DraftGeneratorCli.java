@@ -10,6 +10,7 @@ import project.study.study_project.llm.client.ClaudeProblemGenerator;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.RejectionNote;
+import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
@@ -107,23 +108,29 @@ public final class DraftGeneratorCli {
             return; // 종료 코드 0 — "의도된 중단"은 실패가 아니므로 알림 메일이 오면 안 된다
         }
 
-        // ── 3. 문서 모드 분기 ─────────────────────────────────────
-        // 개념 문서는 대상 선정 방식(칸 순환이 아니라 주제)도, 출력 위치(generated/documents/)도
-        // 다르다. 한 흐름 안에서 if로 갈라면 두 관심사가 뒤엉키므로 아예 따로 뗀다.
-        if ("document".equalsIgnoreCase(opts.getOrDefault("type", "problem"))) {
+        // ── 3. 오늘 무엇을 만들지 결정 ────────────────────────────
+        // 날짜는 한국 기준. 워크플로는 UTC로 도니까 여기서 변환하지 않으면 하루 어긋난다.
+        LocalDate date = resolveDate(opts);
+        GenerationSchedule.Plan plan = GenerationSchedule.planFor(date, batchDomains);
+
+        // 4일 주기의 0일차는 문서를 쓰는 날이다(docs/15 2단계). 수동 실행이 --type으로
+        // 명시하면 그쪽이 이긴다 — 사람이 오늘 문서를 뽑겠다면 주기가 막을 이유가 없다.
+        //
+        // 개념 문서는 대상 선정 방식도, 출력 위치(generated/documents/)도 다르다.
+        // 한 흐름 안에서 if로 갈라면 두 관심사가 뒤엉키므로 아예 따로 뗀다.
+        String requestedType = opts.get("type");
+        boolean documentMode = requestedType != null && !requestedType.isBlank()
+                ? "document".equalsIgnoreCase(requestedType)
+                : plan.documentDay();
+        if (documentMode) {
             generateDocument(opts, model, batchDomains);
             return;
         }
 
-        // ── 4. 오늘 무엇을 만들지 결정 ────────────────────────────
-        // 날짜는 한국 기준. 워크플로는 UTC로 도니까 여기서 변환하지 않으면 하루 어긋난다.
-        LocalDate date = resolveDate(opts);
-
-        GenerationSchedule.Cell cell = GenerationSchedule.cellFor(date, batchDomains);
-        // 수동 실행(workflow_dispatch)에서 특정 칸을 지정한 경우만 순환을 덮어쓴다
-        Domain domain = opts.containsKey("domain") ? Domain.valueOf(opts.get("domain")) : cell.domain();
+        // 수동 실행(workflow_dispatch)에서 특정 칸을 지정한 경우만 주기를 덮어쓴다
+        Domain domain = opts.containsKey("domain") ? Domain.valueOf(opts.get("domain")) : plan.domain();
         Difficulty difficulty = opts.containsKey("difficulty")
-                ? Difficulty.valueOf(opts.get("difficulty")) : cell.difficulty();
+                ? Difficulty.valueOf(opts.get("difficulty")) : plan.difficulty();
         // 유형은 객관식 고정 — 보기·해설이 함께 생성돼 검수 가치가 가장 높다(OX·단답형은 관리자 버튼으로)
         ProblemType type = ProblemType.MULTIPLE_CHOICE;
         int count = opts.containsKey("count") ? Integer.parseInt(opts.get("count")) : defaultCount;
@@ -131,22 +138,37 @@ public final class DraftGeneratorCli {
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Path outFile = outDir.resolve(date + ".json");
 
-        // ── 5. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
+        // ── 4. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
         // 워크플로를 수동으로 두 번 눌러도 API 요금이 두 번 나가지 않게 하는 안전장치.
         if (Files.exists(outFile)) {
             System.out.println("이미 생성됨, 건너뜀: " + outFile);
             return;
         }
 
+        // ── 5. 근거 문서 찾기(2단계) ──────────────────────────────
+        // 못 찾으면 null — 그때는 예전처럼 모델의 지식으로 만든다(폴백). 문서 생성이 실패했거나
+        // 검수에서 거절된 주기에도 그날의 문제는 나와야 하기 때문.
+        SourceDocument source = findSourceDocument(outDir, plan, difficulty);
+        if (source == null && !opts.containsKey("difficulty")) {
+            // 근거가 없으면 "이번 주기의 난이도"를 쓸 이유도 없다. 주기가 헛도는 동안
+            // 같은 분야·난이도만 반복되지 않게 옛 규칙(매일 분야가 바뀌는 24칸 순환)으로 돌아간다.
+            GenerationSchedule.Cell fallback = GenerationSchedule.cellFor(date, batchDomains);
+            if (!opts.containsKey("domain")) {
+                domain = fallback.domain();
+            }
+            difficulty = fallback.difficulty();
+        }
+
         // ── 6. 중복 회피 목록 + 거절 사례 되먹이기 ────────────────
         List<String> avoid = buildAvoidList(outDir, domain);
         List<RejectionNote> rejectionNotes = readRejectionNotes(outDir);
-        System.out.printf("생성 시작: %s × %s, %d문제 (모델 %s, 중복 회피 %d건, 거절 사례 %d건)%n",
-                domain, difficulty, count, model, avoid.size(), rejectionNotes.size());
+        System.out.printf("생성 시작: %s × %s, %d문제 (모델 %s, 근거 문서 %s, 중복 회피 %d건, 거절 사례 %d건)%n",
+                domain, difficulty, count, model,
+                source == null ? "없음(폴백)" : source.slug(), avoid.size(), rejectionNotes.size());
 
         // ── 7. 실제 호출 ──────────────────────────────────────────
         List<GeneratedProblemItem> problems = new ClaudeProblemGenerator(model)
-                .generate(domain, difficulty, type, count, avoid, rejectionNotes);
+                .generate(domain, difficulty, type, count, avoid, rejectionNotes, source);
 
         // 빈 응답은 성공이 아니다 — 조용히 빈 파일을 커밋하면 "돌긴 돌았는데 왜 문제가 없지"가 된다.
         // 예외를 던져 job을 실패시키고 메일을 받는 쪽이 낫다.
@@ -158,11 +180,58 @@ public final class DraftGeneratorCli {
         GeneratedBatchFile batch = new GeneratedBatchFile(
                 "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
                 date.toString(), Instant.now().toString(),
-                domain, difficulty, type, model, problems);
+                domain, difficulty, type, model,
+                source == null ? null : source.slug(), problems);
 
         Files.createDirectories(outDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
         System.out.printf("저장 완료: %s (%d문제)%n", outFile, problems.size());
+    }
+
+    /* ── 근거 문서 찾기(2단계) ───────────────────────────────── */
+
+    /**
+     * 이번 주기의 근거 문서를 읽는다 — 없거나 쓸 수 없으면 {@code null}(폴백).
+     *
+     * <p><b>클라우드에 DB가 없는데 어떻게 문서를 읽나.</b> 문서는 이미 저장소에 커밋돼 있다
+     * ({@code generated/documents/YYYY-MM-DD.json}). Actions는 저장소를 통째로 내려받고 시작하므로
+     * <b>파일을 그냥 열면 된다</b>. 날짜만으로 어느 파일인지 정해지니(주기 0일차) 어긋날 일도 없다.
+     * 문서 흡수 때 겪은 "클라우드는 DB를 못 본다" 문제가 여기서는 저절로 풀린다.
+     *
+     * <p><b>거절된 문서는 쓰지 않는다.</b> 검수자가 "이건 아니다"라고 판단한 문서로 사흘간 문제를
+     * 만들면 그 사흘이 통째로 낭비다. 거절 여부는 로컬 DB에만 있으므로
+     * {@code _existing-documents.json}의 {@code rejectedSlugs}로 실어 보낸다.
+     *
+     * <p><b>아직 검수 안 한 문서는 그냥 쓴다.</b> 미승인은 부정 신호가 아니라 "아직 안 봤다"일 뿐인데,
+     * 승인을 며칠 미뤘다고 그 주기를 날리면 사람의 검수 속도에 배치가 인질로 잡힌다.
+     */
+    private static SourceDocument findSourceDocument(Path outDir, GenerationSchedule.Plan plan,
+                                                     Difficulty difficulty) {
+        if (difficulty == null) {
+            return null; // 문서일에는 근거 문서를 찾을 일이 없다(방어)
+        }
+        Path file = outDir.resolve(DOCUMENT_SUBDIR).resolve(plan.documentDate() + ".json");
+        if (!Files.exists(file)) {
+            System.out.println("근거 문서 없음, 폴백으로 생성합니다: " + file);
+            return null;
+        }
+        try {
+            GeneratedDocumentFile parsed = MAPPER.readValue(file.toFile(), GeneratedDocumentFile.class);
+            GeneratedDocumentItem doc = parsed.document();
+            if (doc == null || doc.contentMd() == null || doc.contentMd().isBlank()) {
+                System.out.println("근거 문서 본문이 비어 폴백으로 생성합니다: " + file);
+                return null;
+            }
+            if (readExistingDocuments(outDir).rejectedSlugs().contains(doc.slug())) {
+                System.out.println("근거 문서가 검수에서 거절돼 폴백으로 생성합니다: " + doc.slug());
+                return null;
+            }
+            return new SourceDocument(doc.slug(), doc.title(), doc.contentMd());
+        } catch (Exception e) {
+            // 문서를 못 읽는 것이 그날 문제 생성을 막을 이유는 없다 — 근거 없이라도 만든다
+            System.out.println("근거 문서를 읽지 못해 폴백으로 생성합니다: " + e.getMessage());
+            return null;
+        }
     }
 
     /* ── 개념 문서 생성 ───────────────────────────────────────── */
@@ -235,21 +304,33 @@ public final class DraftGeneratorCli {
     private static ExistingDocuments readExistingDocuments(Path dir) {
         Path file = dir.resolve(EXISTING_DOCUMENTS_FILE);
         if (!Files.exists(file)) {
-            return new ExistingDocuments(null, null, List.of(), List.of());
+            return ExistingDocuments.empty();
         }
         try {
             ExistingDocuments snapshot = MAPPER.readValue(file.toFile(), ExistingDocuments.class);
             return new ExistingDocuments(snapshot.note(), snapshot.exportedAt(),
                     snapshot.titles() == null ? List.of() : snapshot.titles(),
-                    snapshot.tags() == null ? List.of() : snapshot.tags());
+                    snapshot.tags() == null ? List.of() : snapshot.tags(),
+                    snapshot.rejectedSlugs() == null ? List.of() : snapshot.rejectedSlugs());
         } catch (Exception e) {
             System.out.println("기존 문서 스냅샷을 읽지 못해 건너뜁니다: " + e.getMessage());
-            return new ExistingDocuments(null, null, List.of(), List.of());
+            return ExistingDocuments.empty();
         }
     }
 
-    /** {@code generated/_existing-documents.json}의 형태 — 이 CLI만 읽으므로 여기 둔다. */
-    private record ExistingDocuments(String note, String exportedAt, List<String> titles, List<String> tags) {
+    /**
+     * {@code generated/_existing-documents.json}의 형태 — 이 CLI만 읽으므로 여기 둔다.
+     *
+     * <p>{@code rejectedSlugs}는 2단계에서 추가됐다(docs/15). 검수자가 거절한 문서로 사흘간
+     * 문제를 만드는 낭비를 막는 용도다. 옛 파일에는 이 필드가 없으므로 null 방어가 필요하다 —
+     * 위 {@code readExistingDocuments}가 전부 빈 목록으로 정규화해 호출부가 신경 쓰지 않게 한다.
+     */
+    private record ExistingDocuments(String note, String exportedAt, List<String> titles,
+                                     List<String> tags, List<String> rejectedSlugs) {
+
+        static ExistingDocuments empty() {
+            return new ExistingDocuments(null, null, List.of(), List.of(), List.of());
+        }
     }
 
     /**

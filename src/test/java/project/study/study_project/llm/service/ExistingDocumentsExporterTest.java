@@ -109,6 +109,32 @@ class ExistingDocumentsExporterTest {
         assertThat(read().titles()).hasSize(2);
     }
 
+    /**
+     * 2단계: 거절된 문서로 사흘간 문제를 만드는 낭비를 막는 목록이다. 이 값이 파일에 안 실리면
+     * 배치는 거절 사실을 알 방법이 없어 <b>버려진 문서를 근거로 계속 문제를 만든다</b> —
+     * 오류는 나지 않고 결과물만 조용히 나빠진다.
+     */
+    @Test
+    @DisplayName("거절된 문서 slug가 스냅샷에 실린다 — 배치가 그 문서로는 문제를 만들지 않게 하는 유일한 통로")
+    void includesRejectedSlugs() throws Exception {
+        given(List.of("OSI 7계층"), List.of(), List.of("network"), List.of("bad-doc", "worse-doc"));
+
+        assertThat(exporter.export(tempDir)).isTrue();
+        assertThat(read().rejectedSlugs()).containsExactly("bad-doc", "worse-doc");
+    }
+
+    @Test
+    @DisplayName("거절이 새로 생기면 제목·태그가 그대로여도 다시 쓴다")
+    void rewritesWhenRejectionAdded() throws Exception {
+        given(List.of("OSI 7계층"), List.of(), List.of("network"));
+        exporter.export(tempDir);
+
+        given(List.of("OSI 7계층"), List.of(), List.of("network"), List.of("bad-doc"));
+
+        assertThat(exporter.export(tempDir)).isTrue();
+        assertThat(read().rejectedSlugs()).containsExactly("bad-doc");
+    }
+
     @Test
     @DisplayName("기존 파일이 깨져 있으면 새로 쓴다 — 손으로 편집하다 깨뜨려도 복구된다")
     void rewritesWhenExistingFileIsBroken() throws Exception {
@@ -122,8 +148,14 @@ class ExistingDocumentsExporterTest {
     /* ── 도우미 ──────────────────────────────────────────────── */
 
     private void given(List<String> documentTitles, List<String> draftTitles, List<String> tagNames) {
+        given(documentTitles, draftTitles, tagNames, List.of());
+    }
+
+    private void given(List<String> documentTitles, List<String> draftTitles,
+                       List<String> tagNames, List<String> rejectedSlugs) {
         lenient().when(documentRepository.findAllTitles()).thenReturn(documentTitles);
         lenient().when(draftRepository.findPendingTitles()).thenReturn(draftTitles);
+        lenient().when(draftRepository.findRejectedSlugs()).thenReturn(rejectedSlugs);
         when(tagRepository.findAll()).thenReturn(tagNames.stream().map(Tag::of).toList());
     }
 

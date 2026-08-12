@@ -1,6 +1,7 @@
 {
-  "note" : "정식 document 테이블 + 검수 대기 초안의 제목·태그 스냅샷입니다. GitHub Actions 문서 생성 배치가 주제 중복 회피와 태그 재사용에 씁니다(클라우드에는 DB가 없으므로). docs/15 참고. 이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.",
+  "note" : "정식 document 테이블 + 검수 대기 초안의 제목·태그 스냅샷입니다. GitHub Actions 배치가 주제 중복 회피와 태그 재사용에 쓰고, rejectedSlugs는 '이 문서로는 문제를 만들지 마라'는 목록입니다(클라우드에는 DB가 없으므로). docs/15 참고. 이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.",
   "exportedAt" : "2026-08-12",
-  "titles" : [ "OSI 7계층", "프로세스와 스레드", "TCP 3-way 핸드셰이크와 연결 종료", "HTTP와 HTTPS — 무엇이 다른가", "가상 메모리와 페이징", "DB 인덱스는 왜 B+트리인가", "트랜잭션과 격리 수준", "세션 인증과 JWT — 로그인은 어떻게 유지되나", "시간복잡도와 빅오 표기법", "캐시 전략 — 무엇을 어디에 저장하고, 어떻게 깨지는가", "XSS와 CSRF — 브라우저를 믿으면 생기는 일" ],
-  "tags" : [ "auth", "big-o", "http", "https", "index", "jwt", "memory", "os", "osi", "paging", "tcp", "thread", "transaction", "verify" ]
+  "titles" : [ "OSI 7계층", "프로세스와 스레드", "TCP 3-way 핸드셰이크와 연결 종료", "HTTP와 HTTPS — 무엇이 다른가", "가상 메모리와 페이징", "DB 인덱스는 왜 B+트리인가", "트랜잭션과 격리 수준", "세션 인증과 JWT — 로그인은 어떻게 유지되나", "시간복잡도와 빅오 표기법", "XSS와 CSRF — 브라우저를 믿으면 생기는 일" ],
+  "tags" : [ "auth", "big-o", "http", "https", "index", "jwt", "memory", "os", "osi", "paging", "security", "tcp", "thread", "transaction", "verify" ],
+  "rejectedSlugs" : [ "caching-strategies-and-failures" ]
 }

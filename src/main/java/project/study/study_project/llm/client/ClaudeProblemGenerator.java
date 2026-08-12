@@ -44,7 +44,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
     @Override
     public List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
                                                int count, List<String> avoidQuestions,
-                                               List<RejectionNote> rejectionNotes) {
+                                               List<RejectionNote> rejectionNotes,
+                                               SourceDocument sourceDocument) {
         // 구조화 출력: Batch record가 응답 스키마. create() 결과의 text()가 이미 Batch 타입으로
         // 파싱되어 있다(수동 JSON 파싱 없음 — 이 한 줄이 구조화 출력을 쓰는 이유다).
         StructuredMessageCreateParams<GeneratedProblemItem.Batch> params = MessageCreateParams.builder()
@@ -53,7 +54,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                 .thinking(ThinkingConfigAdaptive.builder().build())
                 .system(SYSTEM_PROMPT)
                 .outputConfig(GeneratedProblemItem.Batch.class)
-                .addUserMessage(buildPrompt(domain, difficulty, type, count, avoidQuestions, rejectionNotes))
+                .addUserMessage(buildPrompt(domain, difficulty, type, count, avoidQuestions,
+                        rejectionNotes, sourceDocument))
                 .build();
 
         try {
@@ -111,14 +113,19 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             - 문제끼리 같은 개념을 다른 말로 물어보는 것. 한 번에 만드는 문제들은 서로 다른 주제여야 한다.
             """;
 
-    private String buildPrompt(Domain domain, Difficulty difficulty, ProblemType type,
-                               int count, List<String> avoidQuestions,
-                               List<RejectionNote> rejectionNotes) {
+    String buildPrompt(Domain domain, Difficulty difficulty, ProblemType type,
+                       int count, List<String> avoidQuestions,
+                       List<RejectionNote> rejectionNotes, SourceDocument sourceDocument) {
         StringBuilder sb = new StringBuilder();
         sb.append("다음 조건으로 문제 ").append(count).append("개를 만들어라.\n\n");
         sb.append("- 분야: ").append(domain.getDisplayName()).append(domainHint(domain)).append('\n');
         sb.append("- 난이도: ").append(difficultyRule(difficulty)).append('\n');
         sb.append("- 유형: ").append(typeRule(type)).append('\n');
+
+        // 근거 문서(2단계) — 있으면 "아는 것을 쓰지 말고 이 문서에서 내라"로 바뀐다.
+        if (sourceDocument != null) {
+            appendSourceDocument(sb, sourceDocument, difficulty);
+        }
 
         // 중복 회피 — 기존 문제·대기 초안의 질문을 그대로 나열한다. "비슷한 주제 금지"보다
         // 실물 목록을 주는 쪽이 훨씬 잘 지켜진다(모델이 '비슷함'을 우리 기준으로 알 수 없으므로).
@@ -146,6 +153,46 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             }
         }
         return sb.toString();
+    }
+
+    /**
+     * 근거 문서 블록을 붙인다 — 2단계의 핵심(docs/15).
+     *
+     * <p><b>왜 "참고하라"가 아니라 "이 문서 안에서만 내라"인가.</b> 참고 수준으로 말하면 모델은
+     * 문서를 슬쩍 보고 결국 자기 기억으로 돌아간다. 그러면 근거를 준 목적 두 가지가 다 무너진다 —
+     * 환각이 줄지 않고, 학습자가 문서를 읽어도 문제를 못 푼다(문서에 없는 내용이 나오므로).
+     * 사흘에 걸쳐 <b>같은 문서로</b> 계단을 오르게 하려면 범위가 닫혀 있어야 한다.
+     *
+     * <p><b>난이도별로 문서의 어느 부분을 쓸지 지정하는 이유.</b> 같은 문서로 세 번 문제를 만드는데
+     * 지시가 같으면 사흘 내내 비슷한 문제가 나온다. 문서는 이미 층위별 재료를 나눠 담도록
+     * 쓰여 있으므로(생성 프롬프트의 [난이도 재료] 절), 어느 층을 캘지 알려 주면 된다.
+     *
+     * <p>특히 고급에서 <b>"면접에서 이렇게 물어본다" 절을 지목</b>하는 것이 이 설계의 회수 지점이다.
+     * 그 절은 질문과 요점이 짝지어 있어 <b>그대로 문항의 씨앗</b>이 된다 — 어제 문서 프롬프트에
+     * 이 절을 넣은 것이 여기서 값을 한다.
+     */
+    private void appendSourceDocument(StringBuilder sb, SourceDocument doc, Difficulty difficulty) {
+        sb.append("\n[근거 문서] 아래 문서를 읽고, 이 문서에 실제로 담긴 내용으로만 문제를 만들어라.\n");
+        sb.append("문서에 없는 사실을 끌어와 문제를 내지 마라. 학습자는 이 문서를 읽고 문제를 푼다 — "
+                + "문서에 없는 것을 물으면 학습이 아니라 시험이 된다.\n");
+        sb.append("단, 문장을 그대로 베껴 빈칸을 뚫는 식은 금지다. 문서가 설명한 원리를 "
+                + "다른 상황에 적용하게 만들어야 이해를 확인할 수 있다.\n");
+        sb.append("\n제목: ").append(doc.title()).append('\n');
+        sb.append("--- 문서 시작 ---\n").append(doc.contentMd()).append("\n--- 문서 끝 ---\n");
+        sb.append('\n').append(sourceFocus(difficulty)).append('\n');
+    }
+
+    /** 난이도별로 문서에서 캐낼 층 — 사흘 내내 비슷한 문제가 나오지 않게 하는 장치. */
+    private String sourceFocus(Difficulty difficulty) {
+        return switch (difficulty) {
+            case BEGINNER -> "[이번 난이도에서 쓸 부분] 문서의 정의·용어 설명과 기본 동작 부분을 쓴다. "
+                    + "문서를 읽은 사람이라면 풀 수 있어야 한다.";
+            case INTERMEDIATE -> "[이번 난이도에서 쓸 부분] 문서의 '왜 이렇게 설계됐는가' 부분을 쓴다. "
+                    + "문서가 설명한 원리를 문서에 없는 새로운 상황에 적용해 판단하게 만들어라.";
+            case ADVANCED -> "[이번 난이도에서 쓸 부분] 문서의 '실무에서 터지는 지점과 한계', "
+                    + "그리고 '면접에서 이렇게 물어본다' 절을 쓴다. 그 질문들이 다루는 트레이드오프와 "
+                    + "엣지 케이스를 문제로 바꿔라. 다만 질문을 그대로 옮기지 말고 객관식으로 재구성한다.";
+        };
     }
 
     /** 프롬프트 토큰 절약용 앞부분 자르기. 잘렸음을 말줄임표로 알려 모델이 문장이 끊긴 것으로 오해하지 않게 한다. */
