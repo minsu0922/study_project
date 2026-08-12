@@ -112,6 +112,11 @@ function init() {
             <div style="color:var(--wrong)">내 답: ${escapeHtml(w.myAnswer)}</div>
             <div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer ?? "")}</div>
             ${w.explanation ? `<div class="meta" style="margin-top:6px">${escapeHtml(w.explanation)}</div>` : ""}
+            <!-- 근거 개념 문서(docs/15 3단계) — 틀린 문제야말로 개념으로 돌아갈 이유가 가장 큰 자리다.
+                 서버가 실재하는 문서일 때만 slug를 내려주므로 존재 여부를 여기서 다시 따지지 않는다.
+                 오답노트는 이미 답을 다 보여주는 화면이라 퀴즈와 달리 "미리 보면 안 되는" 문제가 없다. -->
+            ${w.documentSlug ? `<div class="meta" style="margin-top:6px">📖 <a href="/document.html?slug=${
+              encodeURIComponent(w.documentSlug)}">이 문제의 개념 문서 읽기</a></div>` : ""}
             <div class="meta" style="margin-top:6px">마지막으로 틀린 날: ${formatDate(w.lastSubmittedAt)}</div>
           </div>`).join("");
       }

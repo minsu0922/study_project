@@ -5,12 +5,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.domain.Submission;
 import project.study.study_project.quiz.dto.WrongAnswerItem;
 import project.study.study_project.quiz.repository.SubmissionRepository;
+
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 오답노트 서비스 — 내 오답을 문제당 최신 1건으로 집계해 반환. 스펙은 docs/03, 설계는 ADR-0002.
@@ -24,6 +29,8 @@ import project.study.study_project.quiz.repository.SubmissionRepository;
 public class WrongAnswerService {
 
     private final SubmissionRepository submissionRepository;
+    /** 근거 문서 링크의 실재 확인용(docs/15 3단계). */
+    private final DocumentRepository documentRepository;
 
     /**
      * 오답노트 페이지 조회.
@@ -38,12 +45,37 @@ public class WrongAnswerService {
     @Transactional(readOnly = true)
     public PageResponse<WrongAnswerItem> getWrongAnswers(Long userId, Domain domain, Pageable pageable) {
         Page<Submission> page = submissionRepository.findLatestWrongAnswers(userId, domain, pageable);
-        return PageResponse.from(page.map(this::toItem));
+        // 이 페이지에 실제로 존재하는 근거 문서 slug를 <한 번에> 조회해 둔다(아래 메서드 주석).
+        Set<String> existingSlugs = findExistingDocumentSlugs(page.getContent());
+        return PageResponse.from(page.map(s -> toItem(s, existingSlugs)));
+    }
+
+    /**
+     * 이 페이지의 문제들이 가리키는 근거 문서 중 <b>실제로 있는 것</b>의 slug 집합.
+     *
+     * <p><b>왜 미리 한 번에 조회하나.</b> 항목마다 {@code existsBySlug}를 부르면 한 화면(20건)에
+     * 쿼리가 20번 나간다 — 전형적인 N+1이다. slug를 모아 {@code IN} 한 방으로 묻고 집합으로
+     * 만들어 두면 변환 단계는 메모리 조회만 한다.
+     *
+     * <p>slug를 가진 문제가 하나도 없으면 <b>조회 자체를 하지 않는다</b>. 지금은 대부분의 문제가
+     * 근거 문서 없이 만들어진 옛 문제라 이 경우가 흔하고, 게다가 빈 목록으로 {@code IN ()}을
+     * 만들면 문법 오류가 난다.
+     */
+    private Set<String> findExistingDocumentSlugs(List<Submission> submissions) {
+        Set<String> slugs = submissions.stream()
+                .map(s -> s.getProblem().getDocumentSlug())
+                .filter(slug -> slug != null && !slug.isBlank())
+                .collect(Collectors.toSet());
+        if (slugs.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(documentRepository.findExistingSlugs(slugs));
     }
 
     /** Submission → 표시용 DTO. 답 표기 변환(choiceId → 보기 text 등)은 AnswerDisplay 규칙을 쓴다. */
-    private WrongAnswerItem toItem(Submission s) {
+    private WrongAnswerItem toItem(Submission s, Set<String> existingSlugs) {
         Problem p = s.getProblem();
+        String slug = p.getDocumentSlug();
         return new WrongAnswerItem(
                 p.getId(),
                 p.getDomain(),
@@ -53,7 +85,9 @@ public class WrongAnswerService {
                 AnswerDisplay.userAnswerOf(p, s.getUserAnswer()),
                 AnswerDisplay.correctAnswerOf(p),
                 p.getExplanation(),
-                s.getSubmittedAt()
+                s.getSubmittedAt(),
+                // 존재하지 않는 문서를 가리키면 null — 화면이 죽은 링크를 걸지 않게 한다
+                existingSlugs.contains(slug) ? slug : null
         );
     }
 }

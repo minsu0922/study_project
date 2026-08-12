@@ -191,6 +191,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         my: displayAnswer(p, state.selected),
         ans: r.correctAnswer ?? "",
         exp: r.explanation ?? "",
+        doc: r.documentSlug ?? null,   // 결과 화면 복기에서도 개념 문서로 갈 수 있게(docs/15)
       });
       showFeedback(p, r);
     } catch (e) {
@@ -210,6 +211,23 @@ function startPlayer(mountEl, problems, opts = {}) {
     if (p.type !== "MULTIPLE_CHOICE") return value;
     const c = (p.choices || []).find(c => String(c.id) === String(value));
     return c ? c.text : value;
+  }
+
+  /* 근거 개념 문서 링크 — 채점 결과 안에만 붙는다(docs/15 3단계).
+   *
+   * 이 문서는 이 문제의 <출제 근거>다. 풀기 전에 보여주면 답을 알려주는 꼴이라,
+   * 해설과 똑같이 "제출이라는 대가를 치른 뒤에만" 나타나야 한다.
+   * 서버가 실재하는 문서일 때만 slug를 내려주므로(QuizSubmitResponse) 여기서는 존재 여부를
+   * 다시 따지지 않는다 — 규칙이 두 곳에 있으면 언젠가 어긋난다.
+   *
+   * 새 탭(target=_blank)으로 여는 이유: 퀴즈는 여러 문제를 이어서 푸는 흐름이라, 같은 탭에서
+   * 문서로 이동하면 풀던 세트가 통째로 날아간다(점수·진행 상태가 화면 메모리에만 있다). */
+  function docLink(r) {
+    if (!r.documentSlug) return "";
+    return `<div class="explain" style="font-size:.86rem">
+      📖 <a href="/document.html?slug=${encodeURIComponent(r.documentSlug)}" target="_blank" rel="noopener">
+        이 문제의 개념 문서 읽기</a>
+    </div>`;
   }
 
   /** 채점 결과를 보기 색 + 피드백 박스로 표시하고, [다음] 버튼으로 바꾼다. */
@@ -241,6 +259,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         <span class="verdict">${r.correct ? "🎉 정답입니다!" : "😅 아쉬워요, 오답입니다"}</span>
         ${r.correct ? "" : `<div style="margin-top:4px">정답: <b>${escapeHtml(r.correctAnswer ?? "")}</b></div>`}
         ${r.explanation ? `<div class="explain">${escapeHtml(r.explanation)}</div>` : ""}
+        ${docLink(r)}
         ${opts.reviewMode ? `<div class="explain" style="font-size:.82rem">${
           r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요 👋"
                     : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요 📅"}</div>` : ""}
@@ -287,6 +306,8 @@ function startPlayer(mountEl, problems, opts = {}) {
             <div class="my">내 답: ${escapeHtml(m.my)}</div>
             <div class="ans">정답: ${escapeHtml(m.ans)}</div>
             ${m.exp ? `<div class="exp">${escapeHtml(m.exp)}</div>` : ""}
+            ${m.doc ? `<div class="exp" style="font-size:.86rem">📖 <a href="/document.html?slug=${
+              encodeURIComponent(m.doc)}" target="_blank" rel="noopener">이 문제의 개념 문서 읽기</a></div>` : ""}
           </div>`).join("")}
         <p class="meta">틀린 문제는 <a href="/review.html">복습</a> 사다리에 자동으로 올라갔어요 —
           내일 "오늘의 복습"에서 다시 만나요.</p>

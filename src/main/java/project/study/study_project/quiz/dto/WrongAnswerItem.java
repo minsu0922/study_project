@@ -17,6 +17,10 @@ import java.time.LocalDateTime;
  * 필요해서 DTO 자체 from() 대신 서비스에서 조립한다.
  *
  * @param lastSubmittedAt 이 문제를 마지막으로 틀린 시각(재도전 이력 중 최신 오답 기준)
+ * @param documentSlug    이 문제의 근거가 된 개념 문서 slug(docs/15 3단계).
+ *                        <b>실제로 존재하는 문서일 때만</b> 채워진다 — 아직 검수 대기인 문서를
+ *                        가리키면 {@code null}이라 화면이 죽은 링크를 걸지 않는다.
+ *                        틀린 문제야말로 개념 문서로 돌아갈 이유가 가장 큰 자리다
  */
 public record WrongAnswerItem(
         Long problemId,
@@ -27,6 +31,7 @@ public record WrongAnswerItem(
         String myAnswer,
         String correctAnswer,
         String explanation,
-        LocalDateTime lastSubmittedAt
+        LocalDateTime lastSubmittedAt,
+        String documentSlug
 ) {
 }

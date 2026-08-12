@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.dailyquiz.service.DailyQuizService;
+import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
@@ -42,6 +43,8 @@ public class QuizService {
     private final SubmissionRepository submissionRepository;
     private final ReviewService reviewService;
     private final DailyQuizService dailyQuizService;
+    /** 근거 문서 링크의 실재 확인용(docs/15 3단계) — 죽은 링크를 학습자에게 보여주지 않기 위해. */
+    private final DocumentRepository documentRepository;
 
     /**
      * 필터로 문제 N개 무작위 조회(풀이용 — 정답/해설 미포함).
@@ -106,7 +109,26 @@ public class QuizService {
 
         return new QuizSubmitResponse(
                 problem.getId(), result.correct(), result.correctAnswer(),
-                problem.getExplanation(), submission.getId());
+                problem.getExplanation(), submission.getId(),
+                existingDocumentSlug(problem.getDocumentSlug()));
+    }
+
+    /**
+     * 근거 문서 slug를 <b>실제로 존재할 때만</b> 돌려준다(docs/15 3단계).
+     *
+     * <p>문제의 {@code document_slug}는 FK가 아니라 이름표라 가리키는 문서가 없을 수 있다.
+     * 가장 흔한 경우는 <b>문제는 승인했는데 근거 문서는 아직 검수 대기</b>인 상황 —
+     * 검수 순서를 강제하지 않으므로 정상적으로 자주 생긴다. 확인 없이 내려보내면
+     * 학습자가 링크를 눌렀을 때 "문서를 찾을 수 없습니다"를 만난다.
+     *
+     * <p>slug가 없는 문제(대부분의 기존 문제)는 조회 자체를 하지 않는다 — 값이 없는데
+     * 쿼리를 날리면 제출마다 쓸데없는 왕복이 한 번씩 늘어난다.
+     */
+    private String existingDocumentSlug(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return null;
+        }
+        return documentRepository.findExistingSlugs(List.of(slug)).isEmpty() ? null : slug;
     }
 
     /** 채점 결과 — 정오 여부 + 사람이 읽는 정답 표기. 서비스 내부 전용이라 private record. */

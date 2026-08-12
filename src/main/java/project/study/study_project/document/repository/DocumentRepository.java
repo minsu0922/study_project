@@ -2,8 +2,10 @@ package project.study.study_project.document.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import project.study.study_project.document.domain.Document;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,4 +35,22 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, Docum
      */
     @Query("select d.title from Document d order by d.id")
     List<String> findAllTitles();
+
+    /**
+     * 주어진 slug 중 <b>실제로 존재하는 것</b>만 골라 낸다 — 문제 화면의 "개념 문서 읽기" 링크용(3단계).
+     *
+     * <p><b>왜 존재 확인이 필요한가.</b> 문제의 {@code document_slug}는 FK가 아니라 이름표일 뿐이라
+     * 가리키는 문서가 없을 수 있다(V9). 특히 흔한 경우가 <b>문제는 승인했는데 문서는 아직
+     * 검수 대기</b>인 상황이다 — 검수 순서를 강제하지 않으므로 정상적으로 자주 생긴다.
+     * 확인 없이 링크를 걸면 학습자가 눌렀을 때 "문서를 찾을 수 없습니다"를 만난다.
+     *
+     * <p><b>왜 {@code existsBySlug}를 반복하지 않고 목록으로 받나.</b> 오답노트는 한 화면에 20건이
+     * 나오는데 건마다 조회하면 쿼리가 20번 나간다(N+1). slug를 모아 한 번에 묻고 결과를
+     * {@code Set}으로 만들어 걸러 내면 <b>항상 쿼리 한 방</b>이다.
+     *
+     * <p>빈 목록으로 호출하면 {@code IN ()}이 되어 DB에 따라 문법 오류가 난다 — 호출부가
+     * 비었을 때 아예 부르지 않도록 막아야 한다(그래서 이 메서드에는 방어를 두지 않았다).
+     */
+    @Query("select d.slug from Document d where d.slug in :slugs")
+    List<String> findExistingSlugs(@Param("slugs") Collection<String> slugs);
 }
