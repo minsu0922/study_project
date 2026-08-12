@@ -41,9 +41,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 배합 선정 쿼리(네이티브 RAND/NOT EXISTS)의 실동작, 제출 API와의 트랜잭션 연결(MANDATORY 합류),
  * fetch join 조회, UNIQUE 제약과의 상호작용은 단위 테스트로 볼 수 없다.
  *
- * <p><b>시드 데이터 전제</b>: 문제 풀(V2/V3 시드)이 이미 있으므로 "새 문제 칸"은 시드에서
- * 뽑힌다 — 개수 단정은 "세트 크기 이하"처럼 시드 규모에 안전한 형태로만 한다.
- * 테스트 사용자·문제는 매번 새로 만들고 클래스 {@code @Transactional}이 전부 롤백한다.
+ * <p><b>문제 풀을 테스트가 직접 만든다</b>: 원래는 시드 마이그레이션(V2/V3)에 있던 문제들이
+ * "새 문제 칸"을 채워 줬는데, 그 시드를 걷어내자 이 클래스의 세 테스트가 한꺼번에 깨졌다.
+ * 테스트가 <b>주변 데이터에 기대고 있었다</b>는 뜻이고, 그건 그 자체로 결함이다 —
+ * 누군가 시드를 손대면 상관없는 테스트가 무너지고, 실패 메시지("비어 있음")는 원인을
+ * 전혀 알려주지 않는다. 이제 필요한 문제를 {@link #setUp()}에서 직접 만든다.
+ *
+ * <p>테스트 사용자·문제는 매번 새로 만들고 클래스 {@code @Transactional}이 전부 롤백한다.
  */
 @SpringBootTest
 @Transactional
@@ -71,6 +75,26 @@ class DailyQuizFlowIntegrationTest {
                 .passwordHash("bcrypt-not-needed-here")
                 .build());
         userId = user.getId();
+        createProblemPool();
+    }
+
+    /**
+     * "새 문제 칸"이 뽑아 갈 <b>아직 안 푼 문제</b> 풀을 만든다.
+     *
+     * <p>세트 크기가 {@link DailyQuizService#SET_SIZE}(10)이므로 그보다 넉넉히 만든다 —
+     * 모자라면 서비스가 "채움 칸"(GENERAL)까지 내려가 {@code source} 단정이 흔들린다.
+     *
+     * <p>도메인을 OS·NETWORK와 겹치지 않게 고른 이유: 그 둘은 {@code mixRecipe}가
+     * 복습 재료(NETWORK)와 취약 재료(OS)로 쓰는 도메인이다. 풀이 같은 도메인을 쓰면
+     * 취약 칸이 풀에서 뽑혀도 검증은 통과하지만, <b>무엇이 어디서 왔는지가 흐려져</b>
+     * 나중에 이 테스트가 깨졌을 때 원인을 읽기 어려워진다.
+     */
+    private void createProblemPool() {
+        Domain[] poolDomains = {Domain.DS_ALGORITHM, Domain.SYSTEM_DESIGN,
+                Domain.LANGUAGE_RUNTIME, Domain.BACKEND_FRAMEWORK};
+        for (int i = 0; i < 12; i++) {
+            newOx(poolDomains[i % poolDomains.length], "새 문제 풀 " + i + " " + UUID.randomUUID());
+        }
     }
 
     /* ── 헬퍼 ── */
