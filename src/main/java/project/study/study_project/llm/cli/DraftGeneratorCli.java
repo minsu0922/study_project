@@ -369,10 +369,8 @@ public final class DraftGeneratorCli {
             return;
         }
 
-        // 분야를 지정하지 않으면 그날의 순환 분야를 쓴다(난이도는 문서에 의미가 없어 버린다)
-        Domain domain = opts.containsKey("domain")
-                ? Domain.valueOf(opts.get("domain"))
-                : GenerationSchedule.cellFor(date, batchDomains).domain();
+        // 분야를 지정하지 않으면 그날의 주기 분야를 쓴다(난이도는 문서에 의미가 없어 버린다)
+        Domain domain = documentDomain(date, batchDomains, opts.get("domain"));
         String topic = resolveTopic(opts);
 
         ExistingDocuments snapshot = readExistingDocuments(outDir);
@@ -398,6 +396,43 @@ public final class DraftGeneratorCli {
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(file));
         System.out.printf("저장 완료: %s (\"%s\", 본문 %d자)%n",
                 outFile, document.title(), document.contentMd().length());
+    }
+
+    /**
+     * 문서를 만들 분야 — 수동 지정이 있으면 그것, 없으면 <b>4일 주기</b>가 정한 분야.
+     *
+     * <p><b>이 한 줄이 왜 따로 떨어져 나와 있나.</b> 여기서 실제로 버그가 났기 때문이다.
+     * 2단계에서 문제 쪽만 {@link GenerationSchedule#planFor}로 옮기고 문서 쪽은 옛
+     * {@link GenerationSchedule#cellFor}를 그대로 두었는데, 그 둘이 어긋나는 방식이 하필 최악이었다.
+     *
+     * <pre>
+     *   문서일  = 에포크일 mod 4 == 0        → 4의 배수인 날
+     *   cellFor = 분야[에포크일 mod 8]        → 4의 배수를 8로 나눈 나머지는 0 아니면 4
+     *   ⇒ 후보 8개 중 <b>0번과 4번만</b> 무한 반복 (NETWORK ↔ SYSTEM_DESIGN)
+     * </pre>
+     *
+     * <p>나머지 여섯 분야는 개념 문서를 <b>영원히 못 받는다.</b> 게다가 문제일에는
+     * {@link #alignDomainWithDocument}가 분야를 문서 쪽으로 맞추므로 <b>문제까지 그 두 분야에
+     * 갇힌다</b> — 백엔드 8개 분야를 고루 돌자던 설계가 25%만 도는 셈이었다.
+     *
+     * <p><b>왜 아무도 몰랐나.</b> {@code planFor}에는 테스트가 촘촘했지만 <b>그것을 쓰는 쪽</b>은
+     * 아무도 보지 않았다. 규칙이 옳아도 배선이 틀리면 소용이 없다. 게다가 정렬 장치가 매일
+     * "분야를 맞췄습니다" 로그를 남기며 결과를 그럴듯하게 만들어 줘서 <b>증상마저 가려졌다</b> —
+     * 그 장치는 원래 손으로 만든 옛 문서를 위한 임시 그물이지 매일 발동할 물건이 아니었다.
+     *
+     * <p>그래서 이 판단을 이름 있는 함수로 꺼내 테스트를 걸었다({@code DraftGeneratorCliTest}).
+     * 문제 쪽 배선({@code plan.domain()})과 짝이 맞는지 32일치를 돌려 확인한다.
+     *
+     * @param date            기준 날짜(한국 기준)
+     * @param candidates      후보 분야({@code batch-domains})
+     * @param requestedDomain 수동 실행의 {@code --domain}. 비어 있으면 주기에 맡긴다
+     */
+    static Domain documentDomain(LocalDate date, List<Domain> candidates, String requestedDomain) {
+        if (requestedDomain != null && !requestedDomain.isBlank()) {
+            return Domain.valueOf(requestedDomain.trim());
+        }
+        // ⚠️ 반드시 planFor다. cellFor로 바꾸면 위 계산대로 두 분야만 반복된다.
+        return GenerationSchedule.planFor(date, candidates).domain();
     }
 
     /**

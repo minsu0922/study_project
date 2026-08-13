@@ -4,8 +4,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.llm.support.GenerationSchedule;
 
 import java.io.InputStream;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -149,6 +153,105 @@ class DraftGeneratorCliTest {
                 .as("problem의 오타").isEqualTo(DraftGeneratorCli.BatchAction.DOCUMENT);
         assertThat(DraftGeneratorCli.decideAction(null, "DOCUMENT", false))
                 .as("대소문자는 오타가 아니다 — 받아 준다").isEqualTo(DraftGeneratorCli.BatchAction.SKIP);
+    }
+
+    /* ══ 문서를 만들 분야 (2026-08-13 발견한 버그) ══════════════ */
+
+    /**
+     * {@code batch-domains}와 같은 순서·개수. 실제 설정을 그대로 써야 버그가 재현된다 —
+     * 후보가 8개일 때 "4의 배수 mod 8 = 0 아니면 4"라는 산술이 성립하기 때문이다.
+     */
+    private static final List<Domain> CANDIDATES = List.of(
+            Domain.NETWORK, Domain.OS, Domain.DATABASE, Domain.DS_ALGORITHM,
+            Domain.SYSTEM_DESIGN, Domain.SECURITY, Domain.LANGUAGE_RUNTIME, Domain.BACKEND_FRAMEWORK);
+
+    /**
+     * <b>이 프로젝트에서 실제로 터진 버그를 못 박는 테스트다.</b>
+     *
+     * <p>문서 생성만 옛 규칙({@code cellFor})을 쓰고 있었다. 문서일은 에포크일이 4의 배수인 날인데
+     * {@code cellFor}는 분야를 {@code 에포크일 mod 8}로 고르므로, 나머지가 <b>0 아니면 4</b>밖에
+     * 안 나온다 — 후보 8개 중 두 개만 무한 반복되고 나머지 여섯 분야는 개념 문서를 영영 못 받았다.
+     *
+     * <p>게다가 문제일에는 분야를 문서 쪽으로 맞추므로(정렬 장치) <b>문제까지 그 두 분야에 갇힌다.</b>
+     * 즉 이 한 줄이 기능 전체의 커버리지를 25%로 떨어뜨리고 있었다.
+     *
+     * <p><b>왜 이 형태로 검사하나.</b> "{@code planFor}를 호출한다"를 확인하는 것으로는 부족하다 —
+     * 그건 구현을 베끼는 테스트라 다음에 또 다른 함수로 갈아 끼우면 그대로 통과한다. 대신
+     * <b>결과가 만족해야 할 성질</b>(한 바퀴에 모든 분야가 한 번씩)을 검사한다. 규칙을 어떻게
+     * 구현하든 이 성질이 깨지면 실패한다.
+     */
+    @Test
+    @DisplayName("한 바퀴 돌면 모든 분야가 개념 문서를 한 번씩 받는다 — 옛 규칙이면 8개 중 2개만 돈다")
+    void documentDomainCoversEveryCandidateInOnePass() {
+        LocalDate start = LocalDate.of(2026, 8, 11); // 실제 첫 주기의 0일차
+        int onePass = GenerationSchedule.CYCLE_DAYS * CANDIDATES.size(); // 4 × 8 = 32일
+
+        List<Domain> documentDomains = new ArrayList<>();
+        for (int i = 0; i < onePass; i++) {
+            LocalDate date = start.plusDays(i);
+            if (GenerationSchedule.planFor(date, CANDIDATES).documentDay()) {
+                documentDomains.add(DraftGeneratorCli.documentDomain(date, CANDIDATES, null));
+            }
+        }
+
+        assertThat(documentDomains)
+                .as("32일이면 문서일은 8번")
+                .hasSize(CANDIDATES.size())
+                .as("여덟 분야가 정확히 한 번씩 — 버그 상태에서는 NETWORK·SYSTEM_DESIGN만 4번씩 나왔다")
+                .containsExactlyInAnyOrderElementsOf(CANDIDATES);
+    }
+
+    /**
+     * 위 테스트가 성질을 본다면 이건 <b>실물 날짜</b>를 본다. 버그를 발견할 때 손으로 계산해 둔 표를
+     * 그대로 옮긴 것이라, 실패했을 때 "어느 날 무엇이 나와야 하는데 무엇이 나왔다"가 바로 읽힌다.
+     */
+    @Test
+    @DisplayName("문서일마다 주기가 정한 분야가 나온다 — 버그 당시엔 NETWORK·SYSTEM_DESIGN만 번갈아 나왔다")
+    void documentDomainMatchesTheCycleOnRealDates() {
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 11), CANDIDATES, null))
+                .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(Domain.OS);
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, null))
+                .as("버그 당시 실제 값: NETWORK").isEqualTo(Domain.DATABASE);
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 19), CANDIDATES, null))
+                .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(Domain.DS_ALGORITHM);
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 23), CANDIDATES, null))
+                .as("버그 당시 실제 값: NETWORK").isEqualTo(Domain.SYSTEM_DESIGN);
+    }
+
+    /**
+     * 문서와 문제가 <b>같은 분야</b>를 가리켜야 한 주기가 성립한다. 이 둘이 어긋난 것이 버그의 본질이라,
+     * 짝이 맞는지를 직접 확인한다 — 어긋나면 정렬 장치가 매일 발동해 증상을 가려 버린다.
+     */
+    @Test
+    @DisplayName("문서일의 분야 = 뒤따르는 사흘 문제의 분야 — 이 짝이 어긋난 것이 버그였다")
+    void documentDomainMatchesTheProblemDaysThatFollow() {
+        LocalDate documentDay = LocalDate.of(2026, 8, 15);
+        Domain forDocument = DraftGeneratorCli.documentDomain(documentDay, CANDIDATES, null);
+
+        for (int i = 1; i <= 3; i++) {
+            GenerationSchedule.Plan problemDay =
+                    GenerationSchedule.planFor(documentDay.plusDays(i), CANDIDATES);
+            assertThat(problemDay.domain())
+                    .as("%d일차 문제의 분야", i)
+                    .isEqualTo(forDocument);
+            assertThat(problemDay.documentDate())
+                    .as("%d일차가 가리키는 근거 문서 날짜", i)
+                    .isEqualTo(documentDay);
+        }
+    }
+
+    @Test
+    @DisplayName("수동으로 분야를 지정하면 주기를 무시한다 — 워크플로에서 직접 고른 값이 가장 세다")
+    void manualDomainBeatsTheCycle() {
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "SECURITY"))
+                .isEqualTo(Domain.SECURITY);
+    }
+
+    @Test
+    @DisplayName("빈 문자열은 지정 안 한 것으로 본다 — 워크플로 입력을 비우면 이렇게 넘어온다")
+    void blankDomainFallsBackToTheCycle() {
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "   "))
+                .isEqualTo(Domain.DATABASE);
     }
 
     /**
