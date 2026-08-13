@@ -254,6 +254,59 @@ class DraftGeneratorCliTest {
                 .isEqualTo(Domain.DATABASE);
     }
 
+    /* ══ 스냅샷 낡음 경고 ═══════════════════════════════════════ */
+
+    /**
+     * 스냅샷 파일은 로컬 앱이 갱신하고 <b>사람이 커밋해야</b> 배치에 반영된다. 커밋을 잊으면
+     * 배치가 옛 회피 목록으로 돌아 <b>이미 있는 문제가 또 나온다</b> — 에러는 안 난다.
+     *
+     * <p>배치는 저장소에 커밋된 파일을 읽으므로 그 파일의 {@code exportedAt}이 곧
+     * <b>마지막으로 커밋된 시점</b>이다. 앱에 git을 심지 않고도 같은 것을 알 수 있다.
+     */
+    @Test
+    @DisplayName("2주 넘게 그대로면 낡은 것으로 본다 — 커밋을 잊은 신호")
+    void detectsStaleSnapshot() {
+        LocalDate today = LocalDate.of(2026, 8, 30);
+        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-10", today))
+                .as("20일 전").isTrue();
+    }
+
+    /**
+     * 스냅샷은 <b>내용이 바뀔 때만</b> 갱신된다. 검수를 안 했으면 거절 사례도 안 늘어나므로
+     * 며칠 그대로인 것은 정상이다 — 여기서 경고하면 매일 울리고, 그러면 사람이 경고를
+     * 무시하게 된다(진짜 경고까지 함께 묻힌다).
+     */
+    @Test
+    @DisplayName("2주 안이면 조용하다 — 며칠 그대로인 것은 정상이라 경고하면 안 된다")
+    void freshSnapshotIsNotStale() {
+        LocalDate today = LocalDate.of(2026, 8, 30);
+        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-30", today)).as("오늘").isFalse();
+        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-20", today)).as("10일 전").isFalse();
+        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-16", today))
+                .as("경계 — 정확히 %d일 전은 아직 아니다", DraftGeneratorCli.SNAPSHOT_STALE_DAYS).isFalse();
+    }
+
+    /**
+     * <b>확실할 때만 울린다.</b> 날짜를 못 읽는 것은 "오래됐다"는 증거가 아니다. 여기서 낡음으로
+     * 처리하면 파일이 깨진 날마다 엉뚱한 경고가 뜨고, 사람은 곧 경고 전체를 흘려보내게 된다.
+     */
+    @Test
+    @DisplayName("날짜를 읽을 수 없으면 경고하지 않는다 — 오탐이 경고를 무력화한다")
+    void unreadableDateNeverWarns() {
+        LocalDate today = LocalDate.of(2026, 8, 30);
+        assertThat(DraftGeneratorCli.isStaleSnapshot(null, today)).as("필드 없음").isFalse();
+        assertThat(DraftGeneratorCli.isStaleSnapshot("  ", today)).as("빈 값").isFalse();
+        assertThat(DraftGeneratorCli.isStaleSnapshot("어제", today)).as("날짜가 아님").isFalse();
+        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-13-45", today)).as("있을 수 없는 날짜").isFalse();
+    }
+
+    @Test
+    @DisplayName("ISO 시각 형태도 읽는다 — 스냅샷마다 날짜만 쓰기도, 시각까지 쓰기도 한다")
+    void acceptsIsoTimestamp() {
+        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-01T22:07:51.460797951Z",
+                LocalDate.of(2026, 8, 30))).isTrue();
+    }
+
     /**
      * <b>설정이 조용히 무시되는 것을 막는 테스트다.</b> 위 {@code decideAction}이 아무리 옳아도
      * {@code application.yml}의 키 이름이 코드가 읽는 이름과 다르면 값은 영영 전달되지 않는다.
