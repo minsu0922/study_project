@@ -63,4 +63,20 @@ public interface GeneratedDocumentDraftRepository extends JpaRepository<Generate
             order by d.slug
             """)
     List<String> findRejectedSlugs();
+
+    /**
+     * 모델별 × 상태별 초안 수 — 대시보드 승인율 표(문제 쪽과 같은 목적).
+     *
+     * <p>문서와 문제를 <b>한 표로 합치지 않는</b> 이유: 둘은 검수 기준도 생성 빈도도 다르다.
+     * 문서는 하루 한 편이라 표본이 훨씬 적어서, 합치면 문제 쪽 숫자에 묻혀 문서의 승인율
+     * 변화가 안 보인다. "모델을 바꿨더니 문서만 나빠졌다" 같은 판단을 하려면 나뉘어 있어야 한다.
+     *
+     * <p>반환 타입은 문제 쪽 {@link GeneratedProblemDraftRepository.ModelStatusCount}를 재사용한다.
+     */
+    @Query("""
+            select d.model as model, d.status as status, count(d) as cnt
+            from GeneratedDocumentDraft d
+            group by d.model, d.status
+            """)
+    List<GeneratedProblemDraftRepository.ModelStatusCount> countGroupByModelAndStatus();
 }

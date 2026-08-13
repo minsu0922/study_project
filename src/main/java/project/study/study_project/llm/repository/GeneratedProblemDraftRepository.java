@@ -87,4 +87,40 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
 
         String getReason();
     }
+
+    /**
+     * 모델별 × 상태별 초안 수 — 관리자 대시보드의 <b>승인율</b> 표에 쓴다.
+     *
+     * <p><b>왜 필요했나.</b> {@code model} 컬럼은 처음부터 "모델을 바꿨을 때 품질이 올랐는지
+     * 비교하려고" 기록해 왔고, 설계 문서에도 <b>"측정 없이 바꾸지 않는다"</b>고 적어 뒀다.
+     * 그런데 정작 <b>승인율을 볼 방법이 없었다</b> — 재료만 모으고 저울이 없던 셈이다.
+     *
+     * <p>여기서 비율까지 계산하지 않고 개수만 돌려주는 이유: 나눗셈을 SQL에 넣으면
+     * "검수한 게 0건일 때 0으로 나누기"를 DB 방언마다 다르게 처리해야 하고, 그 결과
+     * <b>"0%(전부 거절)"과 "아직 안 봄"이 구분되지 않는다.</b> 개수를 그대로 받아
+     * 서비스에서 판단하면 후자를 {@code null}로 남길 수 있다(ProblemStat과 같은 규칙).
+     *
+     * <p>초안이 수백 건 규모라 인덱스 없이 전체 스캔해도 무해하다. 대시보드는 관리자
+     * 한 명이 가끔 여는 화면이라 여기에 인덱스를 더하는 것은 쓰기 비용만 늘리는 손해다.
+     */
+    @Query("""
+            select d.model as model, d.status as status, count(d) as cnt
+            from GeneratedProblemDraft d
+            group by d.model, d.status
+            """)
+    List<ModelStatusCount> countGroupByModelAndStatus();
+
+    /**
+     * 모델별 집계 프로젝션. 문서 초안 쪽({@code GeneratedDocumentDraftRepository})도 <b>이 타입을
+     * 재사용</b>한다 — 모양이 같은 인터페이스를 두 벌 두면 언젠가 한쪽만 바뀌어 어긋나고,
+     * 조립하는 서비스가 두 결과를 같은 방식으로 다뤄야 코드도 단순해진다
+     * ({@code DomainDifficultyCount}를 공유한 것과 같은 판단).
+     */
+    interface ModelStatusCount {
+        String getModel();
+
+        DraftStatus getStatus();
+
+        long getCnt();
+    }
 }

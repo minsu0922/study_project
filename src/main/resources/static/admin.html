@@ -34,6 +34,9 @@
       <h3>도메인 × 난이도 문제 현황 <span class="meta">(흐린 0 = 출제가 비어 있는 칸)</span></h3>
       <div class="table-wrap"><table class="grid" id="matrixTable"></table></div>
 
+      <h3>AI 초안 승인율 <span class="meta">(모델·프롬프트를 바꿨을 때 품질이 올랐는지 보는 저울 — 검수 대기는 분모에서 제외)</span></h3>
+      <div class="table-wrap"><table class="grid" id="llmReviewTable"></table></div>
+
       <h3>문제별 정답률 <span class="meta">(정답률이 낮으면 너무 어렵거나 문제 오류 후보)</span></h3>
       <div class="table-wrap"><table class="grid" id="statsTable"></table></div>
     </section>
@@ -242,6 +245,8 @@ async function loadDashboard() {
         return `<tr><td>${dl}</td>${cells}<td><b>${sum}</b></td></tr>`;
       }).join("");
 
+    renderLlmReview(d.llmReview);
+
     document.getElementById("statsTable").innerHTML =
       `<tr><th>ID</th><th>문제</th><th>도메인</th><th>유형</th><th>제출</th><th>정답</th><th>정답률</th></tr>` +
       d.problemStats.map(s => `
@@ -257,6 +262,42 @@ async function loadDashboard() {
   } catch (e) {
     document.getElementById("guard").innerHTML = `<div class="alert error">대시보드 로딩 실패: ${escapeHtml(e.message)}</div>`;
   }
+}
+
+/**
+ * AI 초안 승인율 표 — 문제와 문서를 한 표에 두되 "종류" 열로 구분한다.
+ *
+ * [왜 두 표로 안 나눴나] 행이 모델 수만큼(보통 1~2줄)뿐이라 표를 둘로 쪼개면 제목만
+ * 늘어나고 비교는 오히려 어려워진다. 종류 열 하나면 "같은 모델인데 문서만 승인율이 낮다"가
+ * 한눈에 보인다 — 이 표를 보는 이유가 정확히 그것이다.
+ *
+ * [승인율이 null인 경우] 아직 아무도 검수하지 않은 상태다. 0%(전부 거절)와 정반대 신호라
+ * "0%"로 뭉개면 안 된다 — 서버가 null로 내려보내고 화면도 다른 말로 적는다.
+ */
+function renderLlmReview(review) {
+  const rows = [
+    ...(review?.problems ?? []).map(s => ["문제", s]),
+    ...(review?.documents ?? []).map(s => ["문서", s]),
+  ];
+
+  const table = document.getElementById("llmReviewTable");
+  if (rows.length === 0) {
+    // 초안이 하나도 없는 상태. 빈 표를 그리면 "고장 났나?"로 읽히므로 이유를 적어 준다.
+    table.innerHTML = `<tr><td class="meta">아직 생성된 초안이 없습니다. 배치가 돌면 여기에 모델별 승인율이 쌓입니다.</td></tr>`;
+    return;
+  }
+
+  table.innerHTML =
+    `<tr><th>종류</th><th>모델</th><th>검수 대기</th><th>승인</th><th>거절</th><th>승인율</th></tr>` +
+    rows.map(([kind, s]) => `
+      <tr>
+        <td>${kind}</td>
+        <td>${escapeHtml(s.model)}</td>
+        <td class="${s.pending === 0 ? "zero" : ""}">${s.pending}</td>
+        <td>${s.approved}</td>
+        <td>${s.rejected}</td>
+        <td>${s.approvalRate === null ? '<span class="meta">검수 전</span>' : s.approvalRate + "%"}</td>
+      </tr>`).join("");
 }
 
 /**
