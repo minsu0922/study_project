@@ -4,6 +4,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.support.GenerationSchedule;
 
 import java.io.InputStream;
@@ -329,5 +331,123 @@ class DraftGeneratorCliTest {
         assertThat(String.valueOf(generation.get("batch-type")))
                 .as("허용 값 밖이면 auto로 취급되어 설정한 의미가 사라진다")
                 .isIn("auto", "problem", "document");
+    }
+
+    /* ══ 수확량 점검 ═══════════════════════════════════════════ */
+
+    /**
+     * <b>실제로 겪은 사고를 그대로 못 박는다.</b> 2026-08-14 배치는 5개를 요청해 3개를 받았고,
+     * 그중 하나가 지문·해설이 빈 채 보기만 있는 껍데기였다. 실제로 검수함에 들어간 건 2개뿐인데
+     * job은 초록불로 끝났다 — 당시 방어선이 "목록이 통째로 비었는가"만 봤기 때문이다.
+     *
+     * <p>이런 종류의 실패는 <b>사람이 나중에 세어 보고서야</b> 드러난다. 그래서 세는 일을
+     * 코드가 하게 하고, 그 세는 코드가 옳은지를 여기서 못 박는다.
+     */
+    @Test
+    @DisplayName("지문 없는 껍데기는 유효에서 빠진다 — 2026-08-14 배치 재현(5개 요청, 3개 응답, 2개 유효)")
+    void countsHuskAsDefect() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("캐시 페네트레이션은?", "존재하지 않는 키는 캐시에 채울 값이 없다"),
+                multipleChoice("핫 키는?", "샤딩만으로는 해결되지 않는다"),
+                // 껍데기: 보기는 멀쩡한데 지문·해설이 빈 문자열이다(구조화 출력이 필수 필드를
+                // 빈 값으로 채워 보낸 형태 — GeneratedProblemItem 주석)
+                new GeneratedProblemItem("", "", "", fourChoices()));
+
+        DraftGeneratorCli.YieldCheck yield =
+                DraftGeneratorCli.checkYield(problems, 5, ProblemType.MULTIPLE_CHOICE);
+
+        assertThat(yield.received()).isEqualTo(3);
+        assertThat(yield.usable()).as("껍데기는 흡수 단계에서 버려지므로 유효가 아니다").isEqualTo(2);
+        assertThat(yield.isShort()).isTrue();
+        assertThat(yield.defects()).singleElement().asString()
+                .contains("3번")
+                .contains("지문이 비어 있음");
+    }
+
+    @Test
+    @DisplayName("요청한 만큼 다 오면 부족이 아니다 — 평소의 성공 경로")
+    void fullYieldIsNotShort() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("문제 1", "해설 1"),
+                multipleChoice("문제 2", "해설 2"));
+
+        DraftGeneratorCli.YieldCheck yield =
+                DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE);
+
+        assertThat(yield.usable()).isEqualTo(2);
+        assertThat(yield.isShort()).isFalse();
+        assertThat(yield.defects()).isEmpty();
+        assertThat(yield.blankExplanations()).isEmpty();
+    }
+
+    /**
+     * 모델이 요청보다 <b>많이</b> 주는 것은 부족이 아니다. 여기서 부족으로 판정하면 멀쩡한 날에
+     * 경고가 뜨고, 그런 경고가 몇 번 반복되면 사람이 진짜 경고까지 무시하게 된다
+     * (스냅샷 경고를 14일로 잡은 것과 같은 판단).
+     */
+    @Test
+    @DisplayName("요청보다 많이 와도 부족이 아니다 — 오탐이 경고를 무력화한다")
+    void extraItemsAreNotShort() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("문제 1", "해설 1"),
+                multipleChoice("문제 2", "해설 2"),
+                multipleChoice("문제 3", "해설 3"));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE).isShort())
+                .isFalse();
+    }
+
+    /**
+     * 해설이 빈 문제는 <b>흡수를 통과한다</b>(퀴즈로는 성립하므로). 그래서 유효 개수에는 넣고
+     * 경고만 따로 붙인다 — 여기서 유효에서 빼면 경고가 말하는 개수와 실제 검수함에 들어간
+     * 개수가 어긋나서, 경고를 보고도 무엇을 믿어야 할지 알 수 없게 된다.
+     */
+    @Test
+    @DisplayName("해설만 빈 문제는 유효로 세되 따로 알린다 — 흡수를 통과하기 때문")
+    void blankExplanationCountsAsUsableButIsReported() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("해설이 있는 문제", "해설"),
+                multipleChoice("해설이 없는 문제", ""));
+
+        DraftGeneratorCli.YieldCheck yield =
+                DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE);
+
+        assertThat(yield.usable()).isEqualTo(2);
+        assertThat(yield.isShort()).isFalse();
+        assertThat(yield.defects()).isEmpty();
+        assertThat(yield.blankExplanations()).singleElement().asString().contains("해설이 없는 문제");
+    }
+
+    @Test
+    @DisplayName("객관식 정답이 1개가 아니면 유효에서 빠진다 — 흡수 규칙과 같은 자로 잰다")
+    void countsChoiceRuleViolationAsDefect() {
+        List<GeneratedProblemItem> problems = List.of(
+                new GeneratedProblemItem("정답이 둘인 문제", "", "해설", List.of(
+                        new GeneratedProblemItem.GeneratedChoice("가", true),
+                        new GeneratedProblemItem.GeneratedChoice("나", true),
+                        new GeneratedProblemItem.GeneratedChoice("다", false),
+                        new GeneratedProblemItem.GeneratedChoice("라", false))));
+
+        DraftGeneratorCli.YieldCheck yield =
+                DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE);
+
+        assertThat(yield.usable()).isZero();
+        assertThat(yield.defects()).singleElement().asString()
+                .contains("보기 4개, 정답 2개");
+    }
+
+    /* ── 테스트 재료 ─────────────────────────────────────────── */
+
+    private static GeneratedProblemItem multipleChoice(String question, String explanation) {
+        // 객관식의 answer는 빈 문자열이 정상이다 — 정답은 보기 쪽에 있다(docs/01)
+        return new GeneratedProblemItem(question, "", explanation, fourChoices());
+    }
+
+    private static List<GeneratedProblemItem.GeneratedChoice> fourChoices() {
+        return List.of(
+                new GeneratedProblemItem.GeneratedChoice("정답 보기", true),
+                new GeneratedProblemItem.GeneratedChoice("오답 1", false),
+                new GeneratedProblemItem.GeneratedChoice("오답 2", false),
+                new GeneratedProblemItem.GeneratedChoice("오답 3", false));
     }
 }

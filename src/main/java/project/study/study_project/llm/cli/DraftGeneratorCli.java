@@ -15,6 +15,7 @@ import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
 import project.study.study_project.llm.support.GenerationSchedule;
+import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -187,6 +188,12 @@ public final class DraftGeneratorCli {
         if (problems == null || problems.isEmpty()) {
             throw new IllegalStateException("모델이 문제를 하나도 반환하지 않았습니다 — 프롬프트/모델 설정을 확인하세요.");
         }
+
+        // ── 7-1. 수확량 점검 ──────────────────────────────────────
+        // "목록이 비었나"만 봐서는 부족했다. 2026-08-14 배치는 5개를 요청해 3개를 받았고
+        // 그중 하나가 지문·해설이 빈 껍데기여서 실제로 쓴 건 2개인데, job은 초록불로 끝났다.
+        // 검수함에 문제가 적게 들어온 것을 사람이 먼저 눈치챈 뒤에야 파일을 열어 보고 알았다.
+        reportYield(checkYield(problems, count, type), date);
 
         // ── 8. 파일로 저장 ────────────────────────────────────────
         GeneratedBatchFile batch = new GeneratedBatchFile(
@@ -695,6 +702,127 @@ public final class DraftGeneratorCli {
         } catch (Exception e) {
             return null; // 못 읽으면 판단하지 않는다(위 isStaleSnapshot과 같은 원칙)
         }
+    }
+
+    /* ── 수확량 점검 ──────────────────────────────────────────── */
+
+    /**
+     * 저장 직전의 수확 점검 결과.
+     *
+     * @param requested          요청한 개수
+     * @param received           모델이 돌려준 항목 수
+     * @param usable             그중 흡수 단계를 통과할 항목 수
+     * @param defects            버려질 항목의 사유(사람이 읽는 문장)
+     * @param blankExplanations  해설만 빈 항목의 지문 앞부분. 흡수는 통과하므로 {@code usable}에는 포함된다
+     */
+    record YieldCheck(int requested, int received, int usable,
+                      List<String> defects, List<String> blankExplanations) {
+
+        /** 요청한 만큼 쓸 만한 게 왔는지. 모델이 더 많이 주는 경우도 부족은 아니다. */
+        boolean isShort() {
+            return usable < requested;
+        }
+    }
+
+    /**
+     * 모델이 준 항목을 세어 본다 — <b>걸러내지는 않는다</b>.
+     *
+     * <p>이 클래스는 모델이 준 것을 있는 그대로 파일에 남긴다(클래스 주석의 "왜 여기서 검증하지
+     * 않는가"). 그 원칙은 그대로 두고 <b>세기만</b> 한다. 원본이 남아 있어야 "왜 이 문제가
+     * 버려졌지"를 나중에 대조할 수 있고, 그게 프롬프트를 고칠 때의 재료가 된다.
+     *
+     * <p>판정은 {@link ProblemItemRule}에 맡긴다. 여기서 직접 조건을 적으면 흡수 쪽 규칙과
+     * 갈라져 "배치는 5개 다 멀쩡하다는데 검수함에는 2개만 들어온" 상태가 된다.
+     */
+    static YieldCheck checkYield(List<GeneratedProblemItem> problems, int requested, ProblemType type) {
+        List<String> defects = new ArrayList<>();
+        List<String> blankExplanations = new ArrayList<>();
+        int usable = 0;
+
+        for (int i = 0; i < problems.size(); i++) {
+            GeneratedProblemItem item = problems.get(i);
+            String defect = ProblemItemRule.defectOf(item, type);
+            if (defect != null) {
+                defects.add("%d번 — %s: %s".formatted(i + 1, defect, ProblemItemRule.snippet(item)));
+                continue;
+            }
+            usable++;
+            // 버릴 것은 아니지만 알려야 할 것. 흡수를 통과하므로 usable을 센 <뒤에> 본다 —
+            // 여기서 usable에서 빼면 경고가 말하는 개수와 실제 검수함 개수가 어긋난다.
+            if (ProblemItemRule.hasBlankExplanation(item)) {
+                blankExplanations.add("%d번 — %s".formatted(i + 1, ProblemItemRule.snippet(item)));
+            }
+        }
+        return new YieldCheck(requested, problems.size(), usable, defects, blankExplanations);
+    }
+
+    /**
+     * 수확이 부족하면 로그와 <b>Actions 요약 화면</b>에 알리고, 아예 없으면 job을 실패시킨다.
+     *
+     * <p><b>왜 요약 화면인가.</b> 지금까지 요약에는 파일 이름만 찍혀서(워크플로의 "요약 남기기"
+     * 스텝) "5개 중 2개"를 알 방법이 없었다. 빌드 로그 수백 줄 사이에 묻힌 경고는 없는 것과 같다.
+     *
+     * <p><b>왜 부족한 정도로는 실패시키지 않나.</b> 2개라도 건지는 편이 낫기 때문이다.
+     * 여기서 job을 죽이면 저장·커밋 스텝이 통째로 건너뛰어져 <b>이미 지불한 API 요금이
+     * 결과 없이 버려진다</b>(워크플로가 rebase 보험을 둔 것과 같은 이유). 부족한 것은
+     * 프롬프트를 손볼 신호이지 그날 치를 버릴 이유가 아니다.
+     *
+     * <p><b>반대로 0건이면 실패시킨다.</b> 껍데기만 온 파일을 커밋하면 흡수 이력에
+     * "0건 저장"으로 남아 <b>다시는 시도되지 않는다</b>(V7 주석의 의도된 동작). 그러면 그날은
+     * 조용히 사라진다 — 기존 {@code problems.isEmpty()} 방어가 막으려던 것과 같은 사고이고,
+     * 다만 "빈 목록"이 아니라 "빈 껍데기"라는 형태로 그 그물을 빠져나갔을 뿐이다.
+     */
+    private static void reportYield(YieldCheck yield, LocalDate date) {
+        if (yield.usable() == 0) {
+            // 요약 화면에도 남긴다 — 실패한 job일수록 원인이 위에 보여야 한다
+            appendToStepSummary("""
+                    ❌ **%s 생성 실패 — 쓸 수 있는 문제가 하나도 없습니다**
+
+                    모델이 %d개를 돌려줬지만 전부 규약을 어겼습니다.
+
+                    %s
+                    """.formatted(date, yield.received(), bullets(yield.defects())));
+            throw new IllegalStateException(
+                    "모델이 준 %d개가 전부 규약 위반이라 쓸 수 있는 문제가 없습니다: %s"
+                            .formatted(yield.received(), String.join(" / ", yield.defects())));
+        }
+
+        if (!yield.isShort() && yield.blankExplanations().isEmpty()) {
+            System.out.printf("수확 점검 통과: 요청 %d개 → 유효 %d개%n", yield.requested(), yield.usable());
+            return;
+        }
+
+        StringBuilder message = new StringBuilder();
+        if (yield.isShort()) {
+            message.append("⚠️ **%s 생성: 요청 %d개 중 %d개만 쓸 수 있습니다**(모델 응답 %d개)%n%n"
+                    .formatted(date, yield.requested(), yield.usable(), yield.received()));
+            if (!yield.defects().isEmpty()) {
+                message.append("버려질 항목:%n%s%n%n".formatted(bullets(yield.defects())));
+            }
+            // 근거 문서를 다 우려내면 여기로 온다 — 2026-08-14가 그랬다(고급 재료 8개 중 6개를
+            // 앞선 이틀이 이미 소진). 사람이 볼 때 원인을 바로 짚을 수 있게 후보를 적어 둔다.
+            message.append("""
+                    근거 문서에서 낼 수 있는 만큼 다 냈거나, 중복 회피 목록이 너무 빡빡한 상태입니다.
+                    같은 문서로 사흘을 나면서 재료가 마르는 것이 알려진 원인입니다
+                    → 문서 프롬프트의 고급 재료 요구량 또는 `llm.generation.batch-count`를 확인하세요.
+                    """);
+        }
+        if (!yield.blankExplanations().isEmpty()) {
+            message.append("%n⚠️ **해설이 빈 문제 %d개**(검수함에는 들어갑니다)%n%s%n"
+                    .formatted(yield.blankExplanations().size(), bullets(yield.blankExplanations())));
+        }
+
+        // 여기서 String.format을 한 번 더 돌리면 안 된다 — 지문 앞부분에 '%'가 들어 있으면
+        // ("평시 캐시 히트율이 95%인 조회 API…") 그걸 서식 지시자로 읽고 예외로 죽는다.
+        // 서식은 위에서 인자로 넘겨 이미 끝냈다.
+        String rendered = message.toString();
+        System.out.println(rendered);
+        appendToStepSummary(rendered);
+    }
+
+    /** 사유 목록을 마크다운 불릿으로. 요약 화면과 표준 출력 양쪽에서 읽히는 형태다. */
+    private static String bullets(List<String> lines) {
+        return String.join(System.lineSeparator(), lines.stream().map(s -> "- " + s).toList());
     }
 
     /**

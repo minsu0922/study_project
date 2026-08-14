@@ -25,6 +25,7 @@ import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
+import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
 import java.util.ArrayList;
@@ -233,34 +234,32 @@ public class LlmProblemService {
         return avoid;
     }
 
-    /** 생성 항목 → 초안 엔티티. 내용 규약 위반은 Optional.empty()로 건너뛴다. */
+    /**
+     * 생성 항목 → 초안 엔티티. 내용 규약 위반은 Optional.empty()로 건너뛴다.
+     *
+     * <p><b>판정을 {@link ProblemItemRule}에 맡긴 이유</b>: 생성 배치({@code DraftGeneratorCli})가
+     * "5개 요청했는데 2개만 쓸 만하다"를 경고하려면 <b>흡수와 같은 자</b>로 재야 한다.
+     * 기준이 갈라지면 배치는 "다 멀쩡하다"고 하고 흡수는 절반을 버리는, 서로 다른 말을 하는
+     * 상태가 된다 — 그러면 경고를 믿을 수 없어지고 결국 무시하게 된다.
+     */
     private java.util.Optional<GeneratedProblemDraft> toDraft(GeneratedProblemItem item,
                                                               Domain domain, Difficulty difficulty, ProblemType type,
                                                               String model, String documentSlug) {
-        String question = trimToNull(item.question());
-        String answer = trimToNull(item.answer()); // 스키마상 빈 문자열로 오는 "값 없음"을 null로 정규화
-        if (question == null) {
-            log.warn("생성 항목 건너뜀: 지문 없음");
+        String defect = ProblemItemRule.defectOf(item, type);
+        if (defect != null) {
+            log.warn("생성 항목 건너뜀: {} — {}", defect, ProblemItemRule.snippet(item));
             return java.util.Optional.empty();
         }
-        String choicesJson = null;
-        if (type == ProblemType.MULTIPLE_CHOICE) {
-            List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
-            long correct = choices == null ? 0 : choices.stream().filter(GeneratedProblemItem.GeneratedChoice::correct).count();
-            if (choices == null || choices.size() < 2 || correct != 1) {
-                log.warn("생성 항목 건너뜀: 객관식 보기 규약 위반 (보기 {}개, 정답 {}개) — {}",
-                        choices == null ? 0 : choices.size(), correct, snippet(question));
-                return java.util.Optional.empty();
-            }
-            answer = null; // 객관식 answer는 저장 규칙상 null(docs/01)
-            choicesJson = writeChoicesJson(choices);
-        } else if (answer == null) {
-            log.warn("생성 항목 건너뜀: {} 유형인데 answer 없음 — {}", type, snippet(question));
-            return java.util.Optional.empty();
-        }
+
+        // 객관식 answer는 저장 규칙상 null이다 — 정답은 보기 쪽에 있다(docs/01).
+        // 그 외 유형은 스키마상 빈 문자열로 오는 "값 없음"을 여기서 null로 정규화한다.
+        boolean multipleChoice = type == ProblemType.MULTIPLE_CHOICE;
+        String answer = multipleChoice ? null : trimToNull(item.answer());
+        String choicesJson = multipleChoice ? writeChoicesJson(item.choices()) : null;
+
         return java.util.Optional.of(GeneratedProblemDraft.pending(
-                domain, difficulty, type, question, answer, trimToNull(item.explanation()), choicesJson,
-                model, trimToNull(documentSlug)));
+                domain, difficulty, type, trimToNull(item.question()), answer,
+                trimToNull(item.explanation()), choicesJson, model, trimToNull(documentSlug)));
     }
 
     /* ── 검수(목록·승인·거절) ─────────────────────────────── */
@@ -373,9 +372,5 @@ public class LlmProblemService {
 
     private String trimToNull(String s) {
         return (s == null || s.isBlank()) ? null : s.trim();
-    }
-
-    private String snippet(String s) {
-        return s.length() > 50 ? s.substring(0, 50) + "…" : s;
     }
 }
