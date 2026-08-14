@@ -16,6 +16,7 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.service.LlmDocumentService;
+import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
@@ -64,9 +65,11 @@ class LlmDocumentFlowIntegrationTest {
     @Test
     @DisplayName("검수 대기 목록에 자동 검증 결과가 함께 실려 온다 — 화면이 스스로 판단하면 규칙이 두 벌이 된다")
     void listCarriesValidationResult() throws Exception {
-        // 분량만 살짝 넘긴 문서 — 경고는 뜨지만 승인은 가능해야 한다
+        // 분량만 살짝 넘긴 문서 — 경고는 뜨지만 승인은 가능해야 한다.
+        // 숫자를 직접 적지 않고 상수에 묶는다: 권장 분량을 올린 날 이 문서가 경고선 아래로
+        // 내려가면 검증 결과가 0건이 되는데, 그건 "응답에 안 실렸다"와 구분되지 않는다.
         GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(),
-                validContent("캐시 전략", "가".repeat(4_000)));
+                validContent("캐시 전략", "가".repeat(DocumentDraftValidator.WARN_LENGTH + 1)));
 
         // 검수 대기 목록은 오래된 순이라 방금 만든 초안이 맨 뒤에 온다. 기존 초안이 몇 건
         // 쌓여 있을지 모르므로 넉넉히 받아 와서 우리 것을 직접 찾는다 —
@@ -221,8 +224,14 @@ class LlmDocumentFlowIntegrationTest {
         return """
                 # %s
 
+                ## 무엇인가
+                한 문장 정의.
+
                 ## 왜 필요한가
                 %s
+
+                ## 언제 깨지는가
+                - 깨지는 조건 하나.
 
                 ## 면접에서 이렇게 물어본다
                 **Q. 무엇인가?**

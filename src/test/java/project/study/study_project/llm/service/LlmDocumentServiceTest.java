@@ -16,6 +16,7 @@ import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 
@@ -101,7 +102,10 @@ class LlmDocumentServiceTest {
     @Test
     @DisplayName("경고만 있으면 승인된다 — 분량 초과로 좋은 문서를 막지 않는다")
     void approveAllowedWithWarningsOnly() {
-        String content = validContent("캐시 전략").replace("내용.", "가".repeat(4_000));
+        // 숫자를 직접 적지 않고 상수에 묶는다 — 권장 분량을 올린 날 이 테스트가 "경고 없는 문서로
+        // 경고를 검사하는" 상태가 되어도 통과해 버려서, 무의미해진 것을 아무도 모른다.
+        String content = validContent("캐시 전략")
+                .replace("내용.", "가".repeat(DocumentDraftValidator.WARN_LENGTH + 1));
         givenDraft(1L, pendingDraft("캐시 전략", "cache-strategy", content));
         when(adminDocumentService.create(any())).thenReturn(detail(7L));
 
@@ -227,8 +231,14 @@ class LlmDocumentServiceTest {
         return """
                 # %s
 
+                ## 무엇인가
+                한 문장 정의.
+
                 ## 왜 필요한가
                 내용.
+
+                ## 언제 깨지는가
+                - 깨지는 조건 하나.
 
                 ## 면접에서 이렇게 물어본다
                 **Q. 무엇인가?**
