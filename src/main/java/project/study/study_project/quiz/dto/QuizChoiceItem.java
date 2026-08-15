@@ -5,6 +5,7 @@ import project.study.study_project.quiz.domain.Choice;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 풀이용 보기 항목 — API 스펙(docs/03 GET /api/quiz).
@@ -47,13 +48,20 @@ public record QuizChoiceItem(
         // JPA가 관리하는 컬렉션을 그 자리에서 섞으면 영속성 컨텍스트가 변경으로 오해할 수 있다.
         // 복사본을 섞는다 — 어차피 DTO로 옮길 것이라 비용도 없다.
         List<Choice> copy = new ArrayList<>(choices);
-        Collections.shuffle(copy);
+
+        // 난수원을 명시한다. 인자 없는 Collections.shuffle(list)는 JDK가 들고 있는
+        // <정적 Random 하나>를 모든 스레드가 나눠 쓴다 — 시드가 AtomicLong이라 동시 호출이
+        // 몰리면 CAS 재시도가 생긴다. ThreadLocalRandom은 스레드마다 따로라 그 경합이 없다.
+        // (지금 트래픽에서 체감 차이는 없다. 요청 스레드에서 도는 코드의 기본값을 맞춰 두는 것뿐이다.)
+        Collections.shuffle(copy, ThreadLocalRandom.current());
 
         List<QuizChoiceItem> items = new ArrayList<>(copy.size());
         for (int i = 0; i < copy.size(); i++) {
             Choice c = copy.get(i);
             items.add(new QuizChoiceItem(c.getId(), i + 1, c.getText()));
         }
-        return List.copyOf(items);
+        // 방어 복사(List.copyOf)를 쓰지 않는다 — items는 이 메서드가 방금 만든 지역 변수라
+        // 밖에서 바꿀 수 있는 경로가 없다. 남의 목록을 받을 때만 복사할 이유가 있다.
+        return Collections.unmodifiableList(items);
     }
 }
