@@ -230,6 +230,9 @@ class LlmDocumentFlowIntegrationTest {
                 ## 왜 필요한가
                 %s
 
+                ## 어디서 만나는가
+                - 설정하는 자리 하나.
+
                 ## 언제 깨지는가
                 - 깨지는 조건 하나.
 

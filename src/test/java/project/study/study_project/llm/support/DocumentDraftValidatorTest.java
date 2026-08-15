@@ -169,8 +169,9 @@ class DocumentDraftValidatorTest {
         List<DocumentCheck> checks = DocumentDraftValidator.validate(
                 "다른 제목", "Bad_Slug", "# 본문 제목\n\n## 왜 필요한가\n내용");
 
-        // slug 형식 1 + 제목 불일치 1 + 빠진 필수 절 4(무엇인가·언제 깨지는가·면접 질문·한 줄 요약) = 6
-        assertThat(checks).hasSize(6);
+        // slug 형식 1 + 제목 불일치 1
+        // + 빠진 필수 절 5(무엇인가·어디서 만나는가·언제 깨지는가·면접 질문·한 줄 요약) = 7
+        assertThat(checks).hasSize(7);
         assertThat(checks).extracting(DocumentCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
@@ -189,6 +190,9 @@ class DocumentDraftValidatorTest {
 
                 ## 왜 필요한가
                 %s
+
+                ## 어디서 만나는가
+                - 설정하는 자리 하나.
 
                 ## 언제 깨지는가
                 - 깨지는 조건 하나.
