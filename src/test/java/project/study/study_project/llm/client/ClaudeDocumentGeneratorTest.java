@@ -3,6 +3,7 @@ package project.study.study_project.llm.client;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.llm.support.DocumentDraftValidator;
 
 import java.util.List;
 
@@ -129,7 +130,7 @@ class ClaudeDocumentGeneratorTest {
                 .as("용어를 정의 없이 지나가면 초급 재료가 통째로 비는 셈이 된다")
                 .contains("[용어 다루기]")
                 .as("분량을 올린 건 고급 재료 절과 면접 질문 절에 지면을 주기 위해서다")
-                .contains("4,000~5,800자");
+                .contains("4,500~6,000자");
     }
 
     /**
@@ -149,7 +150,30 @@ class ClaudeDocumentGeneratorTest {
                 .contains("## 언제 깨지는가")
                 .as("개수를 박은 지시만 실제로 지켜졌다는 것이 실측 결과다")
                 .contains("서로 다른 것으로 5가지 이상")
-                .contains("서로 다른 항목이 5개 이상이어야 한다");
+                .contains("4개 이하면 실패다")
+                .as("분량이 빠듯할 때 제일 먼저 깎이는 것이 이 절이라, 깎지 말라고 따로 적는다")
+                .contains("상한 때문에 줄이지 않는다");
+    }
+
+    /**
+     * <b>프롬프트의 분량 지시와 검증기의 경고선이 같은 숫자인지</b> 본다.
+     *
+     * <p>이 짝이 어긋나면 증상이 고약하다. 프롬프트가 6,000자까지 쓰라고 하는데 경고선이
+     * 5,800이면, <b>지시를 잘 따른 문서일수록 매번 경고를 달고</b> 나온다. 경고가 상시로 뜨면
+     * 사람이 경고 자체를 안 보게 되고, 그러면 진짜 문제가 왔을 때도 지나친다.
+     *
+     * <p>2026-08-14과 08-15에 분량을 세 번 올렸는데 그때마다 두 곳을 따로 고쳐야 했다.
+     * 문자열을 뒤져 비교하는 것이 예쁜 테스트는 아니지만, 두 숫자가 다른 파일에 사는 한
+     * 잊는 것을 막을 방법은 이것뿐이다.
+     */
+    @Test
+    @DisplayName("분량 지시와 검증기 경고선이 같은 숫자다 — 어긋나면 지시를 잘 따른 문서가 매번 경고를 단다")
+    void lengthInstructionMatchesValidatorWarnLine() {
+        String warnLine = "%,d자".formatted(DocumentDraftValidator.WARN_LENGTH);
+
+        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+                .as("프롬프트 [분량]의 상한이 검증기 경고선(%s)과 같아야 한다", warnLine)
+                .contains(warnLine);
     }
 
     /**
@@ -162,7 +186,7 @@ class ClaudeDocumentGeneratorTest {
         assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
                 .as("개념·용어 정의가 문서의 첫 절이어야 한다")
                 .contains("## 무엇인가")
-                .contains("정의가 이 문서의 첫 문장이어야 한다")
+                .contains("첫 문장이 이 개념의 정의다")
                 .as("추상적 금지보다 실물 예시가 훨씬 잘 지켜진다")
                 .contains("[덜어낼 것]")
                 .contains("한 문장을 지웠는데 뜻이 그대로면 그 문장은 군더더기다");
@@ -184,7 +208,7 @@ class ClaudeDocumentGeneratorTest {
     @DisplayName("핵심 용어는 하이픈 목록으로 요구한다 — 줄만 바꾸면 화면에서 한 문단으로 붙는다")
     void requiresBulletedTermList() {
         assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
-                .contains("- **용어(영문)** — 한 문장 정의.")
+                .contains("핵심 용어 3~5개를 하이픈 목록으로 정의한다")
                 .as("왜 하이픈이어야 하는지를 함께 적어야 모델이 규칙을 지킨다")
                 .contains("줄만 바꾸면 마크다운이 한 문단으로 붙여 버린다");
     }
@@ -197,8 +221,9 @@ class ClaudeDocumentGeneratorTest {
      * 모델 입장에서는 둘 다 안전한 선택이라(원리를 한 번 더 쓰거나 목록을 늘어놓는 것이,
      * 구체적인 장면을 지어내는 것보다 틀릴 위험이 적다) 못 박아 두지 않으면 돌아간다.
      *
-     * <p>"확실하지 않은 이름·수치는 쓰지 마라"도 함께 지킨다 — 실무 이야기는 그럴듯한 거짓이
-     * 나오기 가장 좋은 자리이고, 그런 거짓은 검수를 잘 통과한다.
+     * <p>카탈로그로 흐르는 것은 이제 [금지]의 "제품별 설정 기본값"이 막는다. 그 금지가
+     * 이 절을 지키는 장치이기도 하다는 뜻이라, 여기서 함께 확인한다 — 한쪽만 남으면
+     * 다시 설정값 목록으로 돌아간다.
      */
     @Test
     @DisplayName("'실무에서는 이렇게 쓴다'는 쓰는 장면을 요구한다 — 카탈로그나 본론 요약으로 변질되지 않게")
@@ -207,12 +232,10 @@ class ClaudeDocumentGeneratorTest {
                 .contains("## 실무에서는 이렇게 쓴다")
                 .as("장면 하나를 처음부터 끝까지 — 이게 이 절의 알맹이다")
                 .contains("장면 하나를 골라 처음부터 끝까지")
-                .as("설정 이름·기본값을 늘어놓는 카탈로그로 흐르는 것을 막는다")
-                .contains("목록으로 늘어놓지 마라")
                 .as("방치하면 본론 요약이 된다")
                 .contains("원리를 다시 설명하지 마라")
-                .as("실무 이야기는 그럴듯한 거짓이 나오기 가장 좋은 자리다")
-                .contains("확실하지 않은 이름·수치는 아예 쓰지 마라");
+                .as("설정값 목록으로 흐르는 것은 금지 항목이 막는다")
+                .contains("제품별 설정 기본값");
     }
 
     /**
@@ -231,8 +254,7 @@ class ClaudeDocumentGeneratorTest {
     void bansAsciiColumnAlignment() {
         assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
                 .contains("비교·대조는 마크다운 표로 쓴다")
-                .as("왜 안 되는지를 함께 적어야 지켜진다 — 실측 근거가 그대로 들어 있다")
-                .contains("한글은 영문의 두 배 폭이라")
+                .contains("ASCII로 칸을 맞추지 마라")
                 .as("순서 있는 흐름의 대체 수단까지 줘야 ASCII로 돌아가지 않는다")
                 .contains("순서가 있는 흐름은 번호 목록으로 쓴다")
                 .as("굵은 글씨 한 줄은 마크다운에서 그냥 문단이라 위계를 못 만든다")
@@ -240,25 +262,66 @@ class ClaudeDocumentGeneratorTest {
     }
 
     /**
-     * "왜 필요한가"가 <b>곤란함 → 좋아지는 것 → 대가</b> 세 박자를 요구하는지 본다.
+     * <b>설계 근거가 통째로 사라지는 것을 막는다.</b> "### 왜 이렇게 설계됐는가"를 문서 전체
+     * 1개로 제한한 것은 가독성 결정이다(8/15 실물은 세 섹션 모두에 달려 있어 의례가 됐다).
+     * 그런데 그 블록은 {@code [난이도 재료]}가 정의한 <b>중급 재료 그 자체</b>이기도 하다 —
+     * "다른 선택지가 있었는데 왜 이걸 골랐는지".
+     *
+     * <p>제목만 줄이고 근거까지 줄면 중급 문제 날에 재료가 마른다. 8/14에 고급 날이
+     * 빈손으로 끝난 것과 똑같은 구조다. 그래서 "나머지는 본문 문장으로 녹여 쓰되 근거
+     * 자체는 빼지 마라"를 함께 박아 두고, 그 문장이 사라지지 않는지 여기서 지킨다.
+     */
+    @Test
+    @DisplayName("소제목은 1개로 줄이되 설계 근거는 남긴다 — 근거까지 줄면 중급 날에 재료가 마른다")
+    void keepsDesignRationaleEvenWithOneHeading() {
+        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+                .as("소제목 반복은 의례가 된다 — 개수를 못 박는다")
+                .contains("문서 전체에서 1개다")
+                .as("제목을 줄인다고 근거까지 줄이면 중급 재료가 3분의 1이 된다")
+                .contains("본문 문장으로 녹여 쓴다")
+                .contains("근거 자체를 빼지 마라");
+    }
+
+    /**
+     * "왜 필요한가"가 <b>곤란함 → 장점 → 단점</b> 세 박자를 요구하는지 본다.
      *
      * <p>전에는 "없으면 무엇이 곤란한지"만 요구해서 <b>문제 제기로만 끝났다</b>. 정작 이걸 왜
      * 쓰는지는 장점을 봐야 알 수 있는데 그 자리가 없었다.
      *
-     * <p>대가를 함께 요구하는 것이 짝이다. 장점만 나열하면 광고문이 되고, 무엇보다 그 대가가
+     * <p>단점을 함께 요구하는 것이 짝이다. 장점만 나열하면 광고문이 되고, 무엇보다 그 단점이
      * 곧 "## 언제 깨지는가"의 씨앗이다 — 두 절이 이어지지 않으면 문서가 앞뒤로 갈라진다.
-     * 장점을 "형용사가 아니라 사실로"라고 못 박은 것은 [문체]의 과장 금지와 같은 규칙인데,
-     * 여기서 한 번 더 적는 이유는 장점 문단이 과장이 가장 나오기 쉬운 자리이기 때문이다.
+     * 장점을 "숫자로 말할 수 있으면 숫자로"라고 못 박은 것은 [덜어낼 것]의 과장 금지와 같은
+     * 규칙인데, 여기서 한 번 더 적는 이유는 장점 문단이 과장이 가장 나오기 쉬운 자리여서다.
      */
     @Test
-    @DisplayName("'왜 필요한가'는 곤란함·장점·대가를 함께 요구한다 — 장점만 쓰면 광고문이 된다")
+    @DisplayName("'왜 필요한가'는 곤란함·장점·단점을 함께 요구한다 — 장점만 쓰면 광고문이 된다")
     void requiresBenefitAndCostInWhyItMatters() {
         assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
                 .as("문제 제기로만 끝나면 왜 쓰는지가 빠진다")
-                .contains("이걸 썼을 때 무엇이 좋아지는지 쓴다")
+                .contains("이어서 썼을 때의 장점을 쓴다")
                 .as("장점은 과장이 가장 나오기 쉬운 자리다")
-                .contains("형용사가 아니라")
-                .as("대가는 '언제 깨지는가'의 씨앗이라 두 절을 잇는다")
-                .contains("대가도 한 줄 붙인다");
+                .contains("숫자로 말할 수 있으면 숫자로")
+                .as("단점은 '언제 깨지는가'의 씨앗이라 두 절을 잇는다")
+                .contains("단점이 있으면 한 줄 붙인다");
+    }
+
+    /**
+     * <b>주제·중복 회피 목록·태그는 시스템 프롬프트에 없어야 한다.</b> 그 셋은 요청마다 바뀌므로
+     * {@link ClaudeDocumentGenerator#buildPrompt} 가 만드는 user 메시지의 몫이다.
+     *
+     * <p>왜 굳이 확인하는가: 프롬프트를 한 덩어리로 다시 쓰다 보면 {@code [주제] {개념명}} 같은
+     * 자리표시자를 시스템 쪽에 넣기 쉽다. 그러면 <b>치환되지 않은 문자열이 매 요청에 그대로
+     * 실려</b> 모델이 주제 지시를 두 번(하나는 빈 채로) 받는다. 게다가 시스템/유저를 나눈
+     * 이유인 프롬프트 캐시가 흐려진다 — 시스템 쪽이 고정이어야 앞부분이 재사용된다.
+     */
+    @Test
+    @DisplayName("요청마다 바뀌는 값은 시스템 프롬프트에 없다 — 주제·회피 목록은 user 메시지의 몫이다")
+    void systemPromptHasNoPerRequestPlaceholders() {
+        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+                .as("치환되지 않은 자리표시자가 그대로 실려 나가면 안 된다")
+                .doesNotContain("{")
+                .as("주제는 user 메시지가 넣는다")
+                .doesNotContain("[주제]")
+                .doesNotContain("[이미 문서가 있는 주제]");
     }
 }
