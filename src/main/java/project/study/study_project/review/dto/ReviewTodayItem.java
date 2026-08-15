@@ -41,8 +41,10 @@ public record ReviewTodayItem(
     public static ReviewTodayItem from(ReviewItem r) {
         Problem p = r.getProblem();
         // 객관식일 때만 LAZY 보기 컬렉션에 접근한다(불필요한 쿼리 방지 — QuizProblemItem과 동일).
+        // 섞는 것도 같이 재사용한다. 복습이야말로 순서를 섞어야 하는 자리다 —
+        // 같은 문제를 다시 만나는 화면이라, 순서가 고정이면 내용이 아니라 위치를 외우게 된다.
         List<QuizChoiceItem> choices = p.getType() == ProblemType.MULTIPLE_CHOICE
-                ? p.getChoices().stream().map(QuizChoiceItem::from).toList()
+                ? QuizChoiceItem.shuffledFrom(p.getChoices())
                 : List.of();
         return new ReviewTodayItem(
                 p.getId(), p.getDomain(), p.getDomain().getDisplayName(),

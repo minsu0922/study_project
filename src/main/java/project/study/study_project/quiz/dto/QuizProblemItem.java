@@ -26,8 +26,9 @@ public record QuizProblemItem(
 ) {
     public static QuizProblemItem from(Problem p) {
         // 객관식일 때만 LAZY 보기 컬렉션에 접근한다(불필요한 쿼리 방지).
+        // 보기는 섞어서 내보낸다 — 이유는 QuizChoiceItem.shuffledFrom 주석 참고.
         List<QuizChoiceItem> choices = p.getType() == ProblemType.MULTIPLE_CHOICE
-                ? p.getChoices().stream().map(QuizChoiceItem::from).toList()
+                ? QuizChoiceItem.shuffledFrom(p.getChoices())
                 : List.of();
         return new QuizProblemItem(p.getId(), p.getDomain(), p.getDifficulty(), p.getType(),
                 p.getQuestion(), choices);
