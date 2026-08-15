@@ -332,9 +332,44 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 
 /* ── 문서 본문(마크다운 렌더링 영역) ── */
 .doc-body { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px 30px; box-shadow: var(--shadow); }
-.doc-body pre { background: #f3f4f6; padding: 12px; border-radius: 8px; overflow-x: auto; }
+.doc-body pre { background: #f3f4f6; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: .85rem; }
 .doc-body code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+.doc-body pre code { background: none; padding: 0; }   /* 코드블록 안에서 배경이 두 겹으로 깔리는 것 방지 */
 .doc-body img { max-width: 100%; }
+
+/* 제목 위계 — 생성 프롬프트가 "### 왜 이렇게 설계됐는가"를 쓰게 바뀌면서 필요해졌다.
+ * 전에는 그 자리를 **굵은 글씨** 한 줄로 썼는데, 마크다운에서 그건 그냥 문단이라
+ * 크기도 간격도 본문과 같다 — 소제목처럼 보이라고 굵게 쓴 것이 위계를 못 만들었다.
+ * h2는 위 여백을 크게 주고 밑줄을 그어 "절이 바뀌었다"를 눈에 띄게, h3는 색으로만 구분한다
+ * (h3까지 선을 그으면 문서가 줄무늬가 된다). */
+.doc-body h2 { font-size: 1.22rem; margin: 34px 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--border); letter-spacing: -.01em; }
+.doc-body h3 { font-size: 1.02rem; margin: 24px 0 8px; color: var(--primary); }
+.doc-body h2:first-child, .doc-body h3:first-child { margin-top: 0; }
+
+/* 본문 맨 앞의 H1은 숨긴다 — 페이지 제목(#title)이 카드 위에 이미 같은 문구를 찍는다.
+ * 마크다운 원문에는 H1이 있어야 한다(검증기가 제목-본문 일치를 그걸로 본다). 즉
+ * "원문에는 필요하지만 화면에는 두 번"인 상황이라, 원문이 아니라 표시 쪽에서 지운다. */
+.doc-body > h1:first-child { display: none; }
+
+/* 표 — ASCII로 칸을 맞추던 것을 마크다운 표로 바꾸면서 추가했다.
+ * 실측: 등폭 글꼴에서 한글 4글자와 영문 8칸이 똑같이 56px이라, 공백으로 맞춘 칸은
+ * 한 줄만 어긋나도 21px씩 밀린다. 칸 맞추기는 사람이 아니라 브라우저가 할 일이다.
+ *
+ * display:block + overflow-x:auto인 이유: marked가 표를 감싸는 div를 만들어 주지 않아서
+ * 스크롤 컨테이너를 따로 둘 수 없다. 표 자체를 블록으로 만들면 좁은 화면에서 표만
+ * 가로로 스크롤되고 페이지 본문은 안 밀린다 — 이게 없으면 긴 표 하나가 화면 전체를 넓힌다. */
+.doc-body table {
+  display: block; overflow-x: auto; max-width: 100%;
+  border-collapse: collapse; margin: 16px 0; font-size: .92rem;
+}
+.doc-body th, .doc-body td { border: 1px solid var(--border); padding: 7px 12px; text-align: left; }
+.doc-body th { background: #f9fafb; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.doc-body tbody tr:nth-child(even) { background: #fcfcfd; }   /* 행이 많아지면 눈이 줄을 놓친다 */
+
+.doc-body blockquote {
+  margin: 14px 0; padding: 2px 16px;
+  border-left: 3px solid var(--primary); color: var(--muted);
+}
 
 /* ── 페이지 이동(이전/다음) ── */
 .pager { display: flex; gap: 8px; justify-content: center; margin-top: 20px; align-items: center; }
