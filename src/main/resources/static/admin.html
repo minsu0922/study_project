@@ -9,7 +9,7 @@
 <body>
 <header id="nav"></header>
 
-<main class="container" style="max-width:1000px">
+<main class="container admin">
   <h1>관리자</h1>
   <div id="guard"></div>
 
@@ -31,13 +31,13 @@
       <h3>도메인별 정답률 <span class="meta">(낮은 순 — 학습자들이 약한 영역부터. DB 뷰 domain_stats)</span></h3>
       <div class="card" id="domainChart" style="padding:14px 16px"></div>
 
-      <h3>도메인 × 난이도 문제 현황 <span class="meta">(흐린 0 = 출제가 비어 있는 칸)</span></h3>
+      <h3>도메인 × 난이도 문제 현황 <span class="meta">(흐린 0 = 출제가 비어 있는 칸 · 칸을 누르면 그 칸으로 AI 생성)</span></h3>
       <div class="table-wrap"><table class="grid" id="matrixTable"></table></div>
 
-      <h3>AI 초안 승인율 <span class="meta">(모델·프롬프트를 바꿨을 때 품질이 올랐는지 보는 저울 — 검수 대기는 분모에서 제외)</span></h3>
+      <h3>AI 초안 승인율 <span class="meta">(모델·프롬프트를 바꿨을 때 품질이 올랐는지 보는 저울 — 검수 대기는 분모에서 제외 · 행을 누르면 검수함)</span></h3>
       <div class="table-wrap"><table class="grid" id="llmReviewTable"></table></div>
 
-      <h3>문제별 정답률 <span class="meta">(정답률이 낮으면 너무 어렵거나 문제 오류 후보)</span></h3>
+      <h3>문제별 정답률 <span class="meta">(낮은 순 — 너무 어렵거나 문제 오류 후보부터 · 행을 누르면 수정)</span></h3>
       <div class="table-wrap"><table class="grid" id="statsTable"></table></div>
     </section>
 
@@ -69,7 +69,7 @@
         <button id="pCancelBtn" class="btn-outline" hidden>수정 취소</button>
       </div>
 
-      <h3>문제 목록</h3>
+      <h3>문제 목록 <span class="meta">(행을 누르면 위 폼에서 수정)</span></h3>
       <div class="table-wrap"><table class="grid" id="problemTable"></table></div>
       <div class="pager" id="pPager" hidden>
         <button id="pPrevBtn" class="btn-outline">이전</button>
@@ -97,7 +97,7 @@
         <button id="dCancelBtn" class="btn-outline" hidden>수정 취소</button>
       </div>
 
-      <h3>문서 목록</h3>
+      <h3>문서 목록 <span class="meta">(행을 누르면 위 폼에서 수정 · [보기]는 실제 문서 화면)</span></h3>
       <div class="table-wrap"><table class="grid" id="documentTable"></table></div>
     </section>
 
@@ -169,6 +169,11 @@ renderNav("admin");
 let editingProblemId = null;  // null=등록 모드, 값 있으면 수정 모드
 let pPage = 0;                // 문제 목록 현재 페이지
 let editingDocumentId = null;
+/* 탭 이름 목록도 여기 둔다 — 아래 initTabs()가 곧바로 읽는다.
+ * 함수 선언(function)은 호이스팅되지만 const/let은 안 된다. 이 줄을 initTabs 옆(파일 중간)에
+ * 뒀다가 정확히 위 주석이 말하는 TDZ 오류가 다시 났다: "Cannot access 'TABS' before
+ * initialization"으로 화면 전체가 빈 채로 떴다. */
+const TABS = ["dashboard", "problems", "documents", "llm", "llmdoc"];
 
 if (!isAdmin()) {
   document.getElementById("guard").innerHTML =
@@ -189,13 +194,34 @@ if (!isAdmin()) {
   refreshLlmDocBadge();
 }
 
-/* ── 탭 전환 ── */
+/* ── 탭 전환 ──
+ * 현재 탭을 주소창 해시(#llmdoc)에 적는다. 이유 셋:
+ *   1) 새로고침하면 늘 대시보드로 돌아가 버렸다 — 검수 중 F5 한 번에 자리를 잃는다.
+ *   2) "AI 문서 탭"을 북마크하거나 링크로 건넬 수 있다.
+ *   3) 대시보드 표에서 다른 탭으로 보내는 이동(아래 goProblem 등)이 뒤로가기로 되돌아온다.
+ * history.pushState가 아니라 location.hash를 쓰는 이유: 해시 변경은 브라우저가 알아서
+ * 방문 기록에 쌓아 주고 hashchange 이벤트도 준다 — 우리가 상태를 따로 관리할 일이 없다.
+ * (탭 이름 목록 TABS는 파일 상단 상태 변수 자리에 있다 — 여기 두면 TDZ로 터진다) */
 function initTabs() {
-  document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
-    ["dashboard", "problems", "documents", "llm", "llmdoc"].forEach(t =>
-      document.getElementById("tab-" + t).hidden = (t !== btn.dataset.tab));
-  }));
+  document.querySelectorAll(".tab-btn").forEach(btn =>
+    btn.addEventListener("click", () => { location.hash = btn.dataset.tab; }));
+
+  // 해시가 바뀌면(버튼 클릭·뒤로가기·직접 입력 모두 여기로 모인다) 화면을 맞춘다.
+  window.addEventListener("hashchange", applyTabFromHash);
+  applyTabFromHash();
+}
+
+function applyTabFromHash() {
+  // 모르는 해시(#foo)는 대시보드로 — 잘못된 주소로 빈 화면을 보여주지 않는다.
+  const tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "dashboard";
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  TABS.forEach(t => document.getElementById("tab-" + t).hidden = (t !== tab));
+}
+
+/** 다른 탭으로 보낸다. 해시만 바꾸면 위 hashchange가 화면을 맞춘다(전환 코드가 한 곳). */
+function switchTab(name) {
+  location.hash = name;
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 /* ── 위험 동작(삭제) 2단계 확인 ──
@@ -232,33 +258,30 @@ async function loadDashboard() {
     renderDomainChart(d.domainStats);
 
     // 현황판: 행=도메인(전체 10개 고정), 열=난이도. 데이터 없는 칸도 0으로 그려서 "빈 곳"을 드러낸다.
+    // 칸을 누르면 그 도메인·난이도가 채워진 채로 AI 생성 탭이 열린다 — 이 표를 보는 이유가
+    // "어디가 비었나"이고, 본 다음에 하는 일이 정확히 "그 칸을 채우는 것"이라 한 번에 잇는다.
     const cellMap = {};
     d.problemMatrix.forEach(c => cellMap[c.domain + "|" + c.difficulty] = c.count);
     document.getElementById("matrixTable").innerHTML =
       `<tr><th>도메인</th>${DIFFICULTIES.map(([, l]) => `<th>${l}</th>`).join("")}<th>합계</th></tr>` +
       DOMAINS.map(([dv, dl]) => {
         let sum = 0;
-        const cells = DIFFICULTIES.map(([lv]) => {
+        const cells = DIFFICULTIES.map(([lv, ll]) => {
           const n = cellMap[dv + "|" + lv] || 0; sum += n;
-          return `<td class="${n === 0 ? "zero" : ""}">${n}</td>`;
+          return `<td class="click-cell ${n === 0 ? "zero" : ""}" data-domain="${dv}" data-difficulty="${lv}"
+                      title="${dl} · ${ll} 문제를 AI로 생성">${n}</td>`;
         }).join("");
         return `<tr><td>${dl}</td>${cells}<td><b>${sum}</b></td></tr>`;
       }).join("");
+    // 위임 한 번으로 30칸을 다 받는다 — 칸마다 onclick 문자열을 심으면 값이 바뀔 때마다
+    // HTML 안의 코드까지 같이 고쳐야 한다.
+    document.getElementById("matrixTable").onclick = e => {
+      const cell = e.target.closest(".click-cell");
+      if (cell) generateForCell(cell.dataset.domain, cell.dataset.difficulty);
+    };
 
     renderLlmReview(d.llmReview);
-
-    document.getElementById("statsTable").innerHTML =
-      `<tr><th>ID</th><th>문제</th><th>도메인</th><th>유형</th><th>제출</th><th>정답</th><th>정답률</th></tr>` +
-      d.problemStats.map(s => `
-        <tr>
-          <td>${s.problemId}</td>
-          <td class="wrap">${escapeHtml(cut(s.question, 40))}</td>
-          <td>${escapeHtml(domainLabel(s.domain))}</td>
-          <td>${escapeHtml(typeLabel(s.type))}</td>
-          <td>${s.attempts}</td>
-          <td>${s.correctCount}</td>
-          <td>${s.correctRate === null ? '<span class="meta">기록 없음</span>' : s.correctRate + "%"}</td>
-        </tr>`).join("");
+    renderProblemStats(d.problemStats);
   } catch (e) {
     document.getElementById("guard").innerHTML = `<div class="alert error">대시보드 로딩 실패: ${escapeHtml(e.message)}</div>`;
   }
@@ -284,13 +307,17 @@ function renderLlmReview(review) {
   if (rows.length === 0) {
     // 초안이 하나도 없는 상태. 빈 표를 그리면 "고장 났나?"로 읽히므로 이유를 적어 준다.
     table.innerHTML = `<tr><td class="meta">아직 생성된 초안이 없습니다. 배치가 돌면 여기에 모델별 승인율이 쌓입니다.</td></tr>`;
+    table.onclick = null;   // 앞서 그린 행의 핸들러가 남아 빈 표를 눌러도 반응하지 않게
     return;
   }
 
+  // 행을 누르면 그 종류의 검수함으로 간다. 검수 대기가 남아 있으면 대기 목록을, 없으면
+  // 승인 목록을 연다 — 이 표에서 사람이 다음에 하려는 일이 그 둘 중 하나다.
   table.innerHTML =
     `<tr><th>종류</th><th>모델</th><th>검수 대기</th><th>승인</th><th>거절</th><th>승인율</th></tr>` +
     rows.map(([kind, s]) => `
-      <tr>
+      <tr class="click-row" data-kind="${kind === "문제" ? "llm" : "llmdoc"}"
+          data-status="${s.pending > 0 ? "PENDING" : "APPROVED"}" title="${kind} 검수함 열기">
         <td>${kind}</td>
         <td>${escapeHtml(s.model)}</td>
         <td class="${s.pending === 0 ? "zero" : ""}">${s.pending}</td>
@@ -298,6 +325,69 @@ function renderLlmReview(review) {
         <td>${s.rejected}</td>
         <td>${s.approvalRate === null ? '<span class="meta">검수 전</span>' : s.approvalRate + "%"}</td>
       </tr>`).join("");
+
+  table.onclick = e => {
+    const tr = e.target.closest(".click-row");
+    if (tr) openReviewBox(tr.dataset.kind, tr.dataset.status);
+  };
+}
+
+/** 검수함 열기 — 상태 필터까지 맞춰 놓고 탭을 바꾼다(가서 또 고르게 하지 않는다). */
+function openReviewBox(tab, status) {
+  const filterId = tab === "llm" ? "gStatusFilter" : "gdStatusFilter";
+  document.getElementById(filterId).value = status;
+  (tab === "llm" ? loadDrafts : loadDocDrafts)();
+  switchTab(tab);
+}
+
+/** 현황판 빈 칸 → AI 생성. 폼만 채우고 요청은 보내지 않는다 — 생성은 돈이 드는 동작이라
+ *  "누르자마자 호출"은 위험하다. 사람이 유형·개수를 보고 직접 버튼을 눌러야 한다. */
+function generateForCell(domain, difficulty) {
+  document.getElementById("gDomain").value = domain;
+  document.getElementById("gDifficulty").value = difficulty;
+  switchTab("llm");
+}
+
+/**
+ * 문제별 정답률 표.
+ *
+ * <p>정렬은 정답률 낮은 순. 이 표를 보는 이유가 "어느 문제가 문제인가"이기 때문이다.
+ * 서버가 준 순서(ID 순)를 그대로 그리면 60문제 중 정답률 20%짜리를 눈으로 찾아야 한다.
+ *
+ * <p>기록 없는 문제(correctRate === null)는 맨 아래로 보낸다. 0%(다 틀렸다)와 "아직 아무도
+ * 안 풀었다"는 정반대 신호인데, null을 0으로 취급해 정렬하면 맨 위 = 가장 위험한 문제라는
+ * 이 표의 규칙이 깨진다.
+ */
+function renderProblemStats(stats) {
+  const sorted = [...stats].sort((a, b) => {
+    if (a.correctRate === null) return b.correctRate === null ? 0 : 1;
+    if (b.correctRate === null) return -1;
+    return a.correctRate - b.correctRate;
+  });
+  const table = document.getElementById("statsTable");
+  table.innerHTML =
+    `<tr><th>ID</th><th>문제</th><th>도메인</th><th>유형</th><th>제출</th><th>정답</th><th>정답률</th></tr>` +
+    sorted.map(s => `
+      <tr class="click-row" data-id="${s.problemId}" title="이 문제를 수정">
+        <td>${s.problemId}</td>
+        <td class="wrap">${escapeHtml(cut(s.question, 40))}</td>
+        <td>${escapeHtml(domainLabel(s.domain))}</td>
+        <td>${escapeHtml(typeLabel(s.type))}</td>
+        <td>${s.attempts}</td>
+        <td>${s.correctCount}</td>
+        <td>${s.correctRate === null ? '<span class="meta">기록 없음</span>' : s.correctRate + "%"}</td>
+      </tr>`).join("");
+
+  table.onclick = e => {
+    const tr = e.target.closest(".click-row");
+    if (tr) openProblemEditor(Number(tr.dataset.id));
+  };
+}
+
+/** 어느 탭에서든 "문제 수정"으로 가는 단일 입구 — 탭 전환과 폼 채우기를 한 곳에 둔다. */
+async function openProblemEditor(id) {
+  switchTab("problems");
+  await editProblem(id);
 }
 
 /**
@@ -454,10 +544,11 @@ function resetProblemForm() {
 
 async function loadProblems() {
   const data = await api("/api/admin/problems?page=" + pPage);
-  document.getElementById("problemTable").innerHTML =
+  const table = document.getElementById("problemTable");
+  table.innerHTML =
     `<tr><th>ID</th><th>문제</th><th>도메인</th><th>난이도</th><th>유형</th><th>정답</th><th></th></tr>` +
     data.content.map(p => `
-      <tr>
+      <tr class="click-row" data-id="${p.id}" title="이 문제를 수정">
         <td>${p.id}</td>
         <td class="wrap">${escapeHtml(cut(p.question, 40))}</td>
         <td>${escapeHtml(domainLabel(p.domain))}</td>
@@ -465,10 +556,28 @@ async function loadProblems() {
         <td>${escapeHtml(typeLabel(p.type))}</td>
         <td>${escapeHtml(cut(displayAnswer(p), 20))}</td>
         <td class="row-actions">
-          <button onclick="editProblem(${p.id})">수정</button>
-          <button class="danger" onclick="deleteProblem(this, ${p.id})">삭제</button>
+          <button class="danger" data-action="delete">삭제</button>
         </td>
       </tr>`).join("");
+
+  /* 행 전체가 "수정"이라 수정 버튼은 없앴다 — 같은 일을 하는 두 가지 길을 두면
+   * 사람은 어느 쪽이 진짜인지 확인하려고 오히려 망설인다.
+   *
+   * 클릭은 표 하나에 위임한다. 행마다 onclick="..." 문자열을 심던 이전 방식은
+   * 값이 HTML 문자열 안에서 코드가 되는 구조라, escapeHtml(HTML용 이스케이프)로
+   * 자바스크립트 문자열을 막으려는 잘못된 코드가 실제로 있었다(문서 목록의 slug).
+   * data-*에 넣고 여기서 읽으면 값이 코드로 해석될 자리 자체가 없어진다.
+   *
+   * 삭제 버튼이 행 안에 있으므로 버튼을 먼저 판별한다 — 순서를 뒤집으면 삭제를 눌렀는데
+   * 수정 폼이 열린다. */
+  table.onclick = e => {
+    const tr = e.target.closest(".click-row");
+    if (!tr) return;
+    const btn = e.target.closest("button[data-action=delete]");
+    if (btn) { deleteProblem(btn, Number(tr.dataset.id)); return; }
+    openProblemEditor(Number(tr.dataset.id));
+  };
+
   const pager = document.getElementById("pPager");
   pager.hidden = data.totalPages <= 1;
   document.getElementById("pPageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
@@ -561,20 +670,50 @@ function resetDocumentForm() {
 async function loadDocuments() {
   // 조회는 공개 API 재사용(관리 전용 목록 API를 따로 두지 않은 이유는 AdminDocumentService 주석 참고)
   const data = await api("/api/documents?size=100");
-  document.getElementById("documentTable").innerHTML =
-    `<tr><th>ID</th><th>제목</th><th>도메인</th><th>slug</th><th>태그</th><th></th></tr>` +
+  const table = document.getElementById("documentTable");
+  if (data.content.length === 0) {
+    table.innerHTML = `<tr><td class="meta">등록된 문서가 없습니다. 위 폼으로 직접 쓰거나, AI 문서 탭에서 초안을 승인하세요.</td></tr>`;
+    table.onclick = null;
+    return;
+  }
+
+  /* 열 구성을 바꿨다. 이전에는 제목이 wrap(줄바꿈 허용)이고 slug·태그가 nowrap이라,
+   * 정작 짧은 slug가 화면을 넓게 차지하고 정보인 제목이 두세 줄로 접혔다 —
+   * 폭은 "가장 많이 읽는 것"에 줘야 한다. 그래서 slug를 회색 작은 글씨로 제목 아래에 붙이고
+   * 열 하나를 줄였다. 대신 수정일을 넣었다: 어떤 문서를 최근에 손봤는지가 관리 화면에서
+   * 제일 자주 하는 질문인데, 지금까지 이 화면에서는 알 방법이 없었다. */
+  table.innerHTML =
+    `<tr><th>ID</th><th>제목</th><th>도메인</th><th>태그</th><th>수정</th><th></th></tr>` +
     data.content.map(d => `
-      <tr>
+      <tr class="click-row" data-id="${d.id}" data-slug="${escapeHtml(d.slug)}" title="이 문서를 수정">
         <td>${d.id}</td>
-        <td class="wrap">${escapeHtml(d.title)}</td>
+        <td class="wrap">
+          ${escapeHtml(d.title)}
+          <div class="meta">/${escapeHtml(d.slug)}</div>
+        </td>
         <td>${escapeHtml(d.domainLabel)}</td>
-        <td>${escapeHtml(d.slug)}</td>
         <td>${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}</td>
+        <td class="meta">${escapeHtml(shortDate(d.updatedAt))}</td>
         <td class="row-actions">
-          <button onclick="editDocument('${escapeHtml(d.slug)}', ${d.id})">수정</button>
-          <button class="danger" onclick="deleteDocument(this, ${d.id})">삭제</button>
+          <button class="btn-outline" data-action="view">보기</button>
+          <button class="danger" data-action="delete">삭제</button>
         </td>
       </tr>`).join("");
+
+  table.onclick = e => {
+    const tr = e.target.closest(".click-row");
+    if (!tr) return;
+    const action = e.target.closest("button[data-action]")?.dataset.action;
+    // 보기는 새 탭으로 — 검수 중에 관리 화면을 잃지 않게 한다(돌아올 자리가 폼 상태를 들고 있다)
+    if (action === "view") { window.open("/document.html?slug=" + encodeURIComponent(tr.dataset.slug), "_blank"); return; }
+    if (action === "delete") { deleteDocument(e.target.closest("button"), Number(tr.dataset.id)); return; }
+    editDocument(tr.dataset.slug, Number(tr.dataset.id));
+  };
+}
+
+/** 2026-08-15T21:53:… → 08-15. 관리 화면의 표에서 초 단위는 읽히지 않고 폭만 먹는다. */
+function shortDate(iso) {
+  return iso ? iso.slice(5, 10) : "";
 }
 
 async function editDocument(slug, id) {
@@ -654,7 +793,8 @@ async function loadDrafts() {
   const data = await api("/api/admin/llm-problems?status=" + status + "&size=50");
   const box = document.getElementById("draftList");
   if (data.content.length === 0) {
-    box.innerHTML = `<div class="meta">해당 상태의 초안이 없습니다.</div>`;
+    box.innerHTML = `<div class="empty-state">해당 상태의 초안이 없습니다.<br>
+      검수 대기가 비었다면 오늘 몫은 다 처리한 것입니다 — 다음 배치는 매일 06:17(KST)에 돕니다.</div>`;
     return;
   }
   // 초안은 표가 아니라 카드로 — 검수는 지문·보기·해설을 통째로 읽어야 하는 작업이라
@@ -816,7 +956,9 @@ async function loadDocDrafts() {
   const data = await api("/api/admin/llm-documents?status=" + status + "&size=20");
   const box = document.getElementById("docDraftList");
   if (data.content.length === 0) {
-    box.innerHTML = `<div class="meta">해당 상태의 초안이 없습니다.</div>`;
+    box.innerHTML = `<div class="empty-state">해당 상태의 초안이 없습니다.<br>
+      개념 문서는 4일에 한 편만 만들어집니다(1일차 문서 → 2~4일차 그 문서로 문제).</div>`;
+    box.onclick = null;
     return;
   }
   box.innerHTML = data.content.map(d => {
@@ -875,12 +1017,26 @@ async function loadDocDrafts() {
         <h3 style="margin:10px 0 2px">${escapeHtml(d.title)}</h3>
         <div class="meta">/${escapeHtml(d.slug)}</div>
         ${blockingBox}${warningBox}
-        <pre style="white-space:pre-wrap; word-break:break-word; max-height:380px; overflow:auto;
-                    background:#f9fafb; border-radius:8px; padding:12px; margin-top:10px;
-                    font-family:Consolas,monospace; font-size:.85rem">${escapeHtml(d.contentMd)}</pre>
+        <div class="doc-preview-bar">
+          <span class="meta">본문 원문 (마크다운)</span>
+          <button class="btn-outline" data-action="expand" data-target="pre-${d.id}">전체 펼치기</button>
+        </div>
+        <pre class="doc-preview" id="pre-${d.id}">${escapeHtml(d.contentMd)}</pre>
         ${actions}
       </div>`;
   }).join("");
+
+  /* 본문 펼치기 — 기본은 60vh까지만 보이고, 누르면 제한을 푼다.
+   * 왜 기본을 짧게 두나: 초안이 여러 건일 때 전부 4,000자로 펼쳐져 있으면 목록을
+   * 훑는 것 자체가 불가능하다. 반대로 짧게만 두면 4,000자 중 화면에 들어오는 건
+   * 앞부분뿐이라 뒤쪽 절(면접 질문 등)을 검수할 수가 없었다 — 그래서 둘 다 준다. */
+  box.onclick = e => {
+    const btn = e.target.closest("button[data-action=expand]");
+    if (!btn) return;
+    const pre = document.getElementById(btn.dataset.target);
+    const expanded = pre.classList.toggle("expanded");
+    btn.textContent = expanded ? "접기" : "전체 펼치기";
+  };
 }
 
 async function approveDocDraft(btn, id) {

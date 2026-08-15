@@ -343,8 +343,23 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 /* 로그인/회원가입처럼 좁은 폼 페이지 */
 .narrow { max-width: 400px; }
 
-/* ── 관리자 페이지 (기존 클래스 유지) ── */
-.tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+/* =====================================================================
+ * 관리자 페이지 (admin.html) — 기존 클래스 이름은 그대로 둔다
+ * ---------------------------------------------------------------------
+ * admin.html은 원래 style="..." 인라인 스타일이 30군데 넘게 흩어져 있었다.
+ * 인라인은 그 자리에서 편하지만 (1) 같은 규칙이 5곳에 복사돼 한 곳만 고쳐지고
+ * (2) 미디어 쿼리를 붙일 수 없어 좁은 화면 보정이 아예 불가능하다.
+ * 그래서 재사용되거나 화면 폭에 반응해야 하는 것만 여기로 옮겼다 —
+ * 한 번만 쓰이고 폭과 무관한 것(예: 특정 입력칸 width)은 인라인으로 남겼다.
+ * ===================================================================== */
+
+/* 관리 화면은 표가 많아 본문(860px)보다 넓게 쓴다 */
+.container.admin { max-width: 1000px; }
+
+/* 탭 — flex-wrap이 핵심이다.
+ * wrap이 없으면 좁은 화면에서 탭이 넘치는 게 아니라 flex가 폭을 눌러 버려,
+ * 글자가 세로로 접히며 버튼 높이가 40px에서 84px로 부푼다(실측). */
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .tab-btn { background: var(--card); color: var(--text); border: 1px solid var(--border); }
 .tab-btn:hover { background: var(--primary-soft); }
 .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
@@ -361,9 +376,54 @@ table.grid td.wrap { white-space: normal; }
 table.grid th { background: #f3f4f6; color: var(--muted); font-weight: 600; }
 table.grid td.zero { color: #d1d5db; }
 
-.row-actions button { padding: 4px 10px; font-size: .8rem; margin-left: 4px; }
+/* 누를 수 있는 행·칸 — 목록에서 상세로 가는 통로.
+ * 표는 카드와 달리 "누를 수 있다"는 생김새가 전혀 없어서, 힌트가 없으면
+ * 사람이 클릭을 시도조차 하지 않는다. 그래서 신호를 두 개 준다:
+ *   1) 손가락 커서 — 올리기 전에는 모르지만 올리면 확실하다
+ *   2) 배경색 반전 — "지금 이 행이 대상"을 알려 준다(행이 길어 시선이 어긋나기 쉽다)
+ *
+ * 행 단위(.click-row)와 칸 단위(.click-cell)를 나눈 이유: 현황판은 칸마다 목적지가
+ * 다르다(도메인 × 난이도). 행 전체를 물들이면 "행을 누르는 것"으로 읽혀 어긋난다.
+ * 반대로 누를 수 없는 곳에는 아무 클래스도 붙이지 않는다 — 아무 일도 안 일어나는데
+ * 손가락 커서만 뜨는 것이 아예 표시가 없는 것보다 나쁘다. */
+table.grid tr.click-row:hover { background: var(--primary-soft); cursor: pointer; }
+table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointer; }
+/* 행 안의 작은 동작 버튼들.
+ * 간격을 `margin-left`가 아니라 `button + button`(앞에 버튼이 있는 버튼)에 준다 —
+ * margin-left는 첫 버튼 왼쪽에도 빈 6px을 만들어 열이 미묘하게 어긋난다.
+ * flex/gap을 쓰지 않은 이유: .row-actions는 <td>에도 붙는데, td에 display:flex를
+ * 주면 table-cell이 아니게 되어 표 레이아웃이 깨진다. */
+.row-actions button { padding: 4px 10px; font-size: .8rem; }
+.row-actions button + button, .row-actions button + .btn { margin-left: 6px; }
 .danger { background: var(--wrong); }
 .danger:hover { background: #b91c1c; }
+
+/* 목록이 비었을 때 자리 — "고장 났나?"로 읽히지 않게 이유를 적는 상자.
+ * 그냥 회색 한 줄로 두면 로딩 실패와 구분이 안 된다. */
+.empty-state {
+  background: var(--card); border: 1px dashed var(--border); border-radius: var(--radius);
+  padding: 22px; text-align: center; color: var(--muted); font-size: .9rem;
+}
+
+/* ── AI 문서 검수 본문 뷰어 ──
+ * 마크다운 원문을 그대로 보여준다(렌더링하지 않는 이유는 admin.html 주석 참고).
+ * 원문이지만 내용은 대부분 산문이라 "코드 뷰어"가 아니라 "글 읽는 판"으로 꾸민다:
+ * 본문 글꼴·1.7 행간·글자 크기 .9rem. 등폭 글꼴에 .85rem/1.4 행간이던 이전 설정은
+ * 4,000자짜리 문서를 검수용으로 읽기에 눈이 너무 빨리 지친다.
+ * 높이는 380px에서 60vh로 — 화면이 큰 사람은 그만큼 더 본다(고정 px은 못 하는 일). */
+.doc-preview {
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 60vh; overflow: auto;
+  background: #f9fafb; border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 18px; margin-top: 10px;
+  font-family: inherit; font-size: .9rem; line-height: 1.75;
+}
+/* 펼침 상태 — 문서 전체를 한 번에 훑고 싶을 때. 카드 안에서 높이 제한만 푼다.
+ * 모달(전체 화면 덮개)을 쓰지 않은 이유: 검수는 본문과 검증 결과를 번갈아 봐야 하는
+ * 작업이라, 본문만 띄우면 오히려 왕복이 는다. */
+.doc-preview.expanded { max-height: none; }
+.doc-preview-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.doc-preview-bar .meta { flex: 1; }
 
 /* ── 모바일 보정 — 좁은 화면에서 여백·글자를 줄여 답답하지 않게 ── */
 @media (max-width: 560px) {
@@ -374,4 +434,8 @@ table.grid td.zero { color: #d1d5db; }
   .player-card .q-text { font-size: 1.08rem; }
   .hero { padding-top: 28px; }
   .hero h1 { font-size: 1.55rem; }
+
+  /* 관리 화면: 탭이 5개라 좁은 화면에서 두 줄이 된다. 글자·여백을 줄여 세 줄이 되는 것만 막는다 */
+  .tab-btn { padding: 8px 12px; font-size: .85rem; }
+  .doc-preview { max-height: 50vh; padding: 12px 14px; }
 }
