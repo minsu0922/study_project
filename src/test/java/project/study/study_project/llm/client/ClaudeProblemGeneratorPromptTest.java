@@ -71,6 +71,40 @@ class ClaudeProblemGeneratorPromptTest {
                 .as("세 프롬프트가 서로 달라야 한다").doesNotHaveDuplicates();
     }
 
+    /**
+     * <b>난이도 지시가 가리키는 절이 실제로 있는 절인지</b> 본다.
+     *
+     * <p>2026-08-15에 실제로 어긋나 있었다. 고급이 "문서의 '실무에서 터지는 지점과 한계' 절"을
+     * 지목했는데 그런 이름의 절은 문서에 없었다 — 실제 고급 재료는 {@code ## 언제 깨지는가}다.
+     * 같은 날 {@code ## 실무에서는 이렇게 쓴다}를 신설하면서, 없는 이름을 가리키던 지시가
+     * <b>비슷한 이름의 엉뚱한 절</b>을 가리키게 되어 더 나빠졌다.
+     *
+     * <p>이런 어긋남은 조용하다. 문제는 정상적으로 생성되고 스키마도 통과하며, 며칠 뒤
+     * "고급인데 왜 쉽지?"로만 드러난다. 원인이 두 파일에 흩어진 문자열이라 되짚기도 어렵다.
+     * 그래서 절 이름의 <b>출처 한 곳</b>({@link ClaudeDocumentGenerator#REQUIRED_SECTIONS})에
+     * 대조한다.
+     */
+    @Test
+    @DisplayName("난이도 지시가 가리키는 절이 문서에 실제로 있는 절이다 — 없는 절을 지목해도 조용히 지나간다")
+    void difficultyFocusPointsAtRealSections() {
+        List<String> sections = ClaudeDocumentGenerator.REQUIRED_SECTIONS;
+
+        assertThat(prompt(Difficulty.BEGINNER, DOC))
+                .as("초급 재료는 정의·용어 절이다")
+                .contains(sections.get(0));                 // ## 무엇인가
+        assertThat(prompt(Difficulty.ADVANCED, DOC))
+                .as("고급 재료는 '언제 깨지는가'다 — 여기가 어긋나 고급 날 재료가 마를 뻔했다")
+                .contains("## 언제 깨지는가")
+                .contains("## 면접에서 이렇게 물어본다");
+        assertThat(prompt(Difficulty.INTERMEDIATE, DOC))
+                .as("중급 재료는 설계 판단 — 소제목 1개로 줄었으므로 본문 문장까지 함께 지목해야 한다")
+                .contains("### 왜 이렇게 설계됐는가")
+                .contains("## 실무에서는 이렇게 쓴다");
+
+        // 지목한 이름이 전부 실재하는지 — 오타나 옛 이름이 남아 있으면 여기서 걸린다.
+        assertThat(sections).contains("## 언제 깨지는가", "## 실무에서는 이렇게 쓴다");
+    }
+
     @Test
     @DisplayName("근거 문서가 없으면 그 블록 자체를 넣지 않는다 — 빈 제목만 남으면 토큰 낭비이고 혼란스럽다")
     void omitsBlockWhenNoSourceDocument() {
