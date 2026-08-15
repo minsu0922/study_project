@@ -8,6 +8,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
@@ -16,6 +18,7 @@ import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.dto.LlmDocumentDraftResponse;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
@@ -27,6 +30,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -213,7 +217,49 @@ class LlmDocumentServiceTest {
         assertThat(draft.getStatus()).isEqualTo(DraftStatus.APPROVED);
     }
 
+    /* ── 목록(검증 결과 표시) ────────────────────────────────── */
+
+    /**
+     * 자동 검증은 "승인해도 되는가"를 판정하는 장치라, 판정이 끝난 초안에는 쓸모가 없다.
+     *
+     * <p>이 두 테스트가 지키는 실제 사고(2026-08-15): 문서 프롬프트에 필수 절 두 개를 추가하자
+     * <b>이미 승인해서 사이트에 잘 올라가 있던</b> 옛 초안들이 검수 화면에서 빨간 "승인 불가"를
+     * 달고 나왔다. 승인 버튼조차 없는 카드라 고칠 방법도 없고, 빨간 상자가 상시로 떠 있으면
+     * 정작 진짜 차단이 왔을 때 눈이 그냥 지나친다.
+     */
+    @Test
+    @DisplayName("검수 대기 초안에는 검증 결과가 실린다")
+    void pendingDraftCarriesChecks() {
+        givenDraftPage(DraftStatus.PENDING, pendingDraft("엉망", "bad-doc", "# 엉망\n\n절 없음"));
+
+        LlmDocumentDraftResponse response =
+                service.getDrafts(DraftStatus.PENDING, Pageable.unpaged()).content().get(0);
+
+        assertThat(response.checks()).isNotEmpty();
+        assertThat(response.blocked()).isTrue();
+    }
+
+    @Test
+    @DisplayName("이미 승인·거절된 초안은 다시 검증하지 않는다 — 옛 기록에 새 기준을 소급하면 상시 빨간 화면이 된다")
+    void decidedDraftIsNotRevalidated() {
+        // 지금 기준으로는 차단감인 본문. 그래도 이미 처리된 건이면 판정할 것이 없다.
+        GeneratedDocumentDraft draft = pendingDraft("엉망", "bad-doc", "# 엉망\n\n절 없음");
+        draft.approve(42L);
+        givenDraftPage(DraftStatus.APPROVED, draft);
+
+        LlmDocumentDraftResponse response =
+                service.getDrafts(DraftStatus.APPROVED, Pageable.unpaged()).content().get(0);
+
+        assertThat(response.checks()).isEmpty();
+        assertThat(response.blocked()).isFalse();
+    }
+
     /* ── 도우미 ──────────────────────────────────────────────── */
+
+    private void givenDraftPage(DraftStatus status, GeneratedDocumentDraft draft) {
+        when(draftRepository.findByStatusOrderByCreatedAtAsc(eq(status), any()))
+                .thenReturn(new PageImpl<>(List.of(draft)));
+    }
 
     private void givenDraft(Long id, GeneratedDocumentDraft draft) {
         when(draftRepository.findById(id)).thenReturn(Optional.of(draft));

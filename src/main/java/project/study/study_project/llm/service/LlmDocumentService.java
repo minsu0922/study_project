@@ -181,9 +181,27 @@ public class LlmDocumentService {
 
     /* ── 변환 ─────────────────────────────────────────────────── */
 
+    /**
+     * 초안 → 응답 DTO.
+     *
+     * <p><b>자동 검증은 PENDING일 때만 돌린다.</b> 검증의 목적은 오직 하나 —
+     * "이걸 승인해도 되는가"를 사람보다 먼저 판정하는 것이다. 이미 승인/거절이 끝난 초안에는
+     * 판정할 것이 없다. 그런데도 매번 다시 검증하면 <b>과거 기록에 지금 기준을 소급 적용</b>하게 된다.
+     *
+     * <p>실제로 그 일이 났다(2026-08-15). 문서 프롬프트를 고치면서 필수 절에
+     * {@code ## 무엇인가}·{@code ## 언제 깨지는가}를 추가했더니, 그 전에 <b>이미 승인해서
+     * 사이트에 정상적으로 올라가 있는</b> 초안 2편이 검수 화면에서 빨간 "승인 불가"를 달고 나왔다.
+     * 승인 버튼도 없는 카드에 승인 불가가 떠 있으니 읽을 수 있는 뜻이 없고, 빨간 상자가 늘
+     * 떠 있으면 <b>진짜 차단이 왔을 때도 그러려니 하게 된다</b> — 경고의 값어치가 0이 되는 길이다.
+     *
+     * <p>대안으로 초안 본문을 새 기준에 맞게 고쳐 쓰는 것도 검토했지만 버렸다. 초안 테이블은
+     * <b>모델이 그날 실제로 내놓은 것의 기록</b>이라, 나중에 "프롬프트를 바꿨더니 결과가 어떻게
+     * 달라졌나"를 되짚는 유일한 근거다. 거절 사유를 지우지 않고 남겨 두는 것과 같은 이유다.
+     */
     private LlmDocumentDraftResponse toResponse(GeneratedDocumentDraft d) {
-        List<DocumentCheck> checks =
-                DocumentDraftValidator.validate(d.getTitle(), d.getSlug(), d.getContentMd());
+        List<DocumentCheck> checks = d.getStatus() == DraftStatus.PENDING
+                ? DocumentDraftValidator.validate(d.getTitle(), d.getSlug(), d.getContentMd())
+                : List.of();
         return new LlmDocumentDraftResponse(
                 d.getId(), d.getDomain(), d.getDomain().getDisplayName(),
                 d.getTitle(), d.getSlug(), d.getContentMd(), readTags(d.getTagsJson()),
