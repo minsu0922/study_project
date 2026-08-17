@@ -207,15 +207,19 @@ public final class ProblemItemRule {
             } else if (length > EXPLANATION_MAX) {
                 warnings.add("해설이 김 (%d자, 기준 %d자)".formatted(length, EXPLANATION_MAX));
             }
-            if (CHOICE_NUMBER_REFERENCE.matcher(explanation).find()) {
-                warnings.add("해설이 보기를 번호로 가리킴 (내보낼 때 보기를 섞으므로 어긋난다)");
+            String choiceRef = contextOf(CHOICE_NUMBER_REFERENCE, explanation);
+            if (choiceRef != null) {
+                warnings.add("해설이 보기를 번호로 가리킴 (\"%s\" — 내보낼 때 섞으므로 어긋난다)"
+                        .formatted(choiceRef));
             }
         }
 
         String question = item.question();
         if (!isBlank(question)) {
-            if (DOCUMENT_REFERENCE.matcher(question).find()) {
-                warnings.add("지문이 근거 문서를 가리킴 (문제는 혼자 성립해야 한다)");
+            String documentRef = contextOf(DOCUMENT_REFERENCE, question);
+            if (documentRef != null) {
+                warnings.add("지문이 근거 문서를 가리킴 (\"%s\" — 문제는 혼자 성립해야 한다)"
+                        .formatted(documentRef));
             }
             if (difficulty == Difficulty.BEGINNER && question.trim().length() > BEGINNER_QUESTION_MAX) {
                 warnings.add("초급 지문이 김 (%d자, 기준 %d자 — 상황 서술이 붙었을 수 있다)"
@@ -234,6 +238,34 @@ public final class ProblemItemRule {
         String trimmed = question.trim();
         return trimmed.length() > SNIPPET_LENGTH ? trimmed.substring(0, SNIPPET_LENGTH) + "…" : trimmed;
     }
+
+    /**
+     * 걸린 자리의 <b>앞뒤를 조금 붙여</b> 돌려준다. 걸리지 않았으면 {@code null}.
+     *
+     * <p><b>왜 증거를 경고에 싣나.</b> "해설이 보기를 번호로 가리킴"만 알려 주면 사람이 해설
+     * 500자를 처음부터 읽어 어디가 문제인지 찾아야 한다. 2026-08-17 평가 실행에서 실제로
+     * 그랬다 — 경고는 떴는데 <b>무엇이 걸렸는지 볼 방법이 없었다</b>. 경고가 그 자리를 직접
+     * 가리키면 고칠지 말지가 한눈에 정해진다.
+     *
+     * <p>전문이 아니라 조각만 싣는 이유: 이 문자열은 Actions 요약과 평가 보고서에 <b>줄 단위로</b>
+     * 찍힌다. 해설 전문을 실으면 경고 하나가 화면 반쪽을 먹어, 여러 건이 났을 때 오히려 안 읽힌다.
+     *
+     * <p>줄바꿈과 연속 공백을 한 칸으로 눌러 두는 것도 같은 이유다 — 한 줄로 유지돼야
+     * 목록의 다른 항목과 나란히 읽힌다.
+     */
+    private static String contextOf(Pattern pattern, String text) {
+        java.util.regex.Matcher m = pattern.matcher(text);
+        if (!m.find()) {
+            return null;
+        }
+        int from = Math.max(0, m.start() - CONTEXT_PAD);
+        int to = Math.min(text.length(), m.end() + CONTEXT_PAD);
+        String snippet = text.substring(from, to).replaceAll("\\s+", " ").trim();
+        return (from > 0 ? "…" : "") + snippet + (to < text.length() ? "…" : "");
+    }
+
+    /** 걸린 자리 앞뒤로 붙여 보여 줄 글자 수. 무엇에 대한 말인지 알아볼 정도면 충분하다. */
+    private static final int CONTEXT_PAD = 18;
 
     /**
      * 구조화 출력은 필수 필드를 <b>빈 문자열</b>로 채워 보낼 수 있다(스키마상 nullable 표현이 제한적이라

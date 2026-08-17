@@ -153,10 +153,12 @@ public final class PromptEvalCli {
         List<Integer> questionLengths = new ArrayList<>();
         List<Integer> explanationLengths = new ArrayList<>();
         Map<String, Integer> warningCounts = new LinkedHashMap<>();
+        List<String> warningLines = new ArrayList<>();
         int usable = 0;
         int withBackground = 0;
 
-        for (GeneratedProblemItem item : problems) {
+        for (int i = 0; i < problems.size(); i++) {
+            GeneratedProblemItem item = problems.get(i);
             if (!ProblemItemRule.isUsable(item, ProblemType.MULTIPLE_CHOICE)) {
                 continue; // 껍데기는 길이 평균을 오염시킨다 — 세지 않고 개수 차이로만 드러낸다
             }
@@ -170,16 +172,19 @@ public final class PromptEvalCli {
                 withBackground++;
             }
             for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty)) {
-                // "해설이 짧음 (382자, 기준 400자)"에서 숫자를 떼어 종류로 묶는다.
+                // "해설이 짧음 (382자, 기준 400자)"에서 괄호를 떼어 종류로 묶는다.
                 // 숫자까지 키로 쓰면 표가 한 줄짜리 항목으로 가득 차 한눈에 안 들어온다.
                 String kind = warning.replaceAll("\\s*\\(.*", "");
                 warningCounts.merge(kind, 1, Integer::sum);
+                // 괄호까지 남긴 원본도 따로 모은다 — 종류만 알면 "무엇이 걸렸는지"를
+                // 볼 수가 없다. 2026-08-17 실행에서 실제로 그 벽에 부딪혔다.
+                warningLines.add("%d번 — %s".formatted(i + 1, warning));
             }
         }
 
         return new DifficultyReport(difficulty, requested, problems.size(), usable,
                 Stat.of(questionLengths), Stat.of(explanationLengths),
-                withBackground, warningCounts, problems);
+                withBackground, warningCounts, warningLines, problems);
     }
 
     /** 지문에 섞인 서술문의 개수 — {@link #DECLARATIVE_SENTENCE} 참고. */
@@ -195,10 +200,16 @@ public final class PromptEvalCli {
         return n;
     }
 
-    /** 한 난이도의 채점 결과. */
+    /**
+     * 한 난이도의 채점 결과.
+     *
+     * @param warnings     종류별 건수 — 표에 쓴다
+     * @param warningLines 걸린 자리까지 담은 원본 줄 — 사람이 보고 판단할 때 쓴다
+     */
     record DifficultyReport(Difficulty difficulty, int requested, int received, int usable,
                             Stat questionLength, Stat explanationLength,
                             int withBackground, Map<String, Integer> warnings,
+                            List<String> warningLines,
                             List<GeneratedProblemItem> problems) {
     }
 
@@ -262,18 +273,21 @@ public final class PromptEvalCli {
         sb.append(" — 상황을 붙이는 순간 중급으로 넘어갑니다.\n");
 
         sb.append("\n## 품질 경고\n\n");
-        boolean any = reports.stream().anyMatch(r -> !r.warnings().isEmpty());
+        boolean any = reports.stream().anyMatch(r -> !r.warningLines().isEmpty());
         if (!any) {
             sb.append("없음.\n");
         } else {
+            // 종류별 건수만 찍던 것을 걸린 자리까지 찍도록 바꿨다. 종류만 알면 "무엇이
+            // 걸렸는지"를 보려고 결국 해설 500자를 처음부터 읽어야 한다.
             for (DifficultyReport r : reports) {
-                if (r.warnings().isEmpty()) {
+                if (r.warningLines().isEmpty()) {
                     continue;
                 }
-                sb.append("- **").append(r.difficulty()).append("**: ");
-                sb.append(r.warnings().entrySet().stream()
-                        .map(e -> "%s %d건".formatted(e.getKey(), e.getValue()))
-                        .reduce((a, b) -> a + ", " + b).orElse(""));
+                sb.append("**").append(r.difficulty()).append("** — ")
+                        .append(r.warningLines().size()).append("건\n\n");
+                for (String line : r.warningLines()) {
+                    sb.append("- ").append(line).append('\n');
+                }
                 sb.append('\n');
             }
         }

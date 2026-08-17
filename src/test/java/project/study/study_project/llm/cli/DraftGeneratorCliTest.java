@@ -537,6 +537,22 @@ class DraftGeneratorCliTest {
                 .isNotEmpty();
     }
 
+    /**
+     * 경고에 <b>걸린 자리</b>가 함께 실리는지. 2026-08-17 평가 실행에서 이게 없어
+     * "해설이 보기를 번호로 가리킴 1건"만 뜨고, 정작 해설 500자 중 어디가 걸렸는지
+     * 볼 방법이 없었다. 종류만 아는 경고는 결국 사람이 전문을 다시 읽게 만든다.
+     */
+    @Test
+    @DisplayName("경고에 걸린 자리가 함께 실린다 — 종류만 알면 해설 전문을 다시 읽어야 한다")
+    void warningCarriesTheOffendingSnippet() {
+        assertThat(warningsFor("따라서 2번 보기는 UDP의 특성을 옮겨 온 것이다."))
+                .singleElement().asString()
+                .as("걸린 표현과 그 앞뒤가 보여야 어디를 고칠지 정해진다")
+                .contains("2번 보기는")
+                .as("전문이 아니라 조각이어야 한다 — 여러 건이 나면 목록이 안 읽힌다")
+                .doesNotContain("해".repeat(60));
+    }
+
     /** 해설 뒤에 붙여 분량 경고를 피하고, 보기 번호 지칭 경고만 남긴다. */
     private static List<String> warningsFor(String explanationTail) {
         List<GeneratedProblemItem> problems =

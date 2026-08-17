@@ -190,6 +190,35 @@ class PromptEvalCliTest {
                 .contains("이 문서에 없는 절");
     }
 
+    /**
+     * 보고서가 경고의 <b>걸린 자리</b>까지 싣는지.
+     *
+     * <p>2026-08-17 첫 실행에서 "ADVANCED: 해설이 보기를 번호로 가리킴 1건"만 찍혔다.
+     * 표본 절에는 지문과 보기만 넣어 뒀는데 정작 경고는 해설에서 났으므로,
+     * <b>무엇이 걸렸는지 볼 방법이 아예 없었다</b>. 종류만 아는 경고는 결국 사람이
+     * 해설 500자를 처음부터 다시 읽게 만든다.
+     */
+    @Test
+    @DisplayName("보고서가 경고의 걸린 자리까지 싣는다 — 종류만 찍으면 결국 전문을 다시 읽어야 한다")
+    void reportShowsWhatTrippedEachWarning() {
+        String explanation = "해".repeat(420) + " 따라서 2번 보기는 갱신 손실과 헷갈린 것이다.";
+
+        String rendered = PromptEvalCli.render(
+                List.of(PromptEvalCli.score(Difficulty.ADVANCED, 1,
+                        List.of(item("쓰기 스큐를 막는 대응은?", explanation)))),
+                "claude-opus-5", Domain.DATABASE, Path.of("generated/documents/2026-08-15.json"),
+                new PromptEvalCli.LoadedDocument(Domain.DATABASE,
+                        new SourceDocument("iso", "격리 수준", "## 무엇인가\n정의.")));
+
+        assertThat(rendered)
+                .as("몇 번 문항인지 있어야 표본과 맞춰 볼 수 있다")
+                .contains("1번")
+                .as("걸린 표현이 있어야 고칠지 말지가 한눈에 정해진다")
+                .contains("2번 보기는")
+                .as("해설 전문을 통째로 실으면 경고 하나가 화면을 먹는다")
+                .doesNotContain("해".repeat(60));
+    }
+
     /* ── 도우미 ──────────────────────────────────────────────── */
 
     private static String explanation() {
