@@ -88,6 +88,37 @@ public final class DocumentDraftValidator {
      */
     private static final Pattern HTML_TAG = Pattern.compile("</?[a-zA-Z][a-zA-Z0-9-]*(\\s[^>]*)?/?>");
 
+    /** 본문 {@code ## } 제목. {@code ###} 이상은 잡지 않도록 {@code ##} 뒤에 공백을 요구한다. */
+    private static final Pattern H2_PATTERN = Pattern.compile("(?m)^##\\s+(.+?)\\s*$");
+
+    /** 중급 재료가 나오는 소제목. 프롬프트가 {@code ### }로 못 박은 형태. */
+    private static final Pattern DESIGN_RATIONALE_HEADING =
+            Pattern.compile("(?m)^###\\s+왜 이렇게 설계됐는가");
+
+    /** 같은 소제목의 <b>옛 형식</b>(굵은 글씨). 고치는 법을 알려 주려고 함께 센다. */
+    private static final Pattern DESIGN_RATIONALE_BOLD =
+            Pattern.compile("(?m)^\\*\\*왜 이렇게 설계됐는가\\*\\*");
+
+    /** 하이픈으로 시작하는 용어 정의 줄 — 프롬프트가 요구하는 형태. */
+    private static final Pattern TERM_BULLET = Pattern.compile("(?m)^-\\s+\\*\\*");
+
+    /** 하이픈 없이 굵은 글씨로만 시작하는 용어 정의 줄 — 화면에서 한 문단으로 뭉치는 형태. */
+    private static final Pattern BOLD_TERM_LINE = Pattern.compile("(?m)^\\*\\*[^*]+\\*\\*\\s*[—-]");
+
+    /**
+     * {@code ## 언제 깨지는가}의 항목 한 개. 형식이 프롬프트에 지정돼 있지 않아
+     * 실물에서 나온 형태({@code **1. 제목**})와 있을 법한 두 형태({@code ### }, {@code - })를
+     * 모두 항목으로 인정한다 — 자세한 이유는 {@link #checkFailureModeCount} 주석 참고.
+     */
+    private static final Pattern FAILURE_MODE_ITEM =
+            Pattern.compile("(?m)^(\\*\\*\\d+\\.|###\\s+|-\\s+\\*\\*|\\d+\\.\\s+)");
+
+    /** 본론 섹션 최소 개수 — 프롬프트는 2~3개를 요구한다. */
+    private static final int MIN_BODY_SECTIONS = 2;
+
+    /** {@code ## 언제 깨지는가} 항목 최소 개수 — 프롬프트의 "5가지 이상"과 같아야 한다. */
+    private static final int MIN_FAILURE_MODES = 5;
+
     private DocumentDraftValidator() {
     }
 
@@ -104,6 +135,10 @@ public final class DocumentDraftValidator {
         checkSlug(slug, checks);
         checkTitleMatchesHeading(title, body, checks);
         checkRequiredSections(body, checks);
+        checkDesignRationaleHeading(body, checks);
+        checkTermList(body, checks);
+        checkBodySections(body, checks);
+        checkFailureModeCount(body, checks);
         checkHtmlTags(body, checks);
         checkLength(body, checks);
         return checks;
@@ -160,6 +195,149 @@ public final class DocumentDraftValidator {
                 checks.add(DocumentCheck.blocking("필수 절이 없습니다: " + section));
             }
         }
+    }
+
+    /* ── 형식 규칙 ───────────────────────────────────────────────
+     * 아래 넷은 프롬프트가 "이렇게 써라"라고 시켰지만 검사하는 곳이 없던 것들이다.
+     * 2026-08-15 문서 한 편에서 <넷 중 둘이 어긋나 있었고> 승인까지 통과했다.
+     *
+     * 전부 경고다. 형식이 어긋났다고 문서를 막으면 그 주기 나흘이 통째로 날아가는데,
+     * 정작 사람은 검수 화면에서 한 줄 고치면 되는 것들이다. */
+
+    /**
+     * {@code ### 왜 이렇게 설계됐는가} 소제목이 <b>정확히 하나</b> 있는지.
+     *
+     * <p><b>이게 중급 문제의 재료다.</b> 2026-08-15 문서에는 이 소제목이 {@code ###}로
+     * 하나도 없었고 대신 {@code **왜 이렇게 설계됐는가**}가 <b>굵은 글씨로 세 번</b> 있었다.
+     * 프롬프트가 "굵은 글씨에서 {@code ###}로 올렸다"고 바꿔 놓은 뒤에도 모델이 옛 형식으로
+     * 쓴 것인데, 검사가 없어 승인까지 통과했다.
+     *
+     * <p>그 대가는 하루 뒤에 온다. 중급 날 배치가 이 절을 찾다 못 찾으면 폴백으로 떨어져
+     * ({@code DraftGeneratorCli.hasMaterialFor}) 그 주기의 중급이 근거 없이 만들어진다.
+     * 여기서 경고를 띄우면 <b>승인 시점에</b> 사람이 굵은 글씨를 {@code ###}로 고칠 수 있다 —
+     * 하루 먼저 알아차리는 것이 이 검사의 값어치다.
+     *
+     * <p>굵은 글씨 형태도 함께 세어 메시지에 담는 이유: "없습니다"만 보면 무엇을 해야 할지
+     * 모르지만, "굵은 글씨로 3개 있습니다"까지 보면 <b>고칠 방법이 곧바로 보인다</b>.
+     */
+    private static void checkDesignRationaleHeading(String body, List<DocumentCheck> checks) {
+        int headings = count(DESIGN_RATIONALE_HEADING, body);
+        if (headings == 1) {
+            return;
+        }
+        if (headings == 0) {
+            int bold = count(DESIGN_RATIONALE_BOLD, body);
+            checks.add(DocumentCheck.warning(bold > 0
+                    ? "'### 왜 이렇게 설계됐는가' 소제목이 없습니다(굵은 글씨로 %d개 있습니다 — ###로 올리세요). 중급 문제가 이 절을 재료로 씁니다."
+                            .formatted(bold)
+                    : "'### 왜 이렇게 설계됐는가' 소제목이 없습니다. 중급 문제가 이 절을 재료로 씁니다."));
+            return;
+        }
+        checks.add(DocumentCheck.warning(
+                "'### 왜 이렇게 설계됐는가' 소제목이 %d개입니다(문서 전체에 1개). 설계 근거는 본문 문장으로 녹여 쓰세요."
+                        .formatted(headings)));
+    }
+
+    /**
+     * {@code ## 무엇인가} 절의 핵심 용어가 <b>하이픈 목록</b>인지.
+     *
+     * <p><b>줄만 바꿔서는 안 되는 이유가 마크다운에 있다.</b> 홑줄바꿈은 문단을 끊지 않으므로
+     * ({@code marked}의 기본값 {@code breaks:false}) 하이픈 없이 다섯 줄을 쓰면 화면에서
+     * 한 문단으로 뭉쳐 나온다. 정의를 맨 앞에 올려 찾기 쉽게 하려던 절이 정작 가장 읽기
+     * 어려운 덩어리가 된다 — 실제로 그렇게 나왔다.
+     *
+     * <p>프롬프트에 두 번 적었는데도 안 지켜졌다(커밋 bafb2e9가 고치려다 실패). 원인은
+     * 규칙 옆의 예시에 하이픈이 없어서였고, 그때 <b>예시가 규칙을 이긴다</b>는 것을 배웠다.
+     * 프롬프트를 또 고치는 것보다 세어 보는 쪽이 확실하다.
+     */
+    private static void checkTermList(String body, List<DocumentCheck> checks) {
+        String section = sectionBody(body, "## 무엇인가");
+        if (section == null || section.isBlank()) {
+            return; // 절 자체가 없으면 checkRequiredSections가 이미 차단으로 잡는다
+        }
+        if (!TERM_BULLET.matcher(section).find() && BOLD_TERM_LINE.matcher(section).find()) {
+            checks.add(DocumentCheck.warning(
+                    "'## 무엇인가'의 용어 정의가 하이픈 목록이 아닙니다. "
+                            + "줄만 바꾸면 화면에서 한 문단으로 뭉쳐 나옵니다(마크다운의 홑줄바꿈)."));
+        }
+    }
+
+    /**
+     * 본론 섹션이 <b>2개 이상</b>인지 — 프롬프트는 2~3개를 요구한다.
+     *
+     * <p>{@link ClaudeDocumentGenerator#REQUIRED_SECTIONS}에는 본론이 없다. 제목이 주제마다
+     * 달라서 목록으로 못 박을 수가 없기 때문인데, 그 결과 <b>본론이 통째로 비어도 통과하는</b>
+     * 구멍이 남았다. 이름을 못 박을 수 없으면 <b>개수</b>를 세면 된다 — 필수 절 목록에 없는
+     * {@code ## } 제목이 곧 본론이다.
+     *
+     * <p>본론이 얇으면 초급·중급 재료가 함께 마른다. 초급이 캘 곳은 {@code ## 무엇인가}와
+     * 본론의 기본 동작이고, 중급의 설계 판단도 대부분 본론에 녹아 있다.
+     */
+    private static void checkBodySections(String body, List<DocumentCheck> checks) {
+        List<String> bodySections = new ArrayList<>();
+        Matcher m = H2_PATTERN.matcher(body);
+        while (m.find()) {
+            String heading = "## " + m.group(1).trim();
+            if (!ClaudeDocumentGenerator.REQUIRED_SECTIONS.contains(heading)) {
+                bodySections.add(heading);
+            }
+        }
+        if (bodySections.size() < MIN_BODY_SECTIONS) {
+            checks.add(DocumentCheck.warning(
+                    "본론 섹션이 %d개입니다(권장 %d~3개). 본론이 얇으면 초급·중급 재료가 함께 마릅니다."
+                            .formatted(bodySections.size(), MIN_BODY_SECTIONS)));
+        }
+    }
+
+    /**
+     * {@code ## 언제 깨지는가}의 항목이 <b>5개 이상</b>인지 — 고급 문제의 재료다.
+     *
+     * <p>2026-08-14에 고급 날 재료가 말라 5개를 요청해 3개만 받은 적이 있다. 그 뒤 프롬프트에
+     * "5가지 이상"을 박았지만 세는 곳은 없었다.
+     *
+     * <p><b>항목의 형식이 정해져 있지 않아</b> 세는 방법을 넉넉하게 잡았다 — 실물은
+     * {@code **1. 쓰기 스큐**} 꼴이었는데 프롬프트는 형식을 지정하지 않으므로 다음 문서는
+     * {@code ### }나 {@code - }로 올 수 있다. 셋을 모두 항목으로 센다. 여기서 형식 하나만
+     * 인정하면 멀쩡한 문서에 경고가 뜨고, 오탐은 경고를 무력하게 만든다.
+     */
+    private static void checkFailureModeCount(String body, List<DocumentCheck> checks) {
+        String section = sectionBody(body, "## 언제 깨지는가");
+        if (section == null) {
+            return; // 절 자체가 없으면 checkRequiredSections가 차단으로 잡는다
+        }
+        int items = count(FAILURE_MODE_ITEM, section);
+        if (items < MIN_FAILURE_MODES) {
+            checks.add(DocumentCheck.warning(
+                    "'## 언제 깨지는가'의 항목이 %d개입니다(기준 %d개 이상). 고급 문제가 여기를 재료로 씁니다."
+                            .formatted(items, MIN_FAILURE_MODES)));
+        }
+    }
+
+    /**
+     * 특정 {@code ## } 절의 본문 — 다음 {@code ## }가 나오기 전까지. 절이 없으면 {@code null}.
+     *
+     * <p>절 단위로 잘라 보는 이유: 문서 전체에서 찾으면 다른 절의 하이픈 목록에 속아
+     * "용어 목록이 있다"고 판정한다. 검사는 <b>그 절 안에서</b> 이뤄져야 의미가 있다.
+     */
+    private static String sectionBody(String body, String heading) {
+        int start = body.indexOf(heading);
+        if (start < 0) {
+            return null;
+        }
+        int from = start + heading.length();
+        Matcher m = H2_PATTERN.matcher(body);
+        // 이 절 <다음>의 ## 제목을 찾는다. find(from)은 from 이후 첫 일치를 준다.
+        return m.find(from) ? body.substring(from, m.start()) : body.substring(from);
+    }
+
+    /** 패턴이 몇 번 나오는지. */
+    private static int count(Pattern pattern, String text) {
+        Matcher m = pattern.matcher(text);
+        int n = 0;
+        while (m.find()) {
+            n++;
+        }
+        return n;
     }
 
     /**

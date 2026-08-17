@@ -14,6 +14,8 @@ import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
+import project.study.study_project.llm.support.DocumentCheck;
+import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
 
@@ -384,6 +386,45 @@ public final class DraftGeneratorCli {
     }
 
     /**
+     * 갓 만든 문서를 검증기에 통과시켜 결과를 로그와 요약 화면에 남긴다.
+     *
+     * <p><b>왜 여기서 또 보는가.</b> {@link DocumentDraftValidator}는 이미 있었지만
+     * <b>승인 화면에서만</b> 돌았다. 그런데 문서는 만든 날 바로 승인되지 않는다 — 그 사이
+     * 이 문서를 근거로 사흘 치 문제가 만들어진다. 형식이 어긋난 것을 <b>사흘 뒤에</b> 알면
+     * 이미 그 주기가 절반 지나간 뒤다. 2026-08-15 문서가 정확히 그 경로로 새어 나갔다.
+     *
+     * <p><b>왜 job을 실패시키지 않는가.</b> 전부 경고이고, 문서 자체는 쓸 수 있다.
+     * 여기서 죽이면 그날 요금을 내고 만든 문서를 버리는 셈인데, 사람이 승인 화면에서
+     * 소제목 하나 고치면 되는 일이 대부분이다. 알리는 데까지가 이 자리의 몫이다.
+     *
+     * <p>차단 항목이 나오면 이야기가 다르다 — 그건 승인 자체가 막힌다는 뜻이라
+     * 그 주기가 통째로 헛돌게 되므로 <b>요약 화면에</b> 눈에 띄게 남긴다.
+     */
+    private static void reportDocumentChecks(GeneratedDocumentItem document, LocalDate date) {
+        List<DocumentCheck> checks = DocumentDraftValidator.validate(
+                document.title(), document.slug(), document.contentMd());
+        if (checks.isEmpty()) {
+            System.out.println("문서 검증 통과: 형식 문제 없음");
+            return;
+        }
+
+        boolean blocking = DocumentDraftValidator.hasBlocking(checks);
+        String lines = checks.stream()
+                .map(c -> "- %s %s".formatted(c.isBlocking() ? "[차단]" : "[경고]", c.message()))
+                .collect(java.util.stream.Collectors.joining("\n"));
+
+        String rendered = "%s **%s 문서 검증: %d건**%s%n%s%n".formatted(
+                blocking ? "❌" : "⚠️", date, checks.size(),
+                blocking ? " — 차단 항목이 있어 이대로는 승인되지 않습니다" : "",
+                lines);
+
+        // 서식은 여기서 끝낸다 — 본문에 '%'가 들어 있으면 다시 포맷할 때 예외로 죽는다
+        // (reportYield에서 실제로 겪은 함정).
+        System.out.println(rendered);
+        appendToStepSummary(rendered);
+    }
+
+    /**
      * 찾아낸 근거 문서와 <b>그 문서가 속한 분야</b>.
      *
      * <p>분야를 따로 들고 다니는 이유: 주기가 계산한 분야와 실제 문서의 분야가 어긋날 수 있고,
@@ -450,6 +491,10 @@ public final class DraftGeneratorCli {
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(file));
         System.out.printf("저장 완료: %s (\"%s\", 본문 %d자)%n",
                 outFile, document.title(), document.contentMd().length());
+
+        // 문제 쪽의 수확량 점검에 해당하는 자리다. 지금까지 문서에는 이런 점검이 없었고,
+        // 검증은 <며칠 뒤 승인 화면에서만> 돌았다. 그 사이 이 문서로 사흘 치 문제가 만들어진다.
+        reportDocumentChecks(document, date);
     }
 
     /**

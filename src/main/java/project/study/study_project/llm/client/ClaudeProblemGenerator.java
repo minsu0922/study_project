@@ -230,6 +230,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             - 답이 여럿 성립하는 질문은 내지 마라. 지문에 조건을 붙여 답을 하나로 좁힌다.
 
             [해설]
+            
             해설은 이 서비스의 핵심 가치다. 400~700자로 쓴다.
             - 왜 정답인지의 근거를 반드시 설명한다.
             - 객관식이면 나머지 보기가 왜 틀렸는지도 한 줄씩 짚는다.

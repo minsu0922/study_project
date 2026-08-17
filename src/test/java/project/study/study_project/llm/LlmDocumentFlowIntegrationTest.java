@@ -87,9 +87,11 @@ class LlmDocumentFlowIntegrationTest {
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> checks = (List<Map<String, Object>>) mine.get("checks");
+        // 개수가 아니라 <우리가 유발한 경고가 실려 있는가>를 본다. 검증기에 규칙이 늘 때마다
+        // (2026-08-17에 형식 규칙 넷이 늘었다) 개수를 세는 단언은 이 테스트를 깨뜨리는데,
+        // 여기서 확인하려는 것은 규칙의 가짓수가 아니라 "결과가 응답에 실려 오는가"다.
         assertThat(checks).as("검증 결과가 응답에 실려야 화면이 규칙을 따로 갖지 않는다")
-                .singleElement()
-                .satisfies(c -> {
+                .anySatisfy(c -> {
                     assertThat(c.get("severity")).isEqualTo("WARNING");
                     assertThat((String) c.get("message")).contains("권장 분량");
                 });

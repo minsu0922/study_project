@@ -170,32 +170,178 @@ class DocumentDraftValidatorTest {
                 "다른 제목", "Bad_Slug", "# 본문 제목\n\n## 왜 필요한가\n내용");
 
         // slug 형식 1 + 제목 불일치 1
-        // + 빠진 필수 절 5(무엇인가·실무에서는 이렇게 쓴다·언제 깨지는가·면접 질문·한 줄 요약) = 7
-        assertThat(checks).hasSize(7);
+        // + 빠진 필수 절 5(무엇인가·실무에서는 이렇게 쓴다·언제 깨지는가·면접 질문·한 줄 요약)
+        // + 형식 2(설계 근거 소제목 없음·본론 0개) = 9
+        // ('## 무엇인가'와 '## 언제 깨지는가'의 형식 검사는 절이 아예 없으면 건너뛴다 —
+        //  없는 절을 두고 "하이픈이 없다"고 말하면 원인이 흐려진다)
+        assertThat(checks).hasSize(9);
         assertThat(checks).extracting(DocumentCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
                 .anyMatch(m -> m.contains("## 면접에서 이렇게 물어본다"));
     }
 
+    /* ── 형식 규칙 ───────────────────────────────────────────────
+     * 프롬프트가 "이렇게 써라"라고 시켰지만 검사하는 곳이 없던 것들.
+     * 2026-08-15 문서 한 편에서 아래 둘이 어긋난 채 승인까지 통과했고, 그 대가는
+     * 하루 뒤 중급 배치가 근거 문서를 못 쓰고 폴백으로 떨어지는 것으로 돌아왔다. */
+
+    @Test
+    @DisplayName("'### 왜 이렇게 설계됐는가'가 없으면 알린다 — 없으면 다음 날 중급이 근거를 잃는다")
+    void warnsWhenDesignRationaleHeadingIsMissing() {
+        String without = body(TITLE, "본문").replace("### 왜 이렇게 설계됐는가", "### 다른 소제목");
+
+        List<DocumentCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", without);
+
+        assertThat(checks).extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("'### 왜 이렇게 설계됐는가' 소제목이 없습니다"));
+        assertThat(DocumentDraftValidator.hasBlocking(checks))
+                .as("형식이 어긋났다고 막으면 그 주기 나흘이 통째로 날아간다")
+                .isFalse();
+    }
+
+    /**
+     * "없습니다"만 알리면 검수자가 무엇을 해야 할지 모른다. 실물은 {@code **왜 이렇게 설계됐는가**}
+     * 라는 <b>굵은 글씨</b>였으므로, 그 사실까지 세어 주면 고칠 방법이 메시지 안에 있다.
+     */
+    @Test
+    @DisplayName("굵은 글씨로 썼으면 그 사실까지 알린다 — 고칠 방법이 메시지에 있어야 한다")
+    void tellsWhenRationaleWasWrittenInBold() {
+        String bold = body(TITLE, "본문")
+                .replace("### 왜 이렇게 설계됐는가", "**왜 이렇게 설계됐는가**");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", bold))
+                .extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("굵은 글씨로 1개"));
+    }
+
+    @Test
+    @DisplayName("소제목이 여럿이면 알린다 — 프롬프트는 문서 전체에 1개를 요구한다")
+    void warnsWhenRationaleHeadingAppearsTwice() {
+        String twice = body(TITLE, "본문") + "\n### 왜 이렇게 설계됐는가\n- 또 다른 근거.\n";
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", twice))
+                .extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("소제목이 2개입니다"));
+    }
+
+    /**
+     * 마크다운의 홑줄바꿈은 문단을 끊지 않아, 하이픈 없이 쓴 용어 정의가 화면에서 한 문단으로
+     * 뭉친다. 프롬프트에 두 번 적었는데도 안 지켜졌다(커밋 bafb2e9가 고치려다 실패) —
+     * 규칙 옆 예시에 하이픈이 없어서였다. 세는 쪽이 확실하다.
+     */
+    @Test
+    @DisplayName("용어 정의에 하이픈이 없으면 알린다 — 화면에서 한 문단으로 뭉친다")
+    void warnsWhenTermListHasNoBullets() {
+        String noBullets = body(TITLE, "본문")
+                .replace("- **첫째 용어(first)**", "**첫째 용어(first)**")
+                .replace("- **둘째 용어(second)**", "**둘째 용어(second)**");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", noBullets))
+                .extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("하이픈 목록이 아닙니다"));
+    }
+
+    /**
+     * 본론은 제목이 주제마다 달라 {@code REQUIRED_SECTIONS}로 못 박을 수 없다. 그래서
+     * <b>본론이 통째로 비어도 통과하는</b> 구멍이 있었다. 이름을 못 박으면 개수를 센다.
+     */
+    @Test
+    @DisplayName("본론이 얇으면 알린다 — 필수 절 목록으로는 본론의 부재를 못 잡는다")
+    void warnsWhenBodySectionsAreThin() {
+        String thin = body(TITLE, "본문")
+                .replace("## 첫째 갈래", "### 첫째 갈래")
+                .replace("## 둘째 갈래", "### 둘째 갈래");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", thin))
+                .extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("본론 섹션이 0개"));
+    }
+
+    /**
+     * 고급 문제의 재료. 2026-08-14에 고급 날 재료가 말라 5개를 요청해 3개만 받았다.
+     * 그 뒤 프롬프트에 "5가지 이상"을 박았지만 세는 곳은 없었다.
+     */
+    @Test
+    @DisplayName("'언제 깨지는가' 항목이 모자라면 알린다 — 고급 날 재료가 마른다")
+    void warnsWhenFailureModesAreTooFew() {
+        String few = body(TITLE, "본문")
+                .replace("**4. 넷째 조건**\n", "")
+                .replace("**5. 다섯째 조건**\n", "");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", few))
+                .extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("'## 언제 깨지는가'의 항목이 3개"));
+    }
+
+    /**
+     * 항목 형식이 프롬프트에 지정돼 있지 않다. 실물은 {@code **1. 제목**}으로 왔지만 다음 문서는
+     * 다른 형식일 수 있어, 형식 하나만 인정하면 <b>멀쩡한 문서에 경고가 뜬다</b>.
+     */
+    @Test
+    @DisplayName("항목 형식이 달라도 센다 — 형식 하나만 인정하면 멀쩡한 문서에 경고가 뜬다")
+    void countsFailureModesInAnyFormat() {
+        String heading = body(TITLE, "본문").replace("**1. 첫째 조건**", "### 첫째 조건");
+        String bullet = body(TITLE, "본문").replace("**1. 첫째 조건**", "- **첫째 조건**");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", heading))
+                .extracting(DocumentCheck::message)
+                .noneMatch(m -> m.contains("언제 깨지는가"));
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", bullet))
+                .extracting(DocumentCheck::message)
+                .noneMatch(m -> m.contains("언제 깨지는가"));
+    }
+
+    /**
+     * 오탐이 나면 경고가 매번 뜨고, 그러면 사람이 경고 자체를 안 보게 된다.
+     * 이 저장소가 이미 겪은 실패 방식이라 <b>정상 문서에 조용한지</b>를 따로 못 박는다.
+     */
+    @Test
+    @DisplayName("규칙을 다 지킨 문서에는 아무 소리도 안 난다 — 오탐이 경고를 무력화한다")
+    void staysQuietOnAWellFormedDocument() {
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", body(TITLE, "본문")))
+                .isEmpty();
+    }
+
     /* ── 도우미 ──────────────────────────────────────────────── */
 
-    /** 필수 절을 모두 갖춘 최소 문서. 검사하려는 항목 외에는 전부 정상이어야 결과가 읽힌다. */
+    /**
+     * <b>모든 검사를 통과하는</b> 최소 문서. 검사하려는 항목만 골라 망가뜨려 쓴다.
+     *
+     * <p>2026-08-17에 형식 규칙 넷을 추가하면서 이 문서도 함께 채웠다 — 전에는 본론이 0개이고
+     * '언제 깨지는가' 항목이 1개인, <b>새 기준으로는 경고가 셋 붙는</b> 문서였다.
+     * 그대로 두면 "이 항목만 검사한다"던 테스트들이 딴 경고까지 세게 되고,
+     * 그러면 무엇을 재고 있었는지 알 수 없어진다.
+     */
     private String body(String heading, String content) {
         return """
                 # %s
 
                 ## 무엇인가
-                한 문장 정의.
+                - **첫째 용어(first)** — 한 문장 정의.
+                - **둘째 용어(second)** — 한 문장 정의.
 
                 ## 왜 필요한가
                 %s
+
+                ## 첫째 갈래
+                본론 설명.
+
+                ### 왜 이렇게 설계됐는가
+                - 다른 선택지를 두고 이렇게 판단했다.
+
+                ## 둘째 갈래
+                본론 설명.
 
                 ## 실무에서는 이렇게 쓴다
                 - 이런 상황에서 이렇게 쓴다.
 
                 ## 언제 깨지는가
-                - 깨지는 조건 하나.
+                **1. 첫째 조건**
+                **2. 둘째 조건**
+                **3. 셋째 조건**
+                **4. 넷째 조건**
+                **5. 다섯째 조건**
 
                 ## 면접에서 이렇게 물어본다
                 **Q. 무엇인가?**
