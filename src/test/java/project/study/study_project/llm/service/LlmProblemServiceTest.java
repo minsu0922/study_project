@@ -106,7 +106,7 @@ class LlmProblemServiceTest {
     private LlmProblemService newService(List<Domain> batchDomains) {
         // ObjectMapper는 실물 사용 — JSON 직렬화가 이 서비스의 실제 책임이라 가짜로 대체하면 검증이 빈다
         return new LlmProblemService(fakeGenerator, draftRepository, problemRepository,
-                adminProblemService, new ObjectMapper(), "test-model", batchDomains);
+                adminProblemService, new ObjectMapper(), event -> { }, "test-model", batchDomains);
     }
 
     /** 거절 사례 조회 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */

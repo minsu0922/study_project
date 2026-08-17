@@ -3,6 +3,7 @@ package project.study.study_project.llm.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -64,6 +65,9 @@ public class LlmProblemService {
     private final ProblemRepository problemRepository;
     private final AdminProblemService adminProblemService;
     private final ObjectMapper objectMapper;
+
+    /** 검수가 끝났음을 알린다 — 스냅샷 내보내기가 커밋 뒤에 듣는다({@link ReviewCompleted}). */
+    private final ApplicationEventPublisher events;
     private final String model;
     /** 배치가 도메인을 "알아서 고를" 때의 후보 — 비어 있으면 전체를 후보로 본다(설정 누락 시 기능 정지 방지). */
     private final List<Domain> batchDomains;
@@ -73,6 +77,7 @@ public class LlmProblemService {
                              ProblemRepository problemRepository,
                              AdminProblemService adminProblemService,
                              ObjectMapper objectMapper,
+                             ApplicationEventPublisher events,
                              @org.springframework.beans.factory.annotation.Value("${llm.generation.model:claude-opus-5}") String model,
                              // 기본값에 8개를 그대로 적어 둔다: 빈 문자열을 기본값으로 두면 Spring이 이를
                              // "빈 문자열 원소 1개"로 변환하려다 enum 변환에 실패할 수 있어서다.
@@ -84,6 +89,7 @@ public class LlmProblemService {
         this.problemRepository = problemRepository;
         this.adminProblemService = adminProblemService;
         this.objectMapper = objectMapper;
+        this.events = events;
         this.model = model;
         this.batchDomains = batchDomains == null || batchDomains.isEmpty()
                 ? List.of(Domain.values()) : List.copyOf(batchDomains);
@@ -295,12 +301,14 @@ public class LlmProblemService {
         }
         AdminProblemDetail created = adminProblemService.create(toAdminRequest(draft));
         draft.approve(created.id()); // 엔티티도 같은 규칙을 방어(이중 안전장치)
+        events.publishEvent(ReviewCompleted.problem());
         return created;
     }
 
     @Transactional
     public void reject(Long draftId, String reason) {
         findDraft(draftId).reject(trimToNull(reason));
+        events.publishEvent(ReviewCompleted.problem());
     }
 
     /**
@@ -316,6 +324,7 @@ public class LlmProblemService {
         GeneratedProblemDraft draft = findDraft(draftId);
         draft.restore();
         log.info("문제 초안 복구: #{} — 검수 대기로 되돌림", draft.getId());
+        events.publishEvent(ReviewCompleted.problem());
     }
 
     private GeneratedProblemDraft findDraft(Long id) {

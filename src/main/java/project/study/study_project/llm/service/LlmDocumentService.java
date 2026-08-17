@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -50,6 +51,9 @@ public class LlmDocumentService {
     private final GeneratedDocumentDraftRepository draftRepository;
     private final AdminDocumentService adminDocumentService;
     private final ObjectMapper objectMapper;
+
+    /** 검수가 끝났음을 알린다 — 스냅샷 내보내기가 커밋 뒤에 듣는다({@link ReviewCompleted}). */
+    private final ApplicationEventPublisher events;
 
     /* ── 흡수(저장) ───────────────────────────────────────────── */
 
@@ -150,12 +154,16 @@ public class LlmDocumentService {
 
         draft.approve(created.id()); // 엔티티도 같은 규칙을 방어(이중 안전장치)
         log.info("문서 초안 승인: \"{}\" → document#{}", draft.getTitle(), created.id());
+        events.publishEvent(ReviewCompleted.document());
         return created;
     }
 
     @Transactional
     public void reject(Long draftId, String reason) {
         findDraft(draftId).reject(truncate(trimToNull(reason), 500));
+        // 거절하면 배치의 "쓰지 마라" 목록(rejectedSlugs)이 늘어난다 — 스냅샷을 다시 찍어야
+        // 그 문서를 근거로 사흘 치 문제가 만들어지는 것을 막을 수 있다.
+        events.publishEvent(ReviewCompleted.document());
     }
 
     /**
@@ -163,8 +171,8 @@ public class LlmDocumentService {
      *
      * <p>규칙은 엔티티에 있다({@link GeneratedDocumentDraft#restore()}). 문서 쪽에서 한 가지 더
      * 기억할 것: 복구하면 배치의 "쓰지 마라" 목록({@code rejectedSlugs})에서도 빠지므로
-     * <b>그 문서로 다시 문제가 만들어질 수 있다</b>. 스냅샷 파일은 앱을 켤 때 갱신되고
-     * 사용자가 커밋해야 배치에 반영된다({@code ExistingDocumentsExporter}).
+     * <b>그 문서로 다시 문제가 만들어질 수 있다</b>. 스냅샷 파일은 이 트랜잭션이 커밋된 직후
+     * 갱신되고({@link ReviewCompleted}), 사용자가 커밋해야 배치에 반영된다.
      */
     @Transactional
     public void restore(Long draftId) {
@@ -172,6 +180,7 @@ public class LlmDocumentService {
         draft.restore();
         log.info("문서 초안 복구: \"{}\" — 검수 대기로 되돌림 (배치가 다시 근거로 쓸 수 있게 됨)",
                 draft.getTitle());
+        events.publishEvent(ReviewCompleted.document());
     }
 
     private GeneratedDocumentDraft findDraft(Long id) {

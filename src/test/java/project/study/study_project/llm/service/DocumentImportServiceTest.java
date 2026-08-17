@@ -59,7 +59,7 @@ class DocumentImportServiceTest {
     @BeforeEach
     void setUp() {
         LlmDocumentService llmDocumentService =
-                new LlmDocumentService(draftRepository, adminDocumentService, objectMapper);
+                new LlmDocumentService(draftRepository, adminDocumentService, objectMapper, event -> { });
         service = new DocumentImportService(llmDocumentService, importedFileRepository, objectMapper);
 
         // save는 받은 엔티티를 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내

@@ -9,6 +9,8 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.dto.RejectionNotesFile;
 
@@ -60,6 +62,27 @@ public class RejectionNotesExporter implements ApplicationRunner {
             // 이 기능이 실패해도 앱은 정상이어야 한다 — 프롬프트 품질 개선은 부가 기능이고,
             // 이것 때문에 부팅이 막히면 퀴즈 풀이 같은 본 기능까지 죽는다.
             log.warn("거절 사유 스냅샷 내보내기 실패(무시하고 계속): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 검수가 <b>커밋된 뒤</b> 스냅샷을 다시 찍는다 — 자세한 배경은 {@link ReviewCompleted}.
+     *
+     * <p>PROBLEM 외의 신호는 흘려보낸다. 바뀔 리 없는 파일을 다시 읽고 비교하는 비용은
+     * 작지만, 로그에 "변경 없음"이 두 배로 쌓여 진짜 갱신이 묻힌다.
+     *
+     * <p>실패해도 검수는 성공으로 남는다({@code run}과 같은 판단). 커밋이 이미 끝난 뒤라
+     * 되돌릴 것이 없고, 스냅샷은 부가 기능이라 이것 때문에 검수를 막으면 안 된다.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onReviewCompleted(ReviewCompleted event) {
+        if (event.target() != ReviewCompleted.Target.PROBLEM) {
+            return;
+        }
+        try {
+            export(Path.of(exportDir));
+        } catch (Exception e) {
+            log.warn("거절 사유 스냅샷 내보내기 실패(검수는 정상 처리됨): {}", e.getMessage());
         }
     }
 

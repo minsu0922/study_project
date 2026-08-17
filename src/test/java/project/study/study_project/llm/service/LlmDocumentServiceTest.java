@@ -57,7 +57,7 @@ class LlmDocumentServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new LlmDocumentService(draftRepository, adminDocumentService, objectMapper);
+        service = new LlmDocumentService(draftRepository, adminDocumentService, objectMapper, event -> { });
         lenient().when(draftRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 

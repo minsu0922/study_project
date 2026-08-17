@@ -70,7 +70,7 @@ class DraftImportServiceTest {
     void setUp() {
         LlmProblemService llmProblemService = new LlmProblemService(
                 problemGenerator, draftRepository, problemRepository, adminProblemService,
-                objectMapper, "claude-opus-5", List.of(Domain.NETWORK));
+                objectMapper, event -> { }, "claude-opus-5", List.of(Domain.NETWORK));
         service = new DraftImportService(llmProblemService, importedFileRepository, objectMapper);
 
         // saveAll은 받은 목록을 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내
