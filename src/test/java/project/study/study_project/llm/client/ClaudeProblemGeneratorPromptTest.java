@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.util.List;
 
@@ -206,7 +207,9 @@ class ClaudeProblemGeneratorPromptTest {
     @DisplayName("해설에 분량 숫자가 박혀 있다 — 숫자 없는 품질 요구는 지켜지지 않는다")
     void pinsExplanationLength() {
         assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
-                .contains("400~700자")
+                .as("프롬프트가 요구하는 분량과 검증기가 재는 분량은 같아야 한다")
+                .contains("%d~%d자".formatted(
+                        ProblemItemRule.EXPLANATION_MIN, ProblemItemRule.EXPLANATION_MAX))
                 .as("상한을 준 대가로 되풀이 금지가 따라와야 한다")
                 .contains("같은 말을 되풀이하지 마라")
                 .as("틀렸을 때 어디로 돌아가면 되는지가 복습 동선이다")

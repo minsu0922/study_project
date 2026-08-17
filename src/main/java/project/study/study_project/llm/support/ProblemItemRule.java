@@ -1,9 +1,12 @@
 package project.study.study_project.llm.support;
 
+import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 모델이 만든 문제 항목 하나가 <b>쓸 수 있는 물건인지</b> 판정하는 규칙 — 생성 배치와 흡수가 공유한다.
@@ -99,6 +102,114 @@ public final class ProblemItemRule {
      */
     public static boolean hasBlankExplanation(GeneratedProblemItem item) {
         return isBlank(item.explanation());
+    }
+
+    /* ── 품질 경고 ───────────────────────────────────────────────
+     * 여기부터는 "퀴즈로 성립하는가"가 아니라 "우리가 원하는 물건인가"를 본다.
+     *
+     * 왜 defectOf에 넣지 않았나. 규약 위반은 흡수가 <버린다>. 해설이 350자인 문제를
+     * 버리면 멀쩡한 문제를 요금까지 내고 잃는 셈이다. 품질은 사람이 검수함에서 보고
+     * 판단할 몫이고, 여기서 할 일은 <놓치지 않게 세어 주는 것>까지다.
+     *
+     * 왜 검증기가 필요한가. 프롬프트에 적어 둔 숫자는 지켜지지 않는다는 것을 실측했다 —
+     * "해설은 400~700자로 쓴다"고 적어 뒀는데 2026-08-13 배치는 5개가 전부 359~395자였고,
+     * 아무도 몰랐다. 검사하지 않는 규칙은 없는 규칙이다. */
+
+    /**
+     * 해설 분량의 아래·위 한계. <b>생성 프롬프트의 숫자와 같아야 한다</b>
+     * ({@code ClaudeProblemGenerator.SYSTEM_PROMPT}의 [해설] 절).
+     *
+     * <p>둘이 갈라지면 두 방향으로 다 나쁘다. 검사가 느슨하면 지시를 어겨도 조용하고,
+     * 검사가 빡빡하면 <b>지시대로 쓴 해설이 매번 경고를 달고 나온다</b>. 경고가 일상이 되면
+     * 사람이 경고를 안 보게 되는데, 그게 이 저장소가 이미 겪은 실패 방식이다
+     * ({@code DocumentDraftValidator.WARN_LENGTH} 주석의 "한쪽만 고치면" 문단).
+     * 그래서 {@code ClaudeProblemGeneratorPromptTest}가 프롬프트와 이 값을 대조한다.
+     */
+    public static final int EXPLANATION_MIN = 400;
+
+    /** 해설 분량 위 한계 — {@link #EXPLANATION_MIN} 참고. */
+    public static final int EXPLANATION_MAX = 700;
+
+    /**
+     * 초급 지문의 길이 상한.
+     *
+     * <p>초급 규칙은 "상황 없이 한두 문장"인데, 그 말은 세어 볼 수가 없다. 실측으로 대신했다 —
+     * 2026-08-16 초급 5문제의 지문은 45·97·124·145·149자였고, <b>짧은 45자짜리 하나만</b>
+     * 상황 없는 정의 문제였다. 나머지 넷은 모두 "~했다"로 시작하는 배경 서술이 붙어 있었다.
+     * 그 경계가 대략 여기다.
+     *
+     * <p>넘었다고 곧바로 잘못은 아니다. 용어가 길거나 조건을 한 줄 붙여야 하는 문제도 있다.
+     * 그래서 차단이 아니라 경고이고, 판단은 검수자가 한다.
+     */
+    public static final int BEGINNER_QUESTION_MAX = 120;
+
+    /**
+     * 지문이 <b>근거 문서를 가리키는</b> 표현. 문제는 혼자서 성립해야 한다.
+     *
+     * <p>2026-08-16 4번이 실제로 이랬다: "MVCC가 읽기를 대기 없이 처리할 수 있는 대신 치르는
+     * 대가로 <b>문서가 든</b> 것은?" 문서를 읽지 않은 학습자에게는 <b>무슨 문서인지조차</b>
+     * 알 수 없는 문제가 된다. 게다가 이 서비스에서 문제는 데일리 퀴즈·복습으로 문서와
+     * 떨어져 노출되므로, 그 자리에는 가리킬 문서가 아예 없다.
+     *
+     * <p>근거 문서는 <b>출제의 재료</b>이지 문제의 등장인물이 아니다 — 그 구분이 무너진 자리다.
+     */
+    private static final Pattern DOCUMENT_REFERENCE =
+            Pattern.compile("문서(가|에|에서|의|를|와|에는|에도)?\\s*(든|따르면|설명한|제시한|말한|언급한|나온|밝힌)");
+
+    /**
+     * 해설이 보기를 <b>번호로</b> 가리키는 표현. 내보낼 때 보기를 섞으므로 번호가 어긋난다.
+     *
+     * <p>정답 위치 편향을 고치면서 보기를 내보내는 시점에 섞기로 했는데({@code QuizProblemItem},
+     * 커밋 9a4fd6b), 그 결정에는 <b>짝이 되는 제약</b>이 딸려 있었다 — 해설이 "2번 보기는"
+     * 이라고 쓰면 섞인 뒤에는 엉뚱한 보기를 가리킨다. 지금까지 사고가 안 난 것은 모델이
+     * 마침 번호를 안 썼기 때문이지 막아 둬서가 아니다.
+     *
+     * <p>이런 종류가 가장 위험하다. 검수자는 <b>섞이기 전</b> 화면을 보므로 번호가 맞아
+     * 보이고, 학습자만 어긋난 해설을 읽는다. 사람 눈으로는 영영 안 걸리는 결함이다.
+     */
+    private static final Pattern CHOICE_NUMBER_REFERENCE =
+            Pattern.compile("([1-4]번|[①-④]|첫\\s*번째|두\\s*번째|세\\s*번째|네\\s*번째)\\s*(보기|선택지|항목)"
+                    + "|(보기|선택지)\\s*([1-4]번|[1-4]\\b|[①-④])");
+
+    /**
+     * 항목 하나의 품질 경고를 모두 모아 돌려준다. 없으면 빈 목록.
+     *
+     * <p>{@link #defectOf}가 하나만 돌려주는 것과 달리 여기는 목록이다 — 규약 위반은 하나만
+     * 있어도 그 항목을 버리므로 첫 번째면 충분하지만, 경고는 사람이 <b>한 번에 다 보고</b>
+     * 고치는 편이 왕복이 적다({@code DocumentDraftValidator.validate}와 같은 판단).
+     *
+     * @param difficulty 난이도. {@code null}이면 난이도별 검사(지문 길이)를 건너뛴다 —
+     *                   관리자 화면의 직접 생성처럼 난이도를 알 수 없는 경로를 위한 여지
+     */
+    public static List<String> qualityWarningsOf(GeneratedProblemItem item, Difficulty difficulty) {
+        List<String> warnings = new ArrayList<>();
+
+        String explanation = item.explanation();
+        if (isBlank(explanation)) {
+            warnings.add("해설 없음");
+        } else {
+            int length = explanation.trim().length();
+            if (length < EXPLANATION_MIN) {
+                warnings.add("해설이 짧음 (%d자, 기준 %d자)".formatted(length, EXPLANATION_MIN));
+            } else if (length > EXPLANATION_MAX) {
+                warnings.add("해설이 김 (%d자, 기준 %d자)".formatted(length, EXPLANATION_MAX));
+            }
+            if (CHOICE_NUMBER_REFERENCE.matcher(explanation).find()) {
+                warnings.add("해설이 보기를 번호로 가리킴 (내보낼 때 보기를 섞으므로 어긋난다)");
+            }
+        }
+
+        String question = item.question();
+        if (!isBlank(question)) {
+            if (DOCUMENT_REFERENCE.matcher(question).find()) {
+                warnings.add("지문이 근거 문서를 가리킴 (문제는 혼자 성립해야 한다)");
+            }
+            if (difficulty == Difficulty.BEGINNER && question.trim().length() > BEGINNER_QUESTION_MAX) {
+                warnings.add("초급 지문이 김 (%d자, 기준 %d자 — 상황 서술이 붙었을 수 있다)"
+                        .formatted(question.trim().length(), BEGINNER_QUESTION_MAX));
+            }
+        }
+        return warnings;
     }
 
     /** 로그·경고에 쓸 지문 앞부분. 지문이 없으면 그 사실을 문구로 보여 준다. */

@@ -193,7 +193,7 @@ public final class DraftGeneratorCli {
         // "목록이 비었나"만 봐서는 부족했다. 2026-08-14 배치는 5개를 요청해 3개를 받았고
         // 그중 하나가 지문·해설이 빈 껍데기여서 실제로 쓴 건 2개인데, job은 초록불로 끝났다.
         // 검수함에 문제가 적게 들어온 것을 사람이 먼저 눈치챈 뒤에야 파일을 열어 보고 알았다.
-        reportYield(checkYield(problems, count, type), date);
+        reportYield(checkYield(problems, count, type, difficulty), date);
 
         // ── 8. 파일로 저장 ────────────────────────────────────────
         GeneratedBatchFile batch = new GeneratedBatchFile(
@@ -759,8 +759,14 @@ public final class DraftGeneratorCli {
      * @param defects            버려질 항목의 사유(사람이 읽는 문장)
      * @param blankExplanations  해설만 빈 항목의 지문 앞부분. 흡수는 통과하므로 {@code usable}에는 포함된다
      */
+    /**
+     * @param warnings 버리지는 않지만 알려야 할 것 — 해설 분량, 초급 지문 길이, 문서 지칭 등.
+     *                 전에는 "해설이 비었다" 하나뿐이라 {@code blankExplanations}였는데,
+     *                 프롬프트에 숫자로 적어 둔 규칙들이 지켜지지 않는 것을 실측하고
+     *                 ({@code ProblemItemRule}의 품질 경고 절) 같은 통로로 모았다
+     */
     record YieldCheck(int requested, int received, int usable,
-                      List<String> defects, List<String> blankExplanations) {
+                      List<String> defects, List<String> warnings) {
 
         /** 요청한 만큼 쓸 만한 게 왔는지. 모델이 더 많이 주는 경우도 부족은 아니다. */
         boolean isShort() {
@@ -778,9 +784,10 @@ public final class DraftGeneratorCli {
      * <p>판정은 {@link ProblemItemRule}에 맡긴다. 여기서 직접 조건을 적으면 흡수 쪽 규칙과
      * 갈라져 "배치는 5개 다 멀쩡하다는데 검수함에는 2개만 들어온" 상태가 된다.
      */
-    static YieldCheck checkYield(List<GeneratedProblemItem> problems, int requested, ProblemType type) {
+    static YieldCheck checkYield(List<GeneratedProblemItem> problems, int requested, ProblemType type,
+                                 Difficulty difficulty) {
         List<String> defects = new ArrayList<>();
-        List<String> blankExplanations = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
         int usable = 0;
 
         for (int i = 0; i < problems.size(); i++) {
@@ -793,11 +800,11 @@ public final class DraftGeneratorCli {
             usable++;
             // 버릴 것은 아니지만 알려야 할 것. 흡수를 통과하므로 usable을 센 <뒤에> 본다 —
             // 여기서 usable에서 빼면 경고가 말하는 개수와 실제 검수함 개수가 어긋난다.
-            if (ProblemItemRule.hasBlankExplanation(item)) {
-                blankExplanations.add("%d번 — %s".formatted(i + 1, ProblemItemRule.snippet(item)));
+            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty)) {
+                warnings.add("%d번 [%s] — %s".formatted(i + 1, warning, ProblemItemRule.snippet(item)));
             }
         }
-        return new YieldCheck(requested, problems.size(), usable, defects, blankExplanations);
+        return new YieldCheck(requested, problems.size(), usable, defects, warnings);
     }
 
     /**
@@ -831,7 +838,7 @@ public final class DraftGeneratorCli {
                             .formatted(yield.received(), String.join(" / ", yield.defects())));
         }
 
-        if (!yield.isShort() && yield.blankExplanations().isEmpty()) {
+        if (!yield.isShort() && yield.warnings().isEmpty()) {
             System.out.printf("수확 점검 통과: 요청 %d개 → 유효 %d개%n", yield.requested(), yield.usable());
             return;
         }
@@ -851,9 +858,11 @@ public final class DraftGeneratorCli {
                     → 문서 프롬프트의 고급 재료 요구량 또는 `llm.generation.batch-count`를 확인하세요.
                     """);
         }
-        if (!yield.blankExplanations().isEmpty()) {
-            message.append("%n⚠️ **해설이 빈 문제 %d개**(검수함에는 들어갑니다)%n%s%n"
-                    .formatted(yield.blankExplanations().size(), bullets(yield.blankExplanations())));
+        if (!yield.warnings().isEmpty()) {
+            // 검수함에는 들어간다는 말을 빼면 안 된다 — 경고를 "버려졌다"로 읽으면
+            // 사람이 개수를 세어 보고 혼란스러워한다(경고와 실제 결과가 어긋나 보인다).
+            message.append("%n⚠️ **품질 경고 %d건**(검수함에는 들어갑니다)%n%s%n"
+                    .formatted(yield.warnings().size(), bullets(yield.warnings())));
         }
 
         // 여기서 String.format을 한 번 더 돌리면 안 된다 — 지문 앞부분에 '%'가 들어 있으면

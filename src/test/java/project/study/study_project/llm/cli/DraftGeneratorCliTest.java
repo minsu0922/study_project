@@ -8,6 +8,7 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.support.GenerationSchedule;
+import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.io.InputStream;
 import java.time.LocalDate;
@@ -355,7 +356,7 @@ class DraftGeneratorCliTest {
                 new GeneratedProblemItem("", "", "", fourChoices()));
 
         DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 5, ProblemType.MULTIPLE_CHOICE);
+                DraftGeneratorCli.checkYield(problems, 5, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.received()).isEqualTo(3);
         assertThat(yield.usable()).as("껍데기는 흡수 단계에서 버려지므로 유효가 아니다").isEqualTo(2);
@@ -369,16 +370,17 @@ class DraftGeneratorCliTest {
     @DisplayName("요청한 만큼 다 오면 부족이 아니다 — 평소의 성공 경로")
     void fullYieldIsNotShort() {
         List<GeneratedProblemItem> problems = List.of(
-                multipleChoice("문제 1", "해설 1"),
-                multipleChoice("문제 2", "해설 2"));
+                multipleChoice("문제 1", goodExplanation()),
+                multipleChoice("문제 2", goodExplanation()));
 
         DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE);
+                DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).isEqualTo(2);
         assertThat(yield.isShort()).isFalse();
         assertThat(yield.defects()).isEmpty();
-        assertThat(yield.blankExplanations()).isEmpty();
+        assertThat(yield.warnings()).as("규약도 분량도 지킨 결과에는 아무 소리도 나면 안 된다")
+                .isEmpty();
     }
 
     /**
@@ -394,8 +396,8 @@ class DraftGeneratorCliTest {
                 multipleChoice("문제 2", "해설 2"),
                 multipleChoice("문제 3", "해설 3"));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE).isShort())
-                .isFalse();
+        assertThat(DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null)
+                .isShort()).isFalse();
     }
 
     /**
@@ -407,16 +409,17 @@ class DraftGeneratorCliTest {
     @DisplayName("해설만 빈 문제는 유효로 세되 따로 알린다 — 흡수를 통과하기 때문")
     void blankExplanationCountsAsUsableButIsReported() {
         List<GeneratedProblemItem> problems = List.of(
-                multipleChoice("해설이 있는 문제", "해설"),
+                multipleChoice("해설이 있는 문제", goodExplanation()),
                 multipleChoice("해설이 없는 문제", ""));
 
         DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE);
+                DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).isEqualTo(2);
         assertThat(yield.isShort()).isFalse();
         assertThat(yield.defects()).isEmpty();
-        assertThat(yield.blankExplanations()).singleElement().asString().contains("해설이 없는 문제");
+        assertThat(yield.warnings()).singleElement().asString()
+                .contains("해설 없음").contains("해설이 없는 문제");
     }
 
     @Test
@@ -430,11 +433,99 @@ class DraftGeneratorCliTest {
                         new GeneratedProblemItem.GeneratedChoice("라", false))));
 
         DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE);
+                DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).isZero();
         assertThat(yield.defects()).singleElement().asString()
                 .contains("보기 4개, 정답 2개");
+    }
+
+    /* ── 품질 경고 ─────────────────────────────────────────────
+     * 프롬프트에 숫자로 적어 둔 규칙이 지켜지지 않는데 아무도 모르던 것을 여기서 센다.
+     * 전부 <경고>이고 흡수는 통과한다 — 멀쩡한 문제를 요금까지 내고 버릴 이유가 없다. */
+
+    /**
+     * 실측이 근거다. 프롬프트는 "해설은 400~700자"라고 적어 뒀는데 2026-08-13 배치는
+     * 5개가 <b>전부</b> 359~395자였고, 검사하는 곳이 없어 아무도 몰랐다.
+     */
+    @Test
+    @DisplayName("해설이 기준보다 짧으면 알린다 — 08-13 배치는 5개 전부 미달이었고 아무도 몰랐다")
+    void warnsOnShortExplanation() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("짧은 해설", "가".repeat(ProblemItemRule.EXPLANATION_MIN - 1)));
+
+        DraftGeneratorCli.YieldCheck yield =
+                DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
+
+        assertThat(yield.usable()).as("짧아도 퀴즈로는 성립하므로 버리지 않는다").isEqualTo(1);
+        assertThat(yield.warnings()).singleElement().asString().contains("해설이 짧음");
+    }
+
+    /**
+     * <b>사람 눈으로는 영영 안 걸리는 결함.</b> 정답 위치 편향을 고치면서 보기를 내보낼 때
+     * 섞기로 했는데(커밋 9a4fd6b), 해설이 "2번 보기는"이라고 쓰면 섞인 뒤 엉뚱한 보기를
+     * 가리킨다. 검수자는 <b>섞이기 전</b> 화면을 보므로 번호가 맞아 보이고, 학습자만
+     * 어긋난 해설을 읽는다. 지금까지 사고가 안 난 것은 모델이 마침 번호를 안 썼기 때문이다.
+     */
+    @Test
+    @DisplayName("해설이 보기를 번호로 가리키면 알린다 — 내보낼 때 섞으므로 학습자에게만 어긋나 보인다")
+    void warnsWhenExplanationPointsAtChoiceNumbers() {
+        String explanation = "가".repeat(400) + " 2번 보기는 UDP의 특성을 TCP로 착각한 것이다.";
+        List<GeneratedProblemItem> problems = List.of(multipleChoice("번호를 가리키는 해설", explanation));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings()).singleElement().asString().contains("보기를 번호로 가리킴");
+    }
+
+    /**
+     * 2026-08-16 4번이 실제로 이랬다 — "MVCC가 ... 대가로 <b>문서가 든</b> 것은?"
+     * 문제는 데일리 퀴즈·복습에서 문서와 떨어져 노출되므로, 그 자리에는 가리킬 문서가 없다.
+     */
+    @Test
+    @DisplayName("지문이 근거 문서를 가리키면 알린다 — 문서와 떨어져 노출되면 무슨 문서인지 알 수 없다")
+    void warnsWhenQuestionReferencesTheSourceDocument() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("MVCC가 대기 없이 읽는 대신 치르는 대가로 문서가 든 것은?", goodExplanation()));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings()).singleElement().asString().contains("근거 문서를 가리킴");
+    }
+
+    /**
+     * "상황 없이 한두 문장"은 세어 볼 수 없어 길이로 대신한다. 08-16 초급 지문은
+     * 45·97·124·145·149자였고, <b>45자짜리 하나만</b> 상황 없는 정의 문제였다.
+     */
+    @Test
+    @DisplayName("초급 지문이 길면 알린다 — 상황 서술이 붙으면 길이부터 늘어난다")
+    void warnsOnLongBeginnerQuestion() {
+        // 2026-08-16 초급 1번의 실제 지문(149자). 초급인데 "~했다"로 배경을 서술한다.
+        String longQuestion = "재고 관리 트랜잭션에서 `SELECT * FROM item WHERE price < 1000` 을 두 번 실행했다. "
+                + "두 번째 결과에는 첫 번째에 없던 행 두 개가 더 들어 있었다"
+                + "(다른 트랜잭션이 그 사이 새 행을 삽입하고 커밋했다). 이 상황에 해당하는 이상 현상은?";
+        List<GeneratedProblemItem> problems = List.of(multipleChoice(longQuestion, goodExplanation()));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.BEGINNER).warnings())
+                .singleElement().asString().contains("초급 지문이 김");
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.INTERMEDIATE).warnings())
+                .as("중급은 상황이 한 문단 있는 것이 정상이라 길이를 재지 않는다")
+                .isEmpty();
+    }
+
+    /**
+     * 오탐이 나면 경고가 매번 뜨고, 그러면 사람이 경고 자체를 안 보게 된다.
+     * 이 저장소가 이미 겪은 실패 방식이라 정상 결과에 조용한지를 따로 못 박는다.
+     */
+    @Test
+    @DisplayName("규약도 분량도 지킨 문제에는 경고가 없다 — 오탐이 경고를 무력화한다")
+    void staysQuietOnGoodProblems() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("팬텀 리드란 무엇인가?", goodExplanation()));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.BEGINNER).warnings()).isEmpty();
     }
 
     /* ── 근거 문서에 오늘 캘 재료가 있는지 ─────────────────────
@@ -494,6 +585,15 @@ class DraftGeneratorCliTest {
     }
 
     /* ── 테스트 재료 ─────────────────────────────────────────── */
+
+    /**
+     * 품질 검사를 <b>통과하는</b> 해설. 길이를 여기서 한 번만 정해 두는 이유는,
+     * 각 테스트가 제 숫자를 적으면 {@link ProblemItemRule#EXPLANATION_MIN}을 올린 날
+     * 그 테스트들이 조용히 "경고가 나는 해설"로 바뀌기 때문이다.
+     */
+    private static String goodExplanation() {
+        return "해".repeat(ProblemItemRule.EXPLANATION_MIN + 20);
+    }
 
     private static GeneratedProblemItem multipleChoice(String question, String explanation) {
         // 객관식의 answer는 빈 문자열이 정상이다 — 정답은 보기 쪽에 있다(docs/01)
