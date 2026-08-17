@@ -15,6 +15,7 @@ import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Claude API 기반 문제 생성기 — {@link ProblemGenerator}의 실제 구현(docs/13).
@@ -34,6 +35,39 @@ import java.util.List;
 @Slf4j
 @Component
 public class ClaudeProblemGenerator implements ProblemGenerator {
+
+    /**
+     * 난이도별로 <b>근거 문서에서 캐낼 절</b> — 절 이름의 단일 출처.
+     *
+     * <p><b>왜 상수로 뺐나.</b> 같은 절 이름이 세 곳에서 필요한데, 지금까지는 {@link #sourceFocus}의
+     * 문장 안에 문자열로 박혀 있어서 나머지 두 곳이 그것을 알 방법이 없었다.
+     * <ul>
+     *   <li>프롬프트: "이번 난이도는 이 절을 써라"라고 모델에게 지목한다
+     *   <li>{@code DraftGeneratorCli.hasMaterialFor}: 오늘 쓸 문서에 <b>그 절이 실제로 있는지</b> 본다
+     *   <li>{@code ClaudeProblemGeneratorPromptTest}: 지목한 이름이 실재하는 절인지 대조한다
+     * </ul>
+     *
+     * <p><b>없으면 어떤 사고가 나는가.</b> 2026-08-15에 문서 프롬프트의 절 이름을 바꿨는데
+     * (커밋 2a5538c) 하루 전 만들어 둔 문서는 옛 이름 그대로였다. 그래서 중급이 지목하는 두 절이
+     * 그 문서에 <b>둘 다 없는</b> 상태가 됐다. 이건 조용하다 — 문제는 정상적으로 생성되고 스키마도
+     * 통과한다. 모델이 알아서 다른 절을 캐는데, 그게 하필 {@code ## 언제 깨지는가}면
+     * <b>다음 날 고급이 쓸 재료를 미리 먹어 치운다</b>(8/14에 실제로 겪은 경로).
+     *
+     * <p><b>여기 적는 이름은 {@link ClaudeDocumentGenerator#REQUIRED_SECTIONS}에 있는 것이어야
+     * 한다.</b> 문서에 존재할 수 없는 절을 지목하면 매일 폴백으로 떨어진다. 테스트가 대조한다.
+     *
+     * <p><b>중급에 두 절을 적은 이유.</b> 문서 프롬프트가 {@code ### 왜 이렇게 설계됐는가}를
+     * 문서 전체 1개로 제한하면서 캘 곳이 하나로 줄었다. 설계 근거는 본문 문장으로도 녹아 있으므로
+     * {@code ## 실무에서는 이렇게 쓴다}의 선택 이유까지 함께 지목해야 재료가 남는다.
+     *
+     * <p>{@code public}인 이유는 검사하는 쪽({@code llm.cli})이 다른 패키지라서다 —
+     * {@code REQUIRED_SECTIONS}를 {@code llm.support}의 검증기에 열어 둔 것과 같은 판단.
+     */
+    public static final Map<Difficulty, List<String>> SOURCE_SECTIONS = Map.of(
+            Difficulty.BEGINNER, List.of("## 무엇인가"),
+            Difficulty.INTERMEDIATE, List.of("### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다"),
+            Difficulty.ADVANCED, List.of("## 언제 깨지는가", "## 면접에서 이렇게 물어본다")
+    );
 
     private final String model;
 
@@ -272,20 +306,24 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      * 설계 근거는 본문 문장으로 녹여 쓰게 해 뒀으므로, 소제목만이 아니라 <b>근거를 밝힌
      * 문장들</b>까지 함께 지목해야 중급 재료가 그대로 남는다.
      *
-     * <p>절 이름이 문자열로 두 파일에 흩어져 있는 것이 근본 원인이다. 지금은 테스트가
-     * 세 난이도의 지시가 서로 다른지까지만 보고 <b>이름이 실재하는지</b>는 못 봤다 —
-     * 그래서 {@code ClaudeProblemGeneratorPromptTest}에 실재 확인을 추가했다.
+     * <p>절 이름이 문자열로 두 파일에 흩어져 있던 것이 근본 원인이었다. 이제 이름은
+     * {@link #SOURCE_SECTIONS} 한 곳에만 적고 이 문장들은 <b>거기서 꺼내 끼운다</b> —
+     * 문장을 고치다 이름이 갈라지는 일 자체가 없어진다.
      */
     private String sourceFocus(Difficulty difficulty) {
+        List<String> sections = SOURCE_SECTIONS.get(difficulty);
         return switch (difficulty) {
-            case BEGINNER -> "[이번 난이도에서 쓸 부분] 문서의 '## 무엇인가' 절(정의·용어 설명)과 "
+            case BEGINNER -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(정의·용어 설명)과 "
+                    .formatted(sections.get(0))
                     + "본론의 기본 동작 부분을 쓴다. 문서를 읽은 사람이라면 풀 수 있어야 한다.";
             case INTERMEDIATE -> "[이번 난이도에서 쓸 부분] 문서가 <왜 그렇게 했는지>를 밝힌 곳을 쓴다 — "
-                    + "'### 왜 이렇게 설계됐는가' 소제목뿐 아니라, 본문 문장 안에서 다른 선택지를 두고 "
-                    + "판단한 대목과 '## 실무에서는 이렇게 쓴다' 절의 선택 이유가 모두 여기 해당한다. "
+                    + "'%s' 소제목뿐 아니라, 본문 문장 안에서 다른 선택지를 두고 "
+                    .formatted(sections.get(0))
+                    + "판단한 대목과 '%s' 절의 선택 이유가 모두 여기 해당한다. ".formatted(sections.get(1))
                     + "문서가 설명한 원리를 문서에 없는 새로운 상황에 적용해 판단하게 만들어라.";
-            case ADVANCED -> "[이번 난이도에서 쓸 부분] 문서의 '## 언제 깨지는가' 절(깨지는 조건과 흔한 오해)과 "
-                    + "'## 면접에서 이렇게 물어본다' 절을 쓴다. 그 질문들이 다루는 트레이드오프와 "
+            case ADVANCED -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(깨지는 조건과 흔한 오해)과 "
+                    .formatted(sections.get(0))
+                    + "'%s' 절을 쓴다. 그 질문들이 다루는 트레이드오프와 ".formatted(sections.get(1))
                     + "엣지 케이스를 문제로 바꿔라. 다만 질문을 그대로 옮기지 말고 객관식으로 재구성한다.";
         };
     }

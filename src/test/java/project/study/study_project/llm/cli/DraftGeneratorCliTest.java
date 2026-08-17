@@ -3,6 +3,7 @@ package project.study.study_project.llm.cli;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
+import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
@@ -434,6 +435,62 @@ class DraftGeneratorCliTest {
         assertThat(yield.usable()).isZero();
         assertThat(yield.defects()).singleElement().asString()
                 .contains("보기 4개, 정답 2개");
+    }
+
+    /* ── 근거 문서에 오늘 캘 재료가 있는지 ─────────────────────
+     * 2026-08-15 주기 재현. 문서는 멀쩡히 있고 본문도 비지 않았고 거절되지도 않았는데
+     * <중급이 지목하는 두 절만> 없었다(절 이름을 문서 생성 뒤에 바꿔서, 커밋 2a5538c).
+     * 기존 세 관문은 전부 통과하므로 아무도 몰랐고, 모델은 멈추는 대신 다른 절을 캔다 —
+     * 그게 '언제 깨지는가'면 다음 날 고급이 빈손이 된다. 그 조용한 경로를 여기서 막는다. */
+
+    @Test
+    @DisplayName("오늘 난이도가 캘 절이 하나도 없으면 재료 없음 — 8/15 주기가 정확히 이 상태였다")
+    void detectsMissingMaterialForDifficulty() {
+        // 최상위 필수 절은 다 있지만 중급이 지목하는 두 곳이 없는 문서
+        String doc = """
+                # TIME_WAIT
+
+                ## 무엇인가
+                연결을 닫은 쪽이 잠시 머무는 상태다.
+
+                ## 왜 필요한가
+                늦게 도착한 패킷이 다음 연결을 오염시키지 않게 한다.
+
+                ## 언제 깨지는가
+                짧은 연결을 대량으로 열고 닫으면 포트가 마른다.
+
+                ## 면접에서 이렇게 물어본다
+                왜 2MSL인가?
+                """;
+
+        assertThat(DraftGeneratorCli.hasMaterialFor(doc, Difficulty.INTERMEDIATE))
+                .as("'### 왜 이렇게 설계됐는가'도 '## 실무에서는 이렇게 쓴다'도 없다")
+                .isFalse();
+        assertThat(DraftGeneratorCli.hasMaterialFor(doc, Difficulty.BEGINNER))
+                .as("초급 재료는 멀쩡하다 — 난이도별로 따로 봐야 한다")
+                .isTrue();
+        assertThat(DraftGeneratorCli.hasMaterialFor(doc, Difficulty.ADVANCED)).isTrue();
+    }
+
+    /**
+     * 문턱을 "전부 있어야 통과"로 잡으면 재료가 멀쩡한 문서까지 폴백으로 버려진다.
+     * 폴백이 잦아지면 근거 문서 구조(2단계) 자체가 헛돈다 — 오탐이 미탐보다 비싸다.
+     */
+    @Test
+    @DisplayName("지목한 절 중 하나만 있어도 통과 — 전부 요구하면 멀쩡한 문서까지 폴백으로 버린다")
+    void oneSectionIsEnough() {
+        String onlySubheading = "## 무엇인가\n설명\n\n### 왜 이렇게 설계됐는가\n다른 선택지도 있었다.";
+        String onlySection = "## 무엇인가\n설명\n\n## 실무에서는 이렇게 쓴다\n이렇게 쓴다.";
+
+        assertThat(DraftGeneratorCli.hasMaterialFor(onlySubheading, Difficulty.INTERMEDIATE)).isTrue();
+        assertThat(DraftGeneratorCli.hasMaterialFor(onlySection, Difficulty.INTERMEDIATE)).isTrue();
+    }
+
+    @Test
+    @DisplayName("본문이나 난이도를 모르면 막지 않는다 — 확신 없이 버리면 그날 치가 근거 없이 날아간다")
+    void doesNotBlockWhenNothingToJudge() {
+        assertThat(DraftGeneratorCli.hasMaterialFor(null, Difficulty.BEGINNER)).isTrue();
+        assertThat(DraftGeneratorCli.hasMaterialFor("## 무엇인가", null)).isTrue();
     }
 
     /* ── 테스트 재료 ─────────────────────────────────────────── */

@@ -330,6 +330,11 @@ public final class DraftGeneratorCli {
                 System.out.println("근거 문서가 검수에서 거절돼 폴백으로 생성합니다: " + doc.slug());
                 return null;
             }
+            if (!hasMaterialFor(doc.contentMd(), difficulty)) {
+                System.out.printf("근거 문서에 %s 재료가 없어 폴백으로 생성합니다: %s (찾은 절: %s 중 하나도 없음)%n",
+                        difficulty, doc.slug(), ClaudeProblemGenerator.SOURCE_SECTIONS.get(difficulty));
+                return null;
+            }
             return new ResolvedSource(parsed.domain(),
                     new SourceDocument(doc.slug(), doc.title(), doc.contentMd()));
         } catch (Exception e) {
@@ -337,6 +342,45 @@ public final class DraftGeneratorCli {
             System.out.println("근거 문서를 읽지 못해 폴백으로 생성합니다: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 이 문서에 <b>오늘 난이도가 캘 재료가 남아 있는지</b> — 없으면 문서를 쓰지 않는다(폴백).
+     *
+     * <p><b>왜 필요한가.</b> 지금까지 근거 문서를 거르는 기준은 "파일이 있나 / 본문이 비었나 /
+     * 거절됐나" 셋뿐이었다. 셋 다 통과하지만 <b>오늘 쓸 절만 없는</b> 문서가 실제로 나왔다 —
+     * 2026-08-15 주기의 문서에 중급이 지목하는 두 절이 둘 다 없었다(절 이름을 문서 생성 뒤에
+     * 바꿨기 때문, 커밋 2a5538c). 승인된 문서는 재검증되지 않아 아무도 몰랐다.
+     *
+     * <p><b>없으면 왜 나쁜가.</b> 프롬프트가 없는 절을 지목하면 모델은 멈추지 않고
+     * <b>알아서 다른 절을 캔다</b>. 하필 {@code ## 언제 깨지는가}를 캐면 그날 중급이 고급처럼
+     * 나오고, 다음 날 고급은 이미 쓴 재료 앞에서 빈손이 된다(8/14에 겪은 경로).
+     * 실패가 아니라 <b>조용한 품질 저하</b>라 며칠 뒤 사람이 눈으로 알아차릴 때까지 간다.
+     *
+     * <p><b>왜 job을 실패시키지 않고 폴백인가.</b> 문서가 못 쓸 물건인 것은 <b>어제까지의
+     * 사고</b>지 오늘 배치의 잘못이 아니다. 여기서 예외를 던지면 그날 문제가 0개가 되는데,
+     * 폴백으로 가면 모델 지식으로라도 그날 치는 나온다 — "근거 문서가 없는 날"과 똑같은 상황으로
+     * 취급하면 되고, 그 경로는 호출부에 이미 있다(난이도까지 옛 24칸 순환으로 되돌린다).
+     * 대신 사유를 또렷이 찍어 로그만 봐도 원인을 알 수 있게 한다.
+     *
+     * <p><b>왜 "하나라도 있으면 통과"인가(전부가 아니라).</b> 중급 지시는 절 이름 외에
+     * "본문 문장 안에서 판단한 대목"까지 재료로 인정한다. 두 절을 모두 요구하면 재료가 멀쩡히
+     * 있는 문서까지 폴백으로 버려진다. 여기서 막으려는 것은 "조금 부족한 문서"가 아니라
+     * <b>캘 곳이 하나도 없는 문서</b>다 — 문턱을 낮게 두어야 오탐이 안 난다.
+     * (오탐으로 폴백이 잦아지면 2단계 구조 자체가 헛돈다.)
+     *
+     * @param contentMd  문서 본문 마크다운
+     * @param difficulty 오늘 만들 난이도. {@code null}이면 검사할 것이 없으므로 통과
+     */
+    static boolean hasMaterialFor(String contentMd, Difficulty difficulty) {
+        if (contentMd == null || difficulty == null) {
+            return true; // 판단 근거가 없으면 막지 않는다 — 확신 없이 버리는 쪽이 더 나쁘다
+        }
+        List<String> sections = ClaudeProblemGenerator.SOURCE_SECTIONS.get(difficulty);
+        if (sections == null || sections.isEmpty()) {
+            return true; // 지목하는 절이 없는 난이도는 검사 대상이 아니다(방어)
+        }
+        return sections.stream().anyMatch(contentMd::contains);
     }
 
     /**

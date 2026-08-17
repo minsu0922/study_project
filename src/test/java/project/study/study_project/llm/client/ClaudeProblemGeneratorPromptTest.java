@@ -81,17 +81,15 @@ class ClaudeProblemGeneratorPromptTest {
      *
      * <p>이런 어긋남은 조용하다. 문제는 정상적으로 생성되고 스키마도 통과하며, 며칠 뒤
      * "고급인데 왜 쉽지?"로만 드러난다. 원인이 두 파일에 흩어진 문자열이라 되짚기도 어렵다.
-     * 그래서 절 이름의 <b>출처 한 곳</b>({@link ClaudeDocumentGenerator#REQUIRED_SECTIONS})에
-     * 대조한다.
+     * 그래서 절 이름을 {@link ClaudeProblemGenerator#SOURCE_SECTIONS} 한 곳으로 모으고,
+     * 그 이름들이 <b>문서 생성 프롬프트가 실제로 시키는 제목</b>인지 여기서 대조한다.
      */
     @Test
     @DisplayName("난이도 지시가 가리키는 절이 문서에 실제로 있는 절이다 — 없는 절을 지목해도 조용히 지나간다")
     void difficultyFocusPointsAtRealSections() {
-        List<String> sections = ClaudeDocumentGenerator.REQUIRED_SECTIONS;
-
         assertThat(prompt(Difficulty.BEGINNER, DOC))
                 .as("초급 재료는 정의·용어 절이다")
-                .contains(sections.get(0));                 // ## 무엇인가
+                .contains("## 무엇인가");
         assertThat(prompt(Difficulty.ADVANCED, DOC))
                 .as("고급 재료는 '언제 깨지는가'다 — 여기가 어긋나 고급 날 재료가 마를 뻔했다")
                 .contains("## 언제 깨지는가")
@@ -100,9 +98,35 @@ class ClaudeProblemGeneratorPromptTest {
                 .as("중급 재료는 설계 판단 — 소제목 1개로 줄었으므로 본문 문장까지 함께 지목해야 한다")
                 .contains("### 왜 이렇게 설계됐는가")
                 .contains("## 실무에서는 이렇게 쓴다");
+    }
 
-        // 지목한 이름이 전부 실재하는지 — 오타나 옛 이름이 남아 있으면 여기서 걸린다.
-        assertThat(sections).contains("## 언제 깨지는가", "## 실무에서는 이렇게 쓴다");
+    /**
+     * 지목한 절 이름이 <b>문서 생성 프롬프트가 실제로 시키는 제목</b>인지 — 이게 진짜 안전장치다.
+     *
+     * <p>위 테스트는 "프롬프트 문장 안에 그 글자가 들어갔나"만 본다. 그건 {@code sourceFocus}가
+     * 스스로를 확인하는 것이라, 두 파일이 갈라지는 원래 사고는 못 잡는다.
+     * 문서 쪽 프롬프트에 대조해야 <b>문서에 존재할 수 없는 절을 지목하는 상태</b>가 걸린다.
+     *
+     * <p>{@code REQUIRED_SECTIONS}가 아니라 {@code SYSTEM_PROMPT}에 대조하는 이유:
+     * 중급이 지목하는 {@code ### 왜 이렇게 설계됐는가}는 본론 안의 소제목이라
+     * {@code REQUIRED_SECTIONS}(문서 최상위 필수 절 목록)에는 없다. 두 종류를 모두 덮으려면
+     * "그 제목을 쓰라고 시키는 곳" 하나에 대조하는 것이 맞다.
+     */
+    @Test
+    @DisplayName("지목한 절 이름을 문서 프롬프트가 실제로 시킨다 — 문서에 없을 절을 지목하면 매일 폴백으로 떨어진다")
+    void sourceSectionsExistInDocumentPrompt() {
+        assertThat(ClaudeProblemGenerator.SOURCE_SECTIONS)
+                .as("세 난이도 모두 캘 곳이 정해져 있어야 한다")
+                .containsOnlyKeys(Difficulty.BEGINNER, Difficulty.INTERMEDIATE, Difficulty.ADVANCED);
+
+        ClaudeProblemGenerator.SOURCE_SECTIONS.forEach((difficulty, sections) -> {
+            assertThat(sections).as("%s가 캘 절이 하나도 없다", difficulty).isNotEmpty();
+            assertThat(sections).allSatisfy(section ->
+                    assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+                            .as("%s가 지목한 '%s'를 문서 프롬프트가 시키지 않는다 — 문서에 그 절이 안 생긴다",
+                                    difficulty, section)
+                            .contains(section));
+        });
     }
 
     @Test
