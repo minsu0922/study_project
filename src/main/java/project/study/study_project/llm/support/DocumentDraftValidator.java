@@ -107,11 +107,20 @@ public final class DocumentDraftValidator {
 
     /**
      * {@code ## 언제 깨지는가}의 항목 한 개. 형식이 프롬프트에 지정돼 있지 않아
-     * 실물에서 나온 형태({@code **1. 제목**})와 있을 법한 두 형태({@code ### }, {@code - })를
-     * 모두 항목으로 인정한다 — 자세한 이유는 {@link #checkFailureModeCount} 주석 참고.
+     * 실물에서 나온 형태({@code **1. 제목**})와 있을 법한 형태들({@code ### }, {@code - },
+     * {@code 1. })을 모두 항목으로 인정한다 — 자세한 이유는 {@link #checkFailureModeCount} 참고.
+     *
+     * <p><b>맨 하이픈을 포함한 것이 핵심이다.</b> 처음에는 {@code - **}(하이픈+굵게)만
+     * 인정했는데, 그러면 {@code - 깨지는 조건 하나} 같은 <b>평범한 목록으로 잘 쓴 문서에
+     * 경고가 뜬다</b>. 실제로 이 저장소의 테스트 도우미 문서가 그 형태였다.
+     *
+     * <p>대가는 항목 밑의 하위 목록까지 항목으로 세는 것이다. 그래서 개수가 부풀고,
+     * 진짜 부족한 문서를 놓칠 수 있다. 그 방향을 택한 이유는 <b>오탐이 미탐보다 비싸기</b>
+     * 때문이다 — 헛울리는 경고는 사람이 경고 전체를 안 보게 만들지만, 재료가 모자란 것은
+     * 다음 날 수확량 점검이 한 번 더 잡는다({@code DraftGeneratorCli.reportYield}).
      */
     private static final Pattern FAILURE_MODE_ITEM =
-            Pattern.compile("(?m)^(\\*\\*\\d+\\.|###\\s+|-\\s+\\*\\*|\\d+\\.\\s+)");
+            Pattern.compile("(?m)^(\\*\\*\\d+\\.|###\\s+|-\\s+|\\d+\\.\\s+)");
 
     /** 본론 섹션 최소 개수 — 프롬프트는 2~3개를 요구한다. */
     private static final int MIN_BODY_SECTIONS = 2;

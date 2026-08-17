@@ -277,6 +277,23 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("고급인데 명백히 틀린 보기가 하나라도 있으면 그 문제는 고급이 아니다");
     }
 
+    /**
+     * 초급 지문 길이를 <b>프롬프트에도 숫자로</b> 적었는지 — 검증기만 숫자를 알면 반쪽이다.
+     *
+     * <p>이 저장소에서 숫자로 박은 지시만 실제로 지켜졌다(해설 분량, 문서 절 개수).
+     * "한두 문장"은 모델도 사람도 서로 다르게 읽는다. 그리고 두 숫자가 갈라지면
+     * <b>지시대로 쓴 지문이 매번 경고를 달고 나온다</b> — 해설 분량에 건 것과 같은 자물쇠다.
+     */
+    @Test
+    @DisplayName("초급 지문 길이가 프롬프트와 검증기에 같은 숫자로 있다 — 한쪽만 알면 반쪽이다")
+    void pinsBeginnerQuestionLength() {
+        assertThat(prompt(Difficulty.BEGINNER, DOC))
+                .contains("%d자 이내".formatted(ProblemItemRule.BEGINNER_QUESTION_MAX));
+        assertThat(prompt(Difficulty.INTERMEDIATE, DOC))
+                .as("중급은 상황이 한 문단 있는 것이 정상이라 길이를 걸지 않는다")
+                .doesNotContain("자 이내");
+    }
+
     @Test
     @DisplayName("초급이 중급으로 넘어가는 두 경로를 이름 붙여 막는다 — 실제로 그 둘로 넘어갔다")
     void blocksTheTwoWaysBeginnerDriftsUpward() {

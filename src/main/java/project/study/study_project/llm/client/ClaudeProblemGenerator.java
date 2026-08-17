@@ -13,6 +13,7 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.util.List;
 import java.util.Map;
@@ -416,8 +417,13 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      */
     private String difficultyRule(Difficulty difficulty) {
         return switch (difficulty) {
-            case BEGINNER -> "초급 — 용어가 무엇인지를 묻는다. 문서의 정의 부분을 읽은 사람이면 푼다. "
-                    + "지문은 상황 없이 한두 문장이고, 한 문제에 개념 하나만 담는다.";
+            // 지문 길이에 숫자를 박는 이유: 이 저장소에서 <숫자로 적은 지시만> 실제로 지켜졌다
+            // (해설 분량, 문서 절 개수). "한두 문장"은 모델도 사람도 서로 다르게 읽는다.
+            // 이 숫자는 검증기가 재는 값과 같아야 한다(ProblemItemRule.BEGINNER_QUESTION_MAX) —
+            // 갈라지면 지시대로 쓴 지문이 매번 경고를 달고 나온다.
+            case BEGINNER -> ("초급 — 용어가 무엇인지를 묻는다. 문서의 정의 부분을 읽은 사람이면 푼다. "
+                    + "지문은 상황 없이 한두 문장(%d자 이내)이고, 한 문제에 개념 하나만 담는다.")
+                    .formatted(ProblemItemRule.BEGINNER_QUESTION_MAX);
             case INTERMEDIATE -> "중급 — 원리를 처음 보는 상황에 적용하게 한다. "
                     + "지문에 상황이 한 문단 있다.";
             case ADVANCED -> "고급 — 여러 대응 중 무엇을 고를지 묻는다. "

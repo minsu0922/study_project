@@ -281,15 +281,27 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("항목 형식이 달라도 센다 — 형식 하나만 인정하면 멀쩡한 문서에 경고가 뜬다")
     void countsFailureModesInAnyFormat() {
-        String heading = body(TITLE, "본문").replace("**1. 첫째 조건**", "### 첫째 조건");
-        String bullet = body(TITLE, "본문").replace("**1. 첫째 조건**", "- **첫째 조건**");
+        // 다섯 항목을 통째로 다른 형식으로 갈아 끼운다. 하나만 바꿔서는 나머지 넷이
+        // 받쳐 줘서 통과하므로, 그 형식을 정말 세는지 알 수 없다.
+        String base = body(TITLE, "본문");
+        String written = """
+                **1. 첫째 조건**
+                **2. 둘째 조건**
+                **3. 셋째 조건**
+                **4. 넷째 조건**
+                **5. 다섯째 조건**""";
 
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", heading))
-                .extracting(DocumentCheck::message)
-                .noneMatch(m -> m.contains("언제 깨지는가"));
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", bullet))
-                .extracting(DocumentCheck::message)
-                .noneMatch(m -> m.contains("언제 깨지는가"));
+        for (String form : List.of(
+                "### 하나\n### 둘\n### 셋\n### 넷\n### 다섯",       // 소제목
+                "- **하나**\n- **둘**\n- **셋**\n- **넷**\n- **다섯**", // 하이픈+굵게
+                "- 하나\n- 둘\n- 셋\n- 넷\n- 다섯",                  // 맨 하이픈 ← 처음엔 못 셌다
+                "1. 하나\n2. 둘\n3. 셋\n4. 넷\n5. 다섯")) {          // 맨 번호
+            assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy",
+                    base.replace(written, form)))
+                    .as("이 형식을 못 세면 멀쩡한 문서에 경고가 뜬다:%n%s", form)
+                    .extracting(DocumentCheck::message)
+                    .noneMatch(m -> m.contains("언제 깨지는가"));
+        }
     }
 
     /**

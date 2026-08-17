@@ -515,6 +515,37 @@ class DraftGeneratorCliTest {
     }
 
     /**
+     * 보기 번호 지칭 검사의 <b>경계</b>. 처음 만든 정규식이 여기서 헛다리를 짚었다 —
+     * 자바의 {@code \b}는 영숫자 기준이라 한글 앞에서도 경계가 잡혀서
+     * "보기 <b>4개</b> 중"이 걸렸고, 맨 {@code [1-4]번}은 "<b>3번의</b> 왕복"을 잡았다.
+     *
+     * <p>이 경고는 "학습자에게만 어긋나 보인다"는 무서운 문구를 달고 나간다.
+     * 헛울리면 다음부터 아무도 안 믿으므로, 놓치는 쪽을 택하고 그 선을 여기 못 박는다.
+     */
+    @Test
+    @DisplayName("숫자가 보기를 가리키지 않으면 조용하다 — '보기 4개', '3번의 왕복'은 지칭이 아니다")
+    void doesNotMistakePlainNumbersForChoiceReferences() {
+        assertThat(warningsFor("네 보기 4개 중 하나만 옳다.")).isEmpty();
+        assertThat(warningsFor("TCP는 3번의 왕복으로 연결을 맺는다.")).isEmpty();
+        assertThat(warningsFor("격리 수준 4가지 중 2가 기본값이다.")).isEmpty();
+
+        assertThat(warningsFor("2번 보기는 UDP의 특성이다.")).isNotEmpty();
+        assertThat(warningsFor("보기 2번은 UDP의 특성이다.")).isNotEmpty();
+        assertThat(warningsFor("첫 번째 보기는 정의가 다르다.")).isNotEmpty();
+        assertThat(warningsFor("②는 격리 수준을 잘못 본 것이다."))
+                .as("원문자는 해설에서 보기 말고 가리킬 것이 없다 — 단독으로도 잡는다")
+                .isNotEmpty();
+    }
+
+    /** 해설 뒤에 붙여 분량 경고를 피하고, 보기 번호 지칭 경고만 남긴다. */
+    private static List<String> warningsFor(String explanationTail) {
+        List<GeneratedProblemItem> problems =
+                List.of(multipleChoice("지문", goodExplanation() + " " + explanationTail));
+        return DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings().stream().filter(w -> w.contains("번호로")).toList();
+    }
+
+    /**
      * 오탐이 나면 경고가 매번 뜨고, 그러면 사람이 경고 자체를 안 보게 된다.
      * 이 저장소가 이미 겪은 실패 방식이라 정상 결과에 조용한지를 따로 못 박는다.
      */
