@@ -960,7 +960,7 @@ public final class DraftGeneratorCli {
      * Spring 없이 설정을 읽어야 해서 snakeyaml을 직접 쓴다(E2E 테스트와 같은 방식).
      */
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> readGenerationConfig() throws Exception {
+    static Map<String, Object> readGenerationConfig() throws Exception {
         try (InputStream in = DraftGeneratorCli.class.getResourceAsStream("/application.yml")) {
             if (in == null) {
                 throw new IllegalStateException("클래스패스에서 application.yml을 찾을 수 없습니다.");
@@ -981,7 +981,7 @@ public final class DraftGeneratorCli {
     }
 
     /** {@code --key=value} 형태만 받는다. 빈 값(--domain=)은 "지정 안 함"으로 본다 — 워크플로 입력이 비면 그렇게 온다. */
-    private static Map<String, String> parseArgs(String[] args) {
+    static Map<String, String> parseArgs(String[] args) {
         Map<String, String> opts = new java.util.HashMap<>();
         for (String arg : args) {
             if (!arg.startsWith("--") || !arg.contains("=")) {

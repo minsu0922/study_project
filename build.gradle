@@ -115,3 +115,28 @@ tasks.register('generateDrafts', JavaExec) {
         }
     }
 }
+
+// 프롬프트 평가 하네스 — 프롬프트를 고쳤을 때 나아졌는지 몇 분 만에 재는 도구.
+//
+//   .\gradlew.bat evalPrompt -PevalArgs="--label=before"
+//   (프롬프트 수정)
+//   .\gradlew.bat evalPrompt -PevalArgs="--label=after"
+//   → eval/ 아래 두 보고서를 나란히 놓고 본다
+//
+// 예약 실행에 딸려 들어가지 않도록 일부러 별도 태스크로 뒀다. 실제 API를 부르므로
+// (기본 9문제 ≈ 하루치 배치의 두 배) check/build에 엮으면 요금이 조용히 새어 나간다.
+// 배치의 중단 스위치도 보지 않는다 — 배치를 꺼 둔 채 프롬프트를 고치는 상황이
+// 바로 이 도구가 필요한 때이기 때문. 자세한 배경은 PromptEvalCli 주석.
+tasks.register('evalPrompt', JavaExec) {
+    group = 'llm'
+    description = '고정된 근거 문서로 세 난이도를 생성해 채점하고 eval/에 보고서를 남긴다'
+    mainClass = 'project.study.study_project.llm.cli.PromptEvalCli'
+    classpath = sourceSets.main.runtimeClasspath
+
+    if (project.hasProperty('evalArgs')) {
+        String raw = project.property('evalArgs').toString().trim()
+        if (!raw.isEmpty()) {
+            args raw.split(/\s+/)
+        }
+    }
+}
