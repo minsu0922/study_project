@@ -229,6 +229,124 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("한 절에서 두 문제를 뽑지 마라");
     }
 
+    /* ── 난이도 재정의 ────────────────────────────────────────
+     * 출발점은 "초급이 초급 같지 않다"였다. 실측해 보니 2026-08-16 초급 5문제 중 4개가
+     * 상황 서술로 시작했고, 하나는 두 격리 수준을 나란히 놓고 비교시켰다(중급의 일).
+     * 원인은 초급 규칙이 약해서가 아니라 <다른 규칙이 초급 규칙을 덮어썼기> 때문이다 —
+     * 근거 문서 블록의 "문서가 설명한 원리를 다른 상황에 적용하게 만들어야 한다"가
+     * 모든 난이도에 걸려 있었는데, 그 문장은 중급의 정의 그 자체다.
+     * 아래 테스트들은 그 덮어쓰기가 되살아나는 것을 막는다. */
+
+    @Test
+    @DisplayName("세 난이도가 '무엇을 묻는가'로 갈린다 — '얼마나 어려운가'로는 중급과 고급이 구분되지 않았다")
+    void definesDifficultyByWhatIsAsked() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("[난이도가 뜻하는 것")
+                .as("초급은 용어를 묻고 상황이 없다 — 이 한 줄이 초급 문제의 상한이다")
+                .contains("<용어가 무엇인가>를 묻는다. 지문에 상황이 없다")
+                .as("중급은 원리를 새 상황에 적용시킨다")
+                .contains("<원리를 처음 보는 상황에 적용>하게 한다")
+                .as("고급은 대응들 사이의 선택이다")
+                .contains("<여러 대응 중 무엇을 고를지>를 묻는다")
+                .as("칸을 넘으면 다음 날 재료가 사라진다는 이유까지 줘야 지켜진다")
+                .contains("다음 날 문제가 쓸 재료를 미리 먹어 치운다");
+    }
+
+    /**
+     * <b>중급과 고급을 가르는 실제 기준.</b> 지문 형태로는 둘이 구분되지 않았다 —
+     * 2026-08-13(중급)과 08-14(고급) 모두 "상황 서술 → 원인과 대응으로 가장 적절한 것은?"이었다.
+     * 갈린 곳은 오답이었다. 중급 오답에는 명백히 틀린 것이 섞여 있었고("시각 동기화가 어긋났다"),
+     * 고급 오답은 넷 다 다른 상황에서는 옳은 대응이었다(stampede 대응·샤딩·TTL 연장).
+     *
+     * <p>이건 모델이 <b>스스로 판정할 수 있는</b> 기준이라는 점이 중요하다. "더 어렵게 내라"는
+     * 지킬 수도 확인할 수도 없지만, "명백히 틀린 보기가 있는가"는 세어 볼 수 있다.
+     */
+    @Test
+    @DisplayName("중급·고급은 오답 설계로 갈린다 — 지문 형태로는 둘이 똑같았다(08-13과 08-14 실측)")
+    void separatesIntermediateFromAdvancedByDistractorDesign() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .as("중급 오답은 원리를 이해했으면 틀렸음을 아는 것")
+                .contains("오답은 원리를 잘못 적용한 판단이다")
+                .as("고급 오답은 조건이 달랐다면 옳았을 대응 — 넷 다 그럴듯해야 한다")
+                .contains("오답은 조건이 달랐다면 옳았을 대응이다")
+                .as("판정 기준이 있어야 모델이 스스로 고칠 수 있다")
+                .contains("중급인데 네 보기가 전부 그럴듯하면 그건 고급이다")
+                .contains("고급인데 명백히 틀린 보기가 하나라도 있으면 그 문제는 고급이 아니다");
+    }
+
+    @Test
+    @DisplayName("초급이 중급으로 넘어가는 두 경로를 이름 붙여 막는다 — 실제로 그 둘로 넘어갔다")
+    void blocksTheTwoWaysBeginnerDriftsUpward() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .as("08-16 초급 5문제 중 4개가 배경 서술로 시작했다")
+                .contains("초급인데 \"~하고 있다\", \"~했다\"로 배경을 서술했다면")
+                .as("READ COMMITTED와 REPEATABLE READ를 나란히 놓고 비교시킨 문제가 초급으로 나왔다")
+                .contains("초급인데 두 개념을 나란히 놓고");
+    }
+
+    /**
+     * 초급이 어려워진 <b>직접 원인</b>을 막는다. 근거 문서 블록에 "문서가 설명한 원리를
+     * 다른 상황에 적용하게 만들어야 이해를 확인할 수 있다"가 난이도와 무관하게 실려 있었다.
+     * 그 문장은 중급의 정의라, 초급 규칙과 부딪히면 이쪽이 이겼다.
+     */
+    @Test
+    @DisplayName("근거 문서 블록이 모든 난이도에 '새 상황에 적용하라'를 걸지 않는다 — 이게 초급을 밀어 올렸다")
+    void doesNotForceApplicationOnEveryDifficulty() {
+        assertThat(prompt(Difficulty.BEGINNER, DOC))
+                .as("초급에까지 걸리면 상황을 지어내게 된다 — 실제로 그렇게 났다")
+                .doesNotContain("다른 상황에 적용하게 만들어야")
+                .as("적용 여부는 난이도가 정한다는 것을 그 자리에서 알려 줘야 한다")
+                .contains("초급에는 상황을 붙이지 마라");
+    }
+
+    /**
+     * 초급이 캘 절({@code ## 무엇인가})은 하나뿐인데 "한 절에서 두 문제를 뽑지 마라"가
+     * 함께 걸려 있으면, 5개를 요청받은 모델은 <b>규칙을 지키려고</b> 다른 절로 넘어간다.
+     * 두 규칙이 부딪히면 초급 규칙이 조용히 지는 구조였다.
+     */
+    @Test
+    @DisplayName("초급에는 '한 절 한 문제'를 강요하지 않는다 — 그 규칙을 지키려다 초급이 다른 절로 넘어갔다")
+    void exemptsBeginnerFromOneProblemPerSection() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("한 절에서 두 문제를 뽑지 마라")
+                .as("초급은 절이 하나뿐이라 예외를 명시하지 않으면 규칙끼리 부딪힌다")
+                .contains("단 초급은 예외다")
+                .contains("<같은 절 안의 서로 다른 용어>로 나눈다")
+                .as("모자라면 칸을 넘지 말고 줄이라고 해야 도망갈 곳이 생긴다")
+                .contains("난이도의 칸을 넘어 다른 절로 가는 것보다 적게 내는 편이 낫다");
+    }
+
+    /**
+     * 예시를 지문 한 줄에서 <b>보기까지 갖춘 통 문항</b>으로 바꾼 것을 지킨다.
+     *
+     * <p>난이도를 실제로 가르는 것은 오답인데, 지문 한 줄짜리 예시로는 오답 설계가
+     * 전달되지 않는다. 그리고 이 저장소는 <b>예시가 규칙을 이긴다</b>는 것을 이미 확인했다 —
+     * 문서 프롬프트의 "핵심 용어를 하이픈 목록으로" 규칙이 바로 아래 예시에 하이픈이
+     * 없다는 이유로 무시됐다. 그렇다면 예시 쪽에 투자하는 것이 맞다.
+     */
+    @Test
+    @DisplayName("난이도 예시가 보기와 판정 근거까지 갖췄다 — 지문 한 줄로는 오답 설계가 전달되지 않는다")
+    void difficultyExamplesShowDistractorsNotJustQuestions() {
+        String beginner = prompt(Difficulty.BEGINNER, null);
+        String intermediate = prompt(Difficulty.INTERMEDIATE, null);
+        String advanced = prompt(Difficulty.ADVANCED, null);
+
+        assertThat(List.of(beginner, intermediate, advanced)).allSatisfy(p ->
+                assertThat(p).as("보기 없이 지문만 보여 주면 난이도의 핵심(오답 설계)이 빠진다")
+                        .contains("보기:")
+                        .as("예시 주제를 그대로 베껴 가면 매일 TCP 문제만 나온다")
+                        .contains("주제(TCP)는 가져다 쓰지 마라"));
+
+        // 왜 그 난이도인지를 예시에 붙여야 모델이 자기 결과와 대조할 수 있다.
+        assertThat(beginner).contains("왜 초급인가");
+        assertThat(intermediate).contains("왜 중급인가");
+        assertThat(advanced).contains("왜 고급인가");
+
+        // 한 요청에는 그 난이도의 예시만 실린다 — 나머지 둘이 보이면 넘어갈 빌미가 된다.
+        assertThat(beginner).as("초급 요청에 고급 예시가 함께 실리면 안 된다")
+                .doesNotContain("왜 고급인가");
+    }
+
     private String prompt(Difficulty difficulty, SourceDocument source) {
         return generator.buildPrompt(Domain.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
                 5, List.of(), List.of(), source);
