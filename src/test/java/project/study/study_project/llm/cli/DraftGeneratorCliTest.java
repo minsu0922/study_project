@@ -504,13 +504,17 @@ class DraftGeneratorCliTest {
                 + "(다른 트랜잭션이 그 사이 새 행을 삽입하고 커밋했다). 이 상황에 해당하는 이상 현상은?";
         List<GeneratedProblemItem> problems = List.of(multipleChoice(longQuestion, goodExplanation()));
 
+        // 이 실제 지문에는 백틱도 들어 있어 마크다운 경고가 함께 난다 — 그것까지 세면
+        // 이 테스트가 무엇을 재는지 흐려지므로, 길이 경고만 골라 본다.
         assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.BEGINNER).warnings())
-                .singleElement().asString().contains("초급 지문이 김");
+                .filteredOn(w -> w.contains("초급 지문이 김"))
+                .singleElement().asString().contains("149자");
 
         assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
                 .as("중급은 상황이 한 문단 있는 것이 정상이라 길이를 재지 않는다")
+                .filteredOn(w -> w.contains("지문이 김"))
                 .isEmpty();
     }
 
@@ -559,6 +563,79 @@ class DraftGeneratorCliTest {
                 List.of(multipleChoice("지문", goodExplanation() + " " + explanationTail));
         return DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings().stream().filter(w -> w.contains("번호로")).toList();
+    }
+
+    /**
+     * <b>정답이 가장 긴 보기</b>인 상태. 실물 22문항 중 18개(82%)가 그랬다 —
+     * 균등하면 25%다. 그 상태면 학습자가 지문을 읽지 않고 제일 긴 보기만 골라도 맞는다.
+     *
+     * <p>정답이 4번에 한 번도 없던 사고와 같은 종류인데, 고칠 방법이 다르다.
+     * 위치는 내보낼 때 섞어서 없앴지만 <b>길이는 섞을 수 없다</b>.
+     */
+    @Test
+    @DisplayName("정답이 유독 길면 알린다 — 실물 82%가 그랬고, 길이는 섞어서 고칠 수 없다")
+    void warnsWhenTheCorrectChoiceIsTheLongest() {
+        List<GeneratedProblemItem> problems = List.of(new GeneratedProblemItem(
+                "무엇인가?", "", goodExplanation(), List.of(
+                new GeneratedProblemItem.GeneratedChoice("가".repeat(60), true),
+                new GeneratedProblemItem.GeneratedChoice("나".repeat(30), false),
+                new GeneratedProblemItem.GeneratedChoice("다".repeat(32), false),
+                new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false))));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings()).singleElement().asString()
+                .contains("정답이 가장 긴 보기")
+                .as("몇 배인지 보여야 얼마나 줄일지 정해진다")
+                .contains("2.00배");
+    }
+
+    /**
+     * 문턱을 <b>둘 다</b> 넘어야 경고한다. 정답이 우연히 최장인 경우는 넷 중 하나꼴로 늘
+     * 생기므로 그것만으로 울리면 4분의 1이 헛울리고, 비율만 보면 오답이 유독 긴
+     * 멀쩡한 문제까지 걸린다.
+     */
+    @Test
+    @DisplayName("정답이 최장이어도 편차가 작으면 조용하다 — 넷 중 하나는 늘 최장이다")
+    void staysQuietWhenTheLongestAnswerIsOnlySlightlyLonger() {
+        List<GeneratedProblemItem> problems = List.of(new GeneratedProblemItem(
+                "무엇인가?", "", goodExplanation(), List.of(
+                new GeneratedProblemItem.GeneratedChoice("가".repeat(44), true),  // 1.26배
+                new GeneratedProblemItem.GeneratedChoice("나".repeat(35), false),
+                new GeneratedProblemItem.GeneratedChoice("다".repeat(40), false),
+                new GeneratedProblemItem.GeneratedChoice("라".repeat(42), false))));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings()).isEmpty();
+
+        // 오답이 유독 긴 것은 찍히는 단서가 아니다 — 걸리면 안 된다.
+        List<GeneratedProblemItem> longDistractor = List.of(new GeneratedProblemItem(
+                "무엇인가?", "", goodExplanation(), List.of(
+                new GeneratedProblemItem.GeneratedChoice("가".repeat(30), true),
+                new GeneratedProblemItem.GeneratedChoice("나".repeat(70), false),
+                new GeneratedProblemItem.GeneratedChoice("다".repeat(32), false),
+                new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false))));
+
+        assertThat(DraftGeneratorCli.checkYield(longDistractor, 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings()).isEmpty();
+    }
+
+    /**
+     * 지문·보기·해설은 화면에 <b>평문 그대로</b> 나간다({@code player.js}의 {@code escapeHtml}).
+     * 백틱과 별표가 글자로 보인다. 문서 본문만 마크다운으로 렌더링되므로 헷갈리기 쉽다.
+     */
+    @Test
+    @DisplayName("백틱·별표는 알린다, 줄바꿈·하이픈 목록은 놔둔다 — 후자는 화면에서 살릴 수 있다")
+    void warnsOnMarkdownThatCannotBeRendered() {
+        List<GeneratedProblemItem> withBacktick = List.of(
+                multipleChoice("`SELECT * FROM item`을 두 번 실행하면?", goodExplanation()));
+        assertThat(DraftGeneratorCli.checkYield(withBacktick, 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings()).singleElement().asString().contains("지문에 마크다운이 섞임");
+
+        // 해설의 줄바꿈·하이픈 목록은 CSS(white-space: pre-wrap)로 살아난다 — 막으면 안 된다.
+        List<GeneratedProblemItem> withList = List.of(multipleChoice("무엇인가?",
+                goodExplanation() + "\n- 첫째 오답은 이런 오해다.\n- 둘째 오답은 저런 오해다."));
+        assertThat(DraftGeneratorCli.checkYield(withList, 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings()).isEmpty();
     }
 
     /**

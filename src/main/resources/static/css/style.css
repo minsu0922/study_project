@@ -261,7 +261,19 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .feedback .verdict { font-weight: 800; font-size: 1.02rem; }
 .feedback.correct .verdict { color: var(--correct); }
 .feedback.wrong .verdict { color: var(--wrong); }
-.feedback .explain { margin-top: 8px; color: #374151; }
+/* 해설은 "정답 근거 + 오답 셋"이라 본래 목록으로 쓰인다 — 실측 22개 중 17개가
+   줄바꿈과 하이픈 목록을 썼다. 그런데 이 자리는 마크다운을 렌더링하지 않고
+   escapeHtml로 평문을 넣으므로(player.js), pre-wrap이 없으면 줄바꿈이 통째로
+   접혀 한 문단으로 뭉친다. 문서 화면에서 이미 겪은 그 버그가 여기서 재발했다.
+   목록을 프롬프트로 금지하는 대신 화면에서 살리는 쪽이 맞다 — 해설의 내용상
+   목록이 맞는 형태이고, 금지하면 해설이 오히려 읽기 어려워진다.
+   break-word는 긴 식별자(SELECT ... FOR UPDATE 같은)가 칸을 밀어내지 않게 한다. */
+.feedback .explain {
+  margin-top: 8px;
+  color: #374151;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
 /* 하단 동작 버튼 줄(제출/다음) — 오른쪽 정렬, 위 요소와 간격 */
 .player-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }

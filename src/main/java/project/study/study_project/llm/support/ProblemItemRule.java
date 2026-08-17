@@ -144,6 +144,41 @@ public final class ProblemItemRule {
     public static final int BEGINNER_QUESTION_MAX = 120;
 
     /**
+     * 보기 길이의 최대/최소 허용 비율. <b>생성 프롬프트의 숫자와 같아야 한다</b>
+     * ([오답 보기의 조건] 절) — 갈라지면 지시대로 쓴 문제가 매번 경고를 단다.
+     *
+     * <p><b>왜 이 검사가 필요한가.</b> 승인·미승인 22문항을 세어 보니 <b>18개(82%)에서
+     * 정답이 가장 긴 보기</b>였다. 균등하면 25%다. 이 상태면 학습자가 지문을 읽지 않고
+     * "제일 긴 보기"만 골라도 대부분 맞힌다 — 정답이 4번에 한 번도 없던 사고와 같은 종류다.
+     *
+     * <p>다른 점은 <b>고칠 방법이 없다</b>는 것이다. 위치 편향은 내보낼 때 섞어서 없앴지만
+     * ({@code QuizProblemItem}) 길이는 섞을 수가 없다. 그래서 프롬프트로 줄이고 여기서 센다.
+     * 프롬프트에는 이미 "정답만 유독 길면 읽지 않고도 찍힌다"가 <b>있었는데도</b> 82%였다 —
+     * 숫자 없는 요구는 지켜지지 않는다는 것을 여기서 또 확인했다.
+     *
+     * <p><b>1.5인 이유는 실측이다.</b> 문턱을 1.4로 하면 22개 중 8개(36%)가 걸려 시끄럽고,
+     * 1.6이면 3개(14%)만 걸려 놓친다. 1.5는 5개(23%) — 네 문제에 한 건이라 읽힌다.
+     *
+     * <p><b>비율만 보거나 최장 여부만 보면 안 된다.</b> 정답이 우연히 최장인 경우는 넷 중 하나꼴로
+     * 늘 생기므로 그것만으로 경고하면 4분의 1이 헛울린다. 반대로 비율만 보면 오답이 유독 긴
+     * 멀쩡한 문제까지 걸린다. <b>둘이 겹칠 때</b>만 "읽지 않고 찍히는" 상태다.
+     */
+    public static final double CHOICE_LENGTH_RATIO = 1.5;
+
+    /**
+     * 지문·보기·해설에 섞인 마크다운 문법.
+     *
+     * <p>이 셋은 화면에 <b>평문 그대로</b> 나간다({@code player.js}의 {@code escapeHtml}) —
+     * 백틱과 별표가 글자로 보인다. 문서 본문만 마크다운으로 렌더링되므로 헷갈리기 쉽다.
+     *
+     * <p><b>줄바꿈과 하이픈 목록은 잡지 않는다.</b> 해설은 "정답 근거 + 오답 셋"이라 본래 목록이
+     * 어울리는 내용이고, 실제로 22개 중 17개가 그렇게 쓴다. 그쪽은 화면에서 살리는 것이 맞아
+     * {@code .explain}에 {@code white-space: pre-wrap}을 넣었다 — 프롬프트로 목록을 금지하면
+     * 해설이 오히려 나빠진다. 여기서 막는 것은 <b>살릴 수 없는 것</b>뿐이다.
+     */
+    private static final Pattern MARKDOWN_SYNTAX = Pattern.compile("`|\\*\\*");
+
+    /**
      * 지문이 <b>근거 문서를 가리키는</b> 표현. 문제는 혼자서 성립해야 한다.
      *
      * <p>2026-08-16 4번이 실제로 이랬다: "MVCC가 읽기를 대기 없이 처리할 수 있는 대신 치르는
@@ -226,7 +261,67 @@ public final class ProblemItemRule {
                         .formatted(question.trim().length(), BEGINNER_QUESTION_MAX));
             }
         }
+
+        String lengthBias = choiceLengthBiasOf(item);
+        if (lengthBias != null) {
+            warnings.add(lengthBias);
+        }
+
+        String markdown = markdownTraceOf(item);
+        if (markdown != null) {
+            warnings.add(markdown);
+        }
         return warnings;
+    }
+
+    /**
+     * 정답이 가장 긴 보기이면서 길이 편차까지 큰가 — 자세한 배경은 {@link #CHOICE_LENGTH_RATIO}.
+     * 아니면 {@code null}.
+     */
+    private static String choiceLengthBiasOf(GeneratedProblemItem item) {
+        List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
+        if (choices == null || choices.size() < MIN_CHOICES) {
+            return null; // 객관식이 아니거나 이미 규약 위반 — defectOf가 볼 몫이다
+        }
+
+        int longest = 0;
+        int shortest = Integer.MAX_VALUE;
+        int correct = -1;
+        for (GeneratedProblemItem.GeneratedChoice choice : choices) {
+            int length = choice.text() == null ? 0 : choice.text().trim().length();
+            longest = Math.max(longest, length);
+            shortest = Math.min(shortest, length);
+            if (choice.correct()) {
+                correct = length;
+            }
+        }
+        if (shortest <= 0 || correct != longest) {
+            return null;
+        }
+
+        double ratio = (double) longest / shortest;
+        if (ratio <= CHOICE_LENGTH_RATIO) {
+            return null;
+        }
+        // 소수 둘째 자리까지 보여 준다. 한 자리면 86/57=1.508이 "1.5배 — 기준 1.5배"로 찍혀,
+        // 왜 걸렸는지 알 수 없는 경고가 된다(실물에서 실제로 그렇게 나왔다).
+        return "정답이 가장 긴 보기 (%d자 vs 최단 %d자, %.2f배 — 기준 %.1f배 이하)"
+                .formatted(longest, shortest, ratio, CHOICE_LENGTH_RATIO);
+    }
+
+    /** 화면에 글자로 보일 마크다운이 섞였는가 — 자세한 배경은 {@link #MARKDOWN_SYNTAX}. */
+    private static String markdownTraceOf(GeneratedProblemItem item) {
+        String where = null;
+        if (!isBlank(item.question()) && MARKDOWN_SYNTAX.matcher(item.question()).find()) {
+            where = "지문";
+        } else if (!isBlank(item.explanation()) && MARKDOWN_SYNTAX.matcher(item.explanation()).find()) {
+            where = "해설";
+        } else if (item.choices() != null && item.choices().stream()
+                .anyMatch(c -> c.text() != null && MARKDOWN_SYNTAX.matcher(c.text()).find())) {
+            where = "보기";
+        }
+        return where == null ? null
+                : "%s에 마크다운이 섞임 (백틱·별표는 화면에 글자로 나온다)".formatted(where);
     }
 
     /** 로그·경고에 쓸 지문 앞부분. 지문이 없으면 그 사실을 문구로 보여 준다. */

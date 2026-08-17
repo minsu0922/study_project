@@ -139,6 +139,7 @@ public final class PromptEvalCli {
 
         Path outFile = writeReport(report, opts);
         System.out.println("보고서 저장: " + outFile);
+        System.out.println("생성 원본 저장: " + writeRaw(reports, outFile));
         System.out.println("이전 실행과 나란히 놓고 보려면 eval/ 아래 두 파일을 비교하세요.");
     }
 
@@ -357,6 +358,31 @@ public final class PromptEvalCli {
      * 보고서를 파일로 남긴다. 파일 이름에 시각과 꼬리표를 넣는 이유는 <b>덮어쓰지 않기 위해서</b>다 —
      * 이 도구의 값어치는 수정 <b>전후</b>를 나란히 놓는 데 있는데, 같은 이름에 쓰면 앞의 것이 사라진다.
      */
+    /**
+     * 생성 원본 전부를 보고서 옆에 JSON으로 남긴다.
+     *
+     * <p><b>왜 필요한가.</b> 보고서는 난이도마다 <b>한 문항만</b> 찍는다 — 오답 설계를 눈으로
+     * 보기에는 충분하지만, 나중에 전수로 훑을 때는 나머지가 없다. 2026-08-17 감사에서 실제로
+     * 그 벽에 부딪혔다: 9문항을 만들어 놓고 6문항이 사라져, 보기 길이 편향 같은 것을
+     * <b>배치 결과로만</b> 셀 수 있었다.
+     *
+     * <p>요금을 내고 만든 물건이다. 남기는 비용은 파일 몇 KB뿐이고, 남기지 않으면
+     * 같은 질문이 생길 때마다 다시 돈을 내야 한다.
+     *
+     * <p>보고서와 같은 이름에 확장자만 다르게 둔 이유: 둘이 한 실행에서 나왔다는 것이
+     * 파일 목록만 봐도 드러나야 나중에 짝을 찾지 않는다.
+     */
+    private static Path writeRaw(List<DifficultyReport> reports, Path reportFile) throws Exception {
+        Map<String, List<GeneratedProblemItem>> byDifficulty = new LinkedHashMap<>();
+        for (DifficultyReport r : reports) {
+            byDifficulty.put(r.difficulty().name(), r.problems());
+        }
+        String name = reportFile.getFileName().toString().replaceFirst("\\.md$", "") + ".json";
+        Path file = reportFile.resolveSibling(name);
+        Files.writeString(file, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(byDifficulty));
+        return file;
+    }
+
     private static Path writeReport(String report, Map<String, String> opts) throws Exception {
         Path dir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Files.createDirectories(dir);
