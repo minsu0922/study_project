@@ -491,6 +491,24 @@ class ClaudeProblemGeneratorPromptTest {
                 .doesNotContain("왜 고급인가");
     }
 
+    /**
+     * <b>{@code [용어]} 절의 예외가 예시로도 보이는지.</b> 그 절은 "어려운 용어는 괄호로 뜻을
+     * 붙여라"와 "단, 정답인 용어에는 붙이지 마라"를 함께 요구한다. 뒤쪽은 {@code [금지]}의
+     * "지문이 답을 알려 주는 문제"와 부딪히지 않으려고 둔 예외인데, 규칙 둘이 서로를 자르면
+     * 모델은 <b>둘 중 하나를 버린다</b>. 어느 쪽을 버렸는지는 문제를 읽어야만 보인다.
+     *
+     * <p>마침 초급 예시가 그 예외에 딱 맞는 사례라(정답이 TIME_WAIT라는 용어 자체다) 두 줄로
+     * 실물을 보여 준다. 서술을 늘리는 것보다 확실하다는 판단은 이 클래스가 이미 여러 번 확인했다.
+     */
+    @Test
+    @DisplayName("초급 예시가 '정답인 용어에는 뜻을 달지 않는다'를 실물로 보여 준다 — 규칙 둘이 부딪히는 자리다")
+    void beginnerExampleDemonstratesTheTerminologyException() {
+        assertThat(prompt(Difficulty.BEGINNER, null))
+                .contains("용어 처리:")
+                .as("정답이 용어 자체인 문제에 뜻을 달면 지문이 답을 알려 준다")
+                .contains("정답이 TIME_WAIT 자체이므로 지문·보기에 뜻을 괄호로 달지 않았다");
+    }
+
     private String prompt(Difficulty difficulty, SourceDocument source) {
         return generator.buildPrompt(Domain.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
                 5, List.of(), List.of(), source);
