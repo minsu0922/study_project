@@ -1,7 +1,7 @@
 {
   "note" : "정식 document 테이블 + 검수 대기 초안의 제목·태그 스냅샷입니다. GitHub Actions 배치가 주제 중복 회피와 태그 재사용에 쓰고, rejectedSlugs는 '이 문서로는 문제를 만들지 마라'는 목록입니다(클라우드에는 DB가 없으므로). docs/15 참고. 이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.",
   "exportedAt" : "2026-08-18",
-  "titles" : [ "캐시 전략 — 무엇을 어디에 저장하고, 어떻게 깨지는가", "XSS와 CSRF — 브라우저를 믿으면 생기는 일", "트랜잭션 격리 수준과 동시성 이상 현상", "트랜잭션 격리 수준과 동시성 이상 현상" ],
+  "titles" : [ "캐시 전략 — 무엇을 어디에 저장하고, 어떻게 깨지는가", "XSS와 CSRF — 브라우저를 믿으면 생기는 일", "트랜잭션 격리 수준과 동시성 이상 현상" ],
   "tags" : [ "auth", "cache", "database", "http", "performance", "security", "system-design" ],
   "rejectedSlugs" : [ ]
 }
