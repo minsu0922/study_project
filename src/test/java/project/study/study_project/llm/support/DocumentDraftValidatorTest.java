@@ -171,10 +171,10 @@ class DocumentDraftValidatorTest {
 
         // slug 형식 1 + 제목 불일치 1
         // + 빠진 필수 절 5(무엇인가·실무에서는 이렇게 쓴다·언제 깨지는가·면접 질문·한 줄 요약)
-        // + 형식 2(설계 근거 소제목 없음·본론 0개) = 9
+        // + 형식 3(설계 근거 소제목 없음·용어 표 없음·본론 0개) = 10
         // ('## 무엇인가'와 '## 언제 깨지는가'의 형식 검사는 절이 아예 없으면 건너뛴다 —
         //  없는 절을 두고 "하이픈이 없다"고 말하면 원인이 흐려진다)
-        assertThat(checks).hasSize(9);
+        assertThat(checks).hasSize(10);
         assertThat(checks).extracting(DocumentCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
@@ -304,6 +304,79 @@ class DocumentDraftValidatorTest {
         }
     }
 
+    /* ── 2026-08-18: 어려운 용어가 정의 없이 지나갔다 ─────────────
+     * 사용자가 8/18 고급 문제를 읽고 "모르는 용어가 설명 없이 나온다"고 지적했다.
+     * 8/15 실물을 세어 보니 정의된 용어는 '## 무엇인가'의 5개뿐이고, 뒤쪽 절에서 처음 나온
+     * 낙관적 잠금·공유 락·배타 락·갭 락·SELECT ... FOR UPDATE 등 아홉 개가 그냥 지나갔다.
+     *
+     * 프롬프트에는 이미 "정의 없이 지나가는 용어가 하나도 없어야 한다"가 있었다.
+     * 문구로는 안 되니 세는 쪽으로 넘긴 것인데, 8/15의 하이픈 사고와 정확히 같은 수순이다. */
+
+    @Test
+    @DisplayName("'### 용어 한눈에' 표가 없으면 알린다 — 뒤쪽 절 용어를 둘 자리가 사라진다")
+    void warnsWhenGlossaryTableIsMissing() {
+        String noGlossary = body(TITLE, "본문").replace("### 용어 한눈에", "### 다른 소제목");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", noGlossary))
+                .extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("'### 용어 한눈에' 표가 없습니다"));
+    }
+
+    @Test
+    @DisplayName("잠금 계열 용어와 SQL 구문이 정의 없이 쓰이면 알린다 — 8/15 실물이 그대로 통과했다")
+    void warnsWhenHardTermsAreUsedWithoutDefinition() {
+        String leaky = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
+                ## 첫째 갈래
+                낙관적 잠금을 쓰거나 판단 근거가 된 행을 SELECT ... FOR UPDATE로 잠근다.""");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", leaky))
+                .extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("낙관적 잠금") && m.contains("SELECT ... FOR UPDATE"));
+    }
+
+    /**
+     * 정의만 있으면 조용해야 한다. 형태 셋(표의 행·하이픈 정의 목록·굵은 글씨 정의 줄)을
+     * 모두 인정하는지 함께 본다 — 하나만 인정하면 <b>제대로 정의한 문서에 경고가 뜬다</b>.
+     * 굵은 글씨 형태를 인정하는 이유는 {@code checkTermList}가 이미 그 형태를 경고하되
+     * 허용하기 때문이다. 한쪽이 봐준 형식을 다른 쪽이 막으면 같은 결함에 경고가 두 번 뜬다.
+     */
+    @Test
+    @DisplayName("정의가 있으면 조용하다 — 표·하이픈 목록·굵은 글씨 셋 다 정의로 본다")
+    void acceptsEveryDefinitionForm() {
+        for (String definition : List.of(
+                "| 낙관적 잠금 | 저장할 때 번호로 확인해 남이 고쳤으면 실패시키는 방식. | 경합이 드물 때. |",
+                "- **낙관적 잠금(optimistic lock)** — 저장할 때 번호로 확인해 실패시키는 방식이다.",
+                "**낙관적 잠금(optimistic lock)** — 저장할 때 번호로 확인해 실패시키는 방식이다.")) {
+            String defined = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
+                    ## 첫째 갈래
+                    낙관적 잠금으로 막는다.
+
+                    %s""".formatted(definition));
+
+            assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", defined))
+                    .as("이 형태를 정의로 못 보면 제대로 쓴 문서에 경고가 뜬다:%n%s", definition)
+                    .extracting(DocumentCheck::message)
+                    .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
+        }
+    }
+
+    /**
+     * <b>오탐을 내지 않는지가 이 검사의 생사다.</b> 후보를 넓게 잡아
+     * {@code ([가-힣]{2,6})\s*락}처럼 쓰면 "그래서 따로 락을 건다"에서 "따로 락"이 걸린다.
+     * 수식어를 목록으로 못 박은 이유이고, 그 판단이 유지되는지 여기서 지킨다.
+     */
+    @Test
+    @DisplayName("평범한 문장의 '락'은 용어로 잡지 않는다 — 오탐이 경고 전체를 무력화한다")
+    void doesNotFlagOrdinaryProseAsTerm() {
+        String prose = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
+                ## 첫째 갈래
+                그래서 따로 락을 건다. 이때 걸리는 락은 하나뿐이다.""");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", prose))
+                .extracting(DocumentCheck::message)
+                .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
+    }
+
     /**
      * 오탐이 나면 경고가 매번 뜨고, 그러면 사람이 경고 자체를 안 보게 된다.
      * 이 저장소가 이미 겪은 실패 방식이라 <b>정상 문서에 조용한지</b>를 따로 못 박는다.
@@ -344,6 +417,16 @@ class DocumentDraftValidatorTest {
 
                 ## 둘째 갈래
                 본론 설명.
+
+                ### 용어 한눈에
+
+                | 용어 | 한 줄 뜻 | 언제 쓰나 |
+                |---|---|---|
+                | 셋째 용어 | 한 줄 뜻. | 이럴 때. |
+                | 넷째 용어 | 한 줄 뜻. | 이럴 때. |
+                | 다섯째 용어 | 한 줄 뜻. | 이럴 때. |
+                | 여섯째 용어 | 한 줄 뜻. | 이럴 때. |
+                | 일곱째 용어 | 한 줄 뜻. | 이럴 때. |
 
                 ## 실무에서는 이렇게 쓴다
                 - 이런 상황에서 이렇게 쓴다.

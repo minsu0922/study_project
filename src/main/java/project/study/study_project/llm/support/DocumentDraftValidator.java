@@ -3,7 +3,9 @@ package project.study.study_project.llm.support;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,20 +30,27 @@ import java.util.regex.Pattern;
 public final class DocumentDraftValidator {
 
     /**
-     * 권장 분량 상한(경고). 프롬프트가 요구하는 "4,500~6,000자"의 위쪽 끝.
+     * 권장 분량 상한(경고). 프롬프트가 요구하는 "5,000~6,800자"의 위쪽 끝.
      * 넘겼다고 막지 않는 이유는 {@link DocumentCheck.Severity} 주석 참고 — 억지로 줄이면
      * 용어 설명과 면접 질문부터 잘려 나가는데, 그 두 절이 분량을 올린 목적이었다.
      *
      * <p><b>이 값은 프롬프트의 분량 지시를 따라간다.</b> 2026-08-14에 고급 재료를 늘리려고
      * 지시를 3,500자에서 5,500자로 올리면서 여기도 함께 올렸고, 2026-08-15에
      * {@code ## 실무에서는 이렇게 쓴다} 절을 신설하면서 그 절의 몫만큼 5,800자로 올렸고,
-     * 같은 날 프롬프트를 다시 다듬으면서 6,000자가 됐다.
+     * 같은 날 프롬프트를 다시 다듬으면서 6,000자가 됐고, 2026-08-18에 <b>용어 정의를 넣을
+     * 자리</b>를 만들려고 6,800자가 됐다.
      * 한쪽만 고치면 <b>지시대로 쓴 문서가 전부 경고를 달고 나오고</b>, 경고가 매번 뜨면
      * 사람이 경고 자체를 안 보게 된다.
      *
-     * <p><b>하드 상한과의 배율도 같이 본다.</b> 지금은 7,700 / 6,000 = 1.28배다. 권장치를
+     * <p><b>2026-08-18에 800자를 올린 이유는 다른 때와 다르다.</b> 앞선 인상은 전부 절을
+     * 신설한 대가였는데, 이번에는 절이 늘지 않았다. 8/15 실물이 상한에 17자를 남기고 나온
+     * 탓에 <b>모델이 용어 정의를 넣을 곳이 없었다</b>는 것이 원인이었다 — 어려운 용어 아홉 개가
+     * 정의 없이 지나갔다. 지면을 주지 않고 "정의를 빼먹지 마라"만 세게 적는 것은 소용이 없다.
+     *
+     * <p><b>하드 상한과의 배율도 같이 본다.</b> 지금은 8,800 / 6,800 = 1.29배다. 권장치를
      * 계속 올리면서 하드 상한을 그대로 두면 언젠가 둘이 붙어, 경고 없이 곧바로 차단되는
-     * 구간이 생긴다. 그때는 하드 상한도 함께 올려야 한다.
+     * 구간이 생긴다. 그때는 하드 상한도 함께 올려야 한다(이번이 그런 경우였다 —
+     * 7,700을 두면 배율이 1.13으로 좁아져 경고 구간이 사실상 사라진다).
      *
      * <p>{@code public}인 이유: 다른 패키지의 테스트({@code LlmDocumentServiceTest})가 "경고만
      * 있는 문서"를 만들 때 이 값을 기준으로 삼는다. 거기서 숫자를 따로 적어 두면 이 값을 올린 날
@@ -49,7 +58,7 @@ public final class DocumentDraftValidator {
      * 검사하게 되고, 통과하므로 아무도 모른다. {@link ClaudeDocumentGenerator#REQUIRED_SECTIONS}를
      * 공개한 것과 같은 이유다.
      */
-    public static final int WARN_LENGTH = 6_000;
+    public static final int WARN_LENGTH = 6_800;
 
     /**
      * 하드 상한(차단). 권장치의 약 1.3배.
@@ -62,7 +71,7 @@ public final class DocumentDraftValidator {
      * 상태가 됐을 것이다. 차단은 조용하지 않지만 원인이 엉뚱한 곳(검수 화면)에서 보여서
      * 프롬프트를 의심하기까지 시간이 걸린다.
      */
-    static final int MAX_LENGTH = 7_700;
+    static final int MAX_LENGTH = 8_800;
 
     /** {@code AdminDocumentRequest.slug}의 정규식과 같아야 한다 — 다르면 승인 순간 400으로 튕긴다. */
     private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(-[a-z0-9]+)*$");
@@ -122,6 +131,38 @@ public final class DocumentDraftValidator {
     private static final Pattern FAILURE_MODE_ITEM =
             Pattern.compile("(?m)^(\\*\\*\\d+\\.|###\\s+|-\\s+|\\d+\\.\\s+)");
 
+    /** 본론 끝의 용어 표 소제목 — 프롬프트가 못 박은 형태. */
+    private static final Pattern GLOSSARY_HEADING = Pattern.compile("(?m)^###\\s+용어 한눈에");
+
+    /**
+     * 정의가 있어야 하는 용어 후보 — <b>넓게 잡지 않는다.</b>
+     *
+     * <p>이상적으로는 "문서에 나오는 모든 전문 용어"를 세고 싶지만, 한국어 문장에서 용어의
+     * 경계를 정규식으로 자르면 오탐이 쏟아진다. 예를 들어 {@code ([가-힣]{2,6})\s*락}으로
+     * 잡으면 "그래서 따로 락을 건다"에서 <b>"따로 락"</b>이 용어로 걸린다. 이 클래스의 오랜
+     * 원칙대로 <b>오탐이 미탐보다 비싸다</b> — 헛울리는 경고는 사람이 경고 전체를 안 보게 만든다.
+     *
+     * <p>그래서 <b>2026-08-18에 실제로 새어 나간 두 계열만</b> 본다.
+     * <ol>
+     *   <li>잠금 계열 — 수식어를 목록으로 못 박는다. 실물에서 정의 없이 지나간 것이
+     *       공유 락·배타 락·낙관적 잠금·비관적 잠금·갭 락 다섯이었다.
+     *   <li>대문자 SQL 구문 — 한글이 섞이지 않아 경계가 분명하다. 실물의
+     *       {@code SELECT ... FOR UPDATE}가 세 번 나오도록 정의가 없었다.
+     * </ol>
+     *
+     * <p>다른 분야(네트워크·보안)의 용어는 이 목록으로 잡히지 않는다. <b>알고 그렇게 뒀다.</b>
+     * 여기서 잡는 것은 "모든 미정의 용어"가 아니라 <b>사고가 났던 자리</b>이고, 같은 사고가
+     * 다른 분야에서 나면 그때 그 계열을 한 줄 더한다. 미리 넓히면 지금 당장 오탐이 난다.
+     */
+    private static final List<Pattern> TERM_CANDIDATES = List.of(
+            Pattern.compile("(?:공유|배타|낙관적|비관적|명시적|묵시적|갭|넥스트키|행|테이블|범위|분산)\\s*(?:락|잠금)"),
+            // 대문자 두 낱말 이상이 이어지는 구문. "..."을 낱말로 인정해 SELECT ... FOR UPDATE를 통째로 잡는다.
+            Pattern.compile("\\b[A-Z]{3,}(?:\\s+(?:\\.\\.\\.|[A-Z]{2,}))+")
+    );
+
+    /** 경고 메시지에 나열할 용어 개수 상한 — 다 적으면 메시지가 화면을 넘긴다. */
+    private static final int MAX_LISTED_TERMS = 6;
+
     /** 본론 섹션 최소 개수 — 프롬프트는 2~3개를 요구한다. */
     private static final int MIN_BODY_SECTIONS = 2;
 
@@ -146,6 +187,8 @@ public final class DocumentDraftValidator {
         checkRequiredSections(body, checks);
         checkDesignRationaleHeading(body, checks);
         checkTermList(body, checks);
+        checkGlossaryTable(body, checks);
+        checkUndefinedTerms(body, checks);
         checkBodySections(body, checks);
         checkFailureModeCount(body, checks);
         checkHtmlTags(body, checks);
@@ -269,6 +312,94 @@ public final class DocumentDraftValidator {
                     "'## 무엇인가'의 용어 정의가 하이픈 목록이 아닙니다. "
                             + "줄만 바꾸면 화면에서 한 문단으로 뭉쳐 나옵니다(마크다운의 홑줄바꿈)."));
         }
+    }
+
+    /**
+     * 본론 끝에 {@code ### 용어 한눈에} 표가 있는지.
+     *
+     * <p><b>이 표는 뒤쪽 절이 쓸 용어를 미리 올려 두는 자리다.</b> 2026-08-18에 사용자가
+     * "문서에 모르는 용어가 설명 없이 나온다"고 지적했고, 실물을 세어 보니 정의된 용어는
+     * {@code ## 무엇인가}의 5개뿐이었다. 뒤쪽 절에서 처음 나온 잠금·격리 용어 아홉 개는
+     * 정의 없이 지나갔다. 프롬프트에는 이미 "정의 없이 지나가는 용어가 하나도 없어야 한다"가
+     * 있었으므로, 문구를 더 세게 적는 것으로는 고쳐지지 않는다는 것이 확인된 셈이다.
+     * <b>용어를 둘 자리를 만들어 주는 쪽</b>으로 바꾸고, 그 자리가 생겼는지 여기서 센다.
+     *
+     * <p>차단이 아니라 경고인 이유는 이 절의 다른 형식 규칙과 같다 — 표 하나가 없다고 나흘치
+     * 문서를 버리는 것보다, 검수자가 승인 전에 표를 채워 넣는 편이 싸다.
+     */
+    private static void checkGlossaryTable(String body, List<DocumentCheck> checks) {
+        if (!GLOSSARY_HEADING.matcher(body).find()) {
+            checks.add(DocumentCheck.warning(
+                    "'### 용어 한눈에' 표가 없습니다. 뒤쪽 절에서 처음 나오는 용어를 올려 두는 자리입니다."));
+        }
+    }
+
+    /**
+     * 어려운 용어가 <b>정의 없이</b> 지나가는지 — 초보 학습자가 문서를 놓치는 가장 흔한 이유다.
+     *
+     * <p><b>이 검사의 한계를 먼저 적는다.</b> 문서에 나오는 모든 전문 용어를 세지 않는다.
+     * 셀 수도 없고, 넓게 잡으면 오탐이 경고 전체를 무력하게 만든다({@link #TERM_CANDIDATES}
+     * 주석의 "따로 락" 예). 여기서 보는 것은 <b>2026-08-18에 실제로 새어 나간 두 계열</b>뿐이고,
+     * 다른 계열에서 같은 사고가 나면 그때 목록을 한 줄 늘린다.
+     *
+     * <p>그래도 값어치가 있는 이유: 이 두 계열이 <b>고급 문제의 보기에 그대로 실려 나간다</b>.
+     * 8/18 문제 5개 중 3개의 보기에 {@code SELECT ... FOR UPDATE}와 낙관적 잠금이 들어 있었는데,
+     * 문서 어디에도 그 뜻이 없었다. 문서에서 새면 문제까지 새는 구조라 <b>문서 단계에서</b>
+     * 잡는 것이 가장 싸다.
+     */
+    private static void checkUndefinedTerms(String body, List<DocumentCheck> checks) {
+        // LinkedHashSet — 같은 용어가 여러 번 나와도 한 번만 알리고, 문서에 나온 순서를 지킨다.
+        // 검수자는 메시지를 들고 문서를 위에서 아래로 훑으므로 순서가 곧 찾는 순서다.
+        Set<String> undefined = new LinkedHashSet<>();
+        List<String> lines = List.of(body.split("\n", -1));
+
+        for (Pattern candidate : TERM_CANDIDATES) {
+            Matcher m = candidate.matcher(body);
+            while (m.find()) {
+                String term = m.group();
+                if (!isDefinedSomewhere(lines, term)) {
+                    undefined.add(term);
+                }
+            }
+        }
+        if (undefined.isEmpty()) {
+            return;
+        }
+
+        List<String> listed = undefined.stream().limit(MAX_LISTED_TERMS).toList();
+        String tail = undefined.size() > listed.size()
+                ? " 외 %d개".formatted(undefined.size() - listed.size())
+                : "";
+        checks.add(DocumentCheck.warning(
+                "정의 없이 쓰인 용어가 있습니다: %s%s. 그 자리에서 풀거나 '### 용어 한눈에' 표에 올리세요."
+                        .formatted(String.join(", ", listed), tail)));
+    }
+
+    /**
+     * 그 용어를 담은 <b>정의 줄</b>이 문서 어딘가에 있는지.
+     *
+     * <p>정의 줄로 인정하는 형태는 셋이다 — 표의 행({@code |}로 시작), 하이픈 정의 목록
+     * ({@code - **용어** — 뜻.}), 굵은 글씨 정의 줄({@code **용어** — 뜻.}). 마지막 것을
+     * 함께 인정하는 이유는 {@link #checkTermList}가 그 형태를 <b>경고하되 허용</b>하기
+     * 때문이다. 한쪽이 봐준 형식을 다른 쪽이 "정의가 아니다"라고 하면 같은 결함으로 경고가
+     * 두 번 뜨고, 검수자는 무엇을 고쳐야 하는지 헷갈린다.
+     *
+     * <p>표 행에 줄표를 요구하지 않는 이유: 표는 칸이 뜻을 나누므로 줄표가 필요 없다.
+     */
+    private static boolean isDefinedSomewhere(List<String> lines, String term) {
+        for (String line : lines) {
+            String trimmed = line.strip();
+            if (!trimmed.contains(term)) {
+                continue;
+            }
+            if (trimmed.startsWith("|")) {
+                return true;
+            }
+            if ((trimmed.startsWith("- **") || trimmed.startsWith("**")) && trimmed.contains("—")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
