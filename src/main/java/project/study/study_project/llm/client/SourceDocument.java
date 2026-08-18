@@ -14,9 +14,34 @@ package project.study.study_project.llm.client;
  * <p>문서 전문을 그대로 싣는다(요약하지 않는다). 3,000자면 대략 2천 토큰이고 입력 토큰은
  * $5/1M이라 편당 1센트 남짓이다 — 요약하느라 근거를 잃는 것이 훨씬 비싸다.
  *
+ * <p><b>{@link Kind}를 나중에 덧붙인 이유</b>(2026-08-18): 관리자가 <b>아무 문서나 올려</b>
+ * 문제를 뽑는 경로가 생겼다. 그런데 프롬프트의 "이번 난이도는 이 절을 캐라" 지시는
+ * {@code ## 무엇인가}·{@code ## 언제 깨지는가}처럼 <b>우리 문서 양식의 절 이름을 직접 지목</b>한다.
+ * 사내 위키나 블로그 글에는 그런 절이 없고, 없는 절을 찾으라고 하면 모델은 오류를 내지 않고
+ * <b>조용히 아무 데나 캔다</b>. 그래서 문서가 어디서 왔는지를 이 record가 들고 다니게 하고,
+ * 절 이름을 쓸지 역할로 말할지는 {@code ClaudeProblemGenerator.sourceFocus}가 정한다.
+ *
+ * <p>플래그를 생성기 파라미터로 따로 받지 않고 여기 넣은 이유: "이 문서가 어떤 양식인가"는
+ * 문서 자체의 속성이지 요청의 속성이 아니다. 파라미터로 빼면 문서와 플래그가 따로 흘러
+ * 언젠가 짝이 어긋난다(생성 문서에 UPLOADED를 붙이는 식).
+ *
  * @param slug      문서 식별자. 생성 결과 파일과 초안에 기록해 "이 문제의 근거"를 남긴다
  * @param title     문서 제목 — 프롬프트에서 주제를 한 줄로 알려 주는 용도
  * @param contentMd 마크다운 본문 전문
+ * @param kind      문서의 출처. 프롬프트가 절 이름을 지목할지 말지를 가른다
  */
-public record SourceDocument(String slug, String title, String contentMd) {
+public record SourceDocument(String slug, String title, String contentMd, Kind kind) {
+
+    /** 우리 양식으로 생성된 문서 — 편의 생성자. 기존 호출부(배치·평가 CLI)가 그대로 쓴다. */
+    public SourceDocument(String slug, String title, String contentMd) {
+        this(slug, title, contentMd, Kind.GENERATED);
+    }
+
+    /** 문서의 출처. 이름을 {@code isUploaded} 같은 boolean으로 두지 않은 이유는 종류가 더 늘 수 있어서다. */
+    public enum Kind {
+        /** LLM이 우리 프롬프트로 쓴 개념 문서 — {@code ## 무엇인가} 등 약속된 절이 있다. */
+        GENERATED,
+        /** 관리자가 올린 임의의 문서 — 어떤 절이 있을지 알 수 없다. */
+        UPLOADED
+    }
 }

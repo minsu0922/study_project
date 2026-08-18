@@ -21,8 +21,10 @@ import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemGenerator;
 import project.study.study_project.llm.client.RejectionNote;
+import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
+import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
@@ -128,8 +130,51 @@ public class LlmProblemService {
         List<GeneratedProblemItem> items =
                 problemGenerator.generate(domain, difficulty, type, request.count(), avoid, rejectionNotes);
 
-        // 관리자 화면의 즉시 생성은 근거 문서 없이 만든다(null). 문서 기반 생성은 4일 주기를
-        // 따르는 배치의 몫이고, 화면에서 문서를 골라 문제를 뽑는 기능은 지금 필요가 없다 — YAGNI.
+        // 이 경로(칸 자동 선택 즉시 생성)는 근거 문서 없이 만든다(null).
+        // 문서를 근거로 만드는 경로는 둘로 갈렸다: 4일 주기 배치와 아래 generateFromUpload.
+        return saveDrafts(domain, difficulty, type, items, model, null).stream().map(this::toResponse).toList();
+    }
+
+    /**
+     * <b>관리자가 올린 문서</b>를 근거로 문제를 생성해 PENDING 초안으로 저장한다 — 2026-08-18 신설.
+     *
+     * <p>전에는 이 자리에 "화면에서 문서를 골라 문제를 뽑는 기능은 지금 필요가 없다 — YAGNI"라고
+     * 적혀 있었다. 필요가 생겨서 만든다. 다만 <b>새 경로를 통째로 만들지 않았다</b> —
+     * 생성은 {@code problemGenerator}의 기존 오버로드가, 저장·검증은 {@link #saveDrafts}가,
+     * 검수·승인·거절은 기존 화면이 그대로 한다. 실제로 새로 쓴 것은 이 메서드 열 줄과
+     * 프롬프트의 절 지목 분기 하나뿐이다.
+     *
+     * <p><b>분야·난이도를 자동으로 고르지 않는다.</b> {@link #generate}는 비어 있으면 "가장 부족한
+     * 칸"을 채우는데, 그 규칙을 여기 쓰면 올린 문서와 무관한 분야가 붙는다. 요청 DTO가
+     * {@code @NotNull}로 막고 있고, 여기서 다시 고르지 않는 것으로 그 결정을 존중한다.
+     *
+     * <p><b>{@code documentSlug}는 {@code null}이다.</b> 이 값은 학습자 화면의 "개념 문서 읽기"
+     * 링크에 쓰이는데, 올린 파일은 서비스에 등록된 문서가 아니라 갈 곳이 없다. 서버가 실재를
+     * 확인해 걸러 주긴 하지만(3단계), 애초에 넣지 않는 쪽이 맞다.
+     * <b>알려진 부작용</b>: 해설 끝의 "(문서의 ○○ 절을 다시 읽어 보라)"가 학습자에게는 갈 곳 없는
+     * 문장이 된다. 프롬프트에서 그 지시를 빼면 배치 문제의 해설까지 나빠지므로 그대로 두고,
+     * 검수 단계에서 사람이 지우는 쪽을 택했다.
+     *
+     * <p>{@link #generate}와 마찬가지로 트랜잭션을 걸지 않는다 — Claude 호출이 수십 초라
+     * 그동안 DB 커넥션을 물고 있으면 커넥션 풀이 마른다.
+     */
+    public List<LlmDraftResponse> generateFromUpload(LlmDocumentGenerateRequest request, SourceDocument document) {
+        ProblemType type = request.type() != null ? request.type() : ProblemType.MULTIPLE_CHOICE;
+        if (type == ProblemType.ESSAY) {
+            throw new BusinessException(ErrorCode.QUIZ_002, "서술형(ESSAY)은 자동채점 미지원이라 생성할 수 없습니다.");
+        }
+
+        Domain domain = request.domain();
+        Difficulty difficulty = request.difficulty();
+
+        // 중복 회피·거절 사례는 기존 경로와 똑같이 싣는다. 근거 문서가 다르다고 해서
+        // "이미 있는 문제와 겹쳐도 된다"가 되는 것은 아니다 — 학습자에게는 같은 문제 목록이다.
+        List<String> avoid = buildAvoidList(domain);
+        List<RejectionNote> rejectionNotes = findRecentRejectionNotes();
+
+        List<GeneratedProblemItem> items = problemGenerator.generate(
+                domain, difficulty, type, request.count(), avoid, rejectionNotes, document);
+
         return saveDrafts(domain, difficulty, type, items, model, null).stream().map(this::toResponse).toList();
     }
 

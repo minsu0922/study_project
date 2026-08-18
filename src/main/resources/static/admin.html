@@ -118,6 +118,34 @@
         <span class="meta" id="gLoading" hidden>생성 중… (수십 초 걸릴 수 있어요)</span>
       </div>
 
+      <!-- ═══ 문서 업로드 생성 (2026-08-18 신설) ═══
+           위 카드와 따로 둔 이유: 근거가 있고 없고는 결과물의 성격이 다르다.
+           위는 모델의 기억에서, 아래는 준 문서 안에서만 낸다. 한 폼에 체크박스로 합치면
+           지금 어느 쪽으로 만들고 있는지가 흐려진다. -->
+      <div class="card">
+        <h3>문서로 문제 만들기</h3>
+        <p class="meta">올린 문서 <b>안에 있는 내용으로만</b> 문제를 만듭니다. 사내 위키·블로그 글처럼
+          우리 양식이 아닌 문서도 됩니다. 도메인·난이도는 <b>직접 골라야 합니다</b> —
+          올린 문서의 주제를 시스템이 알 수 없어 자동 선택을 쓰면 엉뚱한 분야가 붙습니다.</p>
+        <div id="uMessage"></div>
+        <div class="filters">
+          <div class="field"><label>도메인 (필수)</label><select id="uDomain"></select></div>
+          <div class="field"><label>난이도 (필수)</label><select id="uDifficulty"></select></div>
+          <div class="field"><label>유형</label><select id="uType"></select></div>
+          <div class="field"><label>개수 (1~10)</label><input type="number" id="uCount" value="5" min="1" max="10" style="width:80px"></div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label>파일 (.md / .txt)</label>
+          <input type="file" id="uFile" accept=".md,.txt,text/markdown,text/plain">
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label>또는 본문 붙여넣기 (최대 20,000자)</label>
+          <textarea id="uText" rows="8" placeholder="문서 내용을 그대로 붙여넣으세요."></textarea>
+        </div>
+        <button id="uSubmitBtn">문서로 생성</button>
+        <span class="meta" id="uLoading" hidden>생성 중… (수십 초 걸릴 수 있어요)</span>
+      </div>
+
       <h3>생성 초안
         <select id="gStatusFilter" style="margin-left:10px">
           <option value="PENDING">검수 대기</option>
@@ -822,6 +850,65 @@ function initLlmTab() {
 
   document.getElementById("gSubmitBtn").addEventListener("click", generateProblems);
   document.getElementById("gStatusFilter").addEventListener("change", () => loadTab("llm"));
+
+  // 업로드 폼에는 "자동" 옵션을 두지 않는다. 올린 문서의 주제를 시스템이 모르는데 칸을
+  // 자동으로 고르면 문서와 무관한 분야가 붙는다 — 서버도 @NotNull로 막고 있다.
+  fillSelect(document.getElementById("uDomain"), DOMAINS);
+  fillSelect(document.getElementById("uDifficulty"), DIFFICULTIES);
+  fillSelect(document.getElementById("uType"), TYPES);
+  document.getElementById("uSubmitBtn").addEventListener("click", generateFromDocument);
+}
+
+/**
+ * 문서를 근거로 생성. 위 generateProblems와 달리 api() 헬퍼를 쓰지 않는다 —
+ * 그 헬퍼는 body가 있으면 Content-Type을 application/json으로 박는데, multipart는
+ * 브라우저가 boundary까지 포함해 직접 정해야 한다. 헬퍼를 고쳐 분기를 넣는 대신
+ * 이 한 곳만 fetch를 직접 쓴다(호출부 하나 때문에 공용 헬퍼를 복잡하게 만들지 않는다).
+ */
+async function generateFromDocument() {
+  const msg = document.getElementById("uMessage");
+  const btn = document.getElementById("uSubmitBtn");
+  const loading = document.getElementById("uLoading");
+  const fileInput = document.getElementById("uFile");
+  const text = document.getElementById("uText").value.trim();
+  const file = fileInput.files[0];
+
+  // 서버도 같은 것을 검사하지만(둘 다 없음/둘 다 있음 → 400) 여기서 먼저 막는다.
+  // 파일을 올려 두고 붙여넣기까지 한 채 수십 초를 기다렸다가 400을 받는 건 나쁜 경험이다.
+  if (!file && !text) { showError(msg, new Error("문서를 올리거나 본문을 붙여넣어 주세요.")); return; }
+  if (file && text)   { showError(msg, new Error("파일과 붙여넣기 중 하나만 사용해 주세요.")); return; }
+
+  const form = new FormData();
+  form.append("domain", document.getElementById("uDomain").value);
+  form.append("difficulty", document.getElementById("uDifficulty").value);
+  form.append("type", document.getElementById("uType").value);
+  form.append("count", document.getElementById("uCount").value);
+  if (file) form.append("file", file);
+  else form.append("text", text);
+
+  btn.disabled = true;   // 중복 클릭 = 중복 과금
+  loading.hidden = false;
+  try {
+    const headers = {};
+    const token = getToken();
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch("/api/admin/llm-problems/generate-from-document", {
+      method: "POST", headers, body: form,
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json?.error?.message || "생성에 실패했습니다.");
+    }
+    showOk(msg, `${json.data.length}건 생성 완료 — 아래에서 검수해 주세요.`);
+    document.getElementById("gStatusFilter").value = "PENDING";
+    loadTab("llm");
+    refreshLlmBadge();
+  } catch (e) {
+    showError(msg, e);
+  } finally {
+    btn.disabled = false;
+    loading.hidden = true;
+  }
 }
 
 async function generateProblems() {

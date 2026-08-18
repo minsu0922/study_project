@@ -20,8 +20,10 @@ import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemGenerator;
 import project.study.study_project.llm.client.RejectionNote;
+import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
+import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -128,6 +130,98 @@ class LlmProblemServiceTest {
                 new GeneratedProblemItem.GeneratedChoice("보기2", correctIndex == 1),
                 new GeneratedProblemItem.GeneratedChoice("보기3", correctIndex == 2),
                 new GeneratedProblemItem.GeneratedChoice("보기4", correctIndex == 3)));
+    }
+
+    /**
+     * 업로드 문서 기반 생성 — 2026-08-18 신설.
+     *
+     * <p>이 경로는 <b>기존 경로를 재사용해 만든 것</b>이라 새로 검증할 로직이 적다. 대신
+     * 재사용하면서 어긋나기 쉬운 세 가지를 못 박는다: ① 칸을 자동으로 고르지 않는가,
+     * ② 근거 문서가 그대로 생성기까지 가는가, ③ 중복 회피·거절 되먹임이 빠지지 않았는가.
+     */
+    @Nested
+    @DisplayName("업로드 문서 기반 생성")
+    class GenerateFromUpload {
+
+        private final SourceDocument uploaded = new SourceDocument(
+                "uploaded", "사내 카프카 운영 가이드", "# 사내 카프카 운영 가이드\n\n본문이다.",
+                SourceDocument.Kind.UPLOADED);
+
+        /**
+         * <b>칸 자동 선택을 타면 안 된다.</b> {@code generate}는 비어 있으면 "가장 부족한 칸"을
+         * 채우는데, 그 규칙이 여기까지 새어 들어오면 올린 문서와 무관한 분야로 문제가 나온다.
+         * 조용한 실패다 — 문제는 정상적으로 생성되고, 분야가 틀렸다는 건 사람이 읽어야 안다.
+         */
+        @Test
+        @DisplayName("요청에 준 분야·난이도를 그대로 쓴다 — 부족 칸 자동 선택을 타면 안 된다")
+        void usesGivenCellWithoutAutoPicking() {
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+
+            service.generateFromUpload(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null), uploaded);
+
+            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.NETWORK);
+            assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.ADVANCED);
+            // 자동 선택을 탔다면 집계를 조회했을 것이다. setUp에서 stub하지 않았으므로
+            // 값이 비어 엉뚱한 칸이 나왔을 텐데, 위 단언이 그것까지 함께 막는다.
+        }
+
+        @Test
+        @DisplayName("올린 문서가 생성기까지 그대로 간다 — 중간에서 잃으면 근거 없이 만들어진다")
+        void passesUploadedDocumentToGenerator() {
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+
+            service.generateFromUpload(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null), uploaded);
+
+            assertThat(fakeGenerator.calledSourceDocument).isSameAs(uploaded);
+            assertThat(fakeGenerator.calledSourceDocument.kind()).isEqualTo(SourceDocument.Kind.UPLOADED);
+        }
+
+        /**
+         * 근거 문서가 다르다고 "이미 있는 문제와 겹쳐도 된다"가 되지는 않는다 —
+         * 학습자에게는 출처와 무관하게 같은 문제 목록이다.
+         */
+        @Test
+        @DisplayName("중복 회피와 거절 되먹임은 기존 경로와 똑같이 실린다")
+        void keepsAvoidListAndRejectionFeedback() {
+            when(problemRepository.findQuestionTextsByDomain(any(), any())).thenReturn(List.of("이미 있는 문제"));
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+
+            service.generateFromUpload(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null), uploaded);
+
+            assertThat(fakeGenerator.calledAvoid).contains("이미 있는 문제");
+            assertThat(fakeGenerator.calledRejectionNotes).isNotNull();
+        }
+
+        /**
+         * {@code documentSlug}를 비우는 결정을 못 박는다. 올린 파일은 서비스에 등록된 문서가
+         * 아니라, slug를 넣으면 학습자 화면의 "개념 문서 읽기"가 <b>존재하지 않는 문서</b>를
+         * 가리킨다. 서버가 실재를 확인해 걸러 주긴 하지만 애초에 넣지 않는 쪽이 맞다.
+         */
+        @Test
+        @DisplayName("초안의 근거 문서 slug는 비운다 — 올린 파일은 서비스에 없는 문서다")
+        void storesNoDocumentSlug() {
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+            ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
+
+            service.generateFromUpload(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null), uploaded);
+
+            org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
+            assertThat(captor.getValue()).singleElement()
+                    .satisfies(d -> assertThat(d.getDocumentSlug()).isNull());
+        }
+
+        @Test
+        @DisplayName("서술형은 업로드 경로에서도 거부한다 — 자동채점이 안 되는 건 출처와 무관하다")
+        void rejectsEssayOnThisPathToo() {
+            assertThatThrownBy(() -> service.generateFromUpload(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null), uploaded))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("자동채점");
+        }
     }
 
     @Nested

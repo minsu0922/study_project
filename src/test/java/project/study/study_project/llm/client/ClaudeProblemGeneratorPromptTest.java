@@ -509,6 +509,75 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("정답이 TIME_WAIT 자체이므로 지문·보기에 뜻을 괄호로 달지 않았다");
     }
 
+    /* ── 업로드 문서 분기 (2026-08-18) ──────────────────────────
+     * 관리자가 아무 문서나 올려 문제를 뽑는 경로가 생겼다. 프롬프트의 "이번 난이도는 이 절을
+     * 캐라" 지시는 '## 무엇인가'처럼 <우리 문서 양식의 절 이름>을 직접 지목하는데, 사내 위키나
+     * 블로그 글에는 그런 절이 없다. 없는 절을 지목하면 모델은 오류를 내지 않고 조용히 아무 데나
+     * 캔다 — 8/15에 겪은 사고(없는 이름을 지목하던 지시)와 정확히 같은 실패다. */
+
+    /**
+     * <b>이 테스트의 진짜 목적은 배치를 지키는 것이다.</b> 업로드 분기를 넣으면서 기존 경로의
+     * 절 지목이 사라지면 배치 문제의 품질이 조용히 떨어진다 — 문제는 정상적으로 생성되고
+     * 검증도 통과하며, 사흘 뒤 난이도가 뒤섞인 것을 사람이 알아차려야 한다.
+     */
+    @Test
+    @DisplayName("생성 문서는 여전히 절 이름을 지목한다 — 업로드 분기가 배치 경로를 건드리면 안 된다")
+    void generatedDocumentStillNamesSections() {
+        assertThat(prompt(Difficulty.ADVANCED, DOC))
+                .contains("## 언제 깨지는가")
+                .doesNotContain("이 문서는 우리 양식이 아니다");
+    }
+
+    /**
+     * 업로드 문서에는 절 이름이 나가면 안 된다. 나가면 모델이 없는 절을 찾다가
+     * 아무 데나 캐는데, 그게 이 분기를 만든 이유 그대로다.
+     *
+     * <p>마지막 단언이 이 분기의 알맹이다 — 임의의 문서에는 그 난이도의 재료가 아예 없을 수
+     * 있는데, 지시가 없으면 모델은 개수를 맞추려고 지어낸다. 재료가 마를 가능성이 배치보다
+     * 훨씬 높은 경로라 시스템 프롬프트의 [개수를 채우지 못할 때]에 더해 여기서 한 번 더 적는다.
+     */
+    @Test
+    @DisplayName("업로드 문서에는 절 이름 대신 역할로 지시한다 — 없는 절을 찾으면 아무 데나 캔다")
+    void uploadedDocumentDescribesRolesInsteadOfSectionNames() {
+        SourceDocument uploaded = new SourceDocument(
+                "uploaded", "사내 카프카 운영 가이드", "# 사내 카프카 운영 가이드\n\n본문이다.",
+                SourceDocument.Kind.UPLOADED);
+
+        for (Difficulty difficulty : Difficulty.values()) {
+            assertThat(prompt(difficulty, uploaded))
+                    .as("%s: 우리 양식의 절 이름이 업로드 문서에 나가면 안 된다", difficulty)
+                    .doesNotContain("## 무엇인가")
+                    .doesNotContain("## 언제 깨지는가")
+                    .doesNotContain("## 실무에서는 이렇게 쓴다")
+                    .as("%s: 절 이름을 못 쓰니 무엇을 찾을지 역할로 말해야 한다", difficulty)
+                    .contains("정해진 절 이름을 찾지 마라")
+                    .as("%s: 재료가 없으면 지어내지 말고 적게 내라는 것이 이 분기의 알맹이다", difficulty)
+                    .contains("억지로 만들지 말고 만들 수 있는 만큼만 내라");
+        }
+    }
+
+    /**
+     * 양식 분기는 <b>절 지목 한 곳</b>이다. 난이도 정의·오답 조건·해설 규칙·용어 규칙은 문서
+     * 양식과 무관하므로 업로드에도 똑같이 실려야 한다. 이게 깨지면 프롬프트가 사실상 둘로
+     * 갈라진 것이고, 다음에 한쪽만 고쳐서 어긋난다.
+     */
+    @Test
+    @DisplayName("양식과 무관한 규칙은 업로드에도 그대로 실린다 — 갈라진 건 절 지목 한 곳뿐이다")
+    void uploadedPathKeepsAllFormatAgnosticRules() {
+        SourceDocument uploaded = new SourceDocument(
+                "uploaded", "사내 문서", "# 사내 문서\n\n본문", SourceDocument.Kind.UPLOADED);
+
+        assertThat(prompt(Difficulty.ADVANCED, uploaded))
+                .as("근거 문서 안에서만 내라는 지시는 출처와 무관하다")
+                .contains("이 문서에 실제로 담긴 내용으로만 문제를 만들어라")
+                .as("난이도 예시는 문서 양식과 상관없다")
+                .contains("왜 고급인가");
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .as("시스템 프롬프트는 두 경로가 공유한다 — 복제하면 언젠가 어긋난다")
+                .contains("[용어]")
+                .contains("[오답 보기의 조건]");
+    }
+
     private String prompt(Difficulty difficulty, SourceDocument source) {
         return generator.buildPrompt(Domain.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
                 5, List.of(), List.of(), source);

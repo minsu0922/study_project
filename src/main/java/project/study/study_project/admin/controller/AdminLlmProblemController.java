@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,14 +14,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import project.study.study_project.admin.dto.AdminProblemDetail;
+import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.service.LlmProblemService;
+import project.study.study_project.llm.support.UploadedDocumentReader;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +54,49 @@ public class AdminLlmProblemController {
     @PostMapping("/generate")
     public ApiResponse<List<LlmDraftResponse>> generate(@Valid @RequestBody LlmGenerateRequest request) {
         return ApiResponse.ok(llmProblemService.generate(request));
+    }
+
+    /**
+     * <b>올린 문서</b>를 근거로 생성 — 2026-08-18 신설. 파일 업로드 또는 본문 붙여넣기.
+     *
+     * <p>{@code multipart/form-data}인 이유: 파일과 폼 필드를 한 요청에 함께 보내야 한다.
+     * 붙여넣기도 같은 엔드포인트를 쓰는 것은 <b>뒤가 완전히 같기 때문</b>이다 —
+     * 입구만 둘이고 그 뒤로는 같은 {@code SourceDocument}가 흐른다. 경로를 둘로 가르면
+     * 검증과 상한이 두 곳에 생기고, 언젠가 한쪽에만 규칙이 붙는다.
+     *
+     * <p><b>둘 중 정확히 하나여야 한다.</b> 둘 다 없으면 무엇으로 만들지 알 수 없고,
+     * 둘 다 있으면 어느 쪽을 썼는지 사람이 알 수 없다 — 조용히 하나를 고르면
+     * "올린 파일이 무시된 줄 모르는" 사고가 난다. 그래서 골라 주지 않고 400으로 되돌린다.
+     *
+     * <p>파일 크기 상한은 두 겹이다: 톰캣·스프링의 multipart 상한(application.yml)이 먼저 막고,
+     * 통과한 뒤 {@code UploadedDocumentReader}가 <b>글자 수</b>로 다시 막는다. 앞은 전송량,
+     * 뒤는 요금이 기준이라 재는 대상이 다르다.
+     */
+    @PostMapping("/generate-from-document")
+    public ApiResponse<List<LlmDraftResponse>> generateFromDocument(
+            @Valid @ModelAttribute LlmDocumentGenerateRequest request,
+            @RequestParam(value = "file", required = false) MultipartFile file
+    ) {
+        boolean hasFile = file != null && !file.isEmpty();
+        boolean hasText = request.text() != null && !request.text().isBlank();
+        if (hasFile == hasText) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, hasFile
+                    ? "파일과 붙여넣기 중 하나만 보내 주세요."
+                    : "문서를 올리거나 본문을 붙여넣어 주세요.");
+        }
+
+        SourceDocument document;
+        if (hasFile) {
+            try {
+                document = UploadedDocumentReader.fromFile(file.getBytes(), file.getOriginalFilename());
+            } catch (IOException e) {
+                // 업로드 스트림을 읽다 끊긴 경우 — 사용자가 고칠 수 있는 문제라 400으로 돌려준다.
+                throw new BusinessException(ErrorCode.VALIDATION_ERROR, "업로드 파일을 읽지 못했습니다. 다시 시도해 주세요.");
+            }
+        } else {
+            document = UploadedDocumentReader.fromText(request.text());
+        }
+        return ApiResponse.ok(llmProblemService.generateFromUpload(request, document));
     }
 
     /** 초안 목록 — 기본 PENDING, 오래된 순. 예: {@code GET /api/admin/llm-problems?status=REJECTED} */

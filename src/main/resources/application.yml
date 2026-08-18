@@ -19,6 +19,15 @@ spring:
     open-in-view: false                  # 지연로딩 경계를 서비스 계층으로 명확히
     show-sql: true
 
+  # 관리자 문서 업로드(문제 생성 근거)용 상한. 기본값(파일 1MB)에 기대지 않고 명시한다 —
+  # 기본값은 조용히 바뀔 수 있고, 이 값은 "요금이 걸린 입구"라 눈에 보이는 곳에 있어야 한다.
+  # 글자 수 상한(20,000자)은 UploadedDocumentReader가 따로 잰다. 여기서 재는 것은 전송량이고
+  # 거기서 재는 것은 요금이라 기준이 다르다 — 한글은 UTF-8에서 글자당 3바이트라 여유를 둔다.
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 2MB
+
   flyway:
     enabled: true
     baseline-on-migrate: true            # 기존 DB에도 안전하게 적용

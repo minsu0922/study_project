@@ -380,7 +380,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         sb.append("새로운 상황을 지어내 적용시킬지는 난이도가 정한다 — 초급에는 상황을 붙이지 마라.\n");
         sb.append("\n제목: ").append(doc.title()).append('\n');
         sb.append("--- 문서 시작 ---\n").append(doc.contentMd()).append("\n--- 문서 끝 ---\n");
-        sb.append('\n').append(sourceFocus(difficulty)).append('\n');
+        sb.append('\n').append(sourceFocus(difficulty, doc.kind())).append('\n');
     }
 
     /**
@@ -404,8 +404,28 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      * <p>절 이름이 문자열로 두 파일에 흩어져 있던 것이 근본 원인이었다. 이제 이름은
      * {@link #SOURCE_SECTIONS} 한 곳에만 적고 이 문장들은 <b>거기서 꺼내 끼운다</b> —
      * 문장을 고치다 이름이 갈라지는 일 자체가 없어진다.
+     *
+     * <h2>2026-08-18 — 업로드 문서용 분기</h2>
+     *
+     * <p><b>이 메서드가 이 클래스에서 유일하게 "우리 문서 양식"에 묶인 곳이다.</b> 관리자가
+     * 아무 문서나 올려 문제를 뽑는 경로가 생기면서 그 결합이 문제가 됐다 — 사내 위키나 블로그
+     * 글에는 {@code ## 무엇인가}가 없고, <b>없는 절을 지목하면 모델은 오류를 내지 않고 조용히
+     * 아무 데나 캔다</b>. 8/15에 겪은 사고(없는 이름을 지목하던 지시)와 정확히 같은 실패다.
+     *
+     * <p><b>프롬프트를 통째로 복제하지 않은 이유</b>: 시스템 프롬프트의 난이도 정의·오답 조건·
+     * 해설 규칙·용어 규칙은 문서 양식과 아무 상관이 없다. 복제하면 오늘 고친 것들이 두 벌이
+     * 되고, 다음에 한쪽만 고쳐서 어긋난다 — 이 저장소가 절 이름으로 이미 겪은 실패다.
+     * <b>양식에 묶인 곳만 갈랐다.</b>
+     *
+     * <p>업로드 쪽 문구의 핵심은 마지막 줄이다: <b>"그런 대목이 없으면 적게 내라."</b>
+     * 임의의 문서에는 그 난이도의 재료가 아예 없을 수 있는데, 지시가 없으면 모델은 개수를
+     * 맞추려고 지어낸다. 시스템 프롬프트의 {@code [개수를 채우지 못할 때]}와 같은 원리이고,
+     * 여기서 한 번 더 적는 이유는 <b>재료가 마를 가능성이 배치보다 훨씬 높은 경로</b>여서다.
      */
-    private String sourceFocus(Difficulty difficulty) {
+    private String sourceFocus(Difficulty difficulty, SourceDocument.Kind kind) {
+        if (kind == SourceDocument.Kind.UPLOADED) {
+            return uploadedSourceFocus(difficulty);
+        }
         List<String> sections = SOURCE_SECTIONS.get(difficulty);
         return switch (difficulty) {
             case BEGINNER -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(정의·용어 설명)과 "
@@ -420,6 +440,34 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                     .formatted(sections.get(0))
                     + "'%s' 절을 쓴다. 그 질문들이 다루는 트레이드오프와 ".formatted(sections.get(1))
                     + "엣지 케이스를 문제로 바꿔라. 다만 질문을 그대로 옮기지 말고 객관식으로 재구성한다.";
+        };
+    }
+
+    /**
+     * 업로드 문서용 — <b>절 이름 대신 역할로 말한다.</b>
+     *
+     * <p>절 이름을 지목할 수 없으니 "무엇을 담은 대목인가"로 찾게 한다. 우리 양식 문서를
+     * 올려도 그대로 통한다 — {@code ## 언제 깨지는가}는 "한계·실패 조건을 다룬 대목"이 맞다.
+     * 즉 이 문구는 {@link #sourceFocus}의 상위 집합이고, 배치가 굳이 이쪽을 쓰지 않는 이유는
+     * <b>이름으로 지목하는 편이 더 정확하기 때문</b>이다(찾기가 아니라 지정이다).
+     *
+     * <p>각 난이도의 마지막 문장이 "없으면 적게 내라"인 것이 이 메서드의 알맹이다.
+     * 임의의 문서에서 가장 흔한 실패는 <b>고급 재료가 없는 글에서 억지 고급 문제가 나오는 것</b>이다.
+     */
+    private String uploadedSourceFocus(Difficulty difficulty) {
+        String tail = " 문서에 그런 대목이 없으면 억지로 만들지 말고 만들 수 있는 만큼만 내라.";
+        return switch (difficulty) {
+            case BEGINNER -> "[이번 난이도에서 쓸 부분] 이 문서는 우리 양식이 아니다. 정해진 절 이름을 찾지 마라. "
+                    + "용어를 정의한 대목, 구성 요소의 이름과 역할을 밝힌 대목, 기본 동작 순서를 설명한 대목을 "
+                    + "찾아 쓴다. 문서를 읽은 사람이라면 풀 수 있어야 한다." + tail;
+            case INTERMEDIATE -> "[이번 난이도에서 쓸 부분] 이 문서는 우리 양식이 아니다. 정해진 절 이름을 찾지 마라. "
+                    + "문서가 <왜 그렇게 했는지>를 밝힌 대목을 찾아 쓴다 — 다른 선택지를 두고 판단한 문장, "
+                    + "장단점을 견준 문장, 실무에서 이 개념을 꺼내 쓰는 장면이 모두 여기 해당한다. "
+                    + "문서가 설명한 원리를 문서에 없는 새로운 상황에 적용해 판단하게 만들어라." + tail;
+            case ADVANCED -> "[이번 난이도에서 쓸 부분] 이 문서는 우리 양식이 아니다. 정해진 절 이름을 찾지 마라. "
+                    + "한계·실패 조건·트레이드오프를 다룬 대목, 흔한 오해를 짚은 대목, "
+                    + "\"이럴 때는 이렇게 하라\"는 대응 지침을 찾아 쓴다. "
+                    + "여러 대응 중 무엇을 고를지 묻는 형태로 재구성한다." + tail;
         };
     }
 
