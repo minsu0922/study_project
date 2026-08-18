@@ -42,6 +42,20 @@ public final class ProblemItemRule {
      */
     public static final int MIN_CHOICES = 2;
 
+    /**
+     * 객관식 보기의 <b>기대</b> 개수 — 프롬프트가 요구하는 값. 차단 기준이 아니라 경고 기준이다.
+     *
+     * <p>{@link #MIN_CHOICES}가 "버릴지"를 정한다면 이 값은 "알릴지"를 정한다. 둘을 나눈 이유는
+     * 목적이 다르기 때문이다 — 버리는 기준은 <b>퀴즈로 성립하는가</b>라 느슨해야 하고,
+     * 알리는 기준은 <b>프롬프트대로 나왔는가</b>라 정확해야 한다. 한 숫자로 합치면 둘 중
+     * 하나가 망가진다(합치면 4개 미만이 전부 버려지거나, 5개짜리가 조용히 통과한다).
+     *
+     * <p>모자란 쪽(2~3개)은 경고하지 않는다. 그건 {@code [개수를 채우지 못할 때]}가 허용한
+     * 결과일 수 있고, 재료가 마른 것은 수확량 점검이 따로 잡는다. 넘치는 쪽만 본다 —
+     * 그건 지시를 어긴 것 외에 설명할 길이 없다.
+     */
+    public static final int EXPECTED_CHOICES = 4;
+
     /** 지문이 비었을 때 대신 보여 줄 문구 — 로그에 빈 문자열이 찍히면 무엇이 문제인지 안 보인다. */
     private static final String NO_QUESTION = "(지문 없음)";
 
@@ -142,6 +156,25 @@ public final class ProblemItemRule {
      * 그래서 차단이 아니라 경고이고, 판단은 검수자가 한다.
      */
     public static final int BEGINNER_QUESTION_MAX = 120;
+
+    /**
+     * 중급 지문의 길이 상한 — 2026-08-18 신설.
+     *
+     * <p><b>왜 뒤늦게 생겼나.</b> 초급에는 상한이 있었는데 중급에는 없었다. 초급의 상한은
+     * "상황이 붙었는지"를 재는 장치라 중급에는 필요 없다고 봤기 때문인데, 중급의 문제는
+     * 상황의 <b>유무</b>가 아니라 <b>길이</b>였다. 사용자가 실물을 짚었다 — 쓰레드와 static
+     * 카운터를 대조하는 지문을 읽고 "사람은 무슨 상황인지 이해할 수가 없다"고 했다.
+     *
+     * <p>길면 무엇을 묻는지가 흐려진다. 상황 자체는 중급의 정의라 없앨 수 없으니
+     * (없애면 초급이 된다) <b>짧게 만드는 쪽</b>으로 잡았다. 프롬프트의
+     * {@code [상황 지문 쓰는 법]}이 요구하는 두 요소 — 목적 한 문장, 증상 한 문장 —
+     * 이면 대개 150자 안팎이고, 여유를 얹어 250자로 둔다.
+     *
+     * <p>초급과 같은 이유로 <b>경고이지 차단이 아니다</b>. 조건을 한 줄 더 붙여야 하는
+     * 상황도 있고, 그 판단은 검수자의 몫이다. 길이는 결함의 <b>신호</b>일 뿐 결함 자체가 아니다 —
+     * 진짜 결함("개념을 보여주려고 지어낸 장치")은 사람만 알아볼 수 있다.
+     */
+    public static final int INTERMEDIATE_QUESTION_MAX = 250;
 
     /**
      * 보기 길이의 최대/최소 허용 비율. <b>생성 프롬프트의 숫자와 같아야 한다</b>
@@ -268,6 +301,23 @@ public final class ProblemItemRule {
                 warnings.add("초급 지문이 김 (%d자, 기준 %d자 — 상황 서술이 붙었을 수 있다)"
                         .formatted(question.trim().length(), BEGINNER_QUESTION_MAX));
             }
+            // 중급은 상황이 있는 게 정상이라 길이만 본다. 길면 무엇을 묻는지가 흐려진다 —
+            // "억지 상황"인지까지는 기계가 판정할 수 없으므로 검수자에게 신호만 준다.
+            if (difficulty == Difficulty.INTERMEDIATE && question.trim().length() > INTERMEDIATE_QUESTION_MAX) {
+                warnings.add("중급 지문이 김 (%d자, 기준 %d자 — 상황이 길면 무엇을 묻는지가 흐려진다)"
+                        .formatted(question.trim().length(), INTERMEDIATE_QUESTION_MAX));
+            }
+        }
+
+        // 보기 개수 — 차단하지 않고 알리기만 한다. 차단하지 않는 이유는 MIN_CHOICES 주석 참고
+        // (보기가 3개여도 퀴즈로는 성립하고, 4개를 강제하면 멀쩡한 문제가 버려진다).
+        // 그런데 그 주석은 "개수 어긋남은 검수자가 눈으로 볼 몫"이라고 해 놓고 정작 알려 주는
+        // 장치가 없었다 — 2026-08-18에 보기 5개짜리가 조용히 통과했다. 해설 길이도 지문 길이도
+        // 세면서 보기 개수만 안 센 것은 빠뜨린 것이지 의도가 아니다.
+        List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
+        if (choices != null && choices.size() > EXPECTED_CHOICES) {
+            warnings.add("보기가 %d개 (기준 %d개 — 프롬프트는 정확히 %d개를 요구한다)"
+                    .formatted(choices.size(), EXPECTED_CHOICES, EXPECTED_CHOICES));
         }
 
         String lengthBias = choiceLengthBiasOf(item);

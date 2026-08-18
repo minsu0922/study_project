@@ -578,6 +578,42 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("[오답 보기의 조건]");
     }
 
+    /**
+     * <b>사용자가 실물을 짚어 만든 규칙이라 문구가 사라지면 곧바로 되돌아간다.</b>
+     * 문제가 된 지문은 "여러 쓰레드가 같은 메서드를 동시에 실행하는 코드를 점검했다…"였다.
+     * 누가 왜 점검하는지가 없고, 같은 일을 하는 지역 카운터와 static 카운터를 둘 다 두는
+     * 코드는 현실에 없다 — 두 메모리 영역을 대조하려고 발명한 장치였다.
+     *
+     * <p>원인은 중급 규칙이 "상황에 적용하게 하라"고만 말할 뿐 <b>있을 법한 상황이어야 한다는
+     * 요구가 없었던</b> 것이다. 모델에게는 개념이 드러나는 최소 장치를 짜는 쪽이 실무 장면을
+     * 지어내는 것보다 안전하므로, 규칙이 비면 언제나 그쪽으로 간다.
+     *
+     * <p>여기서 지키는 것은 넷이다: 상황의 성격(기능·장애), 지문에 있어야 할 두 요소,
+     * 실험 상황 금지, 그리고 <b>실물 (X)/(O) 대비</b>. 마지막이 특히 중요하다 —
+     * 이 저장소에서 추상적 금지는 여러 번 무시됐고 실물 예시는 지켜졌다.
+     */
+    @Test
+    @DisplayName("상황 지문은 있을 법한 기능·장애여야 한다 — 개념을 보여주려는 장치는 사람이 못 읽는다")
+    void requiresRealisticScenariosForSituationalDifficulties() {
+        // 시스템 프롬프트에 둔다 — 난이도마다 바뀌는 값이 아니고, 두 경로(배치·업로드)가
+        // 함께 쓰는 규칙이다. 난이도별 예시(user 메시지)와 헷갈리지 않게 대상을 못 박는다.
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .as("상황의 성격을 못 박지 않으면 실험 장치가 나온다")
+                .contains("실제로 있을 법한 기능이나 장애")
+                .contains("개념을 보여주려고 장치를 지어내지 마라")
+                .as("기대값이 없어서 못 읽혔다 — 목적과 증상을 둘 다 요구한다")
+                .contains("무엇을 하려던 중인가")
+                .contains("무엇이 어긋났는가")
+                .as("실험 상황은 이 표현들로 시작한다")
+                .contains("~를 점검했다")
+                .as("길면 무엇을 묻는지가 흐려진다 — 숫자로 박은 지시만 지켜졌다")
+                .contains("중급 지문은 %d자를 넘기지 마라".formatted(ProblemItemRule.INTERMEDIATE_QUESTION_MAX))
+                .as("추상적 금지보다 실물 대비가 훨씬 잘 지켜진다")
+                .contains("두 메모리 영역을 대조하려고 발명한 장치다")
+                .as("자기 점검 항목이 있어야 모델이 만든 뒤 스스로 걸러낸다")
+                .contains("실제 서비스에 왜 있는지");
+    }
+
     private String prompt(Difficulty difficulty, SourceDocument source) {
         return generator.buildPrompt(Domain.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
                 5, List.of(), List.of(), source);

@@ -513,7 +513,78 @@ class DraftGeneratorCliTest {
 
         assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
-                .as("중급은 상황이 한 문단 있는 것이 정상이라 길이를 재지 않는다")
+                .as("같은 149자 지문도 중급에서는 정상이다 — 중급의 기준은 %d자"
+                        .formatted(ProblemItemRule.INTERMEDIATE_QUESTION_MAX))
+                .filteredOn(w -> w.contains("지문이 김"))
+                .isEmpty();
+    }
+
+    /**
+     * <b>2026-08-18 신설.</b> 보기 5개짜리가 조용히 통과한 실물에서 나왔다.
+     *
+     * <p>버리지 않는 것은 의도다({@code MIN_CHOICES} 주석 — 보기가 3개여도 퀴즈로는 성립하고,
+     * 4개를 강제하면 멀쩡한 문제가 버려진다). 그런데 그 주석은 "개수 어긋남은 검수자가 눈으로
+     * 볼 몫"이라 해 놓고 <b>알려 주는 장치가 없었다</b>. 해설 길이도 지문 길이도 세면서 보기
+     * 개수만 안 센 것은 빠뜨린 것이지 판단이 아니었다.
+     *
+     * <p>모자란 쪽을 경고하지 않는 것도 함께 못 박는다 — 그건 "재료가 모자라면 적게 내라"가
+     * 허용한 결과일 수 있어서, 경고하면 지시를 잘 따른 문항에 매번 울린다.
+     */
+    @Test
+    @DisplayName("보기가 4개를 넘으면 알린다 — 버리지는 않지만 검수자는 알아야 한다")
+    void warnsWhenChoiceCountExceedsExpected() {
+        GeneratedProblemItem fiveChoices = new GeneratedProblemItem("보기가 다섯 개인 문제는?", "",
+                goodExplanation(), List.of(
+                new GeneratedProblemItem.GeneratedChoice("보기1", true),
+                new GeneratedProblemItem.GeneratedChoice("보기2", false),
+                new GeneratedProblemItem.GeneratedChoice("보기3", false),
+                new GeneratedProblemItem.GeneratedChoice("보기4", false),
+                new GeneratedProblemItem.GeneratedChoice("보기5", false)));
+
+        assertThat(DraftGeneratorCli.checkYield(List.of(fiveChoices), 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.INTERMEDIATE).warnings())
+                .as("규약 위반이 아니라 통과했으므로, 알리지 않으면 아무도 모른다")
+                .filteredOn(w -> w.contains("보기가"))
+                .singleElement().asString().contains("5개");
+
+        GeneratedProblemItem threeChoices = new GeneratedProblemItem("보기가 세 개인 문제는?", "",
+                goodExplanation(), List.of(
+                new GeneratedProblemItem.GeneratedChoice("보기1", true),
+                new GeneratedProblemItem.GeneratedChoice("보기2", false),
+                new GeneratedProblemItem.GeneratedChoice("보기3", false)));
+
+        assertThat(DraftGeneratorCli.checkYield(List.of(threeChoices), 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.INTERMEDIATE).warnings())
+                .as("모자란 쪽은 '적게 내라'가 허용한 결과일 수 있다 — 경고하면 매번 울린다")
+                .filteredOn(w -> w.contains("보기가"))
+                .isEmpty();
+    }
+
+    /**
+     * <b>2026-08-18 신설.</b> 전에는 중급 지문의 길이를 아예 재지 않았다 — 초급의 상한은
+     * "상황이 붙었는지"를 재는 장치라 중급에는 필요 없다고 봤기 때문이다. 그런데 중급의 문제는
+     * 상황의 <b>유무</b>가 아니라 <b>길이</b>였다. 사용자가 실물을 짚었다: 쓰레드와 static
+     * 카운터를 대조하는 지문을 읽고 "사람은 무슨 상황인지 이해할 수가 없다".
+     *
+     * <p>길이는 결함의 <b>신호</b>일 뿐 결함 자체가 아니다. 진짜 결함("개념을 보여주려고
+     * 지어낸 장치")은 기계가 판정할 수 없어 프롬프트 쪽에서 막고, 여기서는 검수자가 그 문항을
+     * 들여다볼 이유만 만들어 준다. 그래서 차단이 아니라 경고다(초급과 같은 판단).
+     */
+    @Test
+    @DisplayName("중급 지문이 상한을 넘으면 알린다 — 상황이 길면 무엇을 묻는지가 흐려진다")
+    void warnsOnLongIntermediateQuestion() {
+        String tooLong = "가".repeat(ProblemItemRule.INTERMEDIATE_QUESTION_MAX + 1) + "?";
+        List<GeneratedProblemItem> problems = List.of(multipleChoice(tooLong, goodExplanation()));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.INTERMEDIATE).warnings())
+                .filteredOn(w -> w.contains("중급 지문이 김"))
+                .singleElement().asString()
+                .contains("기준 %d자".formatted(ProblemItemRule.INTERMEDIATE_QUESTION_MAX));
+
+        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.ADVANCED).warnings())
+                .as("고급은 '이미 시도한 것'까지 적어야 해서 더 길다 — 같은 잣대를 대면 매번 울린다")
                 .filteredOn(w -> w.contains("지문이 김"))
                 .isEmpty();
     }
