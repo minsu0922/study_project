@@ -52,6 +52,32 @@ class ClaudeDocumentGeneratorTest {
         assertThat(prompt).contains("주제를 하나 골라");
     }
 
+    /**
+     * 2026-08-19에 사용자가 지적한 결함이다. 분야만 주면 모델은 <b>분야 이름에 가장 가까운
+     * 가장 큰 주제</b>를 고른다("스프링·백엔드" → "스프링 트랜잭션"). 그러면 6,800자를 개괄에
+     * 다 쓰고 {@code ## 언제 깨지는가}가 얕아져 사흘 뒤 고급 날에 재료가 마른다.
+     *
+     * <p>규칙 문장이 아니라 (X)/(O) 예시로 지시한 것을 함께 못 박는다 — 이 저장소는
+     * "예시가 규칙을 이긴다"를 두 번 확인했다(8/15 하이픈 사고, 8/18 절 형식 흔들림).
+     */
+    @Test
+    @DisplayName("주제를 비우면 '분야만큼 넓게 고르지 마라'가 예시와 함께 실린다 — 분야 이름만 한 주제가 나왔다")
+    void asksToNarrowTopicWhenModelPicks() {
+        String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, null, List.of(), List.of());
+
+        assertThat(prompt).contains("분야 전체를 개괄하지 마라");
+        assertThat(prompt).as("크기 지시는 예시로 줘야 지켜진다").contains("(X)").contains("(O)");
+        assertThat(prompt).as("예시 주제를 그대로 쓰는 것은 막아야 한다").contains("가져다 쓰지 마라");
+    }
+
+    @Test
+    @DisplayName("주제를 지정해도 '넓으면 좁혀라'가 함께 실린다 — 대기열에 넓은 주제를 적어 둘 수도 있다")
+    void asksToNarrowGivenTopicIfTooWide() {
+        String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, "스프링 트랜잭션", List.of(), List.of());
+
+        assertThat(prompt).contains("한 갈래만 골라 좁히고");
+    }
+
     @Test
     @DisplayName("기존 문서 제목이 중복 회피 목록으로 실린다 — 없으면 있는 주제를 또 쓴다")
     void includesAvoidTitles() {
