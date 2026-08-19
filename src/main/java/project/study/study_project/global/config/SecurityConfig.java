@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.auth.gate.AdminGateCookie;
+import project.study.study_project.auth.gate.AdminGateFilter;
 import project.study.study_project.auth.jwt.JwtAuthenticationFilter;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.ratelimit.RateLimitFilter;
@@ -40,6 +42,8 @@ public class SecurityConfig {
     private final TokenBucketRateLimiter rateLimiter;
     private final RateLimitProperties rateLimitProperties;
     private final ObjectMapper objectMapper;
+    /** 관리 화면(정적 파일) 출입증 — 헤더로는 못 막는 자리를 쿠키로 막는다. */
+    private final AdminGateCookie adminGateCookie;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -56,6 +60,13 @@ public class SecurityConfig {
                         // 화면 속 데이터(API)만 토큰으로 보호한다" — 페이지를 잠그면 로그인
                         // 화면 자체도 못 여는 모순이 생기므로 정적 리소스는 전부 연다.
                         .requestMatchers("/", "/*.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
+                        // 관리 화면(/admin/**)은 위 규칙의 <예외>다. 여기서 permitAll인 것은
+                        // 검사를 안 한다는 뜻이 아니라, 검사를 AdminGateFilter가 한다는 뜻이다.
+                        // 왜 Spring Security에 맡기지 않나: 이 규칙들은 Authorization 헤더의
+                        // JWT를 보는데, 브라우저가 HTML·JS 파일을 받아 갈 때는 그 헤더를 붙일
+                        // 방법이 없다(우리 자바스크립트가 끼어들 자리가 없다). 그래서 파일은
+                        // 브라우저가 알아서 들고 오는 쿠키로 막는다(AdminGateCookie 주석).
+                        .requestMatchers("/admin/**").permitAll()
                         // 공개: 회원가입/로그인/재발급/로그아웃 — 재발급·로그아웃은 만료된 access를
                         // 가진 사용자가 쓰는 기능이라 인증을 요구하면 모순이다(자격 증명은 바디의 refresh 토큰)
                         .requestMatchers(HttpMethod.POST,
@@ -86,7 +97,11 @@ public class SecurityConfig {
                 // 필터를 @Component/@Bean으로 두지 않고 여기서 직접 생성하는 이유는
                 // JwtAuthenticationFilter와 동일(서블릿 이중 등록 방지).
                 .addFilterAfter(new RateLimitFilter(rateLimiter, rateLimitProperties, objectMapper),
-                        JwtAuthenticationFilter.class);
+                        JwtAuthenticationFilter.class)
+                // 관리 화면 출입증 검사 — 정적 파일 요청이라 JWT 필터보다 앞이든 뒤든 상관없지만,
+                // "인증 해석 → 출입 판정" 순서가 읽기 자연스러워 뒤에 둔다. 이 필터는
+                // /admin/** 에만 반응하고(shouldNotFilter) 나머지 요청은 그냥 통과시킨다.
+                .addFilterAfter(new AdminGateFilter(adminGateCookie), JwtAuthenticationFilter.class);
 
         return http.build();
     }
