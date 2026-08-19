@@ -197,35 +197,97 @@ function formatDate(iso) {
  * 문서 목록은 /documents.html로 이동. 복습 메뉴에는 "오늘 몇 개"인지 배지가 붙는다
  * (아래 loadReviewBadge — 할 일이 남아 있음을 어느 페이지에서든 보이게 하는 장치).
  */
+/* ── 권한 세 등급 ─────────────────────────────────────────────
+ * 비로그인(anon) → 로그인 사용자(user) → 관리자(admin). 넓은 쪽이 좁은 쪽을 포함한다 —
+ * 관리자도 학습자이므로 사용자 화면을 그대로 쓴다(관리 콘솔만 따로 있다).
+ *
+ * [이건 UX이지 보안이 아니다] 메뉴를 감추는 것은 "누를 곳을 줄여 주는 것"이지 막는 것이
+ * 아니다. JWT payload는 조작할 수 있으므로 아래 판정은 전부 장식이다. 진짜 방어는 서버
+ * 두 겹이다 — API는 SecurityConfig의 hasRole, 관리 화면 파일은 AdminGateFilter의 쿠키.
+ * 그래서 이 표가 틀려도 데이터는 새지 않는다. 반대로 서버만 있고 이 표가 없으면
+ * "눌렀더니 401"이 반복돼 화면이 고장 난 것처럼 보인다. */
+const ROLE_RANK = { public: 0, user: 1, admin: 2 };
+
+/** 지금 이 브라우저의 등급. */
+function currentRole() {
+  if (isAdmin()) return "admin";
+  if (isLoggedIn()) return "user";
+  return "anon";
+}
+
+/** need("public"|"user"|"admin") 이상의 권한을 가졌는가. 페이지 가드도 이걸 쓰면 된다. */
+function hasRole(need) {
+  const have = { anon: 0, user: 1, admin: 2 }[currentRole()];
+  return have >= (ROLE_RANK[need] ?? 0);
+}
+
+/**
+ * 메뉴 선언 — <b>"이 메뉴는 어느 권한이 필요한가"를 적어 두는 유일한 곳</b>.
+ *
+ * 예전에는 renderNav 안에 링크가 하드코딩돼 있었고 관리자 링크만 조건부였다. 그래서
+ * 비로그인 방문자에게도 복습·오답노트가 보였고, 누르면 그제야 "로그인하세요"가 떴다.
+ * 권한이 셋이 된 지금 그 방식은 조건문이 링크 수만큼 흩어진다는 뜻이라, 표로 옮긴다.
+ * 메뉴가 늘어도 여기 한 줄만 추가하면 내비게이션이 알아서 걸러 준다.
+ *
+ * 메뉴 이름은 기능명이 아니라 "언제 누르는지"가 드러나게 짓는다(UX 1단계 개편) —
+ * "퀴즈"만으로는 오늘의 퀴즈와의 차이를 알 수 없어 "자유 퀴즈"로,
+ * "문서"는 무엇의 문서인지 모호해 "개념 문서"로 바꿨다.
+ */
+const MENUS = [
+  { key: "home", label: "홈", href: "/", need: "public" },
+  { key: "quiz", label: "자유 퀴즈", href: "/quiz.html", need: "public" },
+  // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
+  { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge" },
+  { key: "wrong", label: "오답노트", href: "/wrong-answers.html", need: "user" },
+  { key: "docs", label: "개념 문서", href: "/documents.html", need: "public" },
+  // 관리 콘솔은 "다른 영역으로 나간다"는 뜻이라 화살표를 붙여 다른 메뉴와 구분한다
+  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/index.html", need: "admin" },
+];
+
+/**
+ * 사용자 화면 상단 내비게이션 — 권한에 맞는 메뉴만 그린다.
+ *
+ * v2 구조: 홈(/)이 문서 목록이 아니라 "시작 화면"이 됐다(퀴즈 사이트 리뉴얼).
+ * 문서 목록은 /documents.html로 이동.
+ */
 function renderNav(active) {
   const el = document.getElementById("nav");
   if (!el) return;
-  const cls = k => (k === active ? "active" : "");
-  const authArea = isLoggedIn()
+  el.className = "nav";
+  el.innerHTML = `
+    <a class="brand" href="/">csquiz</a>
+    ${MENUS.filter(m => hasRole(m.need)).map(m =>
+      `<a class="${m.key === active ? "active" : ""}" href="${m.href}">${m.label}` +
+      `${m.badge ? `<span id="${m.badge}"></span>` : ""}</a>`).join("")}
+    <span class="spacer"></span>
+    ${authAreaHtml()}`;
+  loadReviewBadge();
+  wireLogout();
+}
+
+/** 로그인 상태 표시 영역 — 사용자 화면과 관리 콘솔이 함께 쓴다. */
+function authAreaHtml() {
+  return isLoggedIn()
     ? `<span class="user-email">${escapeHtml(localStorage.getItem(EMAIL_KEY) || "")}</span>
        <a href="#" id="logoutLink">로그아웃</a>`
     : `<a href="/login.html">로그인</a>
        <a href="/signup.html" class="btn btn-outline" style="padding:5px 14px">회원가입</a>`;
-  el.className = "nav";
-  // 메뉴 이름은 기능명이 아니라 "언제 누르는지"가 드러나게(UX 1단계 개편) —
-  // "퀴즈"만으로는 오늘의 퀴즈와의 차이를 알 수 없어 "자유 퀴즈"로,
-  // "문서"는 무엇의 문서인지 모호해 "개념 문서"로 바꿨다.
-  el.innerHTML = `
-    <a class="brand" href="/">csquiz</a>
-    <a class="${cls("home")}" href="/">홈</a>
-    <a class="${cls("quiz")}" href="/quiz.html">자유 퀴즈</a>
-    <a class="${cls("review")}" href="/review.html">복습<span id="reviewBadge"></span></a>
-    <a class="${cls("wrong")}" href="/wrong-answers.html">오답노트</a>
-    <a class="${cls("docs")}" href="/documents.html">개념 문서</a>
-    ${isAdmin() ? `<a class="${cls("admin")}" href="/admin/index.html">관리자</a>` : ""}
-    <span class="spacer"></span>
-    ${authArea}`;
-  loadReviewBadge();
+}
+
+/**
+ * 로그아웃 링크에 동작을 붙인다 — <b>두 내비게이션이 같은 함수를 쓴다</b>.
+ *
+ * 복사해 두면 안 되는 코드다: 서버의 refresh 토큰 폐기가 빠진 사본이 생기면
+ * "로그아웃했는데 서버에는 14일짜리 출입증이 살아 있는" 상태가 그쪽 화면에서만 생긴다.
+ */
+function wireLogout() {
   const logout = document.getElementById("logoutLink");
-  if (logout) logout.addEventListener("click", async e => {
+  if (!logout) return;
+  logout.addEventListener("click", async e => {
     e.preventDefault();
     // 서버의 refresh 토큰을 먼저 폐기(로드맵 2) — 브라우저만 지우면 서버엔 14일짜리
     // 출입증이 살아 있는 셈이라, "로그아웃 = 서버에서도 회수"가 올바른 순서다.
+    // 관리 화면 출입증 쿠키도 이 응답에서 함께 지워진다(AdminGateCookie).
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (refreshToken) {
       try {

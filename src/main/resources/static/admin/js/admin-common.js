@@ -36,7 +36,7 @@ const ADMIN_PAGES = [
  * @returns 관리자면 true — 호출부는 이 값이 false면 데이터 적재를 건너뛴다
  */
 function initAdminPage(active) {
-  renderNav("admin");   // 사용자 화면과 같은 상단 바(로그아웃·사용자 화면으로 돌아가기)
+  renderConsoleNav();   // 콘솔 전용 상단 바 — 여기서는 학습 메뉴를 보여 주지 않는다
 
   if (!isAdmin()) {
     document.getElementById("guard").innerHTML =
@@ -47,6 +47,29 @@ function initAdminPage(active) {
   renderAdminNav(active);
   refreshAdminBadges();
   return true;
+}
+
+/**
+ * 콘솔 상단 바 — <b>학습 메뉴가 없다</b>는 것이 사용자 화면과의 차이다.
+ *
+ * <p>관리 콘솔은 별도 영역이다. 여기에 홈·자유 퀴즈·복습이 함께 떠 있으면 "지금 어느 쪽에
+ * 있는지"가 흐려지고, 검수하다가 잘못 눌러 나가기도 쉽다. 대신 <b>나가는 문 하나</b>를
+ * 왼쪽에 크게 둔다 — 관리자도 학습자라 오갈 일이 있고, 막을 이유는 없다.
+ *
+ * <p>로그인 표시와 로그아웃은 사용자 화면과 <b>같은 함수</b>를 쓴다({@code authAreaHtml},
+ * {@code wireLogout}). 복사해 두면 서버 토큰 폐기가 빠진 사본이 생겨, 콘솔에서 로그아웃했을
+ * 때만 서버에 출입증이 남는 상태가 된다.
+ */
+function renderConsoleNav() {
+  const el = document.getElementById("nav");
+  if (!el) return;
+  el.className = "nav";
+  el.innerHTML = `
+    <a class="brand" href="/admin/index.html">csquiz 관리</a>
+    <a href="/">← 학습 화면으로</a>
+    <span class="spacer"></span>
+    ${authAreaHtml()}`;
+  wireLogout();
 }
 
 /** 관리 화면 사이를 오가는 링크 줄. 예전 탭 버튼과 같은 모양(.tabs)을 쓴다. */
