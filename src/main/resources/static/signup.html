@@ -15,8 +15,11 @@
 
   <form id="signupForm" class="card">
     <div class="field">
-      <label for="email">이메일</label>
-      <input type="email" id="email" required autocomplete="email">
+      <label for="username">아이디 (영문·숫자·밑줄 4~20자)</label>
+      <!-- 규칙을 라벨에 적어 두는 이유: 서버도 같은 규칙으로 막지만(SignupRequest),
+           제출한 뒤에 알려 주면 다시 입력하게 된다. pattern은 브라우저가 먼저 걸러 준다. -->
+      <input type="text" id="username" required autocomplete="username"
+             pattern="[A-Za-z0-9_]{4,20}" title="영문·숫자·밑줄(_)로 4~20자">
     </div>
     <div class="field">
       <label for="password">비밀번호 (8자 이상, 영문+숫자 포함)</label>
@@ -40,14 +43,16 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
   const msg = document.getElementById("message");
   btn.disabled = true;
   msg.innerHTML = "";
-  const email = document.getElementById("email").value.trim();
+  // 서버도 소문자로 낮춰 저장하므로(AuthService) 여기서도 맞춰 보낸다 —
+  // 대문자로 가입해 놓고 화면에는 소문자가 뜨는 어긋남을 없앤다.
+  const username = document.getElementById("username").value.trim().toLowerCase();
   const password = document.getElementById("password").value;
   try {
-    await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ email, password }) });
+    await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ username, password }) });
     try {
       // 가입 직후 자동 로그인
-      const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
-      setLogin(data.accessToken, data.refreshToken, email);
+      const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
+      setLogin(data.accessToken, data.refreshToken, username);
       location.href = "/";
     } catch (loginErr) {
       location.href = "/login.html"; // 자동 로그인만 실패한 드문 경우: 수동 로그인으로

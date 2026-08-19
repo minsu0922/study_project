@@ -117,11 +117,11 @@ class AdminGateIntegrationTest {
     @Test
     @DisplayName("관리자 로그인 응답에 출입증 쿠키가 실린다 — HttpOnly이고 /admin 경로 전용이다")
     void issuesGateCookieOnAdminLogin() throws Exception {
-        String email = createUser(Role.ADMIN);
+        String username = createUser(Role.ADMIN);
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType("application/json")
-                        .content("{\"email\":\"%s\",\"password\":\"password123\"}".formatted(email)))
+                        .content("{\"username\":\"%s\",\"password\":\"password123\"}".formatted(username)))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -141,11 +141,11 @@ class AdminGateIntegrationTest {
     @Test
     @DisplayName("일반 사용자로 로그인하면 남아 있던 출입증을 지운다")
     void clearsGateCookieOnNonAdminLogin() throws Exception {
-        String email = createUser(Role.USER);
+        String username = createUser(Role.USER);
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType("application/json")
-                        .content("{\"email\":\"%s\",\"password\":\"password123\"}".formatted(email)))
+                        .content("{\"username\":\"%s\",\"password\":\"password123\"}".formatted(username)))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -158,18 +158,19 @@ class AdminGateIntegrationTest {
 
     /** 그 역할의 토큰을 담은 출입증 쿠키. 로그인 흐름을 거치지 않고 필터만 시험할 때 쓴다. */
     private Cookie gateCookie(Role role) {
-        User user = save(role, "gate-" + UUID.randomUUID() + "@test.local");
+        User user = save(role);
         return new Cookie(AdminGateCookie.NAME, jwtTokenProvider.createToken(user.getId(), role));
     }
 
     /** 로그인 흐름까지 시험할 때 쓰는 계정. 비밀번호는 아래 요청 본문과 같아야 한다. */
     private String createUser(Role role) {
-        return save(role, "gate-" + UUID.randomUUID() + "@test.local").getEmail();
+        return save(role).getUsername();
     }
 
-    private User save(Role role, String email) {
+    /** 아이디는 30자 제한이라 UUID를 통째로 쓰지 못한다 — 앞 8자만 따도 충돌하지 않는다. */
+    private User save(Role role) {
         return userRepository.save(User.builder()
-                .email(email)
+                .username("gate" + UUID.randomUUID().toString().substring(0, 8))
                 .passwordHash(passwordEncoder.encode("password123"))
                 .role(role)
                 .build());

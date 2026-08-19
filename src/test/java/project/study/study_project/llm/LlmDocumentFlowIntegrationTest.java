@@ -200,7 +200,7 @@ class LlmDocumentFlowIntegrationTest {
 
     private String adminToken() {
         User admin = userRepository.save(User.builder()
-                .email("llmdoc-test-" + UUID.randomUUID() + "@test.local")
+                .username("llmdoc" + UUID.randomUUID().toString().substring(0, 8))
                 .passwordHash(passwordEncoder.encode("admin-pw1"))
                 .role(Role.ADMIN)
                 .build());

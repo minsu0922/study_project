@@ -82,7 +82,9 @@ ratelimit:
 
 # 로컬 기본값이며, 실 배포에서는 환경변수로 반드시 교체한다.
 admin:
-  email: ${ADMIN_EMAIL:admin@csquiz.local}
+  # V12에서 로그인 아이디가 이메일 → username으로 바뀌었다.
+  # 기존 계정(admin@csquiz.local)은 마이그레이션이 @ 앞부분을 따 "admin"으로 만들어 둔다.
+  username: ${ADMIN_USERNAME:admin}
   password: ${ADMIN_PASSWORD:admin1234}
 
 # LLM 문제 생성 (B안) — 설계 docs/13, 자동화 docs/14, 결정 ADR-0006(개정).

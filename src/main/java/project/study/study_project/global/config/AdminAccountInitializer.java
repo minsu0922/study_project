@@ -33,8 +33,8 @@ public class AdminAccountInitializer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${admin.email}")
-    private String adminEmail;
+    @Value("${admin.username}")
+    private String adminUsername;
 
     @Value("${admin.password}")
     private String adminPassword;
@@ -47,11 +47,13 @@ public class AdminAccountInitializer implements ApplicationRunner {
             return;
         }
         userRepository.save(User.builder()
-                .email(adminEmail)
+                // 아이디는 소문자로 낮춰 저장한다 — AuthService.normalize와 같은 규칙이어야
+                // 설정에 대문자를 적어 둔 날 "만들어졌는데 로그인이 안 되는" 계정이 생기지 않는다.
+                .username(adminUsername.trim().toLowerCase())
                 .passwordHash(passwordEncoder.encode(adminPassword))
                 .role(Role.ADMIN)
                 .build());
-        // 비밀번호는 절대 로그에 남기지 않는다 — 이메일까지만.
-        log.info("초기 관리자 계정 생성: {} (비밀번호는 application.yml의 admin.password / 환경변수 ADMIN_PASSWORD)", adminEmail);
+        // 비밀번호는 절대 로그에 남기지 않는다 — 아이디까지만.
+        log.info("초기 관리자 계정 생성: {} (비밀번호는 application.yml의 admin.password / 환경변수 ADMIN_PASSWORD)", adminUsername);
     }
 }

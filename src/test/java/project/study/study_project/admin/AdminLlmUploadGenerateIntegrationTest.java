@@ -158,7 +158,7 @@ class AdminLlmUploadGenerateIntegrationTest {
 
     private String bearer() {
         User admin = userRepository.save(User.builder()
-                .email("llmupload-test-" + UUID.randomUUID() + "@test.local")
+                .username("llmupload" + UUID.randomUUID().toString().substring(0, 8))
                 .passwordHash(passwordEncoder.encode("admin-pw1"))
                 .role(Role.ADMIN)
                 .build());

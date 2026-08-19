@@ -19,19 +19,23 @@
 
 const TOKEN_KEY = "csquiz_token";
 const REFRESH_KEY = "csquiz_refresh"; // 로드맵 2: access 만료 시 재발급용
-const EMAIL_KEY = "csquiz_email"; // 내비게이션에 "누구로 로그인했는지" 표시용
+// 내비게이션에 "누구로 로그인했는지" 표시용. V12에서 이메일 → 아이디로 바뀌었다.
+// 키 이름까지 바꾼 이유: 옛 키에 이메일이 남아 있으면 로그인하지 않은 화면에
+// 옛 주소가 그대로 떠 있게 된다(값의 뜻이 달라졌으니 그릇도 새로 쓴다).
+const USERNAME_KEY = "csquiz_username";
 
 /* ── 토큰 보관 ── */
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
-function setLogin(accessToken, refreshToken, email) {
+function setLogin(accessToken, refreshToken, username) {
   localStorage.setItem(TOKEN_KEY, accessToken);
   if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken); // Redis 장애 시 null일 수 있음
-  localStorage.setItem(EMAIL_KEY, email);
+  localStorage.setItem(USERNAME_KEY, username);
 }
 function clearLogin() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_KEY);
-  localStorage.removeItem(EMAIL_KEY);
+  localStorage.removeItem(USERNAME_KEY);
+  localStorage.removeItem("csquiz_email"); // V12 이전 키의 잔재 청소
 }
 function isLoggedIn() { return !!getToken(); }
 
@@ -268,7 +272,7 @@ function renderNav(active) {
 /** 로그인 상태 표시 영역 — 사용자 화면과 관리 콘솔이 함께 쓴다. */
 function authAreaHtml() {
   return isLoggedIn()
-    ? `<span class="user-email">${escapeHtml(localStorage.getItem(EMAIL_KEY) || "")}</span>
+    ? `<span class="user-email">${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")}</span>
        <a href="#" id="logoutLink">로그아웃</a>`
     : `<a href="/login.html">로그인</a>
        <a href="/signup.html" class="btn btn-outline" style="padding:5px 14px">회원가입</a>`;

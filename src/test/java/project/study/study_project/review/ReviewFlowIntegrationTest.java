@@ -72,7 +72,7 @@ class ReviewFlowIntegrationTest {
     void setUp() {
         // FK(user_id, problem_id)가 실제로 걸려 있으므로 부모 행을 진짜로 만든다.
         User user = userRepository.save(User.builder()
-                .email("review-test-" + UUID.randomUUID() + "@test.local")
+                .username("review" + UUID.randomUUID().toString().substring(0, 8))
                 .passwordHash("bcrypt-not-needed-here")
                 .build());
         userId = user.getId();

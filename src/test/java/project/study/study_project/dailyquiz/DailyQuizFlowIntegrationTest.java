@@ -71,7 +71,7 @@ class DailyQuizFlowIntegrationTest {
     @BeforeEach
     void setUp() {
         User user = userRepository.save(User.builder()
-                .email("daily-test-" + UUID.randomUUID() + "@test.local")
+                .username("daily" + UUID.randomUUID().toString().substring(0, 8))
                 .passwordHash("bcrypt-not-needed-here")
                 .build());
         userId = user.getId();

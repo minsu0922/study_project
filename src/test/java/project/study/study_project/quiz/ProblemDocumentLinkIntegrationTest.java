@@ -57,7 +57,7 @@ class ProblemDocumentLinkIntegrationTest {
     @BeforeEach
     void setUp() {
         User user = userRepository.save(User.builder()
-                .email("doclink-test-" + UUID.randomUUID() + "@test.local")
+                .username("doclink" + UUID.randomUUID().toString().substring(0, 8))
                 .passwordHash("bcrypt-not-needed-here")
                 .build());
         userId = user.getId();

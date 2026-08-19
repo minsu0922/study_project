@@ -62,24 +62,25 @@ class AuthFlowIntegrationTest {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
-    /** 테스트마다 겹치지 않는 이메일 — 회원가입 중복 검사에 서로 영향을 주지 않기 위함. */
-    private String freshEmail() {
-        return "auth-test-" + UUID.randomUUID() + "@test.local";
+    /** 테스트마다 겹치지 않는 아이디 — 회원가입 중복 검사에 서로 영향을 주지 않기 위함.
+     *  아이디는 30자 제한이라 UUID를 통째로 쓰지 못한다(V12). */
+    private String freshUsername() {
+        return "auth" + UUID.randomUUID().toString().substring(0, 8);
     }
 
-    private MvcResult signup(String email, String password) throws Exception {
+    private MvcResult signup(String username, String password) throws Exception {
         return mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"%s","password":"%s"}""".formatted(email, password)))
+                                {"username":"%s","password":"%s"}""".formatted(username, password)))
                 .andReturn();
     }
 
-    private MvcResult login(String email, String password) throws Exception {
+    private MvcResult login(String username, String password) throws Exception {
         return mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"%s","password":"%s"}""".formatted(email, password)))
+                                {"username":"%s","password":"%s"}""".formatted(username, password)))
                 .andReturn();
     }
 
@@ -90,7 +91,7 @@ class AuthFlowIntegrationTest {
     /** 관리자 권한 토큰이 필요한 테스트용 — 회원가입 API로는 ADMIN을 만들 수 없으므로 직접 저장한다. */
     private String issueAdminToken() {
         User admin = userRepository.save(User.builder()
-                .email(freshEmail())
+                .username(freshUsername())
                 .passwordHash(passwordEncoder.encode("admin-pw1"))
                 .role(Role.ADMIN)
                 .build());
@@ -100,21 +101,21 @@ class AuthFlowIntegrationTest {
     @Test
     @DisplayName("회원가입 → 로그인 → 토큰으로 보호 API 접근까지 정상 흐름")
     void signupLoginAndAccessProtectedResource() throws Exception {
-        String email = freshEmail();
+        String username = freshUsername();
 
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"%s","password":"password1"}""".formatted(email)))
+                                {"username":"%s","password":"password1"}""".formatted(username)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.email").value(email))
+                .andExpect(jsonPath("$.data.username").value(username))
                 .andExpect(jsonPath("$.data.role").value("USER"));
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"%s","password":"password1"}""".formatted(email)))
+                                {"username":"%s","password":"password1"}""".formatted(username)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").exists())
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
@@ -128,15 +129,15 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    @DisplayName("이미 가입된 이메일로 다시 가입하면 409 AUTH_001")
-    void signupDuplicateEmailFails() throws Exception {
-        String email = freshEmail();
-        signup(email, "password1"); // 1차 가입(성공 전제)
+    @DisplayName("이미 가입된 아이디로 다시 가입하면 409 AUTH_001")
+    void signupDuplicateUsernameFails() throws Exception {
+        String username = freshUsername();
+        signup(username, "password1"); // 1차 가입(성공 전제)
 
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"%s","password":"password1"}""".formatted(email)))
+                                {"username":"%s","password":"password1"}""".formatted(username)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("AUTH_001"));
@@ -148,21 +149,21 @@ class AuthFlowIntegrationTest {
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"%s","password":"short1"}""".formatted(freshEmail())))
+                                {"username":"%s","password":"short1"}""".formatted(freshUsername())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
     }
 
     @Test
-    @DisplayName("비밀번호가 틀리면 401 AUTH_002 — 존재하지 않는 이메일과 같은 코드")
+    @DisplayName("비밀번호가 틀리면 401 AUTH_002 — 존재하지 않는 아이디와 같은 코드")
     void loginWrongPasswordFails() throws Exception {
-        String email = freshEmail();
-        signup(email, "password1");
+        String username = freshUsername();
+        signup(username, "password1");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"%s","password":"wrong-pw1"}""".formatted(email)))
+                                {"username":"%s","password":"wrong-pw1"}""".formatted(username)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("AUTH_002"));
     }
@@ -187,9 +188,9 @@ class AuthFlowIntegrationTest {
     @Test
     @DisplayName("일반 사용자 토큰으로 관리자 API에 접근하면 403 AUTH_004")
     void accessAdminResourceAsNormalUserFails() throws Exception {
-        String email = freshEmail();
-        signup(email, "password1");
-        String accessToken = field(login(email, "password1"), "$.data.accessToken");
+        String username = freshUsername();
+        signup(username, "password1");
+        String accessToken = field(login(username, "password1"), "$.data.accessToken");
 
         mockMvc.perform(get("/api/admin/dashboard")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
@@ -210,9 +211,9 @@ class AuthFlowIntegrationTest {
     @Test
     @DisplayName("refresh 토큰은 1회용이다 — 재발급에 쓰고 나면 같은 토큰으로 또 재발급받을 수 없다(회전)")
     void refreshTokenRotatesAndOldOneIsRejected() throws Exception {
-        String email = freshEmail();
-        signup(email, "password1");
-        String oldRefreshToken = field(login(email, "password1"), "$.data.refreshToken");
+        String username = freshUsername();
+        signup(username, "password1");
+        String oldRefreshToken = field(login(username, "password1"), "$.data.refreshToken");
 
         // 1차 재발급 — 새 토큰 세트를 받는다
         MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh")
@@ -237,9 +238,9 @@ class AuthFlowIntegrationTest {
     @Test
     @DisplayName("로그아웃하면 그 refresh 토큰으로는 더 이상 재발급받을 수 없다")
     void logoutRevokesRefreshToken() throws Exception {
-        String email = freshEmail();
-        signup(email, "password1");
-        String refreshToken = field(login(email, "password1"), "$.data.refreshToken");
+        String username = freshUsername();
+        signup(username, "password1");
+        String refreshToken = field(login(username, "password1"), "$.data.refreshToken");
 
         mockMvc.perform(post("/api/auth/logout")
                         .contentType(MediaType.APPLICATION_JSON)

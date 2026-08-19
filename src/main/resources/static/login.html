@@ -15,8 +15,11 @@
 
   <form id="loginForm" class="card">
     <div class="field">
-      <label for="email">이메일</label>
-      <input type="email" id="email" required autocomplete="email">
+      <label for="username">아이디</label>
+      <!-- autocomplete=username: 브라우저 비밀번호 관리자가 "이 칸이 아이디"임을 알아야
+           저장·자동입력이 제대로 동작한다. type도 email이 아니라 text여야 한다 —
+           email이면 브라우저가 @ 없는 값을 거부해 아이디를 못 넣는다. -->
+      <input type="text" id="username" required autocomplete="username">
     </div>
     <div class="field">
       <label for="password">비밀번호</label>
@@ -41,15 +44,17 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
   btn.disabled = true; // 더블클릭으로 요청이 두 번 나가는 것 방지
   msg.innerHTML = "";
   try {
-    const email = document.getElementById("email").value.trim();
+    // 소문자로 낮춰 보낸다 — 서버도 같은 정규화를 하지만(AuthService), 화면에 표시할
+    // 이름과 서버가 저장한 이름을 같게 맞춰야 "Minsu로 로그인했는데 minsu로 뜨는" 어긋남이 없다.
+    const username = document.getElementById("username").value.trim().toLowerCase();
     const data = await api("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password: document.getElementById("password").value }),
+      body: JSON.stringify({ username, password: document.getElementById("password").value }),
     });
-    setLogin(data.accessToken, data.refreshToken, email); // refresh는 자동 재발급용(로드맵 2)
+    setLogin(data.accessToken, data.refreshToken, username); // refresh는 자동 재발급용(로드맵 2)
     location.href = "/"; // 로그인 성공 → 첫 화면으로
   } catch (err) {
-    // AUTH_002: "이메일 또는 비밀번호가 올바르지 않습니다" — 서버 메시지를 그대로 보여준다
+    // AUTH_002: "아이디 또는 비밀번호가 올바르지 않습니다" — 서버 메시지를 그대로 보여준다
     msg.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
     btn.disabled = false;
   }

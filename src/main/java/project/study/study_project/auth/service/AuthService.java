@@ -42,16 +42,18 @@ public class AuthService {
     private long refreshValiditySeconds;
 
     /**
-     * 회원가입. 이메일이 이미 있으면 {@link ErrorCode#AUTH_001}(409).
+     * 회원가입. 아이디가 이미 있으면 {@link ErrorCode#AUTH_001}(409).
      * 비밀번호는 <b>BCrypt 해시로만</b> 저장한다(원문은 어디에도 남기지 않음).
      */
     @Transactional
     public SignupResponse signup(SignupRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        String username = normalize(request.username());
+        if (userRepository.existsByUsername(username)) {
             throw new BusinessException(ErrorCode.AUTH_001);
         }
         User user = User.builder()
-                .email(request.email())
+                .username(username)
+                // email은 넘기지 않는다 — 이 서비스는 메일을 보내지 않아 받을 이유가 없다(V12).
                 .passwordHash(passwordEncoder.encode(request.password())) // 단방향 해시
                 .role(Role.USER)
                 .build();
@@ -59,13 +61,13 @@ public class AuthService {
     }
 
     /**
-     * 로그인 → access + refresh 발급. 이메일이 없거나 비밀번호가 틀리면 둘 다
+     * 로그인 → access + refresh 발급. 아이디가 없거나 비밀번호가 틀리면 둘 다
      * {@link ErrorCode#AUTH_002}(401)로 <b>동일하게</b> 응답한다.
-     * (어느 쪽이 틀렸는지 알려주면 "이 이메일이 가입돼 있다"는 정보가 새어 나가므로 일부러 구분하지 않음)
+     * (어느 쪽이 틀렸는지 알려주면 "이 아이디가 가입돼 있다"는 정보가 새어 나가므로 일부러 구분하지 않음)
      */
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByUsername(normalize(request.username()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_002));
 
         // 입력 원문 비번을 저장된 해시와 대조(matches 내부에서 해시하여 비교)
@@ -103,6 +105,20 @@ public class AuthService {
      */
     public void logout(String refreshToken) {
         refreshTokenStore.revoke(refreshToken); // 없어도 조용히 성공(멱등)
+    }
+
+    /**
+     * 아이디 정규화 — 앞뒤 공백을 떼고 소문자로 낮춘다. <b>가입과 로그인이 같은 함수를 쓴다</b>.
+     *
+     * <p>한쪽만 정규화하면 "Minsu로 가입했는데 minsu로는 로그인이 안 되는" 상태가 된다.
+     * 그리고 그 증상은 대문자를 쓴 사람에게만 나타나서 좀처럼 재현되지 않는다.
+     *
+     * <p><b>DB collation에 기대지 않는 이유</b>: 지금 테이블은 {@code utf8mb4_0900_ai_ci}라
+     * 대소문자를 구분하지 않아 UNIQUE 제약만으로도 중복이 막힌다. 하지만 그건 <b>설정</b>이고,
+     * 언젠가 바뀌면 조용히 깨진다 — 규칙은 코드에 적어 둔다.
+     */
+    private String normalize(String username) {
+        return username == null ? "" : username.trim().toLowerCase();
     }
 
     /** access + refresh 한 세트 발급 (로그인·재발급 공용). */

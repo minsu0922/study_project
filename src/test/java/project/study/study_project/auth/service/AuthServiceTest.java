@@ -61,8 +61,8 @@ class AuthServiceTest {
     }
 
     /** id까지 채워진 User를 흉내 낸다 — id는 @GeneratedValue라 빌더로는 못 주므로 리플렉션으로 넣는다. */
-    private User userWithId(Long id, String email, String passwordHash, Role role) {
-        User user = User.builder().email(email).passwordHash(passwordHash).role(role).build();
+    private User userWithId(Long id, String username, String passwordHash, Role role) {
+        User user = User.builder().username(username).passwordHash(passwordHash).role(role).build();
         ReflectionTestUtils.setField(user, "id", id);
         return user;
     }
@@ -72,54 +72,54 @@ class AuthServiceTest {
     class Signup {
 
         @Test
-        @DisplayName("이미 있는 이메일이면 AUTH_001, 저장은 시도하지 않는다")
-        void duplicateEmailFails() {
-            when(userRepository.existsByEmail("a@test.com")).thenReturn(true);
+        @DisplayName("이미 있는 아이디면 AUTH_001, 저장은 시도하지 않는다")
+        void duplicateUsernameFails() {
+            when(userRepository.existsByUsername("tester")).thenReturn(true);
 
-            assertThatThrownBy(() -> authService.signup(new SignupRequest("a@test.com", "password1")))
+            assertThatThrownBy(() -> authService.signup(new SignupRequest("tester", "password1")))
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode").isEqualTo(ErrorCode.AUTH_001);
             verify(userRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("성공하면 비밀번호는 해시로 저장되고, 응답엔 원문 대신 id/email/role만 담긴다")
+        @DisplayName("성공하면 비밀번호는 해시로 저장되고, 응답엔 원문 대신 id/username/role만 담긴다")
         void success() {
-            when(userRepository.existsByEmail("a@test.com")).thenReturn(false);
+            when(userRepository.existsByUsername("tester")).thenReturn(false);
             when(passwordEncoder.encode("password1")).thenReturn("hashed");
             when(userRepository.save(any(User.class)))
-                    .thenAnswer(inv -> userWithId(1L, "a@test.com", "hashed", Role.USER));
+                    .thenAnswer(inv -> userWithId(1L, "tester", "hashed", Role.USER));
 
-            SignupResponse response = authService.signup(new SignupRequest("a@test.com", "password1"));
+            SignupResponse response = authService.signup(new SignupRequest("tester", "password1"));
 
             assertThat(response.id()).isEqualTo(1L);
-            assertThat(response.email()).isEqualTo("a@test.com");
+            assertThat(response.username()).isEqualTo("tester");
             assertThat(response.role()).isEqualTo(Role.USER);
         }
     }
 
     @Nested
-    @DisplayName("로그인 — 이메일 없음과 비밀번호 불일치는 '같은' 코드로 응답한다(어느 쪽이 틀렸는지 숨김)")
+    @DisplayName("로그인 — 아이디 없음과 비밀번호 불일치는 '같은' 코드로 응답한다(어느 쪽이 틀렸는지 숨김)")
     class Login {
 
         @Test
-        @DisplayName("존재하지 않는 이메일 → AUTH_002")
-        void emailNotFound() {
-            when(userRepository.findByEmail("nobody@test.com")).thenReturn(Optional.empty());
+        @DisplayName("존재하지 않는 아이디 → AUTH_002")
+        void usernameNotFound() {
+            when(userRepository.findByUsername("nobody")).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.login(new LoginRequest("nobody@test.com", "whatever1")))
+            assertThatThrownBy(() -> authService.login(new LoginRequest("nobody", "whatever1")))
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode").isEqualTo(ErrorCode.AUTH_002);
         }
 
         @Test
-        @DisplayName("비밀번호 불일치 → AUTH_002 (이메일 없음과 동일한 코드)")
+        @DisplayName("비밀번호 불일치 → AUTH_002 (아이디 없음과 동일한 코드)")
         void wrongPassword() {
-            User existing = userWithId(1L, "a@test.com", "hashed", Role.USER);
-            when(userRepository.findByEmail("a@test.com")).thenReturn(Optional.of(existing));
+            User existing = userWithId(1L, "tester", "hashed", Role.USER);
+            when(userRepository.findByUsername("tester")).thenReturn(Optional.of(existing));
             when(passwordEncoder.matches("wrong-pw1", "hashed")).thenReturn(false);
 
-            assertThatThrownBy(() -> authService.login(new LoginRequest("a@test.com", "wrong-pw1")))
+            assertThatThrownBy(() -> authService.login(new LoginRequest("tester", "wrong-pw1")))
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode").isEqualTo(ErrorCode.AUTH_002);
         }
@@ -127,14 +127,14 @@ class AuthServiceTest {
         @Test
         @DisplayName("성공하면 access + refresh 토큰 한 세트를 발급한다")
         void success() {
-            User existing = userWithId(1L, "a@test.com", "hashed", Role.USER);
-            when(userRepository.findByEmail("a@test.com")).thenReturn(Optional.of(existing));
+            User existing = userWithId(1L, "tester", "hashed", Role.USER);
+            when(userRepository.findByUsername("tester")).thenReturn(Optional.of(existing));
             when(passwordEncoder.matches("correct1", "hashed")).thenReturn(true);
             when(jwtTokenProvider.createToken(1L, Role.USER)).thenReturn("access-token");
             when(jwtTokenProvider.getValiditySeconds()).thenReturn(3600L);
             when(refreshTokenStore.issue(eq(1L), any(Duration.class))).thenReturn("refresh-token");
 
-            LoginResponse response = authService.login(new LoginRequest("a@test.com", "correct1"));
+            LoginResponse response = authService.login(new LoginRequest("tester", "correct1"));
 
             assertThat(response.accessToken()).isEqualTo("access-token");
             assertThat(response.refreshToken()).isEqualTo("refresh-token");
@@ -171,7 +171,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("성공하면 새 access + 새 refresh를 받는다")
         void success() {
-            User existing = userWithId(1L, "a@test.com", "hashed", Role.USER);
+            User existing = userWithId(1L, "tester", "hashed", Role.USER);
             when(refreshTokenStore.consume("old-refresh")).thenReturn(1L);
             when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
             when(jwtTokenProvider.createToken(1L, Role.USER)).thenReturn("new-access");
