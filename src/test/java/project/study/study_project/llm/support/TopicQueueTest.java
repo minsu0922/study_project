@@ -30,12 +30,12 @@ class TopicQueueTest {
     /* ── 읽기 ─────────────────────────────────────────────────── */
 
     @Test
-    @DisplayName("파일이 없으면 빈 대기열이다 — 아직 안 만들었거나 다 쓴 상태이지 오류가 아니다")
+    @DisplayName("파일이 없으면 빈 목록이다 — 아직 안 만들었을 뿐이지 오류가 아니다")
     void emptyWhenFileMissing() {
         TopicQueue queue = TopicQueue.read(dir);
 
         assertThat(queue.next()).isNull();
-        assertThat(queue.pendingCount()).isZero();
+        assertThat(queue.size()).isZero();
         assertThat(queue.problems()).isEmpty(); // 없는 것은 사유로 남길 일도 아니다
     }
 
@@ -68,14 +68,14 @@ class TopicQueueTest {
     /* ── 고르기 ───────────────────────────────────────────────── */
 
     @Test
-    @DisplayName("위에서부터 첫 번째 미사용 항목을 꺼낸다 — 적은 순서가 곧 공부하고 싶은 순서다")
-    void picksFirstPendingInOrder() throws Exception {
+    @DisplayName("아직 안 쓴 범위가 먼저다 — 새로 넣은 범위가 한 바퀴를 기다리면 안 된다")
+    void prefersNeverUsedRange() throws Exception {
         write("""
                 {
                   "topics": [
-                    { "domain": "DATABASE", "topic": "복합 인덱스", "usedAt": "2026-08-15" },
-                    { "domain": "BACKEND_FRAMEWORK", "topic": "@Transactional 전파 속성" },
-                    { "domain": "NETWORK", "topic": "TIME_WAIT" }
+                    { "domain": "DATABASE", "topic": "인덱스", "lastUsedAt": "2026-08-15", "usedCount": 2 },
+                    { "domain": "BACKEND_FRAMEWORK", "topic": "Spring 트랜잭션" },
+                    { "domain": "NETWORK", "topic": "TCP" }
                   ]
                 }
                 """);
@@ -84,9 +84,44 @@ class TopicQueueTest {
         TopicQueue.Picked picked = queue.next();
 
         assertThat(picked.index()).isEqualTo(1);
-        assertThat(picked.topic()).isEqualTo("@Transactional 전파 속성");
+        assertThat(picked.topic()).isEqualTo("Spring 트랜잭션");
         assertThat(picked.domain()).isEqualTo(Domain.BACKEND_FRAMEWORK);
-        assertThat(queue.pendingCount()).isEqualTo(2); // 이미 쓴 것은 세지 않는다
+        assertThat(queue.size()).as("범위는 쓴다고 없어지지 않는다").isEqualTo(3);
+    }
+
+    /**
+     * 전부 한 번씩 쓰인 뒤의 규칙이다. 이게 없으면 순환이 성립하지 않고, 맨 위 범위만
+     * 계속 걸린다 — 여러 범위를 적어 둔 뜻이 사라진다.
+     */
+    @Test
+    @DisplayName("전부 쓴 상태면 가장 오래 안 쓴 범위를 고른다 — 골고루 돌게 하는 규칙")
+    void picksLeastRecentlyUsedWhenAllUsed() throws Exception {
+        write("""
+                {
+                  "topics": [
+                    { "domain": "DATABASE", "topic": "인덱스", "lastUsedAt": "2026-08-15" },
+                    { "domain": "BACKEND_FRAMEWORK", "topic": "Spring 트랜잭션", "lastUsedAt": "2026-08-07" },
+                    { "domain": "NETWORK", "topic": "TCP", "lastUsedAt": "2026-08-19" }
+                  ]
+                }
+                """);
+
+        assertThat(TopicQueue.read(dir).next().topic()).isEqualTo("Spring 트랜잭션");
+    }
+
+    @Test
+    @DisplayName("차례가 같으면 적어 둔 순서가 이긴다 — 사람이 정한 순서를 뒤 항목이 밀어내면 안 된다")
+    void breaksTieByFileOrder() throws Exception {
+        write("""
+                {
+                  "topics": [
+                    { "domain": "OS", "topic": "프로세스와 스레드", "lastUsedAt": "2026-08-10" },
+                    { "domain": "NETWORK", "topic": "TCP", "lastUsedAt": "2026-08-10" }
+                  ]
+                }
+                """);
+
+        assertThat(TopicQueue.read(dir).next().topic()).isEqualTo("프로세스와 스레드");
     }
 
     @Test
@@ -132,7 +167,7 @@ class TopicQueueTest {
 
         assertThat(queue.next().domain()).isEqualTo(Domain.OS);
         assertThat(queue.problems()).hasSize(2);
-        assertThat(queue.pendingCount()).as("형식이 틀린 항목은 '남은 주제'에 세지 않는다").isEqualTo(1);
+        assertThat(queue.size()).as("형식이 틀린 항목은 개수에 넣지 않는다").isEqualTo(1);
     }
 
     @Test
@@ -153,27 +188,17 @@ class TopicQueueTest {
         assertThat(TopicQueue.read(dir).next().domain()).isEqualTo(Domain.BACKEND_FRAMEWORK);
     }
 
-    @Test
-    @DisplayName("전부 사용 표시가 돼 있으면 아무것도 꺼내지 않는다 — 자동 선택으로 흘려보낸다")
-    void returnsNullWhenAllUsed() throws Exception {
-        write("""
-                { "topics": [ { "domain": "OS", "topic": "페이지 폴트", "usedAt": "2026-08-11" } ] }
-                """);
-
-        assertThat(TopicQueue.read(dir).next()).isNull();
-    }
-
-    /* ── 사용 표시(되쓰기) ────────────────────────────────────── */
+    /* ── 사용 기록(되쓰기) ────────────────────────────────────── */
 
     @Test
-    @DisplayName("사용 표시를 하면 그 항목만 usedAt이 찍히고 나머지는 그대로다")
-    void marksOnlyPickedEntry() throws Exception {
+    @DisplayName("사용 기록은 고른 줄에만 남고, 다음 차례는 다른 범위로 넘어간다")
+    void recordsUseOnPickedEntryOnly() throws Exception {
         write("""
                 {
                   "note": "내가 적어 둔 설명",
                   "topics": [
-                    { "domain": "OS", "topic": "페이지 폴트", "memo": "왜 느려지는지" },
-                    { "domain": "NETWORK", "topic": "TIME_WAIT" }
+                    { "domain": "OS", "topic": "메모리 관리", "memo": "왜 느려지는지" },
+                    { "domain": "NETWORK", "topic": "TCP" }
                   ]
                 }
                 """);
@@ -182,26 +207,43 @@ class TopicQueueTest {
         assertThat(queue.markUsed(dir, queue.next(), LocalDate.of(2026, 8, 19))).isTrue();
 
         String saved = Files.readString(dir.resolve(TopicQueue.FILE_NAME));
-        assertThat(saved).contains("\"usedAt\" : \"2026-08-19\"");
+        assertThat(saved).contains("\"lastUsedAt\" : \"2026-08-19\"");
+        assertThat(saved).contains("\"usedCount\" : 1");
         assertThat(saved).contains("내가 적어 둔 설명");   // note를 배치가 지우면 사용법이 사라진다
         assertThat(saved).contains("왜 느려지는지");       // memo도 보존한다(사람 몫의 기록)
-        assertThat(saved).contains("TIME_WAIT");           // 남은 항목은 손대지 않는다
 
-        // 다시 읽으면 다음 주제로 넘어가 있어야 한다 — 이게 안 되면 같은 주제가 매 주기 나온다
+        // 다시 읽으면 아직 안 쓴 범위가 차례를 받는다 — 이게 안 되면 한 범위만 계속 걸린다
         TopicQueue reread = TopicQueue.read(dir);
-        assertThat(reread.next().topic()).isEqualTo("TIME_WAIT");
-        assertThat(reread.pendingCount()).isEqualTo(1);
+        assertThat(reread.next().topic()).isEqualTo("TCP");
+        assertThat(reread.size()).as("쓴 범위도 목록에 남는다").isEqualTo(2);
+    }
+
+    /**
+     * 편수는 우물이 마르는 것을 알아채는 유일한 신호다. 쓸 때마다 늘지 않으면
+     * "Spring으로 벌써 스무 편"을 영영 모른다.
+     */
+    @Test
+    @DisplayName("같은 범위를 다시 쓰면 편수가 하나 늘어난다")
+    void incrementsUsedCount() throws Exception {
+        write("""
+                { "topics": [ { "domain": "OS", "topic": "메모리 관리", "lastUsedAt": "2026-08-11", "usedCount": 3 } ] }
+                """);
+
+        TopicQueue queue = TopicQueue.read(dir);
+        queue.markUsed(dir, queue.next(), LocalDate.of(2026, 8, 19));
+
+        assertThat(Files.readString(dir.resolve(TopicQueue.FILE_NAME))).contains("\"usedCount\" : 4");
     }
 
     @Test
     @DisplayName("note가 없던 파일에는 사용법 설명을 채워 넣는다 — 파일 자신이 쓰는 법을 들고 있게 한다")
     void fillsDefaultNoteWhenMissing() throws Exception {
-        write("{ \"topics\": [ { \"domain\": \"OS\", \"topic\": \"페이지 폴트\" } ] }");
+        write("{ \"topics\": [ { \"domain\": \"OS\", \"topic\": \"메모리 관리\" } ] }");
 
         TopicQueue queue = TopicQueue.read(dir);
         queue.markUsed(dir, queue.next(), LocalDate.of(2026, 8, 19));
 
-        assertThat(Files.readString(dir.resolve(TopicQueue.FILE_NAME))).contains("usedAt이 있으면");
+        assertThat(Files.readString(dir.resolve(TopicQueue.FILE_NAME))).contains("가장 오래 안 쓴 범위");
     }
 
     /* ── 실물 파일 ────────────────────────────────────────────── */

@@ -19,13 +19,19 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 개념 문서 주제 대기열 — 관리자 화면의 입력을 받고, 배치가 남긴 사용 표시를 되돌려 받는다.
+ * 개념 문서 <b>주제 범위</b> 목록 — 관리자 화면의 입력을 받고, 배치가 남긴 사용 기록을 되돌려 받는다.
+ *
+ * <h2>한 줄은 범위다(V11)</h2>
+ *
+ * <p>"Spring", "JVM 메모리" 같은 <b>범위</b>를 적어 두면, 배치가 문서일마다 범위 하나를 골라
+ * 그 안에서 세부 주제를 정해 문서를 쓴다. 줄은 소진되지 않고 <b>사용 기록만 쌓인다</b> —
+ * 다음 차례가 오면 같은 범위에서 다른 주제를 캔다(이미 쓴 제목은 프롬프트의 중복 회피 목록이 막는다).
  *
  * <h2>왜 생겼나</h2>
  *
- * <p>대기열은 처음에 저장소 파일 하나였다({@code generated/_topics.json}). 배치가 클라우드에서
- * 도니 DB를 볼 수 없어서인데, 그러다 보니 주제 하나 추가하는 데 JSON을 손으로 고쳐야 했다.
- * 쉼표 하나 빠뜨리면 그날 대기열이 통째로 안 읽히고, <b>배치는 그래도 초록불로 끝난다</b>
+ * <p>목록은 처음에 저장소 파일 하나였다({@code generated/_topics.json}). 배치가 클라우드에서
+ * 도니 DB를 볼 수 없어서인데, 그러다 보니 한 줄 추가하는 데 JSON을 손으로 고쳐야 했다.
+ * 쉼표 하나 빠뜨리면 그날 목록이 통째로 안 읽히고, <b>배치는 그래도 초록불로 끝난다</b>
  * (모델이 주제를 자동으로 고르므로). 잘못을 알아차릴 방법이 없는 입력 방식이었다.
  *
  * <h2>DB가 원본, 파일은 사본</h2>
@@ -62,68 +68,95 @@ public class TopicQueueService {
     /* ── 조회 ─────────────────────────────────────────────────── */
 
     /**
-     * 전체 목록 — 대기 중인 것이 위, 이미 쓴 것이 아래.
+     * 전체 목록 — <b>사람이 정한 순서</b> 그대로. 다음 차례인 한 줄에만 표시가 붙는다.
      *
-     * <p><b>다 쓴 주제도 보여 준다.</b> "지난달에 뭘 공부했더라"가 다음 주제를 고를 때 가장
-     * 자주 하는 질문이라서다. 파일에는 대기 중인 것만 내보내는 것과 대비되는데, 파일의 목적은
-     * "다음에 무엇을 쓸까" 하나뿐이고 화면의 목적은 그것과 기록 둘 다이기 때문이다.
+     * <p><b>왜 "다음 차례 순"으로 정렬하지 않나.</b> 그러면 ↑↓ 버튼을 눌러도 목록이 안 움직이는
+     * 때가 생긴다(사용 기록이 정렬을 지배하므로). 사람이 정한 순서를 그대로 보여 주고 다음
+     * 차례만 표시하는 편이, 눈에 보이는 것과 손으로 하는 것이 어긋나지 않는다.
      */
     @Transactional(readOnly = true)
     public List<TopicQueueItemResponse> getAll() {
-        return repository.findAllByOrderBySortOrderAsc().stream()
-                // 대기 중(false=0)이 먼저 오도록. 같은 그룹 안에서는 정렬 순서가 유지된다
-                // (Stream.sorted는 안정 정렬이라 위 sortOrder 순서를 흐트러뜨리지 않는다).
-                .sorted((a, b) -> Boolean.compare(!a.isPending(), !b.isPending()))
-                .map(TopicQueueItemResponse::from)
-                .toList();
+        List<TopicQueueItem> items = repository.findAllByOrderBySortOrderAsc();
+        TopicQueueItem next = pickNext(items);
+        return items.stream().map(item -> TopicQueueItemResponse.from(item, item == next)).toList();
     }
 
-    /** 관리자 화면 배지용 — 남은 주제 수. 0이면 배치가 모델 자동 선택으로 돈다는 뜻이다. */
+    /**
+     * 다음 문서일에 쓰일 범위 — <b>안 쓴 것 먼저 → 가장 오래 안 쓴 것 → 적어 둔 순서</b>.
+     *
+     * <p>배치가 파일을 보고 내리는 판단({@code TopicQueue.next})과 <b>같은 규칙</b>이다.
+     * 두 곳에 있는 것이 마음에 걸리지만, 한쪽은 JSON 줄을 보고 한쪽은 엔티티를 본다 —
+     * 공통 타입을 만들어 묶으면 파일 형식과 DB 스키마가 한 몸이 되어 더 나쁘다.
+     * 대신 규칙이 어긋나면 화면의 "다음 차례" 표시가 실제와 달라지므로 <b>눈에 보인다</b>.
+     *
+     * <p>목록이 {@code sortOrder} 순으로 들어오고 <b>더 앞선 것만</b> 갱신하므로,
+     * 조건이 같을 때는 먼저 온 항목이 자리를 지킨다(= 사람이 정한 순서가 타이브레이커).
+     */
+    private TopicQueueItem pickNext(List<TopicQueueItem> items) {
+        TopicQueueItem best = null;
+        for (TopicQueueItem item : items) {
+            if (best == null || isEarlier(item, best)) {
+                best = item;
+            }
+        }
+        return best;
+    }
+
+    private boolean isEarlier(TopicQueueItem a, TopicQueueItem b) {
+        if (a.isNeverUsed() || b.isNeverUsed()) {
+            return a.isNeverUsed() && !b.isNeverUsed();
+        }
+        return a.getLastUsedAt().isBefore(b.getLastUsedAt());
+    }
+
+    /** 관리자 화면 배지용 — 등록된 범위 수. 0이면 배치가 모델 자동 선택으로 돈다는 뜻이다. */
     @Transactional(readOnly = true)
-    public long pendingCount() {
-        return repository.countByUsedAtIsNull();
+    public long count() {
+        return repository.count();
     }
 
     /* ── 변경 ─────────────────────────────────────────────────── */
 
     /**
-     * 주제 추가 — 대기열 <b>맨 뒤</b>에 붙는다.
+     * 주제 범위 추가 — 목록 <b>맨 뒤</b>에 붙는다. 단, 아직 안 쓴 범위라 <b>다음 차례는
+     * 곧바로 받는다</b>(위 {@link #pickNext} 규칙).
      *
-     * <p>맨 앞이 아닌 이유: 적은 순서가 곧 공부하고 싶은 순서라는 것이 이 대기열의 규칙이고,
-     * 새로 떠오른 주제가 늘 가장 급한 것은 아니다. 급하면 순서 이동으로 올리면 된다.
+     * <p>맨 앞에 꽂지 않는 이유: 이미 넣어 둔 범위들과 순서를 다투게 만들 이유가 없다.
+     * 안 쓴 범위끼리는 적어 둔 순서대로 차례가 오고, 급하면 ↑로 올리면 된다.
      *
-     * <p>같은 분야에 같은 주제가 <b>대기 중</b>이면 막는다(TOPIC_002). 이미 쓴 주제는 막지
-     * 않는다 — 다시 다루고 싶은 것은 정당한 요구다.
+     * <p>같은 분야에 같은 범위가 이미 있으면 막는다(TOPIC_002). V10에서는 "대기 중인 것만"
+     * 봤는데, 범위는 소진되지 않으므로 이제 같은 이름이 둘 있으면 <b>그 범위만 두 배로 자주</b>
+     * 나올 뿐이다.
      */
     @Transactional
     public TopicQueueItemResponse add(AdminTopicQueueRequest request) {
         String topic = request.topic().trim();
-        if (repository.existsByDomainAndTopicAndUsedAtIsNull(request.domain(), topic)) {
+        if (repository.existsByDomainAndTopic(request.domain(), topic)) {
             throw new BusinessException(ErrorCode.TOPIC_002);
         }
 
-        TopicQueueItem saved = repository.save(TopicQueueItem.pending(
+        TopicQueueItem saved = repository.save(TopicQueueItem.fresh(
                 request.domain(), topic, trimToNull(request.memo()),
                 repository.findMaxSortOrder() + 1));
 
-        log.info("주제 대기열 추가: [{}] {} — 커밋해야 다음 배치부터 반영됩니다",
+        log.info("주제 범위 추가: [{}] {} — 커밋해야 다음 배치부터 반영됩니다",
                 request.domain(), topic);
         events.publishEvent(new TopicQueueChanged());
-        return TopicQueueItemResponse.from(saved);
+        return TopicQueueItemResponse.from(saved, false);
     }
 
     /**
-     * 삭제 — 되돌릴 수 없다.
+     * 삭제 — 되돌릴 수 없다. 그 범위로 만든 문서는 남고, <b>몇 편 썼는지의 기록만</b> 사라진다.
      *
-     * <p>이미 쓴 항목도 지울 수 있게 열어 뒀다. 기록으로서의 값어치가 있지만, 그건 지우지 말라고
-     * 권할 이유이지 <b>못 지우게 막을</b> 이유는 아니다 — 잘못 적은 주제가 목록에 영원히 남으면
-     * 화면이 지저분해지고, 그러면 화면 자체를 안 보게 된다.
+     * <p>범위가 말랐을 때 갈아 끼우는 것이 정상 사용법이라 삭제는 자주 쓰인다. 그래서 확인
+     * 절차를 화면 쪽(버튼 두 번 누르기)에만 두고 서버는 막지 않는다.
      */
     @Transactional
     public void delete(Long id) {
         TopicQueueItem item = find(id);
         repository.delete(item);
-        log.info("주제 대기열 삭제: [{}] {}", item.getDomain(), item.getTopic());
+        log.info("주제 범위 삭제: [{}] {} (이 범위로 {}편 썼음)",
+                item.getDomain(), item.getTopic(), item.getUsedCount());
         events.publishEvent(new TopicQueueChanged());
     }
 
@@ -134,9 +167,9 @@ public class TopicQueueService {
      * 해서 한 번의 이동이 여러 행을 건드린다. 맞바꾸기는 항상 두 행이고, 실패해도 두 행만
      * 원래대로 두면 된다.
      *
-     * <p><b>이미 쓴 항목은 옮길 수 없다.</b> 순서는 "다음에 무엇을 쓸까"의 규칙이라 이미 쓴
-     * 것에는 뜻이 없다. 조용히 무시하지 않고 거절하는 이유는, 눌렀는데 아무 일도 안 일어나면
-     * 화면이 고장 난 것처럼 보이기 때문이다.
+     * <p><b>이미 쓴 범위도 옮길 수 있다</b>(V11에서 바뀐 점). 범위는 소진되지 않으므로 순서는
+     * 계속 뜻을 갖는다 — 다만 전부 한 번씩 쓰인 뒤로는 "가장 오래 안 쓴 것"이 차례를 지배해서,
+     * 순서는 <b>사용 시각이 같을 때의 기준</b>으로 물러난다.
      *
      * <p>맨 위에서 위로(맨 아래에서 아래로) 누르면 아무 일도 하지 않는다 — 이건 화면에서
      * 버튼을 감출 수도 있는 종류라 오류로 볼 것이 아니다.
@@ -144,18 +177,15 @@ public class TopicQueueService {
     @Transactional
     public void move(Long id, Direction direction) {
         TopicQueueItem item = find(id);
-        if (!item.isPending()) {
-            throw new BusinessException(ErrorCode.TOPIC_002, "이미 쓴 주제는 순서를 바꿀 수 없습니다.");
-        }
 
-        List<TopicQueueItem> pending = repository.findByUsedAtIsNullOrderBySortOrderAsc();
-        int index = indexOf(pending, id);
+        List<TopicQueueItem> all = repository.findAllByOrderBySortOrderAsc();
+        int index = indexOf(all, id);
         int target = direction == Direction.UP ? index - 1 : index + 1;
-        if (index < 0 || target < 0 || target >= pending.size()) {
+        if (index < 0 || target < 0 || target >= all.size()) {
             return; // 이미 끝이다 — 할 일이 없다
         }
 
-        TopicQueueItem neighbor = pending.get(target);
+        TopicQueueItem neighbor = all.get(target);
         // 두 값을 <바꾸기 전에> 붙잡아 둔다. 맞바꾼 뒤에 비교하면 neighbor는 이미 내 값이라
         // 아래 조건이 <항상> 참이 되어, 멀쩡한 이동에도 보정이 끼어든다(테스트가 잡은 버그).
         int mine = item.getSortOrder();
@@ -174,7 +204,7 @@ public class TopicQueueService {
     /* ── 파일 → DB 동기화 ─────────────────────────────────────── */
 
     /**
-     * 기동 시 파일을 읽어 DB에 반영한다 — <b>사용 표시 되돌려 받기 + 손으로 적은 줄 흡수</b>.
+     * 기동 시 파일을 읽어 DB에 반영한다 — <b>사용 기록 되돌려 받기 + 손으로 적은 줄 흡수</b>.
      *
      * <p>배치는 클라우드에서 돌기 때문에 DB에 아무것도 못 쓴다. 대신 파일에 날짜를 찍어
      * 커밋해 두고, 그 결과를 앱이 켜질 때 여기서 읽는다 — {@code generated/*.json}의 초안
@@ -214,7 +244,7 @@ public class TopicQueueService {
         }
 
         if (applied + imported > 0) {
-            log.info("주제 대기열 동기화: 사용 표시 {}건 반영, 파일에 손으로 적은 주제 {}건 흡수",
+            log.info("주제 범위 동기화: 사용 기록 {}건 반영, 파일에 손으로 적은 범위 {}건 흡수",
                     applied, imported);
             events.publishEvent(new TopicQueueChanged());
         }
@@ -225,22 +255,25 @@ public class TopicQueueService {
     public record SyncResult(int usedApplied, int imported) {
     }
 
-    /** 배치가 찍은 날짜를 DB에 반영한다. 이미 반영됐거나 지운 항목이면 아무 일도 하지 않는다. */
+    /**
+     * 배치가 적은 사용 기록을 DB에 반영한다. 이미 반영됐거나 지운 항목이면 아무 일도 하지 않는다.
+     *
+     * <p>"이미 반영됐는가"는 엔티티가 판정한다({@code recordUse}) — 날짜가 더 최근일 때만
+     * 받아들인다. 여기서 무조건 반영하면 앱을 켤 때마다 편수가 불어난다.
+     */
     private boolean applyUsed(TopicQueueFile.Entry entry) {
-        if (entry.isPending()) {
+        LocalDate lastUsedAt = parseDate(entry.lastUsedAt());
+        if (lastUsedAt == null) {
             return false;
         }
-        LocalDate usedAt = parseDate(entry.usedAt());
-        if (usedAt == null) {
-            return false;
-        }
-        // 화면에서 지운 항목의 도장이 파일에 남아 있을 수 있다 — 그건 무시한다.
+        // 화면에서 지운 항목의 기록이 파일에 남아 있을 수 있다 — 그건 무시한다.
         // 여기서 되살리면 "지웠는데 다시 나타나는" 최악의 동작이 된다.
         return repository.findById(entry.id())
-                .filter(TopicQueueItem::isPending)
                 .map(item -> {
-                    item.markUsed(usedAt);
-                    return true;
+                    boolean changed = item.getLastUsedAt() == null
+                            || lastUsedAt.isAfter(item.getLastUsedAt());
+                    item.recordUse(lastUsedAt, entry.usedCount());
+                    return changed;
                 })
                 .orElse(false);
     }
@@ -252,12 +285,14 @@ public class TopicQueueService {
             return null;
         }
         String topic = entry.topic().trim();
-        if (repository.existsByDomainAndTopicAndUsedAtIsNull(domain, topic)) {
-            return null; // 화면에서 이미 넣어 둔 주제 — 두 벌이 되면 문서도 두 번 나온다
+        if (repository.existsByDomainAndTopic(domain, topic)) {
+            return null; // 화면에서 이미 넣어 둔 범위 — 두 벌이면 그 범위만 두 배로 자주 나온다
         }
-        // usedAt이 있는 줄을 대기로 들여오면 같은 주제로 문서를 한 번 더 만든다(엔티티 주석).
+        // 사용 기록까지 함께 들여온다. 기록을 버리면 그 범위가 "새것"이 되어 곧바로 다음 차례가
+        // 되고, 순환이 한쪽으로 쏠린다(엔티티 imported 주석).
         return repository.save(TopicQueueItem.imported(
-                domain, topic, trimToNull(entry.memo()), sortOrder, parseDate(entry.usedAt())));
+                domain, topic, trimToNull(entry.memo()), sortOrder,
+                parseDate(entry.lastUsedAt()), entry.usedCount() == null ? 0 : entry.usedCount()));
     }
 
     /* ── 도우미 ───────────────────────────────────────────────── */

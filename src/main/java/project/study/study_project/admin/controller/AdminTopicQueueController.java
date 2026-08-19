@@ -41,19 +41,19 @@ public class AdminTopicQueueController {
 
     private final TopicQueueService topicQueueService;
 
-    /** 전체 목록 — 대기 중인 것이 위, 이미 쓴 것이 아래(학습 기록). */
+    /** 전체 목록 — 사람이 정한 순서 그대로. 다음 차례인 한 줄에 {@code next=true}가 붙는다. */
     @GetMapping
     public ApiResponse<List<TopicQueueItemResponse>> list() {
         return ApiResponse.ok(topicQueueService.getAll());
     }
 
-    /** 남은 주제 수 — 탭 배지용. 0이면 배치가 모델 자동 선택으로 돈다. */
-    @GetMapping("/pending-count")
-    public ApiResponse<Map<String, Long>> pendingCount() {
-        return ApiResponse.ok(Map.of("count", topicQueueService.pendingCount()));
+    /** 등록된 범위 수 — 탭 배지용. 0이면 배치가 모델 자동 선택으로 돈다. */
+    @GetMapping("/count")
+    public ApiResponse<Map<String, Long>> count() {
+        return ApiResponse.ok(Map.of("count", topicQueueService.count()));
     }
 
-    /** 주제 추가 — 맨 뒤에 붙는다. 같은 분야에 같은 주제가 대기 중이면 409(TOPIC_002). */
+    /** 범위 추가 — 맨 뒤에 붙는다. 같은 분야에 같은 범위가 이미 있으면 409(TOPIC_002). */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<TopicQueueItemResponse> add(@Valid @RequestBody AdminTopicQueueRequest request) {

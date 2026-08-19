@@ -53,7 +53,7 @@ public enum ErrorCode {
     // 대한 것이고, 이쪽은 생성 <전에> 사람이 정해 두는 입력이라 실패의 성격이 다르다.
     TOPIC_001("TOPIC_001", HttpStatus.NOT_FOUND, "주제 대기열 항목을 찾을 수 없습니다."),
     // 409인 이유는 DOC_002와 같다 — 요청 자체는 멀쩡하고 지금 상태와 부딪힐 뿐이다.
-    TOPIC_002("TOPIC_002", HttpStatus.CONFLICT, "같은 분야에 같은 주제가 이미 대기 중입니다.");
+    TOPIC_002("TOPIC_002", HttpStatus.CONFLICT, "같은 분야에 같은 주제 범위가 이미 있습니다.");
 
     private final String code;
     private final HttpStatus httpStatus;

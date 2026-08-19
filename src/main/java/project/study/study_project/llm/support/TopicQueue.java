@@ -11,12 +11,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 주제 대기열 — {@code generated/_topics.json}을 읽고, 다음 주제를 꺼내고, 쓴 것을 표시한다.
+ * 주제 범위 대기열 — {@code generated/_topics.json}을 읽고, 다음 범위를 고르고, 사용 기록을 적는다.
  *
  * <p><b>왜 생겼나(2026-08-19, 사용자 요청).</b> 배치가 분야만 던지니 분야 전체를 개괄하는 문서가
- * 나왔다. "오늘은 {@code @Transactional} 전파 속성을 파고 싶다"를 배치에 전달할 통로가 없었다 —
+ * 나왔다. "오늘은 스프링 트랜잭션 쪽을 파고 싶다"를 배치에 전달할 통로가 없었다 —
  * 있는 것은 워크플로 수동 실행의 {@code topic} 입력뿐이라 <b>매일 아침 사람이 버튼을 눌러야</b>
  * 했다. 예약 실행이 스스로 읽을 수 있는 자리가 필요했고, 그게 이 파일이다.
+ *
+ * <h2>한 줄은 "범위"다 — 쓴다고 없어지지 않는다(V11)</h2>
+ *
+ * <p>처음에는 한 줄이 문서 한 편이었다(티켓). 그런데 사용자가 원한 것은 "java, spring 같은
+ * 세분화 주제"였고, 그건 한 편짜리가 아니라 <b>범위</b>다. 그래서 줄을 소진하지 않고
+ * 사용 기록만 적는다 — 다음 차례가 오면 같은 범위에서 <b>다른</b> 세부 주제를 캔다
+ * (이미 쓴 제목은 프롬프트의 중복 회피 목록이 막는다).
+ *
+ * <p><b>다음 차례 규칙: 안 쓴 범위 먼저 → 가장 오래 안 쓴 범위 → 적어 둔 순서.</b>
+ * 새로 넣은 범위가 곧바로 차례를 받고, 여러 범위가 골고루 돈다. "맨 위부터 차례로 돌기"도
+ * 검토했지만 버렸다 — 그러면 새 범위를 맨 뒤에 추가했을 때 한 바퀴를 기다려야 한다.
  *
  * <p><b>왜 손으로 관리하는 목록을 이제 와서 받아들였나.</b> {@code ClaudeDocumentGenerator}의
  * 주석에는 "큐레이션 목록은 결국 갱신되지 않는다"며 버린 기록이 남아 있다. 그 판단은 지금도
@@ -41,9 +52,10 @@ public final class TopicQueue {
 
     /** 파일을 새로 쓸 때 note가 비어 있으면 넣어 주는 설명 — 파일 자신이 사용법을 들고 있게 한다. */
     private static final String DEFAULT_NOTE =
-            "다음에 개념 문서로 쓸 주제 대기열입니다. 위에서부터 하나씩 씁니다(4일 주기의 0일차). "
-                    + "domain은 필수이고 Domain 상수명 그대로 적습니다. usedAt이 있으면 이미 쓴 항목이라 건너뜁니다. "
-                    + "대기열이 비면 예전처럼 모델이 주제를 자동으로 고릅니다. 고친 뒤에는 커밋해야 다음 배치에 반영됩니다.";
+            "개념 문서의 주제 범위 목록입니다. 배치가 문서일마다 범위 하나를 골라 그 안에서 세부 주제를 정합니다. "
+                    + "다음 차례는 '아직 안 쓴 범위 먼저, 그다음은 가장 오래 안 쓴 범위'로 정해집니다(줄은 없어지지 않습니다). "
+                    + "domain은 필수이고 Domain 상수명 그대로 적습니다. lastUsedAt·usedCount는 배치가 적는 칸이니 손대지 마세요. "
+                    + "목록이 비면 예전처럼 모델이 주제를 자동으로 고릅니다. 고친 뒤에는 커밋해야 다음 배치에 반영됩니다.";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -92,26 +104,53 @@ public final class TopicQueue {
     /* ── 고르기 ───────────────────────────────────────────────── */
 
     /**
-     * 다음에 쓸 주제 — 아직 안 쓴 첫 항목. 없으면 {@code null}(자동 선택으로 흘려보낸다).
+     * 다음에 쓸 범위 — <b>안 쓴 것 먼저, 그다음은 가장 오래 안 쓴 것</b>. 하나도 없으면
+     * {@code null}(모델 자동 선택으로 흘려보낸다).
      *
-     * <p><b>왜 위에서부터인가.</b> 적은 순서가 곧 공부하고 싶은 순서다. 무작위로 고르거나
-     * "가장 부족한 분야 먼저" 같은 규칙을 얹으면, 사람이 순서를 정해 둔 의미가 사라진다.
+     * <p><b>왜 이 규칙인가.</b> 범위는 소진되지 않으므로 "첫 줄부터 차례로"만으로는 부족하다 —
+     * 언젠가 전부 한 번씩 쓰이고 나면 그다음 차례를 정할 근거가 필요하다. 가장 오래 안 쓴 것을
+     * 고르면 여러 범위가 <b>골고루</b> 돌고, 새로 추가한 범위(안 쓴 것)가 곧바로 차례를 받는다.
+     * 같은 조건이 겹치면 <b>사람이 적어 둔 순서</b>가 이긴다 — 처음 여러 개를 넣었을 때는
+     * 전부 "안 쓴 범위"라 결국 위에서부터 도는 셈이라, 순서를 정해 둔 뜻이 살아 있다.
      *
      * <p><b>분야가 없거나 잘못된 항목은 건너뛴다.</b> 문서의 분야는 그 문서로 만드는 사흘치
      * 문제의 분야까지 정한다({@code alignDomainWithDocument}). 여기서 주기 분야로 대충 메우면
-     * "스프링 주제인데 운영체제 칸에 들어간 문서"가 생기고, 그 상태로 나흘이 간다.
+     * "스프링 범위인데 운영체제 칸에 들어간 문서"가 생기고, 그 상태로 나흘이 간다.
      * 건너뛴 사유는 {@link #problems()}에 쌓여 요약 화면에 뜬다 — 조용히 사라지지 않는다.
      */
     public Picked next() {
         List<TopicQueueFile.Entry> topics = file.topics();
+        int best = -1;
         for (int i = 0; i < topics.size(); i++) {
-            TopicQueueFile.Entry entry = topics.get(i);
-            if (!isUsable(entry)) {
+            if (!isUsable(topics.get(i))) {
                 continue; // 왜 건너뛰는지는 read() 시점에 이미 problems()에 쌓아 뒀다
             }
-            return new Picked(i, parseDomain(entry.domain()), entry.topic().trim());
+            if (best < 0 || isEarlier(topics.get(i), topics.get(best))) {
+                best = i;
+            }
         }
-        return null;
+        if (best < 0) {
+            return null;
+        }
+        TopicQueueFile.Entry picked = topics.get(best);
+        return new Picked(best, parseDomain(picked.domain()), picked.topic().trim());
+    }
+
+    /**
+     * {@code a}가 {@code b}보다 차례가 앞서는가 — 위 규칙의 비교 부분.
+     *
+     * <p>같으면 {@code false}를 돌려주는 것이 중요하다. 그래야 앞선 항목이 자리를 지켜
+     * <b>파일에 적힌 순서</b>가 타이브레이커가 된다(뒤 항목이 밀어내면 순서가 뒤집힌다).
+     *
+     * <p>날짜는 문자열로 비교한다. {@code YYYY-MM-DD}는 사전순과 시간순이 일치하는 형식이라
+     * 파싱이 필요 없고, 손으로 깨뜨린 값이 있어도 예외로 죽지 않는다 — 이 자리에서 예외가 나면
+     * 그날 문서 생성이 통째로 실패한다.
+     */
+    private static boolean isEarlier(TopicQueueFile.Entry a, TopicQueueFile.Entry b) {
+        if (a.isNeverUsed() || b.isNeverUsed()) {
+            return a.isNeverUsed() && !b.isNeverUsed();
+        }
+        return a.lastUsedAt().trim().compareTo(b.lastUsedAt().trim()) < 0;
     }
 
     /**
@@ -125,7 +164,7 @@ public final class TopicQueue {
         List<String> problems = new ArrayList<>();
         for (int i = 0; i < topics.size(); i++) {
             TopicQueueFile.Entry entry = topics.get(i);
-            if (entry == null || !entry.isPending() || isUsable(entry)) {
+            if (entry == null || isUsable(entry)) {
                 continue;
             }
             if (entry.topic() == null || entry.topic().isBlank()) {
@@ -138,15 +177,20 @@ public final class TopicQueue {
         return problems;
     }
 
-    /** 쓸 수 있는 항목인지 — 아직 안 썼고, 주제가 있고, 분야가 아는 상수명이다. */
+    /**
+     * 쓸 수 있는 항목인지 — 범위 이름이 있고 분야가 아는 상수명이다.
+     *
+     * <p>V10에는 "아직 안 썼는가"도 조건에 있었다. 범위는 소진되지 않으므로 그 조건이 사라졌다
+     * (V11) — 사용 기록은 <b>고르는 순서</b>를 정할 뿐 자격을 없애지 않는다.
+     */
     private static boolean isUsable(TopicQueueFile.Entry entry) {
-        return entry != null && entry.isPending()
+        return entry != null
                 && entry.topic() != null && !entry.topic().isBlank()
                 && parseDomain(entry.domain()) != null;
     }
 
-    /** 아직 안 쓴 항목 수 — "남은 주제 3개"처럼 사람에게 알리는 용도. 형식 오류는 세지 않는다. */
-    public int pendingCount() {
+    /** 쓸 수 있는 범위 수 — "등록된 범위 3개"처럼 사람에게 알리는 용도. 형식 오류는 세지 않는다. */
+    public int size() {
         return (int) file.topics().stream().filter(TopicQueue::isUsable).count();
     }
 
@@ -158,16 +202,15 @@ public final class TopicQueue {
     /* ── 사용 표시(되쓰기) ────────────────────────────────────── */
 
     /**
-     * 쓴 주제에 날짜 도장을 찍어 파일을 다시 쓴다. 성공하면 {@code true}.
+     * 쓴 범위에 <b>마지막 사용일과 편수</b>를 적어 파일을 다시 쓴다. 성공하면 {@code true}.
      *
-     * <p><b>왜 생성 전이 아니라 후에 찍나.</b> 먼저 찍으면 생성이 실패했을 때 주제만 소모된다 —
-     * 요금도 안 나갔는데 그 주제는 영영 안 나온다. 반대로 나중에 찍으면 최악의 경우 같은 주제가
-     * 한 번 더 나오는데, 그건 검수 화면에서 눈에 보이고 되돌리기도 쉽다. <b>조용히 사라지는
-     * 쪽보다 눈에 띄게 중복되는 쪽</b>을 고른다.
+     * <p><b>왜 생성 전이 아니라 후에 적나.</b> 먼저 적으면 생성이 실패했을 때 그 범위만 차례를
+     * 잃는다 — 요금도 안 나갔는데 순환에서 뒤로 밀린다. 반대로 나중에 적으면 최악의 경우 같은
+     * 범위가 한 번 더 걸리는데, 그건 검수 화면에서 눈에 보이고 손해도 작다.
+     * <b>조용히 어긋나는 쪽보다 눈에 띄게 겹치는 쪽</b>을 고른다.
      *
-     * <p><b>왜 항목을 지우지 않고 도장만 찍나.</b> 지우면 언제 무엇을 공부했는지 기록이 사라진다.
-     * 게다가 배치가 파일에서 줄을 없애면, 사람이 방금 손으로 추가한 줄과 부딪칠 때
-     * 무엇이 사라졌는지 알 길이 없다(git diff에서 삭제로만 보인다).
+     * <p><b>편수를 함께 적는 이유</b>: 범위는 마르는 순간이 온다. 문서는 계속 나오므로 실패가
+     * 조용한데, 화면에 편수가 보이면 "Spring으로 벌써 스무 편이네"를 알아채고 범위를 갈아 끼운다.
      */
     public boolean markUsed(Path dir, Picked picked, LocalDate date) {
         try {

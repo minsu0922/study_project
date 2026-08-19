@@ -26,30 +26,31 @@ class ClaudeDocumentGeneratorTest {
     private final ClaudeDocumentGenerator generator = new ClaudeDocumentGenerator("claude-opus-5");
 
     @Test
-    @DisplayName("주제를 지정하면 그 주제로 쓰라는 지시가 프롬프트에 실린다")
-    void includesGivenTopic() {
+    @DisplayName("주제 범위를 주면 '그 안에서 하나 골라 쓰라'는 지시가 실린다 — 범위 전체를 개괄하면 안 된다")
+    void includesGivenTopicAsRange() {
         String prompt = generator.buildPrompt(Domain.NETWORK, "TCP 혼잡 제어", List.of(), List.of());
 
-        assertThat(prompt).contains("TCP 혼잡 제어");
-        assertThat(prompt).as("지정 주제일 때는 '고르라'가 아니라 '이 주제로 쓰라'여야 한다")
-                .contains("이 주제로 문서를 써라");
+        assertThat(prompt).contains("주제 범위: TCP 혼잡 제어");
+        assertThat(prompt).as("범위일 때는 '이 주제로 써라'가 아니라 '이 안에서 골라라'여야 한다")
+                .contains("이 범위 안에서");
     }
 
     @Test
-    @DisplayName("주제를 비우면 모델이 직접 고르도록 지시한다")
+    @DisplayName("범위를 비우면 분야 안에서 모델이 직접 고르도록 지시한다")
     void asksModelToPickWhenTopicOmitted() {
         String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of());
 
         assertThat(prompt).contains("주제를 하나 골라");
-        assertThat(prompt).doesNotContain("이 주제로 문서를 써라");
+        assertThat(prompt).doesNotContain("주제 범위:");
     }
 
     @Test
-    @DisplayName("공백만 있는 주제는 지정하지 않은 것으로 본다 — 워크플로 입력이 비면 그렇게 온다")
+    @DisplayName("공백만 있는 범위는 지정하지 않은 것으로 본다 — 워크플로 입력이 비면 그렇게 온다")
     void treatsBlankTopicAsUnspecified() {
         String prompt = generator.buildPrompt(Domain.NETWORK, "   ", List.of(), List.of());
 
         assertThat(prompt).contains("주제를 하나 골라");
+        assertThat(prompt).doesNotContain("주제 범위:");
     }
 
     /**
@@ -70,12 +71,19 @@ class ClaudeDocumentGeneratorTest {
         assertThat(prompt).as("예시 주제를 그대로 쓰는 것은 막아야 한다").contains("가져다 쓰지 마라");
     }
 
+    /**
+     * 범위는 여러 번 쓰인다(V11). 그때마다 같은 주제가 나오면 우물을 파는 뜻이 없으므로,
+     * "이미 문서가 있는 주제와 겹치지 마라"가 <b>범위를 줬을 때도</b> 실려야 한다.
+     */
     @Test
-    @DisplayName("주제를 지정해도 '넓으면 좁혀라'가 함께 실린다 — 대기열에 넓은 주제를 적어 둘 수도 있다")
-    void asksToNarrowGivenTopicIfTooWide() {
-        String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, "스프링 트랜잭션", List.of(), List.of());
+    @DisplayName("범위를 줄 때 '아직 안 다룬 것을 고르라'가 함께 실린다 — 같은 범위가 계속 돌아온다")
+    void asksToPickUncoveredTopicWithinRange() {
+        String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, "Spring 트랜잭션", List.of(), List.of());
 
-        assertThat(prompt).contains("한 갈래만 골라 좁히고");
+        assertThat(prompt).contains("범위 전체를 개괄하지 마라");
+        assertThat(prompt).contains("아직").contains("다루지 않은 것이 오늘의 주제다");
+        assertThat(prompt).as("이미 한 편 크기인 범위를 억지로 더 쪼개면 알맹이가 없어진다")
+                .contains("억지로 더 좁히지 마라");
     }
 
     @Test

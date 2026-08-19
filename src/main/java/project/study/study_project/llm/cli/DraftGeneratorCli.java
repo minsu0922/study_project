@@ -519,9 +519,9 @@ public final class DraftGeneratorCli {
         // 문서는 이미 파일에 있으므로 job을 죽이지 않는다 — 대신 다음 주기에 같은 주제가
         // 또 나올 수 있다는 사실을 또렷이 알린다.
         if (picked != null && !queue.markUsed(outDir, picked, date)) {
-            System.out.println("⚠️ 주제 대기열에 사용 표시를 못 했습니다 — 다음 문서일에 같은 주제가 또 나올 수 있습니다: "
+            System.out.println("⚠️ 주제 범위에 사용 기록을 못 남겼습니다 — 다음 문서일에 같은 범위가 또 걸릴 수 있습니다: "
                     + picked.topic());
-            appendToStepSummary("⚠️ `%s`에 사용 표시를 못 했습니다 — \"%s\"가 다음 문서일에 또 나올 수 있습니다.%n"
+            appendToStepSummary("⚠️ `%s`에 사용 기록을 못 남겼습니다 — \"%s\" 범위가 다음 문서일에 또 걸릴 수 있습니다.%n"
                     .formatted(TopicQueue.FILE_NAME, picked.topic()));
         }
     }
@@ -563,22 +563,22 @@ public final class DraftGeneratorCli {
      */
     private static void reportTopicQueue(TopicQueue queue, TopicQueue.Picked picked, String topic) {
         if (picked != null) {
-            String message = "📌 주제 대기열에서 꺼냄: **%s** (%s) — 남은 주제 %d개%n"
-                    .formatted(picked.topic(), picked.domain(), queue.pendingCount() - 1);
+            String message = "📌 오늘의 주제 범위: **%s** (%s) — 등록된 범위 %d개 중 차례%n"
+                    .formatted(picked.topic(), picked.domain(), queue.size());
             System.out.print(message);
             appendToStepSummary(message);
         } else if (topic == null) {
-            // 수동 지정도 대기열도 없는 평소 경로. 오류가 아니므로 아이콘도 정보(ℹ️)로 둔다 —
+            // 수동 지정도 범위 목록도 없는 평소 경로. 오류가 아니므로 아이콘도 정보(ℹ️)로 둔다 —
             // 매일 경고가 뜨면 사람이 경고 전체를 무시하게 된다.
-            String message = ("ℹ️ 주제 대기열이 비어 모델이 주제를 자동으로 고릅니다. "
-                    + "`generated/%s`에 주제를 적어 커밋하면 다음 문서일부터 그대로 씁니다.%n")
+            String message = ("ℹ️ 주제 범위 목록이 비어 모델이 주제를 자동으로 고릅니다. "
+                    + "관리자 화면에서 범위를 넣고 `generated/%s`를 커밋하면 다음 문서일부터 그 안에서 고릅니다.%n")
                     .formatted(TopicQueue.FILE_NAME);
             System.out.print(message);
             appendToStepSummary(message);
         }
 
         if (!queue.problems().isEmpty()) {
-            String message = "⚠️ **주제 대기열에서 건너뛴 항목 %d건**%n%s%n"
+            String message = "⚠️ **주제 범위 목록에서 건너뛴 항목 %d건**%n%s%n"
                     .formatted(queue.problems().size(), bullets(queue.problems()));
             System.out.print(message);
             appendToStepSummary(message);

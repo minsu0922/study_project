@@ -482,11 +482,17 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
         sb.append("분야: ").append(domain.getDisplayName()).append(domainHint(domain)).append("\n\n");
 
         if (topic != null && !topic.isBlank()) {
-            sb.append("주제: ").append(topic.trim()).append('\n');
+            // 이 값은 대개 "Spring", "JVM 메모리" 같은 <범위>다(주제 범위 목록에서 온다).
+            // 그래서 "이 주제로 써라"가 아니라 "이 안에서 하나를 골라 써라"로 지시한다 —
+            // 전자로 시키면 범위 전체를 개괄하는 문서가 나온다(분야만 던졌을 때와 같은 결함).
+            // 수동 실행으로 한 편짜리 주제를 그대로 넣는 경우도 있어 마지막 줄을 붙였다.
+            sb.append("주제 범위: ").append(topic.trim()).append('\n');
             sb.append("""
-                    이 주제로 문서를 써라. 분야 전체를 훑지 마라.
-                    이 주제가 한 편에 담기지 않을 만큼 넓으면 그 안에서 한 갈래만 골라 좁히고,
-                    제목에 그 갈래를 드러내라.
+                    이 범위 안에서 백엔드 면접에 자주 나오는 주제를 하나 골라 문서를 써라.
+                    범위 전체를 개괄하지 마라. 한 편으로 끝까지 파고들 수 있는 크기로 좁혀 골라라.
+                    아래 [이미 문서가 있는 주제]와 겹치지 않는 것을 고른다 — 그 범위에서 아직
+                    다루지 않은 것이 오늘의 주제다.
+                    범위가 이미 한 편 크기라면 그대로 써라. 억지로 더 좁히지 마라.
                     """);
         } else {
             // 주제를 안 주면 모델은 분야 이름에 가장 가까운 <가장 큰> 주제를 고른다 —

@@ -17,16 +17,17 @@ import project.study.study_project.llm.support.TopicQueue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 /**
- * 주제 대기열 내보내기 테스트.
+ * 주제 범위 내보내기 테스트.
  *
  * <p>다른 내보내기와 같은 규칙을 지킨다 — <b>내용이 같으면 다시 쓰지 않는다</b>. 이게 깨지면
- * 앱을 켤 때마다 파일이 바뀌어 "커밋할 게 항상 있는" 상태가 되고, 정작 주제를 실제로 넣은 날을
+ * 앱을 켤 때마다 파일이 바뀌어 "커밋할 게 항상 있는" 상태가 되고, 정작 범위를 실제로 넣은 날을
  * 알아볼 수 없게 된다.
  *
  * <p>이 파일만의 관심사는 <b>배치가 그대로 읽을 수 있는가</b>다. 쓰는 쪽(여기)과 읽는 쪽
@@ -50,61 +51,77 @@ class TopicQueueExporterTest {
     }
 
     @Test
-    @DisplayName("대기 중인 주제를 순서대로 내보낸다 — 배치가 그대로 읽어 첫 줄을 꺼낸다")
-    void exportsPendingTopicsInOrder() throws Exception {
-        given(item(1L, Domain.BACKEND_FRAMEWORK, "@Transactional 전파 속성", "메모", 1),
-                item(2L, Domain.OS, "컨텍스트 스위칭", null, 2));
+    @DisplayName("범위를 순서대로 내보낸다 — 배치가 그대로 읽어 다음 차례를 고른다")
+    void exportsRangesInOrder() throws Exception {
+        given(item(1L, Domain.BACKEND_FRAMEWORK, "Spring 트랜잭션", "메모", 1),
+                item(2L, Domain.OS, "메모리 관리", null, 2));
 
         assertThat(exporter.export(tempDir)).isTrue();
 
         // 배치의 리더로 직접 읽어 본다 — 형식이 어긋나면 여기서 잡힌다
         TopicQueue queue = TopicQueue.read(tempDir);
         assertThat(queue.problems()).isEmpty();
-        assertThat(queue.pendingCount()).isEqualTo(2);
+        assertThat(queue.size()).isEqualTo(2);
         TopicQueue.Picked picked = queue.next();
-        assertThat(picked.topic()).isEqualTo("@Transactional 전파 속성");
+        assertThat(picked.topic()).isEqualTo("Spring 트랜잭션");
         assertThat(picked.domain()).isEqualTo(Domain.BACKEND_FRAMEWORK);
     }
 
     /**
-     * id가 없으면 배치가 찍은 사용 표시를 어느 DB 행에 돌려줄지 알 수 없다. 그러면 그 주제는
-     * 화면에서 영원히 "대기 중"으로 남고, 다음 내보내기가 다시 실어 보내 <b>같은 주제로 문서가
-     * 반복해서</b> 나온다.
+     * id가 없으면 배치가 적은 사용 기록을 어느 DB 행에 돌려줄지 알 수 없다. 그러면 그 범위는
+     * 화면에서 영원히 "아직 안 씀"으로 남고, 매번 다음 차례로 걸린다.
      */
     @Test
-    @DisplayName("각 줄에 DB id가 실린다 — 이게 없으면 사용 표시가 돌아올 길이 없다")
+    @DisplayName("각 줄에 DB id가 실린다 — 이게 없으면 사용 기록이 돌아올 길이 없다")
     void includesDatabaseId() throws Exception {
-        given(item(42L, Domain.OS, "컨텍스트 스위칭", null, 1));
+        given(item(42L, Domain.OS, "메모리 관리", null, 1));
 
         exporter.export(tempDir);
 
         assertThat(read().topics().get(0).id()).isEqualTo(42L);
     }
 
+    /**
+     * V10에서는 다 쓴 줄을 빼고 내보냈다(소진되는 티켓이었으므로). 범위는 순환하므로
+     * <b>전부</b> 실어야 배치가 "가장 오래 안 쓴 것"을 고를 수 있다 — 빠뜨리면 순환이 성립하지 않는다.
+     */
     @Test
-    @DisplayName("이미 쓴 주제는 내보내지 않는다 — 파일의 목적은 '다음에 뭘 쓸까' 하나뿐이다")
-    void excludesUsedTopics() throws Exception {
-        // 리포지터리가 대기 중인 것만 돌려주므로 여기서는 빈 목록이 온다.
-        // 그래도 파일은 (이미 있다면) 갱신되어야 한다 — 아래 테스트가 그 경우를 본다.
-        given();
-        Files.writeString(tempDir.resolve(TopicQueue.FILE_NAME),
-                "{\"topics\":[{\"id\":1,\"domain\":\"OS\",\"topic\":\"페이지 폴트\",\"usedAt\":\"2026-08-19\"}]}");
+    @DisplayName("이미 쓴 범위도 사용 기록과 함께 내보낸다 — 순환의 근거가 되는 값이다")
+    void exportsUsedRangesWithTheirRecord() throws Exception {
+        given(used(1L, Domain.OS, "메모리 관리", 1, LocalDate.of(2026, 8, 19), 3));
 
-        assertThat(exporter.export(tempDir)).isTrue();
-        assertThat(read().topics()).isEmpty();
+        exporter.export(tempDir);
+
+        TopicQueueFile.Entry entry = read().topics().get(0);
+        assertThat(entry.lastUsedAt()).isEqualTo("2026-08-19");
+        assertThat(entry.usedCount()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("아직 안 쓴 범위에는 기록 칸을 아예 넣지 않는다 — 고쳐도 소용없는 칸은 함정이다")
+    void omitsEmptyUsageColumns() throws Exception {
+        given(item(1L, Domain.OS, "메모리 관리", null, 1));
+
+        exporter.export(tempDir);
+
+        // 안내문(note)이 두 칸의 이름을 설명하고 있어 파일 전체 문자열로는 판정할 수 없다.
+        // 줄(entry) 쪽에 값이 없다는 것이 확인하려는 바다.
+        TopicQueueFile.Entry entry = read().topics().get(0);
+        assertThat(entry.lastUsedAt()).isNull();
+        assertThat(entry.usedCount()).isNull();
     }
 
     @Test
     @DisplayName("내용이 같으면 다시 쓰지 않는다 — 켤 때마다 파일이 바뀌면 진짜 변경을 못 알아본다")
     void doesNotRewriteWhenUnchanged() throws Exception {
-        given(item(1L, Domain.OS, "컨텍스트 스위칭", null, 1));
+        given(item(1L, Domain.OS, "메모리 관리", null, 1));
 
         assertThat(exporter.export(tempDir)).isTrue();
         assertThat(exporter.export(tempDir)).as("두 번째 호출은 아무것도 하지 않아야 한다").isFalse();
     }
 
     @Test
-    @DisplayName("주제가 하나도 없고 파일도 없으면 만들지 않는다 — 커밋할 것도 없는 빈 파일은 혼란만 준다")
+    @DisplayName("범위가 하나도 없고 파일도 없으면 만들지 않는다 — 커밋할 것도 없는 빈 파일은 혼란만 준다")
     void doesNotCreateEmptyFile() throws Exception {
         given();
 
@@ -115,7 +132,7 @@ class TopicQueueExporterTest {
     /* ── 테스트 재료 ─────────────────────────────────────────── */
 
     private void given(TopicQueueItem... items) {
-        when(repository.findByUsedAtIsNullOrderBySortOrderAsc()).thenReturn(List.of(items));
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(items));
     }
 
     private TopicQueueFile read() throws Exception {
@@ -123,8 +140,15 @@ class TopicQueueExporterTest {
     }
 
     private TopicQueueItem item(Long id, Domain domain, String topic, String memo, int sortOrder) {
-        TopicQueueItem item = TopicQueueItem.pending(domain, topic, memo, sortOrder);
+        TopicQueueItem item = TopicQueueItem.fresh(domain, topic, memo, sortOrder);
         ReflectionTestUtils.setField(item, "id", id);
+        return item;
+    }
+
+    private TopicQueueItem used(Long id, Domain domain, String topic, int sortOrder,
+                                LocalDate lastUsedAt, int usedCount) {
+        TopicQueueItem item = item(id, domain, topic, null, sortOrder);
+        item.recordUse(lastUsedAt, usedCount);
         return item;
     }
 }
