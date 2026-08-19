@@ -9,6 +9,7 @@ import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.TopicQueue;
 
 import java.io.InputStream;
 import java.time.LocalDate;
@@ -799,6 +800,38 @@ class DraftGeneratorCliTest {
     void doesNotBlockWhenNothingToJudge() {
         assertThat(DraftGeneratorCli.hasMaterialFor(null, Difficulty.BEGINNER)).isTrue();
         assertThat(DraftGeneratorCli.hasMaterialFor("## 무엇인가", null)).isTrue();
+    }
+
+    /* ══ 주제 대기열의 분야 우선순위(2026-08-19) ═══════════════ */
+
+    /**
+     * 대기열에 "@Transactional 전파 속성"을 적어 뒀는데 그날 주기가 운영체제 차례면,
+     * 스프링 문서가 <b>운영체제 칸</b>에 들어간다. 그 어긋남은 한 편으로 끝나지 않는다 —
+     * 이어지는 사흘의 문제가 그 문서를 근거로 만들어지므로 나흘이 통째로 엉킨다.
+     * 근거 문서가 주기 분야를 이기는 것과 같은 원칙이다({@code alignDomainWithDocument}).
+     */
+    @Test
+    @DisplayName("대기열 주제의 분야가 주기 분야를 이긴다 — 이름표보다 실제 내용이 우선이다")
+    void topicQueueDomainBeatsCycleDomain() {
+        TopicQueue.Picked picked =
+                new TopicQueue.Picked(0, Domain.BACKEND_FRAMEWORK, "@Transactional 전파 속성");
+
+        assertThat(DraftGeneratorCli.topicDomain(Domain.OS, null, picked))
+                .isEqualTo(Domain.BACKEND_FRAMEWORK);
+    }
+
+    @Test
+    @DisplayName("수동으로 분야를 지정하면 대기열보다 그것이 이긴다 — 사람의 가장 최근 의사 표시다")
+    void manualDomainBeatsTopicQueue() {
+        TopicQueue.Picked picked = new TopicQueue.Picked(0, Domain.BACKEND_FRAMEWORK, "AOP 프록시");
+
+        assertThat(DraftGeneratorCli.topicDomain(Domain.OS, "OS", picked)).isEqualTo(Domain.OS);
+    }
+
+    @Test
+    @DisplayName("대기열이 비면 주기 분야를 그대로 쓴다 — 대기열을 안 채워도 파이프라인은 예전대로 돈다")
+    void keepsCycleDomainWhenQueueEmpty() {
+        assertThat(DraftGeneratorCli.topicDomain(Domain.OS, null, null)).isEqualTo(Domain.OS);
     }
 
     /* ── 테스트 재료 ─────────────────────────────────────────── */

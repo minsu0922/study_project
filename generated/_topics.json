@@ -1,0 +1,30 @@
+{
+  "note" : "다음에 개념 문서로 쓸 주제 대기열입니다. 위에서부터 하나씩 씁니다(4일 주기의 0일차). domain은 필수이고 Domain 상수명을 그대로 적습니다(BACKEND_FRAMEWORK, LANGUAGE_RUNTIME, DATABASE, NETWORK, OS, SYSTEM_DESIGN, SECURITY, DS_ALGORITHM, CLOUD_INFRA, FRONTEND_CS, INTEGRATED). usedAt이 있으면 이미 쓴 항목이라 건너뜁니다. 대기열이 비면 예전처럼 모델이 주제를 자동으로 고릅니다. 고친 뒤에는 커밋해야 다음 배치에 반영됩니다. 주제는 분야보다 좁게 적을수록 좋습니다 — '스프링 트랜잭션'이 아니라 '@Transactional 전파 속성'.",
+  "topics" : [ {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "@Transactional 전파 속성 — REQUIRES_NEW는 왜 커넥션을 하나 더 쓰는가",
+    "memo" : "자기 호출(self-invocation)에서 프록시가 안 걸리는 함정까지 다뤄지면 좋음"
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "JPA 영속성 컨텍스트의 1차 캐시와 변경 감지(dirty checking)"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "JVM 힙의 세대 구분과 G1 GC가 영역을 나누는 이유"
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "커넥션 풀이 고갈되는 순간 — HikariCP의 대기와 타임아웃"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "synchronized와 volatile의 차이 — 가시성과 원자성은 다른 문제다"
+  }, {
+    "domain" : "DATABASE",
+    "topic" : "복합 인덱스의 선두 컬럼 규칙 — 왜 두 번째 컬럼만으로는 못 타는가",
+    "memo" : "성능 실험(인덱스 유무 16ms↔1.8초)과 이어 읽을 수 있게"
+  }, {
+    "domain" : "NETWORK",
+    "topic" : "TCP 3-way 핸드셰이크와 TIME_WAIT이 남는 이유"
+  }, {
+    "domain" : "OS",
+    "topic" : "컨텍스트 스위칭의 비용 — 스레드를 늘려도 빨라지지 않는 지점"
+  } ]
+}

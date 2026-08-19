@@ -18,6 +18,7 @@ import project.study.study_project.llm.support.DocumentCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.TopicQueue;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -53,6 +54,8 @@ import java.util.Map;
  * <pre>
  *   --date=2026-08-12        기준 날짜(생략 시 오늘, 한국 시간). 파일명이자 순환 순번의 근거
  *   --domain=NETWORK         분야 강제 지정(생략 시 날짜 순환으로 결정)
+ *   --topic=슬로우쿼리        문서 주제 강제 지정(문서일에만. 생략 시 주제 대기열 → 모델 자동 선택)
+ *                            공백이 든 주제는 환경변수 DRAFT_TOPIC으로 넘긴다
  *   --difficulty=BEGINNER    난이도 강제 지정(생략 시 날짜 순환으로 결정)
  *   --count=5                생성 개수(생략 시 application.yml의 batch-count)
  *   --out=generated          출력 디렉터리
@@ -444,9 +447,11 @@ public final class DraftGeneratorCli {
      * <ul>
      *   <li><b>난이도가 없다.</b> 문서는 한 편 안에 초급·중급·고급 재료를 모두 담는 것이 목표라
      *       (프롬프트의 [난이도 재료] 절) 날짜 순환의 난이도 축은 쓰지 않는다. 분야만 쓴다.
-     *   <li><b>주제를 지정할 수 있다.</b> 배치는 모델이 기존 제목을 피해 고르고, 수동 실행은
-     *       {@code --topic}으로 직접 지정한다 — 문제 생성에서 "배치는 순환, 관리자는 직접 지정"으로
-     *       갈라 둔 것과 같은 구조.
+     *   <li><b>주제를 지정할 수 있다.</b> 우선순위는 <b>수동({@code --topic}) &gt; 주제 대기열
+     *       ({@link TopicQueue}) &gt; 모델 자동 선택</b>이다. 대기열은 사람이 미리 적어 둔
+     *       세부 주제를 위에서부터 꺼내 쓰는 자리로, 분야만 던져서는 문서가 너무 광범위해지는
+     *       문제를 푼다(2026-08-19). 셋 다 없어도 동작한다는 점이 중요하다 — 대기열을 비워 둬도
+     *       파이프라인은 예전 그대로 돈다.
      *   <li><b>하위 디렉터리에 저장한다.</b> 문제 파일과 형식이 달라 같은 폴더에 섞이면
      *       기존 흡수 코드가 파싱에 실패한다({@code GeneratedDocumentFile} 주석 참고).
      * </ul>
@@ -467,6 +472,20 @@ public final class DraftGeneratorCli {
         // 분야를 지정하지 않으면 그날의 주기 분야를 쓴다(난이도는 문서에 의미가 없어 버린다)
         Domain domain = documentDomain(date, batchDomains, opts.get("domain"));
         String topic = resolveTopic(opts);
+
+        // 주제 대기열 — 사람이 미리 적어 둔 세부 주제를 위에서부터 꺼내 쓴다(2026-08-19).
+        // 수동 지정(--topic)이 있으면 대기열을 건드리지 않는다: 그건 "이번 한 번만 이걸로"라는
+        // 뜻이지 줄 서 있는 주제를 소모하겠다는 뜻이 아니다.
+        TopicQueue queue = TopicQueue.read(outDir);
+        TopicQueue.Picked picked = null;
+        if (topic == null) {
+            picked = queue.next();
+            if (picked != null) {
+                topic = picked.topic();
+                domain = topicDomain(domain, opts.get("domain"), picked);
+            }
+        }
+        reportTopicQueue(queue, picked, topic);
 
         ExistingDocuments snapshot = readExistingDocuments(outDir);
         List<String> avoidTitles = snapshot.titles();
@@ -495,6 +514,75 @@ public final class DraftGeneratorCli {
         // 문제 쪽의 수확량 점검에 해당하는 자리다. 지금까지 문서에는 이런 점검이 없었고,
         // 검증은 <며칠 뒤 승인 화면에서만> 돌았다. 그 사이 이 문서로 사흘 치 문제가 만들어진다.
         reportDocumentChecks(document, date);
+
+        // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
+        // 문서는 이미 파일에 있으므로 job을 죽이지 않는다 — 대신 다음 주기에 같은 주제가
+        // 또 나올 수 있다는 사실을 또렷이 알린다.
+        if (picked != null && !queue.markUsed(outDir, picked, date)) {
+            System.out.println("⚠️ 주제 대기열에 사용 표시를 못 했습니다 — 다음 문서일에 같은 주제가 또 나올 수 있습니다: "
+                    + picked.topic());
+            appendToStepSummary("⚠️ `%s`에 사용 표시를 못 했습니다 — \"%s\"가 다음 문서일에 또 나올 수 있습니다.%n"
+                    .formatted(TopicQueue.FILE_NAME, picked.topic()));
+        }
+    }
+
+    /**
+     * 대기열에서 꺼낸 주제의 분야를 적용한다 — <b>수동 지정({@code --domain})이 있으면 그것이 이긴다</b>.
+     *
+     * <p><b>왜 대기열 분야가 주기 분야를 이기나.</b> 대기열에 "@Transactional 전파 속성"을
+     * 적어 뒀는데 그날 주기가 운영체제 차례라면, 스프링 문서가 운영체제 칸에 들어간다.
+     * 그 어긋남은 문서 한 편으로 끝나지 않는다 — 이어지는 사흘의 문제가 그 문서를 근거로
+     * 만들어지므로({@link #alignDomainWithDocument}) 나흘이 통째로 엉킨다.
+     * 근거 문서가 주기 분야를 이기는 것과 <b>정확히 같은 이유</b>다: 실제 내용이 이름표를 이긴다.
+     *
+     * <p><b>왜 수동 지정은 이기지 못하나.</b> 사람이 워크플로에서 분야를 직접 골랐다면 그게
+     * 가장 최근의 의사 표시다. 다만 그 조합은 어긋날 수 있으므로 호출부에서 로그로 알린다.
+     *
+     * @param planned         주기(또는 수동 지정)가 계산해 둔 분야
+     * @param requestedDomain 수동 실행의 {@code --domain}. 비어 있으면 대기열 쪽을 쓴다
+     * @param picked          대기열에서 꺼낸 항목
+     */
+    static Domain topicDomain(Domain planned, String requestedDomain, TopicQueue.Picked picked) {
+        if (requestedDomain != null && !requestedDomain.isBlank()) {
+            if (picked != null && picked.domain() != planned) {
+                System.out.printf("수동 지정 분야(%s)와 대기열 주제의 분야(%s)가 다릅니다 — 수동 지정을 따릅니다%n",
+                        planned, picked.domain());
+            }
+            return planned;
+        }
+        return picked == null ? planned : picked.domain();
+    }
+
+    /**
+     * 대기열 상태를 로그와 <b>Actions 요약 화면</b>에 남긴다.
+     *
+     * <p><b>왜 요약 화면까지 쓰나.</b> 이 기능의 실패는 조용하다 — 대기열을 채워 놓고 커밋을
+     * 잊었거나 분야 상수명을 잘못 적었으면, 배치는 아무 오류 없이 예전처럼 모델이 고른 주제로
+     * 문서를 만든다. 초록불로 끝나므로 <b>대기열이 안 쓰이고 있다는 사실 자체를 모른다</b>.
+     * 스냅샷 낡음 경고를 여기에 둔 것과 같은 판단이다(그 함수 주석 참고).
+     */
+    private static void reportTopicQueue(TopicQueue queue, TopicQueue.Picked picked, String topic) {
+        if (picked != null) {
+            String message = "📌 주제 대기열에서 꺼냄: **%s** (%s) — 남은 주제 %d개%n"
+                    .formatted(picked.topic(), picked.domain(), queue.pendingCount() - 1);
+            System.out.print(message);
+            appendToStepSummary(message);
+        } else if (topic == null) {
+            // 수동 지정도 대기열도 없는 평소 경로. 오류가 아니므로 아이콘도 정보(ℹ️)로 둔다 —
+            // 매일 경고가 뜨면 사람이 경고 전체를 무시하게 된다.
+            String message = ("ℹ️ 주제 대기열이 비어 모델이 주제를 자동으로 고릅니다. "
+                    + "`generated/%s`에 주제를 적어 커밋하면 다음 문서일부터 그대로 씁니다.%n")
+                    .formatted(TopicQueue.FILE_NAME);
+            System.out.print(message);
+            appendToStepSummary(message);
+        }
+
+        if (!queue.problems().isEmpty()) {
+            String message = "⚠️ **주제 대기열에서 건너뛴 항목 %d건**%n%s%n"
+                    .formatted(queue.problems().size(), bullets(queue.problems()));
+            System.out.print(message);
+            appendToStepSummary(message);
+        }
     }
 
     /**

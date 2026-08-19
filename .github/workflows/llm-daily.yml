@@ -34,7 +34,10 @@ on:
           - problem
           - document
       topic:
-        description: '문서 주제 (type=document일 때만). 비우면 모델이 기존 문서와 겹치지 않게 자동 선택'
+        # 비워 두는 것이 평소 경로다 — 예약 실행은 generated/_topics.json(주제 대기열)에서
+        # 위에서부터 하나씩 꺼내 쓰고, 그것도 비면 모델이 고른다. 여기 적는 주제는
+        # "이번 한 번만"이라 대기열을 소모하지 않는다(DraftGeneratorCli.generateDocument).
+        description: '문서 주제 (type=document일 때만). 비우면 주제 대기열(_topics.json) → 모델 자동 선택'
         required: false
         default: ''
       domain:
