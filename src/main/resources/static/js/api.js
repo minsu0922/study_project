@@ -217,7 +217,7 @@ function renderNav(active) {
     <a class="${cls("review")}" href="/review.html">복습<span id="reviewBadge"></span></a>
     <a class="${cls("wrong")}" href="/wrong-answers.html">오답노트</a>
     <a class="${cls("docs")}" href="/documents.html">개념 문서</a>
-    ${isAdmin() ? `<a class="${cls("admin")}" href="/admin.html">관리자</a>` : ""}
+    ${isAdmin() ? `<a class="${cls("admin")}" href="/admin/index.html">관리자</a>` : ""}
     <span class="spacer"></span>
     ${authArea}`;
   loadReviewBadge();
