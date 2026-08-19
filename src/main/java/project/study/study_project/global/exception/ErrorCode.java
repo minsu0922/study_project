@@ -47,7 +47,13 @@ public enum ErrorCode {
     // 개념 문서 검수(docs/15). 400이 아니라 409인 이유: 요청 형식은 멀쩡하고
     // "지금 이 초안의 상태로는 승인할 수 없다"는 자원 쪽 사정이라 충돌에 가깝다.
     // 구체적으로 어떤 검증에 걸렸는지는 BusinessException의 상세 메시지로 함께 내려보낸다.
-    LLM_005("LLM_005", HttpStatus.CONFLICT, "자동 검증에 걸린 초안은 승인할 수 없습니다.");
+    LLM_005("LLM_005", HttpStatus.CONFLICT, "자동 검증에 걸린 초안은 승인할 수 없습니다."),
+
+    // 문서 주제 대기열(V10). LLM_00x에 얹지 않고 분리한 이유: 저 코드들은 "생성된 결과물"에
+    // 대한 것이고, 이쪽은 생성 <전에> 사람이 정해 두는 입력이라 실패의 성격이 다르다.
+    TOPIC_001("TOPIC_001", HttpStatus.NOT_FOUND, "주제 대기열 항목을 찾을 수 없습니다."),
+    // 409인 이유는 DOC_002와 같다 — 요청 자체는 멀쩡하고 지금 상태와 부딪힐 뿐이다.
+    TOPIC_002("TOPIC_002", HttpStatus.CONFLICT, "같은 분야에 같은 주제가 이미 대기 중입니다.");
 
     private final String code;
     private final HttpStatus httpStatus;

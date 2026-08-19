@@ -1,0 +1,246 @@
+package project.study.study_project.llm.service;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
+import project.study.study_project.admin.dto.AdminTopicQueueRequest;
+import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.llm.domain.TopicQueueItem;
+import project.study.study_project.llm.dto.TopicQueueFile;
+import project.study.study_project.llm.repository.TopicQueueItemRepository;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * 주제 대기열 서비스 테스트 — 관리자 입력과 <b>파일에서 돌아오는 사용 표시</b>.
+ *
+ * <p>가장 값어치 있는 검증은 {@link TopicQueueService#syncFrom} 쪽이다. 이 경로는 배치가
+ * 클라우드에서 남긴 흔적을 읽는 유일한 길인데, 틀려도 화면과 배치 둘 다 정상으로 보인다 —
+ * 증상은 <b>며칠 뒤 같은 주제로 문서가 또 나오는</b> 것이라 원인을 짚기 어렵다.
+ */
+@ExtendWith(MockitoExtension.class)
+class TopicQueueServiceTest {
+
+    @Mock
+    private TopicQueueItemRepository repository;
+    @Mock
+    private ApplicationEventPublisher events;
+
+    private TopicQueueService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new TopicQueueService(repository, events);
+    }
+
+    /* ── 추가 ─────────────────────────────────────────────────── */
+
+    @Test
+    @DisplayName("새 주제는 맨 뒤에 붙는다 — 적은 순서가 곧 공부하고 싶은 순서다")
+    void addsToTheEnd() {
+        when(repository.existsByDomainAndTopicAndUsedAtIsNull(any(), any())).thenReturn(false);
+        when(repository.findMaxSortOrder()).thenReturn(7);
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.add(new AdminTopicQueueRequest(Domain.BACKEND_FRAMEWORK, "  AOP 프록시  ", null));
+
+        TopicQueueItem saved = captureSaved();
+        assertThat(saved.getSortOrder()).isEqualTo(8);
+        assertThat(saved.getTopic()).as("앞뒤 공백은 다듬는다").isEqualTo("AOP 프록시");
+        assertThat(saved.isPending()).isTrue();
+        verify(events).publishEvent(any(TopicQueueChanged.class)); // 파일을 다시 내보내야 한다
+    }
+
+    /**
+     * {@code count()}가 아니라 {@code max(sortOrder)}를 쓰는 이유를 못 박는다. 중간을 삭제하면
+     * 개수와 순서값이 어긋나 <b>이미 쓰이는 값</b>이 나오고, 새 주제가 기존 주제와 같은 자리에
+     * 끼어들어 순서가 뒤죽박죽이 된다.
+     */
+    @Test
+    @DisplayName("중간을 지운 뒤 추가해도 순서값이 겹치지 않는다")
+    void doesNotReuseSortOrderAfterDeletion() {
+        when(repository.existsByDomainAndTopicAndUsedAtIsNull(any(), any())).thenReturn(false);
+        when(repository.findMaxSortOrder()).thenReturn(9); // 항목은 3개뿐이지만 최댓값은 9
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.add(new AdminTopicQueueRequest(Domain.OS, "페이지 폴트", null));
+
+        assertThat(captureSaved().getSortOrder()).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("같은 분야에 같은 주제가 대기 중이면 막는다 — 두 벌이면 문서도 두 번 나온다")
+    void rejectsDuplicatePendingTopic() {
+        when(repository.existsByDomainAndTopicAndUsedAtIsNull(Domain.OS, "페이지 폴트")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.add(new AdminTopicQueueRequest(Domain.OS, "페이지 폴트", null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("이미 대기 중");
+        verify(repository, never()).save(any());
+    }
+
+    /* ── 순서 이동 ────────────────────────────────────────────── */
+
+    @Test
+    @DisplayName("위로 이동하면 앞 항목과 순서값을 맞바꾼다")
+    void moveUpSwapsWithNeighbor() {
+        TopicQueueItem first = item(1L, Domain.OS, "페이지 폴트", 1);
+        TopicQueueItem second = item(2L, Domain.NETWORK, "TIME_WAIT", 2);
+        when(repository.findById(2L)).thenReturn(Optional.of(second));
+        when(repository.findByUsedAtIsNullOrderBySortOrderAsc()).thenReturn(List.of(first, second));
+
+        service.move(2L, TopicQueueService.Direction.UP);
+
+        assertThat(second.getSortOrder()).isEqualTo(1);
+        assertThat(first.getSortOrder()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("맨 위에서 위로 눌러도 아무 일도 일어나지 않는다 — 오류가 아니라 할 일이 없는 것")
+    void moveUpAtTopDoesNothing() {
+        TopicQueueItem first = item(1L, Domain.OS, "페이지 폴트", 1);
+        when(repository.findById(1L)).thenReturn(Optional.of(first));
+        when(repository.findByUsedAtIsNullOrderBySortOrderAsc()).thenReturn(List.of(first));
+
+        service.move(1L, TopicQueueService.Direction.UP);
+
+        assertThat(first.getSortOrder()).isEqualTo(1);
+        verify(events, never()).publishEvent(any(TopicQueueChanged.class)); // 파일도 그대로다
+    }
+
+    @Test
+    @DisplayName("이미 쓴 주제는 순서를 바꿀 수 없다 — 눌렀는데 조용히 아무 일도 없으면 고장으로 보인다")
+    void cannotMoveUsedTopic() {
+        TopicQueueItem used = item(1L, Domain.OS, "페이지 폴트", 1);
+        used.markUsed(LocalDate.of(2026, 8, 15));
+        when(repository.findById(1L)).thenReturn(Optional.of(used));
+
+        assertThatThrownBy(() -> service.move(1L, TopicQueueService.Direction.DOWN))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("이미 쓴 주제");
+    }
+
+    /* ── 파일 → DB 동기화 ─────────────────────────────────────── */
+
+    @Test
+    @DisplayName("배치가 파일에 찍은 사용 날짜를 DB로 되돌려 받는다 — 이게 없으면 같은 주제가 계속 나온다")
+    void appliesUsedStampFromFile() {
+        TopicQueueItem item = item(3L, Domain.DATABASE, "복합 인덱스", 1);
+        when(repository.findById(3L)).thenReturn(Optional.of(item));
+        when(repository.findMaxSortOrder()).thenReturn(1);
+
+        TopicQueueService.SyncResult result = service.syncFrom(new TopicQueueFile(null, List.of(
+                new TopicQueueFile.Entry(3L, "DATABASE", "복합 인덱스", null, "2026-08-19"))));
+
+        assertThat(result.usedApplied()).isEqualTo(1);
+        assertThat(item.getUsedAt()).isEqualTo(LocalDate.of(2026, 8, 19));
+    }
+
+    /**
+     * 화면에서 지운 주제의 도장이 파일에 남아 있을 수 있다(배치가 찍고 커밋한 뒤 사람이 지운 경우).
+     * 그걸 되살리면 <b>지웠는데 다시 나타나는</b> 최악의 동작이 된다.
+     */
+    @Test
+    @DisplayName("DB에 없는 id의 사용 표시는 무시한다 — 지운 주제가 되살아나면 안 된다")
+    void ignoresUsedStampForDeletedItem() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+        when(repository.findMaxSortOrder()).thenReturn(0);
+
+        TopicQueueService.SyncResult result = service.syncFrom(new TopicQueueFile(null, List.of(
+                new TopicQueueFile.Entry(99L, "OS", "지운 주제", null, "2026-08-19"))));
+
+        assertThat(result.usedApplied()).isZero();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("id 없는 줄은 손으로 적은 것으로 보고 DB로 가져온다 — 파일을 직접 고치는 길을 살려 둔다")
+    void adoptsHandWrittenEntries() {
+        when(repository.findMaxSortOrder()).thenReturn(4);
+        when(repository.existsByDomainAndTopicAndUsedAtIsNull(any(), any())).thenReturn(false);
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        TopicQueueService.SyncResult result = service.syncFrom(new TopicQueueFile(null, List.of(
+                new TopicQueueFile.Entry(null, "backend_framework", " AOP 프록시 ", "메모", null))));
+
+        assertThat(result.imported()).isEqualTo(1);
+        TopicQueueItem saved = captureSaved();
+        assertThat(saved.getDomain()).as("소문자 분야도 읽는다(배치와 같은 규칙)")
+                .isEqualTo(Domain.BACKEND_FRAMEWORK);
+        assertThat(saved.getTopic()).isEqualTo("AOP 프록시");
+        assertThat(saved.getSortOrder()).isEqualTo(5);
+    }
+
+    /**
+     * 파일에 이미 쓴 항목이 남아 있는 채로 흡수되는 경우다(배치가 찍었는데 아직 앱을 안 켰고,
+     * 그 줄에 id가 없을 때). 대기 상태로 들여오면 <b>같은 주제로 문서를 한 번 더</b> 만든다.
+     */
+    @Test
+    @DisplayName("손으로 적은 줄에 사용 날짜가 있으면 사용됨 상태로 들여온다")
+    void adoptsAlreadyUsedEntryAsUsed() {
+        when(repository.findMaxSortOrder()).thenReturn(0);
+        when(repository.existsByDomainAndTopicAndUsedAtIsNull(any(), any())).thenReturn(false);
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.syncFrom(new TopicQueueFile(null, List.of(
+                new TopicQueueFile.Entry(null, "OS", "페이지 폴트", null, "2026-08-11"))));
+
+        assertThat(captureSaved().isPending()).isFalse();
+    }
+
+    @Test
+    @DisplayName("분야가 잘못된 줄은 건너뛰고 부팅을 막지 않는다 — 배치가 이미 요약 화면에 경고를 띄운다")
+    void skipsMalformedEntriesQuietly() {
+        when(repository.findMaxSortOrder()).thenReturn(0);
+
+        TopicQueueService.SyncResult result = service.syncFrom(new TopicQueueFile(null, List.of(
+                new TopicQueueFile.Entry(null, "SPRING", "빈 생명주기", null, null),
+                new TopicQueueFile.Entry(null, "OS", "   ", null, null))));
+
+        assertThat(result.imported()).isZero();
+        verify(repository, never()).save(any());
+        verify(events, never()).publishEvent(any(TopicQueueChanged.class));
+    }
+
+    @Test
+    @DisplayName("이미 대기 중인 주제는 흡수하지 않는다 — 두 벌이 되면 문서도 두 번 나온다")
+    void doesNotAdoptTopicAlreadyPending() {
+        when(repository.findMaxSortOrder()).thenReturn(0);
+        when(repository.existsByDomainAndTopicAndUsedAtIsNull(Domain.OS, "페이지 폴트")).thenReturn(true);
+
+        TopicQueueService.SyncResult result = service.syncFrom(new TopicQueueFile(null, List.of(
+                new TopicQueueFile.Entry(null, "OS", "페이지 폴트", null, null))));
+
+        assertThat(result.imported()).isZero();
+    }
+
+    /* ── 테스트 재료 ─────────────────────────────────────────── */
+
+    private TopicQueueItem captureSaved() {
+        var captor = org.mockito.ArgumentCaptor.forClass(TopicQueueItem.class);
+        verify(repository).save(captor.capture());
+        return captor.getValue();
+    }
+
+    /** id는 DB가 채우는 값이라 테스트에서는 리플렉션으로 넣는다(엔티티에 setter를 열지 않기 위해). */
+    private TopicQueueItem item(Long id, Domain domain, String topic, int sortOrder) {
+        TopicQueueItem item = TopicQueueItem.pending(domain, topic, null, sortOrder);
+        ReflectionTestUtils.setField(item, "id", id);
+        return item;
+    }
+}

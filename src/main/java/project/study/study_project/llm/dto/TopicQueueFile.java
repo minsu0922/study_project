@@ -39,6 +39,11 @@ public record TopicQueueFile(String note, List<Entry> topics) {
     /**
      * 대기열 한 줄.
      *
+     * @param id     DB {@code topic_queue.id}. 관리자 화면이 내보낸 줄에는 값이 있고,
+     *               <b>손으로 적어 넣은 줄에는 없다(null)</b>. 이 값이 파일 줄과 DB 행을 짝짓는
+     *               유일한 열쇠다 — 주제 글자로 짝지으면 화면에서 오타를 고친 순간 짝이 끊긴다.
+     *               id가 없는 줄은 기동 시 DB로 흡수되면서 번호를 받는다
+     *               ({@code TopicQueueSyncRunner}), 그래서 파일을 직접 고치는 사용법이 계속 산다
      * @param domain 분야 상수명({@code BACKEND_FRAMEWORK} 등). <b>필수</b> — 비우면 그 항목을
      *               건너뛴다. 문서의 분야는 그 문서로 만드는 <b>사흘치 문제의 분야</b>까지
      *               정하므로({@code DraftGeneratorCli.alignDomainWithDocument}), 비워 두면
@@ -52,16 +57,29 @@ public record TopicQueueFile(String note, List<Entry> topics) {
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Entry(String domain, String topic, String memo, String usedAt) {
+    public record Entry(Long id, String domain, String topic, String memo, String usedAt) {
 
-        /** 아직 안 쓴 항목인지. 공백만 있는 {@code usedAt}도 "안 씀"으로 본다(손으로 지운 흔적). */
+        /**
+         * 아직 안 쓴 항목인지. 공백만 있는 {@code usedAt}도 "안 씀"으로 본다(손으로 지운 흔적).
+         *
+         * <p>{@code @JsonIgnore}가 없으면 <b>파일에 {@code "pending": true}가 딸려 나간다</b> —
+         * Jackson이 {@code isXxx()}를 속성으로 읽기 때문이다. 실제로 한 번 나갔다(2026-08-19).
+         * 읽는 쪽은 모르는 필드를 무시하므로 동작에는 지장이 없지만, 이 파일은 사람이 손으로
+         * 고치는 파일이라 <b>고쳐도 아무 효과가 없는 칸</b>이 보이는 것 자체가 함정이다.
+         */
+        @com.fasterxml.jackson.annotation.JsonIgnore
         public boolean isPending() {
             return usedAt == null || usedAt.isBlank();
         }
 
-        /** 이 항목에 사용 날짜를 찍은 사본. record라 새로 만든다(원본을 고치지 않는다). */
+        /**
+         * 이 항목에 사용 날짜를 찍은 사본. record라 새로 만든다(원본을 고치지 않는다).
+         *
+         * <p>{@code id}를 그대로 옮기는 것이 중요하다 — 배치가 파일을 되쓸 때 번호가 사라지면
+         * 앱은 그 줄을 "손으로 새로 적은 항목"으로 보고 <b>같은 주제를 하나 더 만든다</b>.
+         */
         public Entry usedOn(String date) {
-            return new Entry(domain, topic, memo, date);
+            return new Entry(id, domain, topic, memo, date);
         }
     }
 }

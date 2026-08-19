@@ -197,8 +197,12 @@ public final class TopicQueue {
      * <p>대소문자와 앞뒤 공백은 봐준다 — 손으로 적는 파일에서 그것까지 틀렸다고 항목을 버리는
      * 것은 엄격한 게 아니라 불친절한 것이다. 반면 없는 상수명은 봐줄 수 없다: 비슷한 이름으로
      * 짐작해 붙이면 엉뚱한 분야에 문서가 들어가고, 그게 사흘치 문제까지 끌고 간다.
+     *
+     * <p>{@code public}인 이유: 같은 파일을 앱 쪽에서도 읽는다({@code TopicQueueSyncRunner}).
+     * "이 파일의 domain 문자열을 어떻게 읽는가"가 두 곳에 따로 있으면, 한쪽만 관대해져
+     * <b>배치는 건너뛴 항목을 앱은 흡수하는</b> 어긋남이 난다.
      */
-    private static Domain parseDomain(String raw) {
+    public static Domain parseDomain(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }

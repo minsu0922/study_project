@@ -22,6 +22,9 @@
       <!-- 배지: 검수 대기 건수 — "승인을 기다리는 초안이 있다"는 신호를 탭 이름에 얹는다 -->
       <button class="tab-btn" data-tab="llm">AI 생성 <span id="llmBadge" class="badge gray" hidden></span></button>
       <button class="tab-btn" data-tab="llmdoc">AI 문서 <span id="llmDocBadge" class="badge gray" hidden></span></button>
+      <!-- 이 배지는 다른 둘과 뜻이 반대다: 저쪽은 "처리할 게 쌓였다"(많으면 나쁨)이고
+           여기는 "쓸 주제가 남았다"(적으면 나쁨). 0이 되면 숨기지 않고 빨갛게 띄운다. -->
+      <button class="tab-btn" data-tab="topics">주제 대기열 <span id="topicBadge" class="badge gray" hidden></span></button>
     </div>
 
     <!-- ═══ 대시보드 ═══ -->
@@ -177,6 +180,33 @@
       </h3>
       <div id="docDraftList"></div>
     </section>
+
+    <!-- ═══ 주제 대기열 (개념 문서 주제를 미리 정해 두는 곳 — V10) ═══ -->
+    <section id="tab-topics" hidden>
+      <div class="card">
+        <h3>다음에 쓸 문서 주제</h3>
+        <p class="meta">배치가 <b>문서일마다 맨 위 주제 하나</b>를 꺼내 문서를 씁니다. 비어 있으면 모델이 알아서 고릅니다
+          — 그러면 분야만큼 넓은 문서가 나오므로, 공부하고 싶은 주제를 <b>분야보다 좁게</b> 적어 두세요.
+          (예: "스프링 트랜잭션" ✗ → "@Transactional 전파 속성" ✓)</p>
+        <div id="tMessage"></div>
+        <div class="filters">
+          <div class="field"><label>분야</label><select id="tDomain"></select></div>
+          <div class="field" style="flex:1 1 320px"><label>주제</label><input type="text" id="tTopic" placeholder="@Transactional 전파 속성 — REQUIRES_NEW는 왜 커넥션을 하나 더 쓰는가"></div>
+        </div>
+        <div class="field"><label>메모 (선택 · 왜 이 주제인지. 배치는 읽지 않습니다)</label><input type="text" id="tMemo" style="width:100%"></div>
+        <button id="tSubmitBtn">대기열에 추가</button>
+      </div>
+
+      <!-- 이 안내가 화면에서 가장 중요한 줄이다: 커밋하지 않으면 배치는 옛 파일을 읽는다.
+           앱이 스스로 git push를 하지 않는 이유는 docs/14(권한·인증·충돌) 참고. -->
+      <div class="alert info" id="tCommitHint" style="margin-top:14px">
+        추가·삭제·순서 변경은 <code>generated/_topics.json</code>에 바로 반영됩니다.
+        <b>그 파일을 커밋해야</b> 다음 배치부터 이 대기열을 씁니다.
+      </div>
+
+      <h3>대기열 <span class="meta">(위에서부터 하나씩 · ↑↓로 순서 변경 · 사용된 주제는 아래에 기록으로 남습니다)</span></h3>
+      <div class="table-wrap"><table class="grid" id="topicTable"></table></div>
+    </section>
   </div>
 </main>
 
@@ -201,7 +231,7 @@ let editingDocumentId = null;
  * 함수 선언(function)은 호이스팅되지만 const/let은 안 된다. 이 줄을 initTabs 옆(파일 중간)에
  * 뒀다가 정확히 위 주석이 말하는 TDZ 오류가 다시 났다: "Cannot access 'TABS' before
  * initialization"으로 화면 전체가 빈 채로 떴다. */
-const TABS = ["dashboard", "problems", "documents", "llm", "llmdoc"];
+const TABS = ["dashboard", "problems", "documents", "llm", "llmdoc", "topics"];
 
 /* 탭 지연 적재용 상태. 이 둘도 const라 initTabs()보다 위에 있어야 한다 —
  * 값이 함수(호이스팅됨)가 아니라 객체·Set이라 선언 줄을 지나야 존재한다.
@@ -213,6 +243,7 @@ const TAB_LOADERS = {
   documents: () => loadDocuments(),
   llm: () => loadDrafts(),
   llmdoc: () => loadDocDrafts(),
+  topics: () => loadTopicQueue(),
 };
 const loadedTabs = new Set();
 
@@ -227,11 +258,13 @@ if (!isAdmin()) {
   initDocumentForm();
   initLlmTab();
   initLlmDocTab();
+  initTopicTab();
   initTabs();
 
   // 배지는 탭과 무관하게 진입 시 한 번 — "처리할 게 남았다"를 탭을 열기 전에 알려야 의미가 있다.
   refreshLlmBadge();
   refreshLlmDocBadge();
+  refreshTopicBadge();
 }
 
 /* ── 탭 지연 적재 ──────────────────────────────────────────────
@@ -1259,6 +1292,128 @@ async function refreshLlmDocBadge() {
     const badge = document.getElementById("llmDocBadge");
     badge.textContent = count;
     badge.hidden = count === 0;
+  } catch (e) { /* 배지는 장식 — 실패해도 화면 기능에 영향 없음 */ }
+}
+
+/* ══ 주제 대기열 ═══════════════════════════════════════════════
+ * 개념 문서의 주제를 미리 정해 두는 곳(V10). 화면에서 넣은 주제는 DB에 저장되고,
+ * 서버가 generated/_topics.json으로 내보낸다 — 그 파일을 커밋해야 배치가 읽는다.
+ * 그래서 이 탭의 안내문(tCommitHint)이 기능 자체만큼 중요하다. */
+function initTopicTab() {
+  fillSelect(document.getElementById("tDomain"), DOMAINS);
+  document.getElementById("tSubmitBtn").addEventListener("click", addTopic);
+
+  // 엔터로 추가 — 주제를 여러 개 몰아서 적는 화면이라 매번 버튼까지 가면 손이 많이 간다.
+  document.getElementById("tTopic").addEventListener("keydown", e => {
+    if (e.key === "Enter") addTopic();
+  });
+}
+
+async function addTopic() {
+  const msg = document.getElementById("tMessage");
+  const topic = document.getElementById("tTopic").value.trim();
+  if (!topic) { showError(msg, new Error("주제를 입력해 주세요.")); return; }
+
+  try {
+    await api("/api/admin/topic-queue", {
+      method: "POST",
+      body: JSON.stringify({
+        domain: document.getElementById("tDomain").value,
+        topic,
+        memo: document.getElementById("tMemo").value.trim() || null,
+      }),
+    });
+    showOk(msg, "대기열에 추가했습니다. generated/_topics.json을 커밋하세요.");
+    document.getElementById("tTopic").value = "";
+    document.getElementById("tMemo").value = "";
+    loadTopicQueue();
+    refreshTopicBadge();
+  } catch (e) {
+    showError(msg, e);   // 같은 주제가 이미 대기 중이면 409(TOPIC_002)가 그대로 보인다
+  }
+}
+
+async function loadTopicQueue() {
+  const items = await api("/api/admin/topic-queue");
+  const table = document.getElementById("topicTable");
+  if (items.length === 0) {
+    table.innerHTML = `<tr><td class="meta">대기열이 비어 있습니다. 지금은 배치가 모델에게 주제를 맡깁니다 — 위 폼으로 주제를 넣어 두세요.</td></tr>`;
+    table.onclick = null;   // 앞서 그린 행의 핸들러가 남아 빈 표를 눌러도 반응하지 않게
+    return;
+  }
+
+  // 대기 중인 것만 순번을 매긴다. 이미 쓴 주제까지 번호를 이어 붙이면
+  // "다음에 몇 번째로 쓰이는가"라는 번호의 뜻이 흐려진다.
+  let order = 0;
+  table.innerHTML =
+    `<tr><th>순서</th><th>분야</th><th>주제</th><th>상태</th><th></th></tr>` +
+    items.map(t => {
+      const no = t.pending ? ++order : null;
+      return `
+      <tr data-id="${t.id}" class="${t.pending ? "" : "meta"}">
+        <td>${no ?? "—"}</td>
+        <td>${escapeHtml(t.domainLabel)}</td>
+        <td class="wrap">
+          ${escapeHtml(t.topic)}
+          ${t.memo ? `<div class="meta">${escapeHtml(t.memo)}</div>` : ""}
+        </td>
+        <td>${t.pending
+            ? `<span class="badge gray">대기</span>`
+            : `<span class="badge">${escapeHtml(t.usedAt)} 사용</span>`}</td>
+        <td class="row-actions">
+          ${t.pending ? `<button class="btn-outline" data-action="up" title="한 칸 위로">↑</button>
+                         <button class="btn-outline" data-action="down" title="한 칸 아래로">↓</button>` : ""}
+          <button class="danger" data-action="delete">삭제</button>
+        </td>
+      </tr>`;
+    }).join("");
+
+  table.onclick = e => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    const id = Number(btn.closest("tr").dataset.id);
+    if (btn.dataset.action === "delete") {
+      // 2단계 확인 — 대기열은 다시 적으면 그만이지만, 메모까지 사라지는 건 아깝다
+      armedDelete(btn, () => deleteTopic(id));
+      return;
+    }
+    moveTopic(id, btn.dataset.action === "up" ? "UP" : "DOWN");
+  };
+}
+
+async function moveTopic(id, direction) {
+  await api(`/api/admin/topic-queue/${id}/move?direction=${direction}`, { method: "POST" });
+  loadTopicQueue();
+}
+
+async function deleteTopic(id) {
+  const msg = document.getElementById("tMessage");
+  try {
+    await api("/api/admin/topic-queue/" + id, { method: "DELETE" });
+    showOk(msg, "삭제했습니다. generated/_topics.json을 커밋하세요.");
+    loadTopicQueue();
+    refreshTopicBadge();
+  } catch (e) {
+    showError(msg, e);
+  }
+}
+
+/**
+ * 남은 주제 수 배지.
+ *
+ * 다른 배지와 뜻이 반대다 — 검수 배지는 "쌓였다"(많으면 처리하라)이고, 이건 "남았다"(0이면
+ * 채우라)다. 그래서 0일 때 숨기지 않고 <b>빨간 배지</b>로 띄운다: 대기열이 비면 배치는
+ * 조용히 예전 방식(모델 자동 선택)으로 돌아가므로, 알려 주지 않으면 비었다는 것을 모른다.
+ */
+async function refreshTopicBadge() {
+  try {
+    const { count } = await api("/api/admin/topic-queue/pending-count");
+    const badge = document.getElementById("topicBadge");
+    badge.textContent = count === 0 ? "비었음" : count;
+    // orange는 이 스타일시트에서 "눈길을 끌되 오류는 아님"에 쓰는 색이다(복습 stage 표시).
+    // 대기열이 빈 것은 고장이 아니라 채우라는 신호라 딱 맞는다.
+    badge.className = count === 0 ? "badge orange" : "badge gray";
+    badge.hidden = false;
   } catch (e) { /* 배지는 장식 — 실패해도 화면 기능에 영향 없음 */ }
 }
 </script>
