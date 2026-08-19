@@ -1,7 +1,16 @@
 {
   "note" : "정식 problem 테이블의 기존 지문 목록입니다. GitHub Actions 생성 배치가 중복 회피 목록으로 읽습니다(클라우드에는 DB가 없으므로). docs/14 참고. 앱이 기동할 때 자동 갱신되며, 커밋해야 다음 배치부터 반영됩니다.",
-  "exportedAt" : "2026-08-17",
+  "exportedAt" : "2026-08-18",
   "questions" : [ {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "정산 배치가 실행 도중 실패하면서, 실패 지점의 메서드 목록이 위에서 아래로 다음 순서로 로그에 남았다.\n\n- calculateFee\n- settleOrder\n- runBatch\n\n이 정보로 알 수 있는 것으로 가장 적절한 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "알림 발송 기능은 채널별로 발송 클래스가 따로 있다. 문구 오류를 고치려고 카카오 발송 클래스 하나만 수정해 그 클래스 파일만 새로 컴파일했고, 전체 소스를 다시 컴파일하지 않고 서버의 해당 .class 파일만 바꿔 재시작했더니 정상 동작했다. 이런 방식이 가능한 이유로 가장 적절한 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "상품 조회 API에서 응답 속도를 높이려고, 조회한 상품 객체를 서비스 클래스의 static Map 캐시에 담아 두고 다음 요청부터 재사용한다. 서버를 하루 이상 띄워 두면 힙 사용량이 계속 올라가고 GC가 여러 번 돌아도 줄지 않는다. 원인으로 가장 적절한 것은?"
+  }, {
     "domain" : "DATABASE",
     "question" : "MVCC가 읽기를 대기 없이 처리할 수 있는 대신 치르는 대가로 문서가 든 것은?"
   }, {
