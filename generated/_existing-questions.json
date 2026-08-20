@@ -1,7 +1,22 @@
 {
   "note" : "정식 problem 테이블의 기존 지문 목록입니다. GitHub Actions 생성 배치가 중복 회피 목록으로 읽습니다(클라우드에는 DB가 없으므로). docs/14 참고. 앱이 기동할 때 자동 갱신되며, 커밋해야 다음 배치부터 반영됩니다.",
-  "exportedAt" : "2026-08-18",
+  "exportedAt" : "2026-08-20",
   "questions" : [ {
+    "domain" : "DS_ALGORITHM",
+    "question" : "해시 테이블에서 말하는 적재율(load factor)에 대한 설명으로 옳은 것은?"
+  }, {
+    "domain" : "DS_ALGORITHM",
+    "question" : "해시 테이블에서 충돌(collision)이란 무엇인가?"
+  }, {
+    "domain" : "DS_ALGORITHM",
+    "question" : "해시 테이블의 재해싱(rehashing)이 가리키는 작업은 무엇인가?"
+  }, {
+    "domain" : "DS_ALGORITHM",
+    "question" : "해시 함수(hash function)에 대한 설명으로 옳은 것은?"
+  }, {
+    "domain" : "DS_ALGORITHM",
+    "question" : "해시 테이블이 버킷에 값뿐 아니라 키까지 함께 저장하는 이유는 무엇인가?"
+  }, {
     "domain" : "LANGUAGE_RUNTIME",
     "question" : "정산 배치가 실행 도중 실패하면서, 실패 지점의 메서드 목록이 위에서 아래로 다음 순서로 로그에 남았다.\n\n- calculateFee\n- settleOrder\n- runBatch\n\n이 정보로 알 수 있는 것으로 가장 적절한 것은?"
   }, {
