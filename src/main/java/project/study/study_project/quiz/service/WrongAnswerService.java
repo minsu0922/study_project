@@ -86,8 +86,15 @@ public class WrongAnswerService {
                 AnswerDisplay.correctAnswerOf(p),
                 p.getExplanation(),
                 s.getSubmittedAt(),
-                // 존재하지 않는 문서를 가리키면 null — 화면이 죽은 링크를 걸지 않게 한다
-                existingSlugs.contains(slug) ? slug : null
+                // 존재하지 않는 문서를 가리키면 null — 화면이 죽은 링크를 걸지 않게 한다.
+                //
+                // slug != null 검사가 앞에 있어야 한다: existingSlugs는 Set.of()/Set.copyOf()로 만든
+                // 불변 Set인데, 이 계열은 contains(null)에서 그냥 false를 주지 않고 NPE를 던진다
+                // (java.util.ImmutableCollections는 null 질의를 아예 거부한다). 근거 문서 없이 만든
+                // 문제는 slug가 null이고 그런 문제가 대부분이라, 이 검사가 빠지면 오답노트 전체가
+                // 500으로 무너진다 — 2026-08-20에 실제로 그 상태였다.
+                // (QuizService.existingDocumentSlug는 같은 자리에서 null을 먼저 걸러 낸다)
+                slug != null && existingSlugs.contains(slug) ? slug : null
         );
     }
 }

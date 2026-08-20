@@ -121,6 +121,49 @@ class ProblemDocumentLinkIntegrationTest {
         assertThat(slugOf(items, withDeadSlug.getId())).isNull();
     }
 
+    /**
+     * 이 테스트가 없어서 오답노트가 통째로 깨진 채 지나갔다(2026-08-20 발견).
+     *
+     * <p>위 테스트는 "slug 있음"과 "죽은 slug" 두 경우만 봤는데, 정작 <b>가장 흔한 경우</b>인
+     * "slug가 아예 null"이 빠져 있었다. 근거 문서 없이 만든 옛 문제들이 여기 해당하고,
+     * 그런 문제가 오답에 하나라도 섞이면 {@code Set.of().contains(null)}이 NPE를 던져
+     * 오답노트 전체가 500이 됐다. 흔한 경우일수록 테스트에서 빠지기 쉽다는 실례다.
+     */
+    @Test
+    @DisplayName("근거 문서 없이 만든 문제도 오답노트에 정상적으로 나온다 — slug가 null인 경우")
+    void wrongAnswerListHandlesNullSlug() {
+        Problem withoutDocument = createProblem(null);
+        submit(withoutDocument, "X");
+
+        List<WrongAnswerItem> items = wrongAnswerService
+                .getWrongAnswers(userId, null, PageRequest.of(0, 20)).content();
+
+        assertThat(items).hasSize(1);
+        assertThat(slugOf(items, withoutDocument.getId())).isNull();
+    }
+
+    /**
+     * null slug 하나가 목록 전체를 죽이지 않는지 — 위 테스트가 "혼자 있을 때"를 본다면
+     * 이건 "섞여 있을 때"를 본다. 실제 사고가 난 모양이 이쪽이었다(대부분 null인데 하나만 slug 있음).
+     */
+    @Test
+    @DisplayName("slug 있는 문제와 없는 문제가 섞여 있어도 목록이 죽지 않는다")
+    void wrongAnswerListMixesNullAndPresentSlugs() {
+        String slug = createDocument();
+        Problem withDocument = createProblem(slug);
+        Problem withoutDocument = createProblem(null);
+
+        submit(withDocument, "X");
+        submit(withoutDocument, "X");
+
+        List<WrongAnswerItem> items = wrongAnswerService
+                .getWrongAnswers(userId, null, PageRequest.of(0, 20)).content();
+
+        assertThat(items).hasSize(2);
+        assertThat(slugOf(items, withDocument.getId())).isEqualTo(slug);
+        assertThat(slugOf(items, withoutDocument.getId())).isNull();
+    }
+
     /* ── 도우미 ──────────────────────────────────────────────── */
 
     private String slugOf(List<WrongAnswerItem> items, Long problemId) {
