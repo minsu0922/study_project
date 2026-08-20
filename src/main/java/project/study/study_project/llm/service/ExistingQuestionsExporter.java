@@ -1,11 +1,7 @@
 package project.study.study_project.llm.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -15,8 +11,6 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.dto.ExistingQuestionsFile;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -32,15 +26,14 @@ import java.util.Map;
  * 시드 마이그레이션을 걷어낼 때 그 파일에 <b>이미 삭제된 문제 24건</b>이 그대로 남아 있는 것을
  * 보고 드러났다 — 없는 문제를 피하라고 하면 그 주제로 새 문제를 영영 못 만든다.
  *
- * <p>구조와 판단은 형제들과 같다: 앱이 직접 {@code git push}하지 않고(권한·인증·충돌이
- * 줄줄이 따라온다), <b>바뀐 게 있을 때만</b> 파일을 쓰고 info 로그로 알린다.
+ * <p>파일을 언제 쓰고 언제 안 쓰는지 같은 공통 규칙은 {@link SnapshotExporter}에 있다.
+ * 여기 남은 것은 "무엇을 모아 어떤 모양으로 쓰는가"뿐이다.
  */
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "llm.import.enabled", havingValue = "true", matchIfMissing = true)
 @Order(40) // 흡수(@Order 10)보다 뒤 — 승인 여부와 무관하지만 로그가 "받고 → 내보내고"로 읽힌다
-@RequiredArgsConstructor
-public class ExistingQuestionsExporter implements ApplicationRunner {
+public class ExistingQuestionsExporter extends SnapshotExporter {
 
     /** 배치({@code DraftGeneratorCli})가 읽는 파일명. {@code _} 접두사라 흡수 대상과 섞이지 않는다. */
     static final String FILE_NAME = "_existing-questions.json";
@@ -55,22 +48,42 @@ public class ExistingQuestionsExporter implements ApplicationRunner {
      */
     static final int PER_DOMAIN_LIMIT = 50;
 
-    private final ProblemRepository problemRepository;
-    private final ObjectMapper objectMapper;
+    private static final String NOTE =
+            "정식 problem 테이블의 기존 지문 목록입니다. GitHub Actions 생성 배치가 중복 회피 목록으로 "
+                    + "읽습니다(클라우드에는 DB가 없으므로). docs/14 참고. "
+                    + "앱이 기동할 때 자동 갱신되며, 커밋해야 다음 배치부터 반영됩니다.";
 
-    /** 생성 결과 파일과 같은 디렉터리를 쓴다 — Actions가 보는 곳이 한 군데여야 한다. */
-    @Value("${llm.import.dir:generated}")
-    private String exportDir;
+    private final ProblemRepository problemRepository;
+
+    public ExistingQuestionsExporter(ProblemRepository problemRepository, ObjectMapper objectMapper) {
+        super(objectMapper);
+        this.problemRepository = problemRepository;
+    }
 
     @Override
-    public void run(ApplicationArguments args) {
-        try {
-            export(Path.of(exportDir));
-        } catch (Exception e) {
-            // 이 기능이 실패해도 앱은 정상이어야 한다 — 중복 회피는 부가 기능이고,
-            // 이것 때문에 부팅이 막히면 퀴즈 풀이 같은 본 기능까지 죽는다.
-            log.warn("기존 지문 스냅샷 내보내기 실패(무시하고 계속): {}", e.getMessage());
+    protected String fileName() {
+        return FILE_NAME;
+    }
+
+    @Override
+    protected String label() {
+        return "기존 지문 스냅샷";
+    }
+
+    /**
+     * <p>정식 문제가 하나도 없는데 <b>파일도 없으면</b> 만들지 않는다(방금 초기화한 DB가 그렇다).
+     * 커밋할 것도 없는데 빈 파일만 생기기 때문. 반대로 <b>파일이 이미 있으면</b> 빈 목록으로라도
+     * 갱신한다 — 그래야 지워진 문제가 회피 목록에 남아 그 주제를 영영 막는 일이 없다.
+     */
+    @Override
+    protected Snapshot build(boolean fileExists) {
+        List<ExistingQuestionsFile.Item> questions = collectQuestions();
+        if (questions.isEmpty() && !fileExists) {
+            return null;
         }
+        return new Snapshot(
+                new ExistingQuestionsFile(NOTE, LocalDate.now().toString(), questions),
+                questions.size() + "건");
     }
 
     /**
@@ -78,52 +91,13 @@ public class ExistingQuestionsExporter implements ApplicationRunner {
      *
      * <p>PROBLEM 외의 신호는 흘려보낸다. 바뀔 리 없는 파일을 다시 읽고 비교하는 비용은
      * 작지만, 로그에 "변경 없음"이 두 배로 쌓여 진짜 갱신이 묻힌다.
-     *
-     * <p>실패해도 검수는 성공으로 남는다({@code run}과 같은 판단). 커밋이 이미 끝난 뒤라
-     * 되돌릴 것이 없고, 스냅샷은 부가 기능이라 이것 때문에 검수를 막으면 안 된다.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onReviewCompleted(ReviewCompleted event) {
         if (event.target() != ReviewCompleted.Target.PROBLEM) {
             return;
         }
-        try {
-            export(Path.of(exportDir));
-        } catch (Exception e) {
-            log.warn("기존 지문 스냅샷 내보내기 실패(검수는 정상 처리됨): {}", e.getMessage());
-        }
-    }
-
-    /** 디렉터리를 받아 스냅샷을 갱신한다. 실제로 파일을 썼으면 true. */
-    boolean export(Path dir) throws Exception {
-        List<ExistingQuestionsFile.Item> questions = collectQuestions();
-
-        if (questions.isEmpty()) {
-            // 정식 문제가 아직 하나도 없다(방금 초기화한 DB가 그렇다). 빈 파일을 새로 만들면
-            // 커밋할 것도 없는데 변경만 생긴다 — 이미 있는 파일은 아래 hasChanged가 처리한다.
-            if (!Files.exists(dir.resolve(FILE_NAME))) {
-                log.debug("정식 문제가 없어 지문 스냅샷을 만들지 않습니다.");
-                return false;
-            }
-        }
-
-        Path file = dir.resolve(FILE_NAME);
-        if (!hasChanged(file, questions)) {
-            log.debug("기존 지문 스냅샷 변경 없음: {}건", questions.size());
-            return false;
-        }
-
-        ExistingQuestionsFile snapshot = new ExistingQuestionsFile(
-                "정식 problem 테이블의 기존 지문 목록입니다. GitHub Actions 생성 배치가 중복 회피 목록으로 "
-                        + "읽습니다(클라우드에는 DB가 없으므로). docs/14 참고. "
-                        + "앱이 기동할 때 자동 갱신되며, 커밋해야 다음 배치부터 반영됩니다.",
-                LocalDate.now().toString(), questions);
-
-        Files.createDirectories(dir);
-        Files.writeString(file, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(snapshot));
-
-        log.info("기존 지문 스냅샷 갱신: {} ({}건) — 커밋하면 다음 배치부터 반영됩니다", file, questions.size());
-        return true;
+        exportQuietly("검수는 정상 처리됨");
     }
 
     /**
@@ -149,28 +123,5 @@ public class ExistingQuestionsExporter implements ApplicationRunner {
             result.add(new ExistingQuestionsFile.Item(row.getDomain(), row.getQuestion()));
         }
         return result;
-    }
-
-    /**
-     * 기존 파일과 지문 목록이 다른지 본다. 파일이 없으면 당연히 "바뀐 것".
-     *
-     * <p>{@code exportedAt}은 비교하지 않는다 — 날이 바뀔 때마다 내용이 같아도 파일을 새로 쓰게 되고,
-     * 그러면 <b>앱을 켤 때마다 git이 변경으로 인식</b>해 진짜 바뀐 날을 알아볼 수 없다
-     * (형제 내보내기들과 같은 규칙).
-     */
-    private boolean hasChanged(Path file, List<ExistingQuestionsFile.Item> questions) {
-        if (!Files.exists(file)) {
-            return true;
-        }
-        try {
-            ExistingQuestionsFile existing = objectMapper.readValue(file.toFile(), ExistingQuestionsFile.class);
-            List<ExistingQuestionsFile.Item> before =
-                    existing.questions() == null ? List.of() : existing.questions();
-            return !questions.equals(before);
-        } catch (Exception e) {
-            // 파일이 깨졌거나 형식이 바뀐 경우 — 새로 쓰는 쪽이 안전하다
-            log.debug("기존 스냅샷을 읽지 못해 새로 씁니다: {}", e.getMessage());
-            return true;
-        }
     }
 }
