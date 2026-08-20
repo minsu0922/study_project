@@ -146,11 +146,28 @@ function param(name) {
  * confirm() 같은 브라우저 팝업 대신 "버튼을 한 번 더 누르면 실행" 방식.
  * 팝업은 흐름을 끊고, 자동화 도구·테스트도 막는다. 3초 지나면 원래대로 돌아간다. */
 function armedDelete(btn, onConfirm, label = "정말 삭제?") {
-  if (btn.dataset.armed) { onConfirm(); return; }
+  // 확정(두 번째 클릭)이면 되돌리기 타이머를 먼저 끈다.
+  //
+  // 끄지 않으면 3초 뒤 타이머가 깨어나 <b>확정 당시의 문구</b>를 다시 써 버린다.
+  // 삭제 버튼은 실행되면 행이 통째로 사라져 눈에 안 띄었지만, 일괄 승인처럼 버튼이
+  // 화면에 남는 자리에서는 드러난다 — 승인이 끝나 선택이 0건인데 버튼만
+  // "선택 4건 승인"으로 되살아났다(2026-08-20 브라우저 확인에서 발견).
+  // 문구의 주인은 그리는 쪽(syncBulkBar 등)이고, 여기서는 잠시 빌렸다 돌려줄 뿐이다.
+  if (btn.dataset.armed) {
+    clearTimeout(Number(btn.dataset.armedTimer));
+    delete btn.dataset.armed;
+    delete btn.dataset.armedTimer;
+    onConfirm();
+    return;
+  }
   btn.dataset.armed = "1";
   const original = btn.textContent;
   btn.textContent = label;
-  setTimeout(() => { delete btn.dataset.armed; btn.textContent = original; }, 3000);
+  btn.dataset.armedTimer = String(setTimeout(() => {
+    delete btn.dataset.armed;
+    delete btn.dataset.armedTimer;
+    btn.textContent = original;
+  }, 3000));
 }
 
 function showError(el, e) {
