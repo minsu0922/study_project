@@ -27,6 +27,7 @@ import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -145,7 +146,7 @@ class ReviewFlowIntegrationTest {
 
         // 복습 현황(/api/me/reviews)에는 졸업생도 남아 있고, due는 파생 계산으로 false
         PageResponse<ReviewListItem> all =
-                reviewService.getMyReviews(userId, null, PageRequest.of(0, 20));
+                reviewService.getMyReviews(userId, null, null, PageRequest.of(0, 20));
         assertThat(all.content()).hasSize(1);
         assertThat(all.content().get(0).status()).isEqualTo(ReviewStatus.GRADUATED);
         assertThat(all.content().get(0).due()).isFalse();
@@ -177,5 +178,70 @@ class ReviewFlowIntegrationTest {
     void correctOnlyProblemNeverEntersLadder() {
         submit("O");
         assertThat(reviewItemRepository.findByUserIdAndProblemId(userId, problem.getId())).isEmpty();
+    }
+
+    /* ── problemIds 필터 (2026-08-20) ───────────────────────────────
+     *
+     * 오답노트가 복습 단계 배지를 그리려고 쓰는 경로다. 전에는 내 복습 현황 전체를 50개씩
+     * 최대 20페이지 순차로 받아 갔는데, 화면에 필요한 것은 그 페이지에 보이는 문제들뿐이라
+     * id를 넘겨 한 번에 받도록 바꿨다(docs/REVIEW_2026-08-20 §4.1).
+     *
+     * 여기서 반드시 지켜야 하는 것은 성능이 아니라 <b>격리</b>다 — problemIds는 클라이언트가 준
+     * 값이라, userId 조건이 빠지면 남의 복습 진도가 그대로 샌다. 아래 두 번째 테스트가 그 자리를 막는다. */
+
+    @Test
+    @DisplayName("problemIds를 주면 그 문제들만 돌아온다")
+    void problemIdsFilterReturnsOnlyRequested() {
+        submit("X");                                  // 기본 문제가 사다리에 오른다
+        Problem other = saveProblem("DNS는 UDP를 쓴다.");
+        quizService.submit(userId, new QuizSubmitRequest(other.getId(), "X"));  // 두 번째도
+
+        PageResponse<ReviewListItem> all =
+                reviewService.getMyReviews(userId, null, null, PageRequest.of(0, 20));
+        assertThat(all.content()).as("필터 없이는 둘 다 보인다").hasSize(2);
+
+        PageResponse<ReviewListItem> filtered = reviewService.getMyReviews(
+                userId, null, List.of(other.getId()), PageRequest.of(0, 20));
+
+        assertThat(filtered.content()).hasSize(1);
+        assertThat(filtered.content().get(0).problemId()).isEqualTo(other.getId());
+    }
+
+    @Test
+    @DisplayName("남의 문제 id를 넣어도 남의 복습 항목은 새지 않는다")
+    void problemIdsCannotLeakOtherUsersReviews() {
+        // 다른 사용자가 어떤 문제를 틀려 사다리에 올려 둔다
+        User stranger = userRepository.save(User.builder()
+                .username("other" + UUID.randomUUID().toString().substring(0, 8))
+                .passwordHash("bcrypt-not-needed-here")
+                .build());
+        Problem strangersProblem = saveProblem("HTTP는 상태를 저장하지 않는다.");
+        quizService.submit(stranger.getId(), new QuizSubmitRequest(strangersProblem.getId(), "X"));
+
+        // 내가 그 문제 id를 그대로 넣어 조회한다 — 실제로 존재하는 복습 항목이지만 내 것이 아니다
+        PageResponse<ReviewListItem> peeked = reviewService.getMyReviews(
+                userId, null, List.of(strangersProblem.getId()), PageRequest.of(0, 20));
+
+        assertThat(peeked.content())
+                .as("problemIds는 걸러 내는 조건일 뿐, userId 조건을 대신하지 않는다")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("빈 목록을 주면 필터가 없는 것으로 본다 — IN () 문법 오류를 만들지 않는다")
+    void emptyProblemIdsFallsBackToFullList() {
+        submit("X");
+
+        PageResponse<ReviewListItem> result =
+                reviewService.getMyReviews(userId, null, List.of(), PageRequest.of(0, 20));
+
+        assertThat(result.content()).hasSize(1);
+    }
+
+    /** 같은 사용자·다른 문제를 만들 때 쓰는 헬퍼 — 지문만 다르면 되므로 나머지는 고정. */
+    private Problem saveProblem(String question) {
+        return problemRepository.save(Problem.create(
+                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+                question, "O", "해설", null));
     }
 }

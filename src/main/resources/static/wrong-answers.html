@@ -61,18 +61,26 @@ function init() {
    * 도메인 단위로 깔끔하게 유지하는 쪽을 택했다. */
   let reviewMap = new Map();
 
-  /** 내 복습 현황 전체를 페이지 단위(size=50, 서버 상한)로 끝까지 받아 맵으로 만든다.
-   * 안전장치로 20페이지(=1,000문제)에서 끊는다 — 그보다 많으면 배지 일부가 빠질 뿐,
-   * 오답노트 본문은 멀쩡하다. 실패해도 마찬가지(배지만 생략)라 조용히 삼킨다. */
-  async function loadReviewMap() {
+  /**
+   * 지금 화면에 보이는 문제들의 복습 상태만 한 번에 받아 맵으로 만든다.
+   *
+   * [예전에는 어땠나 — 왜 고쳤나]
+   * 전에는 내 복습 현황 <b>전체</b>를 50개씩 최대 20페이지 순차로 받았다. 배지 하나를 그리려고
+   * 최대 20번 왕복한 셈이고, 문제를 풀수록 그 횟수가 늘어 오답노트가 먼저 느려졌다.
+   * 화면에 필요한 것은 이 페이지에 보이는 20문제의 단계뿐이라, 그 id만 넘겨 1회로 끝낸다.
+   * (2026-08-20, docs/REVIEW_2026-08-20 §4.1)
+   *
+   * 실패해도 조용히 삼키는 것은 그대로다 — 배지는 부가 정보이고, 없다고 오답노트를 못 볼 이유가 없다.
+   */
+  async function loadReviewMap(problemIds) {
+    reviewMap = new Map();
+    if (problemIds.length === 0) return;
     try {
-      const map = new Map();
-      for (let p = 0; p < 20; p++) {
-        const data = await api(`/api/me/reviews?size=50&page=${p}`);
-        data.content.forEach(r => map.set(r.problemId, r));
-        if (!data.hasNext) break;
-      }
-      reviewMap = map;
+      // 콤마로 이어 붙이면 Spring이 List<Long>으로 받는다. 한 페이지가 20건이라
+      // 서버 상한(50)에 닿지 않지만, size를 함께 보내 "이만큼 받겠다"를 명시해 둔다.
+      const data = await api(
+        `/api/me/reviews?problemIds=${problemIds.join(",")}&size=${problemIds.length}`);
+      data.content.forEach(r => reviewMap.set(r.problemId, r));
     } catch { /* 배지는 부가 정보 — 실패가 페이지를 막으면 안 된다 */ }
   }
 
@@ -93,6 +101,12 @@ function init() {
       const params = new URLSearchParams({ page });
       if (domainFilter.value) params.set("domain", domainFilter.value);
       const data = await api("/api/me/wrong-answers?" + params);
+
+      // 어느 문제의 배지가 필요한지는 목록을 받아 봐야 안다 — 그래서 순서가 뒤집혔다.
+      // 예전에는 배지를 먼저(전체 조회) 받고 목록을 그렸는데, 이제는 목록을 받아 id를 알아낸 뒤
+      // 필요한 것만 받는다. 왕복은 최대 20회에서 2회로 줄고, 두 번째 요청을 기다렸다가
+      // 한 번에 그리므로 배지가 나중에 나타나며 덜컥거리는 일도 없다.
+      await loadReviewMap(data.content.map(w => w.problemId));
 
       const list = document.getElementById("list");
       if (data.content.length === 0) {
@@ -137,9 +151,7 @@ function init() {
   domainFilter.addEventListener("change", () => { page = 0; load(); });
   document.getElementById("prevBtn").addEventListener("click", () => { page--; load(); });
   document.getElementById("nextBtn").addEventListener("click", () => { page++; load(); });
-  // 복습 맵을 먼저 받고 나서 목록을 그린다 — 목록을 먼저 그리면 배지가 없다가
-  // 나중에 나타나며 화면이 덜컥거린다(요청 1번 기다리는 비용 < 깜빡임 비용).
-  loadReviewMap().then(load);
+  load();   // 배지는 load() 안에서 이 페이지에 필요한 것만 이어서 받는다
 }
 </script>
 </body>

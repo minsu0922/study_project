@@ -9,6 +9,7 @@ import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -81,4 +82,41 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
     Page<ReviewItem> findAllOfUser(@Param("userId") Long userId,
                                    @Param("status") ReviewStatus status,
                                    Pageable pageable);
+
+    /**
+     * <b>지정한 문제들</b>의 복습 항목만 — 오답노트가 복습 단계 배지를 그릴 때 쓴다.
+     *
+     * <p><b>왜 {@link #findAllOfUser}에 파라미터를 하나 더 얹지 않았나.</b>
+     * {@code (:problemIds is null or r.problem.id in :problemIds)}로 합치는 방법이 먼저 떠오르지만,
+     * JPQL의 {@code in :list}는 목록이 {@code null}이거나 비었을 때 구현체마다 다르게 굴고
+     * (빈 목록은 {@code IN ()}이라는 문법 오류가 되는 DB도 있다) 조건이 늘수록 실행 계획도 흐려진다.
+     * "전체 목록"과 "지정한 것만"은 부르는 쪽에서 이미 갈라져 있으므로, 쿼리도 갈라 두는 편이
+     * 읽기도 쉽고 각자 최적의 인덱스를 탄다.
+     *
+     * <p><b>{@code userId} 조건이 이 쿼리의 핵심</b>이다. {@code problemIds}는 클라이언트가 준
+     * 값이라, 사용자 조건 없이 조회하면 남의 복습 진도(몇 단계인지·언제 다시 볼지)가 그대로 샌다.
+     * 여기서는 UNIQUE 제약이 겸하는 인덱스(user_id, problem_id)를 그대로 타므로
+     * 성능을 위해서도 userId가 앞에 있는 편이 맞다.
+     *
+     * <p>정렬을 {@code problem.id}로 두는 것은 <b>결과 순서를 정해 두기 위해서</b>다. 부르는 쪽은
+     * 이 결과를 맵으로 만들어 쓰므로 순서에 의존하지 않지만, 순서가 없는 페이징은 페이지 경계에서
+     * 항목이 중복되거나 빠질 수 있다. 목록 두 개(findDue·findAllOfUser)가 {@code nextReviewAt}으로
+     * 정렬하는 것과 달리 여기서 id를 쓰는 이유는, 이 조회의 결과가 "화면에 보이는 순서"가 아니라
+     * 조회 대상 집합 그 자체이기 때문이다.
+     */
+    @Query(value = """
+            select r from ReviewItem r
+            join fetch r.problem p
+            where r.userId = :userId
+              and p.id in :problemIds
+            order by p.id asc
+            """,
+            countQuery = """
+            select count(r) from ReviewItem r
+            where r.userId = :userId
+              and r.problem.id in :problemIds
+            """)
+    Page<ReviewItem> findAllOfUserByProblemIds(@Param("userId") Long userId,
+                                               @Param("problemIds") List<Long> problemIds,
+                                               Pageable pageable);
 }

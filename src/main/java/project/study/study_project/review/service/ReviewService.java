@@ -16,6 +16,7 @@ import project.study.study_project.review.dto.ReviewTodayItem;
 import project.study.study_project.review.repository.ReviewItemRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -117,16 +118,42 @@ public class ReviewService {
     }
 
     /**
-     * 내 복습 현황 전체(졸업 포함) — 진척 확인용.
+     * 내 복습 현황(졸업 포함) — 진척 확인용.
      *
-     * @param status 상태 필터(선택, null이면 전체)
+     * <p><b>{@code problemIds}가 있으면 그 문제들만</b> 돌려준다 — 오답노트가 복습 단계 배지를
+     * 그릴 때 쓰는 경로다(2026-08-20 신설). 그전에는 배지 하나를 그리려고 오답노트가
+     * <b>내 복습 현황 전체를 50개씩 최대 20페이지 순차로</b> 받아 갔다. 화면에 필요한 것은
+     * 지금 페이지에 보이는 문제 20개의 단계뿐인데 1,000개를 다 받은 셈이라, 문제를 풀수록
+     * 오답노트가 먼저 느려졌다(docs/REVIEW_2026-08-20 §4.1).
+     *
+     * <p>필터가 있을 때 <b>{@code status}는 무시한다</b>. 둘을 겹쳐 받으면 "이 문제들 중
+     * 학습 중인 것만"이라는 조합이 생기는데, 부르는 쪽(배지 그리기)은 졸업 여부와 무관하게
+     * 그 문제의 현재 상태를 알아야 하므로 쓸 일이 없다. 쓰지 않을 조합을 열어 두면
+     * 언젠가 누군가 그 뜻을 되짚어야 한다.
+     *
+     * @param status     상태 필터(선택, null이면 전체). {@code problemIds}가 있으면 쓰이지 않는다
+     * @param problemIds 조회할 문제 id(선택). 개수는 {@link #MAX_SIZE}로 잘라 IN 목록이 무한정
+     *                   길어지지 않게 한다 — 목록 길이가 곧 쿼리 크기라 상한이 없으면 클라이언트가
+     *                   보내는 만큼 DB가 받아야 한다
      */
     @Transactional(readOnly = true)
-    public PageResponse<ReviewListItem> getMyReviews(Long userId, ReviewStatus status, Pageable pageable) {
+    public PageResponse<ReviewListItem> getMyReviews(Long userId, ReviewStatus status,
+                                                     List<Long> problemIds, Pageable pageable) {
         // due 판정 기준 시각은 페이지 전체에 하나 — 항목마다 now()를 부르면 기준이 미세하게 갈린다.
         LocalDateTime now = LocalDateTime.now();
-        Page<ReviewItem> page = reviewItemRepository.findAllOfUser(userId, status, clamp(pageable));
+        Page<ReviewItem> page = (problemIds == null || problemIds.isEmpty())
+                ? reviewItemRepository.findAllOfUser(userId, status, clamp(pageable))
+                : reviewItemRepository.findAllOfUserByProblemIds(userId, capIds(problemIds), clamp(pageable));
         return PageResponse.from(page.map(r -> ReviewListItem.from(r, now)));
+    }
+
+    /**
+     * IN 목록 길이 상한. 넘치면 앞에서부터 자른다 — 에러 대신 조용히 맞추는 것은
+     * {@link #clamp}와 같은 판단이고, 이 값을 쓰는 화면(오답노트 한 페이지 20건)이
+     * 상한에 닿을 일이 애초에 없어 잘려서 곤란해지는 경우가 없다.
+     */
+    private List<Long> capIds(List<Long> problemIds) {
+        return problemIds.size() > MAX_SIZE ? problemIds.subList(0, MAX_SIZE) : problemIds;
     }
 
     /**
