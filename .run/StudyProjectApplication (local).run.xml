@@ -1,0 +1,52 @@
+<component name="ProjectRunConfigurationManager">
+  <!--
+    IntelliJ 실행 구성(공유본) — 로컬에서 앱을 띄울 때 이걸 고른다.
+
+    [왜 이 파일이 필요한가]
+    2026-08-20 보안 점검(커밋 6cdab06)에서 application.yml의 jwt.secret / admin.password
+    기본값을 없앴다. 저장소가 공개라 거기 적힌 서명 키는 곧 "누구나 아는 값"이고,
+    키를 아는 사람은 로그인 없이 {"role":"ADMIN"} 토큰을 만들 수 있기 때문이다.
+    대신 값이 없으면 앱이 아예 뜨지 않는다(빠른 실패).
+
+    그 대가로 로컬 실행이 깨졌다. build.gradle이 개발용 값을 넣어 주긴 하는데
+    그건 <b>bootRun 태스크에만</b> 적용된다. IntelliJ의 초록 실행 버튼(Spring Boot
+    실행 구성)은 Gradle을 거치지 않고 JVM을 바로 띄우므로 그 값을 못 받는다.
+    결과:
+
+        PlaceholderResolutionException:
+          Could not resolve placeholder 'JWT_SECRET' in value "${JWT_SECRET}"
+
+    IDE가 만든 실행 구성은 .idea/ 안에 있고 .idea는 gitignore라, 사람마다 각자
+    환경변수를 손으로 채워 넣어야 했다. 저장소를 새로 받은 사람은 원인도 모른 채
+    부팅 실패를 본다. 그래서 실행 구성 자체를 저장소에 넣는다 — .run/ 은 IntelliJ가
+    읽는 "공유 실행 구성" 위치이고 gitignore 대상이 아니다.
+
+    [여기 적힌 값이 공개돼도 괜찮은가]
+    괜찮다. build.gradle의 bootRun 블록과 <b>같은 값, 같은 판단</b>이다.
+    이 키로 서명한 토큰은 이 키를 쓰는 서버에서만 통하는데, 그런 서버는 개발자 PC뿐이다.
+    운영은 java -jar로 뜨고 Gradle도 IDE도 끼어들지 않으므로, 환경변수를 안 주면
+    그대로 부팅에 실패한다 — 즉 운영이 이 값으로 조용히 뜨는 경로는 없다.
+    진짜 비밀(운영 키, ANTHROPIC_API_KEY)은 여전히 저장소 바깥에 둔다.
+
+    [값을 바꾸고 싶으면]
+    이 파일을 고치지 말고 IDE에서 실행 구성을 복사해 쓴다. 여기 값을 운영 키로 바꾸면
+    커밋에 섞여 들어간다 — 그게 처음에 없애려던 바로 그 사고다.
+
+    두 값의 출처: build.gradle의 tasks.named('bootRun') 블록. 한쪽만 바꾸면
+    "IDE에서는 되는데 gradlew에서는 안 되는" 상태가 되므로 항상 같이 바꾼다.
+  -->
+  <configuration default="false" name="StudyProjectApplication (local)"
+                 type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="MAIN_CLASS_NAME" value="project.study.study_project.StudyProjectApplication" />
+    <module name="study_project.main" />
+    <envs>
+      <!-- HS384 서명이라 384비트(48바이트) 이상이어야 한다. 짧으면 JwtTokenProvider 생성 단계에서 터진다. -->
+      <env name="JWT_SECRET" value="csquiz-local-development-only-signing-key-not-used-in-production-0123456789" />
+      <!-- AdminAccountInitializer가 ADMIN 계정이 하나도 없을 때 이 비밀번호로 admin을 만든다. -->
+      <env name="ADMIN_PASSWORD" value="admin1234" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
