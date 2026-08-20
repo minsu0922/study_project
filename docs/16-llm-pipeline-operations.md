@@ -502,7 +502,7 @@ git status --short generated/
 ### ① 어느 날이 빠졌는지 찾기
 
 ```powershell
-cd C:\Users\박민수\IdeaProjects\study_project
+cd <프로젝트 경로>   # 예: C:\Users\홍길동\IdeaProjects\study_project
 git pull
 
 # 최근 14일 중 파일이 없는 날 = 빠진 날

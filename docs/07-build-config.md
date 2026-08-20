@@ -142,7 +142,7 @@ docker compose up -d          # MySQL 8 기동 (healthy 될 때까지 몇 초)
 
 ---
 
-## 트러블슈팅: 한글 사용자 경로(`C:\Users\박민수\...`)
+## 트러블슈팅: 한글 사용자 경로(`C:\Users\홍길동\...`)
 
 Windows 사용자명이 한글이면 `./gradlew test`가 코드와 무관하게 실패한다.
 Gradle 테스트 워커 JVM이 클래스패스의 비ASCII 경로를 디코딩하지 못해서다.
