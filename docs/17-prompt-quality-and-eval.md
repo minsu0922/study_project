@@ -306,8 +306,14 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-..."   # 그 창에서만
 | `ClaudeProblemGenerator.difficultyExample` | 난이도별 통 예시 (보기 + 판정 근거) |
 | `DraftGeneratorCli.hasMaterialFor` | 오늘 난이도가 캘 절이 문서에 있는지 — 없으면 폴백 |
 | `ProblemItemRule.qualityWarningsOf` | 문제 품질 경고 6종 |
+| `SourceQuoteRule.warningOf` | 근거 인용이 문서에서 왔는지 + **남의 난이도 절을 캤는지** |
 | `DocumentDraftValidator` | 문서 형식 검사 (기존 5 + 신규 4) |
 | `PromptEvalCli` | 평가 하네스 (`evalPrompt` 태스크) |
+
+`SourceQuoteRule`은 나머지와 달리 **근거 문서를 손에 들고 있어야** 판정한다. 그래서 배치와
+평가 CLI만 부르고, 흡수(`LlmProblemService`)는 부르지 않는다 — 파일만 받는 쪽에는 대조할
+원본이 없다. 판정 방향을 "지목 절 안인가"가 아니라 "남의 절을 캤는가"로 뒤집은 이유는
+클래스 주석에 있다(중급은 설계 근거를 본론에서 캐도 정상이라, 전자로 재면 매번 헛울린다).
 
 테스트는 규칙이 **조용히 사라지는 것**을 막는 데 집중했다. 프롬프트에서 한 줄이 빠져도
 예외가 안 나고 문제는 멀쩡히 생성되므로, 증상이 며칠 뒤 품질로만 나타난다.

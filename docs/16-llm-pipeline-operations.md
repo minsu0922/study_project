@@ -377,6 +377,7 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-..."   # 그 창에서만 유효
 | `llm/service/LlmDocumentService` | 문서 초안 저장·승인·거절·복구 | 승인은 `AdminDocumentService.create` 재사용 |
 | `llm/service/ReviewCompleted` | 검수 완료 신호 — 스냅샷 내보내기를 깨운다 | `AFTER_COMMIT`이 핵심(§6) |
 | `llm/support/ProblemItemRule` | 문제 규약 판정(`defectOf`) + **품질 경고**(`qualityWarningsOf`) | 버릴 것과 알릴 것을 나눈 이유 |
+| `llm/support/SourceQuoteRule` | 근거 인용 검증 — 문서에서 왔는가 + 남의 난이도 절을 캤는가 | 문서를 들고 있어야 해서 흡수는 못 부른다 |
 | `llm/support/DocumentDraftValidator` | 문서 자동 검증(차단/경고) | 코드블록 예외가 없으면 보안 문서를 영영 못 쓴다 |
 | `admin/service/AdminStatsService` | 대시보드 — **모델별 승인율** 포함 | `toModelStats`의 "검수 0건 = null" 규칙 |
 
