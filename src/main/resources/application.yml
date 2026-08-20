@@ -61,8 +61,19 @@ springdoc:
     path: /swagger-ui.html               # http://localhost:8080/swagger-ui.html
 
 # 커스텀 JWT 설정 (로드맵 2에서 refresh 토큰 도입 — ADR-0001의 예고 이행)
+#
+# [기본값을 일부러 두지 않았다]
+# 전에는 ${JWT_SECRET:local-dev-secret-...} 처럼 기본값이 있었다. 저장소가 공개된 지금
+# 그 값은 누구나 읽을 수 있고, 서명 키를 아는 사람은 {"role":"ADMIN"} 토큰을 직접 만들어
+# 로그인 없이 관리자 API 전체를 열 수 있다 — 비밀번호를 아무리 바꿔도 소용이 없다.
+# 그래서 기본값을 없앤다. 값이 없으면 앱이 아예 뜨지 않는다:
+# <b>키를 잊은 채 뜨는 것보다 안 뜨는 편이 안전하다</b>(빠른 실패).
+#
+# 로컬 실행(bootRun)은 build.gradle이 개발용 값을 넣어 주므로 그대로 돌아가고,
+# 테스트는 src/test/resources/application.properties가 준다. 둘 다 jar 실행에는 끼어들지
+# 않으므로, 운영 배포는 반드시 JWT_SECRET을 받아야 한다.
 jwt:
-  secret: ${JWT_SECRET:local-dev-secret-please-change-this-to-a-256bit-or-longer-key}
+  secret: ${JWT_SECRET}
   access-token-validity-seconds: 3600         # 1시간 (짧게 — 탈취 피해 시간 제한)
   refresh-token-validity-seconds: 1209600     # 14일 (Redis TTL로 자동 만료)
 
@@ -80,12 +91,21 @@ ratelimit:
     refill-tokens: 60
     refill-period-seconds: 60    # = 분당 60회
 
-# 로컬 기본값이며, 실 배포에서는 환경변수로 반드시 교체한다.
+# 초기 관리자 계정 — AdminAccountInitializer가 ADMIN이 하나도 없을 때 만든다.
+#
+# [비밀번호에 기본값이 없는 이유]
+# 전에는 admin1234가 기본값이었다. 운영 DB는 비어 있는 채로 시작하므로 환경변수를 넣지
+# 않으면 <b>공개된 아이디·비밀번호로 관리자 로그인이 되는 상태</b>로 배포된다.
+# 로그인은 분당 5회로 제한되지만, 정답을 아는 사람에게는 1회면 충분하다.
+# jwt.secret과 같은 판단으로 기본값을 없앴다.
+#
+# username은 비밀이 아니라 기본값을 남긴다 — 아이디를 감춘다고 지켜지는 것은 없고,
+# 값이 없으면 부팅이 막혀 얻는 것 없이 불편만 는다.
 admin:
   # V12에서 로그인 아이디가 이메일 → username으로 바뀌었다.
   # 기존 계정(admin@csquiz.local)은 마이그레이션이 @ 앞부분을 따 "admin"으로 만들어 둔다.
   username: ${ADMIN_USERNAME:admin}
-  password: ${ADMIN_PASSWORD:admin1234}
+  password: ${ADMIN_PASSWORD}
 
 # LLM 문제 생성 (B안) — 설계 docs/13, 자동화 docs/14, 결정 ADR-0006(개정).
 # API 키는 여기 두지 않는다: SDK가 ANTHROPIC_API_KEY 환경변수를 직접 읽는다(코드/설정 유출 방지).

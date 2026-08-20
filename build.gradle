@@ -118,6 +118,24 @@ tasks.named('test') {
 //
 // 환경변수가 이미 있으면 그쪽을 존중한다 — CI나 다른 실행 방식과 부딪히지 않게.
 // 둘 다 없으면 앱은 정상적으로 뜨고 생성 기능만 LLM_004(503)로 막힌다.
+// ── 로컬 실행용 개발 비밀값 ───────────────────────────────────────
+//
+// application.yml에서 jwt.secret과 admin.password의 기본값을 없앴다 — 저장소가 공개라
+// 거기 적힌 값은 곧 "누구나 아는 값"이고, 서명 키가 알려지면 로그인 없이 관리자 토큰을
+// 만들 수 있기 때문이다(2026-08-20 보안 점검). 대신 값이 없으면 앱이 뜨지 않는다.
+//
+// [그래서 로컬은 어떻게 도나]
+// 이 블록이 bootRun에만 값을 넣어 준다. 핵심은 <b>jar 실행에는 끼어들지 않는다</b>는 것이다 —
+// 운영은 도커/서버에서 java -jar로 뜨므로 Gradle이 관여할 자리가 없고, 환경변수를 안 주면
+// 그대로 실패한다. 즉 아래 개발용 값은 <b>내 PC의 bootRun에서만</b> 살아 있다.
+//
+// [왜 개발용 값을 여기 적어 두나 — 공개돼도 괜찮은가]
+// 괜찮다. 이 값으로 서명된 토큰은 이 값을 쓰는 서버에서만 통하는데, 그런 서버는
+// 개발자 PC의 bootRun뿐이다. 반대로 이 값을 안 적으면 저장소를 새로 받은 사람이
+// 아무것도 못 돌린다 — 그 불편을 감수할 만큼의 이득이 없다.
+// 진짜 비밀(운영 키, API 키)은 여전히 저장소 바깥에 둔다(위 anthropicApiKey 주석).
+//
+// 환경변수나 Gradle 속성이 있으면 그쪽을 존중한다 — 운영 값으로 로컬 재현을 해 볼 수 있게.
 tasks.named('bootRun') {
     String apiKey = project.findProperty('anthropicApiKey') ?: System.getenv('ANTHROPIC_API_KEY')
     if (apiKey) {
@@ -128,6 +146,14 @@ tasks.named('bootRun') {
                     '~/.gradle/gradle.properties 에 anthropicApiKey=... 를 넣으세요.')
         }
     }
+
+    // HS384로 서명하므로 384비트(48바이트) 이상이어야 한다. 짧으면 부팅 단계에서 바로 터진다.
+    environment 'JWT_SECRET', project.findProperty('jwtSecret')
+            ?: System.getenv('JWT_SECRET')
+            ?: 'csquiz-local-development-only-signing-key-not-used-in-production-0123456789'
+    environment 'ADMIN_PASSWORD', project.findProperty('adminPassword')
+            ?: System.getenv('ADMIN_PASSWORD')
+            ?: 'admin1234'
 }
 
 // ── 일일 문제 생성 배치 (docs/14) ─────────────────────────────────
