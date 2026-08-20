@@ -22,9 +22,12 @@ import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.dto.LlmBulkApproveRequest;
+import project.study.study_project.llm.dto.LlmBulkApproveResponse;
 import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
+import project.study.study_project.llm.service.LlmDraftBulkApprover;
 import project.study.study_project.llm.service.LlmProblemService;
 import project.study.study_project.llm.support.UploadedDocumentReader;
 
@@ -46,6 +49,8 @@ import java.util.Map;
 public class AdminLlmProblemController {
 
     private final LlmProblemService llmProblemService;
+    /** 일괄 승인만 따로 맡는 협력자 — 건별 트랜잭션을 얻으려면 서비스 <b>밖</b>에서 불러야 한다. */
+    private final LlmDraftBulkApprover llmDraftBulkApprover;
 
     /**
      * 생성 트리거 — Claude 호출은 수십 초 걸릴 수 있어 프론트가 로딩 표시를 담당한다.
@@ -119,6 +124,23 @@ public class AdminLlmProblemController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<AdminProblemDetail> approve(@PathVariable Long id) {
         return ApiResponse.ok(llmProblemService.approve(id));
+    }
+
+    /**
+     * <b>일괄 승인</b> — 검수함에서 체크한 여러 건을 한 요청으로 승인한다.
+     *
+     * <p>단건 승인과 달리 <b>201이 아니라 200</b>이다. 201 Created는 "만들어진 것 하나"를
+     * 가리키는 상태 코드인데(보통 Location 헤더와 짝을 이룬다) 여기서는 만들어진 것이 여럿이고,
+     * 심지어 하나도 없을 수도 있다(전부 실패). 성패가 건마다 다른 응답이라 상태 코드로 성패를
+     * 말하지 않고, 무엇이 되고 안 됐는지를 본문에 적는다({@link LlmBulkApproveResponse}).
+     *
+     * <p>경로를 {@code /approve-batch}로 둔 것은 {@code /{id}/approve}와 충돌을 피하려는 것이
+     * 아니라(경로 변수 자리가 달라 충돌하지 않는다) 클래스 첫머리에 적은 원칙 그대로다 —
+     * 승인은 리소스 수정이 아니라 사건이고, 사건 이름을 경로에 드러낸다.
+     */
+    @PostMapping("/approve-batch")
+    public ApiResponse<LlmBulkApproveResponse> approveBatch(@Valid @RequestBody LlmBulkApproveRequest request) {
+        return ApiResponse.ok(llmDraftBulkApprover.approveAll(request.ids()));
     }
 
     /** 거절 — 사유(선택)를 바디로 받는다: {@code {"reason": "..."} } (없으면 빈 바디 허용). */
