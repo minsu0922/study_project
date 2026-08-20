@@ -375,6 +375,12 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         // 근거 문서(2단계) — 있으면 "아는 것을 쓰지 말고 이 문서에서 내라"로 바뀐다.
         if (sourceDocument != null) {
             appendSourceDocument(sb, sourceDocument, difficulty);
+        } else {
+            // 폴백으로 도는 날. sourceQuote는 스키마상 필수 필드라 모델이 무엇이든 채워 넣는데,
+            // 근거가 없는 날에 지어낸 인용이 들어오면 <검증기가 그것을 진짜로 취급한다>.
+            // 빈 문자열을 명시적으로 요구해 "근거 없음"과 "근거를 지어냄"을 갈라 둔다.
+            sb.append("\n[근거 인용] 이번에는 근거 문서가 없다. sourceQuote는 빈 문자열 \"\"로 두어라. "
+                    + "문서가 없는데 인용을 지어내면 근거를 확인할 길이 사라진다.\n");
         }
 
         // 중복 회피 — 기존 문제·대기 초안의 질문을 그대로 나열한다. "비슷한 주제 금지"보다
@@ -435,6 +441,20 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         sb.append("\n제목: ").append(doc.title()).append('\n');
         sb.append("--- 문서 시작 ---\n").append(doc.contentMd()).append("\n--- 문서 끝 ---\n");
         sb.append('\n').append(sourceFocus(difficulty, doc.kind())).append('\n');
+
+        // 근거 인용 — 위 지시들을 <검사 가능하게> 만드는 장치. 자세한 배경은 SourceQuoteRule.
+        // "그대로 복사"를 못 박는 이유: 요약을 허용하면 문자열 대조가 성립하지 않아 검사가
+        // 통째로 무력해진다. 한 줄로 제한하는 이유는 인용이 길어질수록 옮겨 적다 표현이
+        // 흔들려 못 찾을 확률이 올라가기 때문이다(정규화가 공백까지만 흡수한다).
+        sb.append("""
+
+                [근거 인용] 문제마다 sourceQuote에 그 문제의 근거가 된 <문서 원문 한 줄>을 넣어라.
+                - 문서에서 그대로 복사해 옮긴다. 요약하거나 표현을 바꾸면 안 된다.
+                - 바로 위에서 지목한 절 안의 문장을 골라라. 다른 난이도가 쓸 절에서 캐면
+                  그 난이도의 재료가 하루 먼저 사라진다.
+                - 이 값은 학습자에게 보이지 않는다. 검수자가 "이 문제가 문서에서 나왔는가"를
+                  대조하는 데만 쓰므로, 문제 본문에 문서를 지칭하는 말을 넣지 마라.
+                """);
     }
 
     /**

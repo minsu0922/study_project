@@ -18,6 +18,7 @@ import project.study.study_project.llm.support.DocumentCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.SourceQuoteRule;
 import project.study.study_project.llm.support.TopicQueue;
 
 import java.io.InputStream;
@@ -198,7 +199,7 @@ public final class DraftGeneratorCli {
         // "목록이 비었나"만 봐서는 부족했다. 2026-08-14 배치는 5개를 요청해 3개를 받았고
         // 그중 하나가 지문·해설이 빈 껍데기여서 실제로 쓴 건 2개인데, job은 초록불로 끝났다.
         // 검수함에 문제가 적게 들어온 것을 사람이 먼저 눈치챈 뒤에야 파일을 열어 보고 알았다.
-        reportYield(checkYield(problems, count, type, difficulty), date);
+        reportYield(checkYield(problems, count, type, difficulty, source), date);
 
         // ── 8. 파일로 저장 ────────────────────────────────────────
         GeneratedBatchFile batch = new GeneratedBatchFile(
@@ -919,6 +920,20 @@ public final class DraftGeneratorCli {
      */
     static YieldCheck checkYield(List<GeneratedProblemItem> problems, int requested, ProblemType type,
                                  Difficulty difficulty) {
+        return checkYield(problems, requested, type, difficulty, null);
+    }
+
+    /**
+     * 근거 문서까지 들고 세는 판 — 인용 검사({@link SourceQuoteRule})가 추가로 붙는다.
+     *
+     * <p><b>왜 인자를 하나 더 받는 오버로드인가.</b> 인용 검사만 유독 문서를 필요로 하는데,
+     * 그 사정 때문에 기존 4인자 형태를 없애면 이 검사와 아무 상관 없는 호출부와 테스트가
+     * 전부 흔들린다. 손대야 할 곳이 많을수록 정작 봐야 할 변경이 그 안에 묻힌다.
+     *
+     * @param source 근거 문서. {@code null}이면(폴백으로 돈 날) 인용 검사를 건너뛴다
+     */
+    static YieldCheck checkYield(List<GeneratedProblemItem> problems, int requested, ProblemType type,
+                                 Difficulty difficulty, SourceDocument source) {
         List<String> defects = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         int usable = 0;
@@ -935,6 +950,12 @@ public final class DraftGeneratorCli {
             // 여기서 usable에서 빼면 경고가 말하는 개수와 실제 검수함 개수가 어긋난다.
             for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty)) {
                 warnings.add("%d번 [%s] — %s".formatted(i + 1, warning, ProblemItemRule.snippet(item)));
+            }
+            // 인용 검사는 문서를 들고 있어야 해서 규칙이 따로 산다(SourceQuoteRule 클래스 주석).
+            // 경고를 내보내는 통로는 같게 둔다 — 검수자에게는 한 줄로 나란히 보이는 편이 낫다.
+            String quoteWarning = SourceQuoteRule.warningOf(item, source, difficulty);
+            if (quoteWarning != null) {
+                warnings.add("%d번 [%s] — %s".formatted(i + 1, quoteWarning, ProblemItemRule.snippet(item)));
             }
         }
         return new YieldCheck(requested, problems.size(), usable, defects, warnings);

@@ -7,6 +7,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
+import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.TopicQueue;
@@ -744,6 +745,32 @@ class DraftGeneratorCliTest {
 
         assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.BEGINNER).warnings()).isEmpty();
+    }
+
+    /* ── 근거 인용 ────────────────────────────────────────────
+     * 판정 자체는 SourceQuoteRuleTest가 다 본다. 여기서 지키는 것은 <배선>이다 —
+     * 규칙이 아무리 정확해도 수확량 점검이 부르지 않으면 Actions 요약에 한 줄도 안 뜨고,
+     * 그러면 있으나 마나다. 문서를 넘기는 인자가 조용히 빠지는 것이 정확히 그 사고다. */
+
+    @Test
+    @DisplayName("근거 인용 경고가 수확량 점검을 타고 나온다 — 규칙만 있고 부르지 않으면 아무 데도 안 뜬다")
+    void reportsSourceQuoteWarnings() {
+        SourceDocument doc = new SourceDocument("time-wait", "TIME_WAIT",
+                "# TIME_WAIT\n\n## 무엇인가\n연결을 닫은 쪽이 잠시 머무는 상태다.");
+        GeneratedProblemItem strayQuote = new GeneratedProblemItem(
+                "TIME_WAIT이 오래 남으면 무엇이 마르는가?", "", goodExplanation(),
+                List.of(new GeneratedProblemItem.GeneratedChoice("포트", true),
+                        new GeneratedProblemItem.GeneratedChoice("메모리", false)),
+                "이 문장은 저 문서에 없다.");
+
+        assertThat(DraftGeneratorCli.checkYield(List.of(strayQuote), 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.BEGINNER, doc).warnings())
+                .singleElement().asString().contains("문서에서 찾지 못함");
+
+        assertThat(DraftGeneratorCli.checkYield(List.of(strayQuote), 1, ProblemType.MULTIPLE_CHOICE,
+                Difficulty.BEGINNER).warnings())
+                .as("문서를 안 넘긴 예전 호출은 그대로 조용해야 한다 — 폴백 날에 헛울리면 안 된다")
+                .isEmpty();
     }
 
     /* ── 근거 문서에 오늘 캘 재료가 있는지 ─────────────────────

@@ -141,6 +141,35 @@ class ClaudeProblemGeneratorPromptTest {
         assertThat(prompt).contains("분야:").contains("난이도:").contains("유형:");
     }
 
+    /**
+     * 근거 인용({@code sourceQuote})이 없으면 {@code SourceQuoteRule}이 잴 것이 없다.
+     * 스키마 필드만 만들어 두고 프롬프트가 침묵하면, 모델은 필수 필드를 아무 값으로나 채우고
+     * 검증기는 그 값을 진짜 인용으로 취급한다 — 검사기가 있는데 아무것도 못 잡는 상태가 된다.
+     */
+    @Test
+    @DisplayName("근거 문서를 주면 원문 인용을 요구한다 — 인용이 없으면 '문서에서 냈는가'를 잴 수 없다")
+    void requiresVerbatimQuoteWhenSourceDocumentGiven() {
+        String prompt = prompt(Difficulty.INTERMEDIATE, DOC);
+
+        assertThat(prompt).contains("[근거 인용]").contains("sourceQuote");
+        assertThat(prompt).as("요약을 허용하면 문자열 대조가 성립하지 않아 검사가 통째로 무력해진다")
+                .contains("그대로 복사해 옮긴다");
+        assertThat(prompt).as("어느 절에서 캘지를 인용에도 걸어 둬야 8/14의 재료 선점이 잡힌다")
+                .contains("다른 난이도가 쓸 절");
+    }
+
+    /**
+     * 폴백으로 도는 날의 반대편. {@code sourceQuote}는 스키마상 필수라 모델이 무엇이든 채우는데,
+     * 근거가 없는 날에 지어낸 인용이 들어오면 <b>"근거 없음"과 "근거를 지어냄"이 구분되지 않는다</b>.
+     */
+    @Test
+    @DisplayName("근거 문서가 없으면 인용을 비우라고 말한다 — 지어낸 인용은 없느니만 못하다")
+    void asksForEmptyQuoteWhenNoSourceDocument() {
+        String prompt = prompt(Difficulty.BEGINNER, null);
+
+        assertThat(prompt).contains("sourceQuote는 빈 문자열");
+    }
+
     /* ── 시스템 프롬프트의 품질 규칙 ─────────────────────────────
      * 아래 테스트들은 문구의 좋고 나쁨을 재지 않는다. 규칙이 <조용히 사라지는 것>을 막는다.
      * 프롬프트에서 한 줄이 빠져도 예외가 나지 않고 문서·문제는 멀쩡히 생성되므로,

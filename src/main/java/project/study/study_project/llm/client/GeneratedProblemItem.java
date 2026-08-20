@@ -13,7 +13,8 @@ import java.util.List;
  * 그래서 "응답 형식이 매번 달라 파싱이 깨지는" 문제가 원천적으로 없다.
  *
  * <p>스키마 제약상 모든 필드가 필수(required)라 "값 없음"을 null 대신 빈 값으로 받는다:
- * 객관식의 answer는 빈 문자열 {@code ""}, OX/단답형의 choices는 빈 배열 {@code []}.
+ * 객관식의 answer는 빈 문자열 {@code ""}, OX/단답형의 choices는 빈 배열 {@code []},
+ * 근거 문서 없이 만든 날의 sourceQuote는 빈 문자열 {@code ""}.
  * (구조화 출력은 nullable 필드 표현이 제한적이라, 프롬프트 규칙 + 서비스에서 정규화하는
  * 쪽이 스키마를 비트는 것보다 단순하다.) null 변환은 LlmProblemService가 담당.
  *
@@ -33,8 +34,24 @@ public record GeneratedProblemItem(
         String explanation,
 
         @JsonPropertyDescription("객관식 보기 목록. 객관식이면 정확히 4개(정답 1개), 그 외 유형이면 빈 배열")
-        List<GeneratedChoice> choices
+        List<GeneratedChoice> choices,
+
+        @JsonPropertyDescription("이 문제의 근거가 된 문서 원문 한 줄. 문서에서 그대로 복사해 옮긴다"
+                + "(요약·수정 금지). 근거 문서 없이 만든 문제면 빈 문자열")
+        String sourceQuote
 ) {
+    /**
+     * 인용 없이 만드는 편의 생성자 — 인용을 도입하기 전 코드와 테스트가 그대로 컴파일되게 한다.
+     *
+     * <p>{@link SourceDocument}가 {@code Kind}를 덧붙일 때 쓴 것과 같은 처방이다. 새 필드를
+     * 뒤에 붙이고 짧은 생성자를 남기면, 이 필드와 상관없는 곳(OX·단답형 테스트, 규약 검증
+     * 테스트)이 전부 손대지 않아도 된다 — 손대야 할 곳이 많을수록 정작 봐야 할 변경이 묻힌다.
+     */
+    public GeneratedProblemItem(String question, String answer, String explanation,
+                                List<GeneratedChoice> choices) {
+        this(question, answer, explanation, choices, "");
+    }
+
     /** 객관식 보기 한 개. */
     public record GeneratedChoice(
             @JsonPropertyDescription("보기 내용")

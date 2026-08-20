@@ -9,6 +9,7 @@ import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.SourceQuoteRule;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -130,7 +131,7 @@ public final class PromptEvalCli {
             List<GeneratedProblemItem> problems = generator.generate(
                     domain, difficulty, ProblemType.MULTIPLE_CHOICE, count,
                     List.of(), List.of(), loaded.document());
-            reports.add(score(difficulty, count, problems));
+            reports.add(score(difficulty, count, problems, loaded.document()));
         }
 
         String report = render(reports, model, domain, documentFile, loaded);
@@ -151,6 +152,19 @@ public final class PromptEvalCli {
      */
     static DifficultyReport score(Difficulty difficulty, int requested,
                                   List<GeneratedProblemItem> problems) {
+        return score(difficulty, requested, problems, null);
+    }
+
+    /**
+     * 근거 문서까지 들고 채점하는 판 — 인용 검사({@link SourceQuoteRule})가 경고 집계에 합류한다.
+     *
+     * <p>오버로드로 둔 이유는 {@code DraftGeneratorCli.checkYield}와 같다: 인용 검사만
+     * 문서를 필요로 하는데, 그 사정으로 기존 형태를 없애면 상관없는 테스트가 전부 흔들린다.
+     *
+     * @param source 근거 문서. {@code null}이면 인용 검사를 건너뛴다
+     */
+    static DifficultyReport score(Difficulty difficulty, int requested,
+                                  List<GeneratedProblemItem> problems, SourceDocument source) {
         List<Integer> questionLengths = new ArrayList<>();
         List<Integer> explanationLengths = new ArrayList<>();
         Map<String, Integer> warningCounts = new LinkedHashMap<>();
@@ -180,6 +194,13 @@ public final class PromptEvalCli {
                 // 괄호까지 남긴 원본도 따로 모은다 — 종류만 알면 "무엇이 걸렸는지"를
                 // 볼 수가 없다. 2026-08-17 실행에서 실제로 그 벽에 부딪혔다.
                 warningLines.add("%d번 — %s".formatted(i + 1, warning));
+            }
+            // 인용 검사도 같은 통로로 모은다 — 프롬프트를 고쳤을 때 "문서 밖에서 캐는 비율"이
+            // 줄었는지를 다른 경고와 나란히 세어야 비교가 된다(이 도구의 존재 이유).
+            String quoteWarning = SourceQuoteRule.warningOf(item, source, difficulty);
+            if (quoteWarning != null) {
+                warningCounts.merge(quoteWarning.replaceAll("\\s*\\(.*", ""), 1, Integer::sum);
+                warningLines.add("%d번 — %s".formatted(i + 1, quoteWarning));
             }
         }
 
