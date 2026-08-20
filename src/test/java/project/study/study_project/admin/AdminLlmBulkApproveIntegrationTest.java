@@ -54,7 +54,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * <p>MySQL이 필요하다(다른 통합 테스트와 같은 전제).
  */
-@SpringBootTest(properties = "ratelimit.enabled=false")
+/*
+ * llm.import.enabled=false 인 이유: 이 테스트는 승인을 <b>진짜로 커밋</b>하는데, 커밋 뒤에는
+ * 스냅샷 내보내기가 깨어나 generated/_existing-questions.json을 다시 쓴다(ReviewCompleted).
+ * 그 파일은 git이 추적하는 파일이라, 끄지 않으면 <b>테스트를 돌릴 때마다 저장소가 더러워지고</b>
+ * 테스트용 지문("일괄 승인 테스트용 지문 …")이 배치의 중복 회피 목록에 섞여 들어간다.
+ * 실제로 한 번 그렇게 됐고 되돌렸다. 내보내기는 이 테스트의 검증 대상이 아니므로 꺼도 손실이 없다.
+ */
+@SpringBootTest(properties = {"ratelimit.enabled=false", "llm.import.enabled=false"})
 @AutoConfigureMockMvc
 class AdminLlmBulkApproveIntegrationTest {
 
