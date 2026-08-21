@@ -15,7 +15,7 @@ enum(이넘)은 **"정해진 보기 중에서만 고르게 하는 값"**이다. 
 
 ---
 
-## Domain (11개)
+## Domain (12개)
 
 | enum 상수 | displayName | 비고 |
 |---|---|---|
@@ -23,7 +23,8 @@ enum(이넘)은 **"정해진 보기 중에서만 고르게 하는 값"**이다. 
 | `OS` | 운영체제 | |
 | `DATABASE` | 데이터베이스 | |
 | `DS_ALGORITHM` | 자료구조·알고리즘 | |
-| `SYSTEM_DESIGN` | 시스템설계 | |
+| `SYSTEM_DESIGN` | 시스템설계 | **돌아가는 시스템**의 구조 — 부하·확장·장애 |
+| `SOFTWARE_ENGINEERING` | 소프트웨어공학 | **코드를 만들고 관리하는 절차** — 요구사항·UML·디자인 패턴·테스트 기법·형상관리·개발방법론 (정보처리기사 대비로 신설) |
 | `SECURITY` | 보안 | |
 | `LANGUAGE_RUNTIME` | 언어·런타임 | 순수 Java/JVM — GC·메모리·동시성 |
 | `BACKEND_FRAMEWORK` | 스프링·백엔드 | Spring DI/AOP/트랜잭션, JPA, 커넥션 풀 등 (LLM 문제 생성 도입 시 신설 — docs/13) |
@@ -38,6 +39,7 @@ public enum Domain {
     DATABASE("데이터베이스"),
     DS_ALGORITHM("자료구조·알고리즘"),
     SYSTEM_DESIGN("시스템설계"),
+    SOFTWARE_ENGINEERING("소프트웨어공학"),
     SECURITY("보안"),
     LANGUAGE_RUNTIME("언어·런타임"),
     BACKEND_FRAMEWORK("스프링·백엔드"),

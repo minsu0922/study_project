@@ -563,6 +563,14 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                     " (Spring DI/IoC·Bean 생명주기·AOP·@Transactional 전파·MVC 흐름, JPA 영속성 컨텍스트·지연 로딩·N+1, 커넥션 풀·서블릿 컨테이너. 순수 JVM/GC 주제는 제외)";
             case LANGUAGE_RUNTIME ->
                     " (Java 언어·JVM 내부: 메모리 구조·GC·클래스로딩·동시성. Spring/JPA 등 프레임워크 주제는 제외)";
+            // 소프트웨어공학↔시스템설계도 같은 종류의 경계다(둘 다 "설계"라는 말을 쓴다).
+            // 가르는 기준은 "무엇이 돌아가는가"이지 "어느 쪽이 상위인가"가 아니다.
+            case SOFTWARE_ENGINEERING ->
+                    " (요구사항 분석·UML·디자인 패턴·테스트 기법·형상관리·개발방법론. "
+                            + "즉 사람이 코드를 만들고 관리하는 절차. 부하·확장·장애처럼 돌아가는 시스템을 다루는 주제는 제외)";
+            case SYSTEM_DESIGN ->
+                    " (돌아가는 시스템의 구조: 부하 분산·캐시 계층·확장·장애 대응·데이터 흐름. "
+                            + "요구사항·UML·테스트 기법 같은 개발 절차 주제는 제외)";
             default -> "";
         };
     }
