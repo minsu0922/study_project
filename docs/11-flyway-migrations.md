@@ -28,6 +28,41 @@ DB는 코드처럼 "새 버전으로 통째로 교체"할 수 없다. 안에 **�
 검사한다. **빈 줄 하나만 달라져도** 지문이 바뀌어 앱이 시동을 거부한다.
 (실화: V4에 빈 줄 하나가 끼어들어가 있어서 git checkout으로 되돌렸다 — 2026-07-14)
 
+**주석도 파일의 일부다.** 2026-08-21에 또 밟았다 — V13을 적용한 뒤 `-- 기준 문서:` 한 줄의
+문서 번호를 고쳤더니 다음 기동이 `Migration checksum mismatch for migration version 13`으로
+죽었다. 이 저장소의 마이그레이션은 주석이 본문보다 긴데, 그 주석이 전부 지문에 들어간다.
+바꿀 일이 생기면 **파일이 아니라 딴 데(문서·커밋 메시지)에 적는다.**
+
+#### 어긋났을 때 되돌리는 법
+
+로컬 개발 DB면 밀고 처음부터 재생하는 게 제일 깔끔하다. 그럴 수 없을 때
+(2026-08-21이 그랬다 — 문제 33건과 제출 이력이 들어 있었다) 셋 중 하나다.
+
+1. **파일을 원래대로 되돌린다.** git이 있으니 가장 싸다. 고친 내용을 포기해도 될 때.
+2. **DDL이 정말 그대로인지 확인하고 장부의 지문을 갱신한다.** 이 프로젝트에는 Flyway
+   Gradle 플러그인이 없어서 `flywayRepair`를 쓸 수 없다. 대신 직접 계산해 넣는다 —
+   Flyway의 체크섬은 **줄 단위 CRC32 누적**이다(줄바꿈 문자는 빼고, UTF-8, 32비트 부호 있는 정수):
+
+   ```python
+   import zlib
+   crc = 0
+   for line in open(path, encoding='utf-8').read().splitlines():
+       crc = zlib.crc32(line.encode('utf-8'), crc)
+   print(crc - 2**32 if crc >= 2**31 else crc)
+   ```
+
+   **먼저 옛 파일로 계산해 장부의 값과 같은지 확인하고**(같으면 계산법이 맞다는 뜻),
+   그다음 새 값을 넣는다. 이 확인을 건너뛰면 틀린 값을 박아 넣고도 모른다.
+
+   ```sql
+   UPDATE flyway_schema_history SET checksum = <새 값>
+    WHERE version = '13' AND checksum = <옛 값>;
+   ```
+3. **정정하는 새 파일을 추가한다.** DDL까지 바뀌었다면 이것뿐이다.
+
+2번은 **DDL이 한 글자도 안 바뀐 경우에만** 쓴다. 조금이라도 바뀌었으면 장부와 실제 스키마가
+어긋난 채로 검증만 통과하는, 가장 나쁜 상태가 된다.
+
 ## 규칙 요약
 
 1. **새 변경 = 새 파일.** 컬럼 하나 추가도 `V5__add_xxx.sql`을 새로 만든다.
@@ -61,6 +96,10 @@ R__의 조건은 **멱등성**(몇 번 실행해도 결과가 같음) — `CREAT
 | `V7__imported_draft_file.sql` | 흡수한 파일 도장 | [14](14-llm-batch-automation.md) |
 | `V8__generated_document_draft.sql` | AI 개념 문서 초안 | [15](15-llm-concept-documents.md) |
 | `V9__problem_document_slug.sql` | `problem`·초안에 `document_slug` 컬럼 | [15](15-llm-concept-documents.md) |
+| `V10__topic_queue.sql` | 주제 대기열 표 | [16](16-llm-pipeline-operations.md) |
+| `V11__topic_queue_repeatable.sql` | 대기열에 재사용 표시 | [16](16-llm-pipeline-operations.md) |
+| `V12__user_username.sql` | 로그인 아이디를 이메일 → `username`으로 | [06](06-security-jwt.md) |
+| `V13__problem_title.sql` | `problem`·초안에 `title` 컬럼(목록 화면용) | [18](18-problem-list-ui.md) |
 | `R__domain_stats_view.sql` | 도메인별 정답률 뷰 | [01](01-data-model.md) |
 
 **번호가 V1 다음 V4로 뛴다.** 삭제된 V2·V3의 자리다. 번호를 당겨 메우지 않는 이유는
