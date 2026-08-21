@@ -155,4 +155,21 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
         String getQuestion();
     }
+
+    /**
+     * 목록 제목이 아직 없는 문제 — 제목 백필(V13)이 채울 대상.
+     *
+     * <p><b>엔티티로 읽는다.</b> 위 프로젝션들과 다른 선택인데, 여기는 읽고 끝이 아니라
+     * <b>제목을 써 넣어야</b> 하기 때문이다. 프로젝션으로 읽으면 영속 상태가 아니라
+     * 변경 감지가 안 걸리고, 결국 id로 다시 조회하게 된다. 보기(LAZY)는 건드리지 않으므로
+     * 로딩 부담도 지문 TEXT뿐이다.
+     *
+     * <p>{@code order by p.id}로 오래된 것부터 — 여러 번 나눠 부를 때 같은 순서를 보장한다.
+     * 채워진 것은 다음 호출의 조건에서 저절로 빠지므로 페이지 번호를 들고 다닐 필요가 없다.
+     */
+    @Query("select p from Problem p where p.title is null order by p.id")
+    List<Problem> findWithoutTitle(Pageable pageable);
+
+    /** 관리 화면 배지·백필 버튼 안내용 — 제목이 없는 문제가 몇 건 남았는가. */
+    long countByTitleIsNull();
 }

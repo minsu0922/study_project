@@ -22,6 +22,8 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.dto.TitleBackfillResponse;
+import project.study.study_project.llm.service.ProblemTitleBackfillService;
 
 /**
  * 관리자 문제 관리 API — /api/admin/** 전체가 SecurityConfig에서 hasRole(ADMIN)로 잠긴다.
@@ -34,6 +36,11 @@ import project.study.study_project.global.response.PageResponse;
 public class AdminProblemController {
 
     private final AdminProblemService adminProblemService;
+    /**
+     * 제목 백필은 Claude를 부르므로 {@code llm} 패키지에 산다. 문제 관리 화면에서 누르는
+     * 버튼이라 입구만 여기에 둔다 — 관리자에게는 "문제를 손보는 일" 중 하나다.
+     */
+    private final ProblemTitleBackfillService titleBackfillService;
 
     /** 목록(관리 화면용, 정답 포함). 예: {@code GET /api/admin/problems?domain=NETWORK&page=0} */
     @GetMapping
@@ -70,5 +77,26 @@ public class AdminProblemController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         adminProblemService.delete(id);
         return ApiResponse.ok();
+    }
+
+    /** 제목 없는 문제 수 — 화면이 백필 버튼을 보여 줄지 정하는 데 쓴다. */
+    @GetMapping("/untitled-count")
+    public ApiResponse<Long> untitledCount() {
+        return ApiResponse.ok(titleBackfillService.untitledCount());
+    }
+
+    /**
+     * 제목 백필 — 제목이 없는 문제에 Claude가 지은 목록 제목을 채운다(V13).
+     *
+     * <p><b>{@code GET}이 아니라 {@code POST}인 이유</b>는 당연해 보이지만 적어 둘 값이 있다:
+     * 이 요청은 <b>돈이 들고 DB를 바꾼다</b>. 브라우저가 미리 가져오거나 새로고침으로 다시
+     * 보내도 되는 종류가 아니다.
+     *
+     * <p>한 번에 상한(40건)까지만 처리하고 남은 수를 응답에 담는다 — 서버가 알아서 반복하지
+     * 않는 이유는 {@link ProblemTitleBackfillService#backfill()} 주석 참고.
+     */
+    @PostMapping("/backfill-titles")
+    public ApiResponse<TitleBackfillResponse> backfillTitles() {
+        return ApiResponse.ok(titleBackfillService.backfill());
     }
 }
