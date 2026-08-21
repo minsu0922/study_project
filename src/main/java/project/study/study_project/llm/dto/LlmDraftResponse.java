@@ -23,6 +23,8 @@ public record LlmDraftResponse(
         String domainLabel,
         Difficulty difficulty,
         ProblemType type,
+        /** 목록에 뜰 한 줄 제목 — 모델이 안 냈으면 {@code null}. 검수자가 그 자리에서 고칠 수 있게 함께 내린다. */
+        String title,
         String question,
         String answer,
         String explanation,

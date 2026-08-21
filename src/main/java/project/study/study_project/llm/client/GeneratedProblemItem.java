@@ -38,7 +38,12 @@ public record GeneratedProblemItem(
 
         @JsonPropertyDescription("이 문제의 근거가 된 문서 원문 한 줄. 문서에서 그대로 복사해 옮긴다"
                 + "(요약·수정 금지). 근거 문서 없이 만든 문제면 빈 문자열")
-        String sourceQuote
+        String sourceQuote,
+
+        @JsonPropertyDescription("문제 목록에 뜰 한 줄 제목. 무엇에 관한 문제인지를 명사구로 적는다"
+                + "(예: TIME_WAIT가 쌓여 포트가 마르는 이유). 상황 서술이나 물음표로 끝나는 문장이 아니다. "
+                + "40자 이내")
+        String title
 ) {
     /**
      * 인용 없이 만드는 편의 생성자 — 인용을 도입하기 전 코드와 테스트가 그대로 컴파일되게 한다.
@@ -50,6 +55,19 @@ public record GeneratedProblemItem(
     public GeneratedProblemItem(String question, String answer, String explanation,
                                 List<GeneratedChoice> choices) {
         this(question, answer, explanation, choices, "");
+    }
+
+    /**
+     * 제목 없이 만드는 편의 생성자 — 위와 같은 이유로 남긴다(2026-08-21에 {@code title} 추가).
+     *
+     * <p><b>{@code title}을 맨 뒤에 붙인 것은 호환 때문만이 아니다.</b> record 필드 순서가 곧
+     * 구조화 출력 스키마의 속성 순서이고, 모델은 그 순서대로 값을 쓴다. 지문·보기·해설을
+     * 다 쓴 뒤에 제목을 붙이면 <b>자기가 방금 만든 문제를 보고</b> 이름을 짓는다.
+     * 앞에 두면 제목을 먼저 정하고 거기에 맞춰 문제를 쓰게 되는데, 그건 순서가 거꾸로다.
+     */
+    public GeneratedProblemItem(String question, String answer, String explanation,
+                                List<GeneratedChoice> choices, String sourceQuote) {
+        this(question, answer, explanation, choices, sourceQuote, "");
     }
 
     /** 객관식 보기 한 개. */

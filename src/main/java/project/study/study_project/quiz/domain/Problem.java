@@ -72,6 +72,22 @@ public class Problem {
     @Column(nullable = false, length = 20)
     private ProblemType type;
 
+    /**
+     * 목록 화면에 뜰 한 줄 제목 — 없으면 {@code null}(V13).
+     *
+     * <p><b>지문에서 잘라 쓸 수 없어서 생긴 컬럼이다.</b> 목록은 한 행에 제목 한 줄을 보여 주는데,
+     * 지문의 앞부분을 자르면 "주문 API에서 처리 건수를 세려고 서비스 클래스에 static 카운터를…"이
+     * 나온다 — 무엇을 묻는 문제인지 알 수 없다. 2026-08-18에 중급·고급 지문을 <실무 장면>으로
+     * 쓰게 바꾸면서({@code ClaudeProblemGenerator}의 [상황 지문 쓰는 법]) 지문 첫 문장은
+     * 이제 상황 서술이지 주제가 아니다. 자르기가 더 안 통하게 됐다.
+     *
+     * <p><b>{@code null}을 허용하는 이유</b>: 이 컬럼보다 먼저 만들어진 문제들에는 넣을 값이 없다.
+     * 마이그레이션에서 지문 앞부분으로 채워 두면 <b>가짜 제목이 진짜인 척</b> 들어앉아 백필 대상을
+     * 구분할 수 없어진다. 화면 쪽이 비었을 때 지문으로 대신 보여 주는 편이 정직하다.
+     */
+    @Column(length = 120)
+    private String title;
+
     /** 문제 지문. MySQL TEXT 컬럼이라 String 기본 매핑(VARCHAR)과 구분하기 위해 LONGVARCHAR 지정. */
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(nullable = false)
@@ -113,11 +129,12 @@ public class Problem {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    private Problem(Domain domain, Difficulty difficulty, ProblemType type,
+    private Problem(Domain domain, Difficulty difficulty, ProblemType type, String title,
                     String question, String answer, String explanation, String documentSlug) {
         this.domain = domain;
         this.difficulty = difficulty;
         this.type = type;
+        this.title = title;
         this.question = question;
         this.answer = answer;
         this.explanation = explanation;
@@ -127,19 +144,24 @@ public class Problem {
     /**
      * 관리자 등록용 팩터리. <b>타입별 규칙 검증(객관식=answer 없음 등)은 서비스가 끝낸 뒤</b>
      * 호출한다 — 엔티티는 저장 형태만 책임지고, 규칙 판단은 한 곳(AdminProblemService)에 모은다.
+     *
+     * <p><b>{@code title}과 {@code question}이 나란히 있는 것을 주의해서 부른다.</b> 둘 다
+     * String이라 순서를 바꿔 넣어도 컴파일된다 — 컬럼 순서(V13)와 필드 순서에 맞춰 title을
+     * 앞에 두었으니, 부르는 쪽도 같은 순서로 적어 눈으로 대조할 수 있게 한다.
      */
-    public static Problem create(Domain domain, Difficulty difficulty, ProblemType type,
+    public static Problem create(Domain domain, Difficulty difficulty, ProblemType type, String title,
                                  String question, String answer, String explanation,
                                  String documentSlug) {
-        return new Problem(domain, difficulty, type, question, answer, explanation, documentSlug);
+        return new Problem(domain, difficulty, type, title, question, answer, explanation, documentSlug);
     }
 
     /** 관리자 수정용 — id/created_at만 남기고 내용 필드를 통째로 교체한다(부분 수정 없음: 폼 전체 제출 방식). */
-    public void update(Domain domain, Difficulty difficulty, ProblemType type,
+    public void update(Domain domain, Difficulty difficulty, ProblemType type, String title,
                        String question, String answer, String explanation, String documentSlug) {
         this.domain = domain;
         this.difficulty = difficulty;
         this.type = type;
+        this.title = title;
         this.question = question;
         this.answer = answer;
         this.explanation = explanation;

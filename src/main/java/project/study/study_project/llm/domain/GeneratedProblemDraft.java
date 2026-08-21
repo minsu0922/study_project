@@ -63,6 +63,17 @@ public class GeneratedProblemDraft {
     @Column(nullable = false, length = 20)
     private ProblemType type;
 
+    /**
+     * 목록에 뜰 한 줄 제목 — 없으면 {@code null}(V13). 승인 시 {@link project.study.study_project.quiz.domain.Problem}으로
+     * 그대로 옮겨진다.
+     *
+     * <p><b>초안 단계부터 들고 있는 이유</b>는 {@link #documentSlug}와 같다 — 검수자가 검수함
+     * 목록을 훑을 때 필요하고, 승인 시점에 만들어 내려면 그때 모델을 다시 불러야 한다.
+     * 게다가 제목은 <b>지문을 쓴 모델이 그 자리에서 붙이는 것</b>이 가장 정확하다.
+     */
+    @Column(length = 120)
+    private String title;
+
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(nullable = false)
     private String question;
@@ -114,12 +125,13 @@ public class GeneratedProblemDraft {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
-    private GeneratedProblemDraft(Domain domain, Difficulty difficulty, ProblemType type,
+    private GeneratedProblemDraft(Domain domain, Difficulty difficulty, ProblemType type, String title,
                                   String question, String answer, String explanation,
                                   String choicesJson, String model, String documentSlug) {
         this.domain = domain;
         this.difficulty = difficulty;
         this.type = type;
+        this.title = title;
         this.question = question;
         this.answer = answer;
         this.explanation = explanation;
@@ -129,11 +141,17 @@ public class GeneratedProblemDraft {
         this.documentSlug = documentSlug;
     }
 
-    /** 생성 직후 저장용 팩터리 — 초안은 항상 PENDING으로 태어난다. */
+    /**
+     * 생성 직후 저장용 팩터리 — 초안은 항상 PENDING으로 태어난다.
+     *
+     * <p>{@code title}과 {@code question}이 나란한 String 두 개라 순서를 바꿔도 컴파일된다.
+     * 컬럼 순서(V13)·필드 순서와 같게 맞춰 두었으니 부르는 쪽도 그 순서로 적는다.
+     */
     public static GeneratedProblemDraft pending(Domain domain, Difficulty difficulty, ProblemType type,
-                                                String question, String answer, String explanation,
-                                                String choicesJson, String model, String documentSlug) {
-        return new GeneratedProblemDraft(domain, difficulty, type,
+                                                String title, String question, String answer,
+                                                String explanation, String choicesJson,
+                                                String model, String documentSlug) {
+        return new GeneratedProblemDraft(domain, difficulty, type, title,
                 question, answer, explanation, choicesJson, model, documentSlug);
     }
 

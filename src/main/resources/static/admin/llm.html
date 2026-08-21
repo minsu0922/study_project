@@ -321,7 +321,13 @@ async function loadDrafts() {
         <div class="meta" style="margin-top:6px">
           근거 문서: <a href="/document.html?slug=${encodeURIComponent(d.documentSlug)}" target="_blank">${escapeHtml(d.documentSlug)}</a>
         </div>` : ""}
-        <p style="margin:10px 0 6px; white-space:pre-wrap"><b>${escapeHtml(d.question)}</b></p>
+        <!-- 목록 제목(V13) — 검수자가 "이 제목으로 목록에 뜬다"를 지문과 나란히 보게 둔다.
+             비었으면 그 사실을 적는다. 조용히 감추면 제목 없는 문제가 그대로 승인되고,
+             학습자 목록에는 상황 서술 조각이 뜬다. -->
+        <div class="meta" style="margin-top:8px">
+          목록 제목: ${d.title ? `<b>${escapeHtml(d.title)}</b>` : "<i>(없음 — 승인 전에 붙이는 편이 낫다)</i>"}
+        </div>
+        <p style="margin:6px 0 6px; white-space:pre-wrap"><b>${escapeHtml(d.question)}</b></p>
         ${choices ? `<ul style="margin:6px 0">${choices}</ul>` : ""}
         ${d.answer ? `<div>정답: <b>${escapeHtml(d.answer)}</b></div>` : ""}
         ${d.explanation ? `<div class="meta" style="white-space:pre-wrap; margin-top:6px">${escapeHtml(d.explanation)}</div>` : ""}

@@ -19,6 +19,12 @@ public record AdminProblemDetail(
         Domain domain,
         Difficulty difficulty,
         ProblemType type,
+        /**
+         * 목록에 뜰 한 줄 제목. 비어 있으면 {@code null}을 <b>그대로</b> 내린다 —
+         * 여기서 지문 앞부분으로 채워 주면 수정 폼이 그 가짜 값을 진짜 제목으로 저장해 버린다.
+         * "제목이 없다"는 사실은 백필 대상을 고르는 근거이기도 하므로 지우면 안 된다.
+         */
+        String title,
         String question,
         String answer,
         String explanation,
@@ -33,7 +39,7 @@ public record AdminProblemDetail(
 
     public static AdminProblemDetail from(Problem p) {
         return new AdminProblemDetail(
-                p.getId(), p.getDomain(), p.getDifficulty(), p.getType(),
+                p.getId(), p.getDomain(), p.getDifficulty(), p.getType(), p.getTitle(),
                 p.getQuestion(), p.getAnswer(), p.getExplanation(), p.getCreatedAt(),
                 p.getChoices().stream().map(ChoiceDetail::from).toList()
         );

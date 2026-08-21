@@ -53,7 +53,7 @@ public class AdminProblemService {
     public AdminProblemDetail create(AdminProblemRequest request) {
         validateByType(request);
         Problem problem = Problem.create(
-                request.domain(), request.difficulty(), request.type(),
+                request.domain(), request.difficulty(), request.type(), trimOrNull(request.title()),
                 request.question().trim(), normalizeAnswer(request), trimOrNull(request.explanation()),
                 trimOrNull(request.documentSlug()));
         problem.replaceChoices(buildChoices(problem, request));
@@ -72,7 +72,7 @@ public class AdminProblemService {
     public AdminProblemDetail update(Long id, AdminProblemRequest request) {
         validateByType(request);
         Problem problem = findProblem(id);
-        problem.update(request.domain(), request.difficulty(), request.type(),
+        problem.update(request.domain(), request.difficulty(), request.type(), trimOrNull(request.title()),
                 request.question().trim(), normalizeAnswer(request), trimOrNull(request.explanation()),
                 trimOrNull(request.documentSlug()));
         problem.replaceChoices(buildChoices(problem, request));

@@ -188,7 +188,7 @@ class ProblemDocumentLinkIntegrationTest {
     /** OX 문제 하나 — 정답은 "O". 링크 규칙은 문제 유형과 무관하므로 가장 단순한 것을 쓴다. */
     private Problem createProblem(String documentSlug) {
         return problemRepository.save(Problem.create(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX, "TCP의 연결 지향 성질",
                 "TCP는 연결 지향 프로토콜이다. " + UUID.randomUUID(), "O", "해설", documentSlug));
     }
 }

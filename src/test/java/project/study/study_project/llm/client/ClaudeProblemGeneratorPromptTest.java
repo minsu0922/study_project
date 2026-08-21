@@ -643,6 +643,37 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("실제 서비스에 왜 있는지");
     }
 
+    /**
+     * <b>2026-08-21 신설 — 문제 목록 화면이 보여 줄 이름.</b> {@code problem} 테이블에는 지문뿐이라
+     * 앞부분을 잘라 쓰는 수밖에 없었는데, 사흘 전 [상황 지문 쓰는 법]으로 중급·고급 지문을
+     * 실무 장면으로 바꾼 참이라 첫 문장이 이제 <b>상황 서술</b>이다. 한 개선이 다른 곳의 전제를
+     * 무너뜨린 자리라, 그 사정을 프롬프트에도 적어 두어야 모델이 지문을 옮겨 오지 않는다.
+     *
+     * <p><b>여기서 가장 중요한 단언은 "정답을 제목에 쓰지 마라"다.</b> 제목은 <b>안 푼 문제의
+     * 목록에도</b> 뜬다. 이 줄이 빠지면 목록만 훑어도 답이 보이는 문제가 나오는데, 그건
+     * {@code [금지]}의 "지문이 답을 알려 주는 문제"가 화면 하나 건너에서 되살아나는 것이다.
+     * {@code [용어]} 절에서 배운 것 그대로 — 새 규칙은 <b>기존 규칙과 부딪히는 자리</b>를
+     * 함께 적지 않으면 모델이 둘 중 하나를 조용히 버린다.
+     */
+    @Test
+    @DisplayName("제목은 물음이 아니라 이름이고, 정답을 담지 않는다 — 목록만 읽고 답이 보이면 문제가 죽는다")
+    void requiresANameNotAQuestionForTheListTitle() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("[제목]")
+                .as("명사구라고 못 박지 않으면 지문의 물음을 그대로 옮겨 온다")
+                .contains("<명사구>로 적는다")
+                .contains("물음이 아니라 이름이다")
+                .as("프롬프트가 요구하는 길이와 검증기가 재는 길이는 같아야 한다")
+                .contains("%d자 이내".formatted(ProblemItemRule.TITLE_MAX))
+                .as("중급·고급 지문의 첫 문장은 이제 상황 서술이라 옮겨 오면 제목이 안 된다")
+                .contains("지문의 첫 문장을 옮겨 오지 마라")
+                .as("제목은 안 푼 문제의 목록에도 뜬다 — 이게 빠지면 [금지]의 규칙이 화면 건너에서 무너진다")
+                .contains("정답을 제목에 쓰지 마라")
+                .as("추상적 금지보다 실물 대비가 잘 지켜진다는 것을 이 프롬프트는 여러 번 확인했다")
+                .contains("(X) 이 상황의 원인으로 가장 적절한 것은?")
+                .contains("(O) static 필드에 여러 쓰레드가 동시에 쓸 때의 값 유실");
+    }
+
     private String prompt(Difficulty difficulty, SourceDocument source) {
         return generator.buildPrompt(Domain.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
                 5, List.of(), List.of(), source);

@@ -173,6 +173,7 @@ class AdminLlmReviewStatsIntegrationTest {
     private GeneratedProblemDraft saveDraft() {
         return draftRepository.save(GeneratedProblemDraft.pending(
                 Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                "승인율 집계 테스트용 제목",
                 "승인율 집계 테스트용 지문 " + UUID.randomUUID(),
                 "1", "해설", "[]", MODEL, null));
     }

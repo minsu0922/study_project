@@ -177,6 +177,23 @@ public final class ProblemItemRule {
     public static final int INTERMEDIATE_QUESTION_MAX = 250;
 
     /**
+     * 목록 제목의 길이 상한 — 2026-08-21 신설. <b>생성 프롬프트의 숫자와 같아야 한다</b>
+     * ({@code ClaudeProblemGenerator.SYSTEM_PROMPT}의 [제목] 절).
+     *
+     * <p>제목은 목록 한 행에 <b>한 줄로</b> 들어가야 한다. 넘치면 말줄임표로 잘리는데,
+     * 잘린 제목은 없느니만 못하다 — 앞부분만 보고 고르려던 사람이 결국 문제를 열어 봐야 한다.
+     * 목록 화면의 제목 칸은 14px 기준 대략 35자라 여유를 조금 얹어 40자로 잡았다.
+     *
+     * <p><b>차단이 아니라 경고인 이유</b>는 해설·지문 길이와 같다. 41자짜리 멀쩡한 제목을
+     * 버리면 요금까지 낸 문제를 통째로 잃는다. 게다가 제목은 검수자가 그 자리에서 고칠 수
+     * 있는 <b>한 줄</b>이라, 버리는 비용이 고치는 비용보다 훨씬 크다.
+     *
+     * <p>DB 컬럼은 120자다(V13). 상한 둘이 다른 것은 의도다 — DB는 사고를 막는 선까지만 걸고,
+     * 품질 기준은 여기서 잰다. 같게 맞추면 한 글자 넘겼다고 <b>저장 자체가 실패</b>한다.
+     */
+    public static final int TITLE_MAX = 40;
+
+    /**
      * 보기 길이의 최대/최소 허용 비율. <b>생성 프롬프트의 숫자와 같아야 한다</b>
      * ([오답 보기의 조건] 절) — 갈라지면 지시대로 쓴 문제가 매번 경고를 단다.
      *
@@ -272,6 +289,24 @@ public final class ProblemItemRule {
      */
     public static List<String> qualityWarningsOf(GeneratedProblemItem item, Difficulty difficulty) {
         List<String> warnings = new ArrayList<>();
+
+        // 제목 — 없어도 퀴즈는 성립하므로 defectOf가 아니라 여기서 본다(화면이 지문으로 대신한다).
+        // 다만 조용히 넘기면 제목 없는 문제가 쌓이고, 그러면 목록이 지문 조각으로 채워져
+        // 이 컬럼을 만든 이유가 사라진다. 물음표로 끝나는 제목을 함께 잡는 이유는 아래 주석 참고.
+        String title = item.title();
+        if (isBlank(title)) {
+            warnings.add("제목 없음");
+        } else {
+            String trimmed = title.trim();
+            if (trimmed.length() > TITLE_MAX) {
+                warnings.add("제목이 김 (%d자, 기준 %d자 — 목록에서 잘린다)".formatted(trimmed.length(), TITLE_MAX));
+            }
+            // 제목이 질문문이면 지문을 한 번 더 쓴 것이라 목록에서 아무것도 더 알려 주지 않는다.
+            // "무엇이 원인인가?"가 열 줄 늘어선 목록을 상상하면 된다 — 이름이 아니라 물음이다.
+            if (trimmed.endsWith("?")) {
+                warnings.add("제목이 물음표로 끝남 (\"%s\" — 제목은 물음이 아니라 이름이다)".formatted(trimmed));
+            }
+        }
 
         String explanation = item.explanation();
         if (isBlank(explanation)) {

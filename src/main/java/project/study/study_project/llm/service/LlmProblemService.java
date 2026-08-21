@@ -309,7 +309,7 @@ public class LlmProblemService {
         String choicesJson = multipleChoice ? writeChoicesJson(item.choices()) : null;
 
         return java.util.Optional.of(GeneratedProblemDraft.pending(
-                domain, difficulty, type, trimToNull(item.question()), answer,
+                domain, difficulty, type, trimToNull(item.title()), trimToNull(item.question()), answer,
                 trimToNull(item.explanation()), choicesJson, model, trimToNull(documentSlug)));
     }
 
@@ -380,7 +380,7 @@ public class LlmProblemService {
     /** 초안 → 관리자 등록 요청. 손 등록과 완전히 같은 형태로 변환해 같은 검증을 태운다. */
     private AdminProblemRequest toAdminRequest(GeneratedProblemDraft draft) {
         return new AdminProblemRequest(
-                draft.getDomain(), draft.getDifficulty(), draft.getType(),
+                draft.getDomain(), draft.getDifficulty(), draft.getType(), draft.getTitle(),
                 draft.getQuestion(), draft.getAnswer(), draft.getExplanation(),
                 readChoices(draft.getChoicesJson()), draft.getDocumentSlug());
     }
@@ -419,7 +419,7 @@ public class LlmProblemService {
     private LlmDraftResponse toResponse(GeneratedProblemDraft d) {
         return new LlmDraftResponse(
                 d.getId(), d.getDomain(), d.getDomain().getDisplayName(), d.getDifficulty(), d.getType(),
-                d.getQuestion(), d.getAnswer(), d.getExplanation(), readChoices(d.getChoicesJson()),
+                d.getTitle(), d.getQuestion(), d.getAnswer(), d.getExplanation(), readChoices(d.getChoicesJson()),
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedProblemId(),
                 d.getDocumentSlug(), d.getCreatedAt(), d.getReviewedAt());
     }

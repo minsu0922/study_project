@@ -225,8 +225,12 @@ class PromptEvalCliTest {
         return "해".repeat(ProblemItemRule.EXPLANATION_MIN + 20);
     }
 
+    /**
+     * 제목까지 갖춘 정상 항목. 제목을 비워 두면 "제목 없음" 경고가 모든 항목에 붙어,
+     * 이 테스트들이 재려던 경고(해설 길이 등)의 집계가 흐려진다.
+     */
     private static GeneratedProblemItem item(String question, String explanation) {
-        return new GeneratedProblemItem(question, "", explanation, choices());
+        return new GeneratedProblemItem(question, "", explanation, choices(), "", "제목");
     }
 
     private static List<GeneratedProblemItem.GeneratedChoice> choices() {

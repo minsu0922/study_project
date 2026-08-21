@@ -21,6 +21,8 @@ import java.util.List;
  *       조건부 검증을 표현할 수 없어서 코드로 검사한다(QUIZ_004).
  * </ul>
  *
+ * @param title        목록에 뜰 한 줄 제목(선택). 비우면 화면이 지문으로 대신 보여 준다 —
+ *                     그래서 필수로 만들지 않았다. 다만 손으로 등록할 때도 붙여 두는 편이 낫다
  * @param answer       객관식=비움(null), OX="O"/"X", 단답형=정답(복수는 | 구분) — docs/01 규칙 그대로
  * @param choices      객관식만 사용. 순서(seq)는 배열 순서대로 서버가 1..N 부여
  * @param documentSlug 근거가 된 개념 문서의 slug(선택). LLM 초안 승인 시 초안의 값이 그대로 넘어오고,
@@ -38,6 +40,9 @@ public record AdminProblemRequest(
 
         @NotNull(message = "type은 필수입니다.")
         ProblemType type,
+
+        @Size(max = 120, message = "title은 120자 이하여야 합니다.") // DB VARCHAR(120)
+        String title,
 
         @NotBlank(message = "question은 필수입니다.")
         String question,

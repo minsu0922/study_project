@@ -386,6 +386,57 @@ class LlmProblemServiceTest {
         }
     }
 
+    /**
+     * 목록 제목(V13)이 <b>모델 응답 → 초안</b>까지 끊기지 않는지 본다.
+     *
+     * <p>이 자리가 조용히 끊기기 쉽다. 필드를 record와 엔티티에 넣고 프롬프트까지 고쳐도,
+     * 가운데의 {@code toDraft} 한 줄에서 안 넘기면 <b>아무 오류 없이</b> 제목만 계속 비어 온다.
+     * 검수 화면은 "(없음)"이라 적을 뿐이고, 며칠 뒤 목록이 지문 조각으로 찬 것을 보고서야 안다.
+     */
+    @Nested
+    @DisplayName("생성 — 목록 제목 전달")
+    class Title {
+
+        @Test
+        @DisplayName("모델이 낸 제목이 초안까지 그대로 간다 — 가운데서 끊겨도 오류가 나지 않는다")
+        @SuppressWarnings("unchecked")
+        void carriesTitleIntoDraft() {
+            fakeGenerator.toReturn = List.of(new GeneratedProblemItem(
+                    "무엇이 원인인가?", "", "해설입니다.", List.of(
+                    new GeneratedProblemItem.GeneratedChoice("보기1", true),
+                    new GeneratedProblemItem.GeneratedChoice("보기2", false)),
+                    "", "  캐시 스탬피드가 나는 조건  ")); // 앞뒤 공백은 저장 전에 정리되어야 한다
+
+            service.generate(new LlmGenerateRequest(Domain.OS, Difficulty.BEGINNER, null, 1));
+
+            ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
+            org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
+            assertThat(captor.getValue()).singleElement()
+                    .satisfies(d -> assertThat(d.getTitle()).isEqualTo("캐시 스탬피드가 나는 조건"));
+        }
+
+        /**
+         * 제목이 없는 것은 <b>버릴 이유가 아니다</b>. 화면이 지문으로 대신하므로 퀴즈는 그대로
+         * 성립하고, 검수자가 그 자리에서 한 줄 고치면 된다({@code ProblemItemRule.TITLE_MAX} 주석).
+         *
+         * <p>빈 문자열이 아니라 {@code null}로 저장되는 것까지 못 박는다 — 둘이 갈리면
+         * 백필 대상을 고르는 {@code IS NULL} 조건에 그 행만 걸리지 않는다.
+         */
+        @Test
+        @DisplayName("제목이 없어도 저장한다 — 다만 빈 문자열이 아니라 null이어야 백필에서 찾힌다")
+        @SuppressWarnings("unchecked")
+        void storesNullWhenTitleIsBlank() {
+            fakeGenerator.toReturn = List.of(mcItem("제목 없는 문제", 0)); // 짧은 생성자 → title=""
+
+            service.generate(new LlmGenerateRequest(Domain.OS, Difficulty.BEGINNER, null, 1));
+
+            ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
+            org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
+            assertThat(captor.getValue()).singleElement()
+                    .satisfies(d -> assertThat(d.getTitle()).isNull());
+        }
+    }
+
     @Nested
     @DisplayName("검수 — 승인·거절 상태 전이")
     class Review {
@@ -394,6 +445,7 @@ class LlmProblemServiceTest {
             // 저장 형태 그대로의 초안 — choices JSON은 AdminProblemRequest.ChoiceItem 직렬화 모양
             return GeneratedProblemDraft.pending(
                     Domain.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                    "트랜잭션 전파의 기본값", // title
                     "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.",
                     "[{\"text\":\"REQUIRED\",\"correct\":true},{\"text\":\"REQUIRES_NEW\",\"correct\":false}]", // choicesJson
                     "test-model", "spring-transactional-propagation"); // model, documentSlug
@@ -405,7 +457,7 @@ class LlmProblemServiceTest {
             GeneratedProblemDraft draft = mcDraft();
             when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
             AdminProblemDetail created = new AdminProblemDetail(99L, Domain.BACKEND_FRAMEWORK,
-                    Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                    Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, "트랜잭션 전파의 기본값",
                     "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.", LocalDateTime.now(), List.of());
             when(adminProblemService.create(any())).thenReturn(created);
 
@@ -415,6 +467,9 @@ class LlmProblemServiceTest {
             ArgumentCaptor<AdminProblemRequest> captor = ArgumentCaptor.forClass(AdminProblemRequest.class);
             org.mockito.Mockito.verify(adminProblemService).create(captor.capture());
             assertThat(captor.getValue().question()).isEqualTo("@Transactional 전파 문제");
+            // 제목이 여기서 끊기면 승인된 문제만 제목 없이 목록에 뜬다(V13). 손 등록과 배치
+            // 생성이 같은 문을 통과한다는 원칙이 지켜지려면 이 값도 함께 넘어가야 한다.
+            assertThat(captor.getValue().title()).isEqualTo("트랜잭션 전파의 기본값");
             assertThat(captor.getValue().choices()).hasSize(2);
             assertThat(captor.getValue().choices().get(0).correct()).isTrue();
 
@@ -527,6 +582,7 @@ class LlmProblemServiceTest {
             when(draftRepository.findById(7L)).thenReturn(Optional.of(draft));
             when(adminProblemService.create(any())).thenReturn(new AdminProblemDetail(
                     99L, Domain.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                    "트랜잭션 전파의 기본값",
                     "@Transactional 전파 문제", null, "해설", LocalDateTime.now(), List.of()));
 
             service.restore(7L);

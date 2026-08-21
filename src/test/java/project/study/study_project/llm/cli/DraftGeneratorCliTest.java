@@ -535,13 +535,13 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("보기가 4개를 넘으면 알린다 — 버리지는 않지만 검수자는 알아야 한다")
     void warnsWhenChoiceCountExceedsExpected() {
-        GeneratedProblemItem fiveChoices = new GeneratedProblemItem("보기가 다섯 개인 문제는?", "",
+        GeneratedProblemItem fiveChoices = withTitle(new GeneratedProblemItem("보기가 다섯 개인 문제는?", "",
                 goodExplanation(), List.of(
                 new GeneratedProblemItem.GeneratedChoice("보기1", true),
                 new GeneratedProblemItem.GeneratedChoice("보기2", false),
                 new GeneratedProblemItem.GeneratedChoice("보기3", false),
                 new GeneratedProblemItem.GeneratedChoice("보기4", false),
-                new GeneratedProblemItem.GeneratedChoice("보기5", false)));
+                new GeneratedProblemItem.GeneratedChoice("보기5", false))));
 
         assertThat(DraftGeneratorCli.checkYield(List.of(fiveChoices), 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
@@ -549,11 +549,11 @@ class DraftGeneratorCliTest {
                 .filteredOn(w -> w.contains("보기가"))
                 .singleElement().asString().contains("5개");
 
-        GeneratedProblemItem threeChoices = new GeneratedProblemItem("보기가 세 개인 문제는?", "",
+        GeneratedProblemItem threeChoices = withTitle(new GeneratedProblemItem("보기가 세 개인 문제는?", "",
                 goodExplanation(), List.of(
                 new GeneratedProblemItem.GeneratedChoice("보기1", true),
                 new GeneratedProblemItem.GeneratedChoice("보기2", false),
-                new GeneratedProblemItem.GeneratedChoice("보기3", false)));
+                new GeneratedProblemItem.GeneratedChoice("보기3", false))));
 
         assertThat(DraftGeneratorCli.checkYield(List.of(threeChoices), 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
@@ -670,12 +670,12 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("정답이 유독 길면 알린다 — 실물 82%가 그랬고, 길이는 섞어서 고칠 수 없다")
     void warnsWhenTheCorrectChoiceIsTheLongest() {
-        List<GeneratedProblemItem> problems = List.of(new GeneratedProblemItem(
+        List<GeneratedProblemItem> problems = List.of(withTitle(new GeneratedProblemItem(
                 "무엇인가?", "", goodExplanation(), List.of(
                 new GeneratedProblemItem.GeneratedChoice("가".repeat(60), true),
                 new GeneratedProblemItem.GeneratedChoice("나".repeat(30), false),
                 new GeneratedProblemItem.GeneratedChoice("다".repeat(32), false),
-                new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false))));
+                new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false)))));
 
         assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).singleElement().asString()
@@ -692,23 +692,23 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("정답이 최장이어도 편차가 작으면 조용하다 — 넷 중 하나는 늘 최장이다")
     void staysQuietWhenTheLongestAnswerIsOnlySlightlyLonger() {
-        List<GeneratedProblemItem> problems = List.of(new GeneratedProblemItem(
+        List<GeneratedProblemItem> problems = List.of(withTitle(new GeneratedProblemItem(
                 "무엇인가?", "", goodExplanation(), List.of(
                 new GeneratedProblemItem.GeneratedChoice("가".repeat(44), true),  // 1.26배
                 new GeneratedProblemItem.GeneratedChoice("나".repeat(35), false),
                 new GeneratedProblemItem.GeneratedChoice("다".repeat(40), false),
-                new GeneratedProblemItem.GeneratedChoice("라".repeat(42), false))));
+                new GeneratedProblemItem.GeneratedChoice("라".repeat(42), false)))));
 
         assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).isEmpty();
 
         // 오답이 유독 긴 것은 찍히는 단서가 아니다 — 걸리면 안 된다.
-        List<GeneratedProblemItem> longDistractor = List.of(new GeneratedProblemItem(
+        List<GeneratedProblemItem> longDistractor = List.of(withTitle(new GeneratedProblemItem(
                 "무엇인가?", "", goodExplanation(), List.of(
                 new GeneratedProblemItem.GeneratedChoice("가".repeat(30), true),
                 new GeneratedProblemItem.GeneratedChoice("나".repeat(70), false),
                 new GeneratedProblemItem.GeneratedChoice("다".repeat(32), false),
-                new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false))));
+                new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false)))));
 
         assertThat(DraftGeneratorCli.checkYield(longDistractor, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).isEmpty();
@@ -757,11 +757,11 @@ class DraftGeneratorCliTest {
     void reportsSourceQuoteWarnings() {
         SourceDocument doc = new SourceDocument("time-wait", "TIME_WAIT",
                 "# TIME_WAIT\n\n## 무엇인가\n연결을 닫은 쪽이 잠시 머무는 상태다.");
-        GeneratedProblemItem strayQuote = new GeneratedProblemItem(
+        GeneratedProblemItem strayQuote = withTitle(new GeneratedProblemItem(
                 "TIME_WAIT이 오래 남으면 무엇이 마르는가?", "", goodExplanation(),
                 List.of(new GeneratedProblemItem.GeneratedChoice("포트", true),
                         new GeneratedProblemItem.GeneratedChoice("메모리", false)),
-                "이 문장은 저 문서에 없다.");
+                "이 문장은 저 문서에 없다."));
 
         assertThat(DraftGeneratorCli.checkYield(List.of(strayQuote), 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.BEGINNER, doc).warnings())
@@ -861,6 +861,82 @@ class DraftGeneratorCliTest {
         assertThat(DraftGeneratorCli.topicDomain(Domain.OS, null, null)).isEqualTo(Domain.OS);
     }
 
+    /**
+     * <b>2026-08-21 신설.</b> 목록 제목은 <b>버리지 않고 알리기만</b> 한다 — 제목이 없어도 퀴즈는
+     * 성립하고(화면이 지문으로 대신한다), 검수자가 그 자리에서 고칠 수 있는 한 줄이라
+     * 버리는 비용이 고치는 비용보다 훨씬 크다. 그래서 {@code defectOf}가 아니라 여기서 잰다.
+     *
+     * <p>그런데 알리지 않으면 제목 없는 문제가 그대로 쌓이고, 그러면 목록이 지문 조각으로
+     * 채워져 이 컬럼(V13)을 만든 이유 자체가 사라진다. 보기 개수를 세지 않아 5개짜리가 조용히
+     * 통과했던 것과 같은 실패 방식이다 — 검사하지 않는 규칙은 없는 규칙이다.
+     */
+    @Test
+    @DisplayName("제목이 없으면 알린다 — 버리진 않지만 그대로 승인되면 목록이 지문 조각으로 찬다")
+    void warnsWhenTitleIsMissing() {
+        // 짧은 생성자는 title을 빈 문자열로 채운다 — "모델이 제목을 안 낸" 상태의 재현이다
+        GeneratedProblemItem noTitle = new GeneratedProblemItem("무엇인가?", "", goodExplanation(), fourChoices());
+
+        assertThat(DraftGeneratorCli.checkYield(List.of(noTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings())
+                .as("규약 위반이 아니라 통과했으므로, 알리지 않으면 아무도 모른다")
+                .filteredOn(w -> w.contains("제목"))
+                .singleElement().asString().contains("[제목 없음]");
+    }
+
+    /**
+     * 상한을 넘긴 제목은 목록에서 잘린다. 잘린 제목은 없느니만 못하다 — 앞부분만 보고 고르려던
+     * 사람이 결국 문제를 열어 봐야 한다.
+     *
+     * <p>DB 컬럼은 120자인데(V13) 여기서 재는 값은 40자다. 둘이 다른 것은 의도다:
+     * DB는 사고를 막는 선까지만 걸고 품질 기준은 여기서 잰다. 같게 맞추면 한 글자 넘겼다고
+     * <b>저장 자체가 실패</b>한다.
+     */
+    @Test
+    @DisplayName("제목이 상한을 넘으면 알린다 — 목록에서 잘린 제목은 고르는 데 도움이 안 된다")
+    void warnsOnLongTitle() {
+        GeneratedProblemItem longTitle = new GeneratedProblemItem("무엇인가?", "", goodExplanation(),
+                fourChoices(), "", "제".repeat(ProblemItemRule.TITLE_MAX + 1));
+
+        assertThat(DraftGeneratorCli.checkYield(List.of(longTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings())
+                .filteredOn(w -> w.contains("제목"))
+                .singleElement().asString()
+                .contains("제목이 김")
+                .as("몇 자인지 보여야 얼마나 줄일지 정해진다")
+                .contains("%d자".formatted(ProblemItemRule.TITLE_MAX + 1));
+
+        GeneratedProblemItem exact = new GeneratedProblemItem("무엇인가?", "", goodExplanation(),
+                fourChoices(), "", "제".repeat(ProblemItemRule.TITLE_MAX));
+        assertThat(DraftGeneratorCli.checkYield(List.of(exact), 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings())
+                .as("딱 맞는 것은 지시를 지킨 것이다 — 걸리면 지시대로 쓴 제목이 매번 경고를 단다")
+                .filteredOn(w -> w.contains("제목"))
+                .isEmpty();
+    }
+
+    /**
+     * 제목이 질문문이면 지문을 한 번 더 쓴 것이라 목록에서 아무것도 더 알려 주지 않는다.
+     * "무엇이 원인인가?"가 열 줄 늘어선 목록에서는 어느 것을 풀지 정할 수 없다.
+     *
+     * <p>물음표 하나로 재는 것은 조잡해 보이지만, 이 저장소가 여러 번 확인한 것이 그것이다 —
+     * <b>세어 볼 수 있는 기준만 실제로 지켜진다</b>. "명사구인가"는 기계가 판정할 수 없고,
+     * 물음표는 판정할 수 있다. 명사구인데 물음표를 붙이는 경우는 없으므로 헛울리지도 않는다.
+     */
+    @Test
+    @DisplayName("제목이 물음표로 끝나면 알린다 — 물음을 늘어놓은 목록에서는 고를 수가 없다")
+    void warnsWhenTitleIsAQuestion() {
+        GeneratedProblemItem questionTitle = new GeneratedProblemItem("무엇인가?", "", goodExplanation(),
+                fourChoices(), "", "이 상황의 원인으로 가장 적절한 것은?");
+
+        assertThat(DraftGeneratorCli.checkYield(List.of(questionTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
+                .warnings())
+                .filteredOn(w -> w.contains("제목"))
+                .singleElement().asString()
+                .contains("물음표로 끝남")
+                .as("어느 제목이 걸렸는지 보여야 고칠지 말지가 한눈에 정해진다")
+                .contains("이 상황의 원인으로 가장 적절한 것은?");
+    }
+
     /* ── 테스트 재료 ─────────────────────────────────────────── */
 
     /**
@@ -872,9 +948,29 @@ class DraftGeneratorCliTest {
         return "해".repeat(ProblemItemRule.EXPLANATION_MIN + 20);
     }
 
+    /**
+     * 품질 검사를 <b>통과하는</b> 목록 제목. {@link #goodExplanation()}과 같은 이유로 한 곳에 둔다 —
+     * 각 테스트가 제 문자열을 적으면 {@link ProblemItemRule#TITLE_MAX}를 줄인 날 조용히 경고가 난다.
+     * 물음표로 끝나지 않는 명사구여야 한다는 것도 여기서 한 번만 지킨다.
+     */
+    private static String goodTitle() {
+        return "제목";
+    }
+
     private static GeneratedProblemItem multipleChoice(String question, String explanation) {
         // 객관식의 answer는 빈 문자열이 정상이다 — 정답은 보기 쪽에 있다(docs/01)
-        return new GeneratedProblemItem(question, "", explanation, fourChoices());
+        return withTitle(new GeneratedProblemItem(question, "", explanation, fourChoices()));
+    }
+
+    /**
+     * 제목만 채워 넣는다 — 제목과 무관한 테스트들이 "제목 없음" 경고에 걸리지 않게 한다.
+     *
+     * <p>이렇게 감싸는 이유: 짧은 생성자(제목 없는 4·5인자)는 <b>제목을 안 냈을 때</b>를
+     * 재현하는 데 그대로 필요하다. 그 생성자를 없애 버리면 "제목 없음"을 검사할 방법이 사라진다.
+     */
+    private static GeneratedProblemItem withTitle(GeneratedProblemItem item) {
+        return new GeneratedProblemItem(item.question(), item.answer(), item.explanation(),
+                item.choices(), item.sourceQuote(), goodTitle());
     }
 
     private static List<GeneratedProblemItem.GeneratedChoice> fourChoices() {

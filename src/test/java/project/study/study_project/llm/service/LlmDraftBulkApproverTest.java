@@ -44,7 +44,7 @@ class LlmDraftBulkApproverTest {
     /** 승인 결과 상세 — 이 테스트가 보는 것은 id뿐이라 나머지는 최소로 채운다. */
     private AdminProblemDetail detail(long problemId) {
         return new AdminProblemDetail(problemId, Domain.NETWORK, Difficulty.BEGINNER,
-                ProblemType.MULTIPLE_CHOICE, "지문", null, "해설", null, List.of());
+                ProblemType.MULTIPLE_CHOICE, "제목", "지문", null, "해설", null, List.of());
     }
 
     @Test
