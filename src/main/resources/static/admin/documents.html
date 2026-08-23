@@ -33,7 +33,7 @@
       <button id="dCancelBtn" class="btn-outline" hidden>수정 취소</button>
     </div>
 
-    <h3>문서 목록 <span class="meta">(행을 누르면 위 폼에서 수정 · [보기]는 실제 문서 화면)</span></h3>
+    <h3>문서 목록 <span class="meta">(행을 누르면 위 폼에서 수정 · [보기]는 실제 문서 화면 · [MD 복사]는 본문 마크다운을 클립보드로)</span></h3>
     <div class="table-wrap"><table class="grid" id="documentTable"></table></div>
   </div>
 </main>
@@ -120,6 +120,7 @@ async function loadDocuments() {
         <td>${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}</td>
         <td class="meta">${escapeHtml(shortDate(d.updatedAt))}</td>
         <td class="row-actions">
+          <button class="btn-outline" data-action="copy-md" title="본문 마크다운을 클립보드에 복사">MD 복사</button>
           <button class="btn-outline" data-action="view">보기</button>
           <button class="danger" data-action="delete">삭제</button>
         </td>
@@ -131,9 +132,34 @@ async function loadDocuments() {
     const action = e.target.closest("button[data-action]")?.dataset.action;
     // 보기는 새 탭으로 — 편집 중에 관리 화면을 잃지 않게 한다(돌아올 자리가 폼 상태를 들고 있다)
     if (action === "view") { window.open("/document.html?slug=" + encodeURIComponent(tr.dataset.slug), "_blank"); return; }
+    if (action === "copy-md") { copyMarkdown(e.target.closest("button"), tr.dataset.slug); return; }
     if (action === "delete") { deleteDocument(e.target.closest("button"), Number(tr.dataset.id)); return; }
     editDocument(tr.dataset.slug, Number(tr.dataset.id));
   };
+}
+
+/**
+ * 본문 마크다운을 클립보드로 — 문서를 블로그에 옮겨 붙이려고 만들었다(2026-08-23).
+ *
+ * <p><b>왜 목록이 아니라 단건 API를 부르나.</b> 목록 응답에는 본문이 없다(DocumentListItem).
+ * 목록에 본문을 실으면 100편이 뜨는 이 화면이 매번 수십만 자를 받아 오는데, 정작 쓰는 것은
+ * 눌린 한 편뿐이다. 그래서 누른 순간에만 한 번 더 다녀온다 — {@code editDocument}가
+ * 같은 이유로 같은 API를 부른다.
+ *
+ * <p><b>왜 파일이나 DB에서 뽑지 않고 화면에서 복사하나.</b> {@code generated/documents/*.json}은
+ * <b>검수 화면에서 고치기 전</b>의 원문이다. 승인하며 문장을 손봤다면 그 파일은 낡았고,
+ * 최신본은 DB에만 있다. 화면이 보여 주는 것이 곧 DB의 값이므로 여기서 복사하면
+ * "어느 쪽이 최신이지"를 따질 일이 없어진다.
+ */
+async function copyMarkdown(btn, slug) {
+  try {
+    const d = await api("/api/documents/" + encodeURIComponent(slug));
+    await copyToClipboard(btn, d.contentMd);
+  } catch (e) {
+    // 복사 자체의 실패는 copyToClipboard가 버튼 문구로 알린다. 여기 오는 것은 조회 실패다 —
+    // 원인이 다르므로(문서가 지워졌거나 로그인이 풀렸다) 폼 위 알림에 그대로 띄운다.
+    showError(document.getElementById("dMessage"), e);
+  }
 }
 
 async function editDocument(slug, id) {

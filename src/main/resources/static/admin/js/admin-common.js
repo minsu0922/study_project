@@ -170,6 +170,80 @@ function armedDelete(btn, onConfirm, label = "정말 삭제?") {
   }, 3000));
 }
 
+/* ── 클립보드 ─────────────────────────────────────────────────
+ * 개념 문서를 블로그에 옮겨 붙이려고 만들었다(2026-08-23). 지금까지는 문서 원문을
+ * 꺼내려면 generated/documents/*.json에서 contentMd 필드를 뽑거나 DB를 직접 뒤져야 했는데,
+ * 둘 다 명령을 외워야 하고 <b>승인 화면에서 고친 내용이 반영되지 않는 쪽(파일)을 보기 쉽다</b>.
+ * 화면은 이미 본문을 들고 있으니 클립보드에 넣기만 하면 된다. */
+
+/**
+ * 텍스트를 클립보드에 넣고 <b>버튼 문구로</b> 결과를 알린다.
+ *
+ * <p><b>왜 alert이 아니라 버튼 문구인가.</b> 이 화면의 위험 동작 확인({@code armedDelete})이
+ * 이미 같은 방식을 쓴다 — 브라우저 팝업은 흐름을 끊고 자동화 도구도 막는다.
+ * 복사는 위험하지도 않은 동작이라 더더욱 팝업을 띄울 이유가 없다.
+ *
+ * <p><b>왜 성공/실패를 굳이 보여 주나.</b> 복사는 <b>실패해도 화면이 그대로</b>라
+ * 알려 주지 않으면 사용자가 붙여넣기를 해 보고 나서야 안다. 그때는 이미 편집기로
+ * 넘어간 뒤라 원인을 찾기 어렵다.
+ *
+ * <p><b>대체 경로를 함께 두는 이유.</b> {@code navigator.clipboard}는 보안 컨텍스트
+ * (https 또는 localhost)에서만 산다. 로컬 개발은 localhost라 문제없지만, 같은 PC를
+ * 사설 IP로 열어 두고 폰에서 접속하는 순간 {@code undefined}가 된다 — 그때 조용히
+ * 아무 일도 일어나지 않는 대신 옛 방식(숨긴 textarea + execCommand)으로 넘어간다.
+ * execCommand는 폐기 예정이지만 대체 수단이 없고, 실패해도 잃을 것이 없다.
+ */
+async function copyToClipboard(btn, text, okLabel = "복사됨") {
+  // 연달아 누르면 "복사됨"을 원래 문구로 오해하고 굳어 버린다 — armedDelete가 겪은 사고와 같다.
+  const original = btn.dataset.copyOriginal ?? btn.textContent;
+  btn.dataset.copyOriginal = original;
+  clearTimeout(Number(btn.dataset.copyTimer));
+
+  let ok;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } else {
+      ok = copyByTextarea(text);
+    }
+  } catch (e) {
+    // 권한 거부·포커스 없음 등으로 최신 API가 거절할 때가 있다. 옛 방식은 통하는 경우가 많다.
+    ok = copyByTextarea(text);
+  }
+
+  btn.textContent = ok ? okLabel : "복사 실패";
+  btn.dataset.copyTimer = String(setTimeout(() => {
+    btn.textContent = btn.dataset.copyOriginal;
+    delete btn.dataset.copyOriginal;
+    delete btn.dataset.copyTimer;
+  }, 1800));
+  return ok;
+}
+
+/**
+ * 옛 복사 방식 — 화면 밖 textarea에 담아 선택한 뒤 실행 명령을 부른다.
+ *
+ * <p>{@code display:none}이면 선택이 안 되므로 <b>화면 밖으로 밀어내는</b> 방식을 쓴다.
+ * {@code readOnly}는 모바일에서 키보드가 올라오는 것을 막는다.
+ */
+function copyByTextarea(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.readOnly = true;
+  ta.style.cssText = "position:fixed; left:-9999px; top:0";
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch (e) {
+    ok = false;
+  }
+  document.body.removeChild(ta);
+  return ok;
+}
+
 function showError(el, e) {
   const details = (e.fieldErrors || []).map(f => `<li>${escapeHtml(f.reason)}</li>`).join("");
   el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}${details ? `<ul style="margin:6px 0 0">${details}</ul>` : ""}</div>`;
