@@ -171,6 +171,18 @@ tasks.register('generateDrafts', JavaExec) {
     // 메인 소스셋의 런타임 클래스패스 — application.yml(모델·후보 도메인)도 여기 포함된다
     classpath = sourceSets.main.runtimeClasspath
 
+    // API 키 주입 — bootRun과 같은 규칙이다(Gradle 속성 우선, 없으면 환경변수).
+    //
+    // [왜 뒤늦게 붙였나] Actions에서는 워크플로가 ANTHROPIC_API_KEY를 환경변수로 넣어 주므로
+    // 이 태스크에 키 주입이 없어도 CI는 멀쩡히 돌았다. 로컬에서 손으로 한 편 뽑아 보려 할 때만
+    // LLM_004(503)로 막힌다 — bootRun은 되는데 이건 안 되니 원인이 키라는 것도 잘 안 보인다.
+    // 프롬프트를 고친 날 실물을 확인하는 것이 이 파이프라인에서 가장 중요한 절차인데,
+    // 그 절차의 문턱이 빌드 파일에 있었던 셈이다.
+    String draftApiKey = project.findProperty('anthropicApiKey') ?: System.getenv('ANTHROPIC_API_KEY')
+    if (draftApiKey) {
+        environment 'ANTHROPIC_API_KEY', draftApiKey
+    }
+
     // 인자는 한 덩어리 문자열로 받는다. Gradle의 -P는 값 하나만 넘길 수 있어서,
     // 여러 옵션을 주려면 공백으로 이어 붙인 뒤 여기서 쪼개는 방식이 가장 단순하다.
     if (project.hasProperty('draftArgs')) {
