@@ -61,11 +61,17 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      * 문서 전체 1개로 제한하면서 캘 곳이 하나로 줄었다. 설계 근거는 본문 문장으로도 녹아 있으므로
      * {@code ## 실무에서는 이렇게 쓴다}의 선택 이유까지 함께 지목해야 재료가 남는다.
      *
+     * <p><b>2026-08-23에 초급에 {@code ## 바탕이 되는 개념}을 더했다.</b> 그날 신설된 절인데,
+     * 상위 개념의 구성 요소를 빠짐없이 표로 적는 자리라 <b>초급 재료가 가장 많이 쌓이는 곳</b>이
+     * 됐다(계층·단계·상태의 이름과 역할). 여기를 지목하지 않으면 초급이 계속
+     * {@code ## 무엇인가}의 용어 3~5개만 파게 되고, 사흘 치 15문제에서 초급 5개가 가장 먼저
+     * 마른다 — 8/14에 고급이 겪은 것과 같은 구조다.
+     *
      * <p>{@code public}인 이유는 검사하는 쪽({@code llm.cli})이 다른 패키지라서다 —
      * {@code REQUIRED_SECTIONS}를 {@code llm.support}의 검증기에 열어 둔 것과 같은 판단.
      */
     public static final Map<Difficulty, List<String>> SOURCE_SECTIONS = Map.of(
-            Difficulty.BEGINNER, List.of("## 무엇인가"),
+            Difficulty.BEGINNER, List.of("## 바탕이 되는 개념", "## 무엇인가"),
             Difficulty.INTERMEDIATE, List.of("### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다"),
             Difficulty.ADVANCED, List.of("## 언제 깨지는가", "## 면접에서 이렇게 물어본다")
     );
@@ -535,9 +541,14 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         }
         List<String> sections = SOURCE_SECTIONS.get(difficulty);
         return switch (difficulty) {
-            case BEGINNER -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(정의·용어 설명)과 "
+            // 2026-08-23: 초급이 두 절을 캐게 됐다. 첫 절은 그날 문서에 신설된 상위 개념 설명으로,
+            // 계층·단계·상태의 이름과 역할이 표로 빠짐없이 들어가는 자리다 — 초급 재료가 가장
+            // 많이 쌓인다. 한 절만 지목하던 문장을 그대로 두면 새 절이 있어도 안 캔다.
+            case BEGINNER -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(상위 개념과 그 구성 요소)과 "
                     .formatted(sections.get(0))
-                    + "본론의 기본 동작 부분을 쓴다. 문서를 읽은 사람이라면 풀 수 있어야 한다.";
+                    + "'%s' 절(정의·용어 설명), 그리고 본론의 기본 동작 부분을 쓴다. "
+                    .formatted(sections.get(1))
+                    + "문서를 읽은 사람이라면 풀 수 있어야 한다.";
             case INTERMEDIATE -> "[이번 난이도에서 쓸 부분] 문서가 <왜 그렇게 했는지>를 밝힌 곳을 쓴다 — "
                     + "'%s' 소제목뿐 아니라, 본문 문장 안에서 다른 선택지를 두고 "
                     .formatted(sections.get(0))

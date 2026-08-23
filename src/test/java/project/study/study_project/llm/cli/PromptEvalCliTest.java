@@ -139,6 +139,9 @@ class PromptEvalCliTest {
         String withoutIntermediate = """
                 # 격리 수준
 
+                ## 바탕이 되는 개념
+                상위 개념을 처음부터 설명한다.
+
                 ## 무엇인가
                 - **트랜잭션(transaction)** — 작업 묶음이다.
 
