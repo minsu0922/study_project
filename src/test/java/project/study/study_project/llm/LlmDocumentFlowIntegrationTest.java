@@ -226,6 +226,12 @@ class LlmDocumentFlowIntegrationTest {
         return """
                 # %s
 
+                ## 핵심 요약
+                - **요점** — 결론 한 문장.
+
+                ## 바탕이 되는 개념
+                상위 개념을 처음부터 설명한다.
+
                 ## 무엇인가
                 한 문장 정의.
 

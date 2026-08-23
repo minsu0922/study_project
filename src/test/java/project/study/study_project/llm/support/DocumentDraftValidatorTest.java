@@ -19,6 +19,18 @@ class DocumentDraftValidatorTest {
 
     private static final String TITLE = "캐시 전략 — 읽기는 빠르게, 쓰기는 정확하게";
 
+    /**
+     * {@code ## 바탕이 되는 개념} 절을 채우는 더미 본문.
+     *
+     * <p>이 절만 <b>분량으로</b> 검사받는다({@code MIN_FOUNDATION_LENGTH} 1,000자). 자리를 만들어
+     * 놓고 이름만 남기는 것이 2026-08-23에 실제로 막으려던 실패라, 도우미 문서도 그 기준을
+     * 실제로 넘겨야 한다. 문장을 손으로 1,000자 적는 대신 {@code repeat}으로 만든 이유는
+     * 이 내용이 검사 대상이 아니어서다 — 길이만 의미가 있다.
+     */
+    private static final String FOUNDATION =
+            "이 주제가 딛고 선 상위 개념을 처음부터 설명하는 문단이다. 배경 지식이 없어도 읽힌다. "
+                    .repeat(25);
+
     @Test
     @DisplayName("정상 문서는 지적 사항이 없다")
     void passesValidDocument() {
@@ -170,11 +182,12 @@ class DocumentDraftValidatorTest {
                 "다른 제목", "Bad_Slug", "# 본문 제목\n\n## 왜 필요한가\n내용");
 
         // slug 형식 1 + 제목 불일치 1
-        // + 빠진 필수 절 5(무엇인가·실무에서는 이렇게 쓴다·언제 깨지는가·면접 질문·한 줄 요약)
-        // + 형식 3(설계 근거 소제목 없음·용어 표 없음·본론 0개) = 10
-        // ('## 무엇인가'와 '## 언제 깨지는가'의 형식 검사는 절이 아예 없으면 건너뛴다 —
-        //  없는 절을 두고 "하이픈이 없다"고 말하면 원인이 흐려진다)
-        assertThat(checks).hasSize(10);
+        // + 빠진 필수 절 7(핵심 요약·바탕이 되는 개념·무엇인가·실무에서는 이렇게 쓴다·
+        //   언제 깨지는가·면접 질문·한 줄 요약)
+        // + 형식 4(설계 근거 소제목 없음·용어 표 없음·본론 0개·코드 예제 0개) = 13
+        // ('## 무엇인가'·'## 언제 깨지는가'·'## 바탕이 되는 개념'의 형식 검사는 절이 아예 없으면
+        //  건너뛴다 — 없는 절을 두고 "하이픈이 없다"고 말하면 원인이 흐려진다)
+        assertThat(checks).hasSize(13);
         assertThat(checks).extracting(DocumentCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
@@ -261,13 +274,18 @@ class DocumentDraftValidatorTest {
     /**
      * 고급 문제의 재료. 2026-08-14에 고급 날 재료가 말라 5개를 요청해 3개만 받았다.
      * 그 뒤 프롬프트에 "5가지 이상"을 박았지만 세는 곳은 없었다.
+     *
+     * <p>2026-08-23에 분량을 12,000자로 올리면서 기준을 7가지로 올렸다 — 늘린 지면은
+     * 갈 곳을 지정해야 부연으로 차지 않는다는 것이 이 프롬프트의 오랜 결론이다.
      */
     @Test
     @DisplayName("'언제 깨지는가' 항목이 모자라면 알린다 — 고급 날 재료가 마른다")
     void warnsWhenFailureModesAreTooFew() {
         String few = body(TITLE, "본문")
                 .replace("**4. 넷째 조건**\n", "")
-                .replace("**5. 다섯째 조건**\n", "");
+                .replace("**5. 다섯째 조건**\n", "")
+                .replace("**6. 여섯째 조건**\n", "")
+                .replace("**7. 일곱째 조건**\n", "");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", few))
                 .extracting(DocumentCheck::message)
@@ -281,7 +299,7 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("항목 형식이 달라도 센다 — 형식 하나만 인정하면 멀쩡한 문서에 경고가 뜬다")
     void countsFailureModesInAnyFormat() {
-        // 다섯 항목을 통째로 다른 형식으로 갈아 끼운다. 하나만 바꿔서는 나머지 넷이
+        // 일곱 항목을 통째로 다른 형식으로 갈아 끼운다. 하나만 바꿔서는 나머지 여섯이
         // 받쳐 줘서 통과하므로, 그 형식을 정말 세는지 알 수 없다.
         String base = body(TITLE, "본문");
         String written = """
@@ -289,17 +307,23 @@ class DocumentDraftValidatorTest {
                 **2. 둘째 조건**
                 **3. 셋째 조건**
                 **4. 넷째 조건**
-                **5. 다섯째 조건**""";
+                **5. 다섯째 조건**
+                **6. 여섯째 조건**
+                **7. 일곱째 조건**""";
 
         for (String form : List.of(
-                "### 하나\n### 둘\n### 셋\n### 넷\n### 다섯",       // 소제목
-                "- **하나**\n- **둘**\n- **셋**\n- **넷**\n- **다섯**", // 하이픈+굵게
-                "- 하나\n- 둘\n- 셋\n- 넷\n- 다섯",                  // 맨 하이픈 ← 처음엔 못 셌다
-                "1. 하나\n2. 둘\n3. 셋\n4. 넷\n5. 다섯",             // 맨 번호
+                // 소제목
+                "### 하나\n### 둘\n### 셋\n### 넷\n### 다섯\n### 여섯\n### 일곱",
+                // 하이픈+굵게
+                "- **하나**\n- **둘**\n- **셋**\n- **넷**\n- **다섯**\n- **여섯**\n- **일곱**",
+                // 맨 하이픈 ← 처음엔 못 셌다
+                "- 하나\n- 둘\n- 셋\n- 넷\n- 다섯\n- 여섯\n- 일곱",
+                // 맨 번호
+                "1. 하나\n2. 둘\n3. 셋\n4. 넷\n5. 다섯\n6. 여섯\n7. 일곱",
                 // 번호 없는 굵은 글씨 ← 2026-08-18 재생성 문서가 이 형식이었고, 항목 7개를
                 // 1개로 세어 잘 쓴 문서에 "5개 이상" 경고가 떴다. 프롬프트는 번호를 요구한
                 // 적이 없으므로 번호를 세던 쪽이 처음부터 틀렸다.
-                "**하나**\n**둘**\n**셋**\n**넷**\n**다섯**")) {
+                "**하나**\n**둘**\n**셋**\n**넷**\n**다섯**\n**여섯**\n**일곱**")) {
             assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy",
                     base.replace(written, form)))
                     .as("이 형식을 못 세면 멀쩡한 문서에 경고가 뜬다:%n%s", form)
@@ -381,6 +405,54 @@ class DocumentDraftValidatorTest {
                 .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
     }
 
+    /* ── 2026-08-23: 기본 개념과 코드 예제 ────────────────────────
+     * 사용자가 8/23 실물(「연결이 안 될 때 어느 계층에서 끊겼는가」)을 읽고 두 가지를 지적했다.
+     * ① OSI 7계층 자체를 설명하지 않는다 — 실무 상황만 있고 기본 개념이 없다.
+     * ② 블로그에 그대로 올릴 만한 글이 되려면 코드 예제가 필요하다.
+     *
+     * 둘 다 프롬프트로 풀었지만, 프롬프트만 고치면 몇 주 뒤 조용히 돌아온다는 것을
+     * 이 저장소는 세 번 겪었다(8/15 하이픈, 8/18 용어 정의, 8/18 절 형식). 그래서 센다. */
+
+    /**
+     * {@code ## 바탕이 되는 개념}이 <b>이름만 남고 비지</b> 않았는지.
+     *
+     * <p>자리를 만들어 주면 이름만 남는다는 것을 {@code ### 용어 한눈에}에서 이미 겪었다.
+     * 게다가 이 절은 문서의 주제와 가장 먼 절이라, 모델이 분량 압박을 받을 때
+     * <b>가장 먼저 줄이고 싶어 하는 자리</b>다. 존재가 아니라 분량을 세는 이유다.
+     */
+    @Test
+    @DisplayName("'바탕이 되는 개념'이 얇으면 알린다 — 자리만 만들면 이름만 남는다")
+    void warnsWhenFoundationSectionIsThin() {
+        String thin = body(TITLE, "본문").replace(FOUNDATION, "상위 개념을 한 줄로 스쳐 지나간다.");
+
+        List<DocumentCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", thin);
+
+        assertThat(checks).extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("'## 바탕이 되는 개념'이"));
+        assertThat(DocumentDraftValidator.hasBlocking(checks))
+                .as("얇다고 막으면 그 주기 나흘이 날아간다 — 검수자가 채워 넣는 편이 싸다")
+                .isFalse();
+    }
+
+    /**
+     * 코드 예제가 <b>2개 이상</b>인지. 2026-08-23에 "긴 예제는 쓰지 마라"라는 금지를 풀었는데,
+     * <b>푸는 것만으로는 나오지 않는다</b> — 모델에게 코드를 빼는 쪽이 언제나 안전하다.
+     * 개수를 박은 지시만 지켜지고, 그 개수는 세는 곳이 있어야 유지된다.
+     */
+    @Test
+    @DisplayName("코드 예제가 모자라면 알린다 — 금지를 푸는 것만으로는 코드가 나오지 않는다")
+    void warnsWhenCodeExamplesAreTooFew() {
+        String noCode = body(TITLE, "본문").replace("```sql\nSELECT 1\n```", "설명으로 대신한다.");
+
+        List<DocumentCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noCode);
+
+        assertThat(checks).extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("코드 예제가 1개입니다"));
+        assertThat(DocumentDraftValidator.hasBlocking(checks))
+                .as("코드가 억지가 되는 주제(설계 원칙·방법론)도 있어 차단으로 두면 그런 날 길이 막힌다")
+                .isFalse();
+    }
+
     /**
      * 오탐이 나면 경고가 매번 뜨고, 그러면 사람이 경고 자체를 안 보게 된다.
      * 이 저장소가 이미 겪은 실패 방식이라 <b>정상 문서에 조용한지</b>를 따로 못 박는다.
@@ -406,6 +478,13 @@ class DocumentDraftValidatorTest {
         return """
                 # %s
 
+                ## 핵심 요약
+                - **첫째 요점** — 결론 한 문장.
+                - **둘째 요점** — 결론 한 문장.
+
+                ## 바탕이 되는 개념
+                %s
+
                 ## 무엇인가
                 - **첫째 용어(first)** — 한 문장 정의.
                 - **둘째 용어(second)** — 한 문장 정의.
@@ -414,13 +493,25 @@ class DocumentDraftValidatorTest {
                 %s
 
                 ## 첫째 갈래
-                본론 설명.
+                본론 설명. 아래 예제가 그 동작을 보여 준다.
+
+                ```java
+                var result = compute();
+                ```
+
+                그래서 결과가 이렇게 나온다.
 
                 ### 왜 이렇게 설계됐는가
                 - 다른 선택지를 두고 이렇게 판단했다.
 
                 ## 둘째 갈래
-                본론 설명.
+                본론 설명. 설정은 이렇게 준다.
+
+                ```sql
+                SELECT 1
+                ```
+
+                그래서 이렇게 동작한다.
 
                 ### 용어 한눈에
 
@@ -441,6 +532,8 @@ class DocumentDraftValidatorTest {
                 **3. 셋째 조건**
                 **4. 넷째 조건**
                 **5. 다섯째 조건**
+                **6. 여섯째 조건**
+                **7. 일곱째 조건**
 
                 ## 면접에서 이렇게 물어본다
                 **Q. 무엇인가?**
@@ -448,6 +541,6 @@ class DocumentDraftValidatorTest {
 
                 ## 면접 한 줄 요약
                 한 줄 요약.
-                """.formatted(heading, content);
+                """.formatted(heading, FOUNDATION, content);
     }
 }

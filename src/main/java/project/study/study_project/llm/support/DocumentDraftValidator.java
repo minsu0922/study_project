@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 public final class DocumentDraftValidator {
 
     /**
-     * 권장 분량 상한(경고). 프롬프트가 요구하는 "5,000~6,800자"의 위쪽 끝.
+     * 권장 분량 상한(경고). 프롬프트가 요구하는 "9,000~12,000자"의 위쪽 끝.
      * 넘겼다고 막지 않는 이유는 {@link DocumentCheck.Severity} 주석 참고 — 억지로 줄이면
      * 용어 설명과 면접 질문부터 잘려 나가는데, 그 두 절이 분량을 올린 목적이었다.
      *
@@ -57,8 +57,14 @@ public final class DocumentDraftValidator {
      * <b>그 테스트가 조용히 무의미해진다</b> — 경고 없는 문서로 "경고만 있으면 승인된다"를
      * 검사하게 되고, 통과하므로 아무도 모른다. {@link ClaudeDocumentGenerator#REQUIRED_SECTIONS}를
      * 공개한 것과 같은 이유다.
+     *
+     * <p><b>2026-08-23에 6,800 → 12,000으로 올렸다.</b> 지금까지의 인상은 전부 절 하나·자리
+     * 하나의 대가였는데 이번에는 목표 자체가 바뀌었다 — 문서를 그대로 기술 블로그에 올릴 수
+     * 있는 완결된 글로 만들고, 기본 개념을 처음부터 설명하는 절({@code ## 바탕이 되는 개념})을
+     * 앞에 새로 뒀다. 늘린 5,200자의 갈 곳은 프롬프트 쪽 주석의 배정표에 적어 두었다.
+     * 상한만 올리면 부연으로 찬다는 것을 두 번 겪었으므로 개수 지시를 함께 올렸다.
      */
-    public static final int WARN_LENGTH = 6_800;
+    public static final int WARN_LENGTH = 12_000;
 
     /**
      * 하드 상한(차단). 권장치의 약 1.3배.
@@ -70,8 +76,10 @@ public final class DocumentDraftValidator {
      * 쓰라고 하면서 이 값을 그대로 뒀다면 <b>지시를 잘 따른 문서일수록 승인이 막히는</b>
      * 상태가 됐을 것이다. 차단은 조용하지 않지만 원인이 엉뚱한 곳(검수 화면)에서 보여서
      * 프롬프트를 의심하기까지 시간이 걸린다.
+     *
+     * <p>2026-08-23에 권장치를 12,000으로 올리면서 같은 1.3배를 유지해 15,600으로 옮겼다.
      */
-    static final int MAX_LENGTH = 8_800;
+    static final int MAX_LENGTH = 15_600;
 
     /** {@code AdminDocumentRequest.slug}의 정규식과 같아야 한다 — 다르면 승인 순간 400으로 튕긴다. */
     private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(-[a-z0-9]+)*$");
@@ -177,8 +185,32 @@ public final class DocumentDraftValidator {
     /** 본론 섹션 최소 개수 — 프롬프트는 2~3개를 요구한다. */
     private static final int MIN_BODY_SECTIONS = 2;
 
-    /** {@code ## 언제 깨지는가} 항목 최소 개수 — 프롬프트의 "5가지 이상"과 같아야 한다. */
-    private static final int MIN_FAILURE_MODES = 5;
+    /** {@code ## 언제 깨지는가} 항목 최소 개수 — 프롬프트의 "7가지 이상"과 같아야 한다. */
+    private static final int MIN_FAILURE_MODES = 7;
+
+    /**
+     * 펜스 코드블록 최소 개수 — 프롬프트 {@code [코드 예제]}의 "2~4개"와 짝이다.
+     *
+     * <p><b>2026-08-23에 코드 예제를 허용하면서 같이 넣었다.</b> 그 전까지 프롬프트는
+     * "긴 예제는 쓰지 마라"였고, 허용으로 뒤집는 것만으로는 예제가 나오지 않는다 —
+     * 모델에게 코드를 빼는 쪽이 언제나 더 안전한 선택이기 때문이다(틀릴 위험이 없다).
+     * 이 저장소가 두 번 확인한 대로 <b>개수를 박은 지시만 지켜지고</b>, 그 개수는 세는 곳이
+     * 있어야 유지된다. 없으면 몇 주 뒤 조용히 코드 없는 문서로 돌아간다.
+     *
+     * <p>상한(4개)은 세지 않는다. 넘쳐서 생기는 문제는 분량 경고가 이미 잡고,
+     * 여기서 두 방향을 다 막으면 "코드가 잘 어울리는 주제"에서 헛경고가 난다.
+     */
+    private static final int MIN_CODE_BLOCKS = 2;
+
+    /**
+     * {@code ## 바탕이 되는 개념} 절의 최소 분량 — 프롬프트는 1,500~2,500자를 요구한다.
+     *
+     * <p><b>기준을 1,000자로 낮춰 잡은 이유</b>: 이 검사가 잡으려는 것은 "조금 짧다"가 아니라
+     * <b>절이 이름만 남고 비었다</b>는 상태다. 2026-08-23 이전 문서들이 정확히 그랬다 —
+     * OSI 7계층을 용어 목록 한 줄로 처리하고 넘어갔다. 1,500에 딱 맞춰 경고하면 1,400자짜리
+     * 멀쩡한 절에도 울리고, 헛울리는 경고는 사람이 경고 전체를 안 보게 만든다.
+     */
+    private static final int MIN_FOUNDATION_LENGTH = 1_000;
 
     private DocumentDraftValidator() {
     }
@@ -202,6 +234,8 @@ public final class DocumentDraftValidator {
         checkUndefinedTerms(body, checks);
         checkBodySections(body, checks);
         checkFailureModeCount(body, checks);
+        checkCodeExamples(body, checks);
+        checkFoundationSection(body, checks);
         checkHtmlTags(body, checks);
         checkLength(body, checks);
         return checks;
@@ -461,6 +495,54 @@ public final class DocumentDraftValidator {
             checks.add(DocumentCheck.warning(
                     "'## 언제 깨지는가'의 항목이 %d개입니다(기준 %d개 이상). 고급 문제가 여기를 재료로 씁니다."
                             .formatted(items, MIN_FAILURE_MODES)));
+        }
+    }
+
+    /**
+     * 코드 예제가 <b>2개 이상</b>인지 — 2026-08-23에 블로그 수준 품질을 목표로 삼으면서 넣었다.
+     *
+     * <p>목표로 제시된 기술 블로그 글에는 Java 예제가 일곱 개 있었다. 우리 문서에는 하나도
+     * 없었는데, 프롬프트가 "긴 예제는 쓰지 마라"로 막고 있었기 때문이다. 금지를 풀었지만
+     * <b>푸는 것만으로는 나오지 않는다</b> — 모델에게는 코드를 빼는 쪽이 언제나 안전하다.
+     *
+     * <p>경고인 이유는 이 절의 다른 형식 규칙과 같다. 코드가 하나 모자란다고 나흘치 문서를
+     * 버리는 것보다, 검수자가 승인 전에 한 토막 넣는 편이 싸다. 게다가 주제에 따라서는
+     * (설계 원칙·방법론) 코드가 억지가 되는 날도 있어 차단으로 두면 그런 날 길이 막힌다.
+     */
+    private static void checkCodeExamples(String body, List<DocumentCheck> checks) {
+        int blocks = count(FENCED_CODE, body);
+        if (blocks < MIN_CODE_BLOCKS) {
+            checks.add(DocumentCheck.warning(
+                    "코드 예제가 %d개입니다(기준 %d개 이상). 코드가 없으면 블로그로 옮겼을 때 밀도가 확 떨어집니다."
+                            .formatted(blocks, MIN_CODE_BLOCKS)));
+        }
+    }
+
+    /**
+     * {@code ## 바탕이 되는 개념} 절이 <b>이름만 남고 비지</b> 않았는지.
+     *
+     * <p><b>이 절이 2026-08-23 개정의 전부다.</b> 사용자가 8/23 실물을 읽고 "실무 상황만 있고
+     * OSI 7계층 자체는 설명하지 않는다"고 지적했다. 원인은 바로 위 8/19 개정이 주제를 좁히도록
+     * 시킨 것이었고, 좁힌 주제와 기본 개념이 한 절을 두고 겨루면 좁은 쪽이 이긴다.
+     * 그래서 상위 개념 전용 자리를 따로 냈는데, <b>자리만 만들면 이름만 남는다</b>는 것을
+     * {@code ### 용어 한눈에}에서 이미 겪었다(8/18 — 표를 만들라고 시켰더니 만들긴 했다).
+     *
+     * <p>그래서 존재가 아니라 <b>분량</b>을 센다. 이 검사가 없으면 모델은 [분량] 압박을 받을
+     * 때 이 절부터 줄인다 — 문서의 주제와 가장 먼 절이라 지우기 가장 쉬워 보이기 때문이다.
+     * {@link #MIN_FOUNDATION_LENGTH}의 기준을 프롬프트 요구치(1,500)보다 낮춘 이유는
+     * 그 상수 주석 참고.
+     */
+    private static void checkFoundationSection(String body, List<DocumentCheck> checks) {
+        String section = sectionBody(body, "## 바탕이 되는 개념");
+        if (section == null) {
+            return; // 절 자체가 없으면 checkRequiredSections가 이미 차단으로 잡는다
+        }
+        int length = section.strip().length();
+        if (length < MIN_FOUNDATION_LENGTH) {
+            checks.add(DocumentCheck.warning(
+                    "'## 바탕이 되는 개념'이 %d자입니다(기준 %d자 이상, 프롬프트 요구는 1,500~2,500자). "
+                            .formatted(length, MIN_FOUNDATION_LENGTH)
+                            + "이 절이 얇으면 배경 지식이 없는 사람은 첫 문단에서 막힙니다."));
         }
     }
 
