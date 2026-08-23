@@ -453,6 +453,87 @@ class DocumentDraftValidatorTest {
                 .isFalse();
     }
 
+    /* ── 2026-08-23: 셸 주석이 마크다운 제목과 똑같이 생겼다 ────────
+     * 코드 예제를 허용한 그날 첫 실물(TIME_WAIT 문서)에 이런 줄이 들어 있었다.
+     *
+     *   ```bash
+     *   # 상태별 소켓 개수를 많은 순으로 센다
+     *   ```
+     *
+     * H1_PATTERN에게 이 줄은 문서 제목이고, "## "로 시작하는 주석은 H2_PATTERN에게 절 제목이다.
+     * 코드 예제가 금지돼 있던 동안에는 없던 문제라, 금지를 푼 개정과 짝으로 고쳐야 했다. */
+
+    /**
+     * H1이 없는 문서에서 셸 주석이 <b>제목 행세</b>를 하는지.
+     *
+     * <p>이게 이 계열에서 가장 나쁜 경우다. 구조가 무너진 문서(제목 없음 = 차단)가
+     * <b>제목이 다르다는 경고</b>로 내려앉아 승인이 통과한다. 실패가 아니라 등급이
+     * 조용히 낮아지는 종류라, 사람이 경고를 한 번 넘기면 그대로 나간다.
+     */
+    @Test
+    @DisplayName("코드블록 안의 '# 주석'을 제목으로 세지 않는다 — 차단이 경고로 내려앉는다")
+    void doesNotMistakeShellCommentForHeading() {
+        // replace(String, String)를 쓴다 — replaceFirst는 치환 문자열의 $1을 그룹 참조로 읽어
+        // 셸 예제가 든 이 테스트에서 IndexOutOfBounds로 터진다(실제로 한 번 겪었다).
+        String noHeading = body(TITLE, "본문").replace("# " + TITLE, """
+                ```bash
+                # 상태별 소켓 개수를 많은 순으로 센다
+                ss -ant | awk 'NR>1 {print $1}' | sort | uniq -c
+                ```""");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", noHeading))
+                .as("셸 주석을 제목으로 세면 '최상위 제목이 없습니다'가 아예 안 뜬다")
+                .extracting(DocumentCheck::message)
+                .anyMatch(m -> m.contains("최상위 제목"));
+    }
+
+    /**
+     * 코드블록 안의 {@code ## } 주석에서 절이 <b>먼저 끊기는지</b>.
+     *
+     * <p>이쪽은 오탐이라 더 자주 터진다 — 절이 실제보다 짧아 보여 멀쩡한 문서에
+     * "바탕이 되는 개념이 얇다"·"깨지는 조건이 모자라다"가 뜬다. 이 클래스가 오래
+     * 경계해 온 실패 방식 그대로다(헛울리는 경고는 경고 전체를 무력하게 만든다).
+     */
+    @Test
+    @DisplayName("코드블록 안의 '## 주석'에서 절이 끊기지 않는다 — 멀쩡한 문서에 헛경고가 뜬다")
+    void doesNotSplitSectionOnShellComment() {
+        // 깨지는 조건 일곱 개 <앞>에 '## '로 시작하는 주석이 든 코드블록을 끼운다.
+        // 절이 여기서 끊기면 뒤따르는 일곱 항목이 통째로 다른 절로 밀려 0개로 세어진다.
+        String withComment = body(TITLE, "본문").replace("**1. 첫째 조건**", """
+                ```bash
+                ## 커널 파라미터를 확인한다
+                sysctl net.ipv4.ip_local_port_range
+                ```
+
+                **1. 첫째 조건**""");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", withComment))
+                .extracting(DocumentCheck::message)
+                .as("주석에서 끊기면 항목이 0개로 세어져 헛경고가 뜬다")
+                .noneMatch(m -> m.contains("언제 깨지는가"))
+                .as("본론 섹션 수도 주석 때문에 부풀면 안 된다")
+                .noneMatch(m -> m.contains("본론 섹션이"));
+    }
+
+    /**
+     * 필수 절이 <b>코드 주석으로만</b> 있으면 없는 것으로 봐야 한다.
+     * 원문에서 {@code contains}로 찾으면 빈껍데기 문서가 통과한다.
+     */
+    @Test
+    @DisplayName("코드 주석에 적힌 절 이름은 필수 절로 치지 않는다 — 빈껍데기가 통과한다")
+    void doesNotCountSectionNamesInsideCode() {
+        String faked = body(TITLE, "본문").replace("## 면접 한 줄 요약\n한 줄 요약.", """
+                ```bash
+                ## 면접 한 줄 요약
+                ```""");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", faked))
+                .anySatisfy(c -> {
+                    assertThat(c.isBlocking()).isTrue();
+                    assertThat(c.message()).contains("## 면접 한 줄 요약");
+                });
+    }
+
     /**
      * 오탐이 나면 경고가 매번 뜨고, 그러면 사람이 경고 자체를 안 보게 된다.
      * 이 저장소가 이미 겪은 실패 방식이라 <b>정상 문서에 조용한지</b>를 따로 못 박는다.
