@@ -436,17 +436,23 @@ function renderKindBalance(drafts, status) {
   //    1건씩 나눠 뽑으면 배치마다 물음이 하나라 서버는 조용한데, 쌓아 놓고 보면 다섯이 같다.
   //    목록을 통째로 손에 든 것은 화면뿐이라 여기서도 잰다(유형 쏠림과 같은 판단).
   for (const level of ["BEGINNER", "INTERMEDIATE", "ADVANCED"]) {
-    const tails = {};
-    drafts.filter(d => d.difficulty === level).forEach(d => {
-      const t = closingQuestionOf(d.question);
-      if (t) tails[t] = (tails[t] ?? 0) + 1;
+    const tails = drafts.filter(d => d.difficulty === level)
+      .map(d => closingQuestionOf(d.question)).filter(Boolean);
+    const shared = new Map();
+    for (let i = 0; i < tails.length; i++) {
+      for (let j = i + 1; j < tails.length; j++) {
+        const s = sharedTailOf(tails[i], tails[j]);
+        if (s) shared.set(s, (shared.get(s) ?? 0) + 1);
+      }
+    }
+    shared.forEach((_, tail) => {
+      const n = tails.filter(t => t.endsWith(tail)).length;
+      lines.push({
+        bad: true,
+        html: `⚠ ${escapeHtml(difficultyLabel(level))} ${n}건이 사실상 같은 물음으로 끝납니다 —`
+          + ` "<b>${escapeHtml(tail)}</b>". 문형이 같으면 개념이 아니라 형식이 외워집니다.`,
+      });
     });
-    const dup = Object.entries(tails).filter(([, v]) => v >= 2);
-    dup.forEach(([tail, n]) => lines.push({
-      bad: true,
-      html: `⚠ ${escapeHtml(difficultyLabel(level))} ${n}건이 같은 물음으로 끝납니다 —`
-        + ` "<b>${escapeHtml(tail)}</b>". 문형이 같으면 개념이 아니라 형식이 외워집니다.`,
-    }));
   }
 
   if (lines.length === 0) {
@@ -470,6 +476,23 @@ function closingQuestionOf(question) {
   if (!flat.endsWith("?")) return null;
   const cut = Math.max(flat.lastIndexOf("."), flat.lastIndexOf("!"), flat.lastIndexOf("。"));
   return flat.slice(cut + 1).trim();
+}
+
+/**
+ * 두 물음이 사실상 같으면 겹치는 부분, 아니면 null.
+ * 서버의 ProblemItemRule.sharedTailOf와 같은 규칙이어야 한다.
+ *
+ * 완전 일치로는 부족했다 — 고급 실물에서 "가장 적절한 조치는?"과 "이 상황에서 가장 적절한
+ * 조치는?"이 나왔는데, 문자열로는 다르지만 학습자에게는 같은 물음이다. 앞에 말 몇 개만
+ * 붙이면 빠져나가는 검사는 있으나 마나다.
+ *
+ * "끝 N글자 비교"로 하지 않은 이유: 그러면 초급의 "○○의 정의로 옳은 것은?"이 매번 걸린다.
+ * 그 반복은 정상이라 잡으면 안 된다. 한쪽이 다른 쪽의 <접미사>인지만 본다.
+ */
+function sharedTailOf(a, b) {
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+  if (shorter.length < 8) return null;   // "옳은 것은?"(6자) 같은 공통 꼬리는 세지 않는다
+  return longer.endsWith(shorter) ? shorter : null;
 }
 
 async function loadDrafts() {

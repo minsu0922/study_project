@@ -6,9 +6,7 @@ import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.QuestionKind;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -628,19 +626,63 @@ public final class ProblemItemRule {
      * 물음만 복사하는</b> 경우이고, 그쪽은 앞 문장이 있어 마지막 물음이 깨끗하게 잘린다.
      */
     private static String repeatedQuestionTailOf(List<GeneratedProblemItem> items) {
-        Map<String, Integer> counts = new LinkedHashMap<>();
+        List<String> tails = new ArrayList<>();
         for (GeneratedProblemItem item : items) {
             String tail = questionTailOf(item.question());
             if (tail != null) {
-                counts.merge(tail, 1, Integer::sum);
+                tails.add(tail);
             }
         }
-        return counts.entrySet().stream()
-                .filter(e -> e.getValue() >= 2)
-                .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(null);
+        for (int i = 0; i < tails.size(); i++) {
+            for (int j = i + 1; j < tails.size(); j++) {
+                String shared = sharedTailOf(tails.get(i), tails.get(j));
+                if (shared != null) {
+                    return shared;
+                }
+            }
+        }
+        return null;
     }
+
+    /**
+     * 두 물음이 <b>사실상 같은 물음</b>이면 겹치는 부분을, 아니면 {@code null}.
+     *
+     * <h2>왜 완전 일치로는 부족했나 — 2026-08-25 실물</h2>
+     *
+     * <p>처음에는 마지막 물음이 <b>글자까지 같을 때만</b> 잡았다. 그런데 고급 실물에서 이런 짝이 나왔다:
+     * <pre>
+     *   #921  가장 적절한 조치는?
+     *   #926  이 상황에서 가장 적절한 조치는?
+     * </pre>
+     * 문자열로는 다르지만 학습자에게는 같은 물음이다. 앞에 말 몇 개를 붙이는 것만으로
+     * 검사를 빠져나가면, 있으나 마나 한 검사가 된다.
+     *
+     * <p><b>왜 "끝 N글자 비교"로 하지 않았나.</b> 그게 더 간단하지만 <b>초급을 매번 잡는다</b> —
+     * "핸드셰이크의 정의로 옳은 것은?"과 "TIME_WAIT의 정의로 옳은 것은?"은 끝 10글자가 같다.
+     * 그런데 초급에서 그 반복은 정상이다(같은 것을 묻는 자리라 형식이 같은 편이 낫다).
+     * 그래서 <b>한쪽이 다른 쪽의 접미사인지</b>만 본다. 위 초급 두 물음은 서로 접미사가 아니라
+     * 통과하고, {@code #921}/{@code #926}처럼 <b>앞에 말만 덧붙인</b> 경우는 잡힌다.
+     * 잡으려던 것이 정확히 후자다.
+     *
+     * <p>{@link #SHARED_TAIL_MIN}으로 짧은 쪽에 하한을 두는 이유: "것은?" 같은 조각이 우연히
+     * 접미사가 되는 것까지 세면 헛울린다. 물음 하나를 이룰 만한 길이는 돼야 한다.
+     */
+    private static String sharedTailOf(String a, String b) {
+        String shorter = a.length() <= b.length() ? a : b;
+        String longer = a.length() <= b.length() ? b : a;
+        if (shorter.length() < SHARED_TAIL_MIN) {
+            return null;
+        }
+        return longer.endsWith(shorter) ? shorter : null;
+    }
+
+    /**
+     * 두 물음이 겹쳤다고 보려면 짧은 쪽이 적어도 이만큼은 돼야 한다.
+     *
+     * <p>8자인 근거: 잡으려는 실물이 "가장 적절한 조치는?"(11자)이고, 걸리면 곤란한 것이
+     * "옳은 것은?"(6자)·"것은?"(4자)처럼 어느 물음에나 붙는 꼬리다. 그 사이에 선을 긋는다.
+     */
+    private static final int SHARED_TAIL_MIN = 8;
 
     /** 지문의 마지막 물음 문장(물음표로 끝나는 마지막 조각). 물음표가 없으면 {@code null}. */
     private static String questionTailOf(String question) {

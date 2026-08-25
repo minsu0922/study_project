@@ -395,6 +395,42 @@ class ProblemItemRuleTest {
             assertThat(ProblemItemRule.batchWarningsOf(beginner, Difficulty.BEGINNER)).isEmpty();
         }
 
+        /**
+         * <b>2026-08-25 실물 — 완전 일치로는 못 잡았다.</b> 고급에서 이 짝이 나왔다:
+         * "가장 적절한 조치는?"과 "이 상황에서 가장 적절한 조치는?". 문자열로는 다르지만
+         * 학습자에게는 같은 물음이다. 앞에 말 몇 개만 붙이면 빠져나가는 검사는 있으나 마나다.
+         */
+        @Test
+        @DisplayName("앞에 말만 덧붙인 물음도 겹친 것으로 본다 — 문자열이 달라도 학습자에겐 같다")
+        void catchesTailsThatOnlyDifferByAPrefix() {
+            List<GeneratedProblemItem> real = List.of(
+                    item("로그인 API에 TIME_WAIT가 많다. 가장 적절한 조치는?",
+                            goodExplanation(), QuestionKind.SITUATION),
+                    item("쿠폰 API에서 소켓이 는다. 이 상황에서 가장 적절한 조치는?",
+                            goodExplanation(), QuestionKind.SITUATION));
+
+            assertThat(ProblemItemRule.batchWarningsOf(real, Difficulty.ADVANCED))
+                    .anySatisfy(w -> assertThat(w)
+                            .contains("마지막 물음이 겹침")
+                            .as("겹친 부분만 보여야 어디를 바꿀지 정해진다")
+                            .contains("가장 적절한 조치는?"));
+        }
+
+        /**
+         * 접미사 판정으로 바꾸면서 <b>초급을 잡지 않는다</b>는 성질이 유지되는지 다시 확인한다.
+         * "끝 N글자 비교"로 했다면 여기서 걸렸을 것이다 — 두 물음의 끝 10글자가 같다.
+         * 서로 접미사가 아니므로 통과해야 한다.
+         */
+        @Test
+        @DisplayName("접미사가 아니면 끝이 비슷해도 통과한다 — 초급의 정형을 잡으면 안 된다")
+        void stillIgnoresBeginnerBoilerplate() {
+            List<GeneratedProblemItem> beginner = List.of(
+                    item("핸드셰이크의 정의로 옳은 것은?", goodExplanation(), null),
+                    item("TIME_WAIT의 정의로 옳은 것은?", goodExplanation(), null));
+
+            assertThat(ProblemItemRule.batchWarningsOf(beginner, Difficulty.BEGINNER)).isEmpty();
+        }
+
         @Test
         @DisplayName("물음이 서로 다르면 조용하다 — 오탐이 경고를 무력화한다")
         void staysQuietWhenClosingQuestionsDiffer() {
