@@ -15,6 +15,7 @@ import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
+import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.service.LlmDocumentService;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.user.domain.Role;
@@ -61,6 +62,9 @@ class LlmDocumentFlowIntegrationTest {
     private JwtTokenProvider jwtTokenProvider;
     @Autowired
     private LlmDocumentService llmDocumentService;
+    /** 거절 목록 쿼리를 실제 DB로 확인하는 테스트에서만 쓴다 — 단위 테스트는 이 저장소를 가짜로 둔다. */
+    @Autowired
+    private GeneratedDocumentDraftRepository draftRepository;
 
     @Test
     @DisplayName("검수 대기 목록에 자동 검증 결과가 함께 실려 온다 — 화면이 스스로 판단하면 규칙이 두 벌이 된다")
@@ -95,6 +99,41 @@ class LlmDocumentFlowIntegrationTest {
                     assertThat(c.get("severity")).isEqualTo("WARNING");
                     assertThat((String) c.get("message")).contains("권장 분량");
                 });
+    }
+
+    /**
+     * <b>거절이 나중의 승인을 덮어쓰던 버그</b> — 2026-08-25.
+     *
+     * <p>{@code findRejectedSlugs}는 클라우드 배치에게 "이 문서로는 문제를 만들지 마라"를 알리는
+     * 목록이다. 전에는 {@code status = 'REJECTED'}만 봐서, <b>같은 주제를 다시 뽑아 승인해도</b>
+     * 옛 거절 기록 때문에 영영 목록에 남았다. 배치는 그 문서를 근거로 삼지 않고 폴백으로 도는데,
+     * 로그에는 "검수에서 거절돼 폴백으로 생성합니다"라고만 찍혀 원인을 알아채기 어렵다.
+     *
+     * <p>실제로 걸릴 뻔한 자리: OSI 계층별 장애 진단 문서가 8/23에 거절됐고(기본 개념 절이 없어
+     * 비개발자가 읽을 수 없었다), 문서 프롬프트를 고친 뒤 같은 주제를 다시 뽑아 승인할 참이었다.
+     * 그대로 뒀다면 새 문서가 승인된 채로 배치에서만 조용히 무시됐을 것이다.
+     *
+     * <p>단위 테스트가 저장소를 가짜로 두므로({@code ExistingDocumentsExporterTest}) 쿼리 자체는
+     * 여기서만 검증된다 — 실제 DB로 도는 자리가 여기뿐이다.
+     */
+    @Test
+    @DisplayName("같은 slug가 나중에 승인되면 거절 목록에서 빠진다 — 안 빠지면 승인한 문서를 배치가 조용히 무시한다")
+    void approvedSlugLeavesTheRejectedList() {
+        String slug = uniqueSlug();
+
+        GeneratedDocumentDraft rejected = saveDraft("OSI 계층별 진단", slug, validContent("OSI 계층별 진단", "본문."));
+        llmDocumentService.reject(rejected.getId(), "기본 개념 절이 없어 비개발자가 읽을 수 없다");
+        assertThat(draftRepository.findRejectedSlugs())
+                .as("아직은 거절만 있으므로 목록에 있어야 한다")
+                .contains(slug);
+
+        // 프롬프트를 고쳐 같은 주제를 다시 뽑았고, 이번에는 승인한다.
+        GeneratedDocumentDraft retried = saveDraft("OSI 계층별 진단", slug, validContent("OSI 계층별 진단", "고쳐 쓴 본문."));
+        llmDocumentService.approve(retried.getId());
+
+        assertThat(draftRepository.findRejectedSlugs())
+                .as("승인된 문서를 '쓰지 마라'로 두면 배치가 폴백으로 돌면서 원인은 로그에만 남는다")
+                .doesNotContain(slug);
     }
 
     /** 응답 JSON에서 특정 id의 초안을 찾는다. 없으면 null. */

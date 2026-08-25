@@ -56,10 +56,27 @@ public interface GeneratedDocumentDraftRepository extends JpaRepository<Generate
      *
      * <p>정렬을 넣은 이유: 스냅샷 파일은 <b>내용이 같으면 다시 쓰지 않는</b>다. DB 순서에 맡기면
      * 같은 목록이 다른 순서로 나와 파일이 매번 바뀐 것으로 보인다({@code ExistingDocumentsExporter}).
+     *
+     * <h2>2026-08-25 — 거절이 나중의 승인을 덮어쓰고 있었다</h2>
+     *
+     * <p>전에는 {@code status = 'REJECTED'}만 봤다. 그러면 <b>같은 주제를 다시 뽑아 승인해도</b>
+     * 옛 거절 기록 때문에 영영 "쓰지 마라" 목록에 남는다. 배치는 그 문서를 근거로 삼지 않고
+     * 폴백으로 돌아가는데, 로그에는 "검수에서 거절돼 폴백으로 생성합니다"라고만 찍혀
+     * <b>이미 승인한 문서인데 왜 안 쓰지</b>를 알아채기 어렵다.
+     *
+     * <p>실제로 걸린 자리: OSI 계층별 장애 진단 문서가 2026-08-23에 거절됐고(기본 개념 절이
+     * 없어 비개발자가 읽을 수 없었다), 문서 프롬프트를 고친 뒤 같은 주제를 다시 뽑아 승인할
+     * 참이었다. 그대로 뒀다면 새 문서가 승인된 채로 배치에서만 조용히 무시됐을 것이다.
+     *
+     * <p><b>고친 방향</b>: 같은 slug로 승인된 초안이 하나라도 있으면 목록에서 뺀다.
+     * "거절했다"는 사실보다 "지금 이 slug의 문서가 쓸 만한가"가 이 목록이 답해야 하는 질문이다.
      */
     @Query("""
             select d.slug from GeneratedDocumentDraft d
             where d.status = 'REJECTED'
+              and d.slug not in (
+                  select a.slug from GeneratedDocumentDraft a where a.status = 'APPROVED'
+              )
             order by d.slug
             """)
     List<String> findRejectedSlugs();
