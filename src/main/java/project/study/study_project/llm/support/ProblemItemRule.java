@@ -250,6 +250,31 @@ public final class ProblemItemRule {
     public static final int SITUATION_MAX_PER_BATCH = 2;
 
     /**
+     * 고급에 <b>열어 둔</b> 형태 — 2026-08-25 신설. 중급의 다섯 중 셋만이다.
+     *
+     * <p><b>왜 고급에도 형태를 여는가.</b> 전에는 고급을 "지문에 상황과 이미 시도한 것이 있다"로
+     * 못 박아 사실상 {@link QuestionKind#SITUATION} 하나였다. 그런데 고급이 캐는 절을 실제로 열어
+     * 보니 재료가 더 넓었다 — {@code ### 흔한 오해}("TIME_WAIT가 많으면 장애다")와
+     * {@code ## 면접에서 이렇게 물어본다}의 질문들("왜 하필 2MSL인가", "커널 옵션이 있는데 왜
+     * 함부로 쓰지 않는가")은 <b>상황 지문으로 만들려면 오히려 장면을 지어내야</b> 한다.
+     * 프롬프트가 가장 경계하는 실패 방식이 그것이다.
+     *
+     * <p><b>왜 둘은 닫아 두는가.</b>
+     * <ul>
+     *   <li>{@link QuestionKind#JUDGMENT}: 중급 판정형과 겉모습이 같다(진술 넷 중 고르기).
+     *       오답 설계로만 갈리는데, 그 구분이 이 프롬프트에서 가장 자주 무너지는 자리다
+     *       (2026-08-13 중급과 08-14 고급의 지문이 형태상 똑같았던 사고).
+     *   <li>{@link QuestionKind#SEQUENCE}: 순서는 정답이 하나로 딱 떨어져 "넷 다 그럴듯"이
+     *       성립하지 않는다. 고급의 정의와 정면으로 부딪힌다.
+     * </ul>
+     *
+     * <p><b>부수 효과</b>: 2026-08-14에 고급 날 재료가 말라 3문제밖에 못 나온 사고가 있었다.
+     * 같은 재료를 여러 형태로 캘 수 있으면 그 압박이 줄어든다.
+     */
+    public static final java.util.Set<QuestionKind> ADVANCED_KINDS =
+            java.util.Set.of(QuestionKind.SITUATION, QuestionKind.COMPARISON, QuestionKind.CAUSE);
+
+    /**
      * 목록 제목의 길이 상한 — 2026-08-21 신설. <b>생성 프롬프트의 숫자와 같아야 한다</b>
      * ({@code ClaudeProblemGenerator.SYSTEM_PROMPT}의 [제목] 절).
      *
@@ -488,6 +513,14 @@ public final class ProblemItemRule {
             // 그래서 상한을 350으로 올리고 <상황형에만 하한 150>을 걸었다.
             // 나머지 네 형태(비교·인과·판정·순서)는 짧은 것이 정상이라 하한을 걸지 않는다 —
             // 걸면 짧아도 되는 문제에 군더더기를 붙이게 만든다(SITUATION_QUESTION_MIN 주석).
+            // 고급에 열지 않은 형태를 골랐는가 — 2026-08-25. 항목 하나만 봐도 알 수 있어
+            // batchWarningsOf가 아니라 여기 있다(쏠림과 달리 개수와 무관한 위반이다).
+            if (difficulty == Difficulty.ADVANCED && item.questionKind() != null
+                    && !ADVANCED_KINDS.contains(item.questionKind())) {
+                warnings.add("고급에 열지 않은 형태 (%s — 판정형은 중급과 구별이 안 되고, 순서형은 넷 다 그럴듯할 수 없다)"
+                        .formatted(item.questionKind().getLabel()));
+            }
+
             if (difficulty == Difficulty.INTERMEDIATE) {
                 int qlen = question.trim().length();
                 if (qlen > INTERMEDIATE_QUESTION_MAX) {

@@ -143,6 +143,64 @@ class ProblemItemRuleTest {
         }
     }
 
+    /**
+     * 고급은 중급의 다섯 중 셋만 쓴다 — 2026-08-25.
+     *
+     * <p>전에는 고급을 "지문에 상황과 이미 시도한 것이 있다"로 못 박아 사실상 상황형 하나였는데,
+     * 재료를 열어 보니 더 넓었다({@code ### 흔한 오해}, {@code ## 면접에서 이렇게 물어본다}).
+     * 다만 판정·순서 둘은 닫아 뒀고, 닫아 둔 것이 <b>지켜지는지</b>를 여기서 잰다.
+     */
+    @Nested
+    @DisplayName("고급에 열어 둔 형태는 셋뿐")
+    class AdvancedKinds {
+
+        private List<String> warnings(QuestionKind kind) {
+            return ProblemItemRule.qualityWarningsOf(
+                    item("가".repeat(200) + ". 이때 옳은 판단은?", goodExplanation(), kind),
+                    Difficulty.ADVANCED, true);
+        }
+
+        @Test
+        @DisplayName("상황·비교·인과는 통과한다")
+        void allowsTheThreeOpenedKinds() {
+            for (QuestionKind k : List.of(QuestionKind.SITUATION, QuestionKind.COMPARISON, QuestionKind.CAUSE)) {
+                assertThat(warnings(k))
+                        .as("고급에 연 형태다: %s", k)
+                        .noneSatisfy(w -> assertThat(w).contains("고급에 열지 않은 형태"));
+            }
+        }
+
+        /**
+         * 판정형은 중급 판정형과 겉모습이 같아 오답 설계로만 갈리는데, 그 구분이 이 프롬프트에서
+         * 가장 자주 무너진다. 순서형은 정답이 하나로 떨어져 "넷 다 그럴듯"이 성립하지 않는다.
+         */
+        @Test
+        @DisplayName("판정·순서는 경고한다 — 하나는 중급과 겹치고 하나는 고급의 정의와 부딪힌다")
+        void warnsOnClosedKinds() {
+            assertThat(warnings(QuestionKind.JUDGMENT))
+                    .anySatisfy(w -> assertThat(w).contains("고급에 열지 않은 형태").contains("진술 판정"));
+            assertThat(warnings(QuestionKind.SEQUENCE))
+                    .anySatisfy(w -> assertThat(w).contains("고급에 열지 않은 형태").contains("순서·절차"));
+        }
+
+        /** 중급에서는 다섯이 전부 열려 있다 — 고급 규칙이 중급까지 번지면 안 된다. */
+        @Test
+        @DisplayName("같은 형태라도 중급에서는 경고하지 않는다")
+        void doesNotLeakIntoIntermediate() {
+            assertThat(ProblemItemRule.qualityWarningsOf(
+                    item("가".repeat(200) + ". 이때 옳은 판단은?", goodExplanation(), QuestionKind.SEQUENCE),
+                    Difficulty.INTERMEDIATE, true))
+                    .noneSatisfy(w -> assertThat(w).contains("고급에 열지 않은 형태"));
+        }
+
+        @Test
+        @DisplayName("유형을 선언하지 않은 옛 초안은 건너뛴다")
+        void skipsWhenKindIsUnknown() {
+            assertThat(warnings(null))
+                    .noneSatisfy(w -> assertThat(w).contains("고급에 열지 않은 형태"));
+        }
+    }
+
     @Nested
     @DisplayName("해설이 요구받은 것을 실제로 담았는지 잰다")
     class ExplanationContent {

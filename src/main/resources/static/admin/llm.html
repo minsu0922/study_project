@@ -187,19 +187,29 @@ function initUploadForm() {
   fillSelect(document.getElementById("uDifficulty"), DIFFICULTIES);
   fillSelect(document.getElementById("uType"), TYPES);
 
-  // 형태는 <중급에만> 뜻이 있다. 초급은 정의를 묻는 자리라 나눌 것이 없고, 고급은 정의상
-  // 언제나 상황형이다. 그래서 첫 옵션이 "모델이 고름"이고, 난이도가 중급이 아니면 잠근다 —
-  // 고를 수는 있는데 아무 효과가 없는 칸을 남겨 두면 "왜 안 먹지"가 된다.
+  // 형태는 중급·고급에만 뜻이 있다. 초급은 정의를 묻는 자리라 나눌 것이 없다.
+  // 고급은 다섯 중 셋만 연다 — 판정형은 중급과 구별이 안 되고, 순서형은 "넷 다 그럴듯"이
+  // 성립하지 않아 고급의 정의와 부딪힌다(서버의 ProblemItemRule.ADVANCED_KINDS와 같아야 한다).
+  //
+  // 난이도에 따라 목록 자체를 갈아 끼운다. 전부 보여 주고 서버가 거절하게 두면 요금을 낸 뒤에야
+  // 알게 되고, 잠그기만 하면 "고급은 왜 못 고르지"가 된다.
   const uk = document.getElementById("uKind");
-  uk.innerHTML = `<option value="">모델이 고름</option>`
-    + QUESTION_KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
-  const syncKindEnabled = () => {
-    const intermediate = document.getElementById("uDifficulty").value === "INTERMEDIATE";
-    uk.disabled = !intermediate;
-    if (!intermediate) uk.value = "";
+  const ADVANCED_KINDS = ["SITUATION", "COMPARISON", "CAUSE"];
+  const syncKindOptions = () => {
+    const difficulty = document.getElementById("uDifficulty").value;
+    const allowed = difficulty === "INTERMEDIATE" ? QUESTION_KINDS
+      : difficulty === "ADVANCED" ? QUESTION_KINDS.filter(([v]) => ADVANCED_KINDS.includes(v))
+      : [];
+    const keep = uk.value;
+    uk.innerHTML = `<option value="">모델이 고름</option>`
+      + allowed.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+    // 난이도를 바꿔도 고를 수 있는 형태면 선택을 유지한다 — 중급에서 비교형을 고른 뒤
+    // 고급으로 바꿨다고 선택이 풀리면, 바뀐 줄 모르고 그대로 보내게 된다.
+    uk.value = allowed.some(([v]) => v === keep) ? keep : "";
+    uk.disabled = allowed.length === 0;
   };
-  document.getElementById("uDifficulty").addEventListener("change", syncKindEnabled);
-  syncKindEnabled();
+  document.getElementById("uDifficulty").addEventListener("change", syncKindOptions);
+  syncKindOptions();
 
   document.getElementById("uSubmitBtn").addEventListener("click", generateFromDocument);
   loadDocumentOptions();
@@ -400,23 +410,66 @@ function warningBoxOf(d) {
  */
 function renderKindBalance(drafts, status) {
   const box = document.getElementById("kindBalance");
-  const intermediate = drafts.filter(d => d.difficulty === "INTERMEDIATE" && d.questionKind);
-  if (status !== "PENDING" || intermediate.length === 0) {
+  if (status !== "PENDING" || drafts.length === 0) {
     box.hidden = true;
     return;
   }
-  const counts = {};
-  intermediate.forEach(d => { counts[d.questionKindLabel] = (counts[d.questionKindLabel] ?? 0) + 1; });
-  const summary = Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(" · ");
-  const situations = intermediate.filter(d => d.questionKind === "SITUATION").length;
-  const over = situations > 2;
+  const lines = [];
 
+  // ① 유형 쏠림 — 중급만. 초급은 나눌 것이 없고, 고급은 상황형이 주력이라 상한이 없다.
+  const intermediate = drafts.filter(d => d.difficulty === "INTERMEDIATE" && d.questionKind);
+  if (intermediate.length) {
+    const counts = {};
+    intermediate.forEach(d => { counts[d.questionKindLabel] = (counts[d.questionKindLabel] ?? 0) + 1; });
+    const summary = Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(" · ");
+    const situations = intermediate.filter(d => d.questionKind === "SITUATION").length;
+    lines.push(situations > 2
+      ? { bad: true, html: `⚠ 검수 대기 중급 ${intermediate.length}건 중 <b>상황 적용형이 ${situations}건</b>입니다 (상한 2건).`
+          + ` 나머지는 비교·인과·판정·순서로 채우세요. 지금 형태 — ${escapeHtml(summary)}` }
+      : { bad: false, html: `검수 대기 중급 ${intermediate.length}건의 형태 — ${escapeHtml(summary)}` });
+  }
+
+  // ② 문형 반복 — 난이도별로 따로 센다. 초급과 중급이 같은 물음을 쓰는 것은 문제가 아니고,
+  //    같은 난이도 안에서 겹치는 것이 문제다(학습자는 한 세트를 이어서 푼다).
+  //
+  //    서버의 ProblemItemRule.batchWarningsOf도 같은 것을 재지만 그쪽은 <한 번의 생성>만 본다.
+  //    1건씩 나눠 뽑으면 배치마다 물음이 하나라 서버는 조용한데, 쌓아 놓고 보면 다섯이 같다.
+  //    목록을 통째로 손에 든 것은 화면뿐이라 여기서도 잰다(유형 쏠림과 같은 판단).
+  for (const level of ["BEGINNER", "INTERMEDIATE", "ADVANCED"]) {
+    const tails = {};
+    drafts.filter(d => d.difficulty === level).forEach(d => {
+      const t = closingQuestionOf(d.question);
+      if (t) tails[t] = (tails[t] ?? 0) + 1;
+    });
+    const dup = Object.entries(tails).filter(([, v]) => v >= 2);
+    dup.forEach(([tail, n]) => lines.push({
+      bad: true,
+      html: `⚠ ${escapeHtml(difficultyLabel(level))} ${n}건이 같은 물음으로 끝납니다 —`
+        + ` "<b>${escapeHtml(tail)}</b>". 문형이 같으면 개념이 아니라 형식이 외워집니다.`,
+    }));
+  }
+
+  if (lines.length === 0) {
+    box.hidden = true;
+    return;
+  }
   box.hidden = false;
-  box.className = over ? "alert error" : "alert";
-  box.innerHTML = over
-    ? `⚠ 검수 대기 중급 ${intermediate.length}건 중 <b>상황 적용형이 ${situations}건</b>입니다 (상한 2건).`
-      + ` 나머지는 비교·인과·판정·순서로 채우세요. 지금 형태 — ${escapeHtml(summary)}`
-    : `검수 대기 중급 ${intermediate.length}건의 형태 — ${escapeHtml(summary)}`;
+  box.className = lines.some(l => l.bad) ? "alert error" : "alert";
+  box.innerHTML = lines.map(l => l.html).join("<br>");
+}
+
+/**
+ * 지문의 마지막 물음 문장. 물음표로 끝나지 않으면 null.
+ * 서버의 ProblemItemRule.questionTailOf와 같은 규칙이어야 한다 — 갈라지면 화면과 배치가
+ * 같은 초안을 두고 다른 말을 한다. 한 문장짜리 지문은 통째로 비교되는 것도 그쪽과 같다
+ * (초급의 "○○의 정의로 옳은 것은?" 반복은 정상이라 잡지 않는다).
+ */
+function closingQuestionOf(question) {
+  if (!question) return null;
+  const flat = question.replace(/\s+/g, " ").trim();
+  if (!flat.endsWith("?")) return null;
+  const cut = Math.max(flat.lastIndexOf("."), flat.lastIndexOf("!"), flat.lastIndexOf("。"));
+  return flat.slice(cut + 1).trim();
 }
 
 async function loadDrafts() {
