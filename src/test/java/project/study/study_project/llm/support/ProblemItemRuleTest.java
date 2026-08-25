@@ -198,55 +198,155 @@ class ProblemItemRuleTest {
             assertThat(warnings(noHint, false))
                     .noneSatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"));
         }
+
+        /**
+         * <b>2026-08-25 실물 오탐 — 다섯 중 넷이 헛걸렸다.</b> 첫 패턴은 {@code 문서의 '○○' 절}
+         * 이라는 한 가지 모양만 봤는데, 실제로는 절 이름 뒤에 하위 항목이 붙어 "절"이 문장
+         * 중간에 오고 "대목"·"문답"으로 끝나는 경우가 더 많았다. 프롬프트가 요구한 것보다
+         * <b>더 정확하게</b> 가리킨 해설들이 벌을 받은 셈이다.
+         *
+         * <p>아래는 그날 실제로 나온 다섯 줄이다. 패턴을 다시 좁히면 여기서 걸린다.
+         */
+        @Test
+        @DisplayName("절 뒤에 하위 항목이 붙어도 가리킨 것으로 본다 — 실물 다섯 줄을 그대로 박아 둔다")
+        void acceptsSectionHintsWithSubItems() {
+            List<String> real = List.of(
+                    "(문서의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)",
+                    "(문서의 '언제 깨지는가' 중 '서버가 능동 종료자가 되는 배치' 대목을 다시 읽어 보라)",
+                    "(문서의 '실무에서는 이렇게 쓴다' 절을 다시 읽어 보라)",
+                    "(문서의 '언제 깨지는가' 중 'SO_REUSEADDR에 대한 과신' 대목을 다시 읽어 보라)",
+                    "(문서의 '면접에서 이렇게 물어본다' 중 TIME_WAIT 10만 개 접근 문답을 다시 읽어 보라)");
+
+            for (String line : real) {
+                String explanation = "정답 근거를 길게 설명한다. ".repeat(20) + line;
+                assertThat(warnings(explanation, true))
+                        .as("이 줄이 헛걸리면 경고가 통째로 죽는다: %s", line)
+                        .noneSatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"));
+            }
+        }
     }
 
     @Nested
-    @DisplayName("배치 전체를 봐야 아는 것 — 유형 쏠림")
+    @DisplayName("배치 전체를 봐야 아는 것 — 유형 쏠림과 문형 반복")
     class BatchBalance {
 
+        /** 지문의 마지막 물음을 하나씩 다르게 준다 — 문형 반복 검사에 걸리지 않게. */
         private List<GeneratedProblemItem> batch(QuestionKind... kinds) {
-            return java.util.Arrays.stream(kinds)
-                    .map(k -> item("가".repeat(200), goodExplanation(), k))
-                    .toList();
+            List<GeneratedProblemItem> out = new java.util.ArrayList<>();
+            for (int i = 0; i < kinds.length; i++) {
+                out.add(item("가".repeat(200) + ". 물음 " + i + "은?", goodExplanation(), kinds[i]));
+            }
+            return out;
         }
 
+        /**
+         * <b>이 검사가 뒤집힌 이유</b>다. 처음에는 하한("최소 2개")이었는데 실물은 정반대였다 —
+         * 5문제 중 5개가 상황형이었고, 이어서 1건씩 세 번 더 뽑았는데 세 번 다 상황형이었다.
+         * 상황형은 재료가 가장 풍부해서 내버려 두면 전부를 차지한다.
+         */
         @Test
-        @DisplayName("상황형이 기준에 못 미치면 경고한다 — 면접에서 가장 많이 나오는 형태다")
-        void warnsWhenSituationsAreScarce() {
+        @DisplayName("상황형이 상한을 넘으면 경고한다 — 내버려 두면 전부를 차지한다")
+        void warnsWhenSituationsExceedTheCap() {
             assertThat(ProblemItemRule.batchWarningsOf(
-                    batch(QuestionKind.SITUATION, QuestionKind.COMPARISON, QuestionKind.CAUSE,
-                            QuestionKind.JUDGMENT, QuestionKind.SEQUENCE),
+                    batch(QuestionKind.SITUATION, QuestionKind.SITUATION, QuestionKind.SITUATION,
+                            QuestionKind.COMPARISON, QuestionKind.CAUSE),
                     Difficulty.INTERMEDIATE))
-                    .singleElement(org.assertj.core.api.InstanceOfAssertFactories.STRING)
-                    .contains("상황 적용형이 1개뿐");
+                    .anySatisfy(w -> assertThat(w).contains("상황 적용형이 3개").contains("상한 2개"));
         }
 
+        /** 상한이지 목표가 아니다 — 상황형이 하나뿐이어도 조용해야 한다. */
         @Test
-        @DisplayName("기준을 채우면 아무 말도 하지 않는다")
-        void staysQuietWhenBalanced() {
+        @DisplayName("상한 안이면 아무 말도 하지 않는다 — 상한이지 목표가 아니다")
+        void staysQuietWithinTheCap() {
             assertThat(ProblemItemRule.batchWarningsOf(
-                    batch(QuestionKind.SITUATION, QuestionKind.SITUATION, QuestionKind.COMPARISON),
+                    batch(QuestionKind.SITUATION, QuestionKind.COMPARISON, QuestionKind.JUDGMENT),
                     Difficulty.INTERMEDIATE))
+                    .isEmpty();
+            assertThat(ProblemItemRule.batchWarningsOf(
+                    batch(QuestionKind.COMPARISON, QuestionKind.CAUSE), Difficulty.INTERMEDIATE))
+                    .as("상황형이 0개여도 이제는 경고하지 않는다")
                     .isEmpty();
         }
 
         /** 초급은 정의를 묻는 자리라 형태를 나눌 것이 없고, 고급은 정의상 언제나 상황형이다. */
         @Test
-        @DisplayName("중급이 아니면 재지 않는다 — 매번 울리는 경고는 아무도 안 본다")
-        void appliesOnlyToIntermediate() {
+        @DisplayName("유형 쏠림은 중급에만 잰다 — 고급은 정의상 전부 상황형이라 매번 울린다")
+        void kindBalanceAppliesOnlyToIntermediate() {
             assertThat(ProblemItemRule.batchWarningsOf(
-                    batch(QuestionKind.COMPARISON, QuestionKind.COMPARISON), Difficulty.BEGINNER))
-                    .isEmpty();
-            assertThat(ProblemItemRule.batchWarningsOf(
-                    batch(QuestionKind.COMPARISON, QuestionKind.COMPARISON), Difficulty.ADVANCED))
-                    .isEmpty();
+                    batch(QuestionKind.SITUATION, QuestionKind.SITUATION, QuestionKind.SITUATION),
+                    Difficulty.ADVANCED))
+                    .noneSatisfy(w -> assertThat(w).contains("상황 적용형"));
         }
 
         @Test
-        @DisplayName("아무도 유형을 선언하지 않은 옛 배치는 통째로 건너뛴다")
-        void skipsBatchesWithoutDeclaredKinds() {
+        @DisplayName("아무도 유형을 선언하지 않은 옛 배치는 유형 쏠림을 재지 않는다")
+        void skipsKindBalanceWithoutDeclaredKinds() {
             assertThat(ProblemItemRule.batchWarningsOf(batch(null, null, null), Difficulty.INTERMEDIATE))
-                    .isEmpty();
+                    .noneSatisfy(w -> assertThat(w).contains("상황 적용형"));
+        }
+
+        /**
+         * <b>형태를 갈라도 문형이 같으면 소용없다.</b> 2026-08-25 실측에서 SYSTEM_DESIGN 중급
+         * 6문제 중 다섯이 "~가장 적절한 것은?"으로 끝났다. 반면 NETWORK 5문제는 다섯이 전부 달랐다 —
+         * 같은 상황형인데 한쪽만 쏠렸다는 것이 "형태가 아니라 문형이 문제"라는 증거다.
+         */
+        @Test
+        @DisplayName("마지막 물음이 겹치면 경고한다 — 문형이 같으면 개념이 아니라 형식이 외워진다")
+        void warnsWhenTheClosingQuestionRepeats() {
+            List<GeneratedProblemItem> same = List.of(
+                    item("배달 앱에서 값이 안 바뀐다. 원인으로 가장 적절한 것은?",
+                            goodExplanation(), QuestionKind.SITUATION),
+                    item("러닝 앱에서 질의가 튄다. 원인으로 가장 적절한 것은?",
+                            goodExplanation(), QuestionKind.COMPARISON));
+
+            assertThat(ProblemItemRule.batchWarningsOf(same, Difficulty.INTERMEDIATE))
+                    .anySatisfy(w -> assertThat(w)
+                            .contains("마지막 물음이 겹침")
+                            .as("무엇이 겹쳤는지 보여야 고칠 자리가 정해진다")
+                            .contains("원인으로 가장 적절한 것은?"));
+        }
+
+        /** 유형 쏠림과 달리 문형 반복은 난이도를 가리지 않는다 — 고급 지문도 물음으로 끝난다. */
+        @Test
+        @DisplayName("문형 반복은 고급에서도 잰다 — 유형 쏠림만 중급 전용이다")
+        void tailRepetitionAlsoAppliesToAdvanced() {
+            List<GeneratedProblemItem> same = List.of(
+                    item("정산 배치가 밀린다. 가장 적절한 조치는?", goodExplanation(), null),
+                    item("이미지 서버가 느리다. 가장 적절한 조치는?", goodExplanation(), null));
+
+            assertThat(ProblemItemRule.batchWarningsOf(same, Difficulty.ADVANCED))
+                    .anySatisfy(w -> assertThat(w).contains("마지막 물음이 겹침"));
+        }
+
+        /**
+         * <b>알려진 한계를 못 박는다.</b> 지문이 한 문장뿐이면(초급이 대개 그렇다) 잘라 낼
+         * 문장 경계가 없어 <b>지문 전체</b>가 비교 대상이 된다. 그래서 "○○의 정의로 옳은 것은?"처럼
+         * <b>접미사만</b> 같은 것은 걸리지 않는다.
+         *
+         * <p>일부러 이렇게 뒀다. 접미사로 비교하면 초급이 매번 걸리는데, 초급에서 "정의로 옳은
+         * 것은?"이 반복되는 것은 <b>정상</b>이다 — 같은 것을 묻는 자리라 형식이 같은 편이 낫다.
+         * 잡으려는 것은 중급·고급에서 상황 한 문단을 써 놓고 물음만 복사하는 경우다.
+         */
+        @Test
+        @DisplayName("한 문장짜리 지문은 접미사가 같아도 안 걸린다 — 초급의 정형은 정상이다")
+        void doesNotFlagSharedSuffixInSingleSentenceQuestions() {
+            List<GeneratedProblemItem> beginner = List.of(
+                    item("핸드셰이크의 정의로 옳은 것은?", goodExplanation(), null),
+                    item("TIME_WAIT의 정의로 옳은 것은?", goodExplanation(), null));
+
+            assertThat(ProblemItemRule.batchWarningsOf(beginner, Difficulty.BEGINNER)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("물음이 서로 다르면 조용하다 — 오탐이 경고를 무력화한다")
+        void staysQuietWhenClosingQuestionsDiffer() {
+            List<GeneratedProblemItem> varied = List.of(
+                    item("배달 앱에서 값이 안 바뀐다. 원인으로 가장 적절한 것은?",
+                            goodExplanation(), QuestionKind.SITUATION),
+                    item("러닝 앱에서 질의가 튄다. 가장 먼저 할 확인은?",
+                            goodExplanation(), QuestionKind.COMPARISON));
+
+            assertThat(ProblemItemRule.batchWarningsOf(varied, Difficulty.INTERMEDIATE)).isEmpty();
         }
     }
 }

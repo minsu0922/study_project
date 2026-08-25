@@ -386,8 +386,17 @@ function warningBoxOf(d) {
  * 승인·거절이 끝난 목록에 "상황형이 하나뿐"이라고 알려 봐야 고칠 방법이 없다.
  * 게다가 그 목록은 여러 날의 배치가 섞여 있어 애초에 세는 것이 뜻이 없다.
  *
- * 기준(2)은 서버의 ProblemItemRule.SITUATION_MIN_PER_BATCH와 같아야 한다. 두 곳에 적힌 숫자라
+ * 기준(2)은 서버의 ProblemItemRule.SITUATION_MAX_PER_BATCH와 같아야 한다. 두 곳에 적힌 숫자라
  * 갈라질 수 있는데, 갈라지면 화면은 조용한데 배치 요약만 경고하는 상태가 된다.
+ *
+ * [최소에서 최대로 뒤집었다 — 2026-08-25]
+ * 처음에는 "상황형이 사라지는 것"을 막으려 했는데, 실물은 정반대였다. 5문제 중 5개가 상황형이었고
+ * 이어서 1건씩 세 번 더 뽑았는데 세 번 다 상황형이었다. 막아야 할 쪽은 전부를 차지하는 쪽이다.
+ *
+ * [배치가 아니라 "검수 대기 전체"를 센다]
+ * 서버의 batchWarningsOf는 한 번의 생성 결과만 보지만 여기는 목록 전체를 본다. 실제로 문제가
+ * 되는 것이 그쪽이기 때문이다 — 1건씩 나눠 뽑으면 배치마다 상황형 1개라 서버는 조용한데,
+ * 쌓아 놓고 보면 다섯 개가 전부 상황형이다. 그래서 문구에도 "검수 대기"라고 적어 둔다.
  */
 function renderKindBalance(drafts, status) {
   const box = document.getElementById("kindBalance");
@@ -400,13 +409,14 @@ function renderKindBalance(drafts, status) {
   intermediate.forEach(d => { counts[d.questionKindLabel] = (counts[d.questionKindLabel] ?? 0) + 1; });
   const summary = Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(" · ");
   const situations = intermediate.filter(d => d.questionKind === "SITUATION").length;
+  const over = situations > 2;
 
   box.hidden = false;
-  box.className = situations >= 2 ? "alert" : "alert error";
-  box.innerHTML = situations >= 2
-    ? `중급 ${intermediate.length}건의 형태 — ${escapeHtml(summary)}`
-    : `⚠ 중급 ${intermediate.length}건 중 <b>상황 적용형이 ${situations}건뿐</b>입니다 (기준 2건).`
-      + ` 지금 형태 — ${escapeHtml(summary)}`;
+  box.className = over ? "alert error" : "alert";
+  box.innerHTML = over
+    ? `⚠ 검수 대기 중급 ${intermediate.length}건 중 <b>상황 적용형이 ${situations}건</b>입니다 (상한 2건).`
+      + ` 나머지는 비교·인과·판정·순서로 채우세요. 지금 형태 — ${escapeHtml(summary)}`
+    : `검수 대기 중급 ${intermediate.length}건의 형태 — ${escapeHtml(summary)}`;
 }
 
 async function loadDrafts() {

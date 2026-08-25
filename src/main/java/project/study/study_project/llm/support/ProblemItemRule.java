@@ -6,7 +6,9 @@ import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.QuestionKind;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -221,22 +223,31 @@ public final class ProblemItemRule {
     public static final int SITUATION_QUESTION_MIN = 150;
 
     /**
-     * 한 배치에 있어야 할 <b>상황 적용형</b>의 최소 개수 — 2026-08-25 신설.
+     * 한 배치에 허용할 <b>상황 적용형</b>의 최대 개수 — 2026-08-25 신설, 같은 날 방향을 뒤집었다.
      *
-     * <p>형태를 다섯으로 열면 모델이 <b>쓰기 쉬운 쪽</b>으로 쏠릴 수 있다. 쏠려서 곤란한 방향은
-     * 하나뿐이다 — 상황형이 사라지는 쪽. 면접에서 가장 많이 나오는 형태이고, 애초에
-     * 중급의 정의였던 것이라 기본값으로는 지켜야 한다.
+     * <h2>왜 "최소 2개"에서 "최대 2개"로 뒤집었나</h2>
+     *
+     * <p>처음에는 하한이었다. 형태를 다섯으로 열면 모델이 쓰기 쉬운 쪽으로 쏠릴 텐데, 쏠려서
+     * 곤란한 방향은 <b>상황형이 사라지는 쪽</b>이라고 봤다(면접에서 가장 많이 나오는 형태다).
+     * 실물을 뽑아 보니 정반대였다 — 5문제 중 5개가 상황형이었고, 이어서 1건씩 세 번 더 뽑았는데
+     * 세 번 다 상황형이었다. 막아야 할 쪽은 <b>상황형이 전부를 차지하는 쪽</b>이었다.
+     *
+     * <p><b>상황형 자체가 나쁜 것은 아니다.</b> 같은 날 잰 실측이 그것을 말한다 — NETWORK 중급
+     * 5문제는 <b>전부 상황형인데도</b> 첫머리와 마지막 물음이 다섯 가지로 다 달랐다. 반면
+     * SYSTEM_DESIGN 6문제는 {@code [업종] + ○○ 상세} 틀이 넷, "가장 적절한 것은?"이 다섯이었다.
+     * 그러니 상황형을 없애는 것(사용자가 검토한 안)은 증상을 지우고 원인을 남기는 선택이다.
+     * 상한을 걸어 <b>다른 형태가 들어올 자리를 만드는 쪽</b>이 맞다.
      *
      * <p><b>왜 유형별 개수를 전부 박지 않았나.</b> "상황 2 / 비교 2 / 인과 1" 식으로 박으면
      * 문서에 그 재료가 없을 때 <b>억지로 만든다</b>. 순서·절차형은 특히 그렇다 — 순서가 결과를
      * 가르는 주제(캐시 무효화·트랜잭션)에만 재료가 있는데, 개수를 박으면 순서가 아무 상관 없는
      * 주제에 순서를 지어낸다. 기존 {@code [개수를 채우지 못할 때]} 규칙과도 부딪힌다.
-     * <b>바닥만 깔고 나머지는 재료에 맡기는 것</b>이 이 파이프라인의 방식이다.
+     * <b>천장만 씌우고 나머지는 재료에 맡기는 것</b>이 이 파이프라인의 방식이다.
      *
      * <p>배치 단위라 항목 하나만 보는 {@link #qualityWarningsOf}에서는 잴 수 없다.
      * {@link #batchWarningsOf}가 따로 있는 이유다.
      */
-    public static final int SITUATION_MIN_PER_BATCH = 2;
+    public static final int SITUATION_MAX_PER_BATCH = 2;
 
     /**
      * 목록 제목의 길이 상한 — 2026-08-21 신설. <b>생성 프롬프트의 숫자와 같아야 한다</b>
@@ -354,10 +365,25 @@ public final class ProblemItemRule {
      * <p>패턴을 느슨하게 잡은 이유: 프롬프트 예시는 {@code (문서의 '언제 깨지는가' 절을 다시
      * 읽어 보라)}인데 실물은 따옴표 종류·절 이름 표기가 매번 조금씩 다르다. 형식을 엄격히
      * 재면 정상 동작이 매번 걸린다. 여기서 확인하려는 것은 <b>그 줄이 있는지</b>뿐이다.
+     *
+     * <h2>2026-08-25 — 첫 패턴이 4/5를 헛짚었다</h2>
+     *
+     * <p>처음에는 {@code 문서의 '○○' 절}이라는 <b>한 가지 모양</b>만 봤다. 실물을 뽑아 보니
+     * 다섯 중 넷이 그 모양이 아니었다:
+     * <pre>
+     *   (문서의 '언제 깨지는가' 중 '서버가 능동 종료자가 되는 배치' 대목을 다시 읽어 보라)
+     *   (문서의 '면접에서 이렇게 물어본다' 중 TIME_WAIT 10만 개 문답을 다시 읽어 보라)
+     * </pre>
+     * 절 이름 뒤에 <b>하위 항목이 붙으면</b> "절"이 문장 끝이 아니라 중간에 오고, 끝나는 말이
+     * "대목"·"문답"으로 바뀐다. 프롬프트가 요구한 것은 "다시 읽을 자리를 한 줄로 가리켜라"이고
+     * 이것들은 <b>더 정확하게</b> 가리킨 것인데, 검사가 형식 하나만 알아서 벌을 준 셈이다.
+     *
+     * <p>그래서 기준을 <b>"문서를 가리키며 다시 읽으라고 했는가"</b>로 바꿨다. 절 이름의 표기나
+     * 뒤에 붙는 말은 보지 않는다. 오탐이 넷이면 그 경고는 그 순간 죽는다 — 이 저장소가
+     * 여러 번 확인한 것이다({@code CHOICE_NUMBER_REFERENCE}의 "항목"을 뺀 이유와 같다).
      */
     private static final Pattern DOCUMENT_SECTION_HINT =
-            Pattern.compile("문서(의|에서)?\\s*[''\"“”].{1,60}?['']?[''\"“”]?\\s*절"
-                    + "|문서(의|에서)?\\s*.{1,60}?\\s*절을\\s*다시");
+            Pattern.compile("문서(의|에서|를)?\\s*.{0,120}?다시\\s*(읽어|보)");
 
     /**
      * 해설이 오답을 <b>내용으로 인용</b>한 자리 — 2026-08-25 신설.
@@ -517,19 +543,85 @@ public final class ProblemItemRule {
      * @param difficulty 그 배치의 난이도
      */
     public static List<String> batchWarningsOf(List<GeneratedProblemItem> items, Difficulty difficulty) {
-        if (difficulty != Difficulty.INTERMEDIATE || items == null || items.isEmpty()) {
+        if (items == null || items.isEmpty()) {
             return List.of();
         }
-        long declared = items.stream().filter(i -> i.questionKind() != null).count();
-        if (declared == 0) {
-            return List.of();
+        List<String> warnings = new ArrayList<>();
+
+        // 유형 쏠림 — 중급에만 해당한다. 초급은 정의를 묻는 자리라 형태를 나눌 것이 없고,
+        // 고급은 정의상 언제나 상황형이라 상한을 걸면 매번 울린다.
+        if (difficulty == Difficulty.INTERMEDIATE
+                && items.stream().anyMatch(i -> i.questionKind() != null)) {
+            long situations = items.stream().filter(i -> i.questionKind() == QuestionKind.SITUATION).count();
+            if (situations > SITUATION_MAX_PER_BATCH) {
+                warnings.add("상황 적용형이 %d개 (상한 %d개 — 나머지는 비교·인과·판정·순서로 채운다)"
+                        .formatted(situations, SITUATION_MAX_PER_BATCH));
+            }
         }
-        long situations = items.stream().filter(i -> i.questionKind() == QuestionKind.SITUATION).count();
-        if (situations >= SITUATION_MIN_PER_BATCH) {
-            return List.of();
+
+        // 마지막 물음이 겹치는가 — 난이도와 무관하다(초급도 "~은?"이 반복될 수 있다).
+        String repeated = repeatedQuestionTailOf(items);
+        if (repeated != null) {
+            warnings.add("마지막 물음이 겹침 (\"%s\" — 문형이 같으면 무엇을 묻는지가 아니라 형식이 외워진다)"
+                    .formatted(repeated));
         }
-        return List.of("상황 적용형이 %d개뿐 (기준 %d개 — 면접에서 가장 많이 나오는 형태라 배치마다 지킨다)"
-                .formatted(situations, SITUATION_MIN_PER_BATCH));
+        return warnings;
+    }
+
+    /**
+     * 배치 안에서 <b>두 번 이상 나온 마지막 물음</b>. 없으면 {@code null}.
+     *
+     * <p><b>왜 이걸 재나.</b> 2026-08-25 실측에서 SYSTEM_DESIGN 중급 6문제 중 다섯이
+     * "~가장 적절한 것은?"으로 끝났다. 반면 NETWORK 5문제는 "이 차이를 가장 잘 설명한 것은?",
+     * "가장 먼저 할 확인은?", "가장 적절한 조치는?"처럼 다섯이 전부 달랐다. 같은 상황형인데
+     * 한쪽만 쏠렸다는 것은 <b>형태가 아니라 문형이 문제</b>라는 뜻이다.
+     *
+     * <p>문형이 같으면 학습자가 개념이 아니라 <b>형식을 외운다</b>. "원인으로 가장 적절한 것은?"이
+     * 열 번 나오면 지문을 대충 읽고 정답 냄새가 나는 보기를 고르는 요령이 생긴다.
+     *
+     * <p><b>마지막 물음만 재는 이유</b>: 지문 첫 문장의 "틀"도 겹쳤지만({@code [업종] + ○○ 상세})
+     * 그건 기계가 재기 어렵다 — 업종이 매번 달라 문자열로는 안 겹치고, 구조가 같다는 것을
+     * 알아보려면 자연어를 분석해야 한다. 마지막 물음은 <b>문자열이 실제로 같아서</b> 셀 수 있다.
+     * 첫 문장 쪽은 프롬프트의 (X)/(O) 대비에 맡긴다 — 이 저장소에서 실물 예시는 잘 지켜졌다.
+     *
+     * <p>공백만 정규화하고 그 밖은 그대로 본다. 조사나 어미까지 정규화하면 "무엇이 겹쳤는지"를
+     * 사람에게 보여 줄 수 없고, 정규화가 과하면 다른 물음까지 같은 것으로 묶여 헛울린다.
+     *
+     * <p><b>알려진 한계 — 한 문장짜리 지문은 접미사가 같아도 안 걸린다.</b> 잘라 낼 문장 경계가
+     * 없어 지문 전체가 비교 대상이 되기 때문이다. "핸드셰이크의 정의로 옳은 것은?"과
+     * "TIME_WAIT의 정의로 옳은 것은?"은 통과한다. <b>일부러 이렇게 뒀다</b> — 접미사로 비교하면
+     * 초급이 매번 걸리는데, 초급에서 "정의로 옳은 것은?"이 반복되는 것은 정상이다(같은 것을
+     * 묻는 자리라 형식이 같은 편이 낫다). 잡으려는 것은 중급·고급에서 <b>상황 한 문단을 써 놓고
+     * 물음만 복사하는</b> 경우이고, 그쪽은 앞 문장이 있어 마지막 물음이 깨끗하게 잘린다.
+     */
+    private static String repeatedQuestionTailOf(List<GeneratedProblemItem> items) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (GeneratedProblemItem item : items) {
+            String tail = questionTailOf(item.question());
+            if (tail != null) {
+                counts.merge(tail, 1, Integer::sum);
+            }
+        }
+        return counts.entrySet().stream()
+                .filter(e -> e.getValue() >= 2)
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /** 지문의 마지막 물음 문장(물음표로 끝나는 마지막 조각). 물음표가 없으면 {@code null}. */
+    private static String questionTailOf(String question) {
+        if (isBlank(question)) {
+            return null;
+        }
+        String flat = question.replaceAll("\\s+", " ").trim();
+        if (!flat.endsWith("?")) {
+            return null;
+        }
+        // 마지막 문장 경계부터 자른다. 문장 부호가 없으면 지문 전체가 한 문장이라는 뜻이고,
+        // 그때는 통째로 쓴다(초급 지문이 대개 그렇다).
+        int cut = Math.max(flat.lastIndexOf('.'), Math.max(flat.lastIndexOf('!'), flat.lastIndexOf('。')));
+        return flat.substring(cut + 1).trim();
     }
 
     /**

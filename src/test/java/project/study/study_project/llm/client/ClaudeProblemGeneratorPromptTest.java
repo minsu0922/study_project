@@ -675,9 +675,13 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("JUDGMENT").contains("SEQUENCE")
                 .as("중급의 정의 자체가 바뀌었다 — 상황 적용은 다섯 중 하나일 뿐이다")
                 .contains("중급은 <원리를 쓸 줄 아는가>를 묻는다")
-                .as("배분 바닥을 숫자로 박지 않으면 쓰기 쉬운 형태로 쏠린다")
-                .contains("SITUATION이 최소 %d개는 있어야 한다"
-                        .formatted(ProblemItemRule.SITUATION_MIN_PER_BATCH))
+                // 2026-08-25에 하한에서 상한으로 뒤집었다. 실물 5문제가 전부 상황형이었고
+                // 이어 1건씩 세 번 더 뽑아도 세 번 다 상황형이었다 — 막을 쪽은 반대였다.
+                .as("상한을 숫자로 박지 않으면 재료가 풍부한 상황형이 전부를 차지한다")
+                .contains("SITUATION은 한 번에 만드는 문제 중 <최대 %d개>다"
+                        .formatted(ProblemItemRule.SITUATION_MAX_PER_BATCH))
+                .as("상한을 목표로 읽으면 이번엔 정확히 2개씩 나온다")
+                .contains("상한이지 목표가 아니다")
                 .as("판정형은 초급으로, 비교형은 고급으로 새기 쉽다 — 경계를 실물로 대비시킨다")
                 .contains("[중급이 초급·고급으로 새지 않게 하는 법]")
                 .contains("진술이 <정의>면 초급이고")
@@ -747,6 +751,35 @@ class ClaudeProblemGeneratorPromptTest {
     }
 
     /**
+     * <b>2026-08-25 신설 — 형태를 갈라도 문형이 같으면 소용없다.</b>
+     *
+     * <p>실측이 이 규칙을 부른 자리다. SYSTEM_DESIGN 중급 6문제 중 다섯이 "~가장 적절한 것은?"으로
+     * 끝났고, 지문 첫머리는 {@code [업종] 앱의 ○○ 상세}가 넷이었다. 업종만 갈아 끼운 같은 문제다.
+     * 반면 NETWORK 5문제는 <b>전부 상황형인데도</b> 첫머리와 물음이 다섯 가지로 달랐다 —
+     * 그러니 문제는 형태가 아니라 <b>문형</b>이다.
+     *
+     * <p>실물 (X)/(O) 대비를 지키는 것이 특히 중요하다. 마지막 물음은 기계가 세지만
+     * ({@code ProblemItemRule.batchWarningsOf}) <b>첫 문장 틀은 셀 수가 없다</b> — 업종이 매번
+     * 달라 문자열로는 안 겹치기 때문이다. 그쪽은 예시에 기댈 수밖에 없고, 이 저장소에서
+     * 추상적 금지는 여러 번 무시됐지만 실물 예시는 지켜졌다.
+     */
+    @Test
+    @DisplayName("한 배치에서 문형을 반복하지 말라고 실물로 대비시킨다 — 첫 문장 틀은 기계가 셀 수 없다")
+    void forbidsRepeatingTheSameQuestionShape() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("[같은 문제를 다섯 번 내지 마라]")
+                .as("무엇이 겹치면 안 되는지를 둘로 나눠 못 박는다")
+                .contains("마지막 물음")
+                .contains("지문의 첫 문장 틀")
+                .as("바꿔 쓸 물음을 나열해 줘야 실제로 바뀐다 — 금지만으로는 안 바뀐다")
+                .contains("원인 / 조치 / 먼저 할 확인 / 예상되는 결과 / 판단 / 설명")
+                .as("실제로 이렇게 나왔다는 것을 (X) 예시가 보여 준다")
+                .contains("업종만 다르고 뼈대가 같다")
+                .as("(O)는 서비스 이름을 앞세우지 않아도 상황이 성립함을 보인다")
+                .contains("서비스 이름을 앞세우지 않아도 상황은 성립한다");
+    }
+
+    /**
      * <b>2026-08-25 신설 — 사람이 형태를 지목했을 때.</b>
      *
      * <p>중급에 다섯 형태를 열었더니 실물이 세 번 연속 상황형으로만 나왔다. 모델이 게을러서가
@@ -772,7 +805,9 @@ class ClaudeProblemGeneratorPromptTest {
                 .as("'이것도 낼 수 있다'가 아니라 '이것만 낸다'여야 한다")
                 .contains("로만 낸다")
                 .as("배분 규칙을 끄지 않으면 두 지시가 부딪힌다")
-                .contains("배분 규칙(SITUATION 최소 2개)은 이번에는 적용하지 마라");
+                .contains("배분 규칙(SITUATION 최대 2개)은 이번에는 적용하지 마라")
+                .as("배분은 껐어도 문형 반복 금지는 살아 있어야 한다 — 형태가 같을수록 더 겹친다")
+                .contains("[같은 문제를 다섯 번 내지 마라]는 그대로 지켜라");
 
         assertThat(prompt(Difficulty.INTERMEDIATE, DOC))
                 .as("지목이 없으면 그 줄 자체가 없어야 한다 — 배치의 기본 동작을 건드리지 않는다")
