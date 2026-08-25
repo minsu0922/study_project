@@ -460,7 +460,12 @@ class DraftGeneratorCliTest {
                 DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).as("짧아도 퀴즈로는 성립하므로 버리지 않는다").isEqualTo(1);
-        assertThat(yield.warnings()).singleElement().asString().contains("해설이 짧음");
+        // 이 재료는 글자만 채운 해설이라 오답 인용 경고에도 걸린다(2026-08-25 신설).
+        // 그건 이 테스트가 재는 것이 아니므로 걸러 낸다 — 여기서 세면 검사가 하나 늘 때마다
+        // 상관없는 테스트가 따라 깨진다.
+        assertThat(yield.warnings())
+                .filteredOn(w -> w.contains("해설이 짧음"))
+                .singleElement().asString().contains("399자");
     }
 
     /**
@@ -468,15 +473,29 @@ class DraftGeneratorCliTest {
      * 섞기로 했는데(커밋 9a4fd6b), 해설이 "2번 보기는"이라고 쓰면 섞인 뒤 엉뚱한 보기를
      * 가리킨다. 검수자는 <b>섞이기 전</b> 화면을 보므로 번호가 맞아 보이고, 학습자만
      * 어긋난 해설을 읽는다. 지금까지 사고가 안 난 것은 모델이 마침 번호를 안 썼기 때문이다.
+     *
+     * <p><b>2026-08-25에 경고에서 차단으로 올렸다.</b> 경고로 두면 검수자가 "번호 맞는데?" 하며
+     * 그대로 승인한다 — 판단할 여지가 없는 결함이라(섞기로 한 이상 <b>반드시</b> 틀린다)
+     * 사람에게 물을 것이 아니라 기계가 버려야 한다. 그래서 이 테스트도 경고가 아니라
+     * <b>버려졌는지</b>를 잰다.
      */
     @Test
-    @DisplayName("해설이 보기를 번호로 가리키면 알린다 — 내보낼 때 섞으므로 학습자에게만 어긋나 보인다")
-    void warnsWhenExplanationPointsAtChoiceNumbers() {
+    @DisplayName("해설이 보기를 번호로 가리키면 버린다 — 판단할 여지가 없으니 검수자에게 묻지 않는다")
+    void discardsWhenExplanationPointsAtChoiceNumbers() {
         String explanation = "가".repeat(400) + " 2번 보기는 UDP의 특성을 TCP로 착각한 것이다.";
         List<GeneratedProblemItem> problems = List.of(multipleChoice("번호를 가리키는 해설", explanation));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
-                .warnings()).singleElement().asString().contains("보기를 번호로 가리킴");
+        DraftGeneratorCli.YieldCheck yield =
+                DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
+
+        assertThat(yield.usable()).as("흡수도 같은 자로 재므로 여기서 세면 안 된다").isZero();
+        assertThat(yield.defects()).singleElement().asString()
+                .contains("보기를 번호로 가리킴")
+                .as("걸린 자리가 보여야 프롬프트의 어느 지시가 안 먹었는지 짚을 수 있다")
+                .contains("2번 보기는");
+        assertThat(yield.warnings())
+                .as("버린 항목이 경고 목록에도 오르면 같은 문제를 두 번 세는 셈이다")
+                .noneSatisfy(w -> assertThat(w).contains("번호로"));
     }
 
     /**
@@ -546,8 +565,10 @@ class DraftGeneratorCliTest {
         assertThat(DraftGeneratorCli.checkYield(List.of(fiveChoices), 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
                 .as("규약 위반이 아니라 통과했으므로, 알리지 않으면 아무도 모른다")
-                .filteredOn(w -> w.contains("보기가"))
-                .singleElement().asString().contains("5개");
+                // "보기가"로만 거르면 경고 뒤에 붙는 지문 조각("보기가 다섯 개인 문제는?")까지
+                // 걸려 다른 경고가 함께 딸려 온다(2026-08-25에 실제로 그랬다). 문구로 좁힌다.
+                .filteredOn(w -> w.contains("보기가 5개"))
+                .singleElement().asString().contains("기준 4개");
 
         GeneratedProblemItem threeChoices = withTitle(new GeneratedProblemItem("보기가 세 개인 문제는?", "",
                 goodExplanation(), List.of(
@@ -602,14 +623,14 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("숫자가 보기를 가리키지 않으면 조용하다 — '보기 4개', '3번의 왕복'은 지칭이 아니다")
     void doesNotMistakePlainNumbersForChoiceReferences() {
-        assertThat(warningsFor("네 보기 4개 중 하나만 옳다.")).isEmpty();
-        assertThat(warningsFor("TCP는 3번의 왕복으로 연결을 맺는다.")).isEmpty();
-        assertThat(warningsFor("격리 수준 4가지 중 2가 기본값이다.")).isEmpty();
+        assertThat(choiceReferenceDefectsFor("네 보기 4개 중 하나만 옳다.")).isEmpty();
+        assertThat(choiceReferenceDefectsFor("TCP는 3번의 왕복으로 연결을 맺는다.")).isEmpty();
+        assertThat(choiceReferenceDefectsFor("격리 수준 4가지 중 2가 기본값이다.")).isEmpty();
 
-        assertThat(warningsFor("2번 보기는 UDP의 특성이다.")).isNotEmpty();
-        assertThat(warningsFor("보기 2번은 UDP의 특성이다.")).isNotEmpty();
-        assertThat(warningsFor("첫 번째 보기는 정의가 다르다.")).isNotEmpty();
-        assertThat(warningsFor("②는 격리 수준을 잘못 본 것이다."))
+        assertThat(choiceReferenceDefectsFor("2번 보기는 UDP의 특성이다.")).isNotEmpty();
+        assertThat(choiceReferenceDefectsFor("보기 2번은 UDP의 특성이다.")).isNotEmpty();
+        assertThat(choiceReferenceDefectsFor("첫 번째 보기는 정의가 다르다.")).isNotEmpty();
+        assertThat(choiceReferenceDefectsFor("②는 격리 수준을 잘못 본 것이다."))
                 .as("원문자는 해설에서 보기 말고 가리킬 것이 없다 — 단독으로도 잡는다")
                 .isNotEmpty();
     }
@@ -626,12 +647,12 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("문서 항목을 가리키는 것은 보기 지칭이 아니다 — 프롬프트가 시킨 마지막 줄이 걸렸었다")
     void doesNotFlagReferencesToDocumentItems() {
-        assertThat(warningsFor("(문서의 '언제 깨지는가' 2번 항목과 '흔한 오해 3'을 다시 읽어 보라)"))
+        assertThat(choiceReferenceDefectsFor("(문서의 '언제 깨지는가' 2번 항목과 '흔한 오해 3'을 다시 읽어 보라)"))
                 .isEmpty();
-        assertThat(warningsFor("(문서의 '락 기반과 MVCC' 절과 '언제 깨지는가' 4번 항목을 다시 읽어 보라)"))
+        assertThat(choiceReferenceDefectsFor("(문서의 '락 기반과 MVCC' 절과 '언제 깨지는가' 4번 항목을 다시 읽어 보라)"))
                 .isEmpty();
 
-        assertThat(warningsFor("\"복제 지연\"이라는 보기는 전제가 맞지 않는다."))
+        assertThat(choiceReferenceDefectsFor("\"복제 지연\"이라는 보기는 전제가 맞지 않는다."))
                 .as("내용으로 인용한 것도 당연히 걸리면 안 된다")
                 .isEmpty();
     }
@@ -644,7 +665,7 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("경고에 걸린 자리가 함께 실린다 — 종류만 알면 해설 전문을 다시 읽어야 한다")
     void warningCarriesTheOffendingSnippet() {
-        assertThat(warningsFor("따라서 2번 보기는 UDP의 특성을 옮겨 온 것이다."))
+        assertThat(choiceReferenceDefectsFor("따라서 2번 보기는 UDP의 특성을 옮겨 온 것이다."))
                 .singleElement().asString()
                 .as("걸린 표현과 그 앞뒤가 보여야 어디를 고칠지 정해진다")
                 .contains("2번 보기는")
@@ -653,11 +674,16 @@ class DraftGeneratorCliTest {
     }
 
     /** 해설 뒤에 붙여 분량 경고를 피하고, 보기 번호 지칭 경고만 남긴다. */
-    private static List<String> warningsFor(String explanationTail) {
+    /**
+     * 보기 번호 지칭에 걸린 <b>차단</b> 목록. 2026-08-25에 경고에서 차단으로 올라가면서
+     * {@code warnings()}가 아니라 {@code defects()}를 본다 — 걸린 항목은 이제 버려지므로
+     * 경고 목록에는 아예 오르지 않는다.
+     */
+    private static List<String> choiceReferenceDefectsFor(String explanationTail) {
         List<GeneratedProblemItem> problems =
                 List.of(multipleChoice("지문", goodExplanation() + " " + explanationTail));
         return DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
-                .warnings().stream().filter(w -> w.contains("번호로")).toList();
+                .defects().stream().filter(w -> w.contains("번호로")).toList();
     }
 
     /**
@@ -943,9 +969,23 @@ class DraftGeneratorCliTest {
      * 품질 검사를 <b>통과하는</b> 해설. 길이를 여기서 한 번만 정해 두는 이유는,
      * 각 테스트가 제 숫자를 적으면 {@link ProblemItemRule#EXPLANATION_MIN}을 올린 날
      * 그 테스트들이 조용히 "경고가 나는 해설"로 바뀌기 때문이다.
+     *
+     * <p><b>2026-08-25에 길이만으로는 부족해졌다.</b> 해설 검사가 둘 늘었다 —
+     * 오답을 몇 개나 짚었는가(따옴표 인용 개수), 그리고 다시 읽을 문서 절을 가리켰는가.
+     * 글자만 채운 해설은 이제 그 둘에 걸린다. 이 헬퍼가 있는 이유가 바로 이 상황이므로
+     * (검사가 늘 때마다 열세 개 테스트를 따라 고치지 않기 위해) 여기서 함께 만족시킨다.
+     *
+     * <p>인용문이 {@link #fourChoices()}의 오답 텍스트와 글자까지 같지는 않다. 검사가 세는 것은
+     * <b>따옴표로 묶인 인용의 개수</b>이지 보기와의 일치가 아니기 때문이다 — 그 한계는
+     * {@code QUOTED_CHOICE_REFERENCE} 주석에 적혀 있고, 여기서 그 사실을 한 번 더 드러낸다.
      */
     private static String goodExplanation() {
-        return "해".repeat(ProblemItemRule.EXPLANATION_MIN + 20);
+        String body = "정답인 이유는 원리가 이 상황에 그대로 적용되기 때문이다. "
+                + "\"오답 보기 하나\"는 두 개념을 뒤섞은 오해다. "
+                + "\"오답 보기 둘\"은 조건이 다른 경우를 옮겨 온 것이다. "
+                + "\"오답 보기 셋\"은 원인과 결과를 뒤집어 읽은 것이다. "
+                + "(문서의 '무엇인가' 절을 다시 읽어 보라) ";
+        return body + "해".repeat(ProblemItemRule.EXPLANATION_MIN + 20 - body.length());
     }
 
     /**

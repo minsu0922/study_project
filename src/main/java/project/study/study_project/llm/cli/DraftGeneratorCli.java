@@ -14,7 +14,7 @@ import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
-import project.study.study_project.llm.support.DocumentCheck;
+import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
@@ -404,8 +404,8 @@ public final class DraftGeneratorCli {
      * <p>차단 항목이 나오면 이야기가 다르다 — 그건 승인 자체가 막힌다는 뜻이라
      * 그 주기가 통째로 헛돌게 되므로 <b>요약 화면에</b> 눈에 띄게 남긴다.
      */
-    private static void reportDocumentChecks(GeneratedDocumentItem document, LocalDate date) {
-        List<DocumentCheck> checks = DocumentDraftValidator.validate(
+    private static void reportDraftChecks(GeneratedDocumentItem document, LocalDate date) {
+        List<DraftCheck> checks = DocumentDraftValidator.validate(
                 document.title(), document.slug(), document.contentMd());
         if (checks.isEmpty()) {
             System.out.println("문서 검증 통과: 형식 문제 없음");
@@ -514,7 +514,7 @@ public final class DraftGeneratorCli {
 
         // 문제 쪽의 수확량 점검에 해당하는 자리다. 지금까지 문서에는 이런 점검이 없었고,
         // 검증은 <며칠 뒤 승인 화면에서만> 돌았다. 그 사이 이 문서로 사흘 치 문제가 만들어진다.
-        reportDocumentChecks(document, date);
+        reportDraftChecks(document, date);
 
         // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
         // 문서는 이미 파일에 있으므로 job을 죽이지 않는다 — 대신 다음 주기에 같은 주제가
@@ -948,7 +948,9 @@ public final class DraftGeneratorCli {
             usable++;
             // 버릴 것은 아니지만 알려야 할 것. 흡수를 통과하므로 usable을 센 <뒤에> 본다 —
             // 여기서 usable에서 빼면 경고가 말하는 개수와 실제 검수함 개수가 어긋난다.
-            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty)) {
+            // source가 있으면 해설이 "다시 읽을 절"을 가리켜야 한다(2026-08-25) — 폴백으로
+            // 근거 없이 만든 날은 가리킬 곳이 없으므로 그 검사를 켜지 않는다.
+            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty, source != null)) {
                 warnings.add("%d번 [%s] — %s".formatted(i + 1, warning, ProblemItemRule.snippet(item)));
             }
             // 인용 검사는 문서를 들고 있어야 해서 규칙이 따로 산다(SourceQuoteRule 클래스 주석).
@@ -958,6 +960,11 @@ public final class DraftGeneratorCli {
                 warnings.add("%d번 [%s] — %s".formatted(i + 1, quoteWarning, ProblemItemRule.snippet(item)));
             }
         }
+
+        // 배치 전체를 봐야 알 수 있는 것 — 유형 쏠림(2026-08-25). 한 문제만 봐서는 알 수 없어
+        // 항목 루프 밖에 둔다. 번호를 붙이지 않는 것도 그래서다: 특정 문제의 잘못이 아니다.
+        warnings.addAll(ProblemItemRule.batchWarningsOf(problems, difficulty));
+
         return new YieldCheck(requested, problems.size(), usable, defects, warnings);
     }
 

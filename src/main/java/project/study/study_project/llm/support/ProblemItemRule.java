@@ -3,6 +3,7 @@ package project.study.study_project.llm.support;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
+import project.study.study_project.llm.client.QuestionKind;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -84,6 +85,21 @@ public final class ProblemItemRule {
             return "지문이 비어 있음";
         }
 
+        // 해설이 보기를 번호로 가리키면 <학습자에게만> 어긋난 해설이 나간다 — 2026-08-25에
+        // 경고에서 차단으로 올렸다. 이 검사만 경고 목록이 아니라 여기 있는 이유:
+        //
+        // 다른 경고들("해설이 짧음", "정답이 가장 긴 보기")은 사람이 보고 판단할 여지가 있고,
+        // 버리면 요금까지 낸 멀쩡한 문제를 잃는다. 그런데 이건 판단할 여지가 없다 —
+        // 보기를 섞어 내보내기로 한 이상(QuizProblemItem) 번호로 가리킨 해설은 <반드시> 틀린다.
+        // 게다가 검수자는 섞이기 전 화면을 보므로 번호가 맞아 보여서, 경고로 두면
+        // "번호 맞는데?" 하며 그대로 승인된다. 사람 눈으로는 영영 안 걸리는 결함이라
+        // 기계가 막는 수밖에 없다(DraftCheck.Severity 주석의 "판단해 봐야 답이 하나인 것은 차단").
+        String choiceRef = contextOf(CHOICE_NUMBER_REFERENCE, item.explanation());
+        if (choiceRef != null) {
+            return "해설이 보기를 번호로 가리킴 (\"%s\") — 내보낼 때 섞으므로 학습자에게는 어긋난다"
+                    .formatted(choiceRef);
+        }
+
         if (type == ProblemType.MULTIPLE_CHOICE) {
             List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
             int size = choices == null ? 0 : choices.size();
@@ -108,15 +124,17 @@ public final class ProblemItemRule {
         return defectOf(item, type) == null;
     }
 
-    /**
-     * 해설이 비었는지 — 흡수는 통과하지만 <b>알려야 하는</b> 상태.
+    /*
+     * hasBlankExplanation()이 여기 있었다 — 2026-08-25에 지웠다.
      *
-     * <p>해설은 "왜 정답인지"를 설명하는 이 서비스의 핵심 가치다. 없어도 문제는 돌아가므로
-     * 버리지는 않지만, 조용히 넘어가면 해설 없는 문제가 쌓인다.
+     * "해설이 비었으면 버리지는 말되 알려라"는 뜻으로 만들어 뒀는데, <아무 데서도 부르지
+     * 않았다>. 그 사이 qualityWarningsOf가 같은 일을 하는 "해설 없음" 경고를 갖게 되면서
+     * 같은 판단이 두 벌이 됐고, 그중 한 벌은 죽어 있었다.
+     *
+     * 지운 이유는 안 쓰여서가 아니라 <있으면 안 쓰인 채로 또 오해를 부르기 때문>이다.
+     * 실제로 이번 점검에서 "빈 해설을 아무도 안 잡는다"고 잘못 읽었다 — 죽은 쪽을 보고
+     * 산 쪽을 못 본 것이다. 판단은 qualityWarningsOf 한 곳에만 둔다.
      */
-    public static boolean hasBlankExplanation(GeneratedProblemItem item) {
-        return isBlank(item.explanation());
-    }
 
     /* ── 품질 경고 ───────────────────────────────────────────────
      * 여기부터는 "퀴즈로 성립하는가"가 아니라 "우리가 원하는 물건인가"를 본다.
@@ -174,7 +192,51 @@ public final class ProblemItemRule {
      * 상황도 있고, 그 판단은 검수자의 몫이다. 길이는 결함의 <b>신호</b>일 뿐 결함 자체가 아니다 —
      * 진짜 결함("개념을 보여주려고 지어낸 장치")은 사람만 알아볼 수 있다.
      */
-    public static final int INTERMEDIATE_QUESTION_MAX = 250;
+    public static final int INTERMEDIATE_QUESTION_MAX = 350;
+
+    /**
+     * 중급 <b>상황 적용형</b> 지문의 길이 하한 — 2026-08-25 신설.
+     *
+     * <p><b>상한만 있고 하한이 없던 것이 문제였다.</b> 사용자가 파일럿 5문제를 풀고
+     * "지문을 더 구체화해야겠다"고 했다. 세어 보니 118·134·152·154·173자로,
+     * 상한 250에 <b>한 문제도 근접하지 않았다</b>. 상한은 아무 일도 하지 않고 있었던 셈이다.
+     *
+     * <p>그래서 상한을 250→350으로 올리는 것만으로는 아무것도 바뀌지 않는다. 모델은 이미
+     * 상한 근처에도 안 갔다. 실제로 지면을 쓰게 하는 것은 <b>하한</b>이다 — 문서 프롬프트에서
+     * 이미 배운 것과 같다("개수를 박은 지시만 지켜졌다", {@code ClaudeDocumentGenerator}).
+     *
+     * <p><b>150인 근거.</b> 프롬프트의 {@code [상황 지문 쓰는 법]}은 두 요소를 요구한다 —
+     * 무엇을 하려던 중인가(구체적 기능 이름), 무엇이 어긋났는가(숫자나 현상).
+     * 둘을 제대로 쓰면 대략 150자다. 실측 다섯 중 셋(152·154·173)이 이미 넘었고,
+     * 못 넘은 둘(118·134)이 정확히 "기능 이름이 뭉뚱그려졌거나 증상에 숫자가 없는" 쪽이었다.
+     *
+     * <p><b>상황형에만 건다.</b> 같은 날 중급에 네 형태(비교·인과·판정·순서)를 열었는데
+     * ({@link project.study.study_project.llm.client.QuestionKind}) 그쪽은 <b>짧은 것이 정상</b>이다.
+     * 진술 판정형은 지문이 한 줄이고 보기가 본문이다. 구분 없이 하한을 걸면 짧아도 되는
+     * 문제에 군더더기를 붙이게 만든다 — 지금 고치려는 것과 정확히 반대 방향의 사고다.
+     *
+     * <p>초급·제목과 같은 이유로 <b>경고이지 차단이 아니다</b>. 149자짜리 멀쩡한 지문을
+     * 버리면 요금까지 낸 문제를 통째로 잃는다.
+     */
+    public static final int SITUATION_QUESTION_MIN = 150;
+
+    /**
+     * 한 배치에 있어야 할 <b>상황 적용형</b>의 최소 개수 — 2026-08-25 신설.
+     *
+     * <p>형태를 다섯으로 열면 모델이 <b>쓰기 쉬운 쪽</b>으로 쏠릴 수 있다. 쏠려서 곤란한 방향은
+     * 하나뿐이다 — 상황형이 사라지는 쪽. 면접에서 가장 많이 나오는 형태이고, 애초에
+     * 중급의 정의였던 것이라 기본값으로는 지켜야 한다.
+     *
+     * <p><b>왜 유형별 개수를 전부 박지 않았나.</b> "상황 2 / 비교 2 / 인과 1" 식으로 박으면
+     * 문서에 그 재료가 없을 때 <b>억지로 만든다</b>. 순서·절차형은 특히 그렇다 — 순서가 결과를
+     * 가르는 주제(캐시 무효화·트랜잭션)에만 재료가 있는데, 개수를 박으면 순서가 아무 상관 없는
+     * 주제에 순서를 지어낸다. 기존 {@code [개수를 채우지 못할 때]} 규칙과도 부딪힌다.
+     * <b>바닥만 깔고 나머지는 재료에 맡기는 것</b>이 이 파이프라인의 방식이다.
+     *
+     * <p>배치 단위라 항목 하나만 보는 {@link #qualityWarningsOf}에서는 잴 수 없다.
+     * {@link #batchWarningsOf}가 따로 있는 이유다.
+     */
+    public static final int SITUATION_MIN_PER_BATCH = 2;
 
     /**
      * 목록 제목의 길이 상한 — 2026-08-21 신설. <b>생성 프롬프트의 숫자와 같아야 한다</b>
@@ -278,16 +340,58 @@ public final class ProblemItemRule {
                     + "|[①-④]");
 
     /**
+     * 해설이 <b>근거 문서의 절</b>을 가리키는 마지막 줄 — 2026-08-25 신설.
+     *
+     * <p>프롬프트의 {@code [해설]} 절은 "근거 문서가 주어졌다면 마지막에 다시 읽을 절을 한 줄로
+     * 가리킨다"를 요구한다. 이 한 줄이 <b>학습자가 틀린 뒤 돌아갈 유일한 입구</b>다 —
+     * 오답노트와 복습 화면은 문서와 떨어져 있어서, 해설에 이 줄이 없으면 "그래서 어디를 읽지?"에
+     * 답이 없다. 요구해 놓고 재지 않던 항목이라 실제로 빠져도 아무도 몰랐다.
+     *
+     * <p><b>{@code documentSlug}가 있을 때만 본다.</b> 근거 없이 만든 문제나 관리자가 올린 파일로
+     * 만든 문제는 가리킬 문서가 없다({@code LlmProblemService.generateFromDocument} 주석).
+     * 그런 문제에까지 경고를 달면 헛울리는 경고가 되어 다음부터 아무도 안 본다.
+     *
+     * <p>패턴을 느슨하게 잡은 이유: 프롬프트 예시는 {@code (문서의 '언제 깨지는가' 절을 다시
+     * 읽어 보라)}인데 실물은 따옴표 종류·절 이름 표기가 매번 조금씩 다르다. 형식을 엄격히
+     * 재면 정상 동작이 매번 걸린다. 여기서 확인하려는 것은 <b>그 줄이 있는지</b>뿐이다.
+     */
+    private static final Pattern DOCUMENT_SECTION_HINT =
+            Pattern.compile("문서(의|에서)?\\s*[''\"“”].{1,60}?['']?[''\"“”]?\\s*절"
+                    + "|문서(의|에서)?\\s*.{1,60}?\\s*절을\\s*다시");
+
+    /**
+     * 해설이 오답을 <b>내용으로 인용</b>한 자리 — 2026-08-25 신설.
+     *
+     * <p>프롬프트는 오답마다 왜 틀렸는지를 짚되 "순서가 아니라 내용으로 가리켜라"라고 요구하고,
+     * 예시까지 따옴표로 묶인 형태다({@code "MVCC도 읽기에 공유 락을 건다"는 보기는…}).
+     * 그래서 <b>따옴표로 묶인 인용의 개수</b>가 오답을 몇 개 짚었는지의 대리 지표가 된다.
+     *
+     * <p><b>대리 지표라는 것을 분명히 해 둔다.</b> 인용 없이 "잔여 수량을 캐시에만 쓰겠다는 판단은"
+     * 처럼 풀어 쓴 해설도 정상이고, 이 검사는 그걸 놓친다. 반대로 정답 근거를 설명하며 문서
+     * 문장을 따옴표로 인용해도 개수에 들어간다. 그래서 <b>개수가 모자랄 때만</b> 경고하고
+     * 넘칠 때는 아무 말도 하지 않는다 — 한쪽 방향으로만 트는 검사가 오탐이 훨씬 적다.
+     *
+     * <p>실측(2026-08-25 파일럿 5문제)은 전부 정확히 3건이었다. 오답이 셋이니 셋을 짚은 것이고,
+     * 지금 잘 나오는 것을 <b>재서 유지</b>하는 것이 이 검사의 목적이다 — 해설 400~700자를
+     * 적어 두고도 359~395자로 나오던 일을 겪은 뒤로 이 저장소가 택한 방식이다.
+     */
+    private static final Pattern QUOTED_CHOICE_REFERENCE =
+            Pattern.compile("[\"“][^\"“”]{5,}?[\"”]|['']?'[^']{5,}?'");
+
+    /**
      * 항목 하나의 품질 경고를 모두 모아 돌려준다. 없으면 빈 목록.
      *
      * <p>{@link #defectOf}가 하나만 돌려주는 것과 달리 여기는 목록이다 — 규약 위반은 하나만
      * 있어도 그 항목을 버리므로 첫 번째면 충분하지만, 경고는 사람이 <b>한 번에 다 보고</b>
      * 고치는 편이 왕복이 적다({@code DocumentDraftValidator.validate}와 같은 판단).
      *
-     * @param difficulty 난이도. {@code null}이면 난이도별 검사(지문 길이)를 건너뛴다 —
-     *                   관리자 화면의 직접 생성처럼 난이도를 알 수 없는 경로를 위한 여지
+     * @param difficulty        난이도. {@code null}이면 난이도별 검사(지문 길이)를 건너뛴다 —
+     *                          관리자 화면의 직접 생성처럼 난이도를 알 수 없는 경로를 위한 여지
+     * @param hasSourceDocument 근거 문서를 보고 만든 문제인지(2026-08-25 추가). 해설이 "다시 읽을 절"을
+     *                          가리켜야 하는지가 여기에 달렸다 — 근거 없이 만든 문제는 가리킬 곳이 없다
      */
-    public static List<String> qualityWarningsOf(GeneratedProblemItem item, Difficulty difficulty) {
+    public static List<String> qualityWarningsOf(GeneratedProblemItem item, Difficulty difficulty,
+                                                 boolean hasSourceDocument) {
         List<String> warnings = new ArrayList<>();
 
         // 제목 — 없어도 퀴즈는 성립하므로 defectOf가 아니라 여기서 본다(화면이 지문으로 대신한다).
@@ -318,10 +422,25 @@ public final class ProblemItemRule {
             } else if (length > EXPLANATION_MAX) {
                 warnings.add("해설이 김 (%d자, 기준 %d자)".formatted(length, EXPLANATION_MAX));
             }
-            String choiceRef = contextOf(CHOICE_NUMBER_REFERENCE, explanation);
-            if (choiceRef != null) {
-                warnings.add("해설이 보기를 번호로 가리킴 (\"%s\" — 내보낼 때 섞으므로 어긋난다)"
-                        .formatted(choiceRef));
+            // 보기 번호 지칭은 2026-08-25에 defectOf(차단)로 올라갔다 — 여기서 다시 세지 않는다.
+            // 두 곳에서 보면 차단으로 버려진 항목이 경고 목록에도 뜨거나, 문구가 갈라진다.
+
+            // 오답을 몇 개나 짚었는가 — 객관식에만 해당한다. 대리 지표라 <모자랄 때만> 말한다
+            // (자세한 배경은 QUOTED_CHOICE_REFERENCE).
+            List<GeneratedProblemItem.GeneratedChoice> mc = item.choices();
+            if (mc != null && mc.size() >= MIN_CHOICES) {
+                long wrongCount = mc.stream().filter(c -> !c.correct()).count();
+                long quoted = QUOTED_CHOICE_REFERENCE.matcher(explanation).results().count();
+                if (quoted < wrongCount) {
+                    warnings.add("해설이 짚은 오답이 적음 (인용 %d건, 오답 %d개 — 오답마다 어떤 오해인지 밝혀야 한다)"
+                            .formatted(quoted, wrongCount));
+                }
+            }
+
+            // 근거 문서로 돌아갈 한 줄이 있는가 — 문서를 근거로 만든 문제에만 해당한다.
+            // 학습자가 틀린 뒤 돌아갈 유일한 입구라, 빠지면 해설이 그 자리에서 끝나 버린다.
+            if (hasSourceDocument && contextOf(DOCUMENT_SECTION_HINT, explanation) == null) {
+                warnings.add("해설에 다시 읽을 문서 절이 없음 (틀린 학습자가 돌아갈 곳이 사라진다)");
             }
         }
 
@@ -336,11 +455,24 @@ public final class ProblemItemRule {
                 warnings.add("초급 지문이 김 (%d자, 기준 %d자 — 상황 서술이 붙었을 수 있다)"
                         .formatted(question.trim().length(), BEGINNER_QUESTION_MAX));
             }
-            // 중급은 상황이 있는 게 정상이라 길이만 본다. 길면 무엇을 묻는지가 흐려진다 —
-            // "억지 상황"인지까지는 기계가 판정할 수 없으므로 검수자에게 신호만 준다.
-            if (difficulty == Difficulty.INTERMEDIATE && question.trim().length() > INTERMEDIATE_QUESTION_MAX) {
-                warnings.add("중급 지문이 김 (%d자, 기준 %d자 — 상황이 길면 무엇을 묻는지가 흐려진다)"
-                        .formatted(question.trim().length(), INTERMEDIATE_QUESTION_MAX));
+            // 중급 — 2026-08-25에 상한만 보던 것을 유형별로 갈랐다.
+            //
+            // 전에는 상한(250) 하나였는데, 실측 다섯이 118~173자로 상한 근처에도 안 갔다.
+            // 즉 상한은 아무 일도 하지 않고 있었고, 정작 문제는 "짧아서 무엇을 묻는지 흐리다"였다.
+            // 그래서 상한을 350으로 올리고 <상황형에만 하한 150>을 걸었다.
+            // 나머지 네 형태(비교·인과·판정·순서)는 짧은 것이 정상이라 하한을 걸지 않는다 —
+            // 걸면 짧아도 되는 문제에 군더더기를 붙이게 만든다(SITUATION_QUESTION_MIN 주석).
+            if (difficulty == Difficulty.INTERMEDIATE) {
+                int qlen = question.trim().length();
+                if (qlen > INTERMEDIATE_QUESTION_MAX) {
+                    warnings.add("중급 지문이 김 (%d자, 기준 %d자 — 길면 무엇을 묻는지가 흐려진다)"
+                            .formatted(qlen, INTERMEDIATE_QUESTION_MAX));
+                } else if (item.questionKind() == QuestionKind.SITUATION && qlen < SITUATION_QUESTION_MIN) {
+                    // 유형이 null이면(옛 초안, 테스트) 조용히 넘어간다 — 유형을 도입하기 전에
+                    // 만들어진 초안이 갑자기 경고를 달고 나오면 검수자가 경고를 안 보게 된다.
+                    warnings.add("상황형 지문이 짧음 (%d자, 기준 %d자 — 기능 이름과 어긋난 증상을 숫자로 적었는지 보라)"
+                            .formatted(qlen, SITUATION_QUESTION_MIN));
+                }
             }
         }
 
@@ -365,6 +497,58 @@ public final class ProblemItemRule {
             warnings.add(markdown);
         }
         return warnings;
+    }
+
+    /**
+     * 항목 하나가 아니라 <b>배치 전체</b>를 보고 내는 경고 — 2026-08-25 신설. 없으면 빈 목록.
+     *
+     * <p>{@link #qualityWarningsOf}는 문제 하나만 본다. 그런데 유형 쏠림은 한 문제만 봐서는
+     * 알 수 없다 — 비교형 하나는 아무 문제도 아니고, 다섯 중 다섯이 비교형인 것이 문제다.
+     * 그래서 검사를 따로 뒀다.
+     *
+     * <p><b>중급에만 적용한다.</b> 초급은 정의를 묻는 자리라 형태를 나눌 것이 없고, 고급은
+     * 정의상 언제나 상황형이다({@link QuestionKind} 주석). 다른 난이도에 이 경고를 내면
+     * 매번 울리는 경고가 되고, 그러면 아무도 안 본다.
+     *
+     * <p><b>유형을 아무도 선언하지 않았으면 조용히 넘어간다.</b> 유형을 도입하기 전에 만들어진
+     * 배치가 통째로 경고를 다는 것을 막는다 — 지금 와서 알려 줘 봐야 고칠 방법이 없다.
+     *
+     * @param items      한 번의 생성으로 나온 문제들. 규약 위반으로 버려진 것은 빼고 넘긴다
+     * @param difficulty 그 배치의 난이도
+     */
+    public static List<String> batchWarningsOf(List<GeneratedProblemItem> items, Difficulty difficulty) {
+        if (difficulty != Difficulty.INTERMEDIATE || items == null || items.isEmpty()) {
+            return List.of();
+        }
+        long declared = items.stream().filter(i -> i.questionKind() != null).count();
+        if (declared == 0) {
+            return List.of();
+        }
+        long situations = items.stream().filter(i -> i.questionKind() == QuestionKind.SITUATION).count();
+        if (situations >= SITUATION_MIN_PER_BATCH) {
+            return List.of();
+        }
+        return List.of("상황 적용형이 %d개뿐 (기준 %d개 — 면접에서 가장 많이 나오는 형태라 배치마다 지킨다)"
+                .formatted(situations, SITUATION_MIN_PER_BATCH));
+    }
+
+    /**
+     * 항목 하나의 검사 결과를 검수 화면이 쓰는 모양으로 돌려준다 — 2026-08-25 신설.
+     *
+     * <p><b>왜 이 다리가 필요한가.</b> 이 클래스는 원래 배치(CLI)가 콘솔에 찍으려고 만든 것이라
+     * 결과가 {@code String}이다. 그런데 같은 검사를 검수 화면에도 띄우게 되면서
+     * 심각도가 필요해졌다 — 화면은 차단과 경고를 <b>다른 모양으로</b> 그린다
+     * ("둘을 같은 모양으로 보여주면 빨간 게 늘 있으니 그러려니 하게 된다", {@code llm.html}).
+     *
+     * <p>{@link #defectOf}를 여기 섞지 않은 이유: 규약 위반은 저장 자체가 안 되므로
+     * 화면에 뜰 일이 없다. 문서 쪽은 초안을 일단 저장하고 승인 때 막지만, 문제 쪽은
+     * 애초에 버린다 — 그 차이를 이 메서드가 지우면 "차단인데 왜 목록에 없지"가 된다.
+     */
+    public static List<DraftCheck> checksOf(GeneratedProblemItem item, Difficulty difficulty,
+                                            boolean hasSourceDocument) {
+        return qualityWarningsOf(item, difficulty, hasSourceDocument).stream()
+                .map(DraftCheck::warning)
+                .toList();
     }
 
     /**
@@ -442,6 +626,13 @@ public final class ProblemItemRule {
      * 목록의 다른 항목과 나란히 읽힌다.
      */
     private static String contextOf(Pattern pattern, String text) {
+        // 빈 값에는 걸릴 것이 없다. 호출부가 늘 !isBlank로 감싸 왔는데, 2026-08-25에 차단 검사가
+        // defectOf로 옮겨 오면서 <해설이 빈 채로> 들어오는 경로가 생겼다(해설 없음은 차단이 아니다).
+        // 호출부마다 감싸는 대신 여기서 막는다 — 검사 하나 늘 때마다 감쌀 곳이 늘어나는 구조가
+        // 결국 한 곳을 빠뜨린다.
+        if (isBlank(text)) {
+            return null;
+        }
         java.util.regex.Matcher m = pattern.matcher(text);
         if (!m.find()) {
             return null;

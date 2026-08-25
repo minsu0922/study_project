@@ -391,8 +391,11 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("[난이도가 뜻하는 것")
                 .as("초급은 용어를 묻고 상황이 없다 — 이 한 줄이 초급 문제의 상한이다")
                 .contains("<용어가 무엇인가>를 묻는다. 지문에 상황이 없다")
-                .as("중급은 원리를 새 상황에 적용시킨다")
-                .contains("<원리를 처음 보는 상황에 적용>하게 한다")
+                // 2026-08-25에 "<원리를 처음 보는 상황에 적용>하게 한다"에서 넓혔다.
+                // 그 문구가 중급을 상황 지문 하나로 묶어 두는 바람에 다른 형태가 나올 자리가 없었다.
+                // 상황 적용은 이제 다섯 형태 중 하나이고, 형태 목록은 별도 테스트가 지킨다.
+                .as("중급은 원리를 쓸 줄 아는지를 묻는다 — 형태는 그 아래에서 갈린다")
+                .contains("<원리를 쓸 줄 아는가>를 묻는다")
                 .as("고급은 대응들 사이의 선택이다")
                 .contains("<여러 대응 중 무엇을 고를지>를 묻는다")
                 .as("칸을 넘으면 다음 날 재료가 사라진다는 이유까지 줘야 지켜진다")
@@ -412,8 +415,10 @@ class ClaudeProblemGeneratorPromptTest {
     @DisplayName("중급·고급은 오답 설계로 갈린다 — 지문 형태로는 둘이 똑같았다(08-13과 08-14 실측)")
     void separatesIntermediateFromAdvancedByDistractorDesign() {
         assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
-                .as("중급 오답은 원리를 이해했으면 틀렸음을 아는 것")
-                .contains("오답은 원리를 잘못 적용한 판단이다")
+                // "어느 형태든"은 2026-08-25에 붙었다. 중급에 다섯 형태가 열리면서 오답 성격이
+                // 형태마다 갈릴 위험이 생겼는데, 그게 풀리면 판정형이 그대로 고급이 된다.
+                .as("중급 오답은 원리를 이해했으면 틀렸음을 아는 것 — 형태가 늘어도 이건 그대로다")
+                .contains("오답은 어느 형태든 원리를 잘못 적용한 판단이다")
                 .as("고급 오답은 조건이 달랐다면 옳았을 대응 — 넷 다 그럴듯해야 한다")
                 .contains("오답은 조건이 달랐다면 옳았을 대응이다")
                 .as("판정 기준이 있어야 모델이 스스로 고칠 수 있다")
@@ -460,7 +465,7 @@ class ClaudeProblemGeneratorPromptTest {
         assertThat(prompt(Difficulty.BEGINNER, DOC))
                 .contains("%d자 이내".formatted(ProblemItemRule.BEGINNER_QUESTION_MAX));
         assertThat(prompt(Difficulty.INTERMEDIATE, DOC))
-                .as("중급은 상황이 한 문단 있는 것이 정상이라 길이를 걸지 않는다")
+                .as("중급은 '이내'가 아니라 상·하한 범위로 건다 — 짧은 쪽이 실제 문제였다")
                 .doesNotContain("자 이내");
     }
 
@@ -635,12 +640,79 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("무엇이 어긋났는가")
                 .as("실험 상황은 이 표현들로 시작한다")
                 .contains("~를 점검했다")
-                .as("길면 무엇을 묻는지가 흐려진다 — 숫자로 박은 지시만 지켜졌다")
-                .contains("중급 지문은 %d자를 넘기지 마라".formatted(ProblemItemRule.INTERMEDIATE_QUESTION_MAX))
+                .as("상·하한을 둘 다 박는다 — 상한만 있던 동안 실측 다섯이 118~173자로 근처에도 안 갔다")
+                .contains("중급 상황 지문은 %d~%d자로 쓴다"
+                        .formatted(ProblemItemRule.SITUATION_QUESTION_MIN,
+                                ProblemItemRule.INTERMEDIATE_QUESTION_MAX))
                 .as("추상적 금지보다 실물 대비가 훨씬 잘 지켜진다")
                 .contains("두 메모리 영역을 대조하려고 발명한 장치다")
                 .as("자기 점검 항목이 있어야 모델이 만든 뒤 스스로 걸러낸다")
                 .contains("실제 서비스에 왜 있는지");
+    }
+
+    /**
+     * <b>2026-08-25 신설 — 중급이 묻는 다섯 형태.</b>
+     *
+     * <p>중급이 오래 상황 적용형 하나로만 나왔다. 원인은 프롬프트 안의 <b>자기모순</b>이었다 —
+     * {@code [난이도가 뜻하는 것]}은 중급을 "지문에 상황이 한 문단"으로 못 박았는데,
+     * {@code [난이도를 스스로 확인하는 법]}에는 "두 개념을 나란히 놓고 물었다면 중급이다"가 있었다.
+     * 비교형이 이미 중급으로 분류돼 있으면서 정의에는 없었던 것이다. 모델은 앞쪽 정의를 따랐다.
+     *
+     * <p>여기서 지키는 것은 셋이다: 다섯 형태가 <b>이름과 함께</b> 있는가(questionKind에 적을 값이라
+     * 이름이 정확해야 한다), 경계선이 있는가, 배분 바닥이 숫자로 박혔는가.
+     *
+     * <p><b>경계선 단언이 가장 중요하다.</b> 형태를 열면 초급·고급으로 새기 쉬운데, 그 사정을
+     * 함께 적지 않으면 모델이 규칙 둘 중 하나를 조용히 버린다 — {@code [용어]} 절과
+     * {@code [제목]} 절에서 이미 두 번 배운 것이다.
+     */
+    @Test
+    @DisplayName("중급은 다섯 형태로 낸다 — 경계선과 배분 바닥을 함께 적지 않으면 초급·고급으로 샌다")
+    void opensFiveQuestionKindsForIntermediateWithBoundaries() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("[중급이 묻는 다섯 형태]")
+                .as("questionKind에 적을 값이라 이름이 스키마와 정확히 같아야 한다")
+                .contains("SITUATION").contains("COMPARISON").contains("CAUSE")
+                .contains("JUDGMENT").contains("SEQUENCE")
+                .as("중급의 정의 자체가 바뀌었다 — 상황 적용은 다섯 중 하나일 뿐이다")
+                .contains("중급은 <원리를 쓸 줄 아는가>를 묻는다")
+                .as("배분 바닥을 숫자로 박지 않으면 쓰기 쉬운 형태로 쏠린다")
+                .contains("SITUATION이 최소 %d개는 있어야 한다"
+                        .formatted(ProblemItemRule.SITUATION_MIN_PER_BATCH))
+                .as("판정형은 초급으로, 비교형은 고급으로 새기 쉽다 — 경계를 실물로 대비시킨다")
+                .contains("[중급이 초급·고급으로 새지 않게 하는 법]")
+                .contains("진술이 <정의>면 초급이고")
+                .contains("고급은 <주어진 상황에서의 선택>을 묻는다")
+                .as("형태가 늘어도 중급의 오답 성격은 그대로다 — 이게 풀리면 전부 고급이 된다")
+                .contains("넷이 전부 그럴듯하면 그건 고급이다")
+                .as("b~e에 길이 하한을 걸면 짧아도 되는 문제에 군더더기를 붙인다")
+                .contains("b~e에는 길이 규칙이 없다");
+    }
+
+    /**
+     * <b>2026-08-25 신설 — 해설이 오답을 짚는 방식.</b>
+     *
+     * <p>보기 번호 지칭이 <b>경고에서 차단으로</b> 올라갔다. 보기를 섞어 내보내기로 한 이상
+     * 번호로 가리킨 해설은 반드시 틀리는데, 검수자는 섞이기 전 화면을 보므로 번호가 맞아 보인다 —
+     * 사람 눈으로는 영영 안 걸리는 결함이라 기계가 막는다. 프롬프트에도 <b>버려진다는 사실</b>을
+     * 적어야 한다. "권고인 줄 알았다"는 상태로 두면 요금을 내고 만든 문제가 통째로 버려진다.
+     *
+     * <p>오답을 짚는 방식을 형태별로 가른 것도 함께 지킨다. 무엇이 틀렸는지가 형태마다 다른데
+     * 상황형 기준으로만 적혀 있으면, 판정형 해설이 "이 상황에서는"으로 시작하는 헛소리가 된다.
+     */
+    @Test
+    @DisplayName("해설은 오답을 내용으로 인용하고 형태별로 다르게 짚는다 — 번호 지칭은 버려진다고 적는다")
+    void requiresQuotedChoiceReferencesAndKindAwareExplanations() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .as("하나라도 빠뜨리면 오답 하나가 설명 없이 남는다")
+                .contains("하나도 빠뜨리지 않고")
+                .as("검사가 큰따옴표 인용을 세므로 프롬프트도 그 형식을 요구해야 한다")
+                .contains("보기 내용을 큰따옴표로 묶어 인용한다")
+                .as("차단이라는 사실을 적지 않으면 권고로 읽고 어긴다")
+                .contains("저장 단계에서 통째로 버려진다")
+                .as("형태마다 무엇이 틀렸는지가 다르다 — 상황형 기준으로만 적으면 나머지가 헛돈다")
+                .contains("오답을 짚는 방식은 <형태에 따라 다르다>")
+                .contains("그 진술의 어느 부분이 사실과 다른지")
+                .contains("그 순서로 하면 무슨 일이 나는지");
     }
 
     /**

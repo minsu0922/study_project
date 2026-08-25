@@ -30,6 +30,7 @@ import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
+import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
@@ -359,7 +360,8 @@ public class LlmProblemService {
 
         return java.util.Optional.of(GeneratedProblemDraft.pending(
                 domain, difficulty, type, trimToNull(item.title()), trimToNull(item.question()), answer,
-                trimToNull(item.explanation()), choicesJson, model, trimToNull(documentSlug)));
+                trimToNull(item.explanation()), choicesJson, model, trimToNull(documentSlug),
+                item.questionKind()));
     }
 
     /* ── 검수(목록·승인·거절) ─────────────────────────────── */
@@ -465,12 +467,64 @@ public class LlmProblemService {
         }
     }
 
+    /**
+     * 초안 엔티티 → 검수 화면 응답. 검사 결과를 <b>여기서 그 자리에 계산해</b> 함께 내린다.
+     *
+     * <h2>2026-08-25 — 품질 경고가 검수 화면에 처음 뜬다</h2>
+     *
+     * <p>{@link ProblemItemRule#qualityWarningsOf}는 2026-08-13부터 있었는데, 부르는 곳이
+     * {@code DraftGeneratorCli}와 {@code PromptEvalCli}<b>뿐</b>이었다. 즉 <b>배치로 만든 문제만</b>
+     * 검사를 받았고 그 결과도 Actions 요약에만 찍혔다. 관리 화면에서 만든 문제는 아무 검사도
+     * 받지 않았고, 검수함에는 경고가 뜰 자리조차 없었다.
+     *
+     * <p>실물로 확인된 구멍이다 — 2026-08-25 파일럿 5문제의 해설은 396·422·438·452·521자였고,
+     * <b>396자짜리가 하한(400)에 미달인데 아무도 몰랐다</b>. 게다가 일일 배치를 꺼 둔 지금은
+     * 모든 생성이 화면 경로라, 검사가 사실상 하나도 돌지 않는 상태였다.
+     *
+     * <p><b>왜 저장하지 않고 조회할 때마다 계산하나.</b> 문서 초안이 이미 그렇게 한다
+     * ({@code LlmDocumentService.toResponse}). 검사 결과를 저장하면 규칙을 고쳐도 이미 대기 중인
+     * 초안은 옛 판정을 달고 있다 — 규칙을 자주 고치는 파이프라인이라 "지금 규칙으로 다시 본다"가
+     * 맞다. 비용도 문제가 안 된다: 정규식 몇 개이고 목록은 한 번에 20~50건이다.
+     *
+     * <p><b>엔티티를 다시 {@code GeneratedProblemItem}으로 되돌려 재는 것</b>이 어색해 보일 수
+     * 있다. 그래도 규칙을 엔티티용으로 한 벌 더 쓰는 것보다 낫다 — 판정 기준이 두 곳에 생기면
+     * 언젠가 갈라지고, 그러면 배치와 화면이 같은 문제를 두고 다른 말을 한다(이 클래스가
+     * {@code ProblemItemRule}에 판정을 맡긴 것과 같은 이유).
+     */
     private LlmDraftResponse toResponse(GeneratedProblemDraft d) {
+        List<AdminProblemRequest.ChoiceItem> choices = readChoices(d.getChoicesJson());
+        // 이미 처리된 초안에는 검사를 돌리지 않는다. 승인·거절이 끝난 것에 경고를 달아 봐야
+        // 고칠 방법이 없고, 목록이 지난 경고로 채워지면 정작 봐야 할 대기 건이 묻힌다
+        // (LlmDocumentService.toResponse와 같은 판단).
+        List<DraftCheck> checks = d.getStatus() == DraftStatus.PENDING
+                ? ProblemItemRule.checksOf(toItem(d, choices), d.getDifficulty(), d.getDocumentSlug() != null)
+                : List.of();
+
         return new LlmDraftResponse(
                 d.getId(), d.getDomain(), d.getDomain().getDisplayName(), d.getDifficulty(), d.getType(),
-                d.getTitle(), d.getQuestion(), d.getAnswer(), d.getExplanation(), readChoices(d.getChoicesJson()),
+                d.getTitle(), d.getQuestion(), d.getAnswer(), d.getExplanation(), choices,
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedProblemId(),
-                d.getDocumentSlug(), d.getCreatedAt(), d.getReviewedAt());
+                d.getDocumentSlug(), d.getQuestionKind(),
+                d.getQuestionKind() == null ? null : d.getQuestionKind().getLabel(),
+                checks, d.getCreatedAt(), d.getReviewedAt());
+    }
+
+    /**
+     * 저장된 초안을 검사기가 읽는 모양으로 되돌린다 — {@link #toResponse} 주석의 마지막 문단 참고.
+     *
+     * <p>{@code sourceQuote}는 복원하지 않는다(빈 문자열). 초안 테이블에 그 값을 저장하지 않기
+     * 때문이다 — 인용 검사는 <b>근거 문서를 손에 들고</b> 해야 하는데 검수 시점에는 문서를
+     * 다시 읽어야 하고, 그 검사는 이미 생성 시점에 배치가 했다({@code SourceQuoteRule} 주석).
+     * 여기서 재는 것은 문서 없이도 잴 수 있는 것들뿐이다.
+     */
+    private GeneratedProblemItem toItem(GeneratedProblemDraft d,
+                                        List<AdminProblemRequest.ChoiceItem> choices) {
+        List<GeneratedProblemItem.GeneratedChoice> items = choices == null ? List.of()
+                : choices.stream()
+                .map(c -> new GeneratedProblemItem.GeneratedChoice(c.text(), c.correct()))
+                .toList();
+        return new GeneratedProblemItem(d.getQuestion(), d.getAnswer(), d.getExplanation(),
+                items, "", d.getTitle(), d.getQuestionKind());
     }
 
     private String trimToNull(String s) {

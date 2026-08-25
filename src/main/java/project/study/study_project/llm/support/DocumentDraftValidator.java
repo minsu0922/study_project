@@ -31,7 +31,7 @@ public final class DocumentDraftValidator {
 
     /**
      * 권장 분량 상한(경고). 프롬프트가 요구하는 "9,000~12,000자"의 위쪽 끝.
-     * 넘겼다고 막지 않는 이유는 {@link DocumentCheck.Severity} 주석 참고 — 억지로 줄이면
+     * 넘겼다고 막지 않는 이유는 {@link DraftCheck.Severity} 주석 참고 — 억지로 줄이면
      * 용어 설명과 면접 질문부터 잘려 나가는데, 그 두 절이 분량을 올린 목적이었다.
      *
      * <p><b>이 값은 프롬프트의 분량 지시를 따라간다.</b> 2026-08-14에 고급 재료를 늘리려고
@@ -221,8 +221,8 @@ public final class DocumentDraftValidator {
      * <p><b>첫 실패에서 멈추지 않는 이유</b>: 검수자는 한 번에 다 보고 판단하고 싶어 한다.
      * "절이 빠졌다"를 고쳐 다시 뽑았더니 이번엔 "분량 초과"가 나오는 식이면 왕복만 늘어난다.
      */
-    public static List<DocumentCheck> validate(String title, String slug, String contentMd) {
-        List<DocumentCheck> checks = new ArrayList<>();
+    public static List<DraftCheck> validate(String title, String slug, String contentMd) {
+        List<DraftCheck> checks = new ArrayList<>();
         String body = contentMd == null ? "" : contentMd;
 
         // 제목을 찾는 검사들은 <코드블록을 지운 사본>에서 본다. 배경은 maskFencedCode 주석 참고.
@@ -245,8 +245,8 @@ public final class DocumentDraftValidator {
     }
 
     /** 승인해도 되는가 — BLOCKING이 하나라도 있으면 안 된다. */
-    public static boolean hasBlocking(List<DocumentCheck> checks) {
-        return checks.stream().anyMatch(DocumentCheck::isBlocking);
+    public static boolean hasBlocking(List<DraftCheck> checks) {
+        return checks.stream().anyMatch(DraftCheck::isBlocking);
     }
 
     /* ── 개별 규칙 ───────────────────────────────────────────── */
@@ -256,11 +256,11 @@ public final class DocumentDraftValidator {
      * <b>잡지 못한다</b>: 승인은 컨트롤러가 아니라 서비스에서 {@code AdminDocumentService.create}를
      * 직접 부르는 경로라 {@code @Valid}가 걸리지 않는다. 여기서 안 보면 그대로 통과한다.
      */
-    private static void checkSlug(String slug, List<DocumentCheck> checks) {
+    private static void checkSlug(String slug, List<DraftCheck> checks) {
         if (slug == null || slug.isBlank()) {
-            checks.add(DocumentCheck.blocking("slug가 비어 있습니다."));
+            checks.add(DraftCheck.blocking("slug가 비어 있습니다."));
         } else if (!SLUG_PATTERN.matcher(slug).matches()) {
-            checks.add(DocumentCheck.blocking(
+            checks.add(DraftCheck.blocking(
                     "slug 형식이 규칙에 맞지 않습니다(영문 소문자·숫자·하이픈만): " + slug));
         }
     }
@@ -276,18 +276,18 @@ public final class DocumentDraftValidator {
      * 경고가 뜨면 <b>경고를 무시하는 습관</b>이 생긴다. 진짜 다를 때만 울려야 쓸모가 있다.
      */
     private static void checkTitleMatchesHeading(String title, String body, String structure,
-                                                 List<DocumentCheck> checks) {
+                                                 List<DraftCheck> checks) {
         // 코드블록을 지운 사본에서 찾는다 — 셸 주석("# 개수를 센다")이 제목 행세를 하면
         // "제목이 없습니다"(차단)가 "제목이 다릅니다"(경고)로 내려앉는다(maskFencedCode 주석).
         Matcher m = H1_PATTERN.matcher(structure);
         if (!m.find()) {
-            checks.add(DocumentCheck.blocking("본문에 최상위 제목(# ...)이 없습니다."));
+            checks.add(DraftCheck.blocking("본문에 최상위 제목(# ...)이 없습니다."));
             return;
         }
         // 위치는 사본에서 찾았지만 글자는 원문에서 꺼낸다(두 문자열의 길이가 같아 인덱스가 통한다).
         String heading = body.substring(m.start(1), m.end(1));
         if (title == null || !squash(title).equals(squash(heading))) {
-            checks.add(DocumentCheck.warning(
+            checks.add(DraftCheck.warning(
                     "제목 필드와 본문 제목이 다릅니다. 필드=\"" + title + "\" / 본문=\"" + heading + "\""));
         }
     }
@@ -298,10 +298,10 @@ public final class DocumentDraftValidator {
      * @param structure 코드블록을 지운 사본. 원문으로 보면 코드 주석에 적힌 {@code ## 무엇인가}만으로
      *                  절이 있는 것으로 통과한다.
      */
-    private static void checkRequiredSections(String structure, List<DocumentCheck> checks) {
+    private static void checkRequiredSections(String structure, List<DraftCheck> checks) {
         for (String section : ClaudeDocumentGenerator.REQUIRED_SECTIONS) {
             if (!structure.contains(section)) {
-                checks.add(DocumentCheck.blocking("필수 절이 없습니다: " + section));
+                checks.add(DraftCheck.blocking("필수 절이 없습니다: " + section));
             }
         }
     }
@@ -329,20 +329,20 @@ public final class DocumentDraftValidator {
      * <p>굵은 글씨 형태도 함께 세어 메시지에 담는 이유: "없습니다"만 보면 무엇을 해야 할지
      * 모르지만, "굵은 글씨로 3개 있습니다"까지 보면 <b>고칠 방법이 곧바로 보인다</b>.
      */
-    private static void checkDesignRationaleHeading(String structure, List<DocumentCheck> checks) {
+    private static void checkDesignRationaleHeading(String structure, List<DraftCheck> checks) {
         int headings = count(DESIGN_RATIONALE_HEADING, structure);
         if (headings == 1) {
             return;
         }
         if (headings == 0) {
             int bold = count(DESIGN_RATIONALE_BOLD, structure);
-            checks.add(DocumentCheck.warning(bold > 0
+            checks.add(DraftCheck.warning(bold > 0
                     ? "'### 왜 이렇게 설계됐는가' 소제목이 없습니다(굵은 글씨로 %d개 있습니다 — ###로 올리세요). 중급 문제가 이 절을 재료로 씁니다."
                             .formatted(bold)
                     : "'### 왜 이렇게 설계됐는가' 소제목이 없습니다. 중급 문제가 이 절을 재료로 씁니다."));
             return;
         }
-        checks.add(DocumentCheck.warning(
+        checks.add(DraftCheck.warning(
                 "'### 왜 이렇게 설계됐는가' 소제목이 %d개입니다(문서 전체에 1개). 설계 근거는 본문 문장으로 녹여 쓰세요."
                         .formatted(headings)));
     }
@@ -359,7 +359,7 @@ public final class DocumentDraftValidator {
      * 규칙 옆의 예시에 하이픈이 없어서였고, 그때 <b>예시가 규칙을 이긴다</b>는 것을 배웠다.
      * 프롬프트를 또 고치는 것보다 세어 보는 쪽이 확실하다.
      */
-    private static void checkTermList(String body, String structure, List<DocumentCheck> checks) {
+    private static void checkTermList(String body, String structure, List<DraftCheck> checks) {
         Section section0 = sectionOf(body, structure, "## 무엇인가");
         if (section0 == null || section0.raw().isBlank()) {
             return; // 절 자체가 없으면 checkRequiredSections가 이미 차단으로 잡는다
@@ -367,7 +367,7 @@ public final class DocumentDraftValidator {
         // 코드블록 안의 하이픈 목록에 속으면 "용어 목록이 있다"고 잘못 판정한다
         String section = section0.masked();
         if (!TERM_BULLET.matcher(section).find() && BOLD_TERM_LINE.matcher(section).find()) {
-            checks.add(DocumentCheck.warning(
+            checks.add(DraftCheck.warning(
                     "'## 무엇인가'의 용어 정의가 하이픈 목록이 아닙니다. "
                             + "줄만 바꾸면 화면에서 한 문단으로 뭉쳐 나옵니다(마크다운의 홑줄바꿈)."));
         }
@@ -386,9 +386,9 @@ public final class DocumentDraftValidator {
      * <p>차단이 아니라 경고인 이유는 이 절의 다른 형식 규칙과 같다 — 표 하나가 없다고 나흘치
      * 문서를 버리는 것보다, 검수자가 승인 전에 표를 채워 넣는 편이 싸다.
      */
-    private static void checkGlossaryTable(String structure, List<DocumentCheck> checks) {
+    private static void checkGlossaryTable(String structure, List<DraftCheck> checks) {
         if (!GLOSSARY_HEADING.matcher(structure).find()) {
-            checks.add(DocumentCheck.warning(
+            checks.add(DraftCheck.warning(
                     "'### 용어 한눈에' 표가 없습니다. 뒤쪽 절에서 처음 나오는 용어를 올려 두는 자리입니다."));
         }
     }
@@ -406,7 +406,7 @@ public final class DocumentDraftValidator {
      * 문서 어디에도 그 뜻이 없었다. 문서에서 새면 문제까지 새는 구조라 <b>문서 단계에서</b>
      * 잡는 것이 가장 싸다.
      */
-    private static void checkUndefinedTerms(String body, List<DocumentCheck> checks) {
+    private static void checkUndefinedTerms(String body, List<DraftCheck> checks) {
         // LinkedHashSet — 같은 용어가 여러 번 나와도 한 번만 알리고, 문서에 나온 순서를 지킨다.
         // 검수자는 메시지를 들고 문서를 위에서 아래로 훑으므로 순서가 곧 찾는 순서다.
         Set<String> undefined = new LinkedHashSet<>();
@@ -429,7 +429,7 @@ public final class DocumentDraftValidator {
         String tail = undefined.size() > listed.size()
                 ? " 외 %d개".formatted(undefined.size() - listed.size())
                 : "";
-        checks.add(DocumentCheck.warning(
+        checks.add(DraftCheck.warning(
                 "정의 없이 쓰인 용어가 있습니다: %s%s. 그 자리에서 풀거나 '### 용어 한눈에' 표에 올리세요."
                         .formatted(String.join(", ", listed), tail)));
     }
@@ -472,7 +472,7 @@ public final class DocumentDraftValidator {
      * <p>본론이 얇으면 초급·중급 재료가 함께 마른다. 초급이 캘 곳은 {@code ## 무엇인가}와
      * 본론의 기본 동작이고, 중급의 설계 판단도 대부분 본론에 녹아 있다.
      */
-    private static void checkBodySections(String body, String structure, List<DocumentCheck> checks) {
+    private static void checkBodySections(String body, String structure, List<DraftCheck> checks) {
         List<String> bodySections = new ArrayList<>();
         // 코드블록 안의 "## " 주석을 본론 섹션으로 세면 본론이 빈 문서가 통과한다
         Matcher m = H2_PATTERN.matcher(structure);
@@ -483,7 +483,7 @@ public final class DocumentDraftValidator {
             }
         }
         if (bodySections.size() < MIN_BODY_SECTIONS) {
-            checks.add(DocumentCheck.warning(
+            checks.add(DraftCheck.warning(
                     "본론 섹션이 %d개입니다(권장 %d~3개). 본론이 얇으면 초급·중급 재료가 함께 마릅니다."
                             .formatted(bodySections.size(), MIN_BODY_SECTIONS)));
         }
@@ -500,7 +500,7 @@ public final class DocumentDraftValidator {
      * {@code ### }나 {@code - }로 올 수 있다. 셋을 모두 항목으로 센다. 여기서 형식 하나만
      * 인정하면 멀쩡한 문서에 경고가 뜨고, 오탐은 경고를 무력하게 만든다.
      */
-    private static void checkFailureModeCount(String body, String structure, List<DocumentCheck> checks) {
+    private static void checkFailureModeCount(String body, String structure, List<DraftCheck> checks) {
         Section section = sectionOf(body, structure, "## 언제 깨지는가");
         if (section == null) {
             return; // 절 자체가 없으면 checkRequiredSections가 차단으로 잡는다
@@ -508,7 +508,7 @@ public final class DocumentDraftValidator {
         // 사본으로 센다 — 코드 예제의 "- " 줄까지 항목으로 세면 모자란 문서가 통과한다
         int items = count(FAILURE_MODE_ITEM, section.masked());
         if (items < MIN_FAILURE_MODES) {
-            checks.add(DocumentCheck.warning(
+            checks.add(DraftCheck.warning(
                     "'## 언제 깨지는가'의 항목이 %d개입니다(기준 %d개 이상). 고급 문제가 여기를 재료로 씁니다."
                             .formatted(items, MIN_FAILURE_MODES)));
         }
@@ -525,10 +525,10 @@ public final class DocumentDraftValidator {
      * 버리는 것보다, 검수자가 승인 전에 한 토막 넣는 편이 싸다. 게다가 주제에 따라서는
      * (설계 원칙·방법론) 코드가 억지가 되는 날도 있어 차단으로 두면 그런 날 길이 막힌다.
      */
-    private static void checkCodeExamples(String body, List<DocumentCheck> checks) {
+    private static void checkCodeExamples(String body, List<DraftCheck> checks) {
         int blocks = count(FENCED_CODE, body);
         if (blocks < MIN_CODE_BLOCKS) {
-            checks.add(DocumentCheck.warning(
+            checks.add(DraftCheck.warning(
                     "코드 예제가 %d개입니다(기준 %d개 이상). 코드가 없으면 블로그로 옮겼을 때 밀도가 확 떨어집니다."
                             .formatted(blocks, MIN_CODE_BLOCKS)));
         }
@@ -548,7 +548,7 @@ public final class DocumentDraftValidator {
      * {@link #MIN_FOUNDATION_LENGTH}의 기준을 프롬프트 요구치(1,500)보다 낮춘 이유는
      * 그 상수 주석 참고.
      */
-    private static void checkFoundationSection(String body, String structure, List<DocumentCheck> checks) {
+    private static void checkFoundationSection(String body, String structure, List<DraftCheck> checks) {
         Section section = sectionOf(body, structure, "## 바탕이 되는 개념");
         if (section == null) {
             return; // 절 자체가 없으면 checkRequiredSections가 이미 차단으로 잡는다
@@ -556,7 +556,7 @@ public final class DocumentDraftValidator {
         // 분량은 원문으로 잰다 — 코드 예제도 독자가 읽는 양이다(항목을 세는 검사와 갈리는 지점)
         int length = section.raw().strip().length();
         if (length < MIN_FOUNDATION_LENGTH) {
-            checks.add(DocumentCheck.warning(
+            checks.add(DraftCheck.warning(
                     "'## 바탕이 되는 개념'이 %d자입니다(기준 %d자 이상, 프롬프트 요구는 1,500~2,500자). "
                             .formatted(length, MIN_FOUNDATION_LENGTH)
                             + "이 절이 얇으면 배경 지식이 없는 사람은 첫 문단에서 막힙니다."));
@@ -661,26 +661,26 @@ public final class DocumentDraftValidator {
      * <p>막아야 하는 것은 코드블록 밖의 태그다. 문서 상세 화면이 마크다운 변환 결과를
      * {@code innerHTML}로 넣기 때문에(document.html), 그 자리의 태그는 진짜로 실행된다.
      */
-    private static void checkHtmlTags(String body, List<DocumentCheck> checks) {
+    private static void checkHtmlTags(String body, List<DraftCheck> checks) {
         // 코드 영역을 지운 사본에서만 찾는다. 길이가 달라져도 상관없다 — 위치가 아니라
         // "있는가 / 무엇이"만 알면 되기 때문. 펜스를 먼저 지워야 그 안의 백틱에 안 휘둘린다.
         String stripped = INLINE_CODE.matcher(FENCED_CODE.matcher(body).replaceAll("")).replaceAll("");
 
         Matcher m = HTML_TAG.matcher(stripped);
         if (m.find()) {
-            checks.add(DocumentCheck.blocking(
+            checks.add(DraftCheck.blocking(
                     "코드블록 밖에 HTML 태그가 있습니다(문서 화면에서 그대로 실행됩니다): " + m.group()));
         }
     }
 
     /** 분량 — 권장 초과는 경고, 하드 상한 초과는 차단. */
-    private static void checkLength(String body, List<DocumentCheck> checks) {
+    private static void checkLength(String body, List<DraftCheck> checks) {
         int length = body.length();
         if (length > MAX_LENGTH) {
-            checks.add(DocumentCheck.blocking(
+            checks.add(DraftCheck.blocking(
                     "본문이 하드 상한을 넘었습니다: " + length + "자 (상한 " + MAX_LENGTH + "자)"));
         } else if (length > WARN_LENGTH) {
-            checks.add(DocumentCheck.warning(
+            checks.add(DraftCheck.warning(
                     "본문이 권장 분량을 넘었습니다: " + length + "자 (권장 " + WARN_LENGTH + "자)"));
         }
     }

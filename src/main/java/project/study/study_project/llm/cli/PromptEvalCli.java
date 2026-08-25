@@ -186,7 +186,7 @@ public final class PromptEvalCli {
             if (countDeclarativeSentences(question) > 0) {
                 withBackground++;
             }
-            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty)) {
+            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty, source != null)) {
                 // "해설이 짧음 (382자, 기준 400자)"에서 괄호를 떼어 종류로 묶는다.
                 // 숫자까지 키로 쓰면 표가 한 줄짜리 항목으로 가득 차 한눈에 안 들어온다.
                 String kind = warning.replaceAll("\\s*\\(.*", "");

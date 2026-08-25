@@ -43,7 +43,14 @@ public record GeneratedProblemItem(
         @JsonPropertyDescription("문제 목록에 뜰 한 줄 제목. 무엇에 관한 문제인지를 명사구로 적는다"
                 + "(예: TIME_WAIT가 쌓여 포트가 마르는 이유). 상황 서술이나 물음표로 끝나는 문장이 아니다. "
                 + "40자 이내")
-        String title
+        String title,
+
+        @JsonPropertyDescription("이 문제가 묻는 형태. SITUATION=실무 장면을 주고 원인·판단을 묻는다, "
+                + "COMPARISON=두 방식을 나란히 놓고 무엇이 가르는지 묻는다, "
+                + "CAUSE=왜 그렇게 하는가를 직접 묻는다, "
+                + "JUDGMENT=진술 넷 중 옳거나 틀린 것을 고른다, "
+                + "SEQUENCE=단계가 있는 동작의 순서를 묻는다")
+        QuestionKind questionKind
 ) {
     /**
      * 인용 없이 만드는 편의 생성자 — 인용을 도입하기 전 코드와 테스트가 그대로 컴파일되게 한다.
@@ -68,6 +75,24 @@ public record GeneratedProblemItem(
     public GeneratedProblemItem(String question, String answer, String explanation,
                                 List<GeneratedChoice> choices, String sourceQuote) {
         this(question, answer, explanation, choices, sourceQuote, "");
+    }
+
+    /**
+     * 유형 없이 만드는 편의 생성자 — 위 둘과 같은 이유로 남긴다(2026-08-25에 {@code questionKind} 추가).
+     *
+     * <p><b>{@code title}보다도 뒤에 붙인 이유</b>는 앞의 두 필드와 같다 — record 필드 순서가 곧
+     * 구조화 출력 스키마의 속성 순서이고 모델은 그 순서대로 쓴다. 유형을 맨 앞에 두면
+     * <b>형태를 먼저 정하고 거기 맞춰 문제를 쓰게</b> 되는데, 그러면 "이 재료로 무엇을 물을까"가
+     * 아니라 "비교형을 써야 하니 비교할 것을 찾자"가 된다. 문서에 없는 대조를 지어내는 지름길이다.
+     * 지문·보기·해설을 다 쓴 뒤에 <b>자기가 방금 만든 문제를 보고</b> 형태를 적게 한다.
+     *
+     * <p>{@code null}이 되는 경우: 이 생성자를 쓴 테스트, 그리고 유형을 도입하기 <b>전에</b>
+     * 만들어져 이미 저장된 초안. 검사 쪽은 {@code null}을 "선언 안 함"으로 보고 조용히 넘어간다 —
+     * 옛 초안이 갑자기 경고를 달고 나오면 검수자가 경고를 안 보게 된다.
+     */
+    public GeneratedProblemItem(String question, String answer, String explanation,
+                                List<GeneratedChoice> choices, String sourceQuote, String title) {
+        this(question, answer, explanation, choices, sourceQuote, title, null);
     }
 
     /** 객관식 보기 한 개. */

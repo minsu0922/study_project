@@ -21,6 +21,7 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.llm.client.QuestionKind;
 
 import java.time.LocalDateTime;
 
@@ -114,6 +115,24 @@ public class GeneratedProblemDraft {
     @Column(name = "document_slug", length = 150)
     private String documentSlug;
 
+    /**
+     * 이 문제가 <b>묻는 형태</b> — 없으면 {@code null}(V14, 2026-08-25).
+     *
+     * <p>중급에 형태를 다섯으로 열면서({@link QuestionKind}) 함께 들어왔다. 검사가 조회 시점에
+     * 도는데(문서 초안과 같은 방식), 그때 "이 문제가 상황형이라 선언했는가"를 알아야
+     * 지문 길이 하한을 걸지 말지가 정해진다.
+     *
+     * <p><b>{@code null}인 경우</b>: 이 컬럼이 생기기 전에 만들어진 초안, 그리고 모델이
+     * 선언하지 않은 경우. 검사 쪽은 둘 다 "선언 안 함"으로 보고 조용히 넘어간다 —
+     * 옛 초안이 갑자기 경고를 달고 나오면 검수자가 경고 전체를 안 보게 된다.
+     *
+     * <p>승인해도 {@code Problem}으로 넘어가지 않는다. 이 값은 출제 품질을 재는 데만 쓰이고
+     * 학습자에게 보일 일이 없다 — {@link #documentSlug}가 넘어가는 것과는 이유가 다르다.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "question_kind", length = 15)
+    private QuestionKind questionKind;
+
     /** 승인으로 생성된 problem.id (FK 아님 — 이력 성격, V6 주석 참고). */
     @Column(name = "approved_problem_id")
     private Long approvedProblemId;
@@ -127,7 +146,8 @@ public class GeneratedProblemDraft {
 
     private GeneratedProblemDraft(Domain domain, Difficulty difficulty, ProblemType type, String title,
                                   String question, String answer, String explanation,
-                                  String choicesJson, String model, String documentSlug) {
+                                  String choicesJson, String model, String documentSlug,
+                                  QuestionKind questionKind) {
         this.domain = domain;
         this.difficulty = difficulty;
         this.type = type;
@@ -139,6 +159,7 @@ public class GeneratedProblemDraft {
         this.status = DraftStatus.PENDING;
         this.model = model;
         this.documentSlug = documentSlug;
+        this.questionKind = questionKind;
     }
 
     /**
@@ -150,9 +171,10 @@ public class GeneratedProblemDraft {
     public static GeneratedProblemDraft pending(Domain domain, Difficulty difficulty, ProblemType type,
                                                 String title, String question, String answer,
                                                 String explanation, String choicesJson,
-                                                String model, String documentSlug) {
+                                                String model, String documentSlug,
+                                                QuestionKind questionKind) {
         return new GeneratedProblemDraft(domain, difficulty, type, title,
-                question, answer, explanation, choicesJson, model, documentSlug);
+                question, answer, explanation, choicesJson, model, documentSlug, questionKind);
     }
 
     /** 승인 처리 — 생성된 problem.id를 이력으로 남긴다. 이미 처리된 초안이면 LLM_002. */

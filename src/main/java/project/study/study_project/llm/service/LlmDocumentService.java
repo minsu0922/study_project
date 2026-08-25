@@ -21,7 +21,7 @@ import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.dto.LlmDocumentDraftResponse;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
-import project.study.study_project.llm.support.DocumentCheck;
+import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 
 import java.util.List;
@@ -87,11 +87,11 @@ public class LlmDocumentService {
 
         // 걸린 항목을 흡수 시점에 로그로 남긴다 — 관리자 화면을 열기 전에도
         // "오늘 것은 뭔가 이상하다"를 알 수 있어야 프롬프트 개선이 미뤄지지 않는다.
-        List<DocumentCheck> checks =
+        List<DraftCheck> checks =
                 DocumentDraftValidator.validate(draft.getTitle(), draft.getSlug(), draft.getContentMd());
         if (!checks.isEmpty()) {
             log.warn("문서 초안 검증 지적 {}건 — \"{}\": {}", checks.size(), draft.getTitle(),
-                    checks.stream().map(DocumentCheck::message).toList());
+                    checks.stream().map(DraftCheck::message).toList());
         }
         return draftRepository.save(draft);
     }
@@ -132,14 +132,14 @@ public class LlmDocumentService {
             throw new BusinessException(ErrorCode.LLM_002);
         }
 
-        List<DocumentCheck> checks =
+        List<DraftCheck> checks =
                 DocumentDraftValidator.validate(draft.getTitle(), draft.getSlug(), draft.getContentMd());
         if (DocumentDraftValidator.hasBlocking(checks)) {
             // 무엇에 걸렸는지 메시지로 함께 준다 — "승인할 수 없습니다"만 나오면
             // 검수자는 화면을 새로고침해 가며 이유를 찾아야 한다.
             String reasons = checks.stream()
-                    .filter(DocumentCheck::isBlocking)
-                    .map(DocumentCheck::message)
+                    .filter(DraftCheck::isBlocking)
+                    .map(DraftCheck::message)
                     .reduce((a, b) -> a + " / " + b)
                     .orElse("");
             throw new BusinessException(ErrorCode.LLM_005, "승인 불가: " + reasons);
@@ -208,7 +208,7 @@ public class LlmDocumentService {
      * 달라졌나"를 되짚는 유일한 근거다. 거절 사유를 지우지 않고 남겨 두는 것과 같은 이유다.
      */
     private LlmDocumentDraftResponse toResponse(GeneratedDocumentDraft d) {
-        List<DocumentCheck> checks = d.getStatus() == DraftStatus.PENDING
+        List<DraftCheck> checks = d.getStatus() == DraftStatus.PENDING
                 ? DocumentDraftValidator.validate(d.getTitle(), d.getSlug(), d.getContentMd())
                 : List.of();
         return new LlmDocumentDraftResponse(

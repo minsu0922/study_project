@@ -21,6 +21,7 @@ import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemGenerator;
+import project.study.study_project.llm.client.QuestionKind;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
@@ -527,7 +528,8 @@ class LlmProblemServiceTest {
                     "트랜잭션 전파의 기본값", // title
                     "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.",
                     "[{\"text\":\"REQUIRED\",\"correct\":true},{\"text\":\"REQUIRES_NEW\",\"correct\":false}]", // choicesJson
-                    "test-model", "spring-transactional-propagation"); // model, documentSlug
+                    "test-model", "spring-transactional-propagation", // model, documentSlug
+                    QuestionKind.SITUATION);
         }
 
         @Test

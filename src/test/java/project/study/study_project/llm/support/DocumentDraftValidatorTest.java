@@ -34,7 +34,7 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("정상 문서는 지적 사항이 없다")
     void passesValidDocument() {
-        List<DocumentCheck> checks =
+        List<DraftCheck> checks =
                 DocumentDraftValidator.validate(TITLE, "cache-strategy", body(TITLE, "본문"));
 
         assertThat(checks).isEmpty();
@@ -49,13 +49,13 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("제목 필드와 본문 H1이 다르면 경고 — 실물 2편에서 실제로 어긋났다")
     void warnsWhenTitleDiffersFromHeading() {
-        List<DocumentCheck> checks = DocumentDraftValidator.validate(
+        List<DraftCheck> checks = DocumentDraftValidator.validate(
                 "XSS와 CSRF — 브라우저를 믿으면 생기는 일", "xss-and-csrf",
                 body("CSRF와 XSS — 브라우저를 믿으면 생기는 일", "본문"));
 
         assertThat(checks).singleElement().satisfies(c -> {
             assertThat(c.severity()).as("어느 쪽이 맞는지는 사람만 정한다 — 막지 않고 알리기만").
-                    isEqualTo(DocumentCheck.Severity.WARNING);
+                    isEqualTo(DraftCheck.Severity.WARNING);
             assertThat(c.message()).contains("XSS와 CSRF").contains("CSRF와 XSS");
         });
     }
@@ -63,7 +63,7 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("공백·줄바꿈만 다른 제목은 경고하지 않는다 — 사람 눈에 같은데 울리면 경고를 무시하게 된다")
     void ignoresWhitespaceOnlyTitleDifference() {
-        List<DocumentCheck> checks = DocumentDraftValidator.validate(
+        List<DraftCheck> checks = DocumentDraftValidator.validate(
                 "캐시  전략 — 읽기는 빠르게,  쓰기는 정확하게", "cache-strategy", body(TITLE, "본문"));
 
         assertThat(checks).isEmpty();
@@ -158,7 +158,7 @@ class DocumentDraftValidatorTest {
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content))
                 .singleElement()
                 .satisfies(c -> {
-                    assertThat(c.severity()).isEqualTo(DocumentCheck.Severity.WARNING);
+                    assertThat(c.severity()).isEqualTo(DraftCheck.Severity.WARNING);
                     assertThat(c.message()).contains("권장 분량");
                 });
     }
@@ -178,7 +178,7 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("문제가 여럿이면 첫 건에서 멈추지 않고 전부 모아 준다 — 고치고 다시 뽑는 왕복을 줄인다")
     void collectsAllProblemsAtOnce() {
-        List<DocumentCheck> checks = DocumentDraftValidator.validate(
+        List<DraftCheck> checks = DocumentDraftValidator.validate(
                 "다른 제목", "Bad_Slug", "# 본문 제목\n\n## 왜 필요한가\n내용");
 
         // slug 형식 1 + 제목 불일치 1
@@ -188,7 +188,7 @@ class DocumentDraftValidatorTest {
         // ('## 무엇인가'·'## 언제 깨지는가'·'## 바탕이 되는 개념'의 형식 검사는 절이 아예 없으면
         //  건너뛴다 — 없는 절을 두고 "하이픈이 없다"고 말하면 원인이 흐려진다)
         assertThat(checks).hasSize(13);
-        assertThat(checks).extracting(DocumentCheck::message)
+        assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
                 .anyMatch(m -> m.contains("## 면접에서 이렇게 물어본다"));
@@ -204,9 +204,9 @@ class DocumentDraftValidatorTest {
     void warnsWhenDesignRationaleHeadingIsMissing() {
         String without = body(TITLE, "본문").replace("### 왜 이렇게 설계됐는가", "### 다른 소제목");
 
-        List<DocumentCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", without);
+        List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", without);
 
-        assertThat(checks).extracting(DocumentCheck::message)
+        assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("'### 왜 이렇게 설계됐는가' 소제목이 없습니다"));
         assertThat(DocumentDraftValidator.hasBlocking(checks))
                 .as("형식이 어긋났다고 막으면 그 주기 나흘이 통째로 날아간다")
@@ -224,7 +224,7 @@ class DocumentDraftValidatorTest {
                 .replace("### 왜 이렇게 설계됐는가", "**왜 이렇게 설계됐는가**");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", bold))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("굵은 글씨로 1개"));
     }
 
@@ -234,7 +234,7 @@ class DocumentDraftValidatorTest {
         String twice = body(TITLE, "본문") + "\n### 왜 이렇게 설계됐는가\n- 또 다른 근거.\n";
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", twice))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("소제목이 2개입니다"));
     }
 
@@ -251,7 +251,7 @@ class DocumentDraftValidatorTest {
                 .replace("- **둘째 용어(second)**", "**둘째 용어(second)**");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", noBullets))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("하이픈 목록이 아닙니다"));
     }
 
@@ -267,7 +267,7 @@ class DocumentDraftValidatorTest {
                 .replace("## 둘째 갈래", "### 둘째 갈래");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", thin))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("본론 섹션이 0개"));
     }
 
@@ -288,7 +288,7 @@ class DocumentDraftValidatorTest {
                 .replace("**7. 일곱째 조건**\n", "");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", few))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("'## 언제 깨지는가'의 항목이 3개"));
     }
 
@@ -327,7 +327,7 @@ class DocumentDraftValidatorTest {
             assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy",
                     base.replace(written, form)))
                     .as("이 형식을 못 세면 멀쩡한 문서에 경고가 뜬다:%n%s", form)
-                    .extracting(DocumentCheck::message)
+                    .extracting(DraftCheck::message)
                     .noneMatch(m -> m.contains("언제 깨지는가"));
         }
     }
@@ -346,7 +346,7 @@ class DocumentDraftValidatorTest {
         String noGlossary = body(TITLE, "본문").replace("### 용어 한눈에", "### 다른 소제목");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", noGlossary))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("'### 용어 한눈에' 표가 없습니다"));
     }
 
@@ -358,7 +358,7 @@ class DocumentDraftValidatorTest {
                 낙관적 잠금을 쓰거나 판단 근거가 된 행을 SELECT ... FOR UPDATE로 잠근다.""");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", leaky))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("낙관적 잠금") && m.contains("SELECT ... FOR UPDATE"));
     }
 
@@ -383,7 +383,7 @@ class DocumentDraftValidatorTest {
 
             assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", defined))
                     .as("이 형태를 정의로 못 보면 제대로 쓴 문서에 경고가 뜬다:%n%s", definition)
-                    .extracting(DocumentCheck::message)
+                    .extracting(DraftCheck::message)
                     .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
         }
     }
@@ -401,7 +401,7 @@ class DocumentDraftValidatorTest {
                 그래서 따로 락을 건다. 이때 걸리는 락은 하나뿐이다.""");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", prose))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
     }
 
@@ -425,9 +425,9 @@ class DocumentDraftValidatorTest {
     void warnsWhenFoundationSectionIsThin() {
         String thin = body(TITLE, "본문").replace(FOUNDATION, "상위 개념을 한 줄로 스쳐 지나간다.");
 
-        List<DocumentCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", thin);
+        List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", thin);
 
-        assertThat(checks).extracting(DocumentCheck::message)
+        assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("'## 바탕이 되는 개념'이"));
         assertThat(DocumentDraftValidator.hasBlocking(checks))
                 .as("얇다고 막으면 그 주기 나흘이 날아간다 — 검수자가 채워 넣는 편이 싸다")
@@ -444,9 +444,9 @@ class DocumentDraftValidatorTest {
     void warnsWhenCodeExamplesAreTooFew() {
         String noCode = body(TITLE, "본문").replace("```sql\nSELECT 1\n```", "설명으로 대신한다.");
 
-        List<DocumentCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noCode);
+        List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noCode);
 
-        assertThat(checks).extracting(DocumentCheck::message)
+        assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("코드 예제가 1개입니다"));
         assertThat(DocumentDraftValidator.hasBlocking(checks))
                 .as("코드가 억지가 되는 주제(설계 원칙·방법론)도 있어 차단으로 두면 그런 날 길이 막힌다")
@@ -483,7 +483,7 @@ class DocumentDraftValidatorTest {
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", noHeading))
                 .as("셸 주석을 제목으로 세면 '최상위 제목이 없습니다'가 아예 안 뜬다")
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("최상위 제목"));
     }
 
@@ -508,7 +508,7 @@ class DocumentDraftValidatorTest {
                 **1. 첫째 조건**""");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", withComment))
-                .extracting(DocumentCheck::message)
+                .extracting(DraftCheck::message)
                 .as("주석에서 끊기면 항목이 0개로 세어져 헛경고가 뜬다")
                 .noneMatch(m -> m.contains("언제 깨지는가"))
                 .as("본론 섹션 수도 주석 때문에 부풀면 안 된다")

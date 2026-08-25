@@ -2,7 +2,7 @@ package project.study.study_project.llm.dto;
 
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.domain.DraftStatus;
-import project.study.study_project.llm.support.DocumentCheck;
+import project.study.study_project.llm.support.DraftCheck;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,7 +36,7 @@ public record LlmDocumentDraftResponse(
         Long approvedDocumentId,
         LocalDateTime createdAt,
         LocalDateTime reviewedAt,
-        List<DocumentCheck> checks,
+        List<DraftCheck> checks,
         boolean blocked
 ) {
 }

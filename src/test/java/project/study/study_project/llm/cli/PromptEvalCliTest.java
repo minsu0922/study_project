@@ -110,8 +110,12 @@ class PromptEvalCliTest {
         PromptEvalCli.DifficultyReport r =
                 PromptEvalCli.score(Difficulty.INTERMEDIATE, 2, problems);
 
-        assertThat(r.warnings()).hasSize(1);
-        assertThat(r.warnings()).containsEntry("해설이 짧음", 2);
+        // 재료가 글자만 채운 해설이라 오답 인용 경고에도 걸린다(2026-08-25 신설).
+        // 이 테스트가 재는 것은 "묶이는가"이지 "몇 종류가 나오는가"가 아니므로 종류 수는 세지 않는다 —
+        // 세면 검사가 하나 늘 때마다 상관없는 테스트가 따라 깨진다.
+        assertThat(r.warnings())
+                .as("숫자가 다른 두 건이 한 항목으로 묶여야 표가 읽힌다")
+                .containsEntry("해설이 짧음", 2);
     }
 
     @Test
@@ -204,11 +208,15 @@ class PromptEvalCliTest {
     @Test
     @DisplayName("보고서가 경고의 걸린 자리까지 싣는다 — 종류만 찍으면 결국 전문을 다시 읽어야 한다")
     void reportShowsWhatTrippedEachWarning() {
-        String explanation = "해".repeat(420) + " 따라서 2번 보기는 갱신 손실과 헷갈린 것이다.";
+        // 걸린 자리를 싣는지 재는 것이 목적이라, 조각을 달고 나오는 경고면 무엇이든 된다.
+        // 전에는 해설의 보기 번호 지칭을 썼는데 2026-08-25에 그것이 차단으로 올라갔다 —
+        // 차단된 항목은 아예 버려져 경고 목록에 오르지 않으므로 재료가 될 수 없다.
+        // 지문의 근거 문서 지칭으로 바꿨다. 같은 방식(contextOf)으로 조각을 만든다.
+        String explanation = "해".repeat(420);
 
         String rendered = PromptEvalCli.render(
                 List.of(PromptEvalCli.score(Difficulty.ADVANCED, 1,
-                        List.of(item("쓰기 스큐를 막는 대응은?", explanation)))),
+                        List.of(item("MVCC가 대가로 문서가 든 것은?", explanation)))),
                 "claude-opus-5", Domain.DATABASE, Path.of("generated/documents/2026-08-15.json"),
                 new PromptEvalCli.LoadedDocument(Domain.DATABASE,
                         new SourceDocument("iso", "격리 수준", "## 무엇인가\n정의.")));
@@ -217,7 +225,7 @@ class PromptEvalCliTest {
                 .as("몇 번 문항인지 있어야 표본과 맞춰 볼 수 있다")
                 .contains("1번")
                 .as("걸린 표현이 있어야 고칠지 말지가 한눈에 정해진다")
-                .contains("2번 보기는")
+                .contains("문서가 든")
                 .as("해설 전문을 통째로 실으면 경고 하나가 화면을 먹는다")
                 .doesNotContain("해".repeat(60));
     }

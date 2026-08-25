@@ -191,7 +191,7 @@ class AdminLlmBulkApproveIntegrationTest {
                 Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 "일괄 승인 테스트용 제목",
                 "일괄 승인 테스트용 지문 " + UUID.randomUUID(),
-                null, "해설입니다.", choicesJson, "test-model", null));
+                null, "해설입니다.", choicesJson, "test-model", null, null));
         createdDraftIds.add(draft.getId());
         return draft;
     }

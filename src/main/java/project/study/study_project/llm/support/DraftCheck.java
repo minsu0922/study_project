@@ -1,7 +1,13 @@
 package project.study.study_project.llm.support;
 
 /**
- * 문서 초안 검증 결과 한 줄 — {@link DocumentDraftValidator}가 만들고 검수 화면이 그대로 보여 준다.
+ * 초안 검증 결과 한 줄 — 검증기가 만들고 검수 화면이 그대로 보여 준다.
+ *
+ * <p><b>이름이 {@code DocumentCheck}였다</b>(2026-08-25 개명). 문서 초안 전용으로 태어났는데
+ * 같은 날 문제 초안({@link ProblemItemRule})도 같은 모양의 결과를 내게 되면서 이름이 거짓이 됐다.
+ * 복사해 {@code ProblemCheck}를 따로 두는 길도 있었지만, 그러면 {@link Severity}가 두 벌이 되고
+ * "차단과 경고를 무엇으로 가르는가"라는 <b>판단 기준이 두 곳에 생긴다</b> — 언젠가 한쪽만 고쳐진다.
+ * 화면도 둘을 같은 모양으로 그리므로 결과 타입을 하나로 두는 편이 맞다.
  *
  * <p><b>왜 boolean이 아니라 목록인가.</b> "통과/실패"만 돌려주면 검수자는 무엇이 문제인지
  * 모른 채 문서 전체를 다시 읽어야 한다. 실제로 걸리는 것들(제목 불일치, 절 누락, 분량 초과)은
@@ -11,7 +17,7 @@ package project.study.study_project.llm.support;
  *                 화면에 표시만 되고 승인은 가능하다
  * @param message  검수자가 읽을 한국어 설명 — 그대로 화면에 뿌린다
  */
-public record DocumentCheck(Severity severity, String message) {
+public record DraftCheck(Severity severity, String message) {
 
     /**
      * 심각도.
@@ -29,12 +35,12 @@ public record DocumentCheck(Severity severity, String message) {
         WARNING
     }
 
-    public static DocumentCheck blocking(String message) {
-        return new DocumentCheck(Severity.BLOCKING, message);
+    public static DraftCheck blocking(String message) {
+        return new DraftCheck(Severity.BLOCKING, message);
     }
 
-    public static DocumentCheck warning(String message) {
-        return new DocumentCheck(Severity.WARNING, message);
+    public static DraftCheck warning(String message) {
+        return new DraftCheck(Severity.WARNING, message);
     }
 
     public boolean isBlocking() {
