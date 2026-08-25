@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
+import project.study.study_project.document.domain.Document;
+import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
@@ -66,6 +68,12 @@ public class LlmProblemService {
     private final GeneratedProblemDraftRepository draftRepository;
     private final ProblemRepository problemRepository;
     private final AdminProblemService adminProblemService;
+    /**
+     * 등록된 문서를 근거로 삼는 셋째 입구용(2026-08-25). 조회 전용이라 {@code DocumentService}가 아닌
+     * 저장소를 직접 쓴다 — 그쪽의 반환형은 화면용 DTO라 본문 전문이 없거나 태그·라벨이 딸려 오는데,
+     * 여기서 필요한 것은 프롬프트에 실을 <b>제목과 본문</b>뿐이다.
+     */
+    private final DocumentRepository documentRepository;
     private final ObjectMapper objectMapper;
 
     /** 검수가 끝났음을 알린다 — 스냅샷 내보내기가 커밋 뒤에 듣는다({@link ReviewCompleted}). */
@@ -78,6 +86,7 @@ public class LlmProblemService {
                              GeneratedProblemDraftRepository draftRepository,
                              ProblemRepository problemRepository,
                              AdminProblemService adminProblemService,
+                             DocumentRepository documentRepository,
                              ObjectMapper objectMapper,
                              ApplicationEventPublisher events,
                              @org.springframework.beans.factory.annotation.Value("${llm.generation.model:claude-opus-5}") String model,
@@ -90,6 +99,7 @@ public class LlmProblemService {
         this.draftRepository = draftRepository;
         this.problemRepository = problemRepository;
         this.adminProblemService = adminProblemService;
+        this.documentRepository = documentRepository;
         this.objectMapper = objectMapper;
         this.events = events;
         this.model = model;
@@ -131,12 +141,36 @@ public class LlmProblemService {
                 problemGenerator.generate(domain, difficulty, type, request.count(), avoid, rejectionNotes);
 
         // 이 경로(칸 자동 선택 즉시 생성)는 근거 문서 없이 만든다(null).
-        // 문서를 근거로 만드는 경로는 둘로 갈렸다: 4일 주기 배치와 아래 generateFromUpload.
+        // 문서를 근거로 만드는 경로는 둘로 갈렸다: 4일 주기 배치와 아래 generateFromDocument.
         return saveDrafts(domain, difficulty, type, items, model, null).stream().map(this::toResponse).toList();
     }
 
     /**
-     * <b>관리자가 올린 문서</b>를 근거로 문제를 생성해 PENDING 초안으로 저장한다 — 2026-08-18 신설.
+     * <b>이미 등록된 문서</b>를 프롬프트에 실을 그릇으로 바꾼다 — 2026-08-25 신설.
+     *
+     * <p>컨트롤러가 아니라 여기서 문서를 읽는 이유: 파일·붙여넣기는 HTTP 요청이 들고 온 것이라
+     * 컨트롤러가 풀어내는 게 맞지만, 등록 문서는 <b>DB에 있는 것</b>이라 저장소 접근이 필요하다.
+     * 컨트롤러에 저장소를 물리면 "웹 계층은 서비스만 부른다"는 경계가 여기서부터 무너진다.
+     *
+     * <p>{@link SourceDocument.Kind#GENERATED}로 감싼다(3-인자 생성자의 기본값). 등록된 문서는
+     * 우리 프롬프트가 쓴 것이라 {@code ## 무엇인가}·{@code ## 언제 깨지는가} 같은 <b>약속된 절이
+     * 실제로 있고</b>, 그래야 난이도별 "이 절을 캐라" 지시가 작동한다. 관리자가 손으로 등록한
+     * 문서라면 절이 없을 수도 있지만, 그때는 모델이 절을 못 찾아 문제 수가 적게 나올 뿐
+     * 조용히 틀린 결과가 되지는 않는다 — 검수에서 걸린다.
+     *
+     * @throws BusinessException slug에 해당하는 문서가 없을 때(DOC_001) — 화면의 드롭다운이
+     *                           오래돼 방금 지운 문서를 가리키는 경우가 실제로 생긴다
+     */
+    @Transactional(readOnly = true)
+    public SourceDocument findRegisteredDocument(String slug) {
+        Document document = documentRepository.findBySlug(slug)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DOC_001,
+                        "근거로 삼을 문서를 찾을 수 없습니다: " + slug));
+        return new SourceDocument(document.getSlug(), document.getTitle(), document.getContentMd());
+    }
+
+    /**
+     * <b>주어진 문서</b>를 근거로 문제를 생성해 PENDING 초안으로 저장한다 — 2026-08-18 신설.
      *
      * <p>전에는 이 자리에 "화면에서 문서를 골라 문제를 뽑는 기능은 지금 필요가 없다 — YAGNI"라고
      * 적혀 있었다. 필요가 생겨서 만든다. 다만 <b>새 경로를 통째로 만들지 않았다</b> —
@@ -145,20 +179,31 @@ public class LlmProblemService {
      * 프롬프트의 절 지목 분기 하나뿐이다.
      *
      * <p><b>분야·난이도를 자동으로 고르지 않는다.</b> {@link #generate}는 비어 있으면 "가장 부족한
-     * 칸"을 채우는데, 그 규칙을 여기 쓰면 올린 문서와 무관한 분야가 붙는다. 요청 DTO가
+     * 칸"을 채우는데, 그 규칙을 여기 쓰면 근거 문서와 무관한 분야가 붙는다. 요청 DTO가
      * {@code @NotNull}로 막고 있고, 여기서 다시 고르지 않는 것으로 그 결정을 존중한다.
      *
-     * <p><b>{@code documentSlug}는 {@code null}이다.</b> 이 값은 학습자 화면의 "개념 문서 읽기"
-     * 링크에 쓰이는데, 올린 파일은 서비스에 등록된 문서가 아니라 갈 곳이 없다. 서버가 실재를
-     * 확인해 걸러 주긴 하지만(3단계), 애초에 넣지 않는 쪽이 맞다.
-     * <b>알려진 부작용</b>: 해설 끝의 "(문서의 ○○ 절을 다시 읽어 보라)"가 학습자에게는 갈 곳 없는
-     * 문장이 된다. 프롬프트에서 그 지시를 빼면 배치 문제의 해설까지 나빠지므로 그대로 두고,
-     * 검수 단계에서 사람이 지우는 쪽을 택했다.
+     * <h2>2026-08-25 — 근거 slug를 요청이 아니라 문서가 정하게 바꿨다</h2>
+     *
+     * <p>전에는 {@code documentSlug}에 무조건 {@code null}을 넣었다. 이 경로가 <b>업로드 전용</b>
+     * 이었기 때문이다 — 올린 파일은 서비스에 등록된 문서가 아니라 학습자 화면의 "개념 문서 읽기"가
+     * 갈 곳이 없다. 그런데 등록 문서를 골라 뽑는 셋째 입구가 생기면서 그 가정이 깨졌다.
+     * 여기서는 <b>갈 곳이 있다</b>. slug를 비우면 새로 만든 문제가 근거 문서와 이어지지 않는다.
+     *
+     * <p><b>요청에 "slug를 기록할지" 플래그를 두지 않은 이유</b>: 그 답은 요청의 속성이 아니라
+     * <b>문서 자체의 속성</b>이다({@link SourceDocument.Kind}가 같은 이유로 record 안에 있다).
+     * 플래그로 빼면 문서와 플래그가 따로 흘러 언젠가 짝이 어긋난다 — 올린 파일에 slug를 기록하는
+     * 사고가 나고, 그 결과는 500이 아니라 <b>영원히 404가 나는 링크</b>라 눈에 잘 띄지도 않는다.
+     * 그래서 {@code kind}에서 그대로 유도한다: {@code GENERATED}면 갈 곳이 있으니 기록하고,
+     * {@code UPLOADED}면 없으니 비운다.
+     *
+     * <p><b>업로드 경로의 알려진 부작용은 그대로다</b>: 해설 끝의 "(문서의 ○○ 절을 다시 읽어 보라)"가
+     * 학습자에게 갈 곳 없는 문장이 된다. 프롬프트에서 그 지시를 빼면 배치 문제의 해설까지
+     * 나빠지므로 그대로 두고, 검수 단계에서 사람이 지우는 쪽을 택했다.
      *
      * <p>{@link #generate}와 마찬가지로 트랜잭션을 걸지 않는다 — Claude 호출이 수십 초라
      * 그동안 DB 커넥션을 물고 있으면 커넥션 풀이 마른다.
      */
-    public List<LlmDraftResponse> generateFromUpload(LlmDocumentGenerateRequest request, SourceDocument document) {
+    public List<LlmDraftResponse> generateFromDocument(LlmDocumentGenerateRequest request, SourceDocument document) {
         ProblemType type = request.type() != null ? request.type() : ProblemType.MULTIPLE_CHOICE;
         if (type == ProblemType.ESSAY) {
             throw new BusinessException(ErrorCode.QUIZ_002, "서술형(ESSAY)은 자동채점 미지원이라 생성할 수 없습니다.");
@@ -175,7 +220,11 @@ public class LlmProblemService {
         List<GeneratedProblemItem> items = problemGenerator.generate(
                 domain, difficulty, type, request.count(), avoid, rejectionNotes, document);
 
-        return saveDrafts(domain, difficulty, type, items, model, null).stream().map(this::toResponse).toList();
+        // 등록 문서만 근거 slug를 남긴다(위 주석). 올린 파일은 가리킬 문서가 없어 비운다.
+        String documentSlug = document.kind() == SourceDocument.Kind.GENERATED ? document.slug() : null;
+
+        return saveDrafts(domain, difficulty, type, items, model, documentSlug)
+                .stream().map(this::toResponse).toList();
     }
 
     /**

@@ -38,9 +38,11 @@
          지금 어느 쪽으로 만들고 있는지가 흐려진다. -->
     <div class="card">
       <h3>문서로 문제 만들기</h3>
-      <p class="meta">올린 문서 <b>안에 있는 내용으로만</b> 문제를 만듭니다. 사내 위키·블로그 글처럼
-        우리 양식이 아닌 문서도 됩니다. 도메인·난이도는 <b>직접 골라야 합니다</b> —
-        올린 문서의 주제를 시스템이 알 수 없어 자동 선택을 쓰면 엉뚱한 분야가 붙습니다.</p>
+      <p class="meta">고른 문서 <b>안에 있는 내용으로만</b> 문제를 만듭니다. 근거는 <b>셋 중 하나</b>만
+        고릅니다 — 등록된 문서, 올린 파일, 붙여넣은 본문. 도메인·난이도는 <b>직접 골라야 합니다</b> —
+        문서의 주제를 시스템이 알 수 없어 자동 선택을 쓰면 엉뚱한 분야가 붙습니다.</p>
+      <p class="meta"><b>등록된 문서</b>를 고른 경우에만 학습자 화면에 "개념 문서 읽기" 링크가 붙습니다.
+        올린 파일·붙여넣은 본문은 서비스에 없는 문서라 찾아갈 곳이 없습니다.</p>
       <div id="uMessage"></div>
       <div class="filters">
         <div class="field"><label>도메인 (필수)</label><select id="uDomain"></select></div>
@@ -48,8 +50,15 @@
         <div class="field"><label>유형</label><select id="uType"></select></div>
         <div class="field"><label>개수 (1~10)</label><input type="number" id="uCount" value="5" min="1" max="10" style="width:80px"></div>
       </div>
+      <!-- 등록 문서 입구(2026-08-25). 셋 중 맨 위에 둔 이유: 4일 주기 배치가 쓰는 것과 같은
+           경로이고 결과물도 가장 좋다(약속된 절이 있어 난이도별 재료 분리가 실제로 작동한다).
+           고르면 도메인이 자동으로 맞춰지므로 손도 제일 덜 간다. -->
       <div class="field" style="margin-top:10px">
-        <label>파일 (.md / .txt)</label>
+        <label>등록된 문서에서 고르기</label>
+        <select id="uSlug"><option value="">— 고르지 않음 —</option></select>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>또는 파일 (.md / .txt)</label>
         <input type="file" id="uFile" accept=".md,.txt,text/markdown,text/plain">
       </div>
       <div class="field" style="margin-top:10px">
@@ -150,6 +159,47 @@ function initUploadForm() {
   fillSelect(document.getElementById("uDifficulty"), DIFFICULTIES);
   fillSelect(document.getElementById("uType"), TYPES);
   document.getElementById("uSubmitBtn").addEventListener("click", generateFromDocument);
+  loadDocumentOptions();
+}
+
+/**
+ * 등록 문서 드롭다운을 채운다 — 2026-08-25 신설.
+ *
+ * <p>관리자 전용 목록 API를 새로 만들지 않고 공개 조회 API를 그대로 쓴다. 문서 목록은
+ * 원래 누구나 보는 것이라 관리자용으로 가릴 것이 없고, 엔드포인트를 하나 더 만들면
+ * 정렬·페이징 규칙이 두 곳으로 갈린다.
+ *
+ * <p>size=100은 페이징을 하지 않겠다는 뜻이다. 문서는 4일에 한 편씩 늘어 100편이면 1년 치인데,
+ * 그전에 이 드롭다운 자체가 검색 상자로 바뀌어야 할 것이다. 지금 페이징을 넣는 건 YAGNI다.
+ * (application.yml의 max-page-size가 100이라 이 값이 상한이기도 하다.)
+ *
+ * <p>실패해도 폼을 막지 않는다 — 등록 문서는 세 입구 중 하나일 뿐이라, 목록을 못 불러왔다고
+ * 파일 업로드까지 못 쓰게 되면 손해다. 대신 무슨 일이 났는지는 드롭다운에 적어 둔다.
+ */
+async function loadDocumentOptions() {
+  const sel = document.getElementById("uSlug");
+  try {
+    const data = await api("/api/documents?size=100&sort=createdAt,desc");
+    if (data.content.length === 0) {
+      sel.innerHTML = `<option value="">— 등록된 문서가 없습니다 —</option>`;
+      return;
+    }
+    // 분야를 제목 앞에 붙인다. 문서가 늘면 제목만으로는 어느 분야 것인지 바로 안 보인다.
+    sel.innerHTML = `<option value="">— 고르지 않음 —</option>`
+      + data.content.map(d =>
+          `<option value="${escapeHtml(d.slug)}" data-domain="${escapeHtml(d.domain)}">`
+          + `[${escapeHtml(d.domainLabel)}] ${escapeHtml(d.title)}</option>`).join("");
+
+    // 문서를 고르면 분야를 맞춰 준다. 손이 덜 가는 것보다 중요한 건 <틀릴 수 없게> 하는 것이다 —
+    // 등록 문서는 분야가 이미 정해져 있는데 사람이 다른 분야를 고르면 조용히 어긋난 문제가 나온다.
+    // 난이도는 건드리지 않는다. 그건 문서가 아니라 "오늘 무엇을 뽑을지"의 문제다.
+    sel.addEventListener("change", () => {
+      const domain = sel.selectedOptions[0]?.dataset.domain;
+      if (domain) document.getElementById("uDomain").value = domain;
+    });
+  } catch (e) {
+    sel.innerHTML = `<option value="">— 목록을 불러오지 못했습니다 —</option>`;
+  }
 }
 
 /** 주소에 담겨 온 상태를 화면에 반영한다. 폼만 채우고 요청은 보내지 않는다 —
@@ -214,18 +264,22 @@ async function generateFromDocument() {
   const fileInput = document.getElementById("uFile");
   const text = document.getElementById("uText").value.trim();
   const file = fileInput.files[0];
+  const slug = document.getElementById("uSlug").value;
 
-  // 서버도 같은 것을 검사하지만(둘 다 없음/둘 다 있음 → 400) 여기서 먼저 막는다.
+  // 서버도 같은 것을 검사하지만(하나도 없음/둘 이상 → 400) 여기서 먼저 막는다.
   // 파일을 올려 두고 붙여넣기까지 한 채 수십 초를 기다렸다가 400을 받는 건 나쁜 경험이다.
-  if (!file && !text) { showError(msg, new Error("문서를 올리거나 본문을 붙여넣어 주세요.")); return; }
-  if (file && text)   { showError(msg, new Error("파일과 붙여넣기 중 하나만 사용해 주세요.")); return; }
+  // 개수로 세는 것도 서버와 맞춘다 — boolean 비교로 두면 입구가 셋인 지금 조용히 틀린다.
+  const given = (slug ? 1 : 0) + (file ? 1 : 0) + (text ? 1 : 0);
+  if (given === 0) { showError(msg, new Error("등록된 문서를 고르거나, 파일을 올리거나, 본문을 붙여넣어 주세요.")); return; }
+  if (given > 1)   { showError(msg, new Error("등록 문서·파일·붙여넣기 중 하나만 사용해 주세요.")); return; }
 
   const form = new FormData();
   form.append("domain", document.getElementById("uDomain").value);
   form.append("difficulty", document.getElementById("uDifficulty").value);
   form.append("type", document.getElementById("uType").value);
   form.append("count", document.getElementById("uCount").value);
-  if (file) form.append("file", file);
+  if (slug) form.append("slug", slug);
+  else if (file) form.append("file", file);
   else form.append("text", text);
 
   btn.disabled = true;   // 중복 클릭 = 중복 과금

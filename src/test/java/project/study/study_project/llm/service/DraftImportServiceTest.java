@@ -68,9 +68,12 @@ class DraftImportServiceTest {
 
     @BeforeEach
     void setUp() {
+        // documentRepository는 null이다 — 이 테스트가 검증하는 파일 흡수 경로는 등록 문서를
+        // 조회하지 않는다(그 입구는 관리 화면 전용). 가짜를 하나 더 만들면 "이 경로도 문서를
+        // 읽는다"는 오해만 남는다.
         LlmProblemService llmProblemService = new LlmProblemService(
                 problemGenerator, draftRepository, problemRepository, adminProblemService,
-                objectMapper, event -> { }, "claude-opus-5", List.of(Domain.NETWORK));
+                null, objectMapper, event -> { }, "claude-opus-5", List.of(Domain.NETWORK));
         service = new DraftImportService(llmProblemService, importedFileRepository, objectMapper);
 
         // saveAll은 받은 목록을 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내

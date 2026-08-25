@@ -62,20 +62,28 @@ public class AdminLlmProblemController {
     }
 
     /**
-     * <b>올린 문서</b>를 근거로 생성 — 2026-08-18 신설. 파일 업로드 또는 본문 붙여넣기.
+     * <b>문서를 근거로</b> 생성 — 2026-08-18 신설. 입구는 셋이다: 파일 업로드, 본문 붙여넣기,
+     * <b>이미 등록된 문서 고르기</b>(2026-08-25 추가).
      *
      * <p>{@code multipart/form-data}인 이유: 파일과 폼 필드를 한 요청에 함께 보내야 한다.
-     * 붙여넣기도 같은 엔드포인트를 쓰는 것은 <b>뒤가 완전히 같기 때문</b>이다 —
-     * 입구만 둘이고 그 뒤로는 같은 {@code SourceDocument}가 흐른다. 경로를 둘로 가르면
-     * 검증과 상한이 두 곳에 생기고, 언젠가 한쪽에만 규칙이 붙는다.
+     * 나머지 둘도 같은 엔드포인트를 쓰는 것은 <b>뒤가 완전히 같기 때문</b>이다 —
+     * 입구만 셋이고 그 뒤로는 같은 {@code SourceDocument}가 흐른다. 경로를 셋으로 가르면
+     * 검증과 상한이 세 곳에 생기고, 언젠가 한쪽에만 규칙이 붙는다.
      *
-     * <p><b>둘 중 정확히 하나여야 한다.</b> 둘 다 없으면 무엇으로 만들지 알 수 없고,
-     * 둘 다 있으면 어느 쪽을 썼는지 사람이 알 수 없다 — 조용히 하나를 고르면
+     * <p><b>셋 중 정확히 하나여야 한다.</b> 하나도 없으면 무엇으로 만들지 알 수 없고,
+     * 둘 이상이면 어느 쪽을 썼는지 사람이 알 수 없다 — 조용히 하나를 고르면
      * "올린 파일이 무시된 줄 모르는" 사고가 난다. 그래서 골라 주지 않고 400으로 되돌린다.
+     * 세는 방식을 boolean 비교({@code hasFile == hasText})에서 <b>개수 세기</b>로 바꾼 이유가
+     * 이것이다 — 입구가 둘일 때만 통하던 요령이라 셋째가 붙는 순간 조용히 틀린다.
+     *
+     * <p><b>셋째 입구가 나머지 둘과 다른 점</b>은 생성된 초안에 근거 문서 slug가 기록된다는 것뿐이다.
+     * 등록된 문서라 학습자 화면의 "개념 문서 읽기"가 갈 곳이 있다. 그 판단은 여기가 아니라
+     * {@link LlmProblemService#generateFromDocument}가 문서의 {@code kind}를 보고 내린다.
      *
      * <p>파일 크기 상한은 두 겹이다: 톰캣·스프링의 multipart 상한(application.yml)이 먼저 막고,
      * 통과한 뒤 {@code UploadedDocumentReader}가 <b>글자 수</b>로 다시 막는다. 앞은 전송량,
-     * 뒤는 요금이 기준이라 재는 대상이 다르다.
+     * 뒤는 요금이 기준이라 재는 대상이 다르다. 등록 문서에는 이 상한을 걸지 않는다 —
+     * 우리가 만들어 넣은 문서라 분량을 이미 프롬프트가 통제하고 있다.
      */
     @PostMapping("/generate-from-document")
     public ApiResponse<List<LlmDraftResponse>> generateFromDocument(
@@ -84,14 +92,19 @@ public class AdminLlmProblemController {
     ) {
         boolean hasFile = file != null && !file.isEmpty();
         boolean hasText = request.text() != null && !request.text().isBlank();
-        if (hasFile == hasText) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, hasFile
-                    ? "파일과 붙여넣기 중 하나만 보내 주세요."
-                    : "문서를 올리거나 본문을 붙여넣어 주세요.");
+        boolean hasSlug = request.slug() != null && !request.slug().isBlank();
+
+        int given = (hasFile ? 1 : 0) + (hasText ? 1 : 0) + (hasSlug ? 1 : 0);
+        if (given != 1) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, given == 0
+                    ? "등록된 문서를 고르거나, 문서를 올리거나, 본문을 붙여넣어 주세요."
+                    : "등록 문서·파일·붙여넣기 중 하나만 보내 주세요.");
         }
 
         SourceDocument document;
-        if (hasFile) {
+        if (hasSlug) {
+            document = llmProblemService.findRegisteredDocument(request.slug());
+        } else if (hasFile) {
             try {
                 document = UploadedDocumentReader.fromFile(file.getBytes(), file.getOriginalFilename());
             } catch (IOException e) {
@@ -101,7 +114,7 @@ public class AdminLlmProblemController {
         } else {
             document = UploadedDocumentReader.fromText(request.text());
         }
-        return ApiResponse.ok(llmProblemService.generateFromUpload(request, document));
+        return ApiResponse.ok(llmProblemService.generateFromDocument(request, document));
     }
 
     /** 초안 목록 — 기본 PENDING, 오래된 순. 예: {@code GET /api/admin/llm-problems?status=REJECTED} */

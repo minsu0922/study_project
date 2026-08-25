@@ -12,6 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
+import project.study.study_project.document.domain.Document;
+import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
@@ -56,6 +58,9 @@ class LlmProblemServiceTest {
     private ProblemRepository problemRepository;
     @Mock
     private AdminProblemService adminProblemService;
+    /** 등록 문서를 근거로 삼는 셋째 입구용 — 그 경로를 검증하는 테스트만 stub한다. */
+    @Mock
+    private DocumentRepository documentRepository;
 
     private FakeGenerator fakeGenerator;
     private LlmProblemService service;
@@ -108,7 +113,8 @@ class LlmProblemServiceTest {
     private LlmProblemService newService(List<Domain> batchDomains) {
         // ObjectMapper는 실물 사용 — JSON 직렬화가 이 서비스의 실제 책임이라 가짜로 대체하면 검증이 빈다
         return new LlmProblemService(fakeGenerator, draftRepository, problemRepository,
-                adminProblemService, new ObjectMapper(), event -> { }, "test-model", batchDomains);
+                adminProblemService, documentRepository, new ObjectMapper(), event -> { },
+                "test-model", batchDomains);
     }
 
     /** 거절 사례 조회 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */
@@ -157,8 +163,8 @@ class LlmProblemServiceTest {
         void usesGivenCellWithoutAutoPicking() {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
-            service.generateFromUpload(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null), uploaded);
+            service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null, null), uploaded);
 
             assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.NETWORK);
             assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.ADVANCED);
@@ -171,8 +177,8 @@ class LlmProblemServiceTest {
         void passesUploadedDocumentToGenerator() {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
-            service.generateFromUpload(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null), uploaded);
+            service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null), uploaded);
 
             assertThat(fakeGenerator.calledSourceDocument).isSameAs(uploaded);
             assertThat(fakeGenerator.calledSourceDocument.kind()).isEqualTo(SourceDocument.Kind.UPLOADED);
@@ -188,8 +194,8 @@ class LlmProblemServiceTest {
             when(problemRepository.findQuestionTextsByDomain(any(), any())).thenReturn(List.of("이미 있는 문제"));
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
-            service.generateFromUpload(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null), uploaded);
+            service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null), uploaded);
 
             assertThat(fakeGenerator.calledAvoid).contains("이미 있는 문제");
             assertThat(fakeGenerator.calledRejectionNotes).isNotNull();
@@ -206,8 +212,8 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
             ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
 
-            service.generateFromUpload(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null), uploaded);
+            service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null), uploaded);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
             assertThat(captor.getValue()).singleElement()
@@ -217,10 +223,83 @@ class LlmProblemServiceTest {
         @Test
         @DisplayName("서술형은 업로드 경로에서도 거부한다 — 자동채점이 안 되는 건 출처와 무관하다")
         void rejectsEssayOnThisPathToo() {
-            assertThatThrownBy(() -> service.generateFromUpload(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null), uploaded))
+            assertThatThrownBy(() -> service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null, null), uploaded))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("자동채점");
+        }
+    }
+
+    /**
+     * 등록 문서 기반 생성 — 2026-08-25 신설(셋째 입구).
+     *
+     * <p>업로드 경로와 <b>딱 한 군데</b>가 다르다: 초안에 근거 문서 slug가 남는다. 나머지는
+     * 전부 같은 코드를 탄다. 그래서 여기서 검증할 것은 그 한 군데와, 그 한 군데를 가르는
+     * 판단이 <b>요청이 아니라 문서에서</b> 나오는지다 — 이 둘이 어긋나면 학습자 화면의
+     * "개념 문서 읽기"가 조용히 404를 가리키거나 아예 사라진다.
+     */
+    @Nested
+    @DisplayName("등록 문서 기반 생성")
+    class GenerateFromRegisteredDocument {
+
+        private static final String SLUG = "tcp-time-wait-2msl";
+
+        /** 저장소가 돌려줄 문서 — 엔티티에 setter가 없어 등록용 정적 팩터리를 그대로 쓴다. */
+        private Document registered() {
+            return Document.create(Domain.NETWORK, "TIME_WAIT — 2MSL을 더 기다리는 이유", SLUG,
+                    "## 무엇인가\n\n본문이다.", null, java.util.Set.of());
+        }
+
+        /**
+         * <b>이 기능의 존재 이유</b>를 못 박는 테스트다. 등록 문서로 만든 문제는 근거 문서가
+         * 서비스 안에 실제로 있으므로, 초안에 slug를 남겨야 학습자가 "개념 문서 읽기"로 갈 수 있다.
+         * 업로드 경로를 복사해 만들다 {@code null}을 그대로 물려받기 딱 좋은 자리라 단정으로 막는다.
+         */
+        @Test
+        @DisplayName("초안에 근거 문서 slug를 남긴다 — 등록 문서는 학습자가 찾아갈 곳이 있다")
+        void storesDocumentSlug() {
+            when(documentRepository.findBySlug(SLUG)).thenReturn(Optional.of(registered()));
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+            ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
+
+            SourceDocument source = service.findRegisteredDocument(SLUG);
+            service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG), source);
+
+            org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
+            assertThat(captor.getValue()).singleElement()
+                    .satisfies(d -> assertThat(d.getDocumentSlug()).isEqualTo(SLUG));
+        }
+
+        /**
+         * 등록 문서는 우리 프롬프트가 쓴 것이라 {@code ## 무엇인가} 같은 <b>약속된 절이 실제로 있다</b>.
+         * {@code UPLOADED}로 잘못 감싸면 프롬프트가 절 이름 대신 역할로 두루뭉술하게 지시하고,
+         * 그러면 난이도별 "이 절만 캐라"가 풀려 사흘 치 재료를 하루가 먹어 치운다.
+         */
+        @Test
+        @DisplayName("등록 문서는 GENERATED로 감싼다 — 절 이름을 지목하는 프롬프트가 그래야 작동한다")
+        void wrapsAsGeneratedKind() {
+            when(documentRepository.findBySlug(SLUG)).thenReturn(Optional.of(registered()));
+
+            SourceDocument source = service.findRegisteredDocument(SLUG);
+
+            assertThat(source.kind()).isEqualTo(SourceDocument.Kind.GENERATED);
+            assertThat(source.slug()).isEqualTo(SLUG);
+            assertThat(source.contentMd()).contains("## 무엇인가");
+        }
+
+        /**
+         * 화면의 드롭다운은 페이지를 연 시점의 목록이라, 그 사이에 지운 문서를 가리킬 수 있다.
+         * 그때 조용히 근거 없이 만들어 버리면 <b>문서 기반인 줄 알았던 문제가 사실은 아니게</b> 된다.
+         */
+        @Test
+        @DisplayName("없는 slug면 404로 막는다 — 근거 없이 조용히 만들어지면 안 된다")
+        void rejectsUnknownSlug() {
+            when(documentRepository.findBySlug("gone")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.findRegisteredDocument("gone"))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.DOC_001));
         }
     }
 
