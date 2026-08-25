@@ -45,8 +45,35 @@ public interface ProblemGenerator {
      *
      * @param sourceDocument 근거 문서. {@code null}이면 근거 없이(모델의 지식으로) 생성한다
      */
+    default List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
+                                                int count, List<String> avoidQuestions,
+                                                List<RejectionNote> rejectionNotes,
+                                                SourceDocument sourceDocument) {
+        return generate(domain, difficulty, type, count, avoidQuestions, rejectionNotes,
+                sourceDocument, null);
+    }
+
+    /**
+     * <b>묻는 형태를 지목해</b> 문제를 생성한다 — 2026-08-25 신설.
+     *
+     * <p><b>왜 필요해졌나.</b> 같은 날 중급에 다섯 형태를 열었는데({@link QuestionKind}) 실물이
+     * 세 번 연속 {@link QuestionKind#SITUATION}으로만 나왔다. 프롬프트에 형태를 나열해 두는 것만으로는
+     * 강제력이 없었던 것이다 — 이 저장소가 여러 번 확인한 그대로다: <b>숫자나 값을 박지 않은
+     * 지시는 지켜지지 않는다</b>(해설 400~700자, 문서 절 개수, 고급 재료 개수가 전부 그랬다).
+     *
+     * <p>모델이 상황형으로 돌아가는 것은 게을러서가 아니라 <b>재료가 가장 풍부해서</b>다.
+     * 문서의 {@code ## 실무에서는 이렇게 쓴다} 절이 곧 상황 재료라, 아무 말 없으면 늘 그쪽이 이긴다.
+     * 그러니 다른 형태를 얻으려면 사람이 지목하는 수밖에 없다.
+     *
+     * <p><b>배치가 아니라 관리 화면을 위한 인자다.</b> 4일 주기 배치는 한 번에 다섯을 뽑으므로
+     * 프롬프트의 "SITUATION 최소 2개" 규칙 안에서 모델이 알아서 섞으면 된다. 문제는 검수 뒤
+     * 한두 건을 <b>메워 넣을 때</b>다 — 그때는 개수가 적어 모델에게 섞을 여지가 없다.
+     *
+     * @param requestedKind 지목할 형태. {@code null}이면 모델이 고른다(배치의 기본 동작)
+     */
     List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
                                         int count, List<String> avoidQuestions,
                                         List<RejectionNote> rejectionNotes,
-                                        SourceDocument sourceDocument);
+                                        SourceDocument sourceDocument,
+                                        QuestionKind requestedKind);
 }

@@ -49,6 +49,10 @@
         <div class="field"><label>난이도 (필수)</label><select id="uDifficulty"></select></div>
         <div class="field"><label>유형</label><select id="uType"></select></div>
         <div class="field"><label>개수 (1~10)</label><input type="number" id="uCount" value="5" min="1" max="10" style="width:80px"></div>
+        <!-- 묻는 형태 지목(2026-08-25). 비워 두면 모델이 고르는데, 그러면 재료가 가장 풍부한
+             상황형으로 계속 돌아간다(실물 세 번 연속). 검수 뒤 한두 건을 메울 때 특히 필요하다 —
+             개수가 적으면 "상황형 최소 2개" 규칙이 배치를 통째로 차지해 버린다. -->
+        <div class="field"><label>묻는 형태 (중급)</label><select id="uKind"></select></div>
       </div>
       <!-- 등록 문서 입구(2026-08-25). 셋 중 맨 위에 둔 이유: 4일 주기 배치가 쓰는 것과 같은
            경로이고 결과물도 가장 좋다(약속된 절이 있어 난이도별 재료 분리가 실제로 작동한다).
@@ -162,9 +166,36 @@ function initUploadForm() {
   fillSelect(document.getElementById("uDomain"), DOMAINS);
   fillSelect(document.getElementById("uDifficulty"), DIFFICULTIES);
   fillSelect(document.getElementById("uType"), TYPES);
+
+  // 형태는 <중급에만> 뜻이 있다. 초급은 정의를 묻는 자리라 나눌 것이 없고, 고급은 정의상
+  // 언제나 상황형이다. 그래서 첫 옵션이 "모델이 고름"이고, 난이도가 중급이 아니면 잠근다 —
+  // 고를 수는 있는데 아무 효과가 없는 칸을 남겨 두면 "왜 안 먹지"가 된다.
+  const uk = document.getElementById("uKind");
+  uk.innerHTML = `<option value="">모델이 고름</option>`
+    + QUESTION_KINDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  const syncKindEnabled = () => {
+    const intermediate = document.getElementById("uDifficulty").value === "INTERMEDIATE";
+    uk.disabled = !intermediate;
+    if (!intermediate) uk.value = "";
+  };
+  document.getElementById("uDifficulty").addEventListener("change", syncKindEnabled);
+  syncKindEnabled();
+
   document.getElementById("uSubmitBtn").addEventListener("click", generateFromDocument);
   loadDocumentOptions();
 }
+
+/**
+ * 중급이 묻는 다섯 형태 — 서버의 QuestionKind와 <상수 이름이 같아야> 한다.
+ * 화면이 보내는 값이 곧 enum 이름이라, 갈라지면 400이 난다.
+ */
+const QUESTION_KINDS = [
+  ["SITUATION", "상황 적용"],
+  ["COMPARISON", "비교·선택"],
+  ["CAUSE", "인과·메커니즘"],
+  ["JUDGMENT", "진술 판정"],
+  ["SEQUENCE", "순서·절차"],
+];
 
 /**
  * 등록 문서 드롭다운을 채운다 — 2026-08-25 신설.
@@ -285,6 +316,10 @@ async function generateFromDocument() {
   if (slug) form.append("slug", slug);
   else if (file) form.append("file", file);
   else form.append("text", text);
+
+  // 비었으면 아예 보내지 않는다 — 빈 문자열을 보내면 스프링이 enum 변환에 실패해 400이 난다.
+  const kind = document.getElementById("uKind").value;
+  if (kind) form.append("questionKind", kind);
 
   btn.disabled = true;   // 중복 클릭 = 중복 과금
   loading.hidden = false;

@@ -746,8 +746,41 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("(O) static 필드에 여러 쓰레드가 동시에 쓸 때의 값 유실");
     }
 
+    /**
+     * <b>2026-08-25 신설 — 사람이 형태를 지목했을 때.</b>
+     *
+     * <p>중급에 다섯 형태를 열었더니 실물이 세 번 연속 상황형으로만 나왔다. 모델이 게을러서가
+     * 아니라 상황 재료가 가장 풍부해서다 — 아무 말 없으면 늘 그쪽이 이긴다. 그래서 지목 인자를
+     * 붙였고, 여기서 지키는 것은 <b>지목이 프롬프트에 실제로 실리는가</b>와
+     * <b>배분 규칙을 함께 끄는가</b>다.
+     *
+     * <p>둘째가 특히 중요하다. 시스템 프롬프트의 "SITUATION 최소 2개"가 살아 있는 채로
+     * "JUDGMENT로만 내라"를 주면 두 지시가 정면으로 부딪히고, 그러면 모델이 둘 중 하나를
+     * <b>조용히</b> 버린다 — {@code [용어]}·{@code [제목]} 절에서 이미 두 번 겪은 실패다.
+     */
+    @Test
+    @DisplayName("형태를 지목하면 조건 줄에 실리고 배분 규칙은 함께 꺼진다 — 두 지시가 부딪히면 하나가 조용히 버려진다")
+    void pinsRequestedQuestionKindAndDisablesTheBalanceRule() {
+        String pinned = generator.buildPrompt(Domain.SECURITY, Difficulty.INTERMEDIATE,
+                ProblemType.MULTIPLE_CHOICE, 1, List.of(), List.of(), DOC, QuestionKind.JUDGMENT);
+
+        assertThat(pinned)
+                .as("questionKind에 그대로 적을 값이라 enum 이름이 실려야 한다")
+                .contains("JUDGMENT")
+                .as("사람이 읽을 이름도 함께 — 조건 줄은 사람도 본다")
+                .contains("진술 판정")
+                .as("'이것도 낼 수 있다'가 아니라 '이것만 낸다'여야 한다")
+                .contains("로만 낸다")
+                .as("배분 규칙을 끄지 않으면 두 지시가 부딪힌다")
+                .contains("배분 규칙(SITUATION 최소 2개)은 이번에는 적용하지 마라");
+
+        assertThat(prompt(Difficulty.INTERMEDIATE, DOC))
+                .as("지목이 없으면 그 줄 자체가 없어야 한다 — 배치의 기본 동작을 건드리지 않는다")
+                .doesNotContain("묻는 형태:");
+    }
+
     private String prompt(Difficulty difficulty, SourceDocument source) {
         return generator.buildPrompt(Domain.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
-                5, List.of(), List.of(), source);
+                5, List.of(), List.of(), source, null);
     }
 }

@@ -86,7 +86,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
     public List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
                                                int count, List<String> avoidQuestions,
                                                List<RejectionNote> rejectionNotes,
-                                               SourceDocument sourceDocument) {
+                                               SourceDocument sourceDocument,
+                                               QuestionKind requestedKind) {
         // 구조화 출력: Batch record가 응답 스키마. create() 결과의 text()가 이미 Batch 타입으로
         // 파싱되어 있다(수동 JSON 파싱 없음 — 이 한 줄이 구조화 출력을 쓰는 이유다).
         StructuredMessageCreateParams<GeneratedProblemItem.Batch> params = MessageCreateParams.builder()
@@ -96,7 +97,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                 .system(SYSTEM_PROMPT)
                 .outputConfig(GeneratedProblemItem.Batch.class)
                 .addUserMessage(buildPrompt(domain, difficulty, type, count, avoidQuestions,
-                        rejectionNotes, sourceDocument))
+                        rejectionNotes, sourceDocument, requestedKind))
                 .build();
 
         try {
@@ -448,12 +449,31 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
 
     String buildPrompt(Domain domain, Difficulty difficulty, ProblemType type,
                        int count, List<String> avoidQuestions,
-                       List<RejectionNote> rejectionNotes, SourceDocument sourceDocument) {
+                       List<RejectionNote> rejectionNotes, SourceDocument sourceDocument,
+                       QuestionKind requestedKind) {
         StringBuilder sb = new StringBuilder();
         sb.append("다음 조건으로 문제 ").append(count).append("개를 만들어라.\n\n");
         sb.append("- 분야: ").append(domain.getDisplayName()).append(domainHint(domain)).append('\n');
         sb.append("- 난이도: ").append(difficultyRule(difficulty)).append('\n');
         sb.append("- 유형: ").append(typeRule(type)).append('\n');
+
+        // 사람이 형태를 지목한 경우 — 2026-08-25.
+        //
+        // [왜 조건 목록의 한 줄로 넣나] 시스템 프롬프트의 [중급이 묻는 다섯 형태]는 "고를 수 있는
+        // 것들"의 목록이고, 여기는 "이번에 무엇을 낼지"다. 시스템 프롬프트를 고쳐 넣으면 요청마다
+        // 값이 달라져 프롬프트 캐시가 깨지고(시스템/유저를 나눈 이유가 그것이다), 무엇보다
+        // 분야·난이도와 같은 성격의 조건이라 같은 자리에 있어야 사람도 모델도 한눈에 읽는다.
+        //
+        // [배분 규칙과 부딪히는 자리를 함께 적는다] 시스템 프롬프트에는 "다섯 문제를 만든다면
+        // SITUATION 최소 2개"가 있다. 지목이 있는데 그 규칙이 살아 있으면 모델이 둘 중 하나를
+        // 조용히 버린다 — [용어]·[제목] 절에서 두 번 겪은 실패라 여기서는 명시적으로 끈다.
+        if (requestedKind != null) {
+            sb.append("- 묻는 형태: ").append(requestedKind.name())
+                    .append('(').append(requestedKind.getLabel()).append(")로만 낸다. ")
+                    .append("questionKind에 이 값을 그대로 적어라.\n")
+                    .append("  [중급이 묻는 다섯 형태]의 배분 규칙(SITUATION 최소 2개)은 이번에는 적용하지 마라 — ")
+                    .append("사람이 형태를 직접 골랐다.\n");
+        }
 
         // 난이도 예시는 여러 줄이라 조건 목록 안에 끼우면 "- 유형:" 줄이 예시 밑에 파묻힌다.
         // 조건은 조건대로 한눈에 보이게 두고, 예시는 제 이름표를 달아 따로 붙인다.

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.client.QuestionKind;
 
 /**
  * 문서 기반 문제 생성 요청 — 2026-08-18 신설, 2026-08-25에 입구가 셋이 됐다.
@@ -39,6 +40,10 @@ import project.study.study_project.global.common.ProblemType;
  * @param text       붙여넣기 본문. 파일 대신 쓰는 입구이고, 파일과 <b>동시에</b> 오면 거부한다
  * @param slug       <b>이미 등록된 문서</b>의 slug — 셋째 입구(2026-08-25). 이 경로로 만든 문제만
  *                   초안에 근거 slug가 기록된다(올린 파일은 갈 곳이 없어 비운다)
+ * @param questionKind 묻는 형태를 <b>지목</b>한다(2026-08-25). {@code null}이면 모델이 고른다.
+ *                   중급에 다섯 형태를 열었더니 실물이 세 번 연속 상황형으로만 나와서 붙였다 —
+ *                   재료가 가장 풍부한 쪽으로 모델이 늘 돌아가므로, 다른 형태는 사람이 지목해야 한다.
+ *                   검수 뒤 한두 건을 메워 넣을 때 특히 그렇다(개수가 적으면 섞을 여지가 없다)
  */
 public record LlmDocumentGenerateRequest(
 
@@ -56,6 +61,8 @@ public record LlmDocumentGenerateRequest(
 
         String text,
 
-        String slug
+        String slug,
+
+        QuestionKind questionKind
 ) {
 }

@@ -76,18 +76,22 @@ class LlmProblemServiceTest {
         List<RejectionNote> calledRejectionNotes;
         /** 2단계에서 추가된 근거 문서 인자. 관리자 즉시 생성 경로는 항상 null이어야 한다. */
         project.study.study_project.llm.client.SourceDocument calledSourceDocument;
+        /** 2026-08-25에 추가된 형태 지목. 요청에 없으면 null이어야 한다(모델이 고름). */
+        QuestionKind calledRequestedKind;
 
         @Override
         public List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
                                                    int count, List<String> avoidQuestions,
                                                    List<RejectionNote> rejectionNotes,
-                                                   project.study.study_project.llm.client.SourceDocument sourceDocument) {
+                                                   project.study.study_project.llm.client.SourceDocument sourceDocument,
+                                                   QuestionKind requestedKind) {
             this.calledDomain = domain;
             this.calledDifficulty = difficulty;
             this.calledType = type;
             this.calledAvoid = avoidQuestions;
             this.calledRejectionNotes = rejectionNotes;
             this.calledSourceDocument = sourceDocument;
+            this.calledRequestedKind = requestedKind;
             return toReturn;
         }
     }
@@ -165,7 +169,7 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null, null), uploaded);
+                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null, null, null), uploaded);
 
             assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.NETWORK);
             assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.ADVANCED);
@@ -179,7 +183,7 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null), uploaded);
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
 
             assertThat(fakeGenerator.calledSourceDocument).isSameAs(uploaded);
             assertThat(fakeGenerator.calledSourceDocument.kind()).isEqualTo(SourceDocument.Kind.UPLOADED);
@@ -196,7 +200,7 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null), uploaded);
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
 
             assertThat(fakeGenerator.calledAvoid).contains("이미 있는 문제");
             assertThat(fakeGenerator.calledRejectionNotes).isNotNull();
@@ -214,7 +218,7 @@ class LlmProblemServiceTest {
             ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null), uploaded);
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
             assertThat(captor.getValue()).singleElement()
@@ -225,7 +229,7 @@ class LlmProblemServiceTest {
         @DisplayName("서술형은 업로드 경로에서도 거부한다 — 자동채점이 안 되는 건 출처와 무관하다")
         void rejectsEssayOnThisPathToo() {
             assertThatThrownBy(() -> service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null, null), uploaded))
+                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null, null, null), uploaded))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("자동채점");
         }
@@ -265,7 +269,7 @@ class LlmProblemServiceTest {
 
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG), source);
+                    Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
             assertThat(captor.getValue()).singleElement()
@@ -293,6 +297,40 @@ class LlmProblemServiceTest {
          * 화면의 드롭다운은 페이지를 연 시점의 목록이라, 그 사이에 지운 문서를 가리킬 수 있다.
          * 그때 조용히 근거 없이 만들어 버리면 <b>문서 기반인 줄 알았던 문제가 사실은 아니게</b> 된다.
          */
+        /**
+         * <b>이 인자가 생긴 이유</b>를 못 박는다. 중급에 다섯 형태를 열었는데 실물이 세 번 연속
+         * 상황형으로만 나왔다 — 프롬프트에 형태를 나열해 두는 것만으로는 강제력이 없었다.
+         * 사람이 고른 값이 생성기까지 그대로 가지 않으면 드롭다운이 장식이 된다.
+         */
+        @Test
+        @DisplayName("요청에 지목한 형태가 생성기까지 그대로 간다 — 중간에서 잃으면 드롭다운이 장식이 된다")
+        void passesRequestedKindToGenerator() {
+            when(documentRepository.findBySlug(SLUG)).thenReturn(Optional.of(registered()));
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+
+            SourceDocument source = service.findRegisteredDocument(SLUG);
+            service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG,
+                    QuestionKind.JUDGMENT), source);
+
+            assertThat(fakeGenerator.calledRequestedKind).isEqualTo(QuestionKind.JUDGMENT);
+        }
+
+        /** 지목하지 않으면 모델이 고른다 — 4일 주기 배치의 기본 동작을 바꾸지 않는다. */
+        @Test
+        @DisplayName("형태를 지목하지 않으면 null로 넘어간다 — 배치는 전과 똑같이 돈다")
+        void leavesKindToTheModelWhenUnspecified() {
+            when(documentRepository.findBySlug(SLUG)).thenReturn(Optional.of(registered()));
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+
+            SourceDocument source = service.findRegisteredDocument(SLUG);
+            service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG,
+                    null), source);
+
+            assertThat(fakeGenerator.calledRequestedKind).isNull();
+        }
+
         @Test
         @DisplayName("없는 slug면 404로 막는다 — 근거 없이 조용히 만들어지면 안 된다")
         void rejectsUnknownSlug() {

@@ -218,8 +218,10 @@ public class LlmProblemService {
         List<String> avoid = buildAvoidList(domain);
         List<RejectionNote> rejectionNotes = findRecentRejectionNotes();
 
+        // 요청에 형태가 지목돼 있으면 그대로 넘긴다(2026-08-25). null이면 모델이 고른다.
         List<GeneratedProblemItem> items = problemGenerator.generate(
-                domain, difficulty, type, request.count(), avoid, rejectionNotes, document);
+                domain, difficulty, type, request.count(), avoid, rejectionNotes, document,
+                request.questionKind());
 
         // 등록 문서만 근거 slug를 남긴다(위 주석). 올린 파일은 가리킬 문서가 없어 비운다.
         String documentSlug = document.kind() == SourceDocument.Kind.GENERATED ? document.slug() : null;
