@@ -30,7 +30,8 @@ public record GeneratedProblemItem(
         @JsonPropertyDescription("채점 기준값. 객관식이면 빈 문자열, OX면 O 또는 X, 단답형이면 정답(복수 정답은 |로 구분)")
         String answer,
 
-        @JsonPropertyDescription("해설. 왜 정답인지 근거를 설명하고, 객관식이면 나머지 보기가 왜 틀렸는지도 포함")
+        @JsonPropertyDescription("해설. <왜 정답인지>의 근거만 쓴다. 오답이 왜 틀렸는지는 "
+                + "각 보기의 rationale에 적으므로 여기서 되풀이하지 않는다")
         String explanation,
 
         @JsonPropertyDescription("객관식 보기 목록. 객관식이면 정확히 4개(정답 1개), 그 외 유형이면 빈 배열")
@@ -95,14 +96,34 @@ public record GeneratedProblemItem(
         this(question, answer, explanation, choices, sourceQuote, title, null);
     }
 
-    /** 객관식 보기 한 개. */
+    /**
+     * 객관식 보기 한 개.
+     *
+     * <p><b>{@code rationale}이 맨 뒤인 것은 이 record에서도 순서가 곧 생성 순서이기 때문이다.</b>
+     * 모델은 보기 문장을 쓰고 → 정답인지 정한 뒤 → 왜 틀렸는지를 적는다. 설명을 앞에 두면
+     * "이런 오해를 담아야지"를 먼저 정하고 거기 맞춰 보기를 쓰게 되는데, 그러면 지문의
+     * 조건과 무관한 오해가 들어온다. 바깥 record가 {@code title}·{@code questionKind}를
+     * 맨 뒤에 붙인 것과 같은 판단이다.
+     */
     public record GeneratedChoice(
             @JsonPropertyDescription("보기 내용")
             String text,
 
             @JsonPropertyDescription("이 보기가 정답이면 true. 문제당 정확히 1개만 true")
-            boolean correct
+            boolean correct,
+
+            @JsonPropertyDescription("이 보기가 <오답일 때만> 왜 틀렸는지 한 줄로 적는다"
+                    + "(어떤 오해에서 비롯되는지를 밝힌다). 정답 보기면 빈 문자열 — "
+                    + "정답의 근거는 explanation이 맡는다. 보기를 번호로 가리키지 마라")
+            String rationale
     ) {
+        /**
+         * 설명 없이 만드는 편의 생성자 — 이 필드가 생기기 전 테스트가 그대로 컴파일되게 한다.
+         * 바깥 record의 짧은 생성자들과 같은 이유다.
+         */
+        public GeneratedChoice(String text, boolean correct) {
+            this(text, correct, "");
+        }
     }
 
     /** 구조화 출력의 최상위 스키마 — 문제 배열을 감싸는 봉투(최상위는 객체여야 해서 필요). */

@@ -463,9 +463,12 @@ class DraftGeneratorCliTest {
         // 이 재료는 글자만 채운 해설이라 오답 인용 경고에도 걸린다(2026-08-25 신설).
         // 그건 이 테스트가 재는 것이 아니므로 걸러 낸다 — 여기서 세면 검사가 하나 늘 때마다
         // 상관없는 테스트가 따라 깨진다.
+        // 숫자를 직접 적지 않는다 — EXPLANATION_MIN을 옮긴 날 이 테스트가 함께 따라와야 한다.
+        // 2026-08-27에 실제로 400→200으로 옮겼고, 박아 둔 "399자"가 그때 깨졌다.
         assertThat(yield.warnings())
                 .filteredOn(w -> w.contains("해설이 짧음"))
-                .singleElement().asString().contains("399자");
+                .singleElement().asString()
+                .contains("%d자".formatted(ProblemItemRule.EXPLANATION_MIN - 1));
     }
 
     /**

@@ -100,6 +100,18 @@ public final class ProblemItemRule {
                     .formatted(choiceRef);
         }
 
+        // 2026-08-27: 오답 설명(rationale)에도 같은 검사를 건다. 설명이 보기 행으로 옮겨 간
+        // 뒤에도 <자기 아닌 다른 보기>를 번호로 가리키는 문장은 그대로 나올 수 있고
+        // ("③번과 달리 이쪽은…"), 그러면 옮기기 전과 똑같이 어긋난다.
+        // 오히려 더 눈에 안 띈다 — 설명이 이미 보기에 붙어 있어 "짝이 맞으니 괜찮겠지" 싶어진다.
+        for (GeneratedProblemItem.GeneratedChoice choice : safeChoices(item)) {
+            String inRationale = contextOf(CHOICE_NUMBER_REFERENCE, choice.rationale());
+            if (inRationale != null) {
+                return "오답 설명이 보기를 번호로 가리킴 (\"%s\") — 내보낼 때 섞으므로 학습자에게는 어긋난다"
+                        .formatted(inRationale);
+            }
+        }
+
         if (type == ProblemType.MULTIPLE_CHOICE) {
             List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
             int size = choices == null ? 0 : choices.size();
@@ -122,6 +134,76 @@ public final class ProblemItemRule {
     /** 규약을 지켰는지만 알고 싶을 때. */
     public static boolean isUsable(GeneratedProblemItem item, ProblemType type) {
         return defectOf(item, type) == null;
+    }
+
+    /** 보기 목록을 {@code null} 걱정 없이 훑기 위한 도우미. */
+    private static List<GeneratedProblemItem.GeneratedChoice> safeChoices(GeneratedProblemItem item) {
+        return item.choices() == null ? List.of() : item.choices();
+    }
+
+    /**
+     * 오답마다 설명이 붙었는가 — <b>2026-08-27에 대리 지표를 버리고 실물을 세게 됐다.</b>
+     *
+     * <p>전에는 해설 안의 큰따옴표 인용 개수를 세어 "해설이 짚은 오답이 적음"을 알렸다
+     * ({@code QUOTED_CHOICE_REFERENCE}). 그것은 <b>대리 지표</b>였다 — 오답을 인용 없이 짚어도
+     * 못 세고, 오답과 무관한 인용도 세었다. 설명이 보기 행으로 옮겨 오면서 셀 필요가 없어졌다.
+     * 데이터가 있어야 할 자리에 있으면 추측할 일이 없다.
+     *
+     * <p><b>차단이 아니라 경고인 이유</b>: 설명이 빠졌다고 문제를 버리면 요금까지 낸 멀쩡한
+     * 지문·보기를 함께 잃는다. 검수자가 승인 전에 한 줄 채워 넣는 편이 싸다. 번호 지목만
+     * 차단인 것과 갈리는 지점이고, 기준은 이 저장소가 계속 써 온 것과 같다 —
+     * <b>판단해 봐야 답이 하나인 것만 차단한다.</b>
+     *
+     * <p><b>하나도 없는 것은 아예 알리지 않는다.</b> 만들 때는 "옛 형식입니다"라고 알리게
+     * 두었는데, 테스트를 돌려 보니 <b>기존 초안 전부에</b> 그 경고가 붙었다. 당연하다 —
+     * 이 필드가 생기기 전에 만들어진 것들이다. 검수자가 할 수 있는 일이 없는 경고이고,
+     * 그런 것이 목록에 쌓이면 <b>정작 봐야 할 경고까지 안 보게 된다.</b>
+     * 알리는 것은 <b>일부만 채워진</b> 경우뿐이다. 그때는 화면에 빈 칸이 생기고, 메우는 일은
+     * 사람만 할 수 있다.
+     *
+     * <p><b>정답 보기에 설명이 붙은 것도 알린다.</b> 버리지는 않는다({@code AdminProblemService}가
+     * 저장 직전에 정리한다). 그래도 알리는 이유는 그 값이 <b>조용히 사라지기</b> 때문이다 —
+     * 모델이 정답 쪽에 근거를 몰아 쓰고 {@code explanation}을 얇게 남기면, 정리된 뒤에는
+     * 근거가 어디에도 없는 문제가 된다. 검수자가 그 사실을 화면에서 봐야 한다.
+     */
+    private static List<String> rationaleWarningsOf(GeneratedProblemItem item) {
+        List<GeneratedProblemItem.GeneratedChoice> choices = safeChoices(item);
+        if (choices.size() < MIN_CHOICES) {
+            return List.of(); // 객관식이 아니거나 보기 규약 위반 — 다른 검사가 이미 잡는다
+        }
+
+        List<String> warnings = new ArrayList<>();
+        long wrong = choices.stream().filter(c -> !c.correct()).count();
+        long explained = choices.stream()
+                .filter(c -> !c.correct() && !isBlank(c.rationale()))
+                .count();
+
+        // 하나도 없는 것은 <경고하지 않는다>. 처음에는 "옛 형식입니다"라고 알리게 만들었다가
+        // 되돌렸다 — 이 필드가 생기기 전에 만들어진 초안은 전부 여기 걸리는데, 검수자가 할 수
+        // 있는 일이 없다(승인하면 화면이 알아서 통짜 해설로 그린다). 고칠 것이 없는데 뜨는
+        // 경고는 그 목록 전체를 안 보게 만든다. 이 저장소가 여러 번 확인한 실패 방식이다.
+        //
+        // <일부만 채워진 것>은 다르다. 화면이 새 형식으로 판정해 오답 분석 칸을 그리는데
+        // 한 자리가 비어 나온다. 승인 전에 사람이 한 줄 채워야 하고, 그건 사람만 할 수 있다.
+        if (explained > 0 && explained < wrong) {
+            warnings.add("오답 설명이 빠진 보기가 있음 (%d개 중 %d개만 채워짐 — 화면에 빈 칸이 생긴다)"
+                    .formatted(wrong, explained));
+        }
+
+        // 채워졌더라도 한 마디로 때운 것은 없는 것과 같다 — RATIONALE_MIN 주석 참고.
+        long tooShort = choices.stream()
+                .filter(c -> !c.correct() && !isBlank(c.rationale()))
+                .filter(c -> c.rationale().trim().length() < RATIONALE_MIN)
+                .count();
+        if (tooShort > 0) {
+            warnings.add("오답 설명이 너무 짧음 (%d개가 %d자 미만 — 어떤 오해인지가 안 들어간다)"
+                    .formatted(tooShort, RATIONALE_MIN));
+        }
+
+        if (choices.stream().anyMatch(c -> c.correct() && !isBlank(c.rationale()))) {
+            warnings.add("정답 보기에 오답 설명이 붙음 (저장할 때 버려진다 — 근거는 해설에 써야 한다)");
+        }
+        return warnings;
     }
 
     /*
@@ -156,11 +238,31 @@ public final class ProblemItemRule {
      * 사람이 경고를 안 보게 되는데, 그게 이 저장소가 이미 겪은 실패 방식이다
      * ({@code DocumentDraftValidator.WARN_LENGTH} 주석의 "한쪽만 고치면" 문단).
      * 그래서 {@code ClaudeProblemGeneratorPromptTest}가 프롬프트와 이 값을 대조한다.
+     *
+     * <p><b>2026-08-27에 400~700에서 200~400으로 내렸다.</b> 값을 낮춘 게 아니라 <b>해설이
+     * 맡는 일이 줄었다</b>. 오답 셋이 왜 틀렸는지가 보기 행으로 옮겨 갔으므로(V15,
+     * {@code Choice.rationale}) 여기 남는 것은 "왜 정답인가"뿐이다. 기준을 그대로 뒀다면
+     * <b>지시대로 쓴 해설이 전부 "짧음" 경고를 달고 나왔을 것이다</b> — 위 문단이 경고하는
+     * 바로 그 상태다. 새 숫자는 사용자가 다듬어 보낸 예시의 정답 근거 문단(약 240자)을
+     * 가운데 두고 잡았다.
      */
-    public static final int EXPLANATION_MIN = 400;
+    public static final int EXPLANATION_MIN = 200;
 
     /** 해설 분량 위 한계 — {@link #EXPLANATION_MIN} 참고. */
-    public static final int EXPLANATION_MAX = 700;
+    public static final int EXPLANATION_MAX = 400;
+
+    /**
+     * 오답 설명 한 줄의 아래 한계 — <b>있는 것과 쓸모 있는 것은 다르다</b>.
+     *
+     * <p>{@link #rationaleWarningsOf}가 존재만 세면 "틀렸다" 같은 한 마디로도 통과한다.
+     * 이 저장소가 반복해 확인한 것이 <b>개수를 박은 지시만 지켜진다</b>는 것이고, 그 개수는
+     * 세는 곳이 있어야 유지된다. 실측 기준은 사용자가 다듬은 예시의 오답 한 줄(50~90자)이라
+     * 그 아래쪽에 여유를 두고 잡았다.
+     *
+     * <p>위 한계는 두지 않는다. 넘쳐서 생기는 문제는 화면이 알아서 접고, 두 방향을 다 막으면
+     * 근거를 한 문장 더 붙인 <b>친절한 설명</b>에 헛경고가 난다.
+     */
+    public static final int RATIONALE_MIN = 30;
 
     /**
      * 초급 지문의 길이 상한.
@@ -408,24 +510,19 @@ public final class ProblemItemRule {
     private static final Pattern DOCUMENT_SECTION_HINT =
             Pattern.compile("문서(의|에서|를)?\\s*.{0,120}?다시\\s*(읽어|보)");
 
-    /**
-     * 해설이 오답을 <b>내용으로 인용</b>한 자리 — 2026-08-25 신설.
+    /*
+     * QUOTED_CHOICE_REFERENCE가 여기 있었다 — 2026-08-27에 지웠다.
      *
-     * <p>프롬프트는 오답마다 왜 틀렸는지를 짚되 "순서가 아니라 내용으로 가리켜라"라고 요구하고,
-     * 예시까지 따옴표로 묶인 형태다({@code "MVCC도 읽기에 공유 락을 건다"는 보기는…}).
-     * 그래서 <b>따옴표로 묶인 인용의 개수</b>가 오답을 몇 개 짚었는지의 대리 지표가 된다.
+     * 해설 안의 따옴표 인용 개수를 세어 "오답을 몇 개나 짚었는가"의 <대리 지표>로 썼다.
+     * 대리 지표라는 것을 알고 쓰던 것이다: 인용 없이 풀어 쓴 해설은 못 세고, 정답 근거를
+     * 설명하며 문서를 인용한 것도 개수에 들어갔다.
      *
-     * <p><b>대리 지표라는 것을 분명히 해 둔다.</b> 인용 없이 "잔여 수량을 캐시에만 쓰겠다는 판단은"
-     * 처럼 풀어 쓴 해설도 정상이고, 이 검사는 그걸 놓친다. 반대로 정답 근거를 설명하며 문서
-     * 문장을 따옴표로 인용해도 개수에 들어간다. 그래서 <b>개수가 모자랄 때만</b> 경고하고
-     * 넘칠 때는 아무 말도 하지 않는다 — 한쪽 방향으로만 트는 검사가 오탐이 훨씬 적다.
+     * 오답 설명이 보기 행(Choice.rationale)으로 옮겨 오면서 <셀 필요가 없어졌다>.
+     * 값이 있어야 할 자리에 있으면 추측하지 않아도 된다 — rationaleWarningsOf가 실물을 센다.
      *
-     * <p>실측(2026-08-25 파일럿 5문제)은 전부 정확히 3건이었다. 오답이 셋이니 셋을 짚은 것이고,
-     * 지금 잘 나오는 것을 <b>재서 유지</b>하는 것이 이 검사의 목적이다 — 해설 400~700자를
-     * 적어 두고도 359~395자로 나오던 일을 겪은 뒤로 이 저장소가 택한 방식이다.
+     * 안 쓰이게 된 것을 지우는 이유는 hasBlankExplanation을 지울 때와 같다.
+     * 남겨 두면 다음에 읽는 사람이 <아직 이 방식으로 세는 줄> 알고, 같은 판단이 두 벌이 된다.
      */
-    private static final Pattern QUOTED_CHOICE_REFERENCE =
-            Pattern.compile("[\"“][^\"“”]{5,}?[\"”]|['']?'[^']{5,}?'");
 
     /**
      * 항목 하나의 품질 경고를 모두 모아 돌려준다. 없으면 빈 목록.
@@ -474,24 +571,14 @@ public final class ProblemItemRule {
             // 보기 번호 지칭은 2026-08-25에 defectOf(차단)로 올라갔다 — 여기서 다시 세지 않는다.
             // 두 곳에서 보면 차단으로 버려진 항목이 경고 목록에도 뜨거나, 문구가 갈라진다.
 
-            // 오답을 몇 개나 짚었는가 — 객관식에만 해당한다. 대리 지표라 <모자랄 때만> 말한다
-            // (자세한 배경은 QUOTED_CHOICE_REFERENCE).
-            List<GeneratedProblemItem.GeneratedChoice> mc = item.choices();
-            if (mc != null && mc.size() >= MIN_CHOICES) {
-                long wrongCount = mc.stream().filter(c -> !c.correct()).count();
-                long quoted = QUOTED_CHOICE_REFERENCE.matcher(explanation).results().count();
-                if (quoted < wrongCount) {
-                    warnings.add("해설이 짚은 오답이 적음 (인용 %d건, 오답 %d개 — 오답마다 어떤 오해인지 밝혀야 한다)"
-                            .formatted(quoted, wrongCount));
-                }
-            }
-
             // 근거 문서로 돌아갈 한 줄이 있는가 — 문서를 근거로 만든 문제에만 해당한다.
             // 학습자가 틀린 뒤 돌아갈 유일한 입구라, 빠지면 해설이 그 자리에서 끝나 버린다.
             if (hasSourceDocument && contextOf(DOCUMENT_SECTION_HINT, explanation) == null) {
                 warnings.add("해설에 다시 읽을 문서 절이 없음 (틀린 학습자가 돌아갈 곳이 사라진다)");
             }
         }
+
+        warnings.addAll(rationaleWarningsOf(item));
 
         String question = item.question();
         if (!isBlank(question)) {

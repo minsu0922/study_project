@@ -103,9 +103,12 @@ class PromptEvalCliTest {
     @Test
     @DisplayName("경고는 숫자를 떼고 종류로 묶는다 — 안 그러면 표가 한 줄짜리로 가득 찬다")
     void groupsWarningsByKind() {
+        // 길이를 상수에서 끌어온다 — 숫자를 박아 두면 EXPLANATION_MIN을 옮긴 날
+        // 재료가 조용히 "짧지 않은 해설"이 되어 이 테스트가 아무것도 안 재게 된다
+        // (2026-08-27에 400→200으로 옮기며 실제로 겪었다).
         List<GeneratedProblemItem> problems = List.of(
-                item("첫 문제는?", "짧".repeat(300)),
-                item("둘째 문제는?", "짧".repeat(310)));
+                item("첫 문제는?", "짧".repeat(ProblemItemRule.EXPLANATION_MIN - 100)),
+                item("둘째 문제는?", "짧".repeat(ProblemItemRule.EXPLANATION_MIN - 90)));
 
         PromptEvalCli.DifficultyReport r =
                 PromptEvalCli.score(Difficulty.INTERMEDIATE, 2, problems);

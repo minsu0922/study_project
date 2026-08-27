@@ -442,12 +442,17 @@ public class LlmProblemService {
 
     /**
      * 보기 JSON의 저장 형태는 {@link AdminProblemRequest.ChoiceItem}의 직렬화 결과와 동일하다
-     * ({@code [{"text":..,"correct":..}]}) — 승인 시 역직렬화만 하면 바로 등록 요청이 되도록
-     * 처음부터 같은 모양으로 저장한다(변환 코드 최소화).
+     * ({@code [{"text":..,"correct":..,"rationale":..}]}) — 승인 시 역직렬화만 하면 바로 등록
+     * 요청이 되도록 처음부터 같은 모양으로 저장한다(변환 코드 최소화).
+     *
+     * <p><b>초안의 보기를 JSON으로 둔 결정이 여기서 값을 한다</b>(2026-08-27). 오답 설명을
+     * 더하면서 정식 쪽은 마이그레이션(V15)이 필요했는데, 초안 쪽은 필드 하나가 늘 뿐이다.
+     * 옛 초안의 JSON에는 {@code rationale} 키가 아예 없지만 역직렬화하면 {@code null}이 되고,
+     * 그 값은 "설명 없는 오답"이라는 뜻으로 그대로 통한다 — 검수함에 쌓인 것을 버리지 않아도 된다.
      */
     private String writeChoicesJson(List<GeneratedProblemItem.GeneratedChoice> choices) {
         List<AdminProblemRequest.ChoiceItem> items = choices.stream()
-                .map(c -> new AdminProblemRequest.ChoiceItem(c.text(), c.correct()))
+                .map(c -> new AdminProblemRequest.ChoiceItem(c.text(), c.correct(), c.rationale()))
                 .toList();
         try {
             return objectMapper.writeValueAsString(items);
@@ -521,9 +526,11 @@ public class LlmProblemService {
      */
     private GeneratedProblemItem toItem(GeneratedProblemDraft d,
                                         List<AdminProblemRequest.ChoiceItem> choices) {
+        // rationale까지 되돌려야 한다 — 검수 화면의 "오답 설명 없음" 경고가 이 값을 센다.
+        // 빠뜨리면 설명을 제대로 채운 초안이 매번 경고를 달고 나온다.
         List<GeneratedProblemItem.GeneratedChoice> items = choices == null ? List.of()
                 : choices.stream()
-                .map(c -> new GeneratedProblemItem.GeneratedChoice(c.text(), c.correct()))
+                .map(c -> new GeneratedProblemItem.GeneratedChoice(c.text(), c.correct(), c.rationale()))
                 .toList();
         return new GeneratedProblemItem(d.getQuestion(), d.getAnswer(), d.getExplanation(),
                 items, "", d.getTitle(), d.getQuestionKind());

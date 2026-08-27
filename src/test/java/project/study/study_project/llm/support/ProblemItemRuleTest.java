@@ -8,6 +8,7 @@ import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.QuestionKind;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -211,27 +212,19 @@ class ProblemItemRuleTest {
                     Difficulty.INTERMEDIATE, hasSourceDocument);
         }
 
-        /**
-         * 프롬프트는 "오답마다 어떤 오해인지 밝혀라"를 요구하는데 재는 사람이 없었다.
-         * 따옴표 인용 개수는 대리 지표라 <b>모자랄 때만</b> 말한다 — 한쪽으로만 트는 검사가
-         * 오탐이 훨씬 적다.
+        /*
+         * "오답 셋 중 하나만 짚은 해설은 경고한다"와 그 짝이 여기 있었다 — 2026-08-27에 지웠다.
+         *
+         * 해설 안의 따옴표 인용 개수를 세는 대리 지표를 재던 테스트였는데, 오답 설명이
+         * 보기 행(Choice.rationale)으로 옮겨 가면서 그 지표 자체가 없어졌다.
+         * 같은 판단을 실물로 재는 테스트는 아래 RationaleContent에 있다.
          */
-        @Test
-        @DisplayName("오답 셋 중 하나만 짚은 해설은 경고한다")
-        void warnsWhenFewerChoicesAreAddressed() {
-            String lazy = "정답인 이유는 캐시에 값을 넣으면 늦게 온 조회가 덮기 때문이다. "
-                    + "\"오답 보기 하나입니다\"는 순서를 뒤집어 이해한 것이다. "
-                    + "나머지도 비슷한 오해다. (문서의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)";
-
-            assertThat(warnings(lazy, true))
-                    .anySatisfy(w -> assertThat(w).contains("짚은 오답이 적음"));
-        }
 
         @Test
-        @DisplayName("오답 셋을 다 인용한 해설은 경고하지 않는다")
-        void acceptsFullyAddressedExplanation() {
+        @DisplayName("정답 근거만 담은 해설은 경고하지 않는다 — 오답 설명은 이제 보기 쪽 몫이다")
+        void acceptsExplanationThatOnlyJustifiesTheAnswer() {
             assertThat(warnings(goodExplanation(), true))
-                    .noneSatisfy(w -> assertThat(w).contains("짚은 오답이 적음"));
+                    .noneSatisfy(w -> assertThat(w).contains("오답 설명"));
         }
 
         /** 학습자가 틀린 뒤 돌아갈 유일한 입구다. 빠지면 해설이 그 자리에서 끝나 버린다. */
@@ -441,6 +434,107 @@ class ProblemItemRuleTest {
                             goodExplanation(), QuestionKind.COMPARISON));
 
             assertThat(ProblemItemRule.batchWarningsOf(varied, Difficulty.INTERMEDIATE)).isEmpty();
+        }
+    }
+
+    /**
+     * 오답 설명({@code Choice.rationale}) — 2026-08-27 신설.
+     *
+     * <p>해설이 오답을 "②번"처럼 번호로 가리킬 수 없다는 제약에서 나온 구조다. 보기를 섞어
+     * 내보내므로(위치 편향) 번호는 반드시 어긋나는데, 설명을 보기 행에 붙여 두면 섞은 순서
+     * 그대로 번호를 매겨도 짝이 안 어긋난다. 여기서 재는 것은 그 자리가 <b>실제로 채워지는가</b>다.
+     */
+    @Nested
+    @DisplayName("오답마다 설명이 붙었는지 잰다")
+    class RationaleContent {
+
+        /** 오답 셋 중 앞에서부터 {@code explained}개만 설명을 채운 문제. */
+        private GeneratedProblemItem withRationales(int explained, String text) {
+            List<GeneratedProblemItem.GeneratedChoice> choices = new ArrayList<>();
+            choices.add(new GeneratedProblemItem.GeneratedChoice("정답 보기 내용입니다", true, ""));
+            for (int i = 1; i <= 3; i++) {
+                choices.add(new GeneratedProblemItem.GeneratedChoice(
+                        "오답 보기 " + i + "입니다", false, i <= explained ? text : ""));
+            }
+            return new GeneratedProblemItem("가".repeat(200), "", goodExplanation(),
+                    choices, "", "제목", QuestionKind.SITUATION);
+        }
+
+        private List<String> warningsFor(GeneratedProblemItem item) {
+            return ProblemItemRule.qualityWarningsOf(item, Difficulty.INTERMEDIATE, true);
+        }
+
+        private static final String GOOD = "커밋 순서를 뒤집어 이해한 설명이다. 캐시는 커밋 뒤에 지운다.";
+
+        @Test
+        @DisplayName("셋 다 채우면 조용하다 — 이것이 새 형식의 정상")
+        void staysQuietWhenEveryWrongChoiceIsExplained() {
+            assertThat(warningsFor(withRationales(3, GOOD)))
+                    .noneSatisfy(w -> assertThat(w).contains("오답 설명"));
+        }
+
+        /**
+         * <b>일부만 채워진 것이 진짜 결함이다.</b> 화면이 새 형식으로 판정해 오답 분석 칸을
+         * 그리는데 한 자리가 비어 나온다. 메우는 일은 사람만 할 수 있다.
+         */
+        @Test
+        @DisplayName("셋 중 하나만 채우면 알린다 — 화면에 빈 칸이 생긴다")
+        void warnsWhenSomeWrongChoicesHaveNoRationale() {
+            assertThat(warningsFor(withRationales(1, GOOD)))
+                    .anySatisfy(w -> assertThat(w).contains("오답 설명이 빠진 보기가 있음"));
+        }
+
+        /**
+         * <b>하나도 없는 것은 알리지 않는다.</b> 이 필드가 생기기 전에 만들어진 초안이 전부
+         * 여기 걸리는데 검수자가 할 수 있는 일이 없다 — 승인하면 화면이 통짜 해설로 그린다.
+         * 고칠 것이 없는데 뜨는 경고는 그 목록 전체를 안 보게 만든다.
+         */
+        @Test
+        @DisplayName("하나도 없으면 조용하다 — 옛 초안 전부에 붙는 경고는 목록을 무력화한다")
+        void staysQuietOnOldFormatDrafts() {
+            assertThat(warningsFor(withRationales(0, GOOD)))
+                    .noneSatisfy(w -> assertThat(w).contains("오답 설명"));
+        }
+
+        /** 있는 것과 쓸모 있는 것은 다르다 — 한 마디로 때운 설명은 없는 것과 같다. */
+        @Test
+        @DisplayName("한 마디로 때운 설명은 알린다 — 어떤 오해인지가 안 들어간다")
+        void warnsWhenRationaleIsTooShort() {
+            assertThat(warningsFor(withRationales(3, "틀렸다")))
+                    .anySatisfy(w -> assertThat(w).contains("오답 설명이 너무 짧음"));
+        }
+
+        /**
+         * 정답 쪽 설명은 저장할 때 버려진다({@code AdminProblemService}). 그래도 알리는 이유는
+         * 그 값이 <b>조용히 사라지기</b> 때문이다 — 모델이 근거를 정답 보기에 몰아 쓰고
+         * 해설을 얇게 남기면, 정리된 뒤에는 근거가 어디에도 없는 문제가 된다.
+         */
+        @Test
+        @DisplayName("정답 보기에 설명이 붙으면 알린다 — 저장할 때 조용히 버려지는 값이다")
+        void warnsWhenTheCorrectChoiceCarriesRationale() {
+            GeneratedProblemItem item = new GeneratedProblemItem("가".repeat(200), "", goodExplanation(),
+                    List.of(new GeneratedProblemItem.GeneratedChoice("정답 보기 내용입니다", true, GOOD),
+                            new GeneratedProblemItem.GeneratedChoice("오답 하나", false, GOOD),
+                            new GeneratedProblemItem.GeneratedChoice("오답 둘", false, GOOD),
+                            new GeneratedProblemItem.GeneratedChoice("오답 셋", false, GOOD)),
+                    "", "제목", QuestionKind.SITUATION);
+
+            assertThat(warningsFor(item))
+                    .anySatisfy(w -> assertThat(w).contains("정답 보기에 오답 설명이 붙음"));
+        }
+
+        /**
+         * <b>번호 지목은 설명이 보기로 옮겨 온 뒤에도 막아야 한다.</b> "③번과 달리 이쪽은…"
+         * 같은 문장은 그대로 나올 수 있고, 오히려 더 눈에 안 띈다 — 설명이 이미 보기에
+         * 붙어 있어 짝이 맞는 것처럼 보인다.
+         */
+        @Test
+        @DisplayName("오답 설명이 보기를 번호로 가리키면 차단한다 — 해설과 같은 이유다")
+        void blocksOrdinalReferenceInsideRationale() {
+            GeneratedProblemItem item = withRationales(3, "③번과 달리 이쪽은 읽기 차단을 말한다.");
+
+            assertThat(ProblemItemRule.defectOf(item, ProblemType.MULTIPLE_CHOICE))
+                    .contains("오답 설명이 보기를 번호로 가리킴");
         }
     }
 }
