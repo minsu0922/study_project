@@ -1,0 +1,35 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-09-05",
+  "generatedAt" : "2026-08-27T14:19:18.164414012Z",
+  "domain" : "SECURITY",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5",
+  "documentSlug" : "csrf-samesite-cookie-and-token-defense",
+  "problems" : [ {
+    "question" : "브라우저가 요청 주체의 요구 없이도 쿠키를 알아서 붙여 주는 것처럼, 요청에 저절로 따라붙는 권한을 부르는 이름과 그 뜻으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "브라우저는 주소창에 주소를 치든, 링크를 누르든, 이미지 한 장을 불러오든, 남의 사이트의 폼이 제출되든 목적지가 그 쿠키의 주인이면 개발자가 시키지 않아도 쿠키를 붙인다. 이렇게 요청을 만든 쪽이 따로 요구하지 않았는데도 따라붙는 권한을 주변 권한(ambient authority)이라 부르며, CSRF는 바로 이 자동 첨부를 남의 페이지에서 대신 부려 먹는 공격이다. (문서의 '바탕이 되는 개념 — 쿠키와 브라우저의 자동 전송' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "주변 권한(ambient authority) — 요청 주체가 요구하지 않았는데 따라붙는 권한",
+      "correct" : true,
+      "rationale" : ""
+    }, {
+      "text" : "동일 출처 정책(same-origin policy) — 요청에 자격 증명이 자동으로 실리도록 정한 규칙",
+      "correct" : false,
+      "rationale" : "동일 출처 정책은 A 사이트의 스크립트가 B 사이트의 응답 내용을 읽지 못하게 막는 규칙으로, 쿠키가 자동으로 따라붙는 성질을 가리키는 말이 아니다."
+    }, {
+      "text" : "사전 요청(preflight) — 브라우저가 쿠키를 붙이기 전에 서버에 허용 여부를 묻는 절차",
+      "correct" : false,
+      "rationale" : "사전 요청은 커스텀 헤더나 특수 메서드를 쓸 때 브라우저가 본 요청 전에 OPTIONS로 허용 여부를 묻는 절차이며, 쿠키 자동 첨부와는 다른 개념이다."
+    }, {
+      "text" : "이중 제출 쿠키(double submit cookie) — 쿠키가 요청마다 두 번 실려 나가는 현상",
+      "correct" : false,
+      "rationale" : "이중 제출 쿠키는 같은 토큰을 쿠키와 헤더 양쪽에 넣어 두 값을 비교하는 CSRF 방어 방식이지, 권한이 자동으로 따라붙는 성질의 이름이 아니다."
+    } ],
+    "sourceQuote" : "이렇게 요청 주체가 따로 요구하지 않았는데도 따라붙는 권한을 **주변 권한(ambient authority)** 이라 부른다.",
+    "title" : "쿠키 자동 전송이 만드는 권한의 이름",
+    "questionKind" : "JUDGMENT"
+  } ]
+}
