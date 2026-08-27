@@ -13,6 +13,7 @@ import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.quiz.domain.Choice;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.domain.Submission;
+import project.study.study_project.quiz.dto.QuizChoiceResult;
 import project.study.study_project.quiz.dto.QuizProblemItem;
 import project.study.study_project.quiz.dto.QuizResponse;
 import project.study.study_project.quiz.dto.QuizSubmitRequest;
@@ -107,10 +108,17 @@ public class QuizService {
         // 세트에 없는 문제면 서비스가 조용히 무시하므로 일반 풀이 경로에 영향 없다.
         dailyQuizService.onSubmission(userId, submission);
 
+        // 보기별 결과는 객관식에만 있다. OX·단답형에서 빈 목록을 내리는 것은 null보다 낫다 —
+        // 화면이 유형마다 다른 검사를 하지 않고 "비었으면 안 그린다" 하나로 끝난다.
+        // (구조화 출력 스키마가 "값 없음"을 빈 배열로 받는 것과 같은 규약이다.)
+        List<QuizChoiceResult> choiceResults = problem.getType() == ProblemType.MULTIPLE_CHOICE
+                ? QuizChoiceResult.from(problem.getChoices())
+                : List.of();
+
         return new QuizSubmitResponse(
                 problem.getId(), result.correct(), result.correctAnswer(),
                 problem.getExplanation(), submission.getId(),
-                existingDocumentSlug(problem.getDocumentSlug()));
+                existingDocumentSlug(problem.getDocumentSlug()), choiceResults);
     }
 
     /**

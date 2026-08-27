@@ -53,4 +53,28 @@ final class AnswerDisplay {
                 .map(Choice::getText)
                 .orElse(rawUserAnswer);
     }
+
+    /**
+     * 사용자가 고른 <b>그 보기</b>의 오답 설명 — 없으면 {@code null}(V15).
+     *
+     * <p><b>왜 오답노트에는 보기 넷을 다 안 주나.</b> 그 화면은 보기를 그리지 않는다.
+     * "내 답 / 정답 / 해설"만 보여 주는 복습용 카드다. 거기서 학습자가 알고 싶은 것은
+     * <b>내가 왜 틀렸는가</b> 하나뿐이고, 그건 내가 고른 보기의 설명이다. 넷을 다 실으면
+     * 카드가 문제 풀이 화면으로 부풀고, 안 고른 보기의 설명까지 읽게 된다.
+     *
+     * <p>{@code null}이 되는 경우가 셋이다 — 객관식이 아닐 때, 옛 문제라 설명이 없을 때,
+     * 그리고 <b>정답을 골랐는데 오답노트에 남아 있을 때</b>(과거에 틀린 뒤 다시 풀어 맞힌
+     * 문제도 목록에 남는다, ADR-0002). 셋 다 화면이 그 줄을 안 그리면 되는 상태라
+     * 구분해서 알릴 이유가 없다.
+     */
+    static String userAnswerRationaleOf(Problem problem, String rawUserAnswer) {
+        if (problem.getType() != ProblemType.MULTIPLE_CHOICE || rawUserAnswer == null) {
+            return null;
+        }
+        return problem.getChoices().stream()
+                .filter(c -> String.valueOf(c.getId()).equals(rawUserAnswer.trim()))
+                .findFirst()
+                .map(Choice::getRationale)
+                .orElse(null);
+    }
 }

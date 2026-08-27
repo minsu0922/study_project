@@ -1,5 +1,7 @@
 package project.study.study_project.quiz.dto;
 
+import java.util.List;
+
 /**
  * 답안 제출(채점) 응답 — API 스펙(docs/03 POST /api/quiz/submit).
  *
@@ -14,6 +16,12 @@ package project.study.study_project.quiz.dto;
  *                      그 문서가 아직 검수 대기면 {@code null}이다 — 죽은 링크를 보여주지 않기 위해.
  *                      <p>해설과 <b>같은 자리</b>에 실리는 것이 중요하다. 이 문서는 문제의 출제 근거라
  *                      풀기 전에 보여주면 답을 알려주는 꼴이 된다(docs/03의 "해설은 채점 후에만" 규칙과 같은 이유)
+ * @param choices       보기별 정답 여부와 오답 설명 — 객관식에만 채워지고 그 외 유형은 빈 목록.
+ *                      화면이 이걸로 "오답 분석"을 그린다({@code QuizChoiceResult}).
+ *                      <p>{@code explanation}과 <b>역할이 갈린다</b>: 해설은 "왜 정답인가",
+ *                      여기 실린 것은 "왜 그 오답이 틀렸는가"다. 옛 문제는 오답 설명이 통짜
+ *                      해설 안에 녹아 있어 {@code rationale}이 전부 {@code null}로 오고,
+ *                      화면은 그것을 보고 옛 형식으로 그린다(V15)
  */
 public record QuizSubmitResponse(
         Long problemId,
@@ -21,6 +29,7 @@ public record QuizSubmitResponse(
         String correctAnswer,
         String explanation,
         Long submissionId,
-        String documentSlug
+        String documentSlug,
+        List<QuizChoiceResult> choices
 ) {
 }

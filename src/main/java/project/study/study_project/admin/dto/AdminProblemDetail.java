@@ -31,9 +31,14 @@ public record AdminProblemDetail(
         LocalDateTime createdAt,
         List<ChoiceDetail> choices
 ) {
-    public record ChoiceDetail(Long id, int seq, String text, boolean correct) {
+    /**
+     * @param rationale 이 오답이 왜 틀렸는지 한 줄(V15). 정답 보기와 옛 문제는 {@code null}.
+     *                  <b>수정 폼이 이 값을 되채운다</b> — 안 내려주면 문제를 한 번 수정할 때마다
+     *                  오답 설명이 통째로 지워진다. 폼은 화면에 있는 것만 보내기 때문이다.
+     */
+    public record ChoiceDetail(Long id, int seq, String text, boolean correct, String rationale) {
         static ChoiceDetail from(Choice c) {
-            return new ChoiceDetail(c.getId(), c.getSeq(), c.getText(), c.isCorrect());
+            return new ChoiceDetail(c.getId(), c.getSeq(), c.getText(), c.isCorrect(), c.getRationale());
         }
     }
 

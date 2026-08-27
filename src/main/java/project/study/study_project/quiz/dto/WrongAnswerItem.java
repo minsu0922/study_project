@@ -21,6 +21,10 @@ import java.time.LocalDateTime;
  *                        <b>실제로 존재하는 문서일 때만</b> 채워진다 — 아직 검수 대기인 문서를
  *                        가리키면 {@code null}이라 화면이 죽은 링크를 걸지 않는다.
  *                        틀린 문제야말로 개념 문서로 돌아갈 이유가 가장 큰 자리다
+ * @param myAnswerRationale <b>내가 고른 그 보기</b>가 왜 틀렸는지 한 줄(V15). 없으면 {@code null}.
+ *                        <p>보기 넷의 설명을 다 싣지 않는 이유는 이 화면이 보기를 그리지 않기
+ *                        때문이다 — 복습 카드에서 알고 싶은 것은 "내가 왜 틀렸나" 하나다
+ *                        ({@code AnswerDisplay.userAnswerRationaleOf})
  */
 public record WrongAnswerItem(
         Long problemId,
@@ -32,6 +36,7 @@ public record WrongAnswerItem(
         String correctAnswer,
         String explanation,
         LocalDateTime lastSubmittedAt,
-        String documentSlug
+        String documentSlug,
+        String myAnswerRationale
 ) {
 }

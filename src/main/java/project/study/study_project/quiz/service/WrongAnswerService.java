@@ -94,7 +94,10 @@ public class WrongAnswerService {
                 // 문제는 slug가 null이고 그런 문제가 대부분이라, 이 검사가 빠지면 오답노트 전체가
                 // 500으로 무너진다 — 2026-08-20에 실제로 그 상태였다.
                 // (QuizService.existingDocumentSlug는 같은 자리에서 null을 먼저 걸러 낸다)
-                slug != null && existingSlugs.contains(slug) ? slug : null
+                slug != null && existingSlugs.contains(slug) ? slug : null,
+                // 내가 고른 그 보기가 왜 틀렸는지(V15). 보기 로딩은 위 표기 변환이 이미
+                // 일으키므로 쿼리가 더 나가지 않는다 — 같은 컬렉션을 한 번 더 훑을 뿐이다.
+                AnswerDisplay.userAnswerRationaleOf(p, s.getUserAnswer())
         );
     }
 }
