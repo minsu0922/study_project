@@ -405,6 +405,47 @@ class DocumentDraftValidatorTest {
                 .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
     }
 
+    /**
+     * <b>2026-08-27 실물에서 나온 오탐 둘.</b> 코퍼스 재구축으로 만든 문서 4편을 검증기에
+     * 걸었더니 넷 중 셋에서 대문자 구문 패턴이 헛울렸다.
+     *
+     * <ol>
+     *   <li>네트워크 문서의 {@code RST}가 <b>줄바꿈을 건너</b> 다음 줄 첫 낱말 {@code TCP}와
+     *       한 구문으로 붙었다. 공백을 {@code \s}로 잡으면 줄바꿈이 그 안에 들어간다.
+     *   <li>보안 문서의 평범한 한국어 문장 속 {@code GET API}·{@code JSON API}가 걸렸다.
+     *       대문자 낱말 둘이 나란한 것은 한국어 기술 문서에서 너무 흔해 신호가 못 된다.
+     * </ol>
+     *
+     * <p>같은 4편의 {@code SET ... NX}는 <b>진짜 지적</b>이었다(캐시 문서가 뜻 없이 두 번 썼다).
+     * 셋을 가르는 것이 {@code ...}의 유무이고, 이 테스트는 그 경계가 유지되는지 지킨다.
+     * 위 {@link #doesNotFlagOrdinaryProseAsTerm}과 같은 종류의 방어다.
+     */
+    @Test
+    @DisplayName("대문자 낱말이 나란하기만 하면 용어로 잡지 않는다 — 줄바꿈 너머와 'GET API'가 걸렸다")
+    void doesNotFlagAdjacentUppercaseWordsAsTerm() {
+        String prose = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
+                ## 첫째 갈래
+                포트가 닫혀 있으면 즉시 RST
+                TCP 연결은 그 자리에서 끊긴다. 조회용이라 믿고 만든 GET API가 실제로는
+                데이터를 바꾸면 터지고, JSON API라 안전하다는 생각도 근거가 없다.""");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", prose))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
+    }
+
+    @Test
+    @DisplayName("생략 부호를 낀 구문은 여전히 잡는다 — SET ... NX가 뜻 없이 두 번 쓰였다")
+    void stillFlagsElidedUppercasePhrase() {
+        String leaky = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
+                ## 첫째 갈래
+                미스가 몰리는 자리에는 SET ... NX 뮤텍스를 걸어 원본에 요청 하나만 닿게 한다.""");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", leaky))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("SET ... NX"));
+    }
+
     /* ── 2026-08-23: 기본 개념과 코드 예제 ────────────────────────
      * 사용자가 8/23 실물(「연결이 안 될 때 어느 계층에서 끊겼는가」)을 읽고 두 가지를 지적했다.
      * ① OSI 7계층 자체를 설명하지 않는다 — 실무 상황만 있고 기본 개념이 없다.
