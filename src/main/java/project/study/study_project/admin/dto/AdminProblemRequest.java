@@ -64,7 +64,25 @@ public record AdminProblemRequest(
             @Size(max = 500, message = "보기는 500자 이하여야 합니다.")
             String text,
 
-            boolean correct
+            boolean correct,
+
+            /**
+             * 이 <b>오답</b>이 왜 틀렸는지 한 줄. 정답 보기는 비운다({@code Choice.rationale}).
+             *
+             * <p>{@code @NotBlank}를 걸지 않은 이유가 둘이다. 정답 보기는 <b>비어 있는 것이
+             * 정상</b>이고, 이 필드가 생기기 전에 만들어진 초안은 승인될 때 값이 없다.
+             * 여기서 막으면 옛 초안이 <b>승인 순간 400으로 튕긴다</b> — 검수함에 쌓인 것을
+             * 못 내보내게 된다. 품질 기준은 {@code ProblemItemRule}이 경고로 알린다.
+             */
+            @Size(max = 1000, message = "오답 설명은 1000자 이하여야 합니다.") // DB VARCHAR(1000)
+            String rationale
     ) {
+        /**
+         * 설명 없이 만드는 편의 생성자 — 이 필드가 생기기 전 코드·테스트가 그대로 컴파일되게 한다.
+         * 수동 등록 화면도 아직 이 값을 보내지 않으므로 그 경로가 이 생성자를 탄다.
+         */
+        public ChoiceItem(String text, boolean correct) {
+            this(text, correct, null);
+        }
     }
 }

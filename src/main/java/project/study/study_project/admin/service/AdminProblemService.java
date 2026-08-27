@@ -165,10 +165,31 @@ public class AdminProblemService {
         if (r.type() == ProblemType.MULTIPLE_CHOICE) {
             List<AdminProblemRequest.ChoiceItem> items = r.choices();
             for (int i = 0; i < items.size(); i++) {
-                choices.add(Choice.of(problem, items.get(i).text().trim(), items.get(i).correct(), i + 1));
+                AdminProblemRequest.ChoiceItem item = items.get(i);
+                choices.add(Choice.of(problem, item.text().trim(), item.correct(),
+                        normalizeRationale(item), i + 1));
             }
         }
         return choices; // 객관식이 아니면 빈 리스트 → replaceChoices가 기존 보기를 정리
+    }
+
+    /**
+     * 오답 설명 정규화 — 빈 값은 {@code null}로 눕히고, <b>정답 보기는 값이 와도 버린다</b>.
+     *
+     * <p><b>왜 정답 쪽을 버리나.</b> 정답의 근거는 {@code explanation}이 통째로 맡기로 한
+     * 설계다({@code Choice.rationale} 주석). 모델이 규칙을 어기고 정답에도 한 줄 적어 보내면
+     * 같은 말이 두 곳에 남고, 나중에 해설만 고친 문제가 <b>화면에서 앞뒤가 다른 말을 한다</b>.
+     * 규칙을 어긴 입력을 그대로 저장해 두면 어긴 사실조차 보이지 않으므로 여기서 정리한다.
+     *
+     * <p>빈 문자열을 {@code null}로 눕히는 것은 화면의 판정 때문이다 — 옛 형식(설명이 아예
+     * 없는 문제)과 새 형식을 가르는 기준이 "값이 있는 보기가 하나라도 있나"인데,
+     * {@code ""}가 섞여 들어오면 <b>있는 것으로 세어져</b> 빈 칸이 그려진다.
+     */
+    private String normalizeRationale(AdminProblemRequest.ChoiceItem item) {
+        if (item.correct() || item.rationale() == null || item.rationale().isBlank()) {
+            return null;
+        }
+        return item.rationale().trim();
     }
 
     private String trimOrNull(String s) {
