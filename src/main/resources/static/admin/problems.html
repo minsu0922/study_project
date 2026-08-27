@@ -107,6 +107,9 @@ function initProblemForm() {
 
   document.getElementById("backfillBtn").addEventListener("click", backfillTitles);
   document.getElementById("addChoiceBtn").addEventListener("click", () => addChoiceRow());
+  // 정답 라디오를 옮기면 설명 칸도 따라 접힌다. 줄마다 리스너를 달지 않고 컨테이너에서 한 번만
+  // 받는 이유: 보기 줄은 계속 생겼다 사라지므로, 줄에 달면 새로 만든 줄마다 다시 달아야 한다.
+  document.getElementById("pChoices").addEventListener("change", syncRationaleVisibility);
   document.getElementById("pSubmitBtn").addEventListener("click", submitProblem);
   document.getElementById("pCancelBtn").addEventListener("click", resetProblemForm);
   document.getElementById("pPrevBtn").addEventListener("click", () => { pPage--; loadProblems(); });
@@ -126,17 +129,40 @@ function renderTypeFields() {
   }
 }
 
-function addChoiceRow(text = "", correct = false) {
+/* 보기 한 줄 = 내용 + 오답 설명(V15).
+ *
+ * 설명 칸을 보기 <바로 아래>에 두는 이유: 따로 모아 두면 "이 설명이 어느 보기 것이지?"를
+ * 눈으로 짝지어야 하는데, 그게 정확히 번호 지목을 막은 이유다(보기는 내보낼 때 섞인다).
+ *
+ * 정답 보기의 설명 칸은 라디오를 누르는 순간 접는다. 정답의 근거는 해설이 통째로 맡기로 한
+ * 설계라(Choice.rationale) 여기 적어도 저장 직전에 버려지는데, 칸이 열려 있으면 적어 놓고
+ * 사라진 줄 모른다. 값 자체는 지우지 않는다 — 정답을 잘못 눌렀다가 되돌릴 때 쓴 글이
+ * 사라지면 그게 더 나쁘다. */
+function addChoiceRow(text = "", correct = false, rationale = "") {
   const row = document.createElement("div");
   row.className = "choice-row";
-  row.style.cssText = "display:flex; gap:8px; align-items:center; margin-bottom:6px";
+  row.style.cssText = "display:flex; gap:8px; align-items:flex-start; margin-bottom:6px";
   row.innerHTML = `
-    <input type="radio" name="pCorrect" title="정답으로 선택" ${correct ? "checked" : ""}>
-    <input type="text" class="choice-text" placeholder="보기 내용" style="flex:1">
-    <button type="button" class="btn-outline" style="padding:4px 10px">✕</button>`;
+    <input type="radio" name="pCorrect" title="정답으로 선택" style="margin-top:9px" ${correct ? "checked" : ""}>
+    <div style="flex:1">
+      <input type="text" class="choice-text" placeholder="보기 내용" style="width:100%">
+      <input type="text" class="choice-rationale" maxlength="1000" style="width:100%; margin-top:4px"
+             placeholder="이 오답이 왜 틀렸는지 한 줄 (정답 보기는 비워 둡니다)">
+    </div>
+    <button type="button" class="btn-outline" style="padding:4px 10px; margin-top:6px">✕</button>`;
   row.querySelector(".choice-text").value = text;
+  row.querySelector(".choice-rationale").value = rationale;
   row.querySelector("button").addEventListener("click", () => row.remove());
   document.getElementById("pChoices").appendChild(row);
+  syncRationaleVisibility();
+  return row;
+}
+
+/** 정답으로 선택된 줄의 설명 칸만 감춘다 — 값은 그대로 두어 되돌릴 수 있게 한다. */
+function syncRationaleVisibility() {
+  document.querySelectorAll("#pChoices .choice-row").forEach(r => {
+    r.querySelector(".choice-rationale").hidden = r.querySelector("input[type=radio]").checked;
+  });
 }
 
 function collectProblemBody() {
@@ -159,6 +185,9 @@ function collectProblemBody() {
       .map(r => ({
         text: r.querySelector(".choice-text").value,
         correct: r.querySelector("input[type=radio]").checked,
+        // 빈 칸은 null로 보낸다 — 빈 문자열이 저장되면 화면이 "설명이 있는 보기"로 세어
+        // 오답 분석 칸을 그리고 그 자리가 비어 나온다(제목을 null로 보내는 것과 같은 이유).
+        rationale: r.querySelector(".choice-rationale").value.trim() || null,
       }));
   }
   return body;
@@ -325,7 +354,7 @@ async function editProblem(id) {
   document.getElementById("pAnswer").value = p.answer ?? "";
   document.getElementById("pExplanation").value = p.explanation ?? "";
   document.getElementById("pChoices").innerHTML = "";
-  p.choices.forEach(c => addChoiceRow(c.text, c.correct));
+  p.choices.forEach(c => addChoiceRow(c.text, c.correct, c.rationale ?? ""));
   renderTypeFields();
   window.scrollTo({ top: 0, behavior: "smooth" }); // 폼이 위에 있으니 올려 보낸다
 }

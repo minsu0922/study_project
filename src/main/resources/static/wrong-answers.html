@@ -125,6 +125,12 @@ function init() {
             <h3>${escapeHtml(w.question)}</h3>
             <div style="color:var(--wrong)">내 답: ${escapeHtml(w.myAnswer)}</div>
             <div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer ?? "")}</div>
+            <!-- 내가 고른 그 보기가 왜 틀렸는지(V15). 보기 넷을 다 늘어놓지 않는 이유는
+                 이 화면이 보기를 아예 그리지 않기 때문이다 — 복습 카드에서 알고 싶은 것은
+                 "내가 왜 틀렸나" 하나다(AnswerDisplay.userAnswerRationaleOf).
+                 옛 문제는 이 값이 없고, 그때는 아래 통짜 해설이 같은 일을 한다. -->
+            ${w.myAnswerRationale ? `<div class="meta" style="margin-top:6px;color:var(--wrong)">
+              왜 틀렸나: ${escapeHtml(w.myAnswerRationale)}</div>` : ""}
             ${w.explanation ? `<div class="meta" style="margin-top:6px">${escapeHtml(w.explanation)}</div>` : ""}
             <!-- 근거 개념 문서(docs/15 3단계) — 틀린 문제야말로 개념으로 돌아갈 이유가 가장 큰 자리다.
                  서버가 실재하는 문서일 때만 slug를 내려주므로 존재 여부를 여기서 다시 따지지 않는다.

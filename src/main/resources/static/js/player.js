@@ -189,6 +189,9 @@ function startPlayer(mountEl, problems, opts = {}) {
       else state.misses.push({
         q: p.question,
         my: displayAnswer(p, state.selected),
+        // 내가 고른 그 보기가 왜 틀렸는지(V15). 결과 화면 복기는 보기를 다시 그리지 않으므로
+        // 오답 분석 전체가 아니라 <내가 고른 것> 하나만 가져온다 — 오답노트와 같은 판단이다.
+        why: myRationale(r, state.selected),
         ans: r.correctAnswer ?? "",
         exp: r.explanation ?? "",
         doc: r.documentSlug ?? null,   // 결과 화면 복기에서도 개념 문서로 갈 수 있게(docs/15)
@@ -230,6 +233,44 @@ function startPlayer(mountEl, problems, opts = {}) {
     </div>`;
   }
 
+  /* 오답 분석 — 오답 보기마다 왜 틀렸는지를 <이 화면의 번호>와 함께 늘어놓는다(V15).
+   *
+   * [여기가 번호 문제를 푸는 자리다]
+   * 보기는 요청마다 다시 섞여 나오므로(QuizChoiceItem.shuffledFrom) 서버는 학습자 화면의
+   * 번호를 알지 못한다. 그래서 해설이 "②번"이라고 적는 것을 저장 단계에서 막아 왔다.
+   * 그런데 번호를 아는 쪽은 여기다 — 방금 p.choices의 seq로 배지를 찍었다.
+   * 서버는 id로만 말하고(QuizChoiceResult) 번호는 화면이 붙인다. 그러면 아무리 섞여도 맞는다.
+   *
+   * [옛 문제는 그리지 않는다]
+   * 이 컬럼이 생기기 전에 승인된 문제는 오답 설명이 통짜 해설 안에 녹아 있어 rationale이
+   * 전부 비어 있다. 그때 빈 제목만 뜨면 "설명이 빠졌나?" 싶은 화면이 되므로 절 자체를 접는다.
+   * 두 형식이 공존한다는 판단이 화면까지 이어지는 자리다(V15 주석). */
+  /** 내가 고른 보기의 오답 설명 — 없으면 빈 문자열(객관식이 아니거나 옛 문제). */
+  function myRationale(r, selected) {
+    const mine = (r.choices || []).find(c => String(c.id) === String(selected));
+    return mine && !mine.correct ? (mine.rationale ?? "") : "";
+  }
+
+  function wrongAnalysis(p, r) {
+    if (p.type !== "MULTIPLE_CHOICE") return "";
+
+    // 서버가 준 보기별 결과를 id로 찾을 수 있게 만들어 둔다. String으로 맞추는 이유는
+    // data-value가 문자열이고 JSON의 id는 숫자라, === 로 비교하면 영영 안 맞기 때문이다.
+    const byId = new Map((r.choices || []).map(c => [String(c.id), c]));
+
+    // 화면에 그린 순서(seq) 그대로 훑는다 — 읽는 사람이 위에서 본 번호와 같은 차례여야 한다.
+    const rows = (p.choices || [])
+      .map(c => ({ seq: c.seq, result: byId.get(String(c.id)) }))
+      .filter(x => x.result && !x.result.correct && x.result.rationale)
+      .map(x => `<li><b>${x.seq}번</b> — ${escapeHtml(x.result.rationale)}</li>`);
+
+    if (rows.length === 0) return "";
+    return `<div class="explain wrong-analysis">
+      <div class="wrong-analysis-title">오답 분석</div>
+      <ul>${rows.join("")}</ul>
+    </div>`;
+  }
+
   /** 채점 결과를 보기 색 + 피드백 박스로 표시하고, [다음] 버튼으로 바꾼다. */
   function showFeedback(p, r) {
     // 1) 보기 자체에 색: 정답 보기는 초록, 내가 고른 오답은 빨강.
@@ -253,12 +294,13 @@ function startPlayer(mountEl, problems, opts = {}) {
     const shortInput = mountEl.querySelector("#shortInput");
     if (shortInput) shortInput.disabled = true;
 
-    // 2) 피드백 박스: 판정 + 정답 + 해설
+    // 2) 피드백 박스: 판정 + 정답 + 해설 + 오답 분석
     mountEl.querySelector("#feedback").innerHTML = `
       <div class="feedback ${r.correct ? "correct" : "wrong"} fade-in">
         <span class="verdict">${r.correct ? "🎉 정답입니다!" : "😅 아쉬워요, 오답입니다"}</span>
         ${r.correct ? "" : `<div style="margin-top:4px">정답: <b>${escapeHtml(r.correctAnswer ?? "")}</b></div>`}
         ${r.explanation ? `<div class="explain">${escapeHtml(r.explanation)}</div>` : ""}
+        ${wrongAnalysis(p, r)}
         ${docLink(r)}
         ${opts.reviewMode ? `<div class="explain" style="font-size:.82rem">${
           r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요 👋"
@@ -305,6 +347,7 @@ function startPlayer(mountEl, problems, opts = {}) {
             <div class="q">${escapeHtml(m.q)}</div>
             <div class="my">내 답: ${escapeHtml(m.my)}</div>
             <div class="ans">정답: ${escapeHtml(m.ans)}</div>
+            ${m.why ? `<div class="my" style="margin-top:4px">왜 틀렸나: ${escapeHtml(m.why)}</div>` : ""}
             ${m.exp ? `<div class="exp">${escapeHtml(m.exp)}</div>` : ""}
             ${m.doc ? `<div class="exp" style="font-size:.86rem">📖 <a href="/document.html?slug=${
               encodeURIComponent(m.doc)}" target="_blank" rel="noopener">이 문제의 개념 문서 읽기</a></div>` : ""}

@@ -508,8 +508,13 @@ async function loadDrafts() {
   // 초안은 표가 아니라 카드로 — 검수는 지문·보기·해설을 통째로 읽어야 하는 작업이라
   // 행 하나로 요약하면 결국 펼쳐 보는 클릭만 늘어난다.
   box.innerHTML = data.content.map(d => {
+    // 오답 설명(V15)은 보기 바로 아래 붙여 보여 준다. 따로 모아 두면 검수자가 "이 설명이
+    // 어느 보기 것이지?"를 눈으로 짝지어야 하는데, 그게 정확히 번호 지목을 막은 이유다.
+    // 옛 초안은 이 값이 없고, 그때는 줄이 안 생기므로 화면이 예전 그대로다.
     const choices = (d.choices ?? []).map(c =>
-      `<li>${c.correct ? "✅ " : ""}${escapeHtml(c.text)}</li>`).join("");
+      `<li>${c.correct ? "✅ " : ""}${escapeHtml(c.text)}${
+        c.rationale ? `<div class="meta" style="margin-top:2px">↳ ${escapeHtml(c.rationale)}</div>` : ""
+      }</li>`).join("");
     const actions = d.status === "PENDING" ? `
       <div class="row-actions" style="margin-top:10px">
         <button onclick="approveDraft(this, ${d.id})">승인 → 문제 등록</button>
