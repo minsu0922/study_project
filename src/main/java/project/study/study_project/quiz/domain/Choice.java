@@ -97,4 +97,30 @@ public class Choice {
     public static Choice of(Problem problem, String text, boolean correct, int seq) {
         return new Choice(problem, text, correct, null, seq);
     }
+
+    /**
+     * 비어 있을 때만 오답 설명을 채운다 — 이 칸이 생기기 전에 승인된 문제를 뒤늦게 메우는 데 쓴다.
+     *
+     * <p><b>왜 "덮어쓰지 않는다"를 엔티티가 판단하나.</b> {@code Problem.fillTitleIfAbsent}와 같은
+     * 이유다. 이 판단이 서비스에 있으면 채우는 경로가 하나 더 생길 때마다 같은 {@code if}를
+     * 다시 써야 하고, 한 곳에서 빠뜨리면 <b>검수자가 손으로 다듬은 설명이 모델 것으로 덮인다</b>.
+     * 그 사고는 조용해서, 다듬은 사람이 다시 그 문제를 열어 보기 전까지 아무도 모른다.
+     *
+     * <p><b>정답 보기는 무조건 거절한다.</b> 정답의 근거는 {@code Problem.explanation}이 통째로
+     * 맡기로 한 약속이고(필드 주석), 여기에 값이 들어가면 학습자가 <b>맞혔을 때</b> 화면에
+     * "왜 틀렸는지"가 뜬다. 프롬프트가 정답 보기를 아예 안 보여 주는 것으로 한 번 막지만,
+     * 모델이 요청하지 않은 id를 지어낼 수도 있으므로 저장 직전에 한 번 더 막는다.
+     *
+     * @param rationale 채울 설명. {@code null}이나 공백이면 아무것도 하지 않는다 —
+     *                  모델이 빈 값을 낸 보기는 설명이 여전히 {@code null}이라
+     *                  다음 실행이 다시 집어 온다. 여기서 재시도하지 않아도 손실이 없는 구조다.
+     * @return 실제로 채웠으면 {@code true}. 호출부가 "몇 건 채웠는지"를 세는 데 쓴다
+     */
+    public boolean fillRationaleIfAbsent(String rationale) {
+        if (correct || rationale == null || rationale.isBlank() || this.rationale != null) {
+            return false;
+        }
+        this.rationale = rationale;
+        return true;
+    }
 }

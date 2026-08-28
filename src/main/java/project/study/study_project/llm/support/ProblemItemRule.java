@@ -132,6 +132,24 @@ public final class ProblemItemRule {
     }
 
     /** 규약을 지켰는지만 알고 싶을 때. */
+    /**
+     * 이 글이 보기를 <b>번호로</b> 가리키는가 — 가리키면 걸린 부분을, 아니면 {@code null}.
+     *
+     * <p>{@link #defectOf}가 초안에 거는 검사와 <b>같은 패턴</b>을 초안 밖에서도 쓰려고 연 문이다.
+     * 쓰는 곳은 오답 설명 채우기({@code ChoiceRationaleBackfillService}) — 이미 승인된 문제의
+     * 빈 설명 칸을 모델이 채우는 경로라 {@code GeneratedProblemItem}이 없다.
+     *
+     * <p><b>패턴을 복사해 가지 않는 것이 요점이다.</b> 이 패턴은 오탐 두 번을 겪고 다듬어진
+     * 물건이다("보기 4개 중 하나만", "2번 항목" — 상수 주석 참고). 복사본을 만들면 다음에
+     * 오탐이 하나 더 나왔을 때 한쪽만 고쳐지고, 두 경로가 서로 다른 것을 거르기 시작한다.
+     * 그때는 어느 쪽이 맞는지 아무도 모른다.
+     *
+     * @param text 검사할 글. {@code null}이나 공백이면 {@code null}을 돌려준다
+     */
+    public static String choiceNumberReferenceIn(String text) {
+        return contextOf(CHOICE_NUMBER_REFERENCE, text);
+    }
+
     public static boolean isUsable(GeneratedProblemItem item, ProblemType type) {
         return defectOf(item, type) == null;
     }

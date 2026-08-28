@@ -172,4 +172,44 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
     /** 관리 화면 배지·백필 버튼 안내용 — 제목이 없는 문제가 몇 건 남았는가. */
     long countByTitleIsNull();
+
+    /**
+     * 오답 설명이 빠진 객관식 문제 — 오답 설명 채우기(V15)가 채울 대상.
+     *
+     * <p>{@link #findWithoutTitle}과 같은 이유로 <b>엔티티</b>로 읽는다: 읽고 끝이 아니라
+     * 값을 써 넣어야 하므로 영속 상태여야 변경 감지가 걸린다.
+     *
+     * <p><b>"하나라도 빈 것"을 대상으로 삼는다</b>(전부 빈 것이 아니라). 세 오답 중 둘만 채워진
+     * 문제가 생길 수 있기 때문이다 — 모델이 한 건을 빠뜨리면 정확히 그 상태가 된다. 전부 빈 것만
+     * 집어 오면 그런 문제는 <b>영원히 절반인 채로</b> 남고, 학습자 화면에는 보기마다 설명이
+     * 있다 없다 한다. 이미 채워진 보기는 {@code Choice.fillRationaleIfAbsent}가 건너뛰므로
+     * 대상을 넓게 잡아도 덮어쓸 걱정이 없다.
+     *
+     * <p>{@code distinct}가 필요한 이유: 오답 셋이 다 비어 있으면 조인 결과가 세 줄이 되어
+     * 같은 문제가 세 번 실린다. 그러면 상한 10건이 실제로는 3~4문제가 된다.
+     *
+     * <p>객관식만 본다. OX·단답형에는 보기 행 자체가 없어 채울 자리가 없다.
+     *
+     * <p>{@code order by p.id}로 오래된 것부터 — 여러 번 나눠 부를 때 같은 순서를 보장한다.
+     * 채워진 것은 다음 호출의 조건에서 저절로 빠지므로 페이지 번호를 들고 다닐 필요가 없다.
+     */
+    @Query("""
+            select distinct p from Problem p
+            join p.choices c
+            where p.type = project.study.study_project.global.common.ProblemType.MULTIPLE_CHOICE
+              and c.correct = false
+              and c.rationale is null
+            order by p.id
+            """)
+    List<Problem> findWithMissingRationale(Pageable pageable);
+
+    /** 관리 화면 카드 안내용 — 오답 설명이 빠진 문제가 몇 건 남았는가(조건은 위 쿼리와 같다). */
+    @Query("""
+            select count(distinct p) from Problem p
+            join p.choices c
+            where p.type = project.study.study_project.global.common.ProblemType.MULTIPLE_CHOICE
+              and c.correct = false
+              and c.rationale is null
+            """)
+    long countWithMissingRationale();
 }

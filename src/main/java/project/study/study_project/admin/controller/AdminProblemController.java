@@ -22,7 +22,10 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.client.ClaudeRationaleGenerator;
+import project.study.study_project.llm.dto.RationaleBackfillResponse;
 import project.study.study_project.llm.dto.TitleBackfillResponse;
+import project.study.study_project.llm.service.ChoiceRationaleBackfillService;
 import project.study.study_project.llm.service.ProblemTitleBackfillService;
 
 /**
@@ -41,6 +44,8 @@ public class AdminProblemController {
      * 버튼이라 입구만 여기에 둔다 — 관리자에게는 "문제를 손보는 일" 중 하나다.
      */
     private final ProblemTitleBackfillService titleBackfillService;
+    /** 오답 설명 채우기도 같은 이유로 여기에 입구를 둔다 — 관리자에게는 "문제를 손보는 일"이다. */
+    private final ChoiceRationaleBackfillService rationaleBackfillService;
 
     /** 목록(관리 화면용, 정답 포함). 예: {@code GET /api/admin/problems?domain=NETWORK&page=0} */
     @GetMapping
@@ -98,5 +103,28 @@ public class AdminProblemController {
     @PostMapping("/backfill-titles")
     public ApiResponse<TitleBackfillResponse> backfillTitles() {
         return ApiResponse.ok(titleBackfillService.backfill());
+    }
+
+    /** 오답 설명이 빠진 문제 수 — 화면이 채우기 카드를 보여 줄지 정하는 데 쓴다. */
+    @GetMapping("/missing-rationale-count")
+    public ApiResponse<Long> missingRationaleCount() {
+        return ApiResponse.ok(rationaleBackfillService.missingRationaleCount());
+    }
+
+    /**
+     * 오답 설명 채우기 — 설명이 비어 있는 오답 보기에 Claude가 쓴 "왜 틀렸는지"를 채운다(V15).
+     *
+     * <p>제목 채우기와 같은 이유로 {@code POST}다 — <b>돈이 들고 DB를 바꾼다</b>.
+     * 브라우저가 미리 가져오거나 새로고침으로 다시 보내도 되는 종류가 아니다.
+     *
+     * <p>한 번에 상한(10문제)까지만 처리하고 남은 수를 응답에 담는다. 상한이 제목 쪽(40건)보다
+     * 훨씬 작은 이유는 {@link ClaudeRationaleGenerator#BATCH_SIZE} 주석 참고.
+     *
+     * <p><b>해설은 바뀌지 않는다.</b> 응답의 {@code explanationsToCheck}는 사람이 다듬을 문제
+     * 목록일 뿐, 서버가 손댄 것이 아니다({@link ChoiceRationaleBackfillService} 주석).
+     */
+    @PostMapping("/backfill-rationales")
+    public ApiResponse<RationaleBackfillResponse> backfillRationales() {
+        return ApiResponse.ok(rationaleBackfillService.backfill());
     }
 }
