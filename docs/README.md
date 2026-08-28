@@ -25,7 +25,7 @@ CS(컴퓨터 과학) 개념을 정리해 두고 문제로 풀어 보는 학습 �
 | [15-llm-concept-documents](15-llm-concept-documents.md) | 개념 문서 생성·검수, 그 문서를 근거로 한 문제 출제 |
 | [16-llm-pipeline-operations](16-llm-pipeline-operations.md) | **LLM 파이프라인 운영 매뉴얼** — 설정·실행·점검·핵심 코드 지도 |
 | [17-prompt-quality-and-eval](17-prompt-quality-and-eval.md) | **프롬프트 품질 개선과 평가 하네스** — 난이도 재정의, 검증기, `evalPrompt` |
-| [GLOSSARY](GLOSSARY.md) | **용어집** — 이 저장소에서 쓰는 말과 쓰지 않는 말 (메우기·들여오기·현황 파일…) |
+| [GLOSSARY](GLOSSARY.md) | **용어집** — 이 저장소에서 쓰는 말과 쓰지 않는 말 (빠진 값 채우기·들여오기·현황 파일…) |
 | [adr/](adr/README.md) | 기술 결정 기록 (Architecture Decision Records) |
 
 > 💡 이 문서들만 보고도 프로젝트를 처음부터 다시 만들 수 있게 하는 걸 목표로 한다.
