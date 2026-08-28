@@ -160,19 +160,27 @@ class ProblemTitleBackfillServiceTest {
     }
 
     /**
-     * 남은 건수는 <b>이번에 채운 것을 뺀</b> 값이어야 한다. 커밋 전이라 {@code countByTitleIsNull}은
-     * 방금 채운 것까지 세는데, 그대로 내보내면 화면에 "2건 채웠는데 3건 남음"이 떠서
-     * 버튼을 눌러도 줄지 않는 것처럼 보인다.
+     * 남은 건수는 <b>다시 센 값 그대로</b>다 — 빼지 않는다.
+     *
+     * <p><b>원래는 빼고 있었고, 그게 버그였다(2026-08-28 수정).</b> "커밋 전이라 방금 채운 것이
+     * 그대로 세어진다"고 봤는데 그 전제가 틀렸다. JPQL 조회는 실행 전에 자동으로 flush하므로
+     * {@code countByTitleIsNull}은 <b>이미 채운 것을 뺀</b> 값을 돌려준다. 거기서 또 빼면
+     * 두 번 빠지고, 대상이 상한보다 많으면 음수가 나온다.
+     *
+     * <p><b>이 테스트가 그때 왜 못 잡았는지도 적어 둔다</b> — 저장소가 mock이라 flush라는 것이
+     * 아예 없고, {@code thenReturn(3L)}은 언제 불러도 3이다. 즉 이 테스트는 "빼는가"만 봤지
+     * "빼는 것이 맞는가"는 볼 수 없었다. 실물에서 음수가 나오고서야 드러났다.
+     * 여기서는 <b>빼지 않는다</b>는 것만 지킨다 — flush 동작 자체는 mock으로 잴 수 없다.
      */
     @Test
-    @DisplayName("남은 건수에서 방금 채운 것을 뺀다 — 커밋 전이라 조회는 아직 그것들을 센다")
-    void subtractsWhatWasJustFilledFromTheRemainingCount() {
+    @DisplayName("남은 건수를 다시 센 값 그대로 쓴다 — JPQL 조회가 이미 flush한 뒤라 빼면 두 번 빠진다")
+    void doesNotSubtractFromTheRecountedRemaining() {
         List<Problem> targets = List.of(problem(1L, "1번 지문"), problem(2L, "2번 지문"));
         given(targets);
-        when(problemRepository.countByTitleIsNull()).thenReturn(3L); // 아직 커밋 전이라 2건이 그대로 세어진다
+        when(problemRepository.countByTitleIsNull()).thenReturn(3L); // flush 뒤의 값이라는 전제
         fakeGenerator.toReturn = List.of(new GeneratedTitle(1L, "제목1"), new GeneratedTitle(2L, "제목2"));
 
-        assertThat(service.backfill().remaining()).isEqualTo(1);
+        assertThat(service.backfill().remaining()).isEqualTo(3);
     }
 
     /* ── 도우미 ──────────────────────────────────────────────── */

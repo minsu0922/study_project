@@ -109,9 +109,18 @@ public class ProblemTitleBackfillService {
             }
         }
 
-        // 남은 건수는 <이번에 채운 것을 뺀> 값이다. countByTitleIsNull()을 다시 부르면 아직
-        // 커밋 전이라 방금 채운 것이 그대로 세어져, 화면에 "0건 채웠는데 33건 남음"이 뜬다.
-        long remaining = problemRepository.countByTitleIsNull() - filled.size();
+        // 남은 건수는 <다시 세기만> 한다. 빼지 않는다.
+        //
+        // 2026-08-28 수정. 원래는 "커밋 전이라 방금 채운 것이 그대로 세어진다"고 보고
+        // filled.size()를 뺐는데, 그 전제가 틀렸다. JPQL 조회는 <실행 전에 자동으로 flush한다> —
+        // 보류 중인 변경이 조회 대상 테이블과 겹치면 Hibernate가 UPDATE를 먼저 내보낸다.
+        // 그래서 이 count는 이미 채운 것을 뺀 값이고, 거기서 또 빼면 두 번 빠진다.
+        //
+        // 여기서는 티가 안 났다 — 제목 백필은 대상 33건을 한두 번에 끝냈고, 마지막 실행에서는
+        // 양쪽 다 0에 가까워 음수가 눈에 띄지 않았다. 오답 설명 채우기(V15)를 같은 모양으로
+        // 만들었더니 26건을 세 번에 나눠 돌리면서 remaining이 -4로 나와 드러났다.
+        // 여기가 원본이므로 같이 고친다.
+        long remaining = problemRepository.countByTitleIsNull();
         log.info("제목 백필: 대상 {}건, 모델 응답 {}건, 채움 {}건, 남음 {}건",
                 targets.size(), generated.size(), filled.size(), remaining);
         return new TitleBackfillResponse(targets.size(), filled.size(), remaining, filled);
