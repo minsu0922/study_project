@@ -186,5 +186,109 @@
     "domain" : "DATABASE",
     "topic" : "페이지네이션 — OFFSET이 뒤로 갈수록 느려지는 이유와 커서 방식",
     "memo" : "DB 4단계. 이 저장소의 목록 API가 Pageable을 쓰고 있어 실물과 바로 이어지는 주제다."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "equals와 hashCode — 둘 중 하나만 재정의했을 때 컬렉션에서 벌어지는 일",
+    "memo" : "자바 1단계. 규약 암기가 되지 않게, HashSet에 넣은 객체를 다시 못 찾는 장면에서 출발할 것."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "불변 객체와 방어적 복사 — 필드를 그대로 돌려줬을 때 새는 것",
+    "memo" : "자바 1단계. '불변이 좋다'가 아니라, getter로 넘긴 리스트를 바깥에서 고쳐 버리는 장면을 축으로."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "제네릭과 타입 소거 — 실행 시점에 사라지는 것과 그래서 못 하는 일",
+    "memo" : "자바 1단계. 문법 소개가 아니라 'new T[]가 왜 안 되는가'처럼 막히는 자리로 각도를 잡을 것."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "스택과 힙 — OutOfMemory와 StackOverflow가 갈리는 자리",
+    "memo" : "자바 2단계. 메모리 구조 그림 나열이 되지 않게, 두 오류가 각각 어떤 코드에서 나는지로 꿸 것."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "Stop-the-world — GC 로그의 무엇을 보고 튜닝을 판단하는가",
+    "memo" : "자바 2단계. 범위 #3(G1의 영역 분할)과 겹치지 않게, 로그를 읽고 판단하는 쪽에 초점을 둘 것."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "클래스 로딩과 static 초기화 — 그 코드가 언제 실행되는가",
+    "memo" : "자바 2단계. 순서를 외우게 하지 말고, static 블록이 늦게 돌아 값이 비어 있던 장면으로."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "스레드 풀 — 코어·최대·큐 크기가 서로를 막는 자리",
+    "memo" : "자바 3단계. 큐가 차기 전에는 최대 크기까지 늘지 않는다는 점이 핵심. 설정값 나열이 되지 않게 할 것."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "ConcurrentHashMap과 CAS — 락 없이 갱신하는 방식과 그 한계",
+    "memo" : "자바 3단계. 범위 #5(가시성과 원자성)와 겹치지 않게, 실패하면 다시 시도하는 구조 쪽으로."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "ThreadLocal — 풀에서 재사용되는 스레드에 값이 남는 사고",
+    "memo" : "자바 3단계. 요청마다 새 스레드일 것이라는 착각이 원인. 지우지 않으면 다음 요청이 남의 값을 본다."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "컬렉션 선택 — ArrayList와 LinkedList가 실제로 갈리는 기준",
+    "memo" : "자바 4단계. 복잡도 표 나열이 되지 않게, 실제로는 캐시 지역성 때문에 ArrayList가 이기는 경우까지."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "Optional과 null — 어디까지 감싸고 어디서 풀 것인가",
+    "memo" : "자바 4단계. '쓰면 좋다'가 아니라 필드·파라미터에 쓰면 왜 손해인지까지 갈 것."
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "스트림과 반복문 — 언제 느려지고 언제 읽기 쉬워지는가",
+    "memo" : "자바 4단계. 취향 논쟁이 되지 않게, 디버깅과 조기 종료처럼 갈리는 지점으로 좁힐 것."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "DI와 IoC — 생성자 주입을 쓰는 이유(순환 참조·불변·테스트)",
+    "memo" : "스프링 1단계. 개념 소개가 되지 않게, 필드 주입으로는 못 하는 일 세 가지를 축으로 꿸 것."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "빈 스코프와 생명주기 — 싱글턴 빈에 상태를 두면 벌어지는 일",
+    "memo" : "스프링 1단계. 스코프 목록 나열 대신, 필드에 값을 담았다가 요청끼리 섞이는 장면에서 출발할 것."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "컴포넌트 스캔 — 언제 @Configuration을 직접 써야 하는가",
+    "memo" : "스프링 1단계. 남의 라이브러리 클래스처럼 @Component를 붙일 수 없는 경우가 핵심."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "DispatcherServlet의 흐름 — 요청 하나가 지나가는 자리들",
+    "memo" : "스프링 2단계. 구성요소 사전이 되지 않게, 404와 415가 각각 어디서 결정되는지로 꿸 것."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "@RequestBody와 검증 — 어디서 걸러지고 어떤 예외가 나는가",
+    "memo" : "스프링 2단계. 이 저장소가 공통 응답 봉투로 에러를 내려 주므로 실물과 이어진다."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "전역 예외 처리 — @ControllerAdvice가 잡는 것과 못 잡는 것",
+    "memo" : "스프링 2단계. 필터에서 난 예외는 지나쳐 버린다는 사각이 핵심. 요청 제한 429 버그가 그 자리였다."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "필터와 인터셉터 — 어디서 갈리고 인증을 어느 쪽에 두는가",
+    "memo" : "스프링 2단계. 서블릿 앞이냐 스프링 안이냐가 축. 이 저장소의 JWT 필터가 실물 예다."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "@Transactional 전파 — 안쪽이 롤백될 때 바깥이 겪는 일",
+    "memo" : "스프링 3단계. 전파 속성 목록 나열이 되지 않게, REQUIRES_NEW를 안 썼다가 같이 말려 들어가는 장면으로."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "프록시 기반 AOP — 같은 클래스 안에서 부르면 안 먹는 이유",
+    "memo" : "스프링 3단계. 이 저장소의 LlmDraftBulkApprover가 그 이유로 클래스를 갈라 놓았다. 실물 근거가 있는 주제다."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "지연 로딩과 N+1 — 어디서 터지고 fetch join이 못 푸는 자리",
+    "memo" : "스프링 3단계. docs/08에 N+1을 10방에서 2방으로 줄인 실측이 있다. 페이징과 함께 쓸 때의 제약까지 갈 것."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "읽기 전용 트랜잭션 — 무엇이 실제로 달라지는가",
+    "memo" : "스프링 3단계. '성능이 좋아진다'로 끝내지 말고 스냅샷을 안 뜨는 것과 플러시가 없다는 점을 짚을 것."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "Spring Security 필터 체인 — 인증과 인가가 갈리는 지점",
+    "memo" : "스프링 4단계. 이 저장소가 경로 규칙 한 곳에서 ADMIN을 잠그고 있어 실물과 이어진다."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "@Cacheable — 프록시라서 안 먹는 자리와 키 설계",
+    "memo" : "스프링 4단계. 자기 호출 문제는 AOP 범위와 겹치므로, 여기서는 키를 무엇으로 잡느냐에 무게를 둘 것."
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "설정 우선순위와 프로파일 — 운영에서 값이 안 바뀌는 이유",
+    "memo" : "스프링 4단계. 환경변수가 properties를 이긴다는 순서가 핵심. 이 저장소도 운영 값을 환경변수로 주입한다."
   } ]
 }
