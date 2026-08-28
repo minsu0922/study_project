@@ -25,6 +25,7 @@ CS(컴퓨터 과학) 개념을 정리해 두고 문제로 풀어 보는 학습 �
 | [15-llm-concept-documents](15-llm-concept-documents.md) | 개념 문서 생성·검수, 그 문서를 근거로 한 문제 출제 |
 | [16-llm-pipeline-operations](16-llm-pipeline-operations.md) | **LLM 파이프라인 운영 매뉴얼** — 설정·실행·점검·핵심 코드 지도 |
 | [17-prompt-quality-and-eval](17-prompt-quality-and-eval.md) | **프롬프트 품질 개선과 평가 하네스** — 난이도 재정의, 검증기, `evalPrompt` |
+| [GLOSSARY](GLOSSARY.md) | **용어집** — 이 저장소에서 쓰는 말과 쓰지 않는 말 (메우기·들여오기·현황 파일…) |
 | [adr/](adr/README.md) | 기술 결정 기록 (Architecture Decision Records) |
 
 > 💡 이 문서들만 보고도 프로젝트를 처음부터 다시 만들 수 있게 하는 걸 목표로 한다.
@@ -69,7 +70,7 @@ MVP가 돌아간 다음, 아래를 하나씩 붙이면서 그때마다 "왜 지�
 ### 지금 돌아가는 것
 
 매일 06:17(KST)에 GitHub Actions가 개념 문서 또는 문제를 만들어 저장소에 커밋하고,
-로컬 앱을 켜면 검수 대기함으로 흡수된다. 승인해야만 사용자에게 나간다.
+로컬 앱을 켜면 검수 대기함으로 들여온다. 승인해야만 사용자에게 나간다.
 운영 방법은 [16-llm-pipeline-operations](16-llm-pipeline-operations.md).
 
 ## 만드는 순서 (제안)
