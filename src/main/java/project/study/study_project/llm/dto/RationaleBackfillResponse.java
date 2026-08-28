@@ -19,10 +19,10 @@ import java.util.List;
  *                            문제 하나에 오답이 셋이면 3이 오른다
  * @param remaining           이 작업 뒤에도 설명이 빠진 문제 수. 0이 아니면 버튼을 한 번 더 누르면 된다
  * @param rationales          채워진 설명들(보기 원문과 짝)
- * @param explanationsToCheck 해설이 오답을 <b>직접 언급하는</b> 문제 id들. 여기 실린 문제는
+ * @param explanationsToCheck 해설이 오답 보기를 <b>인용하는</b> 문제 id들. 여기 실린 문제는
  *                            같은 말이 해설과 오답 설명 양쪽에 있게 되므로 사람이 해설을 다듬어야 한다.
  *                            <b>자동으로 고치지 않는다</b> — 해설을 덮어쓰는 것은 되돌릴 수 없고,
- *                            26건 중 4건뿐이라 손으로 보는 편이 싸다
+ *                            되풀이는 읽기에 거슬릴 뿐 틀린 내용이 아니다
  */
 public record RationaleBackfillResponse(
         int targeted,

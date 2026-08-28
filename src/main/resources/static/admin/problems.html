@@ -284,14 +284,22 @@ async function loadProblems() {
 
 /* ═══════════ 제목 백필 ═══════════ */
 
-/** 제목 없는 문제가 있을 때만 카드를 띄운다. 조회 실패는 조용히 숨긴다 — 부가 기능이라 목록을 막을 이유가 없다. */
+/**
+ * 제목 없는 문제가 있을 때만 카드를 띄운다. 조회 실패는 조용히 숨긴다 — 부가 기능이라 목록을 막을 이유가 없다.
+ *
+ * 단, <결과가 떠 있으면 0건이어도 숨기지 않는다>. 마지막 한 건을 채우면 개수가 0이 되는데
+ * 그때 카드를 접어 버리면 방금 붙은 목록이 <읽기도 전에> 사라진다. 눈으로 확인하라고 만든
+ * 목록이 확인할 수 없게 되는 셈이다. (2026-08-28, 오답 설명 쪽에서 실제로 겪고 양쪽 다 고쳤다.)
+ */
 async function refreshBackfillCard() {
+  const card = document.getElementById("backfillCard");
+  const showingResult = document.getElementById("backfillResult").innerHTML !== "";
   try {
     const count = await api("/api/admin/problems/untitled-count");
-    document.getElementById("backfillCard").hidden = count === 0;
+    card.hidden = count === 0 && !showingResult;
     document.getElementById("untitledCount").textContent = count;
   } catch (e) {
-    document.getElementById("backfillCard").hidden = true;
+    card.hidden = !showingResult;
   }
 }
 
@@ -335,14 +343,19 @@ async function backfillTitles() {
 
 /* ═══════════ 오답 설명 채우기 ═══════════ */
 
-/** 제목 카드와 같은 규칙 — 채울 것이 있을 때만 띄우고, 조회 실패는 조용히 숨긴다. */
+/**
+ * 제목 카드와 같은 규칙 — 채울 것이 있을 때만 띄우고, 조회 실패는 조용히 숨긴다.
+ * 결과가 떠 있으면 0건이어도 접지 않는다(refreshBackfillCard 주석에 사연을 적었다).
+ */
 async function refreshRationaleCard() {
+  const card = document.getElementById("rationaleCard");
+  const showingResult = document.getElementById("rationaleResult").innerHTML !== "";
   try {
     const count = await api("/api/admin/problems/missing-rationale-count");
-    document.getElementById("rationaleCard").hidden = count === 0;
+    card.hidden = count === 0 && !showingResult;
     document.getElementById("missingRationaleCount").textContent = count;
   } catch (e) {
-    document.getElementById("rationaleCard").hidden = true;
+    card.hidden = !showingResult;
   }
 }
 

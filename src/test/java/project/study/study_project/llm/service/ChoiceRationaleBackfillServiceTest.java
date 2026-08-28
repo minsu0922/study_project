@@ -192,26 +192,57 @@ class ChoiceRationaleBackfillServiceTest {
     }
 
     /**
-     * 해설이 오답을 이미 언급하면 같은 말이 두 번 읽힌다. 그렇다고 서버가 해설을 고치지는 않는다 —
-     * 되돌릴 수 없는 변경이고, 26건 중 4건뿐이라 사람이 보는 편이 싸다. 이름만 올린다.
+     * 해설이 오답 보기를 인용하면 같은 말이 두 번 읽힌다. 그렇다고 서버가 해설을 고치지는 않는다 —
+     * 되돌릴 수 없는 변경이고, 되풀이는 읽기에 거슬릴 뿐 틀린 내용이 아니다. 이름만 올린다.
+     *
+     * <h2>이 판정을 낱말로 하다가 16건을 놓쳤다 (2026-08-28)</h2>
+     *
+     * <p>처음에는 해설에서 "오답"·"나머지 보기" 같은 <b>낱말</b>을 찾았다. 26건에서 0건이
+     * 걸렸고, 그래서 "되풀이가 없다"고 보고했다. 화면으로 확인해 보니 해설 마지막 문단이 세 오답을
+     * 하나씩 짚고 있었다 — 해설은 "오답"이라는 말을 쓰지 않고 <b>보기 문장을 따옴표로 인용</b>한다.
+     * 다시 재니 26건 중 16건이 그랬다. 낱말 목록을 아무리 늘려도 못 잡았을 종류다.
+     *
+     * <p>그래서 이 테스트의 지문에는 <b>오답 보기 문장이 그대로 들어 있다</b>. 낱말로 되돌아가면
+     * 여기서 깨진다.
      */
     @Test
-    @DisplayName("해설이 오답을 언급하면 이름만 올린다 — 해설은 고치지 않는다")
-    void listsProblemsWhoseExplanationAlreadyDiscussesWrongAnswers() {
-        Problem mentions = problem(1L, "나머지 보기는 전부 TCP의 특성이다.",
-                choice(10L, "정답 보기", true), choice(11L, "오답", false));
+    @DisplayName("해설이 오답 보기를 인용하면 이름만 올린다 — 낱말이 아니라 보기 원문으로 판정한다")
+    void listsProblemsWhoseExplanationQuotesAWrongChoice() {
+        Problem quoting = problem(1L,
+                "\"출발지 IP를 추가하고 목적지 엔드포인트를 늘려\"는 밖으로 연결을 만들 때의 처방이다.",
+                choice(10L, "정답 보기 문장이다", true),
+                choice(11L, "출발지 IP를 추가하고 목적지 엔드포인트를 늘려 조합 수를 곱한다", false));
         Problem clean = problem(2L, "정답이 맞는 이유만 적힌 해설이다.",
-                choice(20L, "정답 보기", true), choice(21L, "오답", false));
-        given(List.of(mentions, clean));
+                choice(20L, "정답 보기 문장이다", true),
+                choice(21L, "전혀 다른 말로 쓰인 오답 보기다", false));
+        given(List.of(quoting, clean));
         fakeGenerator.toReturn = List.of(
                 new GeneratedRationale(11L, "오해를 설명한 문장이다"),
                 new GeneratedRationale(21L, "오해를 설명한 문장이다"));
 
         RationaleBackfillResponse result = service.backfill();
 
-        assertThat(result.explanationsToCheck()).containsExactly(1L);
-        assertThat(mentions.getExplanation()).as("해설은 그대로여야 한다")
-                .isEqualTo("나머지 보기는 전부 TCP의 특성이다.");
+        assertThat(result.explanationsToCheck())
+                .as("낱말('오답')은 어느 해설에도 없다 — 인용으로 잡아야 한다")
+                .containsExactly(1L);
+        assertThat(quoting.getExplanation()).as("해설은 그대로여야 한다")
+                .startsWith("\"출발지 IP를");
+    }
+
+    /**
+     * {@code ping}·{@code traceroute}처럼 짧은 보기는 해설에 정상적으로 등장한다 — 그 개념을
+     * 설명하려면 이름을 부를 수밖에 없다. 그것까지 인용으로 세면 거의 모든 문제가 목록에 올라
+     * 목록이 아무 뜻도 없어진다.
+     */
+    @Test
+    @DisplayName("짧은 보기가 해설에 나오는 것은 인용이 아니다 — 이름을 부른 것뿐이다")
+    void aShortChoiceNameInTheExplanationIsNotAQuote() {
+        Problem p = problem(1L, "ping은 ICMP를 쓰므로 포트 도달성은 알 수 없다.",
+                choice(10L, "traceroute", true), choice(11L, "ping", false));
+        given(List.of(p));
+        fakeGenerator.toReturn = List.of(new GeneratedRationale(11L, "오해를 설명한 문장이다"));
+
+        assertThat(service.backfill().explanationsToCheck()).isEmpty();
     }
 
     /** 빈 요청에 요금을 낼 이유가 없다. 게다가 모델은 빈 목록을 받으면 아무거나 지어내기도 한다. */

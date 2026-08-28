@@ -17,7 +17,6 @@ import project.study.study_project.quiz.repository.ProblemRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -32,13 +31,16 @@ import java.util.stream.Collectors;
  * <h2>해설은 건드리지 않는다 — 측정하고 내린 결정이다</h2>
  *
  * <p>새 형식은 해설을 200~400자의 "왜 정답인지"로 좁히고 오답 이야기를 보기 쪽으로 옮긴다.
- * 그래서 처음에는 해설도 다시 쓰려 했는데, 실제로 26건을 재 보니 <b>오답을 언급하는 해설은
- * 4건뿐</b>이었다(초급 0/5, 중급 3/16, 고급 1/5). 나머지 22건은 이미 정답 근거만 적혀 있고
- * 길이만 길다.
+ * 그러면 옛 해설과 새 오답 설명이 같은 말을 두 번 하게 된다 — 실제로 <b>26건 중 16건</b>이
+ * 해설에서 오답 보기를 인용한다(78개 오답 중 21개).
  *
- * <p>22건의 멀쩡한 해설을 덮어쓰는 것은 되돌릴 수 없는 변경인데, 얻는 것은 길이뿐이다.
- * 그래서 이 서비스는 <b>더하기만 한다</b>. 4건은 {@code explanationsToCheck}로 화면에 이름만
- * 올리고 사람이 다듬는다 — 4건을 손으로 보는 값이 22건을 위험에 넣는 값보다 싸다.
+ * <p>그래도 이 서비스는 <b>더하기만 한다.</b> 해설을 덮어쓰는 것은 되돌릴 수 없고, 되풀이는
+ * 읽기에 거슬릴 뿐 <b>틀린 내용이 아니다</b>. 되돌릴 수 없는 변경으로 고칠 만한 손해가 아니다.
+ * 겹치는 문제는 {@code explanationsToCheck}로 화면에 이름만 올리고 사람이 다듬는다.
+ *
+ * <p><b>이 16건을 처음에 4건으로 잘못 셌다.</b> 낱말("오답", "나머지 보기")로 찾았는데 해설은
+ * 그런 말을 쓰지 않고 보기 문장을 따옴표로 인용한다. 지금은 보기 원문과 맞춰 본다
+ * ({@link #QUOTE_PROBE_LENGTH} 주석).
  *
  * <h2>이 클래스가 실제로 하는 일은 "모델을 믿지 않는 것"이다</h2>
  *
@@ -74,18 +76,30 @@ public class ChoiceRationaleBackfillService {
     private static final int COLUMN_MAX = 1000;
 
     /**
-     * 해설이 오답을 <b>직접 언급하는가</b>를 재는 패턴 — 사람이 손봐야 할 문제를 골라내는 데만 쓴다.
+     * 해설이 오답 보기를 인용하는지 판정할 때 맞춰 볼 <b>보기 앞부분의 길이</b>.
      *
-     * <p>이 패턴에 걸린 문제는 같은 말이 해설과 오답 설명 양쪽에 있게 된다. 학습자는 틀린 직후에
-     * 두 곳을 잇달아 읽으므로 되풀이가 눈에 띈다.
+     * <h2>낱말로 찾다가 16건을 통째로 놓쳤다 (2026-08-28)</h2>
      *
-     * <p><b>느슨하게 잡았고, 그게 의도다.</b> 여기서 헛짚어도 손해가 "사람이 한 건 더 열어 본다"뿐이다
-     * — 자동으로 고치는 것이 없기 때문이다. 반대로 놓치면 되풀이가 그대로 남는다.
-     * {@code ProblemItemRule}의 검사들이 "오탐이 미탐보다 비싸다"는 원칙을 따르는 것과 <b>반대</b>인데,
-     * 그 원칙은 <b>차단하는</b> 검사에 해당한다. 이건 이름만 올리는 검사다.
+     * <p>처음에는 {@code 오답|나머지 보기|틀린 보기} 같은 낱말을 찾았다. 26건에서 <b>0건</b>이
+     * 걸렸고, 그래서 "되풀이가 없다"고 보고했다. 그런데 화면으로 확인해 보니 해설 마지막 문단이
+     * 세 오답을 하나씩 짚고 있었다. 다시 재 보니 <b>26건 중 16건</b>이 그랬다.
+     *
+     * <p>해설은 "오답"이라는 말을 쓰지 않는다. 보기 문장을 <b>따옴표로 인용</b>한다 —
+     * {@code "출발지 IP를 추가하고 목적지 엔드포인트를 늘려"는 우리 서버가 밖으로…}처럼.
+     * 찾을 것이 낱말이 아니라 <b>인용</b>이었으므로, 낱말 목록을 아무리 늘려도 못 잡았을 일이다.
+     *
+     * <p>그래서 짐작을 그만두고 <b>보기 원문과 맞춰 본다</b>. 정답이 손에 있는데 정규식으로
+     * 넘겨짚고 있었던 셈이다. 앞부분만 보는 이유는 해설이 보기를 통째로 옮기지 않고 앞을 잘라
+     * 인용하기 때문이다(뒤쪽 부연은 빼고 인용한다).
+     *
+     * <p><b>8자보다 짧은 보기는 아예 맞춰 보지 않는다.</b> {@code ping}·{@code traceroute}처럼
+     * 짧은 보기는 해설에 정상적으로 등장한다 — 그 개념을 설명하려면 이름을 부를 수밖에 없다.
+     * 그것까지 "인용"으로 세면 거의 모든 문제가 걸려서, 목록이 아무 뜻도 없어진다.
      */
-    private static final Pattern EXPLANATION_MENTIONS_WRONG =
-            Pattern.compile("오답|나머지 (보기|선택지)|틀린 (보기|선택지)");
+    private static final int QUOTE_PROBE_LENGTH = 15;
+
+    /** 인용 판정을 시도할 최소 보기 길이 — 이보다 짧으면 이름을 부른 것뿐이다(위 주석). */
+    private static final int QUOTE_PROBE_MIN = 8;
 
     private final ProblemRepository problemRepository;
     private final RationaleGenerator rationaleGenerator;
@@ -146,7 +160,7 @@ public class ChoiceRationaleBackfillService {
             }
             // 설명을 실제로 붙인 문제만 본다. 아무것도 안 붙은 문제의 해설을 손보라고 해 봐야
             // 되풀이될 상대가 없다.
-            if (touched && mentionsWrongAnswers(problem.getExplanation())) {
+            if (touched && quotesWrongChoices(problem)) {
                 toCheck.add(problem.getId());
             }
         }
@@ -215,9 +229,25 @@ public class ChoiceRationaleBackfillService {
         return true;
     }
 
-    /** 해설이 오답을 직접 언급하는가 — 사람이 다듬을 목록에 올릴지만 정한다(상수 주석 참고). */
-    private boolean mentionsWrongAnswers(String explanation) {
-        return explanation != null && EXPLANATION_MENTIONS_WRONG.matcher(explanation).find();
+    /**
+     * 해설이 이 문제의 오답 보기를 인용하는가 — 사람이 다듬을 목록에 올릴지만 정한다.
+     *
+     * <p>인용한다면 같은 말이 해설과 오답 설명 양쪽에 있게 된다. 학습자는 틀린 직후에 두 곳을
+     * 잇달아 읽으므로 되풀이가 그대로 눈에 띈다.
+     *
+     * <p>판정 방식과 그렇게 정한 사연은 {@link #QUOTE_PROBE_LENGTH} 주석에 있다.
+     */
+    private boolean quotesWrongChoices(Problem problem) {
+        String explanation = problem.getExplanation();
+        if (explanation == null) {
+            return false;
+        }
+        return problem.getChoices().stream()
+                .filter(c -> !c.isCorrect())
+                .map(Choice::getText)
+                .filter(text -> text != null && text.length() >= QUOTE_PROBE_MIN)
+                .anyMatch(text -> explanation.contains(
+                        text.substring(0, Math.min(QUOTE_PROBE_LENGTH, text.length()))));
     }
 
     /** 컬럼 상한을 넘기면 자른다 — 한 건 때문에 채우기 전체가 롤백되는 것을 막는다(상수 주석 참고). */
