@@ -135,8 +135,10 @@ public final class DraftGeneratorCli {
         boolean batchEnabled = !Boolean.FALSE.equals(generation.get("batch-enabled"));
         boolean force = "true".equalsIgnoreCase(opts.getOrDefault("force", "false"));
         if (!shouldGenerate(batchEnabled, force)) {
-            System.out.println("배치가 꺼져 있어 생성하지 않습니다 "
-                    + "(llm.generation.batch-enabled=false). 수동 실행 시 force=true로 한 번만 무시할 수 있습니다.");
+            announce("""
+                    ⏸️ **아무것도 만들지 않았습니다 — 배치가 꺼져 있습니다**
+
+                    `llm.generation.batch-enabled=false`. 수동 실행에서 force=true로 한 번만 무시할 수 있습니다.""");
             return; // 종료 코드 0 — "의도된 중단"은 실패가 아니므로 알림 메일이 오면 안 된다
         }
 
@@ -162,8 +164,10 @@ public final class DraftGeneratorCli {
             return;
         }
         if (action == BatchAction.SKIP) {
-            System.out.println("오늘은 만들 것이 없습니다 "
-                    + "(llm.generation.batch-type=document인데 문서일이 아님). 요금 0으로 종료합니다.");
+            announce("""
+                    💤 **아무것도 만들지 않았습니다 — 오늘은 쉬는 날입니다**
+
+                    `batch-type=document`인데 %s은 문서일이 아닙니다(4일 주기). 요금 0.""".formatted(date));
             return; // 종료 코드 0 — "의도된 쉬는 날"은 실패가 아니다
         }
 
@@ -180,8 +184,19 @@ public final class DraftGeneratorCli {
 
         // ── 4. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
         // 워크플로를 수동으로 두 번 눌러도 API 요금이 두 번 나가지 않게 하는 안전장치.
+        //
+        // 이 자리가 가장 조용히 해로운 곳이다. 두 번 누른 경우에는 옳은 동작이지만,
+        // 사람이 그 날짜를 손으로 채워 둔 경우에도 똑같이 침묵했다 — 그래서 예약 실행이
+        // 며칠씩 아무것도 안 하는 것을 아무도 몰랐다. 이제는 요약에 남기고, 되풀이하지 않는
+        // 방법(--suffix)까지 함께 알려 준다.
         if (Files.exists(outFile)) {
-            System.out.println("이미 생성됨, 건너뜀: " + outFile);
+            announce("""
+                    ⏭️ **아무것도 만들지 않았습니다 — 결과 파일이 이미 있습니다**
+
+                    `%s`
+
+                    두 번 실행한 경우라면 정상입니다. 손으로 한 칸을 채우려던 것이라면
+                    `--suffix`를 주세요 — 날짜 이름을 쓰면 **그 날짜의 예약 실행이 죽습니다**.""".formatted(outFile));
             return;
         }
 
@@ -253,7 +268,11 @@ public final class DraftGeneratorCli {
 
         Files.createDirectories(outDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
-        System.out.printf("저장 완료: %s (%d문제)%n", outFile, problems.size());
+        // 성공한 날도 요약에 남긴다. 건너뛴 날만 적으면 "요약이 비었다"가 두 가지 뜻을
+        // 갖게 된다 — 잘 돌았거나, 요약 쓰기가 실패했거나. 둘을 구분할 수 있어야 한다.
+        announce("✅ **%s 문제 초안 %d건** — %s × %s, 근거 문서 %s → `%s`"
+                .formatted(date, problems.size(), domain, difficulty,
+                        source == null ? "없음(폴백)" : source.slug(), outFile));
     }
 
     /** 오늘 배치가 할 일. {@link #decideAction}이 결정한다. */
@@ -524,7 +543,12 @@ public final class DraftGeneratorCli {
 
         // 문제 생성과 같은 멱등성 보호 — 수동으로 두 번 눌러도 요금이 두 번 나가지 않는다
         if (Files.exists(outFile)) {
-            System.out.println("이미 생성됨, 건너뜀: " + outFile);
+            announce("""
+                    ⏭️ **아무것도 만들지 않았습니다 — 그 날짜의 개념 문서가 이미 있습니다**
+
+                    `%s`
+
+                    이 주기의 문제일 사흘은 이 문서를 근거로 삼습니다.""".formatted(outFile));
             return;
         }
 
@@ -567,8 +591,8 @@ public final class DraftGeneratorCli {
 
         Files.createDirectories(docDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(file));
-        System.out.printf("저장 완료: %s (\"%s\", 본문 %d자)%n",
-                outFile, document.title(), document.contentMd().length());
+        announce("✅ **%s 개념 문서 1편** — %s, 본문 %d자 → `%s`%n%n> %s"
+                .formatted(date, domain, document.contentMd().length(), outFile, document.title()));
 
         // 문제 쪽의 수확량 점검에 해당하는 자리다. 지금까지 문서에는 이런 점검이 없었고,
         // 검증은 <며칠 뒤 승인 화면에서만> 돌았다. 그 사이 이 문서로 사흘 치 문제가 만들어진다.
@@ -624,23 +648,20 @@ public final class DraftGeneratorCli {
         if (picked != null) {
             String message = "📌 오늘의 주제 범위: **%s** (%s) — 등록된 범위 %d개 중 차례%n"
                     .formatted(picked.topic(), picked.domain(), queue.size());
-            System.out.print(message);
-            appendToStepSummary(message);
+            announce(message);
         } else if (topic == null) {
             // 수동 지정도 범위 목록도 없는 평소 경로. 오류가 아니므로 아이콘도 정보(ℹ️)로 둔다 —
             // 매일 경고가 뜨면 사람이 경고 전체를 무시하게 된다.
             String message = ("ℹ️ 주제 범위 목록이 비어 모델이 주제를 자동으로 고릅니다. "
                     + "관리자 화면에서 범위를 넣고 `generated/%s`를 커밋하면 다음 문서일부터 그 안에서 고릅니다.%n")
                     .formatted(TopicQueue.FILE_NAME);
-            System.out.print(message);
-            appendToStepSummary(message);
+            announce(message);
         }
 
         if (!queue.problems().isEmpty()) {
             String message = "⚠️ **주제 범위 목록에서 건너뛴 항목 %d건**%n%s%n"
                     .formatted(queue.problems().size(), bullets(queue.problems()));
-            System.out.print(message);
-            appendToStepSummary(message);
+            announce(message);
         }
     }
 
@@ -1156,6 +1177,28 @@ public final class DraftGeneratorCli {
      *
      * <p>로컬 실행에는 이 환경변수가 없다. 그때는 조용히 넘어간다(표준 출력에는 이미 찍혔다).
      */
+    /**
+     * 사람에게 알린다 — 로그에 찍고 <b>실행 요약에도</b> 남긴다.
+     *
+     * <h2>왜 만들었나(2026-08-29)</h2>
+     *
+     * <p>끝나는 길이 여섯인데(꺼짐·쉬는 날·문제 건너뜀·문서 건너뜀·문제 저장·문서 저장)
+     * 요약에 무언가를 남기는 것은 수확 경고와 주제 범위뿐이었다. 나머지는 stdout에만 찍고
+     * 종료 코드 0으로 끝나서, Actions 화면에서 <b>5문제 만든 날과 아무것도 안 한 날이 똑같이
+     * 초록불</b>로 보였다. 요약 스텝이 찍는 것도 {@code ls | tail -5}뿐이라 전날과 같은 목록이었다.
+     *
+     * <p>이 프로젝트는 "조용히 아무것도 안 하는 배치"에 이미 한 번 당했다(docs/14, 초안 0건).
+     * 그때 옮긴 것은 <b>실행 주체</b>였고, 이번에 막는 것은 <b>보고</b>다 — 돌긴 도는데 무엇을
+     * 했는지 알 수 없으면 결국 같은 자리로 돌아온다.
+     *
+     * <p>로그와 요약에 같은 문장을 보내는 이유: 두 곳에 다른 말을 쓰기 시작하면 언젠가 한쪽만
+     * 고쳐져 어긋난다. 요약은 로그의 발췌가 아니라 <b>같은 문장의 다른 창</b>이다.
+     */
+    private static void announce(String markdown) {
+        System.out.println(markdown.stripTrailing());
+        appendToStepSummary(markdown);
+    }
+
     private static void appendToStepSummary(String markdown) {
         String path = System.getenv("GITHUB_STEP_SUMMARY");
         if (path == null || path.isBlank()) {

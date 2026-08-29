@@ -191,11 +191,21 @@ jobs:
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
-      # 실행 결과를 Actions 요약 화면에 남긴다 — 로그를 뒤지지 않고 무엇이 만들어졌는지 보려고.
-      - name: 요약 남기기
+      # 무엇을 했는지(또는 왜 아무것도 안 했는지)는 CLI가 직접 요약에 쓴다 — 끝나는 길마다
+      # 한 줄씩(DraftGeneratorCli.announce). 여기서 다시 쓰지 않는 이유가 그것이다.
+      #
+      # 예전에는 이 스텝이 `ls | tail -5`를 찍었는데, 그게 오히려 해로웠다. 건너뛴 날에도
+      # 전날과 똑같은 목록이 초록불로 뜨니 "오늘 이만큼 만들었다"로 읽힌다. 목록이 아니라
+      # 파일 이름표를 붙여 "최근 파일"임을 분명히 하고, 판단 재료는 CLI가 쓴 줄에 맡긴다.
+      - name: 요약 꼬리말
         if: always()
         run: |
-          echo "### LLM 일일 생성 결과" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          ls -1 generated/ 2>/dev/null | tail -5 >> "$GITHUB_STEP_SUMMARY" || echo "(생성 디렉터리 없음)" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo ""
+            echo "<details><summary>generated/ 최근 파일 5개 (오늘 만든 것과 무관)</summary>"
+            echo ""
+            echo '```'
+            ls -1 generated/ 2>/dev/null | tail -5 || echo "(생성 디렉터리 없음)"
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
