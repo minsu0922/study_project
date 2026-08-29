@@ -118,7 +118,7 @@ function init() {
           <div class="card">
             <div style="margin-bottom:6px">
               <span class="badge">${escapeHtml(domainLabel(w.domain))}</span>
-              <span class="badge gray">${escapeHtml(difficultyLabel(w.difficulty))}</span>
+              ${difficultyBadge(w.difficulty)}
               <span class="badge gray">${escapeHtml(typeLabel(w.type))}</span>
               ${reviewBadge(w.problemId)}
             </div>

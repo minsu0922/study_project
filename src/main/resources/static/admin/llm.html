@@ -484,7 +484,7 @@ async function loadDrafts(jumpToLast = false) {
         <div>
           ${pick}
           <span class="badge gray">${escapeHtml(d.domainLabel)}</span>
-          <span class="badge gray">${escapeHtml(difficultyLabel(d.difficulty))}</span>
+          ${difficultyBadge(d.difficulty)}
           <span class="badge gray">${escapeHtml(typeLabel(d.type))}</span>
           ${d.questionKindLabel ? `<span class="badge">${escapeHtml(d.questionKindLabel)}</span>` : ""}
           <span class="meta">${escapeHtml(d.model)}</span>

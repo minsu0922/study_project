@@ -328,7 +328,7 @@ async function loadProblems() {
         <td>${p.id}</td>
         <td class="wrap">${problemLabel(p)}</td>
         <td>${escapeHtml(domainLabel(p.domain))}</td>
-        <td>${escapeHtml(difficultyLabel(p.difficulty))}</td>
+        <td>${difficultyBadge(p.difficulty)}</td>
         <td>${escapeHtml(typeLabel(p.type))}</td>
         <td>${escapeHtml(cut(displayAnswer(p), 20))}</td>
         <td class="row-actions">

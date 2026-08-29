@@ -170,6 +170,22 @@ function domainLabel(v) { const f = DOMAINS.find(d => d[0] === v); return f ? f[
 function difficultyLabel(v) { const f = DIFFICULTIES.find(d => d[0] === v); return f ? f[1] : v; }
 function typeLabel(v) { const f = TYPES.find(d => d[0] === v); return f ? f[1] : v; }
 
+/**
+ * 난이도 배지 HTML — 색과 글자를 <한 곳에서> 만든다(2026-08-29 개편 3단계).
+ *
+ * 난이도가 그려지는 자리는 지금 다섯 곳이다(퀴즈 풀이·오답노트·문제 목록·관리 검수·
+ * 관리 문제 목록). 각자 클래스를 손으로 붙이면 난이도가 하나 늘거나 색이 바뀔 때
+ * 다섯 곳을 같이 고쳐야 하고, 언젠가 한 곳만 남는다.
+ *
+ * 색은 DIFFICULTIES의 <순서>에서 나온다 — 그 배열이 이미 초·중·고 오름차순이라
+ * 별도의 매핑 표를 두면 두 곳이 어긋날 자리가 생긴다.
+ */
+function difficultyBadge(v) {
+  const i = DIFFICULTIES.findIndex(d => d[0] === v);
+  const cls = i >= 0 ? `lv${i + 1}` : "gray";   // 모르는 값은 회색 — 색을 지어내지 않는다
+  return `<span class="badge ${cls}">${escapeHtml(difficultyLabel(v))}</span>`;
+}
+
 /** <select>에 "전체" + enum 옵션을 채운다 (목록 필터 공용) */
 function fillSelect(selectEl, pairs, allLabel) {
   selectEl.innerHTML = "";

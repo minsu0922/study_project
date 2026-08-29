@@ -104,7 +104,7 @@ function startPlayer(mountEl, problems, opts = {}) {
       <div class="card player-card fade-in">
         <div>
           <span class="badge">${escapeHtml(domainLabel(p.domain))}</span>
-          <span class="badge gray">${escapeHtml(difficultyLabel(p.difficulty))}</span>
+          ${difficultyBadge(p.difficulty)}
           <span class="badge gray">${escapeHtml(typeLabel(p.type))}</span>
           ${reviewBadge}${extraBadge}
         </div>
