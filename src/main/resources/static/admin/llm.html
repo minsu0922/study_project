@@ -85,13 +85,22 @@
     </div>
     </details>
 
-    <h3 id="problem-drafts">문제 초안
-      <select id="gStatusFilter" style="margin-left:10px">
-        <option value="PENDING">검수 대기</option>
-        <option value="APPROVED">승인됨</option>
-        <option value="REJECTED">거절됨</option>
-      </select>
-    </h3>
+    <h3 id="problem-drafts">문제 초안</h3>
+    <!-- 필터 넷(2026-08-29). 그전에는 상태 하나뿐이라 검수 대기 47건이 한 줄로 쏟아졌다.
+         검수의 실제 단위는 "오늘 들어온 전부"가 아니라 <이 문서로 만든 것들>이다 —
+         같은 문서에서 나온 다섯을 나란히 봐야 서로 겹치는지, 난이도가 실제로 갈리는지 보인다. -->
+    <div class="filters" style="margin-bottom:12px">
+      <div class="field"><label>상태</label>
+        <select id="gStatusFilter">
+          <option value="PENDING">검수 대기</option>
+          <option value="APPROVED">승인됨</option>
+          <option value="REJECTED">거절됨</option>
+        </select>
+      </div>
+      <div class="field"><label>분야</label><select id="fDomain"></select></div>
+      <div class="field"><label>난이도</label><select id="fDifficulty"></select></div>
+      <div class="field"><label>근거 문서</label><select id="fDocument"></select></div>
+    </div>
 
     <!-- 유형 쏠림 알림(2026-08-25) — 초안 하나만 봐서는 알 수 없어 목록 위에 따로 둔다.
          카드마다 붙이면 다섯 장에 같은 말이 다섯 번 뜬다. -->
@@ -180,6 +189,28 @@ const QUESTION_KINDS = [
   ["SEQUENCE", "순서·절차"],
 ];
 
+/**
+ * 자주 쓰는 거절 사유 — 한 번 눌러 채운다(2026-08-29 신설).
+ *
+ * <p><b>왜 만들었나.</b> 사유는 다음 생성 프롬프트에 되먹여지는데(docs/14) <b>선택 입력</b>이라
+ * 비운 채 거절하기 쉬웠다. 실제로 5건이 그렇게 나가 그 배치의 되먹임이 0이 됐다.
+ * 적는 데 드는 손이 곧 비어 있는 이유였다.
+ *
+ * <p><b>왜 문구를 여기서 정해 두나.</b> 모델에게 갈 문장이라 매번 다르게 쓰면 <b>되먹임이
+ * 흩어진다</b>. 같은 지적이 같은 문장으로 쌓여야 "이 실수가 반복된다"는 신호가 된다.
+ * 그때그때 다듬을 수 있게 입력란은 그대로 두고, 칩은 출발점만 준다.
+ *
+ * <p>목록은 이 저장소가 실제로 겪은 결함에서 뽑았다 — 정답 길이 편향(22문항 중 18개),
+ * 보기 겹침, 암기 확인, 문서 밖 내용, 오답 설명이 반박이 아닌 재설명.
+ */
+const REJECT_REASONS = [
+  "정답이 유독 길어 지문을 읽지 않고도 찍힌다",
+  "오답 보기가 서로 겹쳐 정답이 둘로 읽힌다",
+  "단순 암기 확인이라 실무 판단을 묻지 않는다",
+  "근거 문서에 없는 내용을 지어냈다",
+  "오답 설명이 왜 틀렸는지가 아니라 보기를 다시 설명한다",
+];
+
 /* 한 판에 보여 줄 초안 수. 문제는 카드가 짧아 20장까지 훑을 만하고, 문서는 본문 미리보기가
  * 붙어 한 장이 화면을 거의 채우므로 10장으로 둔다. 예전에는 각각 50·20을 <한 번만> 불렀는데,
  * 그건 상한이 아니라 "그 뒤는 없는 셈 치기"였다. */
@@ -196,6 +227,7 @@ if (initAdminPage("llm")) {
   initUploadForm();
   initBulkApprove();
   applyDeepLink();
+  loadDocumentSlugFilter();
   loadDrafts();
   loadDocDrafts();
 }
@@ -212,8 +244,25 @@ function initGenerateForm() {
   fillSelect(document.getElementById("gType"), TYPES);
 
   document.getElementById("gSubmitBtn").addEventListener("click", generateProblems);
+
+  // 목록 필터 셋 — 첫 옵션은 "전체"(빈 값). 서버는 빈 값을 안 보내면 조건을 걸지 않는다.
+  const fd = document.getElementById("fDomain");
+  fd.innerHTML = `<option value="">전체</option>`;
+  DOMAINS.forEach(([v, l]) => fd.insertAdjacentHTML("beforeend", `<option value="${v}">${l}</option>`));
+  const ff = document.getElementById("fDifficulty");
+  ff.innerHTML = `<option value="">전체</option>`;
+  DIFFICULTIES.forEach(([v, l]) => ff.insertAdjacentHTML("beforeend", `<option value="${v}">${l}</option>`));
+
   // 필터를 바꾸면 첫 쪽부터 — 보던 쪽수를 들고 넘어가면 "빈 3쪽"이 열릴 수 있다.
-  document.getElementById("gStatusFilter").addEventListener("change", () => { draftPage = 0; loadDrafts(); });
+  // 상태가 바뀌면 근거 문서 목록도 다시 받는다: 검수 대기에 걸린 문서와 승인됨에 걸린
+  // 문서가 다르기 때문이다. 안 바꾸면 고를 수는 있는데 결과가 0건인 항목이 남는다.
+  document.getElementById("gStatusFilter").addEventListener("change", () => {
+    draftPage = 0;
+    loadDocumentSlugFilter();
+    loadDrafts();
+  });
+  ["fDomain", "fDifficulty", "fDocument"].forEach(id =>
+    document.getElementById(id).addEventListener("change", () => { draftPage = 0; loadDrafts(); }));
   document.getElementById("gdStatusFilter").addEventListener("change", () => { docDraftPage = 0; loadDocDrafts(); });
 
   document.getElementById("dPrevBtn").addEventListener("click", () => { draftPage--; loadDrafts(); });
@@ -573,6 +622,42 @@ function sharedTailOf(a, b) {
 }
 
 /**
+ * 근거 문서 필터를 채운다 — <b>지금 상태에 실제로 있는</b> slug만 서버가 준다.
+ *
+ * <p>등록 문서 전체를 넣지 않는 이유: 초안이 걸린 문서는 그중 일부라, 전부 보여 주면
+ * 고르는 족족 "0건"이 나온다. 고를 수 있는 것만 있는 목록이 고르고 나서 실망하지 않는다.
+ *
+ * <p>고르고 있던 값이 새 목록에도 있으면 유지한다 — 상태를 잠깐 바꿔 봤다고 문서 선택이
+ * 풀리면, 바뀐 줄 모르고 "왜 전체가 나오지" 하게 된다.
+ *
+ * <p>실패해도 조용히 넘어간다. 필터 하나를 못 채웠다고 검수 목록까지 막을 이유는 없다.
+ */
+async function loadDocumentSlugFilter() {
+  const sel = document.getElementById("fDocument");
+  const keep = sel.value;
+  const status = document.getElementById("gStatusFilter").value;
+  try {
+    const slugs = await api(`/api/admin/llm-problems/document-slugs?status=${status}`);
+    sel.innerHTML = `<option value="">전체</option>`
+      + slugs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    sel.value = slugs.includes(keep) ? keep : "";
+  } catch (e) {
+    sel.innerHTML = `<option value="">전체</option>`;
+  }
+}
+
+/** 지금 걸려 있는 목록 필터를 쿼리 문자열로. 빈 값은 아예 넘기지 않는다(서버가 조건을 건너뛴다). */
+function draftFilterQuery() {
+  const params = new URLSearchParams();
+  for (const [key, id] of [["domain", "fDomain"], ["difficulty", "fDifficulty"], ["documentSlug", "fDocument"]]) {
+    const value = document.getElementById(id).value;
+    if (value) params.set(key, value);
+  }
+  const query = params.toString();
+  return query ? "&" + query : "";
+}
+
+/**
  * @param jumpToLast 방금 생성한 직후면 true — 마지막 쪽으로 옮긴다.
  *                   검수 목록은 <오래된 순>이라(FIFO, DraftImportRunner.scan 참고) 새로 만든
  *                   초안이 맨 뒤에 붙는다. 그대로 첫 쪽을 보여 주면 "생성 완료"라고 해 놓고
@@ -581,7 +666,8 @@ function sharedTailOf(a, b) {
  */
 async function loadDrafts(jumpToLast = false) {
   const status = document.getElementById("gStatusFilter").value;
-  const data = await api(`/api/admin/llm-problems?status=${status}&size=${DRAFT_PAGE_SIZE}&page=${draftPage}`);
+  const data = await api(`/api/admin/llm-problems?status=${status}&size=${DRAFT_PAGE_SIZE}&page=${draftPage}`
+    + draftFilterQuery());
   const box = document.getElementById("draftList");
 
   if (jumpToLast && data.totalPages > 0 && draftPage !== data.totalPages - 1) {
@@ -616,9 +702,15 @@ async function loadDrafts(jumpToLast = false) {
       </div>
       <div id="rejectForm-${d.id}" hidden style="margin-top:10px">
         <input id="rejectReason-${d.id}" type="text" maxlength="500"
-               placeholder="거절 사유 (선택) — 예: 부정형 문제라 나머지 보기까지 검증해야 한다"
+               placeholder="거절 사유 (선택) — 아래에서 고르거나 직접 적으세요"
                onkeydown="if (event.key === 'Enter') confirmReject(document.getElementById('rejectConfirm-${d.id}'), ${d.id})"
                style="width:100%">
+        <!-- 사유 문구는 버튼의 글자에서 직접 읽는다(fillReason). 문자열을 onclick 인자로
+             끼워 넣으면 따옴표가 든 문구 하나에 화면이 깨진다 — 문제 목록에서 겪은 사고와 같다. -->
+        <div class="reject-chips">
+          ${REJECT_REASONS.map(r =>
+            `<button type="button" class="chip" onclick="fillReason(${d.id}, this)">${escapeHtml(r)}</button>`).join("")}
+        </div>
         <div class="meta" style="margin:4px 0 6px">
           사유는 다음 문제 생성 프롬프트에 그대로 반영됩니다(docs/14). 비워도 거절은 되지만, 되먹임에는 쓰이지 않습니다.
         </div>
@@ -843,6 +935,13 @@ function openReject(id) {
 
 function closeReject(id) {
   document.getElementById(`rejectForm-${id}`).hidden = true;
+}
+
+/** 칩을 눌러 사유를 채운다. 문구는 버튼의 글자에서 읽는다 — 따옴표가 든 문구도 안전하다. */
+function fillReason(id, btn) {
+  const input = document.getElementById(`rejectReason-${id}`);
+  input.value = btn.textContent.trim();
+  input.focus();
 }
 
 async function confirmReject(btn, id) {

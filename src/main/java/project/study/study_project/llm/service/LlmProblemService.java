@@ -368,11 +368,28 @@ public class LlmProblemService {
 
     /* ── 검수(목록·승인·거절) ─────────────────────────────── */
 
+    /**
+     * 검수 목록 — 상태(기본 PENDING)에 분야·난이도·근거 문서를 선택으로 더한다(2026-08-29).
+     *
+     * <p>셋 다 {@code null}이면 예전과 같은 목록이다. 검수의 실제 단위가 "이 문서로 만든 것들"이라
+     * 좁혀 보는 길이 필요했다 — 자세한 배경은 {@code findForReview}의 주석에 있다.
+     */
     @Transactional(readOnly = true)
-    public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, Pageable pageable) {
+    public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, Domain domain, Difficulty difficulty,
+                                                    String documentSlug, Pageable pageable) {
         DraftStatus target = status != null ? status : DraftStatus.PENDING;
-        return PageResponse.from(
-                draftRepository.findByStatusOrderByCreatedAtAsc(target, pageable).map(this::toResponse));
+        return PageResponse.from(draftRepository
+                .findForReview(target, domain, difficulty, trimToNull(documentSlug), pageable)
+                .map(this::toResponse));
+    }
+
+    /**
+     * 검수 화면 필터에 채울 근거 문서 목록 — 그 상태에 <b>실제로 있는</b> slug만 돌려준다.
+     * 고를 수 있는 것만 보여 줘야 고르고 나서 "0건"을 보지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public List<String> getReviewDocumentSlugs(DraftStatus status) {
+        return draftRepository.findDocumentSlugsByStatus(status != null ? status : DraftStatus.PENDING);
     }
 
     /** 관리자 대시보드 배지용 — 검수 대기 건수. */

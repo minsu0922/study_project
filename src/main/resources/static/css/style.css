@@ -551,6 +551,22 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 /* 펼친 뒤에는 손잡이와 내용이 붙어 보이게 아래 여백을 준다. */
 .gen-panel[open] > summary { margin-bottom: 12px; }
 
+/* 자주 쓰는 거절 사유 칩 — 2026-08-29.
+ *
+ * 사유는 다음 생성 프롬프트에 되먹여지는데 선택 입력이라 비운 채 거절하기 쉬웠다.
+ * 한 번 눌러 채우게 만들어, 적는 손이 이유가 되지 않게 한다.
+ *
+ * 버튼이지만 위험한 동작이 아니라 <입력을 돕는 것>이라 작고 조용하게 둔다 —
+ * 옆의 "거절 확정"과 같은 무게로 보이면 어느 쪽이 실행 버튼인지 헷갈린다. */
+.reject-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.reject-chips .chip {
+  background: #fff; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 4px 10px; font-size: .8rem; line-height: 1.4;
+  cursor: pointer;
+}
+.reject-chips .chip:hover { background: #f3f4f6; color: var(--text); }
+
 /* 검수를 끝낸 초안 카드 — 2026-08-29.
  *
  * 승인·거절해도 카드를 지우거나 목록을 다시 그리지 않는다(markCardDone). 20장을 훑으며

@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
@@ -21,6 +22,57 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
 
     /** 검수 화면 목록 — 상태 필터, 오래된 순(먼저 생성된 것부터 처리). V6 인덱스와 정렬 방향 일치. */
     Page<GeneratedProblemDraft> findByStatusOrderByCreatedAtAsc(DraftStatus status, Pageable pageable);
+
+    /**
+     * 검수 화면 목록 — 상태에 <b>분야·난이도·근거 문서</b>를 더해 좁힌다(2026-08-29).
+     *
+     * <h2>왜 필요했나</h2>
+     *
+     * <p>필터가 상태 하나뿐이라 검수 대기 47건이 한 줄로 쏟아졌다. 그런데 검수의 실제 단위는
+     * "오늘 들어온 전부"가 아니라 <b>"이 문서로 만든 것들"</b>이다 — 같은 문서에서 나온 문제
+     * 다섯을 나란히 봐야 서로 겹치는지, 난이도가 실제로 갈리는지를 판단할 수 있다.
+     * 문서 하나로 열 건 넘게 만들어 놓고 그걸 못 모아 본다는 것이 이 화면의 가장 큰 불편이었다.
+     *
+     * <h2>파생 쿼리를 쓰지 않은 이유</h2>
+     *
+     * <p>이름 규칙으로 쓰면 {@code findByStatusAndDomainAndDifficultyAndDocumentSlug…}가 되는데,
+     * <b>선택 조건 셋을 조합</b>하려면 메서드가 여덟 개 필요하다. null이면 건너뛰는 조건을
+     * JPQL 한 곳에 모으는 편이 짧고, 조건이 하나 늘어도 메서드가 배로 늘지 않는다.
+     * (이 저장소의 {@code ProblemRepository.findForAdmin}이 같은 방식이다.)
+     *
+     * @param domain       null이면 분야를 가리지 않는다
+     * @param difficulty   null이면 난이도를 가리지 않는다
+     * @param documentSlug null이면 근거 문서를 가리지 않는다. <b>빈 문자열이 아니라 null</b>이어야
+     *                     한다 — 컨트롤러가 빈 값을 null로 정규화한다
+     */
+    @Query("""
+            select d from GeneratedProblemDraft d
+            where d.status = :status
+              and (:domain is null or d.domain = :domain)
+              and (:difficulty is null or d.difficulty = :difficulty)
+              and (:documentSlug is null or d.documentSlug = :documentSlug)
+            order by d.createdAt asc
+            """)
+    Page<GeneratedProblemDraft> findForReview(
+            @Param("status") DraftStatus status,
+            @Param("domain") Domain domain,
+            @Param("difficulty") Difficulty difficulty,
+            @Param("documentSlug") String documentSlug,
+            Pageable pageable);
+
+    /**
+     * 검수 화면 필터에 채울 <b>근거 문서 목록</b> — 그 상태에 실제로 존재하는 slug만.
+     *
+     * <p>등록된 문서 전체를 드롭다운에 넣지 않는 이유: 문서는 6편인데 초안이 걸린 것은
+     * 두세 편뿐일 수 있고, 그러면 고르는 족족 "0건"이 나온다. <b>고를 수 있는 것만 보여 주는</b>
+     * 목록이 고르고 나서 실망하지 않는 목록이다.
+     */
+    @Query("""
+            select distinct d.documentSlug from GeneratedProblemDraft d
+            where d.status = :status and d.documentSlug is not null
+            order by d.documentSlug
+            """)
+    List<String> findDocumentSlugsByStatus(@Param("status") DraftStatus status);
 
     /** 대기 건수 — 관리자 화면 배지("검수 대기 N건")용. */
     long countByStatus(DraftStatus status);

@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import project.study.study_project.admin.dto.AdminProblemDetail;
+import project.study.study_project.global.common.Difficulty;
+import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
@@ -117,13 +119,34 @@ public class AdminLlmProblemController {
         return ApiResponse.ok(llmProblemService.generateFromDocument(request, document));
     }
 
-    /** 초안 목록 — 기본 PENDING, 오래된 순. 예: {@code GET /api/admin/llm-problems?status=REJECTED} */
+    /**
+     * 초안 목록 — 기본 PENDING, 오래된 순.
+     *
+     * <p>예: {@code GET /api/admin/llm-problems?status=PENDING&documentSlug=xss-context-aware-output-encoding}
+     *
+     * <p>분야·난이도·근거 문서는 선택이고, 안 주면 예전과 같은 목록이다(2026-08-29 추가).
+     * 검수의 실제 단위가 "이 문서로 만든 것들"이라 좁혀 보는 길을 열었다.
+     */
     @GetMapping
     public ApiResponse<PageResponse<LlmDraftResponse>> list(
             @RequestParam(required = false) DraftStatus status,
+            @RequestParam(required = false) Domain domain,
+            @RequestParam(required = false) Difficulty difficulty,
+            @RequestParam(required = false) String documentSlug,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(llmProblemService.getDrafts(status, pageable));
+        return ApiResponse.ok(llmProblemService.getDrafts(status, domain, difficulty, documentSlug, pageable));
+    }
+
+    /**
+     * 위 목록의 근거 문서 필터에 채울 slug 목록 — 그 상태에 <b>실제로 있는</b> 것만.
+     *
+     * <p>등록 문서 전체를 주지 않는 이유: 초안이 걸린 문서는 그중 일부뿐이라, 전부 보여 주면
+     * 고르는 족족 "0건"이 나온다. 화면이 문서 목록 API를 따로 부르지 않아도 되게 여기서 준다.
+     */
+    @GetMapping("/document-slugs")
+    public ApiResponse<List<String>> documentSlugs(@RequestParam(required = false) DraftStatus status) {
+        return ApiResponse.ok(llmProblemService.getReviewDocumentSlugs(status));
     }
 
     /** 검수 대기 건수 — 관리자 화면 배지용. */
