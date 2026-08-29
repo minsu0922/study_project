@@ -54,6 +54,8 @@ import java.util.Map;
  * <p>사용법(Gradle 태스크 {@code generateDrafts}가 감싼다):
  * <pre>
  *   --date=2026-08-12        기준 날짜(생략 시 오늘, 한국 시간). 파일명이자 순환 순번의 근거
+ *   --document-date=2026-09-08  근거로 삼을 문서 지목(생략 시 --date의 주기가 결정)
+ *                            지목하면 폴백을 막는다 — 못 쓰는 문서면 요금 0으로 실패시킨다
  *   --domain=NETWORK         분야 강제 지정(생략 시 날짜 순환으로 결정)
  *   --topic=슬로우쿼리        문서 주제 강제 지정(문서일에만. 생략 시 주제 대기열 → 모델 자동 선택)
  *                            공백이 든 주제는 환경변수 DRAFT_TOPIC으로 넘긴다
@@ -84,6 +86,9 @@ public final class DraftGeneratorCli {
 
     /** 개념 문서 결과가 쌓이는 하위 디렉터리. 문제 파일과 형식이 달라 폴더로 분리한다(docs/15). */
     private static final String DOCUMENT_SUBDIR = "documents";
+
+    /** 근거 문서를 지목하는 옵션 이름. 이름을 세 곳에서 문자열로 쓰게 되어 상수로 뽑았다. */
+    static final String DOCUMENT_DATE_OPT = "document-date";
 
     /** 기존 문서 제목·태그 스냅샷. 문서 주제 중복을 피하고 태그 난립을 막는 데 쓴다. */
     private static final String EXISTING_DOCUMENTS_FILE = "_existing-documents.json";
@@ -158,8 +163,21 @@ public final class DraftGeneratorCli {
         // ── 5. 근거 문서 찾기(2단계) ──────────────────────────────
         // 못 찾으면 null — 그때는 예전처럼 모델의 지식으로 만든다(폴백). 문서 생성이 실패했거나
         // 검수에서 거절된 주기에도 그날의 문제는 나와야 하기 때문.
-        ResolvedSource resolved = findSourceDocument(outDir, plan, difficulty);
+        LocalDate documentDate = resolveDocumentDate(opts, plan);
+        boolean documentPinned = opts.containsKey(DOCUMENT_DATE_OPT);
+
+        ResolvedSource resolved = findSourceDocument(outDir, documentDate, difficulty);
         SourceDocument source = resolved == null ? null : resolved.document();
+
+        // 지목한 문서를 못 쓰면 <b>폴백하지 않고 실패</b>시킨다. 폴백은 "예약 실행이 그날을 통째로
+        // 날리지 않게" 하려고 둔 장치인데, 사람이 문서를 콕 집어 부른 실행에서는 정반대로 해롭다 —
+        // 원하는 문서 대신 <b>근거 없는 문제 5개</b>가 조용히 나오고, 그 사실은 파일을 열어 봐야
+        // 안다(documentSlug가 null). 요금까지 나간 뒤에 알게 되는 셈이라 호출 전에 끊는다.
+        if (documentPinned && resolved == null) {
+            throw new IllegalStateException(
+                    "지목한 근거 문서를 쓸 수 없습니다: " + outDir.resolve(DOCUMENT_SUBDIR).resolve(documentDate + ".json")
+                    + " (위에 찍힌 사유 참고). 요금 0으로 중단합니다.");
+        }
 
         if (source == null && !opts.containsKey("difficulty")) {
             // 근거가 없으면 "이번 주기의 난이도"를 쓸 이유도 없다. 주기가 헛도는 동안
@@ -301,7 +319,18 @@ public final class DraftGeneratorCli {
     /* ── 근거 문서 찾기(2단계) ───────────────────────────────── */
 
     /**
-     * 이번 주기의 근거 문서를 읽는다 — 없거나 쓸 수 없으면 {@code null}(폴백).
+     * 근거 문서를 읽는다 — 없거나 쓸 수 없으면 {@code null}(폴백).
+     *
+     * <p><b>왜 {@code Plan}이 아니라 날짜를 받나</b>(2026-08-29). 원래는 {@code plan.documentDate()}를
+     * 안에서 꺼내 썼다. 그러면 "어느 문서를 읽을지"가 주기 계산에 묶여, 문서를 지목하려면
+     * 그 문서의 주기에 속하는 날짜를 {@code --date}로 넘기는 수밖에 없었다. 그런데 그 날짜는
+     * 주기당 셋뿐인 데다 결과 파일명이기도 해서, 한 번 쓴 날짜는 다시 못 쓴다
+     * (같은 이름이면 멱등성 검사가 건너뛰고, 흡수 이력도 파일명으로 남는다).
+     * 실제로 보안 문서 두 편이 그 셋을 다 소진해 <b>남은 난이도를 채울 방법이 없어졌다</b>.
+     *
+     * <p>날짜 하나만 받게 바꾸니 두 축이 갈라진다 — {@code --date}는 "결과를 어디에 쓸지",
+     * {@code --document-date}는 "무엇을 근거로 할지". 예약 실행은 여전히 주기가 둘 다 정하므로
+     * 평소 경로는 그대로다.
      *
      * <p><b>클라우드에 DB가 없는데 어떻게 문서를 읽나.</b> 문서는 이미 저장소에 커밋돼 있다
      * ({@code generated/documents/YYYY-MM-DD.json}). Actions는 저장소를 통째로 내려받고 시작하므로
@@ -315,12 +344,12 @@ public final class DraftGeneratorCli {
      * <p><b>아직 검수 안 한 문서는 그냥 쓴다.</b> 미승인은 부정 신호가 아니라 "아직 안 봤다"일 뿐인데,
      * 승인을 며칠 미뤘다고 그 주기를 날리면 사람의 검수 속도에 배치가 인질로 잡힌다.
      */
-    private static ResolvedSource findSourceDocument(Path outDir, GenerationSchedule.Plan plan,
+    private static ResolvedSource findSourceDocument(Path outDir, LocalDate documentDate,
                                                      Difficulty difficulty) {
         if (difficulty == null) {
             return null; // 문서일에는 근거 문서를 찾을 일이 없다(방어)
         }
-        Path file = outDir.resolve(DOCUMENT_SUBDIR).resolve(plan.documentDate() + ".json");
+        Path file = outDir.resolve(DOCUMENT_SUBDIR).resolve(documentDate + ".json");
         if (!Files.exists(file)) {
             System.out.println("근거 문서 없음, 폴백으로 생성합니다: " + file);
             return null;
@@ -684,6 +713,22 @@ public final class DraftGeneratorCli {
         return opts.containsKey("date")
                 ? LocalDate.parse(opts.get("date"))
                 : LocalDate.now(ZoneId.of("Asia/Seoul"));
+    }
+
+    /**
+     * 근거 문서 파일의 날짜 — {@code --document-date}가 있으면 그것, 없으면 주기가 정한 값.
+     *
+     * <p>이 한 줄을 굳이 메서드로 뺀 이유는 <b>테스트하려고</b>다. 옵션을 무시하거나 반대로
+     * 예약 실행에서까지 옵션 쪽을 보는 실수는 증상이 조용하다 — 둘 다 문제는 정상적으로
+     * 나오고, 다만 <b>엉뚱한 문서를 근거로</b> 나온다. 파일 안의 {@code documentSlug}를
+     * 들여다봐야 알 수 있는 종류라 못 박아 둔다({@code shouldGenerate}와 같은 이유).
+     *
+     * @param plan 날짜 순환이 계산한 계획. 옵션이 없을 때의 기본값을 여기서 가져온다
+     */
+    static LocalDate resolveDocumentDate(Map<String, String> opts, GenerationSchedule.Plan plan) {
+        return opts.containsKey(DOCUMENT_DATE_OPT)
+                ? LocalDate.parse(opts.get(DOCUMENT_DATE_OPT))
+                : plan.documentDate();
     }
 
     /* ── 중단 스위치 ─────────────────────────────────────────── */

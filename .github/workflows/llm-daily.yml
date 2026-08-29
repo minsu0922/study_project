@@ -53,7 +53,15 @@ on:
         required: false
         default: ''
       date:
-        description: '기준 날짜(YYYY-MM-DD). 비우면 오늘(한국 시간)'
+        description: '기준 날짜(YYYY-MM-DD). 비우면 오늘(한국 시간). 결과 파일명이 되므로 이미 쓴 날짜는 건너뛴다'
+        required: false
+        default: ''
+      document_date:
+        # 문서 한 편의 빈 난이도를 뒤늦게 채울 때 쓴다. 근거 문서는 원래 date의 주기가 정하는데,
+        # 주기에 속한 날짜는 셋뿐이고 결과 파일명이라 재사용도 안 된다 — 그 셋을 다 쓴 문서는
+        # 남은 칸을 채울 방법이 없었다(2026-08-29 보안 문서 두 편에서 실제로 막힘).
+        # date는 "어디에 쓸지", 이 값은 "무엇을 근거로 할지"로 축을 갈라 둔다.
+        description: '근거 문서 파일의 날짜(generated/documents/<날짜>.json). 비우면 date의 주기가 결정'
         required: false
         default: ''
       force:
@@ -120,6 +128,7 @@ jobs:
           IN_DIFFICULTY: ${{ inputs.difficulty }}
           IN_COUNT: ${{ inputs.count }}
           IN_DATE: ${{ inputs.date }}
+          IN_DOCUMENT_DATE: ${{ inputs.document_date }}
           # 예약 실행에서는 inputs가 비어 있으므로 force는 항상 꺼진 상태로 넘어간다 —
           # 중단 스위치를 예약 실행이 스스로 무시하는 일은 구조적으로 불가능하다.
           IN_FORCE: ${{ inputs.force }}
@@ -132,7 +141,7 @@ jobs:
           DRAFT_TOPIC: ${{ inputs.topic }}
         run: |
           ./gradlew generateDrafts --no-daemon --console=plain \
-            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --force=${IN_FORCE} --type=${IN_TYPE}"
+            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --document-date=${IN_DOCUMENT_DATE} --force=${IN_FORCE} --type=${IN_TYPE}"
 
       - name: 결과 커밋 & 푸시
         run: |

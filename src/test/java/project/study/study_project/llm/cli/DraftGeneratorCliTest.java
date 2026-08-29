@@ -260,6 +260,51 @@ class DraftGeneratorCliTest {
                 .isEqualTo(Domain.DATABASE);
     }
 
+    /* ══ 근거 문서 지목 (--document-date) ═══════════════════════ */
+
+    /**
+     * 2026-08-29에 붙인 옵션. 배경은 {@code DraftGeneratorCli#findSourceDocument} 주석에 있다 —
+     * 근거 문서가 {@code --date}의 주기에 묶여 있어, 주기의 세 날짜를 다 쓴 문서는 남은 난이도를
+     * 채울 방법이 없었다.
+     *
+     * <p><b>왜 한 줄짜리를 테스트하나.</b> 틀렸을 때 아무도 안 죽기 때문이다. 옵션을 무시하면
+     * 문제는 정상적으로 5개 나오고 job도 초록불인데, 근거만 <b>엉뚱한 문서</b>다. 파일 안의
+     * {@code documentSlug}를 열어 봐야 알 수 있고, 그때는 이미 요금이 나간 뒤다.
+     */
+    @Test
+    @DisplayName("문서를 지목하면 그 날짜를 쓴다 — 주기가 정한 값을 이긴다")
+    void pinnedDocumentDateBeatsTheCycle() {
+        // 2026-09-20은 주기상 근거 문서가 2026-09-19지만, 지목한 09-08을 따라야 한다
+        GenerationSchedule.Plan plan = GenerationSchedule.planFor(LocalDate.of(2026, 9, 20), CANDIDATES);
+
+        assertThat(DraftGeneratorCli.resolveDocumentDate(
+                Map.of(DraftGeneratorCli.DOCUMENT_DATE_OPT, "2026-09-08"), plan))
+                .isEqualTo(LocalDate.of(2026, 9, 8));
+    }
+
+    @Test
+    @DisplayName("지목하지 않으면 주기가 정한 문서를 쓴다 — 예약 실행 경로는 그대로다")
+    void unpinnedDocumentDateFollowsTheCycle() {
+        GenerationSchedule.Plan plan = GenerationSchedule.planFor(LocalDate.of(2026, 9, 20), CANDIDATES);
+
+        assertThat(DraftGeneratorCli.resolveDocumentDate(Map.of(), plan))
+                .isEqualTo(plan.documentDate());
+    }
+
+    /**
+     * 워크플로는 입력이 비어도 {@code --document-date=}를 <b>항상</b> 붙여 보낸다. 빈 값을
+     * "지정함"으로 세면 {@code LocalDate.parse("")}가 터져 예약 실행이 매일 실패한다.
+     * 빈 값을 버리는 것은 {@code parseArgs}의 몫이라, 그 계약을 여기서 함께 못 박는다.
+     */
+    @Test
+    @DisplayName("빈 값은 지정 안 한 것으로 본다 — 워크플로가 늘 붙여 보내는 형태")
+    void blankDocumentDateIsIgnored() {
+        Map<String, String> opts = DraftGeneratorCli.parseArgs(
+                new String[]{"--date=2026-09-20", "--document-date="});
+
+        assertThat(opts).doesNotContainKey(DraftGeneratorCli.DOCUMENT_DATE_OPT);
+    }
+
     /* ══ 스냅샷 낡음 경고 ═══════════════════════════════════════ */
 
     /**
