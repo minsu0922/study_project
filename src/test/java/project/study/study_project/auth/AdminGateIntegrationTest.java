@@ -37,6 +37,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 셋 다 단위 테스트로는 볼 수 없다. 실제 요청이 필터 사슬을 지나야 드러난다.
  *
  * <p>MySQL이 필요하다(다른 통합 테스트와 같은 전제). 클래스 {@code @Transactional}로 롤백된다.
+ *
+ * <h2>이 테스트가 못 보는 것 (2026-08-29)</h2>
+ *
+ * <p>MockMvc는 서블릿의 <b>ERROR 디스패치를 재현하지 않는다.</b> 그래서 필터가
+ * {@code sendError(404)}를 부른 뒤 요청이 {@code /error}로 다시 들어가 <b>인증 엔트리포인트가
+ * 401로 덮어쓰는</b> 일이 여기서는 보이지 않는다 — 실제로 그 상태로 한동안 돌았고 이 테스트는
+ * 내내 초록불이었다.
+ *
+ * <p>그 자리는 {@link AdminGateRealServerTest}가 진짜 톰캣을 띄워 본다. 여기 있는 것들은
+ * <b>필터의 판단</b>(경로·역할·쿠키)이고, 저기 있는 것은 <b>필터 뒤에 이어 붙는 것</b>이다.
  */
 @SpringBootTest(properties = "ratelimit.enabled=false")
 @AutoConfigureMockMvc
