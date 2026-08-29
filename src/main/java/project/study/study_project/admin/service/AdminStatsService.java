@@ -1,10 +1,13 @@
 package project.study.study_project.admin.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminDashboardResponse;
+import project.study.study_project.global.common.Difficulty;
+import project.study.study_project.global.common.Domain;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
@@ -13,10 +16,13 @@ import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.repository.UserRepository;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 관리자 대시보드 통계 — 전체 요약 + 도메인×난이도 현황판 + 문제별 정답률.
@@ -49,6 +55,34 @@ public class AdminStatsService {
      * JdbcTemplate 후속(체이닝 API)으로, 같은 DataSource/트랜잭션에 참여한다.
      */
     private final JdbcClient jdbcClient;
+
+    /**
+     * 일일 배치 스위치 — 화면에 그대로 비춘다(2026-08-29).
+     *
+     * <p>꺼져 있으면 초안이 하나도 안 들어오는데, 지금까지 <b>화면 어디에도 그 사실이
+     * 없었다</b>. 검수함이 비어 있는 것이 "오늘 몫을 다 처리했다"인지 "배치가 꺼져 있다"인지
+     * 구별할 방법이 없었던 셈이다 — 이 프로젝트가 이미 한 번 당한 종류의 침묵이다(docs/14).
+     *
+     * <p>설정을 화면으로 바꾸는 길은 만들지 않는다. 배치를 켜고 끄는 것은 저장소에 기록이
+     * 남아야 하는 결정이라 커밋으로 하는 편이 맞다(그 판단은 DraftGeneratorCli 주석에 있다).
+     */
+    @Value("${llm.generation.batch-enabled:true}")
+    private boolean batchEnabled;
+
+    /**
+     * 배치가 채우는 분야 — "빈 칸"을 세는 기준이다(2026-08-29).
+     *
+     * <p><b>왜 전체 분야로 세지 않나.</b> Domain enum에는 배치가 건드리지 않는 분야도 있다
+     * (클라우드·인프라, 프론트엔드CS 등). 그걸 함께 세면 채울 계획도 없는 칸이 "빈 칸"으로
+     * 잡혀 숫자가 늘 크게 떠 있고, 그러면 사람은 그 타일을 아예 안 보게 된다.
+     *
+     * <p>기본값 문자열이 {@code LlmProblemService}와 같다. 한 곳에 모으는 편이 낫지만,
+     * 그러려면 설정 클래스를 새로 만들어 두 서비스가 의존하게 해야 한다 — 값이 갈라지면
+     * 화면의 "빈 칸"과 배치가 실제로 채우는 칸이 어긋나므로 <b>눈에 보이는</b> 종류의
+     * 어긋남이라, 지금은 기본값을 맞춰 두는 선에서 멈춘다.
+     */
+    @Value("${llm.generation.batch-domains:NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
+    private List<Domain> batchDomains;
 
     @Transactional(readOnly = true)
     public AdminDashboardResponse getDashboard() {
@@ -94,7 +128,27 @@ public class AdminStatsService {
                 toModelStats(problemDraftRepository.countGroupByModelAndStatus()),
                 toModelStats(documentDraftRepository.countGroupByModelAndStatus()));
 
-        return new AdminDashboardResponse(totals, matrix, domainStats, stats, llmReview);
+        // 빈 칸 — 배치가 채우는 분야 안에서만 센다(batchDomains 주석).
+        Set<String> filled = matrix.stream()
+                .filter(cell -> cell.count() > 0)
+                .map(cell -> cell.domain() + "|" + cell.difficulty())
+                .collect(Collectors.toSet());
+        int plannedCells = batchDomains.size() * Difficulty.values().length;
+        int emptyCells = plannedCells - (int) batchDomains.stream()
+                .flatMap(domain -> Arrays.stream(Difficulty.values())
+                        .map(difficulty -> domain + "|" + difficulty))
+                .filter(filled::contains)
+                .count();
+
+        // 지금 할 일 — 전부 "0이면 손댈 것 없음"이 되게 방향을 맞춘 값들이다(Todo 주석).
+        var todo = new AdminDashboardResponse.Todo(
+                problemDraftRepository.countByStatus(DraftStatus.PENDING),
+                documentDraftRepository.countByStatus(DraftStatus.PENDING),
+                problemRepository.countByTitleIsNull(),
+                problemRepository.countWithMissingRationale(),
+                batchEnabled, emptyCells, plannedCells);
+
+        return new AdminDashboardResponse(totals, matrix, domainStats, stats, llmReview, todo);
     }
 
     /**

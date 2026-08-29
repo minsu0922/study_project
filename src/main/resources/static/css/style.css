@@ -551,6 +551,65 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 /* 펼친 뒤에는 손잡이와 내용이 붙어 보이게 아래 여백을 준다. */
 .gen-panel[open] > summary { margin-bottom: 12px; }
 
+/* ── 대시보드: 오늘 할 일 줄 ── 2026-08-29
+ *
+ * 예전에는 여기에 누적 수 넷(회원·문서·문제·제출)이 있었다. 매일 봐도 다음 행동을 정해
+ * 주지 않는 숫자들이라 아래 한 줄로 내리고, 행동을 부르는 값으로 갈아 끼웠다.
+ *
+ * 0인 타일은 흐리게 둔다 — 다 흐리면 "오늘 손댈 것이 없다"가 한눈에 보인다.
+ * 숫자를 지우거나 감추지 않는 이유: 0도 확인된 정보다("검수 대기 0" ≠ "모름"). */
+.todo-row {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  margin-bottom: 12px;
+}
+.todo-tile {
+  flex: 1 1 160px; min-width: 150px;
+  padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: #fff; text-decoration: none; color: inherit;
+  display: block;
+}
+a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft); }
+.todo-tile .num { font-size: 1.7rem; font-weight: 800; line-height: 1.1; color: var(--primary); }
+.todo-tile .label { font-size: .9rem; font-weight: 600; margin-top: 2px; }
+.todo-tile .hint { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+/* 할 일이 없는 타일 — 숫자는 남기되 존재감을 뺀다. */
+.todo-tile.done { background: #fafafa; }
+.todo-tile.done .num { color: var(--muted); font-weight: 700; }
+
+/* 배치 상태는 숫자가 아니라 상태다. 타일과 같은 모양이면 "꺼짐"이 0건처럼 읽혀
+ * 좋은 소식으로 오해된다 — 그래서 줄 하나로 따로 둔다. */
+.batch-row { flex: 1 1 100%; }
+.batch-state { font-size: .85rem; }
+.batch-state.on { color: var(--muted); }
+.batch-state.off {
+  color: #92400e; background: #fffbeb;
+  border: 1px solid #fde68a; border-radius: 8px;
+  padding: 6px 10px; display: inline-block;
+}
+
+/* ── 출제 현황 히트맵 ── 2026-08-29
+ *
+ * 칸 색은 자바스크립트가 값에 따라 인라인으로 넣는다(농도가 데이터라 CSS로 못 적는다).
+ * 여기서는 <색이 잘 보이게> 하는 것만 한다: 칸 사이를 벌려 인접한 두 농도가 서로
+ * 번져 보이지 않게 하고, 빈 칸은 색 대신 흐린 글씨로 구멍처럼 남긴다. */
+.grid.heatmap td { text-align: center; font-variant-numeric: tabular-nums; }
+.grid.heatmap td.click-cell {
+  border: 2px solid #fff;      /* 칸 사이 2px 간격 — 농도끼리 경계가 살아난다 */
+  border-radius: 6px;
+  cursor: pointer;
+}
+.grid.heatmap td.click-cell:hover { outline: 2px solid var(--primary); outline-offset: -2px; }
+.grid.heatmap td.zero { color: var(--muted); background: #fafafa; }
+
+/* 접어 둔 학습 통계 — 표본이 쌓이면 열린다(index.html renderLearningStats). */
+#learningStats > summary {
+  cursor: pointer; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  font-weight: 600; margin-top: 8px;
+}
+#learningStats > summary:hover { background: #f9fafb; }
+
 /* 제목 줄에 붙는 정렬 고르기 — 2026-08-29.
  *
  * 표 위 어디에 둘지 고민했는데, <제목 옆>이 맞다고 봤다. "무엇을 어떤 순서로 보고 있는가"가

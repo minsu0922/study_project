@@ -15,15 +15,54 @@ import java.util.List;
  *                      문제 단위(problemStats)보다 한 단계 넓은 시야: "어느 영역이 약한가"
  * @param problemStats  문제별 제출 수·정답률 — 너무 어렵거나(정답률↓) 오류인 문제 발견용
  * @param llmReview     AI 초안의 모델별 승인율 — "모델·프롬프트를 바꿨더니 나아졌나"를 보는 저울
+ * @param todo          <b>지금 할 일</b>(2026-08-29 신설). 나머지 넷이 "쌓인 것"을 보여 준다면
+ *                      이건 "손대야 할 것"이다 — 대시보드를 매일 여는 이유가 후자인데
+ *                      그 자리가 없었다
  */
 public record AdminDashboardResponse(
         Totals totals,
         List<MatrixCell> problemMatrix,
         List<DomainStat> domainStats,
         List<ProblemStat> problemStats,
-        LlmReview llmReview
+        LlmReview llmReview,
+        Todo todo
 ) {
     public record Totals(long users, long documents, long problems, long submissions) {
+    }
+
+    /**
+     * 지금 손대야 할 것들 — 전부 <b>0이면 할 일이 없다</b>는 뜻이 되게 방향을 맞췄다.
+     *
+     * <p><b>왜 누적 수와 갈라 두나.</b> 회원 4명·문제 76개는 매일 봐도 다음 행동을 정해 주지
+     * 않는다. 검수 대기 8건은 본 즉시 무엇을 할지가 정해진다. 둘을 같은 줄에 같은 크기로
+     * 두면 행동을 부르는 숫자가 배경 숫자에 묻힌다.
+     *
+     * <p><b>"커밋 안 한 스냅샷"은 넣지 못했다.</b> 그건 git 상태이고 앱은 git을 돌리지 않는다
+     * (docs/14 — 권한·인증·충돌 때문에 앱이 push하지 않기로 한 결정). 알 수 없는 것을
+     * 짐작해 띄우느니 빼는 편이 낫다.
+     *
+     * @param pendingProblemDrafts  검수 대기 문제 초안
+     * @param pendingDocumentDrafts 검수 대기 문서 초안
+     * @param untitledProblems      목록 제목이 없는 문제 — 학습자 목록에 지문 조각이 뜬다
+     * @param missingRationale      오답 설명이 빠진 문제 — 틀려도 "왜 아닌지"가 안 뜬다
+     * @param batchEnabled          일일 배치가 켜져 있는지. 꺼져 있으면 <b>초안이 안 들어오는
+     *                              이유</b>가 이것인데, 지금까지 화면 어디에도 안 보였다
+     * @param emptyCells            출제가 하나도 없는 (분야 × 난이도) 칸 수
+     * @param plannedCells          채울 계획이 있는 칸 수 = {@code batch-domains} × 난이도 3.
+     *                              <b>화면의 분야 목록으로 세면 안 된다</b> — 거기에는 배치가
+     *                              건드리지 않는 분야(클라우드·프론트엔드CS 등)까지 들어 있어,
+     *                              채울 계획도 없는 칸이 "빈 칸"으로 잡힌다. 늘 커다란 숫자가
+     *                              떠 있으면 사람은 그 타일을 아예 안 보게 된다
+     */
+    public record Todo(
+            long pendingProblemDrafts,
+            long pendingDocumentDrafts,
+            long untitledProblems,
+            long missingRationale,
+            boolean batchEnabled,
+            int emptyCells,
+            int plannedCells
+    ) {
     }
 
     public record MatrixCell(Domain domain, Difficulty difficulty, long count) {
