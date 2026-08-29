@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.support.GenerationLimits;
 
 /**
  * 관리자 수동 생성 요청 바디.
@@ -20,8 +21,11 @@ public record LlmGenerateRequest(
         Difficulty difficulty,
         ProblemType type,
 
-        @Min(value = 1, message = "count는 1 이상이어야 합니다.")
-        @Max(value = 10, message = "count는 10 이하여야 합니다.")
+        // 상한·하한은 {@link GenerationLimits}에 있다 — 배치 진입점(DraftGeneratorCli)과
+        // 같은 값을 써야 해서다. 애너테이션은 컴파일 상수만 받는데 static final int는 상수라
+        // 그대로 쓸 수 있고, 메시지의 문자열 이어 붙이기도 상수식이라 통과한다.
+        @Min(value = GenerationLimits.MIN_COUNT, message = "count는 " + GenerationLimits.MIN_COUNT + " 이상이어야 합니다.")
+        @Max(value = GenerationLimits.MAX_COUNT, message = "count는 " + GenerationLimits.MAX_COUNT + " 이하여야 합니다.")
         int count
 ) {
 }

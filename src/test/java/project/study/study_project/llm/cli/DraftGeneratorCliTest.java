@@ -306,6 +306,63 @@ class DraftGeneratorCliTest {
         assertThat(opts).doesNotContainKey(DraftGeneratorCli.DOCUMENT_DATE_OPT);
     }
 
+    /* ══ 생성 개수 (--count) ════════════════════════════════════ */
+
+    /**
+     * 관리자 API는 {@code @Max(10)}으로 11을 거부하는데 이 진입점에는 상한이 없어,
+     * 워크플로 수동 입력의 {@code 500}이 그대로 요금이 됐다. 검증이 없는 쪽이 하필
+     * 사람이 손으로 숫자를 적어 넣는 쪽이었다(2026-08-29).
+     */
+    @Test
+    @DisplayName("옵션이 없으면 설정값을 쓴다 — 예약 실행의 평소 경로")
+    void countFallsBackToTheConfiguredValue() {
+        assertThat(DraftGeneratorCli.resolveCount(Map.of(), 5)).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("옵션이 있으면 그 값을 쓴다")
+    void countOptionWins() {
+        assertThat(DraftGeneratorCli.resolveCount(Map.of("count", "3"), 5)).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("상한을 넘으면 거부한다 — 잘라 쓰면 50을 적은 사람이 50이 나온 줄 안다")
+    void countAboveTheCapIsRejected() {
+        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of("count", "500"), 5))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("--count");
+    }
+
+    @Test
+    @DisplayName("0과 음수도 거부한다 — '만들지 않겠다'가 아니라 오타다")
+    void countBelowOneIsRejected() {
+        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of("count", "0"), 5))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of("count", "-1"), 5))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("숫자가 아니면 무엇을 받았는지 알려 준다 — NumberFormatException만 뜨면 원인을 못 찾는다")
+    void countMustBeANumber() {
+        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of("count", "다섯"), 5))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("다섯");
+    }
+
+    /**
+     * 옵션만 검증하면 {@code batch-count: 100}이라는 설정 오타가 예약 실행에서 매일 조용히
+     * 통과한다. 어느 경로로 들어왔든 같은 문을 지나야 하고, 메시지는 <b>어디를 고쳐야 하는지</b>
+     * 를 말해야 한다 — "--count가 잘못됐다"고 하면 손대지도 않은 옵션을 찾게 된다.
+     */
+    @Test
+    @DisplayName("설정값이 범위를 벗어나도 거부하고, 고칠 곳을 알려 준다")
+    void configuredCountIsCheckedToo() {
+        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of(), 100))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("batch-count");
+    }
+
     /* ══ 결과 파일 이름 (--suffix) ══════════════════════════════ */
 
     /**

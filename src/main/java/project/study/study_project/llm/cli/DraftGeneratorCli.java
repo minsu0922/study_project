@@ -16,6 +16,7 @@ import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
+import project.study.study_project.llm.support.GenerationLimits;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.SourceQuoteRule;
@@ -63,7 +64,7 @@ import java.util.regex.Pattern;
  *   --topic=슬로우쿼리        문서 주제 강제 지정(문서일에만. 생략 시 주제 대기열 → 모델 자동 선택)
  *                            공백이 든 주제는 환경변수 DRAFT_TOPIC으로 넘긴다
  *   --difficulty=BEGINNER    난이도 강제 지정(생략 시 날짜 순환으로 결정)
- *   --count=5                생성 개수(생략 시 application.yml의 batch-count)
+ *   --count=5                생성 개수 1~10(생략 시 application.yml의 batch-count)
  *   --out=generated          출력 디렉터리
  *   --force=true             batch-enabled=false여도 이번 한 번은 생성(수동 실행 전용)
  * </pre>
@@ -177,7 +178,7 @@ public final class DraftGeneratorCli {
                 ? Difficulty.valueOf(opts.get("difficulty")) : plan.difficulty();
         // 유형은 객관식 고정 — 보기·해설이 함께 생성돼 검수 가치가 가장 높다(OX·단답형은 관리자 버튼으로)
         ProblemType type = ProblemType.MULTIPLE_CHOICE;
-        int count = opts.containsKey("count") ? Integer.parseInt(opts.get("count")) : defaultCount;
+        int count = resolveCount(opts, defaultCount);
 
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Path outFile = outDir.resolve(outFileName(date, opts.get(SUFFIX_OPT)));
@@ -763,6 +764,48 @@ public final class DraftGeneratorCli {
         return opts.containsKey("date")
                 ? LocalDate.parse(opts.get("date"))
                 : LocalDate.now(KST);
+    }
+
+    /**
+     * 만들 개수 — 옵션이 있으면 그것, 없으면 {@code application.yml}의 {@code batch-count}.
+     *
+     * <h2>왜 검증이 필요한가(2026-08-29)</h2>
+     *
+     * <p>예전에는 {@code Integer.parseInt(opts.get("count"))} 한 줄이었다. 관리자 API는
+     * {@code @Max(10)}으로 11을 거부하는데 <b>이쪽에는 상한이 없어</b> 워크플로 수동 입력의
+     * {@code 500}이 그대로 요금이 됐다. 검증이 없는 쪽이 하필 사람이 손으로 숫자를 적는 쪽이었다.
+     *
+     * <p><b>설정값도 같이 잰다.</b> 옵션만 검증하면 {@code batch-count: 100}이라는 오타가
+     * 예약 실행에서 매일 조용히 통과한다. 어느 경로로 들어왔든 이 문을 지나게 두고,
+     * 메시지에 출처를 적어 어디를 고쳐야 하는지 알린다.
+     *
+     * <p>범위를 벗어나면 잘라 쓰지 않고 던진다({@link GenerationLimits} 참고). 호출 전이라
+     * 요금은 0이고, job이 빨간불로 끝나 메일이 온다 — 조용히 10개가 나오는 것보다 낫다.
+     *
+     * @param fallback 옵션이 없을 때 쓸 값(설정에서 읽은 {@code batch-count})
+     * @throws IllegalArgumentException 숫자가 아니거나 허용 범위 밖일 때
+     */
+    static int resolveCount(Map<String, String> opts, int fallback) {
+        String raw = opts.get("count");
+        boolean fromOption = raw != null;
+
+        int count;
+        if (fromOption) {
+            try {
+                count = Integer.parseInt(raw);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("--count는 숫자여야 합니다(받은 값: \"%s\")".formatted(raw));
+            }
+        } else {
+            count = fallback;
+        }
+
+        if (count < GenerationLimits.MIN_COUNT || count > GenerationLimits.MAX_COUNT) {
+            throw new IllegalArgumentException("%s는 %d~%d 사이여야 합니다(받은 값: %d)".formatted(
+                    fromOption ? "--count" : "application.yml의 llm.generation.batch-count",
+                    GenerationLimits.MIN_COUNT, GenerationLimits.MAX_COUNT, count));
+        }
+        return count;
     }
 
     /**

@@ -7,6 +7,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.QuestionKind;
+import project.study.study_project.llm.support.GenerationLimits;
 
 /**
  * 문서 기반 문제 생성 요청 — 2026-08-18 신설, 2026-08-25에 입구가 셋이 됐다.
@@ -55,8 +56,9 @@ public record LlmDocumentGenerateRequest(
 
         ProblemType type,
 
-        @Min(value = 1, message = "count는 1 이상이어야 합니다.")
-        @Max(value = 10, message = "count는 10 이하여야 합니다.")
+        // 상한·하한의 출처는 {@link GenerationLimits} 하나다(LlmGenerateRequest와 같은 이유).
+        @Min(value = GenerationLimits.MIN_COUNT, message = "count는 " + GenerationLimits.MIN_COUNT + " 이상이어야 합니다.")
+        @Max(value = GenerationLimits.MAX_COUNT, message = "count는 " + GenerationLimits.MAX_COUNT + " 이하여야 합니다.")
         int count,
 
         String text,
