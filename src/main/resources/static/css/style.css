@@ -534,6 +534,38 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 .doc-preview-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .doc-preview-bar .meta { flex: 1; }
 
+/* 접어 둔 생성 폼 손잡이 — 2026-08-29.
+ *
+ * AI 검수 화면에서 매일 하는 일은 검수이고 생성은 가끔인데, 큰 폼 두 장이 목록 위를
+ * 차지하고 있었다. details로 접어 기본 화면이 곧 검수 목록이 되게 했다.
+ *
+ * summary의 기본 삼각형 표식을 지우지 않는다 — 그게 "여기 접힌 게 있다"를 알리는
+ * 브라우저 공용 신호라, 직접 만든 화살표보다 정확하다. */
+.gen-panel { margin-bottom: 16px; }
+.gen-panel > summary {
+  cursor: pointer; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  font-weight: 600;
+}
+.gen-panel > summary:hover { background: #f9fafb; }
+/* 펼친 뒤에는 손잡이와 내용이 붙어 보이게 아래 여백을 준다. */
+.gen-panel[open] > summary { margin-bottom: 12px; }
+
+/* 검수를 끝낸 초안 카드 — 2026-08-29.
+ *
+ * 승인·거절해도 카드를 지우거나 목록을 다시 그리지 않는다(markCardDone). 20장을 훑으며
+ * 처리하는 작업이라 한 건마다 목록이 새로 그려지면 읽던 자리를 잃기 때문이다.
+ * 대신 <처리했다>는 것이 한눈에 보여야 한다 — 안 그러면 같은 카드를 또 읽는다.
+ *
+ * 흐리게(opacity)만 쓰지 않고 왼쪽 띠를 함께 두는 이유: 흐림은 스크롤 중에 잘 안 보이고,
+ * 색만으로 상태를 알리면 색을 구분하기 어려운 사람에게는 아무 신호도 아니다.
+ * 띠는 위치·굵기라는 다른 축을 하나 더 준다. */
+.card.draft-done {
+  opacity: .62;
+  border-left: 4px solid var(--border);
+  background: #fafafa;
+}
+
 /* ── 모바일 보정 ──────────────────────────────────────────────────────
  *
  * 이 제품이 내건 약속은 "매일 조금씩"이고, 매일 하는 행동은 폰에서 일어난다.
