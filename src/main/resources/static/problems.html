@@ -10,7 +10,14 @@
 <header id="nav"></header>
 
 <main class="container problem-list">
-  <h1>문제</h1>
+  <!-- 자유 퀴즈로 가는 입구(2026-08-29 메뉴 개편). 예전에는 상단 메뉴에 "자유 퀴즈"가
+       따로 있었는데, 이 화면과 하는 일이 같아서(둘 다 풀 것을 고른다) 이름만으로는 어디로
+       들어가야 하는지 안 갈렸다. 여기로 옮기니 관계가 분명해진다 —
+       <목록에서 하나 고르기>가 기본이고, <아무거나 열 문제>는 그 옆의 다른 길이다. -->
+  <div class="page-head">
+    <h1>문제</h1>
+    <a class="btn btn-outline" href="/quiz.html">무작위로 10문제 →</a>
+  </div>
   <div id="message"></div>
 
   <div id="ui" hidden>

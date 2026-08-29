@@ -3,100 +3,152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>csquiz — CS 퀴즈로 면접 준비</title>
+<title>오늘 — csquiz</title>
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <header id="nav"></header>
 
 <main class="container">
-  <!-- v3(UX 1단계 개편): 홈의 대표 버튼은 하나 — "오늘의 퀴즈"다.
-       v2는 hero(자유 퀴즈)와 카드(오늘의 퀴즈)가 대표 자리를 두고 충돌했는데,
-       처음 온 사람은 큰 버튼부터 누르므로 습관 고리의 입구(docs/12)가 뒷전이 됐다.
-       나머지 메뉴는 "언제 쓰는지"(상황) 기준의 섹션으로 묶어 위계를 만든다. -->
-  <section class="hero">
+  <!-- ═══ 비로그인: 처음 온 사람에게는 여전히 히어로가 맞다 ═══
+       무엇을 하는 곳인지 모르는 사람에게 "오늘 할 일"을 보여 줄 수는 없다.
+       로그인하면 이 자리가 통째로 오늘 화면으로 바뀐다. -->
+  <section class="hero" id="intro" hidden>
     <h1>CS 면접, <span class="accent">매일 조금씩</span></h1>
-    <p>매일 나에게 맞춘 10문제 — 틀린 건 잊어버릴 때쯤 다시 만나요.<br>
-      네트워크 · 운영체제 · 데이터베이스 · 자료구조 등 10개 분야</p>
-    <!-- 대표 버튼: 비로그인은 가입 유도, 로그인은 오늘의 퀴즈 상태(미시작/진행/완료)를 그대로 반영.
-         JS가 채우기 전에도 화면이 비지 않게 기본값(가입 유도)을 정적으로 깔아 둔다. -->
-    <div id="heroCta">
+    <p>매일 나에게 맞춘 10문제 — 틀린 건 잊어버릴 때쯤 다시 만나요.</p>
+    <div>
       <a href="/signup.html" class="btn btn-lg">무료로 시작하기 🚀</a>
       <div class="note">가입하면 매일 아침 "오늘의 퀴즈"가 준비돼요 ·
         <a href="/quiz.html">가입 없이 둘러보기</a></div>
     </div>
   </section>
 
-  <!-- 카드는 "무엇인지"가 아니라 "언제 누르는지"를 설명한다(상황형 설명).
-       처음 온 사람의 머릿속 질문("더 풀고 싶다", "개념부터 보고 싶다")에 맞춘 섹션 구분. -->
-  <div class="section-label">더 하고 싶다면</div>
-  <section class="quick-grid">
-    <a class="quick-card" href="/quiz.html">
-      <div class="icon">✍️</div>
-      <h3>자유 퀴즈</h3>
-      <p>분야·난이도를 골라 원하는 만큼 더 풀고 싶을 때</p>
-    </a>
-    <a class="quick-card" href="/review.html" id="reviewCard">
-      <div class="icon">📅</div>
-      <h3>복습<span id="reviewCount"></span></h3>
-      <p>잊을 때가 된 문제만 골라 다시 보고 싶을 때</p>
-    </a>
-    <a class="quick-card" href="/wrong-answers.html">
-      <div class="icon">📕</div>
-      <h3>오답노트</h3>
-      <p>내가 뭘 틀렸고 뭐라고 답했는지 훑어보고 싶을 때</p>
-    </a>
-  </section>
+  <!-- ═══ 로그인: 오늘 할 일 ═══ -->
+  <section id="today" hidden>
+    <h1>오늘</h1>
+    <div id="tasks"></div>
+    <div class="stat-row" id="stats"></div>
 
-  <div class="section-label">개념부터 보고 싶다면</div>
-  <section class="quick-grid">
-    <a class="quick-card" href="/documents.html">
-      <div class="icon">📚</div>
-      <h3>개념 문서</h3>
-      <p>문제보다 개념 정리를 먼저 읽고 나서 풀고 싶을 때</p>
-    </a>
+    <div class="section-label">더 하고 싶다면</div>
+    <section class="quick-grid">
+      <a class="quick-card" href="/problems.html">
+        <div class="icon">🗂️</div>
+        <h3>문제 고르기</h3>
+        <p>안 푼 것·틀린 것을 걸러 하나씩 고르고 싶을 때</p>
+      </a>
+      <a class="quick-card" href="/quiz.html">
+        <div class="icon">🎲</div>
+        <h3>무작위 10문제</h3>
+        <p>고르기도 귀찮고 그냥 풀고 싶을 때</p>
+      </a>
+      <a class="quick-card" href="/documents.html">
+        <div class="icon">📚</div>
+        <h3>개념 문서</h3>
+        <p>문제보다 개념 정리를 먼저 읽고 싶을 때</p>
+      </a>
+    </section>
   </section>
 </main>
 
 <script src="/js/api.js"></script>
 <script>
-/* 홈 화면 v3 — 카드는 전부 정적으로 깔아 두고(처음 와도 전체 메뉴가 보이게),
- * 로그인 상태면 두 곳만 서버 데이터로 "업그레이드"한다:
- *   ① heroCta: 가입 유도 → 오늘의 퀴즈 상태 버튼(미시작/진행 중/완료 + 스트릭).
- *      홈 방문이 곧 GET /api/me/daily-quiz라서 그날 첫 방문이 세트를 만든다(지연 생성, docs/12).
- *   ② 복습 카드: 오늘 due 개수를 제목에 붙이고 주황 강조 — 카드를 새로 끼워 넣던
- *      v2 방식 대신 제자리 강조로 바꿔 카드 배치가 상태에 따라 출렁이지 않게 했다.
- * 실패는 각각 조용히 무시 — 홈은 동적 데이터 없이도 완전한 화면이어야 한다. */
-renderNav("home");
+/* 첫 화면 — 2026-08-29에 "홈"에서 "오늘"로 바꿨다.
+ *
+ * [왜 바꿨나]
+ * 예전 홈은 큰 문구 + 시작 버튼 + 바로가기 카드였다. 처음 온 사람에게는 친절하지만
+ * <매일 오는 사람에게는 매일 같은 광고>다. 이 앱은 1인용이고 약속이 "매일 조금씩"이라
+ * 첫 화면이 답해야 하는 질문은 "이게 뭐 하는 곳인가"가 아니라 <오늘 뭐부터 하지>다.
+ *
+ * [할 일이 없으면 조용해진다]
+ * 오늘 것을 다 했으면 줄이 하나도 안 뜨고 "오늘 몫은 끝났습니다" 한 줄만 남는다.
+ * 화면이 비는 것 자체가 정보다 — 뭔가 늘 떠 있으면 그게 할 일인지 장식인지 구별이 안 된다.
+ *
+ * [필요한 데이터는 이미 다 있었다]
+ * 진행률은 오늘의 퀴즈 API, 복습 대기·이번 주·정답률은 문제 목록 화면을 만들며 붙인
+ * study-summary가 그대로 준다. 새로 만든 서버 코드는 없다.
+ *
+ * [실패해도 화면은 남는다]
+ * 둘 중 하나가 실패해도 나머지는 그린다. 첫 화면이 통째로 비면 앱이 죽은 것처럼 보인다. */
+renderNav("today");
 
-(async () => {
-  if (!isLoggedIn()) return;
+if (!isLoggedIn()) {
+  document.getElementById("intro").hidden = false;
+} else {
+  document.getElementById("today").hidden = false;
+  loadToday();
+  loadStats();
+}
 
-  // ① 대표 버튼 업그레이드 — 오늘의 퀴즈 3상태
+/**
+ * 오늘 할 일 줄 — 있는 것만 그린다.
+ *
+ * <p>순서는 <b>급한 것부터</b>다: 복습은 "잊을 때가 됐다"는 시한이 붙은 일이고,
+ * 데일리는 오늘 안에 하면 되는 일이다. 둘 다 없으면 끝났다는 한 줄만 남는다.
+ *
+ * <p>이 화면을 여는 것이 곧 {@code GET /api/me/daily-quiz}라, 그날 첫 방문이 세트를
+ * 만든다(지연 생성, docs/12). 예전 홈과 같은 동작이다.
+ */
+async function loadToday() {
+  const box = document.getElementById("tasks");
+  const rows = [];
+
+  // ① 복습 — 시한이 붙은 일이라 맨 위
+  try {
+    const due = await api("/api/me/reviews/today?size=1");   // 개수만 필요
+    if (due.totalElements > 0) {
+      rows.push(`<a class="task due" href="/review.html">
+          <span class="what">복습 ${due.totalElements}문제가 오늘 차례입니다</span>
+          <span class="go">복습하러 가기 →</span></a>`);
+    }
+  } catch (e) { /* 조용히 넘어간다 — 아래 데일리 줄은 그려야 한다 */ }
+
+  // ② 오늘의 퀴즈 — 세 상태
   try {
     const d = await api("/api/me/daily-quiz");
     const { total, solved } = d.progress;
-    let label;
-    if (d.completed) label = "오늘의 퀴즈 완료 ✅ 결과 보기";
-    else if (solved === 0) label = "오늘의 퀴즈 시작하기 🎯";
-    else label = `오늘의 퀴즈 이어서 풀기 (${solved}/${total}) →`;
-    document.getElementById("heroCta").innerHTML =
-      `<a href="/daily.html" class="btn btn-lg">${label}</a>`;
+    if (!d.completed) {
+      rows.push(`<a class="task" href="/daily.html">
+          <span class="what">오늘의 퀴즈 ${solved > 0 ? `· ${solved} / ${total}` : `· ${total}문제`}</span>
+          <span class="go">${solved > 0 ? "이어서 풀기" : "시작하기"} →</span></a>`);
+    }
   } catch (e) {
-    // 세트 조회 실패 시에도 로그인 사용자의 대표 버튼은 데일리 입구를 유지한다
-    document.getElementById("heroCta").innerHTML =
-      `<a href="/daily.html" class="btn btn-lg">오늘의 퀴즈 🎯</a>`;
+    // 세트를 못 불러와도 입구는 남긴다 — 이 앱에서 매일 하는 행동이라 링크가 사라지면 안 된다.
+    rows.push(`<a class="task" href="/daily.html">
+        <span class="what">오늘의 퀴즈</span><span class="go">가기 →</span></a>`);
   }
 
-  // ② 복습 카드 업그레이드 — 할 일이 있을 때만 개수 + 주황 강조
+  box.innerHTML = rows.length
+    ? rows.join("")
+    : `<div class="task done">오늘 몫은 끝났습니다 · 더 풀고 싶으면 아래에서 골라 보세요</div>`;
+}
+
+/**
+ * 통계 세 칸 — 문제 목록 화면과 <같은 API·같은 규칙>을 쓴다.
+ *
+ * <p>정답률이 null이면 "0%"로 채우지 않는다. 0%는 "다 틀렸다"는 뜻이라 아직 시작도 안 한
+ * 사람에게 정반대 신호를 준다(대시보드·문제 목록에서 이미 정한 규칙).
+ *
+ * <p>"이번 주"가 스트릭 자리를 대신한다. 연속 일수는 하루만 쉬어도 0이 되어, 주 3회 페이스를
+ * 지키는 사람에게 매주 실패를 알렸다(docs/12의 제거 절).
+ */
+async function loadStats() {
+  let s;
   try {
-    const data = await api("/api/me/reviews/today?size=1"); // 개수만 필요 — 본문 최소화
-    if (data.totalElements > 0) {
-      document.getElementById("reviewCount").textContent = ` · 오늘 ${data.totalElements}개`;
-      document.getElementById("reviewCard").classList.add("due");
-    }
-  } catch (e) { /* 배지 실패는 무시 */ }
-})();
+    s = (await api("/api/me/study-summary")).stats;
+  } catch (e) {
+    return;   // 통계는 부가 정보다 — 못 불러오면 자리를 비운다
+  }
+  const cards = [
+    [String(s.solvedTotal), "푼 문제"],
+    [s.correctRate === null ? null : s.correctRate + "%", "정답률"],
+    [String(s.solvedThisWeek), "이번 주"],
+  ];
+  document.getElementById("stats").innerHTML = cards.map(([v, label]) => `
+    <div class="stat">
+      <div class="num${v === null ? " none" : ""}">${v === null ? "아직 기록 없음" : escapeHtml(v)}</div>
+      <div class="label">${label}</div>
+    </div>`).join("");
+}
 </script>
 </body>
 </html>

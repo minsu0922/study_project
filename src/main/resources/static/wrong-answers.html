@@ -10,10 +10,20 @@
 <header id="nav"></header>
 
 <main class="container">
-  <h1>오답노트</h1>
+  <h1>복습</h1>
+    <!-- 구역 탭 — 복습과 오답노트는 <한 구역>이다(2026-08-29 메뉴 개편).
+         둘 다 "틀린 문제를 다시 보는" 자리인데 상단 메뉴에 나란히 있어서, 어느 쪽을
+         눌러야 하는지가 이름만 봐서는 안 갈렸다. 복습 화면이 아예 "해설을 다시 읽고
+         싶으면 → 오답노트"라고 안내하고 있었다 — 화면이 스스로 반쪽이라고 말한 셈이다.
+         메뉴에서는 하나로 묶고, 오가는 것은 여기서 한다. -->
+    <div class="tabs">
+      <a class="tab-btn " href="/review.html">복습 일정</a>
+      <a class="tab-btn active" href="/wrong-answers.html">오답노트</a>
+    </div>
+
   <p class="meta">틀린 적 있는 문제를 문제당 1건(가장 최근에 틀린 답 기준)으로 모아 보여줍니다.
-    틀린 문제는 <a href="/review.html">복습</a>에서 1→3→7→14→30일 간격으로 다시 나와요 —
-    각 카드의 <span class="badge orange" style="margin:0">N단계</span> 배지가 지금 어디까지 왔는지예요.</p>
+    각 카드의 <span class="badge orange" style="margin:0">N단계</span> 배지가 복습 사다리에서
+    지금 어디까지 왔는지예요 — 일정은 <a href="/review.html">복습 일정</a> 탭에서 봅니다.</p>
 
   <div class="filters">
     <div class="field">
@@ -37,7 +47,7 @@
 /* 오답노트 페이지 — GET /api/me/wrong-answers (로그인 필수).
  * 페이지 진입 시점에 로그인 여부를 확인해 미리 로그인으로 보낸다.
  * (API를 호출해 401을 받고 나서야 알려주는 것보다 빠르고 친절) */
-renderNav("wrong");
+renderNav("review");
 
 if (!isLoggedIn()) {
   // 로그인 후 다시 돌아올 수 있게 안내만 하고 자동 이동은 하지 않는다
