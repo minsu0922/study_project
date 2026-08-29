@@ -51,11 +51,22 @@
   --correct-bg: #f0fdf4;
   --wrong-bg: #fef2f2;
 
-  /* 그림자 2단계 — 평상시엔 옅게, 마우스를 올리면 살짝 떠오르게(카드가 "누를 수 있는 것"처럼 보임) */
-  --shadow: 0 1px 3px rgba(17, 24, 39, .06), 0 1px 2px rgba(17, 24, 39, .04);
-  --shadow-lift: 0 8px 24px rgba(17, 24, 39, .10);
+  /* 그림자를 걷어냈다(2026-08-29 개편 · C안).
+   *
+   * 예전에는 카드마다 옅은 그림자를 깔고 hover에 떠오르게 했다. 카드 하나를 볼 때는
+   * 괜찮은데, 이 앱의 화면은 대부분 <목록>이다. 줄마다 떠 있으면 눈이 줄 단위로 멈춰
+   * 훑기가 안 된다. 깊이 대신 1px 선과 여백으로 나눈다.
+   *
+   * --overlay만 남긴다. 이건 카드가 아니라 <진짜로 떠 있는 것>(툴팁)에 쓴다 —
+   * 그 자리에서는 그림자가 장식이 아니라 "이건 페이지 위에 얹힌 것"이라는 정보다. */
+  --overlay-shadow: 0 8px 24px rgba(17, 24, 39, .10);
 
-  --radius: 14px;                /* 카드 공통 둥글기 */
+  /* 모서리 14 → 8px. 14px는 카드 하나를 크게 보여 줄 때의 값이고, 목록의 줄이나
+     작은 칩에 쓰면 둥근 티가 나 밀도가 떨어진다. 8px은 둘 다 견딘다.
+     눈금은 둘뿐이다 — 손가락으로 누르는 큰 표적(보기 버튼·시작하기)만 12px를 쓴다.
+     크기마다 다른 값을 주면 "왜 이건 10이고 저건 12인가"를 매번 정하게 된다. */
+  --radius: 8px;
+  --radius-lg: 12px;
 }
 
 * { box-sizing: border-box; }
@@ -129,14 +140,15 @@ h1 { font-size: 1.55rem; margin: 8px 0 18px; letter-spacing: -.02em; }
   border-radius: var(--radius);
   padding: 18px 22px;
   margin-bottom: 14px;
-  box-shadow: var(--shadow);
 }
 .card h3 { margin: 0 0 6px; font-size: 1.05rem; }
 .card a { color: var(--text); text-decoration: none; }
 .card a:hover { color: var(--primary); }
-/* 목록에서 "클릭할 수 있는 카드"는 hover 시 살짝 떠오르게 — 누를 수 있다는 신호 */
-.card.clickable { transition: box-shadow .15s, transform .15s; cursor: pointer; }
-.card.clickable:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px); }
+/* 클릭할 수 있는 카드 — 예전에는 hover에 떠올랐다(그림자 + translateY).
+ * 그림자를 걷으면서 신호를 <테두리와 배경>으로 옮겼다. 움직임을 뺀 이유가 하나 더 있다:
+ * 목록을 훑으며 마우스가 지나가면 줄들이 차례로 들썩여 시선이 따라 흔들린다. */
+.card.clickable { transition: border-color .12s, background .12s; cursor: pointer; }
+.card.clickable:hover { border-color: var(--primary); background: var(--primary-soft); }
 
 /* 도메인·난이도 등 작은 라벨 */
 .badge {
@@ -180,7 +192,7 @@ h1 { font-size: 1.55rem; margin: 8px 0 18px; letter-spacing: -.02em; }
   background: var(--text); color: #fff;
   font-size: .78rem; line-height: 1.5;
   padding: 6px 10px; border-radius: 6px;
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--overlay-shadow);   /* 진짜로 떠 있는 것 — 남기는 유일한 그림자 */
 }
 
 /* ── 폼(로그인/회원가입/필터) ── */
@@ -188,7 +200,7 @@ h1 { font-size: 1.55rem; margin: 8px 0 18px; letter-spacing: -.02em; }
 .field label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
 input[type=text], input[type=email], input[type=password], select, textarea {
   width: 100%; padding: 10px 12px;
-  border: 1px solid var(--border); border-radius: 10px;
+  border: 1px solid var(--border); border-radius: var(--radius);
   font-size: .95rem; background: var(--card); font-family: inherit;
 }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
@@ -198,7 +210,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); o
 
 button, .btn {
   background: var(--primary); color: #fff;
-  border: none; border-radius: 10px;
+  border: none; border-radius: var(--radius);
   padding: 10px 20px; font-size: .95rem; font-weight: 600;
   cursor: pointer; text-decoration: none; display: inline-block;
   font-family: inherit;
@@ -217,15 +229,15 @@ button:active, .btn:active { transform: scale(.98); }   /* 눌리는 느낌 */
 button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .btn-outline { background: var(--card); color: var(--primary); border: 1px solid var(--primary); }
 .btn-outline:hover { background: var(--primary-soft); }
-.btn-lg { padding: 14px 30px; font-size: 1.05rem; border-radius: 12px; }  /* 시작하기 등 핵심 동작 */
+.btn-lg { padding: 14px 30px; font-size: 1.05rem; border-radius: var(--radius-lg); }  /* 시작하기 등 핵심 동작 */
 
 /* ── 알림/결과 박스 ── */
-.alert { border-radius: 10px; padding: 11px 14px; margin: 12px 0; font-size: .9rem; }
+.alert { border-radius: var(--radius); padding: 11px 14px; margin: 12px 0; font-size: .9rem; }
 .alert.error { background: var(--wrong-bg); color: var(--wrong); }
 .alert.info { background: var(--primary-soft); color: var(--primary); }
 
 /* (구)채점 결과 박스 — 오답노트 등에서 계속 사용 */
-.result { border-radius: 10px; padding: 12px 16px; margin-top: 12px; font-size: .92rem; }
+.result { border-radius: var(--radius); padding: 12px 16px; margin-top: 12px; font-size: .92rem; }
 .result.correct { background: var(--correct-bg); border: 1px solid var(--correct); }
 .result.wrong { background: var(--wrong-bg); border: 1px solid var(--wrong); }
 .result .verdict { font-weight: 700; }
@@ -264,7 +276,7 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .opt {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
   background: var(--card); color: var(--text);
-  border: 2px solid var(--border); border-radius: 12px;
+  border: 2px solid var(--border); border-radius: var(--radius-lg);
   padding: 13px 16px; margin-bottom: 10px;
   font-size: .97rem; font-weight: 500; cursor: pointer;
   transition: border-color .12s, background .12s;
@@ -305,7 +317,7 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .ox-row .opt { justify-content: center; font-size: 1.5rem; font-weight: 800; padding: 20px 0; }
 
 /* 채점 피드백 박스(플레이어 안) */
-.feedback { border-radius: 12px; padding: 14px 18px; margin-top: 16px; font-size: .93rem; }
+.feedback { border-radius: var(--radius-lg); padding: 14px 18px; margin-top: 16px; font-size: .93rem; }
 .feedback.correct { background: var(--correct-bg); border: 1px solid #bbf7d0; }
 .feedback.wrong { background: var(--wrong-bg); border: 1px solid #fecaca; }
 .feedback .verdict { font-weight: 800; font-size: 1.02rem; }
@@ -402,10 +414,9 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
   display: block; text-decoration: none; color: var(--text);
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 22px;
-  box-shadow: var(--shadow);
-  transition: box-shadow .15s, transform .15s;
+  transition: border-color .12s, background .12s;
 }
-.quick-card:hover { box-shadow: var(--shadow-lift); transform: translateY(-3px); }
+.quick-card:hover { border-color: var(--primary); background: var(--primary-soft); }
 .quick-card .icon { font-size: 1.7rem; }
 .quick-card h3 { margin: 8px 0 4px; font-size: 1.02rem; }
 .quick-card p { margin: 0; color: var(--muted); font-size: .84rem; }
@@ -425,7 +436,7 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .hero .note { color: var(--muted); font-size: .84rem; margin-top: 12px; }
 
 /* ── 문서 본문(마크다운 렌더링 영역) ── */
-.doc-body { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px 30px; box-shadow: var(--shadow); }
+.doc-body { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px 30px; }
 .doc-body pre { background: #f3f4f6; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: .85rem; }
 .doc-body code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
 .doc-body pre code { background: none; padding: 0; }   /* 코드블록 안에서 배경이 두 겹으로 깔리는 것 방지 */
@@ -494,7 +505,7 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
 .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-.stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow); }
+.stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
 .stat .num { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
 .stat .label { color: var(--muted); font-size: .85rem; }
 
@@ -585,7 +596,7 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 .todo-tile {
   flex: 1 1 160px; min-width: 150px;
   padding: 14px 16px;
-  border: 1px solid var(--border); border-radius: 12px;
+  border: 1px solid var(--border); border-radius: var(--radius);
   background: #fff; text-decoration: none; color: inherit;
   display: block;
 }
@@ -713,7 +724,7 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   /* 제출/다음은 이 화면의 유일한 주 동작이다. 데스크톱에서는 오른쪽 아래 작은 버튼이지만,
      폰에서는 가로를 꽉 채워 엄지가 어디에 있든 닿게 한다. */
   .player-actions { margin-top: 16px; }
-  .player-actions button { flex: 1; padding: 15px 20px; font-size: 1.02rem; border-radius: 12px; }
+  .player-actions button { flex: 1; padding: 15px 20px; font-size: 1.02rem; border-radius: var(--radius-lg); }
 
   /* 관리 화면: 탭이 5개라 좁은 화면에서 두 줄이 된다. 글자·여백을 줄여 세 줄이 되는 것만 막는다 */
   .tab-btn { padding: 8px 12px; font-size: .85rem; }
