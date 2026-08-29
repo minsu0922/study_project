@@ -1,0 +1,131 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-09-30",
+  "generatedAt" : "2026-08-29T01:36:41.502642300Z",
+  "domain" : "SYSTEM_DESIGN",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5",
+  "documentSlug" : "cache-write-strategies-and-invalidation",
+  "problems" : [ {
+    "question" : "캐시에 넣은 값이 정해진 시간이 지나면 저절로 사라지게 만드는, 값의 수명을 뜻하는 용어의 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "캐시에 값을 넣을 때 함께 지정하는 수명이 TTL이다. 그 시간이 지나면 별도 조작 없이 값이 사라지므로, 무효화가 실패한 경우 낡은 값이 남는 최대 시간을 제한하는 안전망 역할도 한다. (문서의 '바탕이 되는 개념: 캐시' 절의 용어 목록을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "축출(eviction) — 캐시 공간이 모자랄 때 기존 값을 골라 버리는 일이다",
+      "correct" : false,
+      "rationale" : "공간이 모자랄 때 기존 값을 골라 버리는 일은 축출이며, 자동 만료와는 발동 조건이 다르다."
+    }, {
+      "text" : "TTL(time to live) — 캐시에 넣은 값이 살아 있는 시간으로, 지나면 자동으로 사라진다",
+      "correct" : true,
+      "rationale" : ""
+    }, {
+      "text" : "적중률(hit ratio) — 전체 조회 중 적중이 차지하는 비율이다",
+      "correct" : false,
+      "rationale" : "적중률은 전체 조회 중 적중이 차지하는 비율로, 값의 수명과는 관계가 없는 지표다."
+    }, {
+      "text" : "무효화(invalidation) — 캐시 키를 지워 다음 조회가 원본을 읽게 만드는 일이다",
+      "correct" : false,
+      "rationale" : "무효화는 특정 키를 사람이나 코드가 지우는 행위이고, 시간이 지나 저절로 사라지는 것과는 다르다."
+    } ],
+    "sourceQuote" : "- **TTL(time to live)** — 캐시에 넣은 값이 살아 있는 시간이다. 지나면 자동으로 사라진다.",
+    "title" : "캐시 값의 수명을 정하는 용어의 뜻",
+    "questionKind" : "JUDGMENT"
+  }, {
+    "question" : "Write-Through 쓰기 방식의 동작에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "Write-Through는 쓰기 요청 하나로 캐시와 원본 두 곳을 함께 기록하고, 둘 다 성공해야 응답이 끝나는 쓰기 방식이다. 그래서 쓰기가 끝난 순간 캐시에 최신 값이 들어 있고 유실 위험이 없는 대신 쓰기 지연이 가장 길다. (문서의 '무엇인가' 절과 '쓰기 경로 세 가지' 표를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "캐시에만 기록하고 바로 응답한 뒤, 원본 반영은 나중에 모아서 한다",
+      "correct" : false,
+      "rationale" : "캐시에만 쓰고 원본 반영을 미루는 것은 Write-Back의 동작이다."
+    }, {
+      "text" : "원본에만 기록하고 캐시는 지우거나 그대로 놔둔다",
+      "correct" : false,
+      "rationale" : "쓰기는 원본에만 하고 캐시는 건드리지 않는 것은 Write-Around의 동작이다."
+    }, {
+      "text" : "캐시에 쓰면 캐시가 원본까지 함께 쓰고, 둘 다 성공해야 응답한다",
+      "correct" : true,
+      "rationale" : ""
+    }, {
+      "text" : "미스가 나면 캐시 계층이 원본을 읽어 채운 뒤 애플리케이션에 돌려준다",
+      "correct" : false,
+      "rationale" : "미스가 났을 때 캐시 계층이 원본을 읽어 채우는 것은 Read-Through라는 읽기 방식이다."
+    } ],
+    "sourceQuote" : "- **Write-Through** — 애플리케이션이 캐시에 쓰면 캐시가 그 자리에서 원본까지 함께 쓰고, 둘 다 성공해야 응답하는 방식이다.",
+    "title" : "Write-Through의 쓰기 동작 정의",
+    "questionKind" : "JUDGMENT"
+  }, {
+    "question" : "캐시에 들어 있는 값이 원본과 달라져 낡아 버린 상태를 가리키는 용어는?",
+    "answer" : "",
+    "explanation" : "캐시에 값은 있지만 그 값이 원본과 달라져 낡아 버린 상태를 스테일이라 부른다. 정합성 창을 이야기할 때 '낡은 값이 보이는 최대 시간'을 재는 대상이 바로 이 상태다. (문서의 '무엇인가' 절 용어 정의를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "스테일(stale)",
+      "correct" : true,
+      "rationale" : ""
+    }, {
+      "text" : "캐시 미스(cache miss)",
+      "correct" : false,
+      "rationale" : "캐시 미스는 찾는 값이 캐시에 아예 없어 원본까지 다녀와야 하는 상황을 가리킨다."
+    }, {
+      "text" : "콜드 캐시(cold cache)",
+      "correct" : false,
+      "rationale" : "콜드 캐시는 캐시가 비어 모든 요청이 원본으로 흐르는 상태를 말한다."
+    }, {
+      "text" : "축출(eviction)",
+      "correct" : false,
+      "rationale" : "축출은 공간이 부족할 때 값을 버리는 일이지, 값이 원본과 달라진 상태를 뜻하지 않는다."
+    } ],
+    "sourceQuote" : "- **스테일(stale)** — 캐시의 값이 원본과 달라진 상태, 즉 낡은 값이다.",
+    "title" : "캐시 값이 원본과 달라진 상태의 명칭",
+    "questionKind" : "JUDGMENT"
+  }, {
+    "question" : "읽기 방식인 Cache-Aside(lazy loading)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "Cache-Aside는 애플리케이션 코드가 캐시를 직접 다루는 읽기 방식이다. 캐시에서 키를 찾아 적중하면 그대로 반환하고, 미스면 애플리케이션이 데이터베이스에서 읽어 TTL과 함께 캐시에 넣은 뒤 값을 반환한다. 캐시를 채우는 주체가 애플리케이션이라는 점이 핵심이다. (문서의 '읽기 경로부터 정한다: Cache-Aside와 Read-Through' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "애플리케이션은 캐시에만 물어보고, 미스는 캐시 계층이 원본을 읽어 채워 준다",
+      "correct" : false,
+      "rationale" : "캐시 계층이 미스를 스스로 처리해 원본을 읽어 채우는 것은 Read-Through의 특징이다."
+    }, {
+      "text" : "애플리케이션이 캐시를 먼저 보고, 미스면 원본에서 읽어 캐시에 직접 넣은 뒤 반환한다",
+      "correct" : true,
+      "rationale" : ""
+    }, {
+      "text" : "쓰기가 들어올 때 캐시와 원본에 함께 기록해 두어 다음 조회가 반드시 적중하게 한다",
+      "correct" : false,
+      "rationale" : "쓰기 시점에 캐시와 원본을 함께 기록하는 것은 Write-Through라는 쓰기 방식의 설명이다."
+    }, {
+      "text" : "TTL에 임의의 초를 더해 저장해 여러 키가 같은 시각에 만료되지 않게 한다",
+      "correct" : false,
+      "rationale" : "만료 시각을 흩어 동시 만료를 막는 것은 TTL 지터 기법이며 읽기 경로를 정하는 방식이 아니다."
+    } ],
+    "sourceQuote" : "**Cache-Aside(lazy loading)** 는 애플리케이션 코드가 캐시를 직접 다루는 방식이다.",
+    "title" : "Cache-Aside 읽기 방식의 동작 정의",
+    "questionKind" : "JUDGMENT"
+  }, {
+    "question" : "캐시 공간이 부족할 때, 가장 오랫동안 쓰이지 않은 값부터 버리는 축출 정책의 이름은?",
+    "answer" : "",
+    "explanation" : "축출 정책 중 가장 오랫동안 쓰이지 않은 값을 먼저 버리는 것이 LRU다. 최근에 참조된 값일수록 다시 참조될 가능성이 높다는 가정을 이용해, 공간이 부족할 때 버릴 후보를 마지막 사용 시점으로 고른다. (문서의 '자리를 비우는 방법' 절의 축출 정책 표를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "LFU(least frequently used)",
+      "correct" : false,
+      "rationale" : "참조 횟수가 가장 적은 것부터 버리는 기준은 LFU이며, 최근 사용 시점을 보지 않는다."
+    }, {
+      "text" : "LRU(least recently used)",
+      "correct" : true,
+      "rationale" : ""
+    }, {
+      "text" : "FIFO(first in first out)",
+      "correct" : false,
+      "rationale" : "FIFO는 들어온 순서만 보고 먼저 들어온 것부터 버리므로, 최근에 자주 쓰인 값도 오래 들어와 있으면 버려진다."
+    }, {
+      "text" : "TTL 만료",
+      "correct" : false,
+      "rationale" : "TTL 만료는 정해진 시간이 지난 값을 버리는 것으로, 공간 부족과 무관하게 동작한다."
+    } ],
+    "sourceQuote" : "| LRU(least recently used) | 가장 오랫동안 안 쓰인 것부터 버린다 |",
+    "title" : "마지막 사용 시점을 기준으로 버리는 축출 정책",
+    "questionKind" : "JUDGMENT"
+  } ]
+}

@@ -4,7 +4,9 @@
     "id" : 18,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "오버로딩과 오버라이딩 — 컴파일 시점과 실행 시점에 정해지는 것",
-    "memo" : "정보처리기사 대비"
+    "memo" : "정보처리기사 대비",
+    "lastUsedAt" : "2026-09-20",
+    "usedCount" : 1
   }, {
     "id" : 20,
     "domain" : "OS",
@@ -123,170 +125,212 @@
     "lastUsedAt" : "2026-08-23",
     "usedCount" : 1
   }, {
+    "id" : 28,
     "domain" : "DATABASE",
     "topic" : "기본키를 무엇으로 잡는가 — 자연키와 대리키, 나중에 바꾸기 어려워지는 자리",
     "memo" : "DB 1단계. 정의 나열이 되지 않게, 주민번호처럼 '바뀌지 않는다고 믿었던 값'을 키로 잡았다가 겪는 장면에서 출발할 것."
   }, {
+    "id" : 29,
     "domain" : "DATABASE",
     "topic" : "SELECT의 실행 순서 — WHERE와 HAVING이 갈리는 지점",
     "memo" : "DB 1단계. 문법 소개가 아니라 '집계 전이냐 후냐' 한 축으로 설명할 것."
   }, {
+    "id" : 30,
     "domain" : "DATABASE",
     "topic" : "JOIN의 종류 — 어느 쪽 행이 남는지가 결과 건수를 바꾸는 자리",
     "memo" : "DB 1단계. 벤 다이어그램 나열 대신 'LEFT를 INNER로 바꿨더니 건수가 줄었다'는 장면에서 출발할 것."
   }, {
+    "id" : 31,
     "domain" : "DATABASE",
     "topic" : "B+트리 인덱스의 생김새 — 왜 해시가 아니라 트리인가",
     "memo" : "DB 2단계. 자료구조 설명으로 흐르지 않게, 범위 조회와 정렬이 함께 딸려 온다는 점을 축으로 잡을 것."
   }, {
+    "id" : 32,
     "domain" : "DATABASE",
     "topic" : "인덱스를 못 타는 조건 — 함수 적용·형 변환·앞자리 와일드카드",
     "memo" : "DB 2단계. docs/08의 실측(50만 건에서 1.8초 → 16ms)과 이어지는 자리. '인덱스를 만들었는데 왜 그대로인가'로 시작할 것."
   }, {
+    "id" : 33,
     "domain" : "DATABASE",
     "topic" : "커버링 인덱스 — 테이블에 가지 않고 끝내는 조회",
     "memo" : "DB 2단계. 실행 계획의 Using index가 무엇을 뜻하는지까지 갈 것."
   }, {
+    "id" : 34,
     "domain" : "DATABASE",
     "topic" : "카디널리티와 선택도 — 인덱스가 있는데도 풀스캔이 빠른 경우",
     "memo" : "DB 2단계. '인덱스는 항상 좋다'는 오해를 깨는 자리. 값 종류가 적은 컬럼을 예로 들 것."
   }, {
+    "id" : 35,
     "domain" : "DATABASE",
     "topic" : "실행 계획 읽기 — type·key·rows·Extra에서 무엇을 먼저 보는가",
     "memo" : "DB 2단계. 컬럼 사전이 되지 않게, 느린 쿼리 하나를 놓고 어디를 먼저 보는지 순서로 쓸 것."
   }, {
+    "id" : 36,
     "domain" : "DATABASE",
     "topic" : "락의 종류 — 공유·배타, 행·갭·넥스트키가 갈리는 기준",
     "memo" : "DB 3단계. 표로 나열하지 말고 '어디까지 잠기는가'를 한 축으로 꿸 것."
   }, {
+    "id" : 37,
     "domain" : "DATABASE",
     "topic" : "MVCC — 읽기가 락을 걸지 않는 구조와 언두 로그가 치르는 값",
     "memo" : "DB 3단계. 락 기반과 혼동하는 것이 가장 흔한 오답이라, 그 경계를 분명히 할 것."
   }, {
+    "id" : 38,
     "domain" : "DATABASE",
     "topic" : "데드락 — 인덱스가 없어서 갭 락이 넓어지는 자리",
     "memo" : "DB 3단계. OS의 데드락 네 조건(범위 #25)과 겹치지 않게, DB에서만 나오는 원인으로 좁힐 것."
   }, {
+    "id" : 39,
     "domain" : "DATABASE",
     "topic" : "낙관적 락과 비관적 락 — 버전 컬럼이 실패를 뒤로 미루는 방식",
     "memo" : "DB 3단계. 어느 쪽이 낫다가 아니라 '충돌이 잦은가'로 갈린다는 축으로 쓸 것."
   }, {
+    "id" : 40,
     "domain" : "DATABASE",
     "topic" : "커넥션 풀과 트랜잭션 경계 — 풀을 물고 외부 호출을 기다릴 때",
     "memo" : "DB 4단계. HikariCP 고갈(범위 #4)과 겹치지 않게, 트랜잭션을 어디서 끊을지에 초점을 둘 것."
   }, {
+    "id" : 41,
     "domain" : "DATABASE",
     "topic" : "복제 지연 — 쓰고 바로 읽었는데 없는 이유",
     "memo" : "DB 4단계. 읽기 분산을 켠 뒤 생기는 장면으로. '쓴 직후 읽기'를 어떻게 다루는지까지 갈 것."
   }, {
+    "id" : 42,
     "domain" : "DATABASE",
     "topic" : "파티셔닝과 샤딩 — 나누는 순간 포기하는 것(조인·유니크·트랜잭션)",
     "memo" : "DB 4단계. 장점 나열이 되지 않게, 나눈 뒤 못 하게 되는 일을 중심에 둘 것."
   }, {
+    "id" : 43,
     "domain" : "DATABASE",
     "topic" : "페이지네이션 — OFFSET이 뒤로 갈수록 느려지는 이유와 커서 방식",
     "memo" : "DB 4단계. 이 저장소의 목록 API가 Pageable을 쓰고 있어 실물과 바로 이어지는 주제다."
   }, {
+    "id" : 44,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "equals와 hashCode — 둘 중 하나만 재정의했을 때 컬렉션에서 벌어지는 일",
     "memo" : "자바 1단계. 규약 암기가 되지 않게, HashSet에 넣은 객체를 다시 못 찾는 장면에서 출발할 것."
   }, {
+    "id" : 45,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "불변 객체와 방어적 복사 — 필드를 그대로 돌려줬을 때 새는 것",
     "memo" : "자바 1단계. '불변이 좋다'가 아니라, getter로 넘긴 리스트를 바깥에서 고쳐 버리는 장면을 축으로."
   }, {
+    "id" : 46,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "제네릭과 타입 소거 — 실행 시점에 사라지는 것과 그래서 못 하는 일",
     "memo" : "자바 1단계. 문법 소개가 아니라 'new T[]가 왜 안 되는가'처럼 막히는 자리로 각도를 잡을 것."
   }, {
+    "id" : 47,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "스택과 힙 — OutOfMemory와 StackOverflow가 갈리는 자리",
     "memo" : "자바 2단계. 메모리 구조 그림 나열이 되지 않게, 두 오류가 각각 어떤 코드에서 나는지로 꿸 것."
   }, {
+    "id" : 48,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "Stop-the-world — GC 로그의 무엇을 보고 튜닝을 판단하는가",
     "memo" : "자바 2단계. 범위 #3(G1의 영역 분할)과 겹치지 않게, 로그를 읽고 판단하는 쪽에 초점을 둘 것."
   }, {
+    "id" : 49,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "클래스 로딩과 static 초기화 — 그 코드가 언제 실행되는가",
     "memo" : "자바 2단계. 순서를 외우게 하지 말고, static 블록이 늦게 돌아 값이 비어 있던 장면으로."
   }, {
+    "id" : 50,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "스레드 풀 — 코어·최대·큐 크기가 서로를 막는 자리",
     "memo" : "자바 3단계. 큐가 차기 전에는 최대 크기까지 늘지 않는다는 점이 핵심. 설정값 나열이 되지 않게 할 것."
   }, {
+    "id" : 51,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "ConcurrentHashMap과 CAS — 락 없이 갱신하는 방식과 그 한계",
     "memo" : "자바 3단계. 범위 #5(가시성과 원자성)와 겹치지 않게, 실패하면 다시 시도하는 구조 쪽으로."
   }, {
+    "id" : 52,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "ThreadLocal — 풀에서 재사용되는 스레드에 값이 남는 사고",
     "memo" : "자바 3단계. 요청마다 새 스레드일 것이라는 착각이 원인. 지우지 않으면 다음 요청이 남의 값을 본다."
   }, {
+    "id" : 53,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "컬렉션 선택 — ArrayList와 LinkedList가 실제로 갈리는 기준",
     "memo" : "자바 4단계. 복잡도 표 나열이 되지 않게, 실제로는 캐시 지역성 때문에 ArrayList가 이기는 경우까지."
   }, {
+    "id" : 54,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "Optional과 null — 어디까지 감싸고 어디서 풀 것인가",
     "memo" : "자바 4단계. '쓰면 좋다'가 아니라 필드·파라미터에 쓰면 왜 손해인지까지 갈 것."
   }, {
+    "id" : 55,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "스트림과 반복문 — 언제 느려지고 언제 읽기 쉬워지는가",
     "memo" : "자바 4단계. 취향 논쟁이 되지 않게, 디버깅과 조기 종료처럼 갈리는 지점으로 좁힐 것."
   }, {
+    "id" : 56,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "DI와 IoC — 생성자 주입을 쓰는 이유(순환 참조·불변·테스트)",
     "memo" : "스프링 1단계. 개념 소개가 되지 않게, 필드 주입으로는 못 하는 일 세 가지를 축으로 꿸 것."
   }, {
+    "id" : 57,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "빈 스코프와 생명주기 — 싱글턴 빈에 상태를 두면 벌어지는 일",
     "memo" : "스프링 1단계. 스코프 목록 나열 대신, 필드에 값을 담았다가 요청끼리 섞이는 장면에서 출발할 것."
   }, {
+    "id" : 58,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "컴포넌트 스캔 — 언제 @Configuration을 직접 써야 하는가",
     "memo" : "스프링 1단계. 남의 라이브러리 클래스처럼 @Component를 붙일 수 없는 경우가 핵심."
   }, {
+    "id" : 59,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "DispatcherServlet의 흐름 — 요청 하나가 지나가는 자리들",
     "memo" : "스프링 2단계. 구성요소 사전이 되지 않게, 404와 415가 각각 어디서 결정되는지로 꿸 것."
   }, {
+    "id" : 60,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "@RequestBody와 검증 — 어디서 걸러지고 어떤 예외가 나는가",
     "memo" : "스프링 2단계. 이 저장소가 공통 응답 봉투로 에러를 내려 주므로 실물과 이어진다."
   }, {
+    "id" : 61,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "전역 예외 처리 — @ControllerAdvice가 잡는 것과 못 잡는 것",
     "memo" : "스프링 2단계. 필터에서 난 예외는 지나쳐 버린다는 사각이 핵심. 요청 제한 429 버그가 그 자리였다."
   }, {
+    "id" : 62,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "필터와 인터셉터 — 어디서 갈리고 인증을 어느 쪽에 두는가",
     "memo" : "스프링 2단계. 서블릿 앞이냐 스프링 안이냐가 축. 이 저장소의 JWT 필터가 실물 예다."
   }, {
+    "id" : 63,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "@Transactional 전파 — 안쪽이 롤백될 때 바깥이 겪는 일",
     "memo" : "스프링 3단계. 전파 속성 목록 나열이 되지 않게, REQUIRES_NEW를 안 썼다가 같이 말려 들어가는 장면으로."
   }, {
+    "id" : 64,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "프록시 기반 AOP — 같은 클래스 안에서 부르면 안 먹는 이유",
     "memo" : "스프링 3단계. 이 저장소의 LlmDraftBulkApprover가 그 이유로 클래스를 갈라 놓았다. 실물 근거가 있는 주제다."
   }, {
+    "id" : 65,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "지연 로딩과 N+1 — 어디서 터지고 fetch join이 못 푸는 자리",
     "memo" : "스프링 3단계. docs/08에 N+1을 10방에서 2방으로 줄인 실측이 있다. 페이징과 함께 쓸 때의 제약까지 갈 것."
   }, {
+    "id" : 66,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "읽기 전용 트랜잭션 — 무엇이 실제로 달라지는가",
     "memo" : "스프링 3단계. '성능이 좋아진다'로 끝내지 말고 스냅샷을 안 뜨는 것과 플러시가 없다는 점을 짚을 것."
   }, {
+    "id" : 67,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "Spring Security 필터 체인 — 인증과 인가가 갈리는 지점",
     "memo" : "스프링 4단계. 이 저장소가 경로 규칙 한 곳에서 ADMIN을 잠그고 있어 실물과 이어진다."
   }, {
+    "id" : 68,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "@Cacheable — 프록시라서 안 먹는 자리와 키 설계",
     "memo" : "스프링 4단계. 자기 호출 문제는 AOP 범위와 겹치므로, 여기서는 키를 무엇으로 잡느냐에 무게를 둘 것."
   }, {
+    "id" : 69,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "설정 우선순위와 프로파일 — 운영에서 값이 안 바뀌는 이유",
     "memo" : "스프링 4단계. 환경변수가 properties를 이긴다는 순서가 핵심. 이 저장소도 운영 값을 환경변수로 주입한다."
