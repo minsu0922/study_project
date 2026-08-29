@@ -590,6 +590,77 @@ a.task:hover { border-color: var(--primary); background: var(--primary-soft); }
 a.task.due:hover { border-color: #b45309; background: var(--review-soft); }
 .task.done { color: var(--muted); font-size: .92rem; justify-content: center; }
 
+/* ── 첫 방문 안내 (index.html) ── 2026-08-29
+ *
+ * 기록이 하나도 없을 때만 뜨고, 첫 문제를 풀면 영영 안 보인다. 그 자리에 통계 세 칸이
+ * 들어선다 — 둘은 같은 자리를 나눠 쓰는 관계다.
+ *
+ * <b>왜 필요한가</b>: 통계는 "0 / 0 / 아직 기록 없음"으로 시작한다. 숫자로는 맞지만
+ * 처음 온 사람에게 세 개의 0은 <이 앱에 아무것도 없다>로 읽힌다. 실제로는 문제 76개와
+ * 문서 6편이 이미 있다. 그래서 첫날에는 "내가 쌓은 것"이 아니라 "여기 있는 것"을 센다. */
+.onboard {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 22px; margin-bottom: 20px;
+}
+.onboard .lead { font-size: 1.02rem; margin: 0 0 4px; }
+.onboard .sub { color: var(--muted); font-size: .86rem; margin: 0 0 14px; }
+.onboard .facts { display: flex; gap: 26px; flex-wrap: wrap; }
+.onboard .facts div { font-size: .84rem; color: var(--muted); }
+.onboard .facts b {
+  display: block; font-size: 1.35rem; color: var(--text); font-weight: 700;
+  font-variant-numeric: tabular-nums;   /* 숫자 폭을 고정 — 세 값이 세로로 안 흔들린다 */
+}
+
+/* ── 분야별 진척 줄 (index.html) ── 2026-08-29
+ *
+ * 문제 목록 화면의 사이드바(.pl-domain)와 <같은 데이터, 다른 목적>이다. 거기는 12개를
+ * 다 늘어놓는 필터고, 여기는 "다음에 뭘 할까"에 답하는 추천 3줄이다. 그래서 격자가
+ * 아니라 줄이고, 눌러 이동하는 링크다(필터 버튼이 아니다).
+ *
+ * 분모는 여기서도 안 쓴다 — 이유는 문제 목록 renderDomains()의 주석과 같다.
+ * 바는 "이 사람 안에서의 상대 비교"일 뿐이라, 전부 0인 첫날에는 빈 채로 남는다. */
+.dom-list {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 6px 18px;
+}
+.dom-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  font-size: .92rem; text-decoration: none; color: var(--text);
+}
+.dom-row:last-child { border-bottom: 0; }
+a.dom-row:hover .nm { color: var(--primary-dark); }
+.dom-row .nm { width: 132px; flex: none; }
+.dom-row .bar { flex: 1; height: 6px; background: var(--fill); border-radius: 999px; overflow: hidden; }
+.dom-row .bar i { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
+.dom-row .n { width: 52px; text-align: right; flex: none; color: var(--muted); font-size: .84rem; font-variant-numeric: tabular-nums; }
+/* 안내 한 줄 — 줄이 아니라 설명이라 이름 칸의 고정 폭을 쓰지 않는다 */
+.dom-row.note { color: var(--muted); font-size: .86rem; }
+@media (max-width: 560px) { .dom-row .nm { width: 100px; } .dom-row .bar { display: none; } }
+
+/* ── 최근 개념 문서 줄 (index.html) ──
+ *
+ * 이 앱에서 <저절로 늘어나는> 유일한 것이라 첫 화면에 둔다(4일에 한 편, 배치가 만든다).
+ * 제목이 길어 한 줄에 안 들어가므로 말줄임으로 자른다 — 두 줄로 흘리면 줄 높이가
+ * 제목마다 달라져 목록이 들쭉날쭉해진다. */
+.doc-line {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px; margin-bottom: 8px;
+  text-decoration: none; color: var(--text); font-size: .92rem;
+  transition: border-color .12s, background .12s;
+}
+.doc-line:hover { border-color: var(--primary); background: var(--primary-soft); }
+.doc-line .dm {
+  flex: none; font-size: .74rem; color: var(--primary-dark);
+  background: var(--primary-soft); padding: 3px 9px; border-radius: 999px;
+}
+.doc-line .ti { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-line .dt { flex: none; color: var(--muted); font-size: .78rem; }
+/* 오늘 올라온 것만 색을 준다 — 다 칠하면 "새것"이라는 뜻이 사라진다 */
+.doc-line.fresh .dt { color: var(--lv2-fg); font-weight: 600; }
+@media (max-width: 560px) { .doc-line .dm, .doc-line .dt { display: none; } }
+
 .table-wrap { overflow-x: auto; margin-bottom: 24px; }
 table.grid { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); font-size: .9rem; }
 table.grid th, table.grid td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }

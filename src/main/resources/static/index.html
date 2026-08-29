@@ -26,8 +26,19 @@
   <!-- ═══ 로그인: 오늘 할 일 ═══ -->
   <section id="today" hidden>
     <h1>오늘</h1>
+
+    <!-- 기록이 0일 때만 뜬다. 첫 문제를 풀면 이 자리를 통계 세 칸이 물려받는다. -->
+    <div class="onboard" id="onboard" hidden></div>
+
     <div id="tasks"></div>
     <div class="stat-row" id="stats"></div>
+
+    <!-- 라벨 문구가 상황에 따라 달라져 비워 둔다(비어 있는 분야가 있나 / 없나) -->
+    <div class="section-label" id="domLabel" hidden></div>
+    <div class="dom-list" id="domList" hidden></div>
+
+    <div class="section-label" id="docLabel" hidden>최근 개념 문서</div>
+    <div id="docList"></div>
 
     <div class="section-label">더 하고 싶다면</div>
     <section class="quick-grid">
@@ -76,7 +87,8 @@ if (!isLoggedIn()) {
 } else {
   document.getElementById("today").hidden = false;
   loadToday();
-  loadStats();
+  loadSummary();
+  loadRecentDocs();
 }
 
 /**
@@ -123,21 +135,40 @@ async function loadToday() {
 }
 
 /**
- * 통계 세 칸 — 문제 목록 화면과 <같은 API·같은 규칙>을 쓴다.
+ * 통계 세 칸 + 분야 진척 — 요청 <한 번>으로 둘 다 그린다.
+ *
+ * <p>study-summary는 예전부터 {@code stats}와 {@code domains}를 같이 주는데(문제 목록
+ * 화면을 만들며 붙였다) 이 화면은 stats만 꺼내 쓰고 분야 12개를 버리고 있었다. 새 API를
+ * 만들 필요 없이 이미 오는 것을 쓴다.
+ */
+async function loadSummary() {
+  let summary;
+  try {
+    summary = await api("/api/me/study-summary");
+  } catch (e) {
+    return;   // 통계는 부가 정보다 — 못 불러오면 자리를 비운다
+  }
+  const s = summary.stats;
+
+  // 기록이 하나도 없으면 통계 대신 안내를 띄운다. 자세한 이유는 style.css의 .onboard 주석.
+  // 통계 칸은 <숨긴다> — 비워만 두면 .stat-row의 아래 여백이 빈 줄로 남는다.
+  if (s.solvedTotal === 0) {
+    document.getElementById("stats").hidden = true;
+    renderOnboard(summary.domains.length);
+  } else {
+    renderStats(s);
+  }
+  renderDomains(summary.domains);
+}
+
+/** 통계 세 칸 — 문제 목록 화면과 <같은 API·같은 규칙>을 쓴다.
  *
  * <p>정답률이 null이면 "0%"로 채우지 않는다. 0%는 "다 틀렸다"는 뜻이라 아직 시작도 안 한
  * 사람에게 정반대 신호를 준다(대시보드·문제 목록에서 이미 정한 규칙).
  *
  * <p>"이번 주"가 스트릭 자리를 대신한다. 연속 일수는 하루만 쉬어도 0이 되어, 주 3회 페이스를
- * 지키는 사람에게 매주 실패를 알렸다(docs/12의 제거 절).
- */
-async function loadStats() {
-  let s;
-  try {
-    s = (await api("/api/me/study-summary")).stats;
-  } catch (e) {
-    return;   // 통계는 부가 정보다 — 못 불러오면 자리를 비운다
-  }
+ * 지키는 사람에게 매주 실패를 알렸다(docs/12의 제거 절). */
+function renderStats(s) {
   const cards = [
     [String(s.solvedTotal), "푼 문제"],
     [s.correctRate === null ? null : s.correctRate + "%", "정답률"],
@@ -148,6 +179,118 @@ async function loadStats() {
       <div class="num${v === null ? " none" : ""}">${v === null ? "아직 기록 없음" : escapeHtml(v)}</div>
       <div class="label">${label}</div>
     </div>`).join("");
+}
+
+/**
+ * 첫 방문 안내 — "내가 쌓은 것"이 아직 없으니 "여기 있는 것"을 센다.
+ *
+ * <p>문제 수와 문서 수는 목록 API의 {@code totalElements}를 빌린다({@code size=1}로 요청해
+ * 본문은 한 건만 받는다 — 필요한 건 개수뿐이다). 세는 것만을 위한 API를 새로 만들지 않는다.
+ *
+ * <p>둘 중 하나가 실패해도 안내는 띄운다 — 숫자가 없는 문장이 될 뿐, 첫 화면이 비는 것보다 낫다.
+ */
+async function renderOnboard(domainCount) {
+  const box = document.getElementById("onboard");
+  const [problems, docs] = await Promise.all([
+    api("/api/problems?size=1").then(d => d.totalElements).catch(() => null),
+    api("/api/documents?size=1").then(d => d.totalElements).catch(() => null),
+  ]);
+  const facts = [
+    [problems, "문제"],
+    [domainCount, "분야"],
+    [docs, "편의 개념 문서"],
+  ].filter(([v]) => v !== null);
+
+  box.innerHTML = `
+    <p class="lead">아직 푼 문제가 없습니다.</p>
+    <p class="sub">오늘의 퀴즈 10문제면 첫 기록이 남고, 내일부터 복습이 붙습니다.</p>
+    <div class="facts">
+      ${facts.map(([v, label]) => `<div><b>${v}</b>${escapeHtml(label)}</div>`).join("")}
+    </div>`;
+  box.hidden = false;
+}
+
+/**
+ * "다음에 뭘 할까"에 답하는 분야 세 줄.
+ *
+ * <p>12개를 다 늘어놓지 않는다. 그건 문제 목록 화면의 사이드바가 이미 하는 일이라,
+ * 여기서 되풀이하면 같은 방으로 가는 문이 둘이 된다. 이 자리는 <b>고르는 곳이 아니라
+ * 추천하는 곳</b>이라 셋만 뽑는다.
+ *
+ * <p>뽑는 기준은 상황에 따라 다르고, 라벨도 같이 바뀐다 — 라벨이 고정이면 "비어 있습니다"
+ * 아래에 0이 아닌 숫자가 놓이는 날이 온다.
+ * <ul>
+ *   <li>안 푼 분야가 있다 → 그중 셋 ("이 분야가 비어 있습니다")
+ *   <li>전부 한 번씩은 풀었다 → 가장 적게 푼 셋 ("가장 적게 푼 분야")
+ * </ul>
+ *
+ * <p>첫날에는 12개가 모두 0이라 "비어 있다"는 말이 정보가 되지 못한다. 그때만 안내 한 줄을
+ * 앞에 붙이고, 서버가 주는 순서(네트워크·운영체제·데이터베이스…)의 앞 셋을 권한다 —
+ * 그 순서는 임의가 아니라 Domain enum의 선언 순서이고, 기초부터 쌓이도록 짜여 있다.
+ */
+function renderDomains(domains) {
+  if (!domains || domains.length === 0) return;
+
+  const untouched = domains.filter(d => d.solved === 0);
+  const allZero = untouched.length === domains.length;
+
+  // 안 푼 분야가 있으면 그쪽, 없으면 적게 푼 순. 원본 배열은 정렬로 건드리지 않는다.
+  const picks = (untouched.length > 0 ? untouched : [...domains].sort((a, b) => a.solved - b.solved))
+    .slice(0, 3);
+
+  const max = domains.reduce((m, d) => Math.max(m, d.solved), 0);
+  const note = allZero
+    ? `<div class="dom-row note">아직 아무 분야도 시작하지 않았습니다 — 기초부터 쌓이는 순서로 권합니다</div>`
+    : "";
+
+  document.getElementById("domList").innerHTML = note + picks.map(d => `
+    <a class="dom-row" href="/problems.html?domain=${encodeURIComponent(d.domain)}">
+      <span class="nm">${escapeHtml(d.label)}</span>
+      <span class="bar"><i style="width:${max === 0 ? 0 : Math.round(d.solved / max * 100)}%"></i></span>
+      <span class="n">${d.solved}문제</span>
+    </a>`).join("");
+
+  const label = document.getElementById("domLabel");
+  label.textContent = untouched.length > 0 ? "다음은 이 분야가 비어 있습니다" : "가장 적게 푼 분야";
+  label.hidden = false;
+  document.getElementById("domList").hidden = false;
+}
+
+/**
+ * 최근 개념 문서 세 편.
+ *
+ * <p>이 앱에서 가만히 둬도 늘어나는 것은 문서뿐이라(4일에 한 편, 배치가 만든다) 첫 화면에
+ * "새 소식" 자리가 하나 필요하다. 그게 없으면 매일 같은 화면이 뜬다.
+ *
+ * <p>날짜는 {@code updatedAt}을 쓴다. 목록 API가 주는 날짜가 이것뿐이고, 문서는 만들어진
+ * 뒤 거의 고쳐지지 않아 사실상 올라온 날과 같다. 그래서 "올라온 날"이라고 <단정하지 않고>
+ * 날짜만 적는다 — 나중에 문서를 손보면 어긋날 표기라 문구로 약속하지 않는다.
+ */
+async function loadRecentDocs() {
+  let docs;
+  try {
+    docs = (await api("/api/documents?size=3")).content;   // 기본 정렬이 createdAt 내림차순
+  } catch (e) {
+    return;   // 부가 정보 — 실패하면 자리를 비운다
+  }
+  if (!docs || docs.length === 0) return;
+
+  const today = new Date().toISOString().substring(0, 10);
+  document.getElementById("docList").innerHTML = docs.map(d => {
+    const day = (d.updatedAt || "").substring(0, 10);
+    return `<a class="doc-line ${day === today ? "fresh" : ""}" href="/document.html?slug=${encodeURIComponent(d.slug)}">
+      <span class="dm">${escapeHtml(d.domainLabel)}</span>
+      <span class="ti">${escapeHtml(d.title)}</span>
+      <span class="dt">${day === today ? "오늘" : escapeHtml(shortDay(day))}</span>
+    </a>`;
+  }).join("");
+  document.getElementById("docLabel").hidden = false;
+}
+
+/** "2026-08-25" → "8월 25일". 첫 화면에서는 연도가 정보가 아니라 소음이다. */
+function shortDay(day) {
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(day);
+  return m ? `${Number(m[1])}월 ${Number(m[2])}일` : day;
 }
 </script>
 </body>

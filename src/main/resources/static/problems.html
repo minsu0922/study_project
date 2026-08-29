@@ -88,14 +88,34 @@ const STATES = [
 
 const LEVELS = [["BEGINNER", "초급"], ["INTERMEDIATE", "중급"], ["ADVANCED", "고급"]];
 
-/* 화면 상태 — 주소로 넘기지 않는다. 이 화면은 "지금 뭘 풀지" 고르는 자리라
- * 링크로 공유할 일이 없고, 새로고침하면 처음부터 보는 편이 자연스럽다. */
-let selectedDomain = null;
+/* 화면 상태 — 화면 안에서 필터를 바꿔도 주소는 그대로다. 이 화면은 "지금 뭘 풀지"
+ * 고르는 자리라 링크로 공유할 일이 없고, 클릭마다 주소가 바뀌면 뒤로가기가
+ * 필터 되돌리기가 되어 "홈으로 못 돌아가는" 화면이 된다.
+ *
+ * <b>다만 들어올 때의 domain 하나만 받는다</b>(2026-08-29). 홈의 "이 분야가 비어 있습니다"
+ * 줄이 이 화면으로 보내는데, 그냥 목록만 열면 사용자가 방금 고른 분야를 여기서 <다시>
+ * 골라야 한다 — 누른 것이 아무 일도 안 한 것처럼 보인다. 받기만 하고 쓰지는 않으므로
+ * 위 판단(주소를 상태로 쓰지 않는다)은 그대로다. */
+let selectedDomain = incomingDomain();
 let selectedLevels = new Set();
 let selectedState = "";
 let page = 0;
-let domainsExpanded = false;
+/* 들어올 때 분야가 지정됐으면 사이드바를 펼친 채로 연다. 12개 중 앞 5개만 보이는 상태에서
+ * 뒤쪽 분야(예: 프론트엔드CS)로 들어오면 목록은 걸러졌는데 <걸린 필터가 화면에 없어>
+ * 문제가 몇 개 없는 것처럼 보인다. */
+let domainsExpanded = selectedDomain !== null;
 let summary = null;
+
+/**
+ * 주소의 domain 파라미터를 읽어 검증한다 — 홈에서 넘어오는 경로에서만 쓴다.
+ *
+ * 아는 값이 아니면 버린다. 서버는 어차피 파싱에 실패해 400을 주지만, 그러면 목록이
+ * 통째로 에러가 된다 — 주소 한 글자 오타로 화면이 죽는 것보다 필터 없이 여는 편이 낫다.
+ */
+function incomingDomain() {
+  const v = new URLSearchParams(location.search).get("domain");
+  return v && DOMAINS.some(d => d[0] === v) ? v : null;
+}
 
 if (!isLoggedIn()) {
   document.getElementById("message").innerHTML =
