@@ -89,7 +89,8 @@ function renderMatrix(matrix) {
   table.onclick = e => {
     const cell = e.target.closest(".click-cell");
     // 폼만 채우고 요청은 보내지 않는다 — 생성은 돈이 드는 동작이라 "누르자마자 호출"은 위험하다.
-    if (cell) goLlm({ domain: cell.dataset.domain, difficulty: cell.dataset.difficulty });
+    // 2026-08-29부터 생성은 별도 화면이라 goLlm이 아니라 goGenerate로 간다.
+    if (cell) goGenerate({ domain: cell.dataset.domain, difficulty: cell.dataset.difficulty });
   };
 }
 

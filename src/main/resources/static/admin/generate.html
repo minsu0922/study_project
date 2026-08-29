@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 생성 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container admin">
+  <h1>관리자</h1>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <div class="tabs" id="adminNav"></div>
+
+    <!-- 이 화면의 버튼은 <전부> Claude를 부른다 = 요금이 나간다. 그 사실을 맨 위에 적어 둔다 —
+         메뉴를 이렇게 가른 이유가 그것이다(2026-08-29). -->
+    <div class="alert info" style="margin-bottom:16px">
+      이 화면의 생성 버튼은 <b>Claude를 호출합니다 — 누를 때마다 요금이 나갑니다.</b>
+      만들어진 것은 곧바로 문제가 되지 않고 <a href="/admin/llm.html">검수</a> 대기함으로 들어갑니다.
+    </div>
+
+    <!-- ═══ AI 문제 생성 (docs/13) ═══ -->
+    <div class="card">
+      <h3>AI 문제 생성</h3>
+      <p class="meta">Claude가 문제를 만들어 <b>검수 대기</b>로 저장합니다. 승인해야만 정식 문제로 등록됩니다.
+        도메인·난이도를 "자동"으로 두면 문제가 가장 부족한 칸을 골라 생성합니다.</p>
+      <div id="gMessage"></div>
+      <div class="filters">
+        <div class="field"><label>도메인</label><select id="gDomain"></select></div>
+        <div class="field"><label>난이도</label><select id="gDifficulty"></select></div>
+        <div class="field"><label>유형</label><select id="gType"></select></div>
+        <div class="field"><label>개수 (1~10)</label><input type="number" id="gCount" value="5" min="1" max="10" style="width:80px"></div>
+      </div>
+      <button id="gSubmitBtn">생성 요청</button>
+      <span class="meta" id="gLoading" hidden>생성 중… (수십 초 걸릴 수 있어요)</span>
+    </div>
+
+    <!-- ═══ 문서 업로드 생성 (2026-08-18 신설) ═══
+         위 카드와 따로 둔 이유: 근거가 있고 없고는 결과물의 성격이 다르다.
+         위는 모델의 기억에서, 아래는 준 문서 안에서만 낸다. 한 폼에 체크박스로 합치면
+         지금 어느 쪽으로 만들고 있는지가 흐려진다. -->
+    <div class="card">
+      <h3>문서로 문제 만들기</h3>
+      <p class="meta">고른 문서 <b>안에 있는 내용으로만</b> 문제를 만듭니다. 근거는 <b>셋 중 하나</b>만
+        고릅니다 — 등록된 문서, 올린 파일, 붙여넣은 본문. 도메인·난이도는 <b>직접 골라야 합니다</b> —
+        문서의 주제를 시스템이 알 수 없어 자동 선택을 쓰면 엉뚱한 분야가 붙습니다.</p>
+      <p class="meta"><b>등록된 문서</b>를 고른 경우에만 학습자 화면에 "개념 문서 읽기" 링크가 붙습니다.
+        올린 파일·붙여넣은 본문은 서비스에 없는 문서라 찾아갈 곳이 없습니다.</p>
+      <div id="uMessage"></div>
+      <div class="filters">
+        <div class="field"><label>도메인 (필수)</label><select id="uDomain"></select></div>
+        <div class="field"><label>난이도 (필수)</label><select id="uDifficulty"></select></div>
+        <div class="field"><label>유형</label><select id="uType"></select></div>
+        <div class="field"><label>개수 (1~10)</label><input type="number" id="uCount" value="5" min="1" max="10" style="width:80px"></div>
+        <!-- 묻는 형태 지목(2026-08-25). 비워 두면 모델이 고르는데, 그러면 재료가 가장 풍부한
+             상황형으로 계속 돌아간다(실물 세 번 연속). 검수 뒤 한두 건을 메울 때 특히 필요하다 —
+             개수가 적으면 "상황형 최소 2개" 규칙이 배치를 통째로 차지해 버린다. -->
+        <div class="field"><label>묻는 형태 (중급)</label><select id="uKind"></select></div>
+      </div>
+      <!-- 등록 문서 입구(2026-08-25). 셋 중 맨 위에 둔 이유: 4일 주기 배치가 쓰는 것과 같은
+           경로이고 결과물도 가장 좋다(약속된 절이 있어 난이도별 재료 분리가 실제로 작동한다).
+           고르면 도메인이 자동으로 맞춰지므로 손도 제일 덜 간다. -->
+      <div class="field" style="margin-top:10px">
+        <label>등록된 문서에서 고르기</label>
+        <select id="uSlug"><option value="">— 고르지 않음 —</option></select>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>또는 파일 (.md / .txt)</label>
+        <input type="file" id="uFile" accept=".md,.txt,text/markdown,text/plain">
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>또는 본문 붙여넣기 (최대 20,000자)</label>
+        <textarea id="uText" rows="8" placeholder="문서 내용을 그대로 붙여넣으세요."></textarea>
+      </div>
+      <button id="uSubmitBtn">문서로 생성</button>
+      <span class="meta" id="uLoading" hidden>생성 중… (수십 초 걸릴 수 있어요)</span>
+    </div>
+
+    <!-- ═══ 주제 범위 (2026-08-29에 이 화면으로 옮김) ═══
+         전에는 별도 메뉴였는데, 주제를 정하는 것은 <생성의 입력>이지 별개 작업이 아니다.
+         메뉴 맨 끝에 있어서 실제 순서(주제 → 생성)와 반대로 놓여 있었다. -->
+    <h3 style="margin-top:36px">문서를 캘 주제 범위</h3>
+    <div class="card">
+      <p class="meta">배치가 <b>문서일마다 범위 하나</b>를 골라 그 안에서 세부 주제를 정해 문서를 씁니다.
+        범위는 <b>쓴다고 없어지지 않고</b> 계속 돌아옵니다(다음 차례 = 아직 안 쓴 범위 먼저, 그다음은 가장 오래 안 쓴 범위).
+        분야보다는 좁고 한 편보다는 넓게 적으세요. (예: "스프링·백엔드"(분야) ✗ → "Spring 트랜잭션" ✓ → "@Transactional 전파 속성"(한 편) ✗)</p>
+      <div id="tMessage"></div>
+      <div class="filters">
+        <div class="field"><label>분야</label><select id="tDomain"></select></div>
+        <div class="field" style="flex:1 1 320px"><label>주제 범위</label><input type="text" id="tTopic" placeholder="Spring 트랜잭션 / JVM 메모리와 GC / 인덱스와 실행계획"></div>
+      </div>
+      <div class="field"><label>메모 (선택 · 왜 이 범위인지. 배치는 읽지 않습니다)</label><input type="text" id="tMemo" style="width:100%"></div>
+      <button id="tSubmitBtn">범위 추가</button>
+    </div>
+
+    <!-- 이 안내가 화면에서 가장 중요한 줄이다: 커밋하지 않으면 배치는 옛 파일을 읽는다.
+         앱이 스스로 git push를 하지 않는 이유는 docs/14(권한·인증·충돌) 참고. -->
+    <div class="alert info" style="margin-top:14px">
+      추가·삭제·순서 변경은 <code>generated/_topics.json</code>에 바로 반영됩니다.
+      <b>그 파일을 커밋·푸시해야</b> 다음 배치부터 이 목록을 씁니다(배치는 원격 저장소를 내려받아 돕니다).
+    </div>
+
+    <h3>등록된 범위 <span class="meta">(↑↓는 차례가 같을 때의 순서 · <b>편수</b>가 많아지면 그 범위가 마른다는 신호이니 갈아 끼우세요)</span></h3>
+    <div class="table-wrap"><table class="grid" id="topicTable"></table></div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script>
+/* 생성 — Claude를 부르는 일을 한곳에 모은 화면(2026-08-29 신설).
+ *
+ * [왜 검수에서 떼어냈나]
+ * 예전 llm.html은 이름이 "AI 검수"인데 실제로는 세 가지를 했다 — 생성(요금)·문제 검수·문서 검수.
+ * 매일 하는 일은 검수인데 큰 생성 폼 두 장이 목록 위를 차지해, 검수하러 올 때마다 지나쳐
+ * 스크롤해야 했다. 접어 두는 것으로 한 번 완화했지만 이름과 내용이 어긋난 건 그대로였다.
+ *
+ * 갈라 놓으니 얻는 것이 둘이다. 검수 화면이 열자마자 대기 목록이 되고(다 처리하면 빈 화면 =
+ * "오늘 할 일 없음"), <요금이 나가는 버튼이 이 페이지 하나에 모인다>. 실수로 누를 자리가 준다.
+ *
+ * [주제 범위도 여기로]
+ * 주제를 정하는 것은 생성의 입력이지 별개 작업이 아니다. 메뉴 맨 끝에 있어서 실제 순서와
+ * 반대였다. /admin/topics.html은 이 주소로 넘겨 준다(옛 링크·북마크 보호).
+ *
+ * [주소로 상태를 받는다]
+ *   ?domain=OS&difficulty=BEGINNER   현황판의 빈 칸에서 옴 → 폼을 채워 둔다(요청은 안 보낸다) */
+
+/**
+ * 중급이 묻는 다섯 형태 — 서버의 QuestionKind와 <상수 이름이 같아야> 한다.
+ * 화면이 보내는 값이 곧 enum 이름이라, 갈라지면 400이 난다.
+ *
+ * [왜 파일 맨 위인가 — 2026-08-25에 여기서 화면이 통째로 죽었다]
+ * 처음에는 이 상수를 쓰는 initUploadForm() 바로 아래에 뒀다. 읽기에는 그쪽이 자연스러운데,
+ * 아래 초기화 블록이 스크립트 맨 위에서 <먼저> 돈다. const는 선언 줄에 닿기 전까지
+ * 접근할 수 없어서(TDZ) initUploadForm()이 ReferenceError로 죽고, 그 뒤가 통째로 실행되지 않았다.
+ *
+ * 함수 선언은 호이스팅되므로 아래에 둬도 되지만 const는 아니다. 초기화 블록보다 위에 둔다.
+ */
+const QUESTION_KINDS = [
+  ["SITUATION", "상황 적용"],
+  ["COMPARISON", "비교·선택"],
+  ["CAUSE", "인과·메커니즘"],
+  ["JUDGMENT", "진술 판정"],
+  ["SEQUENCE", "순서·절차"],
+];
+
+if (initAdminPage("generate")) {
+  initGenerateForm();
+  initUploadForm();
+  initTopicForm();
+  applyDeepLink();
+  loadTopicQueue();
+}
+
+function initGenerateForm() {
+  // 도메인·난이도의 첫 옵션은 "자동" — 값이 빈 문자열이면 서버에 null로 보내
+  // "가장 부족한 칸 자동 선택"(docs/13의 빈 칸 채우기 전략)을 태운다.
+  const gd = document.getElementById("gDomain");
+  gd.innerHTML = `<option value="">자동 — 가장 부족한 칸</option>`;
+  DOMAINS.forEach(([v, l]) => gd.insertAdjacentHTML("beforeend", `<option value="${v}">${l}</option>`));
+  const gf = document.getElementById("gDifficulty");
+  gf.innerHTML = `<option value="">자동 — 가장 부족한 칸</option>`;
+  DIFFICULTIES.forEach(([v, l]) => gf.insertAdjacentHTML("beforeend", `<option value="${v}">${l}</option>`));
+  fillSelect(document.getElementById("gType"), TYPES);
+
+  document.getElementById("gSubmitBtn").addEventListener("click", generateProblems);
+}
+
+function initUploadForm() {
+  // 업로드 폼에는 "자동" 옵션을 두지 않는다. 올린 문서의 주제를 시스템이 모르는데 칸을
+  // 자동으로 고르면 문서와 무관한 분야가 붙는다 — 서버도 @NotNull로 막고 있다.
+  fillSelect(document.getElementById("uDomain"), DOMAINS);
+  fillSelect(document.getElementById("uDifficulty"), DIFFICULTIES);
+  fillSelect(document.getElementById("uType"), TYPES);
+
+  // 형태는 중급·고급에만 뜻이 있다. 초급은 정의를 묻는 자리라 나눌 것이 없다.
+  // 고급은 다섯 중 셋만 연다 — 판정형은 중급과 구별이 안 되고, 순서형은 "넷 다 그럴듯"이
+  // 성립하지 않아 고급의 정의와 부딪힌다(서버의 ProblemItemRule.ADVANCED_KINDS와 같아야 한다).
+  //
+  // 난이도에 따라 목록 자체를 갈아 끼운다. 전부 보여 주고 서버가 거절하게 두면 요금을 낸 뒤에야
+  // 알게 되고, 잠그기만 하면 "고급은 왜 못 고르지"가 된다.
+  const uk = document.getElementById("uKind");
+  const ADVANCED_KINDS = ["SITUATION", "COMPARISON", "CAUSE"];
+  const syncKindOptions = () => {
+    const difficulty = document.getElementById("uDifficulty").value;
+    const allowed = difficulty === "INTERMEDIATE" ? QUESTION_KINDS
+      : difficulty === "ADVANCED" ? QUESTION_KINDS.filter(([v]) => ADVANCED_KINDS.includes(v))
+      : [];
+    const keep = uk.value;
+    uk.innerHTML = `<option value="">모델이 고름</option>`
+      + allowed.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+    // 난이도를 바꿔도 고를 수 있는 형태면 선택을 유지한다 — 중급에서 비교형을 고른 뒤
+    // 고급으로 바꿨다고 선택이 풀리면, 바뀐 줄 모르고 그대로 보내게 된다.
+    uk.value = allowed.some(([v]) => v === keep) ? keep : "";
+    uk.disabled = allowed.length === 0;
+  };
+  document.getElementById("uDifficulty").addEventListener("change", syncKindOptions);
+  syncKindOptions();
+
+  document.getElementById("uSubmitBtn").addEventListener("click", generateFromDocument);
+  loadDocumentOptions();
+}
+
+/**
+ * 등록 문서 드롭다운을 채운다 — 2026-08-25 신설.
+ *
+ * <p>관리자 전용 목록 API를 새로 만들지 않고 공개 조회 API를 그대로 쓴다. 문서 목록은
+ * 원래 누구나 보는 것이라 관리자용으로 가릴 것이 없고, 엔드포인트를 하나 더 만들면
+ * 정렬·페이징 규칙이 두 곳으로 갈린다.
+ *
+ * <p>size=100은 페이징을 하지 않겠다는 뜻이다. 문서는 4일에 한 편씩 늘어 100편이면 1년 치인데,
+ * 그전에 이 드롭다운 자체가 검색 상자로 바뀌어야 할 것이다. 지금 페이징을 넣는 건 YAGNI다.
+ *
+ * <p>실패해도 폼을 막지 않는다 — 등록 문서는 세 입구 중 하나일 뿐이라, 목록을 못 불러왔다고
+ * 파일 업로드까지 못 쓰게 되면 손해다. 대신 무슨 일이 났는지는 드롭다운에 적어 둔다.
+ */
+async function loadDocumentOptions() {
+  const sel = document.getElementById("uSlug");
+  try {
+    const data = await api("/api/documents?size=100&sort=createdAt,desc");
+    if (data.content.length === 0) {
+      sel.innerHTML = `<option value="">— 등록된 문서가 없습니다 —</option>`;
+      return;
+    }
+    // 분야를 제목 앞에 붙인다. 문서가 늘면 제목만으로는 어느 분야 것인지 바로 안 보인다.
+    sel.innerHTML = `<option value="">— 고르지 않음 —</option>`
+      + data.content.map(d =>
+          `<option value="${escapeHtml(d.slug)}" data-domain="${escapeHtml(d.domain)}">`
+          + `[${escapeHtml(d.domainLabel)}] ${escapeHtml(d.title)}</option>`).join("");
+
+    // 문서를 고르면 분야를 맞춰 준다. 손이 덜 가는 것보다 중요한 건 <틀릴 수 없게> 하는 것이다 —
+    // 등록 문서는 분야가 이미 정해져 있는데 사람이 다른 분야를 고르면 조용히 어긋난 문제가 나온다.
+    // 난이도는 건드리지 않는다. 그건 문서가 아니라 "오늘 무엇을 뽑을지"의 문제다.
+    sel.addEventListener("change", () => {
+      const domain = sel.selectedOptions[0]?.dataset.domain;
+      if (domain) document.getElementById("uDomain").value = domain;
+    });
+  } catch (e) {
+    sel.innerHTML = `<option value="">— 목록을 불러오지 못했습니다 —</option>`;
+  }
+}
+
+/** 주소에 담겨 온 상태를 화면에 반영한다. 폼만 채우고 요청은 보내지 않는다 —
+ *  생성은 돈이 드는 동작이라 "링크를 여는 것만으로 호출"은 위험하다. */
+function applyDeepLink() {
+  const domain = param("domain");
+  const difficulty = param("difficulty");
+  if (domain) document.getElementById("gDomain").value = domain;
+  if (difficulty) document.getElementById("gDifficulty").value = difficulty;
+}
+
+/* ═══════════ 문제 생성 ═══════════ */
+
+async function generateProblems() {
+  const msg = document.getElementById("gMessage");
+  const btn = document.getElementById("gSubmitBtn");
+  const loading = document.getElementById("gLoading");
+  btn.disabled = true;      // Claude 호출은 수십 초 — 더블클릭으로 중복 요청(=중복 과금)되는 걸 막는다
+  loading.hidden = false;
+  try {
+    const drafts = await api("/api/admin/llm-problems/generate", {
+      method: "POST",
+      body: JSON.stringify({
+        domain: document.getElementById("gDomain").value || null,
+        difficulty: document.getElementById("gDifficulty").value || null,
+        type: document.getElementById("gType").value,
+        count: Number(document.getElementById("gCount").value),
+      }),
+    });
+    showGenerated(msg, drafts.length);
+    refreshAdminBadges();
+  } catch (e) {
+    showError(msg, e); // LLM_003(API 오류)·LLM_004(키 없음) 메시지가 그대로 표시된다
+  } finally {
+    btn.disabled = false;
+    loading.hidden = true;
+  }
+}
+
+/**
+ * 문서를 근거로 생성. 위 generateProblems와 달리 api() 헬퍼를 쓰지 않는다 —
+ * 그 헬퍼는 body가 있으면 Content-Type을 application/json으로 박는데, multipart는
+ * 브라우저가 boundary까지 포함해 직접 정해야 한다. 헬퍼를 고쳐 분기를 넣는 대신
+ * 이 한 곳만 fetch를 직접 쓴다(호출부 하나 때문에 공용 헬퍼를 복잡하게 만들지 않는다).
+ */
+async function generateFromDocument() {
+  const msg = document.getElementById("uMessage");
+  const btn = document.getElementById("uSubmitBtn");
+  const loading = document.getElementById("uLoading");
+  const fileInput = document.getElementById("uFile");
+  const text = document.getElementById("uText").value.trim();
+  const file = fileInput.files[0];
+  const slug = document.getElementById("uSlug").value;
+
+  // 서버도 같은 것을 검사하지만(하나도 없음/둘 이상 → 400) 여기서 먼저 막는다.
+  // 파일을 올려 두고 붙여넣기까지 한 채 수십 초를 기다렸다가 400을 받는 건 나쁜 경험이다.
+  // 개수로 세는 것도 서버와 맞춘다 — boolean 비교로 두면 입구가 셋인 지금 조용히 틀린다.
+  const given = (slug ? 1 : 0) + (file ? 1 : 0) + (text ? 1 : 0);
+  if (given === 0) { showError(msg, new Error("등록된 문서를 고르거나, 파일을 올리거나, 본문을 붙여넣어 주세요.")); return; }
+  if (given > 1)   { showError(msg, new Error("등록 문서·파일·붙여넣기 중 하나만 사용해 주세요.")); return; }
+
+  const form = new FormData();
+  form.append("domain", document.getElementById("uDomain").value);
+  form.append("difficulty", document.getElementById("uDifficulty").value);
+  form.append("type", document.getElementById("uType").value);
+  form.append("count", document.getElementById("uCount").value);
+  if (slug) form.append("slug", slug);
+  else if (file) form.append("file", file);
+  else form.append("text", text);
+
+  // 비었으면 아예 보내지 않는다 — 빈 문자열을 보내면 스프링이 enum 변환에 실패해 400이 난다.
+  const kind = document.getElementById("uKind").value;
+  if (kind) form.append("questionKind", kind);
+
+  btn.disabled = true;   // 중복 클릭 = 중복 과금
+  loading.hidden = false;
+  try {
+    const headers = {};
+    const token = getToken();
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch("/api/admin/llm-problems/generate-from-document", {
+      method: "POST", headers, body: form,
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json?.error?.message || "생성에 실패했습니다.");
+    }
+    showGenerated(msg, json.data.length);
+    refreshAdminBadges();
+  } catch (e) {
+    showError(msg, e);
+  } finally {
+    btn.disabled = false;
+    loading.hidden = true;
+  }
+}
+
+/**
+ * 생성 결과 안내 — <b>검수 화면으로 가는 링크</b>를 함께 준다.
+ *
+ * <p>예전에는 같은 화면 아래에 목록이 있어 "아래에서 검수해 주세요"로 끝냈다. 화면을 가른
+ * 지금은 만든 것이 여기 없으므로, 어디로 가야 하는지를 말해 주지 않으면 흐름이 끊긴다.
+ *
+ * <p>{@code showOk}를 쓰지 않는다 — 그건 2.5초 뒤 사라지는데, 링크가 사라지면 누를 수가 없다.
+ */
+function showGenerated(el, count) {
+  el.innerHTML = `<div class="alert info">${count}건 생성 완료 —
+    <a href="/admin/llm.html">검수 화면에서 확인하세요</a>.</div>`;
+}
+
+/* ═══════════ 주제 범위 (옛 topics.html) ═══════════
+ *
+ * 화면에서 넣은 범위는 DB에 저장되고, 서버가 generated/_topics.json으로 내보낸다.
+ * 그 파일을 커밋·푸시해야 배치(GitHub Actions)가 읽는다 — 배치는 원격 저장소를
+ * 내려받아 돌기 때문이다. 그래서 이 화면의 안내문이 기능 자체만큼 중요하다. */
+
+function initTopicForm() {
+  fillSelect(document.getElementById("tDomain"), DOMAINS);
+  document.getElementById("tSubmitBtn").addEventListener("click", addTopic);
+
+  // 엔터로 추가 — 범위를 여러 개 몰아서 적는 화면이라 매번 버튼까지 가면 손이 많이 간다.
+  document.getElementById("tTopic").addEventListener("keydown", e => {
+    if (e.key === "Enter") addTopic();
+  });
+}
+
+async function addTopic() {
+  const msg = document.getElementById("tMessage");
+  const topic = document.getElementById("tTopic").value.trim();
+  if (!topic) { showError(msg, new Error("주제 범위를 입력해 주세요.")); return; }
+
+  try {
+    await api("/api/admin/topic-queue", {
+      method: "POST",
+      body: JSON.stringify({
+        domain: document.getElementById("tDomain").value,
+        topic,
+        memo: document.getElementById("tMemo").value.trim() || null,
+      }),
+    });
+    showOk(msg, "범위를 추가했습니다. generated/_topics.json을 커밋하세요.");
+    document.getElementById("tTopic").value = "";
+    document.getElementById("tMemo").value = "";
+    loadTopicQueue();
+    refreshAdminBadges();
+  } catch (e) {
+    showError(msg, e);   // 같은 범위가 이미 있으면 409(TOPIC_002)가 그대로 보인다
+  }
+}
+
+async function loadTopicQueue() {
+  const items = await api("/api/admin/topic-queue");
+  const table = document.getElementById("topicTable");
+  if (items.length === 0) {
+    table.innerHTML = `<tr><td class="meta">등록된 범위가 없습니다. 지금은 배치가 모델에게 주제를 맡깁니다 — 위 폼으로 범위를 넣어 두세요.</td></tr>`;
+    table.onclick = null;   // 앞서 그린 행의 핸들러가 남아 빈 표를 눌러도 반응하지 않게
+    return;
+  }
+
+  // 다음 차례 판정(next)은 서버가 계산해 보낸다. 화면에서 다시 계산하면 규칙이 두 곳이 되고,
+  // 배치가 실제로 고르는 것과 화면 표시가 언젠가 어긋난다.
+  table.innerHTML =
+    `<tr><th>순서</th><th>분야</th><th>주제 범위</th><th>편수</th><th>마지막</th><th></th></tr>` +
+    items.map((t, i) => `
+      <tr data-id="${t.id}">
+        <td>${i + 1}</td>
+        <td>${escapeHtml(t.domainLabel)}</td>
+        <td class="wrap">
+          ${escapeHtml(t.topic)}
+          ${t.next ? ` <span class="badge orange">다음 차례</span>` : ""}
+          ${t.memo ? `<div class="meta">${escapeHtml(t.memo)}</div>` : ""}
+        </td>
+        <td>${t.usedCount === 0 ? `<span class="meta">—</span>` : `${t.usedCount}편`}</td>
+        <td class="meta">${t.lastUsedAt ? escapeHtml(t.lastUsedAt) : "아직 안 씀"}</td>
+        <td class="row-actions">
+          <button class="btn-outline" data-action="up" title="한 칸 위로">↑</button>
+          <button class="btn-outline" data-action="down" title="한 칸 아래로">↓</button>
+          <button class="danger" data-action="delete">삭제</button>
+        </td>
+      </tr>`).join("");
+
+  table.onclick = e => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    const id = Number(btn.closest("tr").dataset.id);
+    if (btn.dataset.action === "delete") {
+      // 2단계 확인 — 다시 적으면 그만이지만, 몇 편 썼는지의 기록은 되살릴 수 없다
+      armedDelete(btn, () => deleteTopic(id));
+      return;
+    }
+    moveTopic(id, btn.dataset.action === "up" ? "UP" : "DOWN");
+  };
+}
+
+async function moveTopic(id, direction) {
+  await api(`/api/admin/topic-queue/${id}/move?direction=${direction}`, { method: "POST" });
+  loadTopicQueue();
+}
+
+async function deleteTopic(id) {
+  const msg = document.getElementById("tMessage");
+  try {
+    await api("/api/admin/topic-queue/" + id, { method: "DELETE" });
+    showOk(msg, "삭제했습니다. generated/_topics.json을 커밋하세요.");
+    loadTopicQueue();
+    refreshAdminBadges();
+  } catch (e) {
+    showError(msg, e);
+  }
+}
+</script>
+</body>
+</html>

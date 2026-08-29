@@ -15,13 +15,29 @@
  * 페이지마다 하는 일이 하나뿐이라 오갈 일 자체가 줄어든다고 보고 감수한다.
  */
 
-/** 관리 화면 목록 — 네비게이션과 "여기가 어디인지" 표시에 함께 쓴다. */
+/**
+ * 관리 화면 목록 — 네비게이션과 "여기가 어디인지" 표시에 함께 쓴다.
+ *
+ * <h2>순서를 일의 단계로 바꿨다 (2026-08-29)</h2>
+ *
+ * <p>예전 메뉴는 <b>무엇에 대한 것인가</b>(문제/문서/주제)로 나뉘어 있었는데, 실제 일은
+ * <b>어느 단계인가</b>로 흐른다: 현황을 보고 → 만들고 → 검수하고 → 정식 콘텐츠를 손본다.
+ * 그 어긋남이 불편의 뿌리였다.
+ *
+ * <p>가장 뚜렷했던 것이 옛 "AI 검수"다. 이름은 검수인데 실제로는 셋을 했다 —
+ * 생성(요금)·문제 검수·문서 검수. 생성을 떼어내니 검수 화면은 열자마자 대기 목록이 되고
+ * (다 처리하면 빈 화면 = "오늘 할 일 없음"), <b>요금이 나가는 버튼이 생성 한 곳에 모인다.</b>
+ *
+ * <p>"주제 범위"는 별도 메뉴에서 생성 안으로 들어갔다. 주제를 정하는 것은 생성의 입력이지
+ * 별개 작업이 아닌데, 메뉴 맨 끝에 있어 실제 순서(주제 → 생성)와 반대로 놓여 있었다.
+ * 옛 주소 {@code /admin/topics.html}은 생성으로 넘겨 준다(북마크·문서 링크 보호).
+ */
 const ADMIN_PAGES = [
-  ["dashboard", "대시보드", "/admin/index.html"],
-  ["problems", "문제 관리", "/admin/problems.html"],
-  ["documents", "문서 관리", "/admin/documents.html"],
-  ["llm", "AI 검수", "/admin/llm.html"],
-  ["topics", "주제 범위", "/admin/topics.html"],
+  ["dashboard", "현황", "/admin/index.html"],
+  ["llm", "검수", "/admin/llm.html"],
+  ["generate", "생성", "/admin/generate.html"],
+  ["problems", "문제", "/admin/problems.html"],
+  ["documents", "문서", "/admin/documents.html"],
 ];
 
 /**
@@ -94,12 +110,16 @@ async function refreshAdminBadges() {
     countOf("/api/admin/topic-queue/count"),
   ]);
 
-  // AI 검수 배지는 문제·문서 대기를 합쳐 하나로 보여 준다 — 한 페이지가 둘 다 다루므로
+  // 검수 배지는 문제·문서 대기를 합쳐 하나로 보여 준다 — 한 페이지가 둘 다 다루므로
   // 배지도 하나여야 "저기 들어가면 할 일이 있다"가 정확해진다.
+  //
+  // 이 화면이 검수만 하게 된 뒤로(2026-08-29) 이 숫자가 곧 "읽어야 할 건수"가 됐다.
+  // 예전에는 같은 페이지에 생성 폼이 있어서 배지가 가리키는 곳과 화면이 어긋났다.
   setBadge("llm", problems + documents, false);
 
   // 주제 범위는 뜻이 반대다: 0이면 배치가 모델 자동 선택으로 돌아가므로 0일 때 눈에 띄게 띄운다.
-  setBadge("topics", topics === 0 ? "비었음" : topics, topics === 0);
+  // 주제 범위가 생성 화면 안으로 들어가면서 배지도 그쪽에 붙는다.
+  setBadge("generate", topics === 0 ? "범위 없음" : null, topics === 0);
 }
 
 /** 배지 하나 — 값이 null이거나 0이면 숨긴다(0을 붙여 두면 늘 시끄럽다). */
@@ -132,9 +152,19 @@ function goProblemEdit(id) {
   location.href = "/admin/problems.html?edit=" + id;
 }
 
-/** AI 검수 화면으로. 어느 칸을 채울지(생성 폼) 또는 어느 필터로 열지를 함께 넘긴다. */
+/**
+ * 검수 화면으로 — 어느 목록을 어떤 필터로 열지 넘긴다({@code kind}, {@code status}).
+ *
+ * <p>생성 폼을 채우는 용도({@code domain}, {@code difficulty})는 {@link goGenerate}로 갈라졌다
+ * (2026-08-29). 한 함수가 두 화면을 가리키고 있으면 어느 쪽으로 가는지 호출부만 봐서는 모른다.
+ */
 function goLlm(params) {
   location.href = "/admin/llm.html?" + new URLSearchParams(params).toString();
+}
+
+/** 생성 화면으로 — 현황판의 빈 칸에서 "이 칸을 채우자"로 넘어올 때. 폼만 채우고 호출은 안 한다. */
+function goGenerate(params) {
+  location.href = "/admin/generate.html?" + new URLSearchParams(params).toString();
 }
 
 /** 주소의 쿼리 파라미터 — 없으면 null. */
