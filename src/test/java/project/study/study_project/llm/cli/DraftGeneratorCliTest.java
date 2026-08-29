@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 배치 중단 스위치의 진리표 테스트 — docs/14.
@@ -303,6 +304,74 @@ class DraftGeneratorCliTest {
                 new String[]{"--date=2026-09-20", "--document-date="});
 
         assertThat(opts).doesNotContainKey(DraftGeneratorCli.DOCUMENT_DATE_OPT);
+    }
+
+    /* ══ 결과 파일 이름 (--suffix) ══════════════════════════════ */
+
+    /**
+     * 2026-08-29에 붙인 옵션. 파일 이름이 곧 날짜였고 그 날짜가 곧 주기 순번이라,
+     * <b>손으로 한 칸을 채우면 그 날짜의 예약 실행이 죽었다</b>. 보안 문서 두 편을 채우느라
+     * 여덟 날짜를 쓴 결과 이후 30일 중 11일이 조용히 건너뛰기가 됐다.
+     */
+    @Test
+    @DisplayName("접미사가 없으면 예전 그대로 — 예약 실행의 이름은 달라지지 않는다")
+    void noSuffixKeepsThePlainDateName() {
+        assertThat(DraftGeneratorCli.outFileName(LocalDate.of(2026, 8, 29), null))
+                .isEqualTo("2026-08-29.json");
+    }
+
+    @Test
+    @DisplayName("접미사를 주면 날짜 뒤에 붙는다 — 날짜가 앞이라 흡수 순서(이름 오름차순)가 유지된다")
+    void suffixGoesAfterTheDate() {
+        assertThat(DraftGeneratorCli.outFileName(LocalDate.of(2026, 8, 29), "csrf-beg"))
+                .isEqualTo("2026-08-29-csrf-beg.json");
+    }
+
+    /**
+     * 이 값은 워크플로의 수동 입력으로 들어와 <b>파일 경로가 된다</b>. 검증 없이 이어 붙이면
+     * 저장소 밖에 쓰거나, {@code _}로 시작해 흡수에서 제외되는(그래서 영영 안 들어오는)
+     * 파일을 만들 수 있다. 통과 목록 방식이라 새로운 공격 형태가 나와도 자동으로 막힌다.
+     */
+    @Test
+    @DisplayName("경로를 벗어나는 접미사는 거부한다 — 이 값이 파일 경로가 되기 때문")
+    void suffixCannotEscapeTheDirectory() {
+        LocalDate date = LocalDate.of(2026, 8, 29);
+
+        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "../../etc/x"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "a/b"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "_hidden"))
+                .as("_로 시작하면 흡수가 건너뛴다 — 만들어도 영영 안 들어온다")
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("빈 접미사와 대문자·공백은 거부한다 — 조용히 고쳐 쓰면 찾는 파일과 실제 파일이 달라진다")
+    void suffixMustBeLowercaseAndNonEmpty() {
+        LocalDate date = LocalDate.of(2026, 8, 29);
+
+        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "XSS")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "a b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "-x"))
+                .as("하이픈으로 시작하면 2026-08-29--x.json이 되어 읽기 나쁘다")
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * 워크플로는 입력이 비어도 {@code --suffix=}를 항상 붙여 보낸다. 빈 값을 "지정함"으로 세면
+     * 예약 실행이 매일 검증에 걸려 죽는다 — {@code --document-date}와 같은 계약이다.
+     */
+    @Test
+    @DisplayName("빈 값은 지정 안 한 것으로 본다 — 워크플로가 늘 붙여 보내는 형태")
+    void blankSuffixIsIgnored() {
+        Map<String, String> opts = DraftGeneratorCli.parseArgs(
+                new String[]{"--date=2026-08-29", "--suffix="});
+
+        assertThat(opts).doesNotContainKey(DraftGeneratorCli.SUFFIX_OPT);
+        assertThat(DraftGeneratorCli.outFileName(LocalDate.of(2026, 8, 29), opts.get(DraftGeneratorCli.SUFFIX_OPT)))
+                .isEqualTo("2026-08-29.json");
     }
 
     /* ══ 스냅샷 낡음 경고 ═══════════════════════════════════════ */

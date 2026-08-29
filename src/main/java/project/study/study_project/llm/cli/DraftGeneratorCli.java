@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * 일일 생성 배치의 실행 진입점 — <b>GitHub Actions 러너에서 돈다</b>(docs/14, ADR-0006 개정).
@@ -56,6 +57,8 @@ import java.util.Map;
  *   --date=2026-08-12        기준 날짜(생략 시 오늘, 한국 시간). 파일명이자 순환 순번의 근거
  *   --document-date=2026-09-08  근거로 삼을 문서 지목(생략 시 --date의 주기가 결정)
  *                            지목하면 폴백을 막는다 — 못 쓰는 문서면 요금 0으로 실패시킨다
+ *   --suffix=xss-beg         결과 파일을 {날짜}-{접미사}.json으로 쓴다(손으로 채울 때).
+ *                            주기가 만드는 이름과 겹치지 않아 그날의 예약 실행을 죽이지 않는다
  *   --domain=NETWORK         분야 강제 지정(생략 시 날짜 순환으로 결정)
  *   --topic=슬로우쿼리        문서 주제 강제 지정(문서일에만. 생략 시 주제 대기열 → 모델 자동 선택)
  *                            공백이 든 주제는 환경변수 DRAFT_TOPIC으로 넘긴다
@@ -89,6 +92,23 @@ public final class DraftGeneratorCli {
 
     /** 근거 문서를 지목하는 옵션 이름. 이름을 세 곳에서 문자열로 쓰게 되어 상수로 뽑았다. */
     static final String DOCUMENT_DATE_OPT = "document-date";
+
+    /** 결과 파일 이름에 붙일 접미사 옵션. */
+    static final String SUFFIX_OPT = "suffix";
+
+    /**
+     * 접미사에 허용하는 글자.
+     *
+     * <p>이 값은 <b>파일 이름이 된다</b>. 워크플로의 수동 입력으로 들어오므로 검증 없이 이어 붙이면
+     * {@code ../../}로 저장소 밖에 쓰거나 {@code _}로 시작해 흡수에서 제외되는 파일을 만들 수 있다.
+     * 그래서 통과 목록(소문자·숫자·하이픈)으로 좁힌다 — 막을 것을 나열하는 방식은 언제나
+     * 빠뜨리는 것이 생긴다. 첫 글자를 하이픈이 아니게 한 것은 {@code 2026-08-29--x.json}처럼
+     * 읽기 나쁜 이름을 막으려는 것이다.
+     */
+    private static final Pattern SUFFIX_PATTERN = Pattern.compile("[a-z0-9][a-z0-9-]{0,29}");
+
+    /** 한국 날짜 기준 — 워크플로는 UTC로 도니까 변환하지 않으면 하루 어긋난다. */
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     /** 기존 문서 제목·태그 스냅샷. 문서 주제 중복을 피하고 태그 난립을 막는 데 쓴다. */
     private static final String EXISTING_DOCUMENTS_FILE = "_existing-documents.json";
@@ -126,7 +146,12 @@ public final class DraftGeneratorCli {
         GenerationSchedule.Plan plan = GenerationSchedule.planFor(date, batchDomains);
 
         // 스냅샷이 낡았는지 여기서 한 번 본다 — 생성 성공/실패와 무관하게 알려야 하므로 맨 앞에 둔다.
-        warnIfSnapshotsAreStale(Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR)), date);
+        //
+        // 기준이 date가 아니라 <실제 오늘>인 이유(2026-08-29): 이 판정이 묻는 것은 "사람이 커밋을
+        // 잊은 지 얼마나 됐나"이고, 그건 벽시계로만 잴 수 있다. date를 쓰면 손으로 미래 날짜를
+        // 넘겨 한 칸 채울 때 <어제 갱신한 파일도 14일 넘었다>고 잘못 경고한다(실제로 겪음).
+        // 예약 실행은 date가 곧 오늘이라 동작이 달라지지 않는다.
+        warnIfSnapshotsAreStale(Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR)), LocalDate.now(KST));
 
         // 개념 문서는 대상 선정 방식도, 출력 위치(generated/documents/)도 다르다.
         // 한 흐름 안에서 if로 갈라면 두 관심사가 뒤엉키므로 아예 따로 뗀다.
@@ -151,7 +176,7 @@ public final class DraftGeneratorCli {
         int count = opts.containsKey("count") ? Integer.parseInt(opts.get("count")) : defaultCount;
 
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
-        Path outFile = outDir.resolve(date + ".json");
+        Path outFile = outDir.resolve(outFileName(date, opts.get(SUFFIX_OPT)));
 
         // ── 4. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
         // 워크플로를 수동으로 두 번 눌러도 API 요금이 두 번 나가지 않게 하는 안전장치.
@@ -491,6 +516,10 @@ public final class DraftGeneratorCli {
         LocalDate date = resolveDate(opts);
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Path docDir = outDir.resolve(DOCUMENT_SUBDIR);
+        // 문서에는 --suffix를 적용하지 않는다(2026-08-29). 근거 문서를 가리키는 유일한 통로가
+        // --document-date, 즉 <날짜>인데 접미사가 붙은 문서는 그 이름으로 가리킬 수 없다 —
+        // 만들 수는 있지만 아무도 못 쓰는 파일이 된다. 주소 체계를 한 줄로 지킨다:
+        // 문서는 날짜로, 문제는 이름으로 부른다.
         Path outFile = docDir.resolve(date + ".json");
 
         // 문제 생성과 같은 멱등성 보호 — 수동으로 두 번 눌러도 요금이 두 번 나가지 않는다
@@ -712,7 +741,41 @@ public final class DraftGeneratorCli {
     private static LocalDate resolveDate(Map<String, String> opts) {
         return opts.containsKey("date")
                 ? LocalDate.parse(opts.get("date"))
-                : LocalDate.now(ZoneId.of("Asia/Seoul"));
+                : LocalDate.now(KST);
+    }
+
+    /**
+     * 결과 파일 이름 — 접미사가 없으면 예전 그대로 {@code {날짜}.json}.
+     *
+     * <h2>왜 접미사가 필요한가(2026-08-29)</h2>
+     *
+     * <p>파일 이름이 곧 날짜였고, 그 날짜가 곧 주기 순번이었다. 그래서 <b>사람이 손으로 한 칸을
+     * 채우면 그 날짜의 예약 실행이 죽었다</b> — 같은 이름이면 멱등성 검사가 건너뛰기 때문이다.
+     * 보안 문서 두 편을 채우느라 여덟 날짜를 쓴 결과, 이후 30일 중 11일이 조용히 건너뛰기가 되고
+     * 그 사이에 만들 문서 두 편은 문제를 한 건도 못 받는 상태가 됐다.
+     *
+     * <p>접미사를 붙이면 주기가 만드는 이름({@code 2026-09-25.json})과 손으로 채운 이름
+     * ({@code 2026-08-29-csrf-beg.json})이 서로 다른 공간에 산다. 날짜를 앞에 두는 것은
+     * 흡수가 이름 오름차순 = 오래된 순으로 읽기 때문이다({@code DraftImportRunner.scan}).
+     *
+     * <p><b>멱등성은 그대로다.</b> 같은 접미사로 두 번 부르면 여전히 건너뛴다 — 두 번 눌러
+     * 요금이 두 번 나가는 것을 막는 장치는 손대지 않았다. "다른 결과를 원하면 다른 이름"이라는
+     * 규칙이 되었을 뿐이다.
+     *
+     * @param suffix {@code null}이면 접미사 없음
+     * @throws IllegalArgumentException 접미사가 허용 글자를 벗어날 때 — 조용히 고쳐 쓰지 않는다.
+     *                                  이름을 마음대로 바꾸면 사람이 찾는 파일과 실제 파일이 달라진다
+     */
+    static String outFileName(LocalDate date, String suffix) {
+        if (suffix == null) {
+            return date + ".json";
+        }
+        if (!SUFFIX_PATTERN.matcher(suffix).matches()) {
+            throw new IllegalArgumentException(
+                    "--suffix는 소문자·숫자·하이픈만 쓸 수 있고 30자를 넘을 수 없습니다(받은 값: \"%s\")"
+                            .formatted(suffix));
+        }
+        return date + "-" + suffix + ".json";
     }
 
     /**

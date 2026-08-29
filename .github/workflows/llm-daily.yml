@@ -64,6 +64,14 @@ on:
         description: '근거 문서 파일의 날짜(generated/documents/<날짜>.json). 비우면 date의 주기가 결정'
         required: false
         default: ''
+      suffix:
+        # 손으로 한 칸 채울 때 쓴다. 이걸 안 쓰고 빈 날짜를 골라 채우면 그 날짜의 예약 실행이
+        # 죽는다 — 같은 이름이면 멱등성 검사가 건너뛰기 때문이다. 2026-08-29에 여덟 날짜를
+        # 그렇게 써서 이후 30일 중 11일이 조용히 건너뛰기가 됐다.
+        # 접미사를 주면 date는 오늘로 두고 결과만 다른 이름으로 나간다.
+        description: '결과 파일 접미사 — {날짜}-{접미사}.json (소문자·숫자·하이픈). 손으로 채울 때만'
+        required: false
+        default: ''
       force:
         description: 'batch-enabled=false여도 이번 한 번은 생성'
         type: boolean
@@ -129,6 +137,7 @@ jobs:
           IN_COUNT: ${{ inputs.count }}
           IN_DATE: ${{ inputs.date }}
           IN_DOCUMENT_DATE: ${{ inputs.document_date }}
+          IN_SUFFIX: ${{ inputs.suffix }}
           # 예약 실행에서는 inputs가 비어 있으므로 force는 항상 꺼진 상태로 넘어간다 —
           # 중단 스위치를 예약 실행이 스스로 무시하는 일은 구조적으로 불가능하다.
           IN_FORCE: ${{ inputs.force }}
@@ -141,7 +150,7 @@ jobs:
           DRAFT_TOPIC: ${{ inputs.topic }}
         run: |
           ./gradlew generateDrafts --no-daemon --console=plain \
-            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --document-date=${IN_DOCUMENT_DATE} --force=${IN_FORCE} --type=${IN_TYPE}"
+            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --document-date=${IN_DOCUMENT_DATE} --suffix=${IN_SUFFIX} --force=${IN_FORCE} --type=${IN_TYPE}"
 
       - name: 결과 커밋 & 푸시
         run: |
