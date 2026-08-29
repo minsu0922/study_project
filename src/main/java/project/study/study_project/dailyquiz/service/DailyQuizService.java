@@ -70,7 +70,7 @@ public class DailyQuizService {
         LocalDate today = LocalDate.now();
         DailyQuiz quiz = dailyQuizRepository.findWithItems(userId, today)
                 .orElseGet(() -> generate(userId, today));
-        return DailyQuizResponse.from(quiz, calcStreak(userId, today));
+        return DailyQuizResponse.from(quiz);
     }
 
     /**
@@ -165,33 +165,5 @@ public class DailyQuizService {
             return List.of(-1L);
         }
         return picks.keySet().stream().map(Problem::getId).toList();
-    }
-
-    /**
-     * 스트릭(연속 완료 일수) — 저장하지 않고 조회 시점에 계산한다(파생값 원칙, docs/12).
-     *
-     * <p>규칙: 오늘부터, 오늘이 미완료면 어제부터 거슬러 내려가며 연속으로 완료된 날을 센다.
-     * "오늘 미완료여도 어제까지 이어져 있으면 살아 있다" — 아직 안 풀었다고 아침부터
-     * 스트릭 0을 보여주면 의욕이 꺾인다(오늘 풀면 +1이 되는 상태).
-     */
-    private int calcStreak(Long userId, LocalDate today) {
-        List<LocalDate> dates = dailyQuizRepository.findCompletedDatesDesc(userId);
-        if (dates.isEmpty()) {
-            return 0;
-        }
-        // 시작점: 최신 완료일이 오늘이면 오늘부터, 어제면 어제부터. 그보다 오래됐으면 이미 끊긴 것.
-        LocalDate cursor = dates.get(0);
-        if (cursor.isBefore(today.minusDays(1))) {
-            return 0;
-        }
-        int streak = 0;
-        for (LocalDate date : dates) { // 최신순 + 하루 1행(UNIQUE) 보장이라 단순 순회로 충분
-            if (!date.equals(cursor)) {
-                break; // 하루라도 구멍 → 연속 끝
-            }
-            streak++;
-            cursor = cursor.minusDays(1);
-        }
-        return streak;
     }
 }

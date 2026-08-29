@@ -76,13 +76,12 @@ renderNav("home");
   try {
     const d = await api("/api/me/daily-quiz");
     const { total, solved } = d.progress;
-    const streak = d.streak > 0 ? `<div class="note">🔥 연속 ${d.streak}일째 완료 중</div>` : "";
     let label;
     if (d.completed) label = "오늘의 퀴즈 완료 ✅ 결과 보기";
     else if (solved === 0) label = "오늘의 퀴즈 시작하기 🎯";
     else label = `오늘의 퀴즈 이어서 풀기 (${solved}/${total}) →`;
     document.getElementById("heroCta").innerHTML =
-      `<a href="/daily.html" class="btn btn-lg">${label}</a>${streak}`;
+      `<a href="/daily.html" class="btn btn-lg">${label}</a>`;
   } catch (e) {
     // 세트 조회 실패 시에도 로그인 사용자의 대표 버튼은 데일리 입구를 유지한다
     document.getElementById("heroCta").innerHTML =

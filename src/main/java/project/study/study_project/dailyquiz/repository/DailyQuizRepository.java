@@ -6,7 +6,6 @@ import org.springframework.data.repository.query.Param;
 import project.study.study_project.dailyquiz.domain.DailyQuiz;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -43,18 +42,4 @@ public interface DailyQuizRepository extends JpaRepository<DailyQuiz, Long> {
             """)
     Optional<DailyQuiz> findWithItems(@Param("userId") Long userId,
                                       @Param("quizDate") LocalDate quizDate);
-
-    /**
-     * 스트릭 계산 재료 — 완료된 세트의 날짜만 최신순으로. 연속 판정은 서비스가 한다
-     * (SQL로 "연속"을 세려면 윈도우 함수 곡예가 필요한데, 하루 1행이라 1년 치가 365행 —
-     * 자바 순회가 더 읽기 쉽고 충분히 싸다).
-     * UNIQUE(user_id, quiz_date) 인덱스가 필터+정렬을 그대로 받는다.
-     */
-    @Query("""
-            select d.quizDate from DailyQuiz d
-            where d.userId = :userId
-              and d.completedAt is not null
-            order by d.quizDate desc
-            """)
-    List<LocalDate> findCompletedDatesDesc(@Param("userId") Long userId);
 }

@@ -8,16 +8,19 @@ import java.util.List;
 /**
  * 오늘의 퀴즈 세트 응답 — API 스펙(docs/12 GET /api/me/daily-quiz).
  *
- * <p>스트릭이 세트 응답에 포함되는 이유: 홈 카드가 "3/10 완료 · 🔥 5일째"를 한 화면에
- * 그리는데, 이걸 API 2개로 쪼개면 클라이언트가 호출을 조립해야 한다. 세트를 조회하는
- * 순간이 곧 스트릭이 필요한 순간이라 함께 내려준다(별도 스트릭 API 없음).
+ * <h2>스트릭을 뺐다 (2026-08-29)</h2>
  *
- * @param streak 연속 완료 일수. 오늘 미완료여도 어제까지 이어져 있으면 살아 있는 값(docs/12)
+ * <p>연속 완료 일수를 함께 내려주고 있었다. 뺀 이유는 기술이 아니라 <b>제품 판단</b>이다 —
+ * 이 도구는 1인용이라 비교할 상대가 없고, 목표 페이스가 주 3회다. 주 3회를 지켜도 스트릭은
+ * 매주 끊기므로, 잘하고 있는데 실패한 것처럼 보이는 숫자가 된다. <b>끊기는 순간이 곧 그만두는
+ * 순간</b>이라는 것이 게임화 요소의 알려진 부작용이고, 여기서는 얻을 것이 없다.
+ *
+ * <p>계산 로직(calcStreak)과 그것이 쓰던 조회(findCompletedDatesDesc)까지 함께 지웠다.
+ * 화면에서만 감추면 세트를 열 때마다 아무도 안 보는 값을 위해 조회가 한 번 더 나간다.
  */
 public record DailyQuizResponse(
         LocalDate quizDate,
         boolean completed,
-        int streak,
         Progress progress,
         List<DailyQuizItemResponse> items
 ) {
@@ -25,7 +28,7 @@ public record DailyQuizResponse(
     public record Progress(int total, int solved) {
     }
 
-    public static DailyQuizResponse from(DailyQuiz quiz, int streak) {
+    public static DailyQuizResponse from(DailyQuiz quiz) {
         List<DailyQuizItemResponse> items = quiz.getItems().stream()
                 .map(DailyQuizItemResponse::from)
                 .toList();
@@ -33,7 +36,6 @@ public record DailyQuizResponse(
         return new DailyQuizResponse(
                 quiz.getQuizDate(),
                 quiz.isCompleted(),
-                streak,
                 new Progress(items.size(), solved),
                 items
         );

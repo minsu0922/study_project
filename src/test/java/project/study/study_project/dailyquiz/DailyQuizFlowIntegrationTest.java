@@ -211,24 +211,15 @@ class DailyQuizFlowIntegrationTest {
         assertThat(fresh).allMatch(i -> !mySubmitted.contains(i.problem().id()));
     }
 
+    /**
+     * 스트릭 단언은 2026-08-29에 뺐다 — 기능 자체를 없앴기 때문이다(DailyQuizResponse 주석).
+     * 완료 도장(completedAt)은 그대로 검증한다: 스트릭의 재료였을 뿐 아니라 "오늘 다 풀었나"를
+     * DB에 남기는 값이라, 스트릭이 사라져도 이 도장의 뜻은 그대로다.
+     */
     @Test
-    @DisplayName("진행률→완료→스트릭: 세트 문제만 진행률에 반영되고, 전부 풀면 완료 도장 + 스트릭이 이어진다")
-    void progressCompletionAndStreak() {
-        // 스트릭 사전 조건: 그저께·어제 세트를 완료 상태로 만들어 둔다(빈 세트 + 완료 도장 벌크 부여 —
-        // completedAt의 유일한 정상 경로는 제출이지만, "과거에 완료했다"는 전제는 테스트가 이렇게 만드는 게 최단)
-        dailyQuizRepository.save(DailyQuiz.of(userId, LocalDate.now().minusDays(2)));
-        dailyQuizRepository.save(DailyQuiz.of(userId, LocalDate.now().minusDays(1)));
-        em.flush();
-        em.createQuery("update DailyQuiz d set d.completedAt = :t where d.userId = :userId")
-                .setParameter("t", LocalDateTime.now().minusDays(1))
-                .setParameter("userId", userId)
-                .executeUpdate();
-        em.clear();
-
-        // 오늘 미완료여도 어제까지 이어졌으면 스트릭은 살아 있다(docs/12 — 아침부터 0을 보여주지 않는다)
+    @DisplayName("진행률→완료: 세트 문제만 진행률에 반영되고, 전부 풀면 완료 도장이 찍힌다")
+    void progressAndCompletion() {
         DailyQuizResponse today = getToday();
-        assertThat(today.streak()).isEqualTo(2);
-
         List<DailyQuizItemResponse> items = today.items();
         Long firstProblemId = items.get(0).problem().id();
 
@@ -242,14 +233,13 @@ class DailyQuizFlowIntegrationTest {
         assertThat(mid.progress().solved()).isEqualTo(1);
         assertThat(mid.completed()).isFalse();
 
-        // 나머지 전부 풀면 → 완료 도장 + 스트릭이 오늘까지 3일로 늘어난다
+        // 나머지 전부 풀면 → 완료 도장
         items.stream().skip(1).forEach(i -> submit(i.problem().id(), anyValidAnswer(i)));
         DailyQuizResponse done = getToday();
         assertThat(done.completed()).isTrue();
         assertThat(done.progress().solved()).isEqualTo(done.progress().total());
-        assertThat(done.streak()).isEqualTo(3);
 
-        // 완료 도장은 DB에도 찍혀 있다(스트릭 계산의 재료)
+        // 완료 도장은 DB에도 찍혀 있다
         DailyQuiz stored = dailyQuizRepository
                 .findByUserIdAndQuizDate(userId, LocalDate.now()).orElseThrow();
         assertThat(stored.getCompletedAt()).isNotNull();
@@ -264,7 +254,5 @@ class DailyQuizFlowIntegrationTest {
 
         DailyQuizResponse today = getToday();
         assertThat(today.quizDate()).isEqualTo(LocalDate.now());
-        // 어제 미완료는 스트릭에도 안 잡힌다(완료만 센다)
-        assertThat(today.streak()).isZero();
     }
 }

@@ -315,7 +315,6 @@ refresh 토큰을 폐기한다.
 {
   "quizDate": "2026-08-13",
   "completed": false,
-  "streak": 5,
   "progress": { "total": 10, "solved": 3 },
   "items": [
     { "seq": 1, "source": "REVIEW", "solved": true,
