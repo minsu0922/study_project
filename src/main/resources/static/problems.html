@@ -56,10 +56,11 @@
  * (docs/18). 그래서 여기 있는 값은 전부 그 선택에 쓰이는 것만 있다:
  * 무엇을 안 풀었나(상태) · 언제 마지막으로 건드렸나 · 지금 복습할 때인가.
  *
- * [토큰을 --pl-*로 가둔 이유]
- * 스펙의 --accent(파랑)가 기존 --accent(주황, 복습 강조)와, --radius 8px가 기존 14px와
- * 부딪힌다. 같은 이름을 덮으면 이 화면 하나가 아니라 홈·퀴즈·오답노트·관리 화면이
- * 함께 변형된다(style.css의 해당 블록 주석).
+ * [토큰은 이제 공용이다 — 2026-08-29 개편 4단계]
+ * 이 화면은 한동안 --pl-* 접두사로 가둔 섬이었다. 스펙의 토큰 이름이 기존 것과
+ * 부딪혀서(--accent 주황 ↔ 파랑, --radius 14 ↔ 8px), 화면 하나를 고치려다 앱 전체가
+ * 바뀌는 일을 막으려는 격리였다. 개편 1~3단계에서 그 충돌이 다 풀려 공용으로 흡수했다.
+ * 브랜드색은 인디고다(C안) — 이 화면만 파랑을 쓰던 상태가 사라졌다.
  *
  * [로그인 필수]
  * 이 목록의 모든 줄이 "나와의 관계"를 달고 있다 — 맞혔나, 언제 풀었나, 복습할 때인가.
@@ -263,7 +264,7 @@ function renderList(rows, data) {
       <span class="pl-state">${stateIcon(p.state)}</span>
       <span class="pl-title">${p.title
         ? escapeHtml(p.title)
-        : `<span style="color:var(--pl-muted)">(제목 없음 — 관리 화면에서 채울 수 있습니다)</span>`}</span>
+        : `<span style="color:var(--muted)">(제목 없음 — 관리 화면에서 채울 수 있습니다)</span>`}</span>
       <span class="pl-type">${escapeHtml(typeLabel(p.type))}</span>
       <span class="pl-lv"><span class="pl-badge" data-lv="${p.difficulty}">${lvLabel}</span></span>
       <span class="pl-when">${whenLabel(p.lastAttemptedAt)}</span>
@@ -287,15 +288,15 @@ function renderList(rows, data) {
  * 색을 구분하기 어려운 사람에게 초록 동그라미와 빨간 가위표는 같은 회색 동그라미다.
  */
 function stateIcon(state) {
-  if (state === "CORRECT") return `<span aria-label="맞힌 문제" title="맞힌 문제" style="color:var(--pl-lv1-solid)">✓</span>`;
-  if (state === "WRONG") return `<span aria-label="틀린 문제" title="틀린 문제" style="color:var(--pl-lv3-solid)">✗</span>`;
-  return `<span aria-label="안 푼 문제" title="안 푼 문제" style="color:var(--pl-muted)">○</span>`;
+  if (state === "CORRECT") return `<span aria-label="맞힌 문제" title="맞힌 문제" style="color:var(--lv1-solid)">✓</span>`;
+  if (state === "WRONG") return `<span aria-label="틀린 문제" title="틀린 문제" style="color:var(--lv3-solid)">✗</span>`;
+  return `<span aria-label="안 푼 문제" title="안 푼 문제" style="color:var(--muted)">○</span>`;
 }
 
 /** 마지막 시도일 — 오늘/어제는 글자로, 그 뒤는 날짜로. "3일 전"까지 세지 않는 이유는
  *  이 열의 폭이 74px이고, 오래된 것은 정확한 날짜가 더 쓸모 있기 때문이다. */
 function whenLabel(iso) {
-  if (!iso) return `<span style="color:var(--pl-muted)">—</span>`;
+  if (!iso) return `<span style="color:var(--muted)">—</span>`;
   const d = new Date(iso);
   const today = new Date();
   const days = Math.floor((today.setHours(0, 0, 0, 0) - new Date(iso).setHours(0, 0, 0, 0)) / 86400000);

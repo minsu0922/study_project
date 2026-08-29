@@ -40,11 +40,28 @@
   --lv2-bg: #fffbeb; --lv2-fg: #b45309; --lv2-solid: #f59e0b;   /* 중급 */
   --lv3-bg: #fef2f2; --lv3-fg: #b91c1c; --lv3-solid: #ef4444;   /* 고급 */
 
-  --bg: #f5f6fa;                 /* 페이지 배경 */
+  /* ── 중립색: slate 계열 (2026-08-29 개편 4단계) ─────────────────
+   * 문제 목록 화면이 쓰던 slate 눈금을 앱 전체로 올렸다. 순수 회색보다 파란빛이
+   * 살짝 도는 계열이라 인디고 브랜드색과 같은 온도에서 만난다 — 중립색이 브랜드와
+   * 다른 온도면 카드 위에 놓인 버튼이 화면에서 떠 보인다.
+   *
+   * <b>--muted만 스펙 값을 안 썼다.</b> 스펙의 #94a3b8은 흰 배경에서 대비가 2.56:1로
+   * AA(4.5:1)에 한참 못 미친다. 그 화면에서는 11px 라벨에만 써서 티가 덜 났지만,
+   * 앱 전체의 보조 글자에 올리면 .meta가 전부 읽기 어려워진다. 같은 계열에서
+   * 한 단계 진한 #64748b(4.76:1)로 올렸다. */
+  --bg: #f8fafc;                 /* 페이지 배경 (slate-50) */
   --card: #ffffff;
-  --text: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
+  /* 페이지·카드보다 한 단계 진한 채움. 통계 타일처럼 <배경 위에 얹힌 면>과
+     흰 줄의 hover에 쓴다.
+     이 토큰이 없어서 한 번 깨졌다(2026-08-29): 통계 타일이 --bg를 쓰고 있었는데
+     페이지 배경도 --bg라 타일이 통째로 사라졌다. 화면을 띄워 보고 알았다 —
+     "배경"과 "배경 위의 옅은 면"은 다른 것이라 토큰도 달라야 한다. */
+  --fill: #f1f5f9;               /* slate-100 */
+  --text: #0f172a;               /* slate-900 */
+  --text-2: #475569;             /* slate-600 — 본문보다 한 단계 여린 글자 */
+  --muted: #64748b;              /* slate-500 — 보조 설명. 대비 4.76:1 */
+  --border: #e2e8f0;             /* slate-200 */
+  --border-strong: #cbd5e1;      /* slate-300 — 호버·강조 테두리 */
 
   --correct: #16a34a;
   --wrong: #dc2626;
@@ -196,7 +213,7 @@ h1 { font-size: 1.55rem; margin: 8px 0 18px; letter-spacing: -.02em; }
   gap: 10px; align-items: center;
   padding: 5px 8px; border-radius: 6px;
 }
-.hbar-row:hover { background: var(--bg); }  /* 행 전체가 호버 대상 — 막대보다 큰 히트 영역 */
+.hbar-row:hover { background: var(--fill); }  /* 행 전체가 호버 대상 — 막대보다 큰 히트 영역 */
 .hbar-label { font-size: .85rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hbar-label .n { color: var(--muted); font-size: .75rem; margin-left: 4px; }  /* 표본 수 — 2회짜리 0%를 과신하지 않게 */
 .hbar-track { height: 16px; background: var(--primary-soft); border-radius: 0 4px 4px 0; }
@@ -749,47 +766,34 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 }
 
 /* =====================================================================
- * 문제 목록 화면 (/problems.html) — docs/18, 2026-08-29
+ * 문제 목록 화면 (/problems.html) — docs/18
  * ---------------------------------------------------------------------
- * [왜 토큰에 --pl- 접두사를 붙였나]
- * 스펙이 가져온 토큰 이름들이 기존 것과 정면으로 부딪힌다:
- *   --accent  기존 #f59e0b 주황(복습 강조)  ↔  스펙 #2563eb 파랑
- *   --radius  기존 14px                     ↔  스펙 8px
- * 같은 이름을 덮으면 <이 화면 하나가 아니라> 홈·퀴즈·오답노트·관리 화면이 동시에
- * 변형된다. 작업 범위가 "화면 1개"인데 결과 범위가 앱 전체가 되는 셈이다.
- * 접두사로 가둬 두면 나중에 전 페이지 개편을 할 때 이 블록을 기준으로 삼을 수 있다.
+ * [토큰을 공용으로 흡수했다 — 2026-08-29 개편 4단계]
+ * 이 블록은 원래 --pl-* 접두사로 가둔 <섬>이었다. 스펙의 토큰 이름이 기존 것과
+ * 정면으로 부딪혀서(--accent 주황 ↔ 파랑, --radius 14 ↔ 8px), 화면 하나를 고치려다
+ * 앱 전체를 바꾸는 일을 막으려는 격리였다.
+ *
+ * 이제 그 충돌이 다 풀렸다 — --review로 이름이 갈렸고, --radius는 8px가 됐고,
+ * 난이도 3색은 공용 토큰이 됐다. 섬을 유지할 이유가 남은 것은 브랜드색 하나였는데
+ * C안이 인디고를 지키기로 정했으므로 그것도 없어졌다.
+ *
+ * 남은 지역 토큰은 --pl-sidebar-w 하나다. 이 화면에만 있는 구조라 공용으로 올릴
+ * 자리가 없다. 클래스 이름의 pl- 접두사는 그대로 둔다 — 이름을 바꾸면 HTML까지
+ * 함께 고쳐야 하고, 접두사 자체는 "이 화면 전용 규칙"이라는 뜻으로 여전히 쓸모가 있다.
  *
  * [평면 — 그림자 없음]
- * 이 화면은 그림자를 쓰지 않는다. 깊이로 구분하는 대신 1px 선과 여백으로 나눈다.
- * 목록은 훑는 화면이라, 줄마다 떠 있는 느낌이 오히려 눈을 잡아 세운다.
+ * 목록은 훑는 화면이라 줄마다 떠 있는 느낌이 눈을 잡아 세운다. 깊이 대신 1px 선과
+ * 여백으로 나눈다. 2단계에서 앱 전체가 같은 규칙이 됐다.
  *
  * [굵기는 400·500만]
  * 600·700을 쓰지 않는다. 강조가 흔해지면 강조가 아니게 된다 — 이 화면에서 굵게
  * 처리할 것은 통계 숫자와 배지뿐이다.
  * ===================================================================== */
 .problem-list {
-  --pl-surface-1: #f1f5f9;
-  --pl-surface-2: #ffffff;
-
-  --pl-text: #0f172a;
-  --pl-text-2: #475569;
-  --pl-muted: #94a3b8;
-
-  --pl-border: #e2e8f0;
-  --pl-border-strong: #cbd5e1;
-
-  --pl-accent: #2563eb;
-  --pl-accent-bg: #eff6ff;
-
-  --pl-lv1-bg: #ecfdf5; --pl-lv1-fg: #047857; --pl-lv1-solid: #10b981;
-  --pl-lv2-bg: #fffbeb; --pl-lv2-fg: #b45309; --pl-lv2-solid: #f59e0b;
-  --pl-lv3-bg: #fef2f2; --pl-lv3-fg: #b91c1c; --pl-lv3-solid: #ef4444;
-
-  --pl-radius: 8px;
   --pl-sidebar-w: 190px;
 
   max-width: 980px;
-  color: var(--pl-text);
+  color: var(--text);
 }
 
 /* ── 통계 카드 4열 ────────────────────────────────────────────── */
@@ -798,25 +802,25 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   margin-bottom: 20px;
 }
 .pl-stat {
-  background: var(--pl-surface-1); border-radius: var(--pl-radius);
+  background: var(--fill); border-radius: var(--radius);
   padding: 12px 14px;
 }
 .pl-stat .num { font-size: 22px; font-weight: 500; line-height: 1.2; }
-.pl-stat .label { font-size: 11px; color: var(--pl-muted); margin-top: 2px; }
+.pl-stat .label { font-size: 11px; color: var(--muted); margin-top: 2px; }
 /* 값이 없는 카드(정답률 null 등) — 숫자 자리를 비우지 않고 이유를 적는다.
    "0%"로 채우면 다 틀렸다는 뜻이 되어 정반대 신호가 된다. */
-.pl-stat .num.none { font-size: 13px; color: var(--pl-muted); padding: 5px 0; }
+.pl-stat .num.none { font-size: 13px; color: var(--muted); padding: 5px 0; }
 
 /* ── 본문 2단 ─────────────────────────────────────────────────── */
 .pl-body { display: flex; gap: 20px; align-items: flex-start; }
 .pl-side {
   width: var(--pl-sidebar-w); flex: none;
-  border-right: 1px solid var(--pl-border); padding-right: 16px;
+  border-right: 1px solid var(--border); padding-right: 16px;
 }
 .pl-main { flex: 1; min-width: 0; }   /* min-width:0 — 안 주면 긴 제목이 표를 밀어낸다 */
 
 .pl-side h2 {
-  font-size: 11px; font-weight: 400; color: var(--pl-muted);
+  font-size: 11px; font-weight: 400; color: var(--muted);
   margin: 0 0 8px;
 }
 .pl-side h2.second { margin-top: 20px; }
@@ -825,86 +829,86 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 .pl-domain {
   display: block; width: 100%; text-align: left;
   background: none; border: 0; cursor: pointer;
-  padding: 7px 8px; border-radius: var(--pl-radius);
-  font: inherit; font-size: 13px; color: var(--pl-text);
+  padding: 7px 8px; border-radius: var(--radius);
+  font: inherit; font-size: 13px; color: var(--text);
 }
-.pl-domain:hover { background: var(--pl-surface-1); }
-.pl-domain[aria-pressed="true"] { background: var(--pl-accent-bg); }
+.pl-domain:hover { background: var(--fill); }
+.pl-domain[aria-pressed="true"] { background: var(--primary-soft); }
 .pl-domain .row { display: flex; align-items: baseline; gap: 6px; }
 .pl-domain .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pl-domain .n { font-size: 11px; color: var(--pl-muted); flex: none; }
-.pl-bar { height: 3px; border-radius: 2px; background: var(--pl-surface-1); margin-top: 5px; }
-.pl-bar > i { display: block; height: 100%; border-radius: 2px; background: var(--pl-accent); }
+.pl-domain .n { font-size: 11px; color: var(--muted); flex: none; }
+.pl-bar { height: 3px; border-radius: 2px; background: var(--fill); margin-top: 5px; }
+.pl-bar > i { display: block; height: 100%; border-radius: 2px; background: var(--primary); }
 
 .pl-more {
   background: none; border: 0; cursor: pointer; font: inherit;
-  font-size: 12px; color: var(--pl-accent); padding: 6px 8px;
+  font-size: 12px; color: var(--primary); padding: 6px 8px;
 }
 
 /* 난이도 토글 — 다중 선택 */
 .pl-levels { display: flex; gap: 6px; flex-wrap: wrap; }
 .pl-level {
-  border: 1px solid var(--pl-border); background: var(--pl-surface-2);
+  border: 1px solid var(--border); background: var(--card);
   border-radius: 999px; padding: 5px 12px;
   font: inherit; font-size: 11px; font-weight: 500; cursor: pointer;
-  color: var(--pl-text-2);
+  color: var(--text-2);
 }
-.pl-level[aria-pressed="true"][data-lv="BEGINNER"]     { background: var(--pl-lv1-bg); color: var(--pl-lv1-fg); border-color: var(--pl-lv1-solid); }
-.pl-level[aria-pressed="true"][data-lv="INTERMEDIATE"] { background: var(--pl-lv2-bg); color: var(--pl-lv2-fg); border-color: var(--pl-lv2-solid); }
-.pl-level[aria-pressed="true"][data-lv="ADVANCED"]     { background: var(--pl-lv3-bg); color: var(--pl-lv3-fg); border-color: var(--pl-lv3-solid); }
+.pl-level[aria-pressed="true"][data-lv="BEGINNER"]     { background: var(--lv1-bg); color: var(--lv1-fg); border-color: var(--lv1-solid); }
+.pl-level[aria-pressed="true"][data-lv="INTERMEDIATE"] { background: var(--lv2-bg); color: var(--lv2-fg); border-color: var(--lv2-solid); }
+.pl-level[aria-pressed="true"][data-lv="ADVANCED"]     { background: var(--lv3-bg); color: var(--lv3-fg); border-color: var(--lv3-solid); }
 
 /* ── 상태 필터 칩 ─────────────────────────────────────────────── */
 .pl-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .pl-chip {
-  border: 1px solid var(--pl-border); background: var(--pl-surface-2);
+  border: 1px solid var(--border); background: var(--card);
   border-radius: 20px; padding: 6px 12px;
-  font: inherit; font-size: 12px; cursor: pointer; color: var(--pl-text-2);
+  font: inherit; font-size: 12px; cursor: pointer; color: var(--text-2);
 }
-.pl-chip:hover { border-color: var(--pl-border-strong); }
+.pl-chip:hover { border-color: var(--border-strong); }
 .pl-chip[aria-checked="true"] {
-  background: var(--pl-accent-bg); border-color: var(--pl-accent); color: var(--pl-accent);
+  background: var(--primary-soft); border-color: var(--primary); color: var(--primary);
 }
 
 /* ── 목록 ─────────────────────────────────────────────────────── */
 .pl-head, .pl-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 9px 14px; border-bottom: 1px solid var(--pl-border);
+  padding: 9px 14px; border-bottom: 1px solid var(--border);
 }
-.pl-head { font-size: 11px; color: var(--pl-muted); }
+.pl-head { font-size: 11px; color: var(--muted); }
 .pl-row {
-  background: var(--pl-surface-2); color: inherit; text-decoration: none;
+  background: var(--card); color: inherit; text-decoration: none;
   min-height: 44px;                      /* 터치 타깃 — 스펙 §4 */
 }
 .pl-row:last-child { border-bottom: 0; }
-.pl-row:hover { background: var(--pl-surface-1); }
+.pl-row:hover { background: var(--fill); }
 .pl-state { width: 18px; flex: none; display: flex; align-items: center; font-size: 15px; }
 .pl-title { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pl-type { width: 56px; flex: none; font-size: 12px; color: var(--pl-text-2); }
+.pl-type { width: 56px; flex: none; font-size: 12px; color: var(--text-2); }
 .pl-lv   { width: 46px; flex: none; }
-.pl-when { width: 74px; flex: none; font-size: 12px; color: var(--pl-text-2); text-align: right; }
+.pl-when { width: 74px; flex: none; font-size: 12px; color: var(--text-2); text-align: right; }
 
 .pl-badge {
   display: inline-block; border-radius: 999px;
   padding: 2px 8px; font-size: 11px; font-weight: 500;
 }
-.pl-badge[data-lv="BEGINNER"]     { background: var(--pl-lv1-bg); color: var(--pl-lv1-fg); }
-.pl-badge[data-lv="INTERMEDIATE"] { background: var(--pl-lv2-bg); color: var(--pl-lv2-fg); }
-.pl-badge[data-lv="ADVANCED"]     { background: var(--pl-lv3-bg); color: var(--pl-lv3-fg); }
+.pl-badge[data-lv="BEGINNER"]     { background: var(--lv1-bg); color: var(--lv1-fg); }
+.pl-badge[data-lv="INTERMEDIATE"] { background: var(--lv2-bg); color: var(--lv2-fg); }
+.pl-badge[data-lv="ADVANCED"]     { background: var(--lv3-bg); color: var(--lv3-fg); }
 
 /* 복습 차례 표시 — 색만으로 알리지 않으려고 글자를 함께 쓴다 */
 .pl-due {
-  font-size: 11px; color: var(--pl-lv2-fg); background: var(--pl-lv2-bg);
+  font-size: 11px; color: var(--lv2-fg); background: var(--lv2-bg);
   border-radius: 999px; padding: 2px 7px; flex: none;
 }
 
-.pl-empty { padding: 40px 14px; text-align: center; color: var(--pl-text-2); font-size: 14px; }
+.pl-empty { padding: 40px 14px; text-align: center; color: var(--text-2); font-size: 14px; }
 .pl-empty .act { margin-top: 12px; }
 
 .pl-pager { display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 20px; }
-.pl-pager .info { font-size: 12px; color: var(--pl-muted); }
+.pl-pager .info { font-size: 12px; color: var(--muted); }
 
 /* 포커스 링을 지우지 않는다(스펙 §4) — 키보드로 훑는 사람에게 유일한 위치 표시다 */
-.problem-list :focus-visible { outline: 2px solid var(--pl-accent); outline-offset: 2px; }
+.problem-list :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ── 768~1023px: 사이드바 유지, 유형 열을 버린다 ────────────────
  * 스펙은 정답률(→ 마지막 시도일) 열을 먼저 버리라고 했지만 뒤집었다.
@@ -923,12 +927,12 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   .pl-body { display: block; }
   .pl-side {
     width: auto; border-right: 0; padding-right: 0;
-    border-bottom: 1px solid var(--pl-border); padding-bottom: 12px; margin-bottom: 12px;
+    border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 12px;
   }
   .pl-domains { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
   .pl-domain {
     flex: none; min-width: 88px;
-    border: 1px solid var(--pl-border); border-radius: var(--pl-radius);
+    border: 1px solid var(--border); border-radius: var(--radius);
   }
   .pl-more { flex: none; white-space: nowrap; }
   .pl-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
@@ -946,14 +950,14 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   .pl-row::before {
     content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 0;
   }
-  .pl-row[data-lv="BEGINNER"]::before     { background: var(--pl-lv1-solid); }
-  .pl-row[data-lv="INTERMEDIATE"]::before { background: var(--pl-lv2-solid); }
-  .pl-row[data-lv="ADVANCED"]::before     { background: var(--pl-lv3-solid); }
+  .pl-row[data-lv="BEGINNER"]::before     { background: var(--lv1-solid); }
+  .pl-row[data-lv="INTERMEDIATE"]::before { background: var(--lv2-solid); }
+  .pl-row[data-lv="ADVANCED"]::before     { background: var(--lv3-solid); }
 
   .pl-title { flex: 1 1 100%; order: 1; white-space: normal; }
   .pl-meta-line {
     flex: 1 1 100%; order: 2; margin-top: 3px;
-    font-size: 12px; color: var(--pl-text-2);
+    font-size: 12px; color: var(--text-2);
   }
   .pl-lv, .pl-type, .pl-when { display: none; }   /* 2줄 메타가 대신한다 */
   /* 상태 아이콘은 우측 끝 고정 */
