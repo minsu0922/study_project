@@ -141,7 +141,7 @@ async function loadStatus() {
           ? `<span class="badge green">졸업 🎓</span>`
           : `<span class="badge orange">${r.stage + 1}단계</span>`;
         const dueLabel = r.status === "GRADUATED" ? "복습 끝! 다시 안 나와요"
-          : r.due ? `<span style="color:var(--accent);font-weight:700">지금 복습할 시간!</span>`
+          : r.due ? `<span style="color:var(--review);font-weight:700">지금 복습할 시간!</span>`
                   : `다음 복습: ${formatDate(r.nextReviewAt)}`;
         return `
           <div class="card">
