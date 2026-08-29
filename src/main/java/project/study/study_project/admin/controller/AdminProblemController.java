@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
+import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.ApiResponse;
@@ -27,6 +28,8 @@ import project.study.study_project.llm.dto.RationaleBackfillResponse;
 import project.study.study_project.llm.dto.TitleBackfillResponse;
 import project.study.study_project.llm.service.ChoiceRationaleBackfillService;
 import project.study.study_project.llm.service.ProblemTitleBackfillService;
+
+import java.util.List;
 
 /**
  * 관리자 문제 관리 API — /api/admin/** 전체가 SecurityConfig에서 hasRole(ADMIN)로 잠긴다.
@@ -51,10 +54,18 @@ public class AdminProblemController {
     @GetMapping
     public ApiResponse<PageResponse<AdminProblemDetail>> list(
             @RequestParam(required = false) Domain domain,
+            @RequestParam(required = false) Difficulty difficulty,
             @RequestParam(required = false) ProblemType type,
+            @RequestParam(required = false) String documentSlug,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(adminProblemService.getProblems(domain, type, pageable));
+        return ApiResponse.ok(adminProblemService.getProblems(domain, difficulty, type, documentSlug, pageable));
+    }
+
+    /** 근거 문서 필터에 채울 slug 목록 — 문제에 실제로 붙어 있는 것만. */
+    @GetMapping("/document-slugs")
+    public ApiResponse<List<String>> documentSlugs() {
+        return ApiResponse.ok(adminProblemService.getDocumentSlugs());
     }
 
     /** 단건(수정 폼 채우기용). */

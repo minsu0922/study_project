@@ -51,19 +51,28 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     );
 
     /**
-     * 관리자용 문제 목록 — 최신 등록 순, 도메인/유형 필터(선택).
+     * 관리자용 문제 목록 — 최신 등록 순, 분야·난이도·유형·근거 문서 필터(전부 선택).
      * 퀴즈 조회와 달리 랜덤이 아니고(관리 화면은 예측 가능한 순서가 편함),
      * ESSAY 제외도 없다(관리자는 전부 봐야 함). JPQL이라 enum 파라미터를 그대로 받는다.
+     *
+     * <p><b>난이도와 근거 문서를 2026-08-29에 더했다.</b> 그전에는 분야·유형만 있었고
+     * 그마저 화면이 쓰지 않아, 문제 76개를 네 쪽에 걸쳐 눈으로 훑는 수밖에 없었다.
+     * 실제로 자주 하는 질문은 "이 문서로 만든 문제가 몇 개고 난이도가 고른가"인데
+     * 그 둘이 없으면 답할 수 없다.
      */
     @Query("""
             select p from Problem p
             where (:domain is null or p.domain = :domain)
+              and (:difficulty is null or p.difficulty = :difficulty)
               and (:type is null or p.type = :type)
+              and (:documentSlug is null or p.documentSlug = :documentSlug)
             order by p.id desc
             """)
     Page<Problem> findForAdmin(
             @Param("domain") Domain domain,
+            @Param("difficulty") Difficulty difficulty,
             @Param("type") ProblemType type,
+            @Param("documentSlug") String documentSlug,
             Pageable pageable
     );
 
@@ -134,6 +143,21 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      */
     @Query("select p.question from Problem p where p.domain = :domain order by p.id desc")
     List<String> findQuestionTextsByDomain(@Param("domain") Domain domain, Pageable pageable);
+
+    /**
+     * 관리 화면의 근거 문서 필터에 채울 slug 목록 — <b>문제에 실제로 붙어 있는</b> 것만.
+     *
+     * <p>등록 문서 목록을 그대로 쓰지 않는 이유가 둘이다. 하나는 문제가 한 건도 없는 문서를
+     * 고르면 빈 목록이 나온다는 것. 다른 하나는 <b>둘이 어긋날 수 있다</b>는 것이다 —
+     * 문제의 slug는 연관관계가 아니라 문자열이라(V9 주석), 문서 쪽 slug를 고친 뒤에도
+     * 옛 값을 가리키는 문제가 남는다. 그런 문제를 찾으려면 문제 쪽에서 세는 수밖에 없다.
+     */
+    @Query("""
+            select distinct p.documentSlug from Problem p
+            where p.documentSlug is not null
+            order by p.documentSlug
+            """)
+    List<String> findDistinctDocumentSlugs();
 
     /**
      * 분야 + 지문만 최신순으로 — 클라우드 배치가 읽을 중복 회피 스냅샷을 만드는 데 쓴다(docs/14).

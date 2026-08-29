@@ -78,6 +78,18 @@
     </div>
 
     <h3>문제 목록 <span class="meta">(행을 누르면 위 폼에서 수정)</span></h3>
+    <!-- 필터(2026-08-29). 서버에는 분야·유형 파라미터가 <이미 있었는데> 화면이 쓰지 않아,
+         문제 76개를 네 쪽에 걸쳐 눈으로 훑는 수밖에 없었다. 난이도·근거 문서는 이번에 더했다 —
+         여기서 자주 하는 질문이 "이 문서로 만든 문제가 몇 개고 난이도가 고른가"인데
+         그 둘이 없으면 답할 수 없다. -->
+    <div class="filters" style="margin-bottom:12px">
+      <div class="field"><label>분야</label><select id="fpDomain"></select></div>
+      <div class="field"><label>난이도</label><select id="fpDifficulty"></select></div>
+      <div class="field"><label>유형</label><select id="fpType"></select></div>
+      <div class="field"><label>근거 문서</label><select id="fpDocument"></select></div>
+      <div class="field"><label>&nbsp;</label><button id="fpResetBtn" class="btn-outline">필터 지우기</button></div>
+    </div>
+    <div class="meta" id="pTotal" style="margin-bottom:6px"></div>
     <div class="table-wrap"><table class="grid" id="problemTable"></table></div>
     <div class="pager" id="pPager" hidden>
       <button id="pPrevBtn" class="btn-outline">이전</button>
@@ -101,6 +113,7 @@ let pPage = 0;                // 목록 현재 페이지
 
 if (initAdminPage("problems")) {
   initProblemForm();
+  initListFilters();
   loadProblems();
   refreshBackfillCard();
   refreshRationaleCard();
@@ -129,6 +142,68 @@ function initProblemForm() {
   document.getElementById("pCancelBtn").addEventListener("click", resetProblemForm);
   document.getElementById("pPrevBtn").addEventListener("click", () => { pPage--; loadProblems(); });
   document.getElementById("pNextBtn").addEventListener("click", () => { pPage++; loadProblems(); });
+}
+
+/**
+ * 목록 필터 넷 — 2026-08-29 신설.
+ *
+ * <p>서버에는 분야·유형 파라미터가 <b>이미 있었는데</b> 화면이 쓰지 않아, 문제 76개를
+ * 네 쪽에 걸쳐 눈으로 훑는 수밖에 없었다. 난이도·근거 문서는 이번에 서버까지 더했다 —
+ * 이 화면에서 자주 하는 질문이 "이 문서로 만든 문제가 몇 개고 난이도가 고른가"인데
+ * 그 둘이 없으면 답할 수 없다.
+ *
+ * <p>등록 폼의 select(pDomain 등)와 <b>id를 갈라 둔다</b>(fp 접두사). 같은 요소를 나눠 쓰면
+ * 문제를 하나 등록할 때마다 목록 필터가 함께 움직인다.
+ */
+function initListFilters() {
+  for (const [id, options] of [["fpDomain", DOMAINS], ["fpDifficulty", DIFFICULTIES], ["fpType", TYPES]]) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">전체</option>`
+      + options.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+    // 필터를 바꾸면 첫 쪽부터 — 3쪽을 보다 좁히면 결과가 1쪽뿐이라 빈 화면이 뜬다.
+    sel.addEventListener("change", () => { pPage = 0; loadProblems(); });
+  }
+  document.getElementById("fpDocument").addEventListener("change", () => { pPage = 0; loadProblems(); });
+
+  document.getElementById("fpResetBtn").addEventListener("click", () => {
+    ["fpDomain", "fpDifficulty", "fpType", "fpDocument"].forEach(id => document.getElementById(id).value = "");
+    pPage = 0;
+    loadProblems();
+  });
+
+  loadProblemDocumentFilter();
+}
+
+/**
+ * 근거 문서 필터를 채운다 — <b>문제에 실제로 붙어 있는</b> slug만 서버가 준다.
+ *
+ * <p>등록 문서 목록을 쓰지 않는 이유가 둘이다. 문제가 한 건도 없는 문서를 고르면 빈 목록이
+ * 나온다는 것, 그리고 둘이 <b>어긋날 수 있다</b>는 것 — 문제의 slug는 연관관계가 아니라
+ * 문자열이라 문서 쪽 slug를 고쳐도 옛 값을 가리키는 문제가 남는다. 그런 문제를 찾으려면
+ * 문제 쪽에서 센 목록이어야 한다.
+ */
+async function loadProblemDocumentFilter() {
+  const sel = document.getElementById("fpDocument");
+  try {
+    const slugs = await api("/api/admin/problems/document-slugs");
+    sel.innerHTML = `<option value="">전체</option>`
+      + slugs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  } catch (e) {
+    // 필터 하나를 못 채웠다고 목록까지 막지 않는다.
+    sel.innerHTML = `<option value="">전체</option>`;
+  }
+}
+
+/** 지금 걸려 있는 필터를 쿼리 문자열로. 빈 값은 넘기지 않는다(서버가 조건을 건너뛴다). */
+function listFilterQuery() {
+  const params = new URLSearchParams();
+  for (const [key, id] of [["domain", "fpDomain"], ["difficulty", "fpDifficulty"],
+                           ["type", "fpType"], ["documentSlug", "fpDocument"]]) {
+    const value = document.getElementById(id).value;
+    if (value) params.set(key, value);
+  }
+  const query = params.toString();
+  return query ? "&" + query : "";
 }
 
 /** 유형 선택에 따라 입력 UI를 바꾼다 — 서버의 타입별 검증 규칙(QUIZ_004)과 짝을 맞춘 화면 규칙. */
@@ -240,11 +315,15 @@ function resetProblemForm() {
 }
 
 async function loadProblems() {
-  const data = await api("/api/admin/problems?page=" + pPage);
+  const data = await api("/api/admin/problems?page=" + pPage + listFilterQuery());
   const table = document.getElementById("problemTable");
+  // 필터가 생기면서 "결과 0건"이 흔해졌다. 머리글만 남으면 로딩 중인지 없는 건지 알 수 없다.
+  const emptyRow = `<tr><td colspan="7" class="meta" style="padding:18px; text-align:center">
+    조건에 맞는 문제가 없습니다 — 필터를 지우면 전체가 보입니다.</td></tr>`;
+
   table.innerHTML =
     `<tr><th>ID</th><th>제목 / 지문</th><th>도메인</th><th>난이도</th><th>유형</th><th>정답</th><th></th></tr>` +
-    data.content.map(p => `
+    (data.content.length === 0 ? emptyRow : data.content.map(p => `
       <tr class="click-row" data-id="${p.id}" title="이 문제를 수정">
         <td>${p.id}</td>
         <td class="wrap">${problemLabel(p)}</td>
@@ -255,7 +334,7 @@ async function loadProblems() {
         <td class="row-actions">
           <button class="danger" data-action="delete">삭제</button>
         </td>
-      </tr>`).join("");
+      </tr>`).join(""));
 
   /* 행 전체가 "수정"이라 수정 버튼은 없앴다 — 같은 일을 하는 두 가지 길을 두면
    * 사람은 어느 쪽이 진짜인지 확인하려고 오히려 망설인다.
@@ -274,6 +353,10 @@ async function loadProblems() {
     if (btn) { deleteProblem(btn, Number(tr.dataset.id)); return; }
     editProblem(Number(tr.dataset.id));
   };
+
+  // 전체 건수를 늘 적는다. 필터를 걸었을 때 "몇 건으로 좁혀졌나"가 곧 답인 경우가 많고,
+  // 쪽수만으로는 그걸 알 수 없다(쪽이 하나면 페이저 자체가 숨는다).
+  document.getElementById("pTotal").textContent = `전체 ${data.totalElements}건`;
 
   const pager = document.getElementById("pPager");
   pager.hidden = data.totalPages <= 1;
