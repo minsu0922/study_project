@@ -699,3 +699,220 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   .tab-btn { padding: 8px 12px; font-size: .85rem; }
   .doc-preview { max-height: 50vh; padding: 12px 14px; }
 }
+
+/* =====================================================================
+ * 문제 목록 화면 (/problems.html) — docs/18, 2026-08-29
+ * ---------------------------------------------------------------------
+ * [왜 토큰에 --pl- 접두사를 붙였나]
+ * 스펙이 가져온 토큰 이름들이 기존 것과 정면으로 부딪힌다:
+ *   --accent  기존 #f59e0b 주황(복습 강조)  ↔  스펙 #2563eb 파랑
+ *   --radius  기존 14px                     ↔  스펙 8px
+ * 같은 이름을 덮으면 <이 화면 하나가 아니라> 홈·퀴즈·오답노트·관리 화면이 동시에
+ * 변형된다. 작업 범위가 "화면 1개"인데 결과 범위가 앱 전체가 되는 셈이다.
+ * 접두사로 가둬 두면 나중에 전 페이지 개편을 할 때 이 블록을 기준으로 삼을 수 있다.
+ *
+ * [평면 — 그림자 없음]
+ * 이 화면은 그림자를 쓰지 않는다. 깊이로 구분하는 대신 1px 선과 여백으로 나눈다.
+ * 목록은 훑는 화면이라, 줄마다 떠 있는 느낌이 오히려 눈을 잡아 세운다.
+ *
+ * [굵기는 400·500만]
+ * 600·700을 쓰지 않는다. 강조가 흔해지면 강조가 아니게 된다 — 이 화면에서 굵게
+ * 처리할 것은 통계 숫자와 배지뿐이다.
+ * ===================================================================== */
+.problem-list {
+  --pl-surface-1: #f1f5f9;
+  --pl-surface-2: #ffffff;
+
+  --pl-text: #0f172a;
+  --pl-text-2: #475569;
+  --pl-muted: #94a3b8;
+
+  --pl-border: #e2e8f0;
+  --pl-border-strong: #cbd5e1;
+
+  --pl-accent: #2563eb;
+  --pl-accent-bg: #eff6ff;
+
+  --pl-lv1-bg: #ecfdf5; --pl-lv1-fg: #047857; --pl-lv1-solid: #10b981;
+  --pl-lv2-bg: #fffbeb; --pl-lv2-fg: #b45309; --pl-lv2-solid: #f59e0b;
+  --pl-lv3-bg: #fef2f2; --pl-lv3-fg: #b91c1c; --pl-lv3-solid: #ef4444;
+
+  --pl-radius: 8px;
+  --pl-sidebar-w: 190px;
+
+  max-width: 980px;
+  color: var(--pl-text);
+}
+
+/* ── 통계 카드 4열 ────────────────────────────────────────────── */
+.pl-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  margin-bottom: 20px;
+}
+.pl-stat {
+  background: var(--pl-surface-1); border-radius: var(--pl-radius);
+  padding: 12px 14px;
+}
+.pl-stat .num { font-size: 22px; font-weight: 500; line-height: 1.2; }
+.pl-stat .label { font-size: 11px; color: var(--pl-muted); margin-top: 2px; }
+/* 값이 없는 카드(정답률 null 등) — 숫자 자리를 비우지 않고 이유를 적는다.
+   "0%"로 채우면 다 틀렸다는 뜻이 되어 정반대 신호가 된다. */
+.pl-stat .num.none { font-size: 13px; color: var(--pl-muted); padding: 5px 0; }
+
+/* ── 본문 2단 ─────────────────────────────────────────────────── */
+.pl-body { display: flex; gap: 20px; align-items: flex-start; }
+.pl-side {
+  width: var(--pl-sidebar-w); flex: none;
+  border-right: 1px solid var(--pl-border); padding-right: 16px;
+}
+.pl-main { flex: 1; min-width: 0; }   /* min-width:0 — 안 주면 긴 제목이 표를 밀어낸다 */
+
+.pl-side h2 {
+  font-size: 11px; font-weight: 400; color: var(--pl-muted);
+  margin: 0 0 8px;
+}
+.pl-side h2.second { margin-top: 20px; }
+
+/* 도메인 한 줄 — 이름 + 개수 + 진척 바 */
+.pl-domain {
+  display: block; width: 100%; text-align: left;
+  background: none; border: 0; cursor: pointer;
+  padding: 7px 8px; border-radius: var(--pl-radius);
+  font: inherit; font-size: 13px; color: var(--pl-text);
+}
+.pl-domain:hover { background: var(--pl-surface-1); }
+.pl-domain[aria-pressed="true"] { background: var(--pl-accent-bg); }
+.pl-domain .row { display: flex; align-items: baseline; gap: 6px; }
+.pl-domain .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-domain .n { font-size: 11px; color: var(--pl-muted); flex: none; }
+.pl-bar { height: 3px; border-radius: 2px; background: var(--pl-surface-1); margin-top: 5px; }
+.pl-bar > i { display: block; height: 100%; border-radius: 2px; background: var(--pl-accent); }
+
+.pl-more {
+  background: none; border: 0; cursor: pointer; font: inherit;
+  font-size: 12px; color: var(--pl-accent); padding: 6px 8px;
+}
+
+/* 난이도 토글 — 다중 선택 */
+.pl-levels { display: flex; gap: 6px; flex-wrap: wrap; }
+.pl-level {
+  border: 1px solid var(--pl-border); background: var(--pl-surface-2);
+  border-radius: 999px; padding: 5px 12px;
+  font: inherit; font-size: 11px; font-weight: 500; cursor: pointer;
+  color: var(--pl-text-2);
+}
+.pl-level[aria-pressed="true"][data-lv="BEGINNER"]     { background: var(--pl-lv1-bg); color: var(--pl-lv1-fg); border-color: var(--pl-lv1-solid); }
+.pl-level[aria-pressed="true"][data-lv="INTERMEDIATE"] { background: var(--pl-lv2-bg); color: var(--pl-lv2-fg); border-color: var(--pl-lv2-solid); }
+.pl-level[aria-pressed="true"][data-lv="ADVANCED"]     { background: var(--pl-lv3-bg); color: var(--pl-lv3-fg); border-color: var(--pl-lv3-solid); }
+
+/* ── 상태 필터 칩 ─────────────────────────────────────────────── */
+.pl-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.pl-chip {
+  border: 1px solid var(--pl-border); background: var(--pl-surface-2);
+  border-radius: 20px; padding: 6px 12px;
+  font: inherit; font-size: 12px; cursor: pointer; color: var(--pl-text-2);
+}
+.pl-chip:hover { border-color: var(--pl-border-strong); }
+.pl-chip[aria-checked="true"] {
+  background: var(--pl-accent-bg); border-color: var(--pl-accent); color: var(--pl-accent);
+}
+
+/* ── 목록 ─────────────────────────────────────────────────────── */
+.pl-head, .pl-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; border-bottom: 1px solid var(--pl-border);
+}
+.pl-head { font-size: 11px; color: var(--pl-muted); }
+.pl-row {
+  background: var(--pl-surface-2); color: inherit; text-decoration: none;
+  min-height: 44px;                      /* 터치 타깃 — 스펙 §4 */
+}
+.pl-row:last-child { border-bottom: 0; }
+.pl-row:hover { background: var(--pl-surface-1); }
+.pl-state { width: 18px; flex: none; display: flex; align-items: center; font-size: 15px; }
+.pl-title { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-type { width: 56px; flex: none; font-size: 12px; color: var(--pl-text-2); }
+.pl-lv   { width: 46px; flex: none; }
+.pl-when { width: 74px; flex: none; font-size: 12px; color: var(--pl-text-2); text-align: right; }
+
+.pl-badge {
+  display: inline-block; border-radius: 999px;
+  padding: 2px 8px; font-size: 11px; font-weight: 500;
+}
+.pl-badge[data-lv="BEGINNER"]     { background: var(--pl-lv1-bg); color: var(--pl-lv1-fg); }
+.pl-badge[data-lv="INTERMEDIATE"] { background: var(--pl-lv2-bg); color: var(--pl-lv2-fg); }
+.pl-badge[data-lv="ADVANCED"]     { background: var(--pl-lv3-bg); color: var(--pl-lv3-fg); }
+
+/* 복습 차례 표시 — 색만으로 알리지 않으려고 글자를 함께 쓴다 */
+.pl-due {
+  font-size: 11px; color: var(--pl-lv2-fg); background: var(--pl-lv2-bg);
+  border-radius: 999px; padding: 2px 7px; flex: none;
+}
+
+.pl-empty { padding: 40px 14px; text-align: center; color: var(--pl-text-2); font-size: 14px; }
+.pl-empty .act { margin-top: 12px; }
+
+.pl-pager { display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 20px; }
+.pl-pager .info { font-size: 12px; color: var(--pl-muted); }
+
+/* 포커스 링을 지우지 않는다(스펙 §4) — 키보드로 훑는 사람에게 유일한 위치 표시다 */
+.problem-list :focus-visible { outline: 2px solid var(--pl-accent); outline-offset: 2px; }
+
+/* ── 768~1023px: 사이드바 유지, 유형 열을 버린다 ────────────────
+ * 스펙은 정답률(→ 마지막 시도일) 열을 먼저 버리라고 했지만 뒤집었다.
+ * 객관식/OX는 "무엇을 풀지" 고르는 판단에 거의 쓰이지 않고, 마지막 시도일은
+ * 이 화면이 정답률을 대신해 들여온 <결정에 쓰는> 값이다. 좁은 폭에서 살릴 열은
+ * 결정에 쓰이는 쪽이다. */
+@media (max-width: 1023px) {
+  .pl-type { display: none; }
+}
+
+/* ── 768px 미만 ───────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .pl-stats { grid-template-columns: repeat(2, 1fr); }
+
+  /* 사이드바 → 가로 스크롤 칩 줄. 접히는 드로어를 만들지 않는다 — 탭이 한 번 준다. */
+  .pl-body { display: block; }
+  .pl-side {
+    width: auto; border-right: 0; padding-right: 0;
+    border-bottom: 1px solid var(--pl-border); padding-bottom: 12px; margin-bottom: 12px;
+  }
+  .pl-domains { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .pl-domain {
+    flex: none; min-width: 88px;
+    border: 1px solid var(--pl-border); border-radius: var(--pl-radius);
+  }
+  .pl-more { flex: none; white-space: nowrap; }
+  .pl-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .pl-chip { flex: none; }
+
+  /* 표 5열 → 2줄. 1줄=제목, 2줄=난이도·유형·마지막 시도일 */
+  .pl-head { display: none; }
+  .pl-row {
+    flex-wrap: wrap; align-items: flex-start;
+    padding: 10px 40px 10px 15px; position: relative;
+  }
+  /* 난이도를 배지 대신 좌측 3px 세로 스트립으로 — 좁은 폭에서 배지는 제목을 밀어낸다.
+   * 한쪽 테두리이므로 둥글리지 않는다(스펙 §3). 색 단독이 되지 않게 2줄 메타에
+   * "초급/중급/고급" 글자를 반드시 남긴다(스펙 §4). */
+  .pl-row::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 0;
+  }
+  .pl-row[data-lv="BEGINNER"]::before     { background: var(--pl-lv1-solid); }
+  .pl-row[data-lv="INTERMEDIATE"]::before { background: var(--pl-lv2-solid); }
+  .pl-row[data-lv="ADVANCED"]::before     { background: var(--pl-lv3-solid); }
+
+  .pl-title { flex: 1 1 100%; order: 1; white-space: normal; }
+  .pl-meta-line {
+    flex: 1 1 100%; order: 2; margin-top: 3px;
+    font-size: 12px; color: var(--pl-text-2);
+  }
+  .pl-lv, .pl-type, .pl-when { display: none; }   /* 2줄 메타가 대신한다 */
+  /* 상태 아이콘은 우측 끝 고정 */
+  .pl-state { position: absolute; right: 12px; top: 12px; }
+}
+
+/* 데스크톱에서는 2줄 메타를 쓰지 않는다(열이 따로 있다) */
+@media (min-width: 768px) {
+  .pl-meta-line { display: none; }
+}

@@ -74,6 +74,32 @@ public class QuizService {
     }
 
     /**
+     * 문제 하나만 — 목록 화면에서 <b>이걸 풀자</b>고 눌러 들어올 때(docs/18, 2026-08-29).
+     *
+     * <p><b>왜 필요했나.</b> 문제 목록은 "다음에 풀 문제 하나를 고르게 하는" 화면인데, 정작
+     * 고른 뒤에 갈 곳이 없었다. {@code /api/quiz}는 무작위 세트만 주므로 목록에서 3번 문제를
+     * 눌러도 엉뚱한 열 문제가 나온다 — 화면을 만들어 놓고 링크만 죽어 있는 상태가 된다.
+     *
+     * <p>응답을 {@link QuizResponse}(목록)로 감싸는 것은 의도다. 풀이 화면은 이미 "문제 배열"을
+     * 받아 도는 구조라, 한 건짜리 전용 형태를 새로 만들면 화면에 분기가 하나 생긴다.
+     * 한 칸짜리 세트로 주면 기존 흐름을 그대로 탄다.
+     *
+     * <p>ESSAY는 거절한다. 자동 채점 대상이 아니라 풀이 화면이 채점을 못 하는데, 목록에는
+     * 관리자가 손으로 넣은 서술형이 섞일 수 있다(관리 화면에는 유형 제한이 없다).
+     *
+     * @throws BusinessException 없는 id면 QUIZ_001, 서술형이면 QUIZ_002
+     */
+    @Transactional(readOnly = true)
+    public QuizResponse getOne(Long problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+        if (!problem.getType().isAutoScored()) {
+            throw new BusinessException(ErrorCode.QUIZ_002);
+        }
+        return new QuizResponse(List.of(QuizProblemItem.from(problem)));
+    }
+
+    /**
      * 답안 제출 → 즉시 채점 → 이력 저장 → 정답·해설 반환. (docs/03 POST /api/quiz/submit)
      *
      * <p>정답이든 오답이든 <b>Submission은 항상 저장</b>한다 — 오답만 저장하면 "몇 번 만에

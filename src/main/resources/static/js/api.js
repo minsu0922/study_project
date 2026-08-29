@@ -241,6 +241,8 @@ function hasRole(need) {
 const MENUS = [
   { key: "home", label: "홈", href: "/", need: "public" },
   { key: "quiz", label: "자유 퀴즈", href: "/quiz.html", need: "public" },
+  // 문제 목록은 내 풀이 기록을 함께 보여 주는 화면이라 로그인 사용자에게만 띄운다(docs/18)
+  { key: "problems", label: "문제", href: "/problems.html", need: "user" },
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
   { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge" },
   { key: "wrong", label: "오답노트", href: "/wrong-answers.html", need: "user" },

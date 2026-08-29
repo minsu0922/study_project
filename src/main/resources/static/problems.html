@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>문제 목록 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container problem-list">
+  <h1>문제</h1>
+  <div id="message"></div>
+
+  <div id="ui" hidden>
+    <!-- 통계 카드 넷. 스트릭은 없다 — 주 3회 페이스에서 매주 끊겨 잘하고 있는데
+         실패한 것처럼 보이는 숫자가 된다. 대신 "이번 주"를 쓴다(docs/12). -->
+    <div class="pl-stats" id="stats"></div>
+
+    <div class="pl-body">
+      <aside class="pl-side">
+        <h2>분야</h2>
+        <div class="pl-domains" id="domains"></div>
+
+        <h2 class="second">난이도</h2>
+        <div class="pl-levels" id="levels"></div>
+      </aside>
+
+      <div class="pl-main">
+        <!-- 상태 필터는 사이드바가 아니라 목록 바로 위에 둔다. 한쪽에 필터가 여덟 종
+             쌓이면 목록이 아니라 설정 화면이 된다(스펙 §2.3). -->
+        <div class="pl-chips" id="chips" role="radiogroup" aria-label="풀이 상태"></div>
+
+        <div class="pl-head" aria-hidden="true">
+          <span class="pl-state"></span>
+          <span class="pl-title">제목</span>
+          <span class="pl-type">유형</span>
+          <span class="pl-lv">난이도</span>
+          <span class="pl-when">마지막</span>
+        </div>
+        <div id="list"></div>
+        <div class="pl-pager" id="pager" hidden>
+          <button id="prevBtn" class="btn-outline">이전</button>
+          <span class="info" id="pageInfo"></span>
+          <button id="nextBtn" class="btn-outline">다음</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+/* 문제 목록 — "다음에 풀 문제 하나를 30초 안에 고르게 하는 것"이 이 화면의 유일한 목적이다
+ * (docs/18). 그래서 여기 있는 값은 전부 그 선택에 쓰이는 것만 있다:
+ * 무엇을 안 풀었나(상태) · 언제 마지막으로 건드렸나 · 지금 복습할 때인가.
+ *
+ * [토큰을 --pl-*로 가둔 이유]
+ * 스펙의 --accent(파랑)가 기존 --accent(주황, 복습 강조)와, --radius 8px가 기존 14px와
+ * 부딪힌다. 같은 이름을 덮으면 이 화면 하나가 아니라 홈·퀴즈·오답노트·관리 화면이
+ * 함께 변형된다(style.css의 해당 블록 주석).
+ *
+ * [로그인 필수]
+ * 이 목록의 모든 줄이 "나와의 관계"를 달고 있다 — 맞혔나, 언제 풀었나, 복습할 때인가.
+ * 그것을 뺀 목록은 그냥 카탈로그이고 그건 자유 퀴즈가 이미 하는 일이다. */
+
+renderNav("problems");
+
+const DOMAIN_PREVIEW = 5;   // 사이드바 기본 노출 수 — 12개를 다 펴면 사이드바가 본문보다 길어진다
+const PAGE_SIZE = 20;
+
+/* 상태 필터 넷. 값이 null이면 서버에 안 보낸다(= 전체). */
+const STATES = [
+  ["", "전체"],
+  ["UNSOLVED", "안 푼 문제"],
+  ["WRONG", "틀린 문제"],
+  ["DUE", "복습 대기"],     // 이것만 state가 아니라 reviewDue 파라미터로 나간다
+];
+
+const LEVELS = [["BEGINNER", "초급"], ["INTERMEDIATE", "중급"], ["ADVANCED", "고급"]];
+
+/* 화면 상태 — 주소로 넘기지 않는다. 이 화면은 "지금 뭘 풀지" 고르는 자리라
+ * 링크로 공유할 일이 없고, 새로고침하면 처음부터 보는 편이 자연스럽다. */
+let selectedDomain = null;
+let selectedLevels = new Set();
+let selectedState = "";
+let page = 0;
+let domainsExpanded = false;
+let summary = null;
+
+if (!isLoggedIn()) {
+  document.getElementById("message").innerHTML =
+    `<div class="alert info">문제 목록은 <b>내 풀이 기록</b>을 함께 보여 주는 화면이라 로그인이 필요합니다.
+     <a href="/login.html">로그인하기</a></div>`;
+} else {
+  document.getElementById("ui").hidden = false;
+  initFilters();
+  loadSummary();
+  loadList();
+}
+
+/* ═══════════ 통계 카드 + 사이드바 ═══════════ */
+
+async function loadSummary() {
+  try {
+    summary = await api("/api/me/study-summary");
+  } catch (e) {
+    // 통계를 못 불러왔다고 목록까지 막지 않는다 — 이 화면의 본체는 목록이다.
+    summary = null;
+  }
+  renderStats();
+  renderDomains();
+}
+
+/**
+ * 통계 카드 넷.
+ *
+ * 정답률이 null이면 "0%"로 채우지 않는다 — 0%는 "다 틀렸다"는 뜻이라, 아직 시작도 안 한
+ * 사람에게 정반대 신호를 준다. 숫자 자리에 이유를 적는다.
+ */
+function renderStats() {
+  const s = summary?.stats;
+  const box = document.getElementById("stats");
+  if (!s) {
+    box.innerHTML = `<div class="pl-stat"><div class="num none">통계를 불러오지 못했습니다</div></div>`;
+    return;
+  }
+  const cards = [
+    [String(s.solvedTotal), "푼 문제"],
+    [s.correctRate === null ? null : s.correctRate + "%", "정답률"],
+    [String(s.solvedThisWeek), "이번 주"],
+    [String(s.reviewDue), "복습 대기"],
+  ];
+  box.innerHTML = cards.map(([value, label]) => `
+    <div class="pl-stat">
+      <div class="num${value === null ? " none" : ""}">${value === null ? "아직 기록 없음" : escapeHtml(value)}</div>
+      <div class="label">${label}</div>
+    </div>`).join("");
+}
+
+/**
+ * 분야 목록 — 이름 + 맞힌 개수 + 진척 바.
+ *
+ * <b>분모를 쓰지 않는다.</b> 배치가 매일 문제를 더하므로 "18/42" 같은 분수는 분모가 계속
+ * 커져 어제 40%가 오늘 37%가 된다. 아무것도 잘못하지 않았는데 뒷걸음질치는 표시가 된다.
+ * 그래서 개수는 절대값으로 적고, 바는 <b>이 사람 안에서의 상대 비교</b>로만 쓴다
+ * (가장 많이 푼 분야를 100%로).
+ */
+function renderDomains() {
+  const rows = summary?.domains ?? [];
+  const max = rows.reduce((m, d) => Math.max(m, d.solved), 0);
+  const shown = domainsExpanded ? rows : rows.slice(0, DOMAIN_PREVIEW);
+
+  const html = shown.map(d => `
+    <button class="pl-domain" data-domain="${d.domain}"
+            aria-pressed="${selectedDomain === d.domain}">
+      <span class="row"><span class="name">${escapeHtml(d.label)}</span><span class="n">${d.solved}</span></span>
+      <span class="pl-bar"><i style="width:${max === 0 ? 0 : Math.round(d.solved / max * 100)}%"></i></span>
+    </button>`).join("");
+
+  const more = rows.length > DOMAIN_PREVIEW
+    ? `<button class="pl-more" id="moreBtn">${domainsExpanded ? "접기" : `+ ${rows.length - DOMAIN_PREVIEW}개 더 보기`}</button>`
+    : "";
+
+  document.getElementById("domains").innerHTML = html + more;
+}
+
+function initFilters() {
+  document.getElementById("levels").innerHTML = LEVELS.map(([v, l]) =>
+    `<button class="pl-level" data-lv="${v}" aria-pressed="false">${l}</button>`).join("");
+
+  document.getElementById("chips").innerHTML = STATES.map(([v, l]) =>
+    `<button class="pl-chip" role="radio" data-state="${v}"
+             aria-checked="${v === selectedState}">${l}</button>`).join("");
+
+  // 이벤트 위임 — 사이드바는 다시 그려지므로 버튼마다 붙이면 그릴 때마다 다시 붙여야 한다.
+  document.getElementById("domains").addEventListener("click", e => {
+    const more = e.target.closest("#moreBtn");
+    if (more) { domainsExpanded = !domainsExpanded; renderDomains(); return; }
+    const btn = e.target.closest(".pl-domain");
+    if (!btn) return;
+    // 같은 분야를 다시 누르면 해제 — 필터를 지우는 별도 버튼 없이 되돌릴 수 있다.
+    selectedDomain = selectedDomain === btn.dataset.domain ? null : btn.dataset.domain;
+    page = 0;
+    renderDomains();
+    loadList();
+  });
+
+  document.getElementById("levels").addEventListener("click", e => {
+    const btn = e.target.closest(".pl-level");
+    if (!btn) return;
+    const lv = btn.dataset.lv;
+    selectedLevels.has(lv) ? selectedLevels.delete(lv) : selectedLevels.add(lv);
+    btn.setAttribute("aria-pressed", String(selectedLevels.has(lv)));
+    page = 0;
+    loadList();
+  });
+
+  document.getElementById("chips").addEventListener("click", e => {
+    const btn = e.target.closest(".pl-chip");
+    if (!btn) return;
+    selectedState = btn.dataset.state;
+    document.querySelectorAll("#chips .pl-chip").forEach(c =>
+      c.setAttribute("aria-checked", String(c.dataset.state === selectedState)));
+    page = 0;
+    loadList();
+  });
+
+  document.getElementById("prevBtn").addEventListener("click", () => { page--; loadList(); });
+  document.getElementById("nextBtn").addEventListener("click", () => { page++; loadList(); });
+}
+
+/* ═══════════ 목록 ═══════════ */
+
+/**
+ * 난이도는 <b>서버가 여러 개를 못 받는다</b>(파라미터가 하나다). 여러 개를 고르면 화면에서
+ * 거른다 — 다중 선택이 세 개뿐이라 한 판(20줄)에서 걸러도 손해가 크지 않고, 서버에
+ * IN 절을 여는 것보다 지금은 이쪽이 싸다. <b>다만 쪽 수가 실제와 어긋난다</b>는 대가가 있어,
+ * 거르는 중에는 그 사실을 목록 위에 적는다.
+ */
+function levelParam() {
+  return selectedLevels.size === 1 ? [...selectedLevels][0] : null;
+}
+
+async function loadList() {
+  const params = new URLSearchParams({ page: String(page), size: String(PAGE_SIZE) });
+  if (selectedDomain) params.set("domain", selectedDomain);
+  const lv = levelParam();
+  if (lv) params.set("difficulty", lv);
+  if (selectedState === "DUE") params.set("reviewDue", "true");
+  else if (selectedState) params.set("state", selectedState);
+
+  let data;
+  try {
+    data = await api("/api/problems?" + params.toString());
+  } catch (e) {
+    document.getElementById("list").innerHTML =
+      `<div class="pl-empty">목록을 불러오지 못했습니다.<br><span class="meta">${escapeHtml(e.message)}</span></div>`;
+    document.getElementById("pager").hidden = true;
+    return;
+  }
+
+  // 난이도를 둘 이상 골랐을 때만 화면에서 한 번 더 거른다(levelParam 주석).
+  const rows = selectedLevels.size > 1
+    ? data.content.filter(p => selectedLevels.has(p.difficulty))
+    : data.content;
+
+  renderList(rows, data);
+  renderPager(data);
+}
+
+function renderList(rows, data) {
+  const box = document.getElementById("list");
+  if (rows.length === 0) {
+    box.innerHTML = emptyStateHtml();
+    return;
+  }
+  box.innerHTML = rows.map(p => {
+    const lvLabel = difficultyLabel(p.difficulty);
+    return `
+    <a class="pl-row" href="/quiz.html?problemId=${p.id}" data-lv="${p.difficulty}">
+      <span class="pl-state">${stateIcon(p.state)}</span>
+      <span class="pl-title">${p.title
+        ? escapeHtml(p.title)
+        : `<span style="color:var(--pl-muted)">(제목 없음 — 관리 화면에서 채울 수 있습니다)</span>`}</span>
+      <span class="pl-type">${escapeHtml(typeLabel(p.type))}</span>
+      <span class="pl-lv"><span class="pl-badge" data-lv="${p.difficulty}">${lvLabel}</span></span>
+      <span class="pl-when">${whenLabel(p.lastAttemptedAt)}</span>
+      ${p.reviewDue ? `<span class="pl-due">복습</span>` : ""}
+      <span class="pl-meta-line">${lvLabel} · ${escapeHtml(typeLabel(p.type))} · ${whenLabel(p.lastAttemptedAt)}</span>
+    </a>`;
+  }).join("");
+
+  // 화면에서 거른 경우 쪽 수가 실제와 어긋난다 — 감추지 말고 적는다.
+  if (selectedLevels.size > 1) {
+    box.insertAdjacentHTML("afterbegin",
+      `<div class="pl-empty" style="padding:8px 14px; text-align:left">
+         <span class="meta">난이도를 둘 이상 골라 이 쪽에서만 걸렀습니다 —
+         쪽 수는 전체(${data.totalElements}건) 기준입니다.</span>
+       </div>`);
+  }
+}
+
+/**
+ * 상태 아이콘 — <b>색으로만 알리지 않는다</b>(스펙 §4). 기호와 aria-label을 함께 쓴다.
+ * 색을 구분하기 어려운 사람에게 초록 동그라미와 빨간 가위표는 같은 회색 동그라미다.
+ */
+function stateIcon(state) {
+  if (state === "CORRECT") return `<span aria-label="맞힌 문제" title="맞힌 문제" style="color:var(--pl-lv1-solid)">✓</span>`;
+  if (state === "WRONG") return `<span aria-label="틀린 문제" title="틀린 문제" style="color:var(--pl-lv3-solid)">✗</span>`;
+  return `<span aria-label="안 푼 문제" title="안 푼 문제" style="color:var(--pl-muted)">○</span>`;
+}
+
+/** 마지막 시도일 — 오늘/어제는 글자로, 그 뒤는 날짜로. "3일 전"까지 세지 않는 이유는
+ *  이 열의 폭이 74px이고, 오래된 것은 정확한 날짜가 더 쓸모 있기 때문이다. */
+function whenLabel(iso) {
+  if (!iso) return `<span style="color:var(--pl-muted)">—</span>`;
+  const d = new Date(iso);
+  const today = new Date();
+  const days = Math.floor((today.setHours(0, 0, 0, 0) - new Date(iso).setHours(0, 0, 0, 0)) / 86400000);
+  if (days <= 0) return "오늘";
+  if (days === 1) return "어제";
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/**
+ * 빈 상태 — 상황마다 다른 말을 한다(스펙 §6).
+ * "아직 아무것도 없어요" 같은 사과조 문구는 쓰지 않는다.
+ */
+function emptyStateHtml() {
+  if (selectedState === "DUE") {
+    return `<div class="pl-empty">복습할 문제가 없습니다
+      <div class="act"><a class="btn" href="/quiz.html">새 문제 풀기</a></div></div>`;
+  }
+  if (selectedDomain || selectedLevels.size > 0 || selectedState) {
+    return `<div class="pl-empty">조건에 맞는 문제가 없습니다
+      <div class="act"><button class="btn-outline" id="resetBtn">필터 초기화</button></div></div>`;
+  }
+  return `<div class="pl-empty">이 분야는 아직 문제를 만들지 않았습니다</div>`;
+}
+
+// 필터 초기화 — 빈 상태 안의 버튼이라 위임으로 받는다(그릴 때마다 새로 생긴다).
+document.getElementById("list")?.addEventListener("click", e => {
+  if (!e.target.closest("#resetBtn")) return;
+  e.preventDefault();
+  selectedDomain = null;
+  selectedLevels.clear();
+  selectedState = "";
+  page = 0;
+  document.querySelectorAll("#levels .pl-level").forEach(b => b.setAttribute("aria-pressed", "false"));
+  document.querySelectorAll("#chips .pl-chip").forEach(c =>
+    c.setAttribute("aria-checked", String(c.dataset.state === "")));
+  renderDomains();
+  loadList();
+});
+
+function renderPager(data) {
+  document.getElementById("pager").hidden = data.totalPages <= 1;
+  document.getElementById("pageInfo").textContent =
+    `${data.page + 1} / ${Math.max(data.totalPages, 1)} — 전체 ${data.totalElements}건`;
+  document.getElementById("prevBtn").disabled = data.page === 0;
+  document.getElementById("nextBtn").disabled = !data.hasNext;
+}
+</script>
+</body>
+</html>

@@ -73,7 +73,10 @@ public class SecurityConfig {
                                 "/api/auth/signup", "/api/auth/login",
                                 "/api/auth/refresh", "/api/auth/logout").permitAll()
                         // 공개: 문서/퀴즈 읽기
-                        .requestMatchers(HttpMethod.GET, "/api/documents/**", "/api/quiz").permitAll()
+                        // /api/quiz/** 로 넓힌 것은 2026-08-29 — 문제 목록에서 한 건을 골라
+                        // 들어오는 GET /api/quiz/{id}가 생겼다(docs/18). 이 클래스가 세운 원칙
+                        // "화면과 문제는 누구나, 채점만 로그인"이 그대로 적용되는 자리다.
+                        .requestMatchers(HttpMethod.GET, "/api/documents/**", "/api/quiz/**", "/api/quiz").permitAll()
                         // 공개: API 문서(Swagger)
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // 보호: 답안 제출 / 내 정보(오답노트 등)

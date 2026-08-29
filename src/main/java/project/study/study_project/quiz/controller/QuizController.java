@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,6 +45,20 @@ public class QuizController {
             @RequestParam(required = false, defaultValue = "" + QuizService.DEFAULT_SIZE) int size
     ) {
         return ApiResponse.ok(quizService.getQuiz(domain, level, type, size));
+    }
+
+    /**
+     * 문제 하나만 — 목록 화면에서 "이걸 풀자"고 눌러 들어올 때(docs/18).
+     *
+     * <p>{@code /api/quiz}와 같은 {@link QuizResponse}(한 칸짜리 세트)로 돌려준다 —
+     * 풀이 화면이 이미 배열을 받아 도는 구조라, 전용 형태를 만들면 화면에 분기가 하나 생긴다.
+     *
+     * <p>목록과 마찬가지로 <b>공개</b>다. 로그인 없이도 문제 자체는 볼 수 있어야 하고
+     * (SecurityConfig의 {@code GET /api/quiz/**} permitAll), 채점만 로그인을 요구한다.
+     */
+    @GetMapping("/{problemId}")
+    public ApiResponse<QuizResponse> getOne(@PathVariable Long problemId) {
+        return ApiResponse.ok(quizService.getOne(problemId));
     }
 
     /**

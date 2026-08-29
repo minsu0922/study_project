@@ -67,6 +67,34 @@ const playerEl = document.getElementById("player");
 
 document.getElementById("startBtn").addEventListener("click", start);
 
+/* 문제 목록에서 한 건을 골라 들어온 경우 — /quiz.html?problemId=42 (docs/18, 2026-08-29).
+ *
+ * 목록 화면의 유일한 목적이 "다음에 풀 문제 하나를 고르게 하는 것"인데, 고른 뒤에 갈 곳이
+ * 없으면 그 화면은 아무 일도 하지 못한다. 설정 화면을 건너뛰고 그 문제 하나로 바로 시작한다.
+ *
+ * 서버가 한 칸짜리 세트로 돌려주므로(QuizService.getOne) 플레이어는 평소 흐름을 그대로 탄다. */
+const requestedId = new URLSearchParams(location.search).get("problemId");
+if (requestedId) {
+  startSingle(requestedId);
+}
+
+async function startSingle(problemId) {
+  const msg = document.getElementById("message");
+  try {
+    const data = await api("/api/quiz/" + encodeURIComponent(problemId));
+    setupEl.hidden = true;
+    playerEl.hidden = false;
+    startPlayer(playerEl, data.problems, {
+      // 한 문제를 풀고 나면 돌아갈 곳은 설정 화면이 아니라 <온 곳>이다.
+      exitLabel: "문제 목록으로",
+      onExit: () => { location.href = "/problems.html"; },
+    });
+  } catch (e) {
+    msg.innerHTML = `<div class="alert error">${escapeHtml(e.message)}
+      <div style="margin-top:8px"><a href="/problems.html">문제 목록으로 돌아가기</a></div></div>`;
+  }
+}
+
 async function start() {
   const msg = document.getElementById("message");
   msg.innerHTML = "";

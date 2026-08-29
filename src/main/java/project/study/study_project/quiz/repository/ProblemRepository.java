@@ -265,6 +265,20 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      * 정렬을 도메인 → 난이도 → id로 고정하면 무엇을 풀든 줄이 제자리에 있고, "안 푼 것만
      * 보고 싶다"는 필터 칩 한 번이면 된다. 같은 목적에 장치가 둘일 필요가 없다.
      *
+     * <h2>난이도를 CASE로 정렬하는 이유</h2>
+     *
+     * <p>{@code order by p.difficulty}로 두면 <b>고급이 맨 앞에 온다</b>. 난이도가
+     * {@code EnumType.STRING}이라 DB에는 글자로 저장되고, 정렬도 글자순
+     * (ADVANCED → BEGINNER → INTERMEDIATE)이 되기 때문이다. 화면을 띄워 보고 알았다 —
+     * 컴파일도 되고 테스트도 통과하며, 다만 초급을 찾는 사람이 고급 열 줄을 지나쳐야 한다.
+     *
+     * <p>선언 순서(초·중·고)를 쓰려면 {@code ORDINAL}로 저장하는 방법도 있지만, 그러면
+     * enum에 값을 끼워 넣는 순간 기존 데이터가 통째로 밀린다. 저장 형식은 글자로 두고
+     * <b>정렬에서만</b> 순서를 매긴다.
+     *
+     * <p>분야는 글자순 그대로 둔다. 사이드바 목록 순서와는 다르지만, 분야는 <b>고르는 것</b>이라
+     * 목록 안에서의 순서가 판단에 쓰이지 않는다. CASE를 열두 줄 더 쓸 값어치가 없다.
+     *
      * @param userId    로그인 사용자. 이 화면은 인증 필수라 null이 오지 않는다
      * @param state     {@code null}이면 상태를 가리지 않는다. 값은 {@code SolveState} 이름
      *                  ({@code CORRECT}/{@code WRONG}/{@code UNSOLVED})
@@ -305,7 +319,13 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
                                where r.userId = :userId and r.problem = p
                                  and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
                                  and r.nextReviewAt <= :now))
-            order by p.domain, p.difficulty, p.id
+            order by p.domain,
+                     case p.difficulty
+                          when project.study.study_project.global.common.Difficulty.BEGINNER then 1
+                          when project.study.study_project.global.common.Difficulty.INTERMEDIATE then 2
+                          else 3
+                     end,
+                     p.id
             """)
     Page<ProblemListRow> findListForUser(
             @Param("userId") Long userId,
