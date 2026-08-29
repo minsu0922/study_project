@@ -2,6 +2,6 @@
   "note" : "정식 document 테이블 + 검수 대기 초안의 제목·태그 스냅샷입니다. GitHub Actions 배치가 주제 중복 회피와 태그 재사용에 쓰고, rejectedSlugs는 '이 문서로는 문제를 만들지 마라'는 목록입니다(클라우드에는 DB가 없으므로). docs/15 참고. 이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.",
   "exportedAt" : "2026-08-29",
   "titles" : [ "TIME_WAIT — TCP 연결을 끊고도 2MSL을 더 기다리는 이유", "캐시 쓰기 전략 — Write-Through·Write-Back·Write-Around와 무효화 경쟁", "연결이 안 된다 — refused·timeout·DNS 실패로 장애 계층 짚어내기", "XSS 방어의 핵심 — 출력 컨텍스트별 이스케이프", "CSRF — 브라우저가 자동으로 붙여 주는 쿠키를 공격자가 대신 쓰게 하는 공격", "오버로딩과 오버라이딩 — 컴파일러가 고르는 시그니처, JVM이 고르는 구현" ],
-  "tags" : [ "auth", "cache", "data-structure", "database", "http", "network", "performance", "security", "system-design" ],
+  "tags" : [ "auth", "cache", "data-structure", "database", "http", "java", "network", "performance", "security", "system-design" ],
   "rejectedSlugs" : [ "diagnosing-network-failures-by-osi-layer" ]
 }
