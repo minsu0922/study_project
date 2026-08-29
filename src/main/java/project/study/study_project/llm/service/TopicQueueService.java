@@ -3,12 +3,15 @@ package project.study.study_project.llm.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;
@@ -16,6 +19,7 @@ import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.llm.support.TopicQueue;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -76,9 +80,56 @@ public class TopicQueueService {
      */
     @Transactional(readOnly = true)
     public List<TopicQueueItemResponse> getAll() {
-        List<TopicQueueItem> items = repository.findAllByOrderBySortOrderAsc();
+        return toResponses(repository.findAllByOrderBySortOrderAsc());
+    }
+
+    /**
+     * 검색·쪽 나누기를 얹은 목록 — 2026-08-29 신설. 범위가 67개까지 늘어 한 화면에 다 담기지 않는다.
+     *
+     * <h2>왜 DB가 아니라 메모리에서 자르나</h2>
+     *
+     * <p>이 목록은 두 가지를 <b>전체를 봐야만</b> 정할 수 있다.
+     * <ul>
+     *   <li>{@code next}(다음 차례) — {@link #pickNext}가 목록 전체를 훑어 하나를 고른다.
+     *       한 쪽만 넘겨받아 계산하면 "3쪽에도 다음 차례가 있다"는 거짓말이 된다.
+     *   <li>{@code order}(전체에서 몇 번째) — 검색으로 걸러진 줄에도 <b>원래 차례</b>가 붙어야 한다.
+     * </ul>
+     * 둘 다 전체 목록이 손에 있어야 하므로, DB에 페이징을 맡겨도 어차피 전부 읽어야 한다.
+     * 범위는 문서일마다 하나씩 늘어(4일에 1개) 몇백 개가 한계이므로 이 방식이 부담이 되지 않는다.
+     * 그보다 커지면 그때는 {@code next}를 별도 조회로 떼어내는 것이 먼저다.
+     *
+     * @param q 주제·메모에서 찾을 말. 비어 있으면 거르지 않는다(대소문자 무시)
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<TopicQueueItemResponse> search(String q, Pageable pageable) {
+        List<TopicQueueItemResponse> all = getAll();
+
+        String keyword = (q == null) ? "" : q.trim().toLowerCase();
+        List<TopicQueueItemResponse> matched = keyword.isEmpty() ? all
+                : all.stream().filter(item -> matches(item, keyword)).toList();
+
+        int from = (int) Math.min(pageable.getOffset(), matched.size());
+        int to = Math.min(from + pageable.getPageSize(), matched.size());
+        // PageImpl을 거쳐 PageResponse.from을 탄다 — 변환 지점을 하나로 두면 응답 규격이
+        // 바뀔 때 고칠 곳도 하나다(PageResponse 클래스 주석).
+        return PageResponse.from(new PageImpl<>(matched.subList(from, to), pageable, matched.size()));
+    }
+
+    /** 주제와 메모에서 찾는다. 분야는 목록에 배지로 보이고 눈으로 훑기 쉬워 검색어에 넣지 않는다. */
+    private boolean matches(TopicQueueItemResponse item, String keyword) {
+        return item.topic().toLowerCase().contains(keyword)
+                || (item.memo() != null && item.memo().toLowerCase().contains(keyword));
+    }
+
+    /** 목록 → 응답. {@code next}와 {@code order}를 여기서 한 번에 붙인다(둘 다 전체가 있어야 한다). */
+    private List<TopicQueueItemResponse> toResponses(List<TopicQueueItem> items) {
         TopicQueueItem next = pickNext(items);
-        return items.stream().map(item -> TopicQueueItemResponse.from(item, item == next)).toList();
+        List<TopicQueueItemResponse> responses = new ArrayList<>(items.size());
+        for (int i = 0; i < items.size(); i++) {
+            TopicQueueItem item = items.get(i);
+            responses.add(TopicQueueItemResponse.from(item, item == next, i + 1));
+        }
+        return responses;
     }
 
     /**
@@ -142,7 +193,11 @@ public class TopicQueueService {
         log.info("주제 범위 추가: [{}] {} — 커밋해야 다음 배치부터 반영됩니다",
                 request.domain(), topic);
         events.publishEvent(new TopicQueueChanged());
-        return TopicQueueItemResponse.from(saved, false);
+        // 방금 넣은 줄은 맨 뒤이므로 차례도 마지막이다. next는 false로 둔다 — 실제로는 안 쓴
+        // 범위라 다음 차례를 곧바로 받지만, 그 판정은 목록 전체를 봐야 하고 화면은 추가 직후
+        // 목록을 다시 불러 정확한 값을 받는다. 여기서 짐작해 true를 넣으면 그 순간만 맞고
+        // 다른 안 쓴 범위가 앞에 있을 때 틀린다.
+        return TopicQueueItemResponse.from(saved, false, (int) repository.count());
     }
 
     /**

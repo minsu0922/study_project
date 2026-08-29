@@ -16,6 +16,10 @@ import java.time.LocalDate;
  *                  유일한 신호라 목록에 반드시 띄운다
  * @param next      다음 문서일에 쓰일 범위인지. 판정 규칙(안 쓴 것 먼저 → 가장 오래된 것)이
  *                  화면과 배치 양쪽에 있으면 언젠가 어긋나므로, <b>서버가 계산해</b> 내려보낸다
+ * @param order     <b>전체 목록에서 몇 번째인가</b>(1부터). 화면이 행 번호로 대신 쓰던 값인데,
+ *                  검색·쪽 나누기가 붙으면서(2026-08-29) 그 방식이 무너졌다 — 3쪽의 첫 줄이
+ *                  "1번"으로 보이고, 검색 결과의 두 번째 줄이 "2번"으로 보인다.
+ *                  이 숫자의 뜻은 "화면의 몇째 줄"이 아니라 "차례가 몇 번째"라 서버가 정해야 한다
  */
 public record TopicQueueItemResponse(
         Long id,
@@ -26,13 +30,14 @@ public record TopicQueueItemResponse(
         int sortOrder,
         LocalDate lastUsedAt,
         int usedCount,
-        boolean next
+        boolean next,
+        int order
 ) {
 
-    public static TopicQueueItemResponse from(TopicQueueItem item, boolean next) {
+    public static TopicQueueItemResponse from(TopicQueueItem item, boolean next, int order) {
         return new TopicQueueItemResponse(
                 item.getId(), item.getDomain(), item.getDomain().getDisplayName(),
                 item.getTopic(), item.getMemo(), item.getSortOrder(),
-                item.getLastUsedAt(), item.getUsedCount(), next);
+                item.getLastUsedAt(), item.getUsedCount(), next, order);
     }
 }

@@ -551,6 +551,19 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 /* 펼친 뒤에는 손잡이와 내용이 붙어 보이게 아래 여백을 준다. */
 .gen-panel[open] > summary { margin-bottom: 12px; }
 
+/* 제목 줄에 붙는 정렬 고르기 — 2026-08-29.
+ *
+ * 표 위 어디에 둘지 고민했는데, <제목 옆>이 맞다고 봤다. "무엇을 어떤 순서로 보고 있는가"가
+ * 한 줄에 모여야 하고, 표 위에 따로 줄을 만들면 표와 제목 사이가 벌어져 둘의 관계가 흐려진다.
+ *
+ * 제목보다 작고 조용하게 — 이건 데이터가 아니라 <보는 방법>이라 제목과 같은 무게면 안 된다. */
+.sort-select {
+  margin-left: 8px;
+  font-size: .82rem; font-weight: 400;
+  padding: 3px 6px;
+  vertical-align: middle;
+}
+
 /* 자주 쓰는 거절 사유 칩 — 2026-08-29.
  *
  * 사유는 다음 생성 프롬프트에 되먹여지는데 선택 입력이라 비운 채 거절하기 쉬웠다.
