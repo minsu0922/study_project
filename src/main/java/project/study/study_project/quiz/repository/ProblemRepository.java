@@ -10,6 +10,7 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -236,4 +237,99 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
               and c.rationale is null
             """)
     long countWithMissingRationale();
+
+    /* ── 학습자 문제 목록(docs/18) ─────────────────────────────── */
+
+    /**
+     * 문제 목록 화면 한 판 — <b>로그인 사용자 기준으로 개인화</b>된 프로젝션(2026-08-29).
+     *
+     * <h2>왜 상관 서브쿼리 넷인가</h2>
+     *
+     * <p>한 줄에 필요한 것이 문제 자체(제목·분야·난이도·유형)와 <b>그 사용자와의 관계</b>
+     * (맞힌 적 있나 · 시도한 적 있나 · 마지막이 언제인가 · 복습할 때인가)다. 관계 쪽을 조인으로
+     * 붙이면 제출이 여럿인 문제가 여러 줄이 되어 {@code distinct}와 페이징이 부딪힌다
+     * (오답 설명 조회에서 이미 겪은 함정이다 — 그쪽은 상한 10건이라 티가 났지만
+     * 여기는 페이지 수가 조용히 틀어진다). 서브쿼리는 문제당 정확히 한 줄을 보장한다.
+     *
+     * <p>비용은 문제당 인덱스 조회 네 번인데, 한 판이 20줄이라 80번이다.
+     * {@code submission(user_id, problem_id)}과 {@code review_item(user_id, status, next_review_at)}
+     * 인덱스가 그대로 받는다.
+     *
+     * <h2>정렬을 "미풀이 우선"으로 하지 않은 이유</h2>
+     *
+     * <p>첫 스펙은 <b>미풀이 우선 → 도메인 → 난이도</b>였다. 그러면 한 문제를 풀고 목록으로
+     * 돌아올 때마다 그 줄이 뒤로 밀려 <b>목록 전체가 한 칸 당겨진다</b> — 무한 스크롤을 뺀
+     * 이유(위치를 잃는다)와 똑같은 일이 정렬 쪽에서 생긴다(docs/18 §2.4).
+     *
+     * <p>그런데 "미풀이 우선"이 하려던 일은 <b>상태 필터가 이미 한다</b>(전체/안 푼/틀린/복습).
+     * 정렬을 도메인 → 난이도 → id로 고정하면 무엇을 풀든 줄이 제자리에 있고, "안 푼 것만
+     * 보고 싶다"는 필터 칩 한 번이면 된다. 같은 목적에 장치가 둘일 필요가 없다.
+     *
+     * @param userId    로그인 사용자. 이 화면은 인증 필수라 null이 오지 않는다
+     * @param state     {@code null}이면 상태를 가리지 않는다. 값은 {@code SolveState} 이름
+     *                  ({@code CORRECT}/{@code WRONG}/{@code UNSOLVED})
+     * @param onlyDue   {@code true}면 지금 복습 차례인 문제만
+     * @param now       복습 차례 판정 기준 시각. 호출부가 넘긴다 — 쿼리 안에서 현재 시각을
+     *                  읽으면 같은 요청 안에서도 값이 흔들려 테스트가 불가능해진다
+     */
+    @Query("""
+            select p.id as id, p.title as title, p.domain as domain,
+                   p.difficulty as difficulty, p.type as type,
+                   (select max(s.submittedAt) from Submission s
+                     where s.userId = :userId and s.problem = p) as lastAttemptedAt,
+                   (select count(s) from Submission s
+                     where s.userId = :userId and s.problem = p and s.correct = true) as correctCount,
+                   (select count(s) from Submission s
+                     where s.userId = :userId and s.problem = p) as attemptCount,
+                   (select count(r) from ReviewItem r
+                     where r.userId = :userId and r.problem = p
+                       and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
+                       and r.nextReviewAt <= :now) as dueCount
+            from Problem p
+            where (:domain is null or p.domain = :domain)
+              and (:difficulty is null or p.difficulty = :difficulty)
+              and (:state is null
+                   or (:state = 'CORRECT'
+                       and exists (select 1 from Submission s
+                                    where s.userId = :userId and s.problem = p and s.correct = true))
+                   or (:state = 'WRONG'
+                       and exists (select 1 from Submission s
+                                    where s.userId = :userId and s.problem = p)
+                       and not exists (select 1 from Submission s
+                                        where s.userId = :userId and s.problem = p and s.correct = true))
+                   or (:state = 'UNSOLVED'
+                       and not exists (select 1 from Submission s
+                                        where s.userId = :userId and s.problem = p)))
+              and (:onlyDue = false
+                   or exists (select 1 from ReviewItem r
+                               where r.userId = :userId and r.problem = p
+                                 and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
+                                 and r.nextReviewAt <= :now))
+            order by p.domain, p.difficulty, p.id
+            """)
+    Page<ProblemListRow> findListForUser(
+            @Param("userId") Long userId,
+            @Param("domain") Domain domain,
+            @Param("difficulty") Difficulty difficulty,
+            @Param("state") String state,
+            @Param("onlyDue") boolean onlyDue,
+            @Param("now") LocalDateTime now,
+            Pageable pageable);
+
+    /**
+     * 위 조회의 한 줄. 상태는 <b>개수로 받아 자바에서 판정</b>한다 —
+     * CASE 식으로 문자열을 만들어 내려받으면 그 문자열과 {@code SolveState} enum이 두 곳에서
+     * 따로 살게 되고, 언젠가 한쪽만 바뀐다.
+     */
+    interface ProblemListRow {
+        Long getId();
+        String getTitle();
+        Domain getDomain();
+        Difficulty getDifficulty();
+        ProblemType getType();
+        LocalDateTime getLastAttemptedAt();
+        long getCorrectCount();
+        long getAttemptCount();
+        long getDueCount();
+    }
 }

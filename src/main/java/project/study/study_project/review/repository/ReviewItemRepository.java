@@ -64,6 +64,21 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
                              Pageable pageable);
 
     /**
+     * 지금 복습 차례인 문제 수 — 문제 목록 화면의 통계 카드(docs/18, 2026-08-29).
+     *
+     * <p>조건은 {@link #findDue}의 countQuery와 <b>같아야 한다</b>. 목록의 "복습 대기" 필터와
+     * 카드의 숫자가 어긋나면, 9건이라고 해 놓고 눌렀을 때 7건이 나온다.
+     * 같은 인덱스({@code idx_reviewitem_user_due})를 그대로 탄다.
+     */
+    @Query("""
+            select count(r) from ReviewItem r
+            where r.userId = :userId
+              and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
+              and r.nextReviewAt <= :now
+            """)
+    long countDue(@Param("userId") Long userId, @Param("now") LocalDateTime now);
+
+    /**
      * 내 복습 현황 전체(졸업 포함) — 대시보드/진척 확인용. status 필터는 선택(null이면 전체),
      * 정렬은 스펙 기본값(nextReviewAt asc)으로 고정.
      */

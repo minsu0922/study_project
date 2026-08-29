@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.quiz.domain.Submission;
 
+import java.time.LocalDateTime;
+
 /**
  * Submission 저장소 — 채점 시 저장 + 오답노트 조회(ADR-0002: 별도 오답 테이블 없이 조회 기반).
  */
@@ -129,5 +131,77 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
         String getQuestion();
         long getAttempts();
         long getCorrectCount();
+    }
+
+    /* ── 학습자 문제 목록 화면의 통계(docs/18) ────────────────── */
+
+    /**
+     * 내가 <b>맞힌 적 있는</b> 문제 수 — 목록 화면의 "푼 문제" 카드.
+     *
+     * <p>제출 건수가 아니라 <b>문제 수</b>를 센다({@code distinct}). 같은 문제를 세 번 풀어도
+     * 내가 아는 문제는 하나다. 목록의 {@code state=CORRECT} 개수와 같은 값이어야 하므로
+     * 판정 규칙("한 번이라도 맞혔나")도 그쪽과 맞춘다.
+     */
+    @Query("""
+            select count(distinct s.problem.id) from Submission s
+            where s.userId = :userId and s.correct = true
+            """)
+    long countSolvedProblems(@Param("userId") Long userId);
+
+    /**
+     * 기간 안에 맞힌 문제 수 — "이번 주" 카드.
+     *
+     * <p><b>스트릭 대신 쓰는 값이다.</b> 연속 일수는 하루만 쉬어도 0으로 떨어져, 주 3회 페이스를
+     * 지키는 사람에게 매주 실패를 알린다. "이번 주 몇 개"는 같은 "요즘 하고 있나"를 말하면서
+     * 그런 벌을 주지 않는다(docs/12의 스트릭 제거 절 참고).
+     *
+     * <p>지난주에 맞힌 문제를 이번 주에 다시 맞히면 이번 주에도 <b>한 번 더 센다</b>.
+     * "처음 맞힌 주"만 세려면 문제별 최초 정답 시각을 구해야 하는데, 이 카드가 묻는 것은
+     * "이번 주에 뭘 했나"이지 "새 문제를 몇 개 뚫었나"가 아니다.
+     */
+    @Query("""
+            select count(distinct s.problem.id) from Submission s
+            where s.userId = :userId and s.correct = true and s.submittedAt >= :from
+            """)
+    long countSolvedProblemsSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
+
+    /** 내 전체 제출 수와 그중 정답 수 — 목록 화면의 "정답률" 카드. 나눗셈은 서비스가 한다. */
+    @Query("""
+            select count(s) as total,
+                   sum(case when s.correct = true then 1 else 0 end) as correctCount
+            from Submission s
+            where s.userId = :userId
+            """)
+    OverallStat aggregateOverall(@Param("userId") Long userId);
+
+    /** {@link #aggregateOverall} 결과. 제출이 0건이면 total=0, correctCount=null이다. */
+    interface OverallStat {
+        long getTotal();
+        Long getCorrectCount();
+    }
+
+    /**
+     * 분야별로 내가 맞힌 문제 수 — 사이드바 진척 표시.
+     *
+     * <p><b>분모(전체 문제 수)를 함께 주지 않는다</b>(2026-08-29 결정). 배치가 매일 문제를
+     * 더하므로 분모가 계속 커지고, 그러면 어제 40%가 오늘 37%가 된다. 게이지가 뒷걸음질치는
+     * 것은 아무것도 잘못하지 않았는데 벌을 주는 표시다. 절대 개수만 보여 준다.
+     *
+     * <p>맞힌 적 없는 분야는 결과에 아예 없다(GROUP BY의 성질). 화면이 0으로 채운다 —
+     * 여기서 모든 분야를 만들어 내려면 Domain enum을 SQL이 알아야 한다.
+     */
+    @Query("""
+            select p.domain as domain, count(distinct p.id) as solved
+            from Submission s
+            join s.problem p
+            where s.userId = :userId and s.correct = true
+            group by p.domain
+            """)
+    java.util.List<DomainSolvedCount> countSolvedByDomain(@Param("userId") Long userId);
+
+    /** {@link #countSolvedByDomain} 결과 행. */
+    interface DomainSolvedCount {
+        Domain getDomain();
+        long getSolved();
     }
 }
