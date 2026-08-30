@@ -10,12 +10,13 @@ CS(컴퓨터 과학) 개념을 정리해 두고 문제로 풀어 보는 학습 �
 | 문서 | 한 줄 요약 |
 |---|---|
 | [01-data-model](01-data-model.md) | DB에 어떤 표(테이블)를 두고, 어떻게 연결하고, 채점은 어떤 규칙으로 하나 |
-| [02-domain-enums](02-domain-enums.md) | 도메인(11)·난이도(3)·문제유형(4) 같은 "정해진 보기" 값들 |
-| [03-api-spec](03-api-spec.md) | MVP API 7개의 요청/응답을 예시까지 상세히 |
+| [02-domain-enums](02-domain-enums.md) | 도메인(12)·난이도(3)·문제유형(4) 같은 "정해진 보기" 값들 |
+| [03-api-spec](03-api-spec.md) | 전체 API 48개(사용자 15·관리자 33)의 요청/응답을 예시까지 상세히 |
 | [04-response-format](04-response-format.md) | 성공/실패 응답을 항상 같은 모양으로 — 공통 응답 봉투 + 에러 코드 |
 | [05-package-structure](05-package-structure.md) | 코드를 어떤 폴더 구조로 나눌지 |
 | [06-security-jwt](06-security-jwt.md) | 로그인/인증을 실제로 어떻게 구현하나 (JWT·비밀번호·보호 경로) |
 | [07-build-config](07-build-config.md) | 어떤 버전으로 깔고 어떤 설정값으로 돌리나 (재현용) |
+| [08-performance-experiments](08-performance-experiments.md) | 인덱스·QueryDSL 실측 — 50만 건에서 1.8초 → 16ms (로드맵 1) |
 | [09-rate-limiting](09-rate-limiting.md) | 요청 제한 — 토큰 버킷·429/Retry-After·fail-open (로드맵 3) |
 | [10-review-recommendation](10-review-recommendation.md) | 복습 추천 — 망각곡선·간격 사다리·ReviewItem (로드맵 4) |
 | [11-flyway-migrations](11-flyway-migrations.md) | Flyway로 DB 스키마 형상 관리 — V__/R__ 구분·멱등성 학습 노트 |
@@ -25,8 +26,19 @@ CS(컴퓨터 과학) 개념을 정리해 두고 문제로 풀어 보는 학습 �
 | [15-llm-concept-documents](15-llm-concept-documents.md) | 개념 문서 생성·검수, 그 문서를 근거로 한 문제 출제 |
 | [16-llm-pipeline-operations](16-llm-pipeline-operations.md) | **LLM 파이프라인 운영 매뉴얼** — 설정·실행·점검·핵심 코드 지도 |
 | [17-prompt-quality-and-eval](17-prompt-quality-and-eval.md) | **프롬프트 품질 개선과 평가 하네스** — 난이도 재정의, 검증기, `evalPrompt` |
+| [18-problem-list-ui](18-problem-list-ui.md) | 문제 목록 화면 — 제목 컬럼, 개인화 목록 API, 스펙과 갈린 결정 넷 |
+| [19-ui-refresh](19-ui-refresh.md) | 화면 개편 — 토큰 통합 4단계, 메뉴 여섯 → 넷, 첫 화면 "오늘" |
 | [GLOSSARY](GLOSSARY.md) | **용어집** — 이 저장소에서 쓰는 말과 쓰지 않는 말 (빠진 값 채우기·들여오기·현황 파일…) |
 | [adr/](adr/README.md) | 기술 결정 기록 (Architecture Decision Records) |
+
+기록용 문서는 따로 둔다 — 설계가 아니라 **그때 무슨 일이 있었나**를 남기는 자리다.
+
+| 문서 | 무엇을 적나 |
+|---|---|
+| [PROJECT_SUMMARY](PROJECT_SUMMARY.md) | 프로젝트 전체를 한 번에 훑는 요약 |
+| [IMPROVEMENTS](IMPROVEMENTS.md) | 발견한 문제와 고친 내역 — 발견/원인/조치/확인 네 칸 |
+| [INTERVIEW_SCRIPT](INTERVIEW_SCRIPT.md) | 면접에서 말할 대본 — 주제별 문답 카드 |
+| [REVIEW_2026-08-20](REVIEW_2026-08-20.md) | 배포 전 보안 점검 결과 (시점 점검은 `REVIEW_<날짜>.md`로) |
 
 > 💡 이 문서들만 보고도 프로젝트를 처음부터 다시 만들 수 있게 하는 걸 목표로 한다.
 > "무엇을(01~03)", "어떤 규칙으로(04)", "어떻게 나눠서(05)", "어떻게 잠그고(06)", "어떤 버전·설정으로(07)".
@@ -61,22 +73,28 @@ MVP가 돌아간 다음, 아래를 하나씩 붙이면서 그때마다 "왜 지�
 | 3 | 요청 제한 | 토큰 버킷을 Lua로 직접 구현 | [09](09-rate-limiting.md) · [ADR-0003](adr/0003-token-bucket-rate-limiting.md) |
 | 4 | 복습 추천(망각곡선) | 간격 사다리, 파생값은 저장 안 함 | [10](10-review-recommendation.md) · [ADR-0004](adr/0004-review-item-interval-ladder.md) |
 | 5 | CI/CD | GitHub Actions → 빌드·테스트·GHCR push | [PROJECT_SUMMARY](PROJECT_SUMMARY.md) |
-| 6 | 오늘의 퀴즈 | 세트 배합, 지연 생성, 스트릭 | [12](12-daily-quiz.md) · [ADR-0005](adr/0005-daily-quiz-set.md) |
+| 6 | 오늘의 퀴즈 | 세트 배합, 지연 생성 (스트릭은 2026-08-29에 제거) | [12](12-daily-quiz.md) · [ADR-0005](adr/0005-daily-quiz-set.md) |
 | 7 | LLM 문제 생성 | 초안 격리, 구조화 출력, 이중 검증 | [13](13-llm-problem-generation.md) · [ADR-0006](adr/0006-llm-problem-generation.md) |
 | 7+ | **일일 배치 → GitHub Actions** | `@Scheduled`가 한 번도 안 돈 것을 실측으로 발견 | [14](14-llm-batch-automation.md) |
 | 7++ | **개념 문서 생성 + 문서 기반 출제** | 4일 주기, 자동 검증, 단일 경로 원칙 | [15](15-llm-concept-documents.md) · [16](16-llm-pipeline-operations.md) |
 | 7+++ | **프롬프트 품질 · 평가 하네스** | 규칙 충돌 해소, 검증기 10종, 회귀 측정 | [17](17-prompt-quality-and-eval.md) |
+| 8 | **문제 목록 화면** | 1인 서비스에서 성립하지 않는 지표를 걷어냈다 | [18](18-problem-list-ui.md) |
+| 8+ | **화면 개편** | 토큰 두 벌 통합, 메뉴 여섯 → 넷, 첫 화면 "오늘" | [19](19-ui-refresh.md) |
 
 ### 지금 돌아가는 것
 
-매일 06:17(KST)에 GitHub Actions가 개념 문서 또는 문제를 만들어 저장소에 커밋하고,
+06:17(KST)에 GitHub Actions가 개념 문서 또는 문제를 만들어 저장소에 커밋하고,
 로컬 앱을 켜면 검수 대기함으로 들여온다. 승인해야만 사용자에게 나간다.
 운영 방법은 [16-llm-pipeline-operations](16-llm-pipeline-operations.md).
 
-## 만드는 순서 (제안)
+**단, 예약 배치는 2026-08-25부터 꺼 두었다**(`llm.batch-enabled: false`) — 중급 난이도를 다시
+잡느라 코퍼스를 재구축하는 중이고, 옛 기준의 결과물이 섞이면 새 기준을 잴 표본이 오염된다.
+꺼 둔 채 한 편씩 뽑는 것은 워크플로 수동 실행의 `force=true`로 한다.
 
-1. `build.gradle` 정리 (MVP 의존성 + Flyway) — ✅ 완료
-2. `docker-compose.yml`(MySQL 8) + `application.yml` — ✅ 완료
-3. `global`: 공통 응답 봉투 + 전역 예외처리 + 공용 enum — ✅ 완료
-4. `User` 엔티티 + Flyway `V1__init.sql`
-5. 회원가입/로그인 API + Security/JWT ([06](06-security-jwt.md) 참고)
+## 어디를 먼저 읽나
+
+- **처음 보는 사람**: 루트 [README](../README.md) → [PROJECT_SUMMARY](PROJECT_SUMMARY.md)
+- **코드를 고치러 온 사람**: [05-package-structure](05-package-structure.md) →
+  [04-response-format](04-response-format.md) → [03-api-spec](03-api-spec.md)
+- **AI 파이프라인을 돌리러 온 사람**: [16-llm-pipeline-operations](16-llm-pipeline-operations.md) 한 편이면 된다
+- **"왜 이렇게 만들었나"가 궁금한 사람**: [adr/](adr/README.md)와 각 문서의 "결정" 절

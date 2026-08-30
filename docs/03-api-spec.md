@@ -4,18 +4,20 @@
 > 인증: `Authorization: Bearer <accessToken>`. 재발급은 [`POST /api/auth/refresh`](#post-apiauthrefresh).
 > Base URL: `/api` · 🔒 = 로그인 필요 · 🛡️ = **ADMIN 전용**
 
-## 전체 엔드포인트 (32개)
+## 전체 엔드포인트 (48개 — 사용자 15 · 관리자 33)
 
 | 묶음 | 엔드포인트 | |
 |---|---|---|
 | **인증** | `POST /api/auth/signup` · `login` · `refresh` · `logout` | [↓](#post-apiauthsignup) |
 | **문서** | `GET /api/documents` · `/{slug}` | [↓](#get-apidocuments) |
-| **퀴즈** | `GET /api/quiz` · `POST /api/quiz/submit` 🔒 | [↓](#get-apiquiz) |
+| **퀴즈** | `GET /api/quiz` · `/{problemId}` · `POST /api/quiz/submit` 🔒 | [↓](#get-apiquiz) |
+| **문제 목록** | `GET /api/problems` 🔒 · `GET /api/me/study-summary` 🔒 | [↓](#get-apiproblems-) |
 | **내 학습** | `GET /api/me/wrong-answers` 🔒<br>`GET /api/me/reviews` · `/reviews/today` 🔒<br>`GET /api/me/daily-quiz` 🔒 | [↓](#get-apimewrong-answers-) |
-| **관리자·문제** | `GET`·`POST /api/admin/problems` · `GET`·`PUT`·`DELETE /{id}` 🛡️ | [↓](#관리자-api-️) |
+| **관리자·문제** | `GET`·`POST /api/admin/problems` · `GET`·`PUT`·`DELETE /{id}` · 제목/근거 백필 🛡️ | [↓](#관리자-api-️) |
 | **관리자·문서** | `POST /api/admin/documents` · `PUT`·`DELETE /{id}` 🛡️ | [↓](#관리자-api-️) |
 | **관리자·통계** | `GET /api/admin/dashboard` 🛡️ | [↓](#관리자-api-️) |
-| **AI 검수** | `/api/admin/llm-problems` · `/llm-documents` 각 5개 🛡️ | [↓](#ai-검수-api-️) |
+| **관리자·주제 대기열** | `GET`·`POST /api/admin/topic-queue` · `DELETE /{id}` · `/{id}/move` 🛡️ | [↓](#ai-검수-api-️) |
+| **AI 검수** | `/api/admin/llm-problems`(9) · `/llm-documents`(5) 🛡️ | [↓](#ai-검수-api-️) |
 
 > 관리자·AI 검수 API는 **경로 접두사 `/api/admin/**` 전체에 `hasRole(ADMIN)`이 한 줄로 걸린다.**
 > 컨트롤러마다 권한을 적지 않는 이유는 하나만 빠뜨려도 뚫리기 때문이다 — 경로가 곧 경계다.
@@ -27,7 +29,7 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
 아래 표의 🔒(자물쇠)가 붙은 창구는 **로그인(토큰)이 있어야** 이용할 수 있고, 나머지는 누구나 쓸 수 있다.
 로그인이 실제로 어떻게 동작하는지는 [06-security-jwt](06-security-jwt.md)에 있다.
 
-사용자가 쓰는 창구는 이 11개다. 나머지 21개는 **관리자 전용**이라 평소엔 안 보인다.
+사용자가 쓰는 창구는 이 15개다. 나머지 33개는 **관리자 전용**이라 평소엔 안 보인다.
 
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
@@ -38,7 +40,10 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
 | GET | `/api/documents` | ✕ | 문서 목록(도메인/태그 필터, 페이징) |
 | GET | `/api/documents/{slug}` | ✕ | 문서 단건 |
 | GET | `/api/quiz` | ✕ | 필터로 문제 N개 |
+| GET | `/api/quiz/{problemId}` | ✕ | 문제 단건(목록에서 고른 한 문제를 푼다) |
 | POST | `/api/quiz/submit` | ✓ | 답안 제출 → 채점 + 해설 |
+| GET | `/api/problems` | ✓ | 문제 목록 화면 — 개인화·필터·페이징 ([18](18-problem-list-ui.md)) |
+| GET | `/api/me/study-summary` | ✓ | 통계 카드 4칸 + 분야별 진척 ([18](18-problem-list-ui.md)) |
 | GET | `/api/me/wrong-answers` | ✓ | 오답노트 |
 | GET | `/api/me/reviews/today` | ✓ | 오늘의 복습 (로드맵 4 — [10](10-review-recommendation.md)) |
 | GET | `/api/me/reviews` | ✓ | 내 복습 현황 전체 (로드맵 4) |
@@ -194,6 +199,67 @@ refresh 토큰을 폐기한다.
 ```
 - **정답(`is_correct`)·`answer`·`explanation`은 절대 미노출** (채점 시에만 반환).
 - 객관식만 `choices` 채움, OX/단답형은 빈 배열.
+
+---
+
+## GET /api/problems  🔒
+문제 목록 화면(`problems.html`)의 한 판. 설계 배경은 [18-problem-list-ui](18-problem-list-ui.md).
+
+**왜 로그인을 요구하나**: 이 목록의 모든 줄이 "나와의 관계"(맞혔나·언제 풀었나·복습할 때인가)를
+달고 있다. 그걸 뺀 목록은 그냥 카탈로그이고, 그건 이미 `GET /api/quiz`가 한다.
+
+**Query params**
+| 이름 | 필수 | 예 | 설명 |
+|---|---|---|---|
+| `domain` | ✕ | `NETWORK` | Domain enum |
+| `difficulty` | ✕ | `BEGINNER` | Difficulty enum (`/api/quiz`는 `level`, 여기는 `difficulty`) |
+| `state` | ✕ | `UNSOLVED` | `UNSOLVED`/`CORRECT`/`WRONG`. 없으면 전체 |
+| `reviewDue` | ✕ | `true` | 지금 복습 차례인 문제만 |
+| `page`·`size` | ✕ | `0`·`20` | 기본 20개 |
+
+**Response 200**
+```json
+{
+  "content": [
+    {
+      "id": 100, "title": "TCP 3-way 핸드셰이크의 목적",
+      "domain": "NETWORK", "domainLabel": "네트워크",
+      "difficulty": "BEGINNER", "type": "MULTIPLE_CHOICE",
+      "lastAttemptedAt": "2026-08-28T21:14:00", "state": "CORRECT", "reviewDue": false
+    }
+  ],
+  "page": 0, "size": 20, "totalElements": 128, "totalPages": 7, "hasNext": true
+}
+```
+- **정렬은 고정**(분야 → 난이도 → id)이고 파라미터로 받지 않는다. 첫 스펙의 "미풀이 우선"은
+  한 문제를 풀고 돌아올 때마다 그 줄이 뒤로 밀려 목록 전체가 한 칸 당겨진다 — 무한 스크롤을
+  뺀 이유와 같은 문제다. 그 정렬이 하려던 일은 `state=UNSOLVED` 필터가 이미 한다.
+- `state`는 **"한 번이라도 맞혔나"**로 판정한다(`CORRECT`는 마지막 시도가 오답이어도 유지).
+  "지금도 아는지"는 `reviewDue`가 따로 답한다.
+- `lastAttemptedAt`은 한 번도 안 풀었으면 `null`. "안 풀었다"와 "오래전에 풀었다"는 다른 말이라
+  0이나 빈 문자열로 뭉개지 않는다.
+- `title`이 비어 있으면 **서버가** 지문 앞부분으로 채워 내린다(화면마다 대체하면 규칙이 갈라진다).
+  단 관리 화면은 예외로 `null`을 그대로 받는다 — 거기서는 "제목 없음"이 고쳐야 할 정보다.
+
+---
+
+## GET /api/me/study-summary  🔒
+문제 목록 화면의 통계 카드 4칸 + 분야별 진척. 화면을 열 때 한 번만 부른다.
+
+**Response 200**
+```json
+{
+  "stats": { "solvedTotal": 128, "correctRate": 64, "solvedThisWeek": 14, "reviewDue": 9 },
+  "domains": [ { "domain": "NETWORK", "label": "네트워크", "solved": 18 } ]
+}
+```
+- **목록과 API를 가른 이유**: 목록은 필터·쪽을 바꿀 때마다 다시 부르는데 통계는 그때마다
+  바뀌지 않는다. 한 응답에 담으면 필터를 만질 때마다 집계 쿼리 넷이 같이 돈다.
+- `correctRate`는 제출이 하나도 없으면 `null` — 0%(다 틀렸다)와 "아직 안 풀었다"는 정반대 신호다.
+- `domains`는 **맞힌 개수만** 주고 분모(전체 문제 수)를 주지 않는다. 배치가 매일 문제를 더해
+  분모가 커지므로, 비율로 보이면 어제 40%가 오늘 37%가 된다 — 아무것도 잘못하지 않았는데
+  뒷걸음질친 것처럼 보인다.
+- 스트릭(연속 일수)은 없다. `solvedThisWeek`가 그 자리를 대신한다(2026-08-29 제거).
 
 ---
 
