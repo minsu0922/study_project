@@ -93,7 +93,7 @@ R__의 조건은 **멱등성**(몇 번 실행해도 결과가 같음) — `CREAT
 | `V4__review_item.sql` | 복습 사다리 표 + **기존 오답 이관** | [10](10-review-recommendation.md) |
 | `V5__daily_quiz.sql` | 오늘의 퀴즈 세트 2개 표 | [12](12-daily-quiz.md) |
 | `V6__generated_problem_draft.sql` | AI 문제 초안 | [13](13-llm-problem-generation.md) |
-| `V7__imported_draft_file.sql` | 흡수한 파일 도장 | [14](14-llm-batch-automation.md) |
+| `V7__imported_draft_file.sql` | 들여온 파일 도장 | [14](14-llm-batch-automation.md) |
 | `V8__generated_document_draft.sql` | AI 개념 문서 초안 | [15](15-llm-concept-documents.md) |
 | `V9__problem_document_slug.sql` | `problem`·초안에 `document_slug` 컬럼 | [15](15-llm-concept-documents.md) |
 | `V10__topic_queue.sql` | 주제 대기열 표 | [16](16-llm-pipeline-operations.md) |

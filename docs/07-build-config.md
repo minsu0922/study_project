@@ -71,7 +71,7 @@ DB 접속·JPA·Flyway·JWT·로깅을 담는다. 값마다 "왜 이 값인지"�
 | `llm.generation.batch-enabled` | `true` | 생성 중단 스위치 → [16 §5](16-llm-pipeline-operations.md). |
 | `llm.generation.batch-type` | `auto` | `auto`\|`problem`\|`document` — 한쪽만 돌리기. |
 | `llm.generation.batch-count` / `batch-domains` | `5` / 8개 | 회당 문제 수, 순환 후보 분야. |
-| `llm.import.enabled` / `dir` | `true` / `generated` | 기동 시 생성 파일 흡수. **`dir`는 GitHub Actions가 커밋하는 위치와 반드시 같아야 한다.** |
+| `llm.import.enabled` / `dir` | `true` / `generated` | 기동 시 생성 파일 들여오기. **`dir`는 GitHub Actions가 커밋하는 위치와 반드시 같아야 한다.** |
 | `logging.level.org.hibernate.SQL` | debug | 실행 SQL 로그. |
 | `logging.level.org.hibernate.orm.jdbc.bind` | trace | 바인딩 파라미터 값까지 출력(개발용). 운영에서는 낮춘다(민감정보 로그 방지). |
 
@@ -117,7 +117,7 @@ docker compose up -d          # MySQL 8 기동 (healthy 될 때까지 몇 초)
 # 4. 기동할 때 벌어지는 일 (순서대로)
 #    Flyway 마이그레이션 적용 → JPA가 엔티티↔테이블 일치 검증(validate, 불일치면 부팅 실패)
 #    → AdminAccountInitializer: 관리자 계정 없으면 생성
-#    → DraftImportRunner(@Order 10): generated/*.json을 검수 대기함으로 흡수
+#    → DraftImportRunner(@Order 10): generated/*.json을 검수 대기함으로 들여오기
 #    → 스냅샷 내보내기 3종(@Order 20·30·40): DB → generated/_*.json
 
 # 5. 확인
@@ -136,7 +136,7 @@ docker compose up -d          # MySQL 8 기동 (healthy 될 때까지 몇 초)
 
 ### 기동 순서가 왜 중요한가
 
-흡수(`@Order 10`)가 내보내기(20·30·40)보다 **먼저** 돌아야 한다. 순서를 안 정하면 스프링이
+들여오기(`@Order 10`)가 내보내기(20·30·40)보다 **먼저** 돌아야 한다. 순서를 안 정하면 스프링이
 `ApplicationRunner`를 **맨 뒤로** 돌려서, 오늘 들어온 초안이 오늘 스냅샷에 안 담기고
 **하루 늦게 반영**된다. 실제로 그렇게 돼 있었고 `@Order`를 붙여 고쳤다(docs/16 §6).
 

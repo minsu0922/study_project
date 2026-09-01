@@ -311,7 +311,7 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-..."   # 그 창에서만
 | `PromptEvalCli` | 평가 하네스 (`evalPrompt` 태스크) |
 
 `SourceQuoteRule`은 나머지와 달리 **근거 문서를 손에 들고 있어야** 판정한다. 그래서 배치와
-평가 CLI만 부르고, 흡수(`LlmProblemService`)는 부르지 않는다 — 파일만 받는 쪽에는 대조할
+평가 CLI만 부르고, 들여오기(`LlmProblemService`)는 부르지 않는다 — 파일만 받는 쪽에는 대조할
 원본이 없다. 판정 방향을 "지목 절 안인가"가 아니라 "남의 절을 캤는가"로 뒤집은 이유는
 클래스 주석에 있다(중급은 설계 근거를 본론에서 캐도 정상이라, 전자로 재면 매번 헛울린다).
 

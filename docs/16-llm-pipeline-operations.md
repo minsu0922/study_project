@@ -114,7 +114,7 @@ llm:
     batch-count: 5            # 문제일 1회당 생성 개수
     batch-domains: NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK
   import:
-    enabled: true             # ③ 기동 시 흡수 여부
+    enabled: true             # ③ 기동 시 들여오기 여부
     dir: generated            # Actions가 커밋하는 위치와 반드시 같아야 한다
 ```
 
@@ -191,10 +191,10 @@ llm:
 
 ```powershell
 git pull                 # 배치가 커밋한 generated/*.json 내려받기
-.\gradlew.bat bootRun    # 기동하면서 검수 대기함으로 흡수
+.\gradlew.bat bootRun    # 기동하면서 검수 대기함으로 들여오기
 ```
 
-**앱을 켜기 전에 `git pull`을 해야 한다.** 파일이 없으면 흡수할 것도 없다.
+**앱을 켜기 전에 `git pull`을 해야 한다.** 파일이 없으면 들여올 것도 없다.
 (오늘 겪은 그대로 — 앱은 떠 있었지만 파일을 안 받아서 검수함이 비어 있었다.)
 
 ### 검수한 뒤 — 스냅샷 커밋
@@ -244,7 +244,7 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-..."   # 그 창에서만 유효
 | 생성 전체 | Actions 탭 → **Disable workflow** | 즉시 | **급할 때** |
 | 생성 전체 | `batch-enabled: false` + 커밋 | 다음 실행부터 | **오래 꺼둘 때**(이유가 이력에 남는다) |
 | 한쪽만 | `batch-type: problem` 또는 `document` | 다음 실행부터 | 문서/문제 중 하나만 |
-| 흡수 | `import.enabled: false` | 앱 재기동 | 파일은 쌓되 검수함은 비워 둘 때 |
+| 들여오기 | `import.enabled: false` | 앱 재기동 | 파일은 쌓되 검수함은 비워 둘 때 |
 | 진행 중인 1회 | Actions에서 Cancel | 즉시 | 이미 호출했다면 요금은 나간다 |
 
 **버튼과 설정을 둘 다 두는 이유**: 버튼은 빠르지만 GitHub 화면 깊숙한 곳에 있어서, 몇 주 뒤
@@ -303,7 +303,7 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-..."   # 그 창에서만 유효
 
 ### 세 가지 공통 규칙
 
-1. **흡수(`@Order(10)`)보다 뒤에 돈다.** 방금 들어온 초안의 제목까지 스냅샷에 담기게 하기 위함이다.
+1. **들여오기(`@Order(10)`)보다 뒤에 돈다.** 방금 들어온 초안의 제목까지 스냅샷에 담기게 하기 위함이다.
    순서가 없으면 스프링이 러너를 **맨 뒤**로 돌려 "하루 늦게 반영"되는 조용한 버그가 생긴다
    (실제로 그렇게 돼 있었고, `@Order`를 붙여 고쳤다).
 2. **내용이 같으면 파일을 다시 쓰지 않는다.** 매 부팅마다 "내보낸 시각"만 바뀐 파일을 쓰면
@@ -371,13 +371,13 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-..."   # 그 창에서만 유효
 | 클래스 | 하는 일 | 특히 볼 곳 |
 |---|---|---|
 | `llm/service/DraftImportRunner` `@Order(10)` | 기동 시 `generated/`와 `generated/documents/` 스캔 | 두 폴더를 한 러너가 훑는다 |
-| `llm/service/DraftImportService` | 문제 파일 1개 = 트랜잭션 1개 | 스캔/흡수를 다른 빈으로 나눈 이유 |
-| `llm/service/DocumentImportService` | 문서 파일 흡수. `importKey`가 `documents/` 접두 | **파일명 충돌 지뢰** 참고 |
+| `llm/service/DraftImportService` | 문제 파일 1개 = 트랜잭션 1개 | 스캔/들여오기를 다른 빈으로 나눈 이유 |
+| `llm/service/DocumentImportService` | 문서 파일 들여오기. `importKey`가 `documents/` 접두 | **파일명 충돌 지뢰** 참고 |
 | `llm/service/LlmProblemService` | 문제 초안 저장(규약 검증)·승인·거절·복구 | 승인은 `AdminProblemService.create` 재사용 |
 | `llm/service/LlmDocumentService` | 문서 초안 저장·승인·거절·복구 | 승인은 `AdminDocumentService.create` 재사용 |
 | `llm/service/ReviewCompleted` | 검수 완료 신호 — 스냅샷 내보내기를 깨운다 | `AFTER_COMMIT`이 핵심(§6) |
 | `llm/support/ProblemItemRule` | 문제 규약 판정(`defectOf`) + **품질 경고**(`qualityWarningsOf`) | 버릴 것과 알릴 것을 나눈 이유 |
-| `llm/support/SourceQuoteRule` | 근거 인용 검증 — 문서에서 왔는가 + 남의 난이도 절을 캤는가 | 문서를 들고 있어야 해서 흡수는 못 부른다 |
+| `llm/support/SourceQuoteRule` | 근거 인용 검증 — 문서에서 왔는가 + 남의 난이도 절을 캤는가 | 문서를 들고 있어야 해서 들여오기는 못 부른다 |
 | `llm/support/DocumentDraftValidator` | 문서 자동 검증(차단/경고) | 코드블록 예외가 없으면 보안 문서를 영영 못 쓴다 |
 | `admin/service/AdminStatsService` | 대시보드 — **모델별 승인율** 포함 | `toModelStats`의 "검수 0건 = null" 규칙 |
 
@@ -391,7 +391,7 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-..."   # 그 창에서만 유효
 |---|---|---|
 | `generated_problem_draft` | V6 (+V9 `document_slug`) | 문제 검수 대기함 |
 | `generated_document_draft` | V8 | 문서 검수 대기함 |
-| `imported_draft_file` | V7 | **파일명이 PK** — 중복 흡수 방지 |
+| `imported_draft_file` | V7 | **파일명이 PK** — 중복 들여오기 방지 |
 | `problem.document_slug` | V9 | 문제 → 근거 문서 느슨한 연결(FK 아님) |
 
 > `document_slug`를 FK로 걸지 않은 이유: 문제 초안이 **문서 승인보다 먼저** 존재할 수 있다.
@@ -433,7 +433,7 @@ git log --oneline -3 origin/main
 실행 상태를 더 자세히 보려면 GitHub `Actions` 탭. 실패하면 **소유자에게 메일이 온다** —
 조용히 죽지 않는 것이 `@Scheduled`에서 옮겨 온 가장 큰 이득이다.
 
-### ② 내 PC로 흡수됐나
+### ② 내 PC로 들여왔나
 
 ```powershell
 git pull

@@ -71,7 +71,7 @@ problem에 아예 존재하지 않는 구조를 택했다. 보기는 JSON 문자
 - **수동**: 관리자 화면 "AI 생성" 탭에서 도메인·난이도·유형·개수를 골라 즉시 생성.
   이 경로는 DB가 옆에 있으므로 **집계 기반 "가장 부족한 칸" 자동 선택**을 그대로 쓴다.
 - **배치**: GitHub Actions가 매일 06:17에 생성해 저장소에 커밋하고, 앱이 기동할 때
-  검수 대기함으로 흡수한다. 러너에는 DB가 없어 대상 선택은 **날짜 기반 4일 주기**를 쓴다
+  검수 대기함으로 들여온다. 러너에는 DB가 없어 대상 선택은 **날짜 기반 4일 주기**를 쓴다
   (0일차 개념 문서 → 1·2·3일차 그 문서를 근거로 초·중·고급 문제. 근거 문서를 못 찾으면
   옛 24칸 순환으로 폴백). → 상세: [14](14-llm-batch-automation.md)·[15](15-llm-concept-documents.md),
   사용법은 [16](16-llm-pipeline-operations.md)
@@ -103,7 +103,7 @@ llm:
     batch-count: 5             # 배치 1회당 생성 문제 수
     batch-domains: NETWORK,OS,DATABASE,...   # 배치 후보 도메인(= 날짜 순환 순서)
   import:
-    enabled: true              # 기동 시 generated/*.json 흡수
+    enabled: true              # 기동 시 generated/*.json 들여오기
     dir: generated
 ```
 
