@@ -23,61 +23,81 @@
       만들어진 것은 곧바로 문제가 되지 않고 <a href="/admin/llm.html">검수</a> 대기함으로 들어갑니다.
     </div>
 
-    <!-- ═══ AI 문제 생성 (docs/13) ═══ -->
+    <!-- ═══ AI 문제 생성 (docs/13) ═══
+         2026-09-01에 카드 둘("AI 문제 생성" + "문서로 문제 만들기")을 하나로 합쳤다.
+
+         [왜 합쳤나] 전에는 "근거가 있고 없고는 성격이 다르니 카드를 나눈다"였는데,
+         실제로 갈라 놓고 쓰다 보니 반대 문제가 생겼다. 위 카드가 먼저 눈에 들어와
+         <근거 없는 생성이 기본값>처럼 동작했다 — 문서를 쓸 수 있는 주제인데도 위에서
+         눌러 놓고 나중에야 "이건 왜 문서 링크가 없지"를 묻게 된다.
+         카드가 둘이면 "무엇을 고를지"가 아니라 "어느 카드에서 누를지"가 되어 버린다.
+
+         [왜 폼을 셋으로 쪼개지 않았나] 근거마다 폼을 따로 두면 분야·난이도·유형·개수
+         네 칸을 세 벌 복사해야 하고, 한 칸을 고칠 때 세 곳을 같이 고쳐야 한다.
+         다른 것은 <근거 하나>뿐이므로 그 한 줄만 고르게 한다.
+
+         [잘못된 조합이 아예 안 만들어진다] 전에는 파일과 붙여넣기를 둘 다 채운 채 보낼 수
+         있어서 "하나만 보내세요" 오류가 필요했다. 고른 것만 펼치면 그 오류가 날 수 없다. -->
     <div class="card">
       <h3>AI 문제 생성</h3>
-      <p class="meta">Claude가 문제를 만들어 <b>검수 대기</b>로 저장합니다. 승인해야만 정식 문제로 등록됩니다.
-        도메인·난이도를 "자동"으로 두면 문제가 가장 부족한 칸을 골라 생성합니다.</p>
+      <p class="meta">Claude가 문제를 만들어 <b>검수 대기</b>로 저장합니다. 승인해야만 정식 문제로 등록됩니다.</p>
+
+      <!-- 근거 고르기를 맨 위에 둔 이유: 이 선택이 아래 칸의 구성과 결과물의 성격을 <둘 다> 바꾼다.
+           칸을 다 채운 뒤 마지막에 고르게 하면 채운 것이 무효가 되는 순서가 된다. -->
+      <div class="field" style="margin-top:12px">
+        <label>근거</label>
+        <div class="filters" style="gap:16px">
+          <label class="meta"><input type="radio" name="gSource" value="doc" checked> 등록된 문서</label>
+          <label class="meta"><input type="radio" name="gSource" value="paste"> 붙여넣기 · 파일</label>
+          <label class="meta"><input type="radio" name="gSource" value="none"> 없음</label>
+        </div>
+      </div>
+
+      <!-- 셋의 <결과>가 어떻게 다른지 그 자리에 적어 둔다. 고르는 순간 알아야 하는 것이지
+           나중에 검수 화면에서 발견할 일이 아니다. -->
+      <table class="meta" style="margin:10px 0 14px">
+        <thead><tr><th>근거</th><th>개념 문서 읽기 링크</th><th>재료 검사</th></tr></thead>
+        <tbody>
+          <tr><td>등록된 문서</td><td>붙습니다</td><td>걸립니다 (짝짓기는 표 4행 필요)</td></tr>
+          <tr><td>붙여넣기 · 파일</td><td>안 붙습니다 — 서비스에 없는 글이라 찾아갈 곳이 없습니다</td><td>안 걸립니다 (우리 문서 양식이 아니라서)</td></tr>
+          <tr><td>없음</td><td>안 붙습니다</td><td>대상이 아닙니다 (볼 문서가 없음)</td></tr>
+        </tbody>
+      </table>
+
       <div id="gMessage"></div>
-      <div class="filters">
-        <div class="field"><label>도메인</label><select id="gDomain"></select></div>
-        <div class="field"><label>난이도</label><select id="gDifficulty"></select></div>
+
+      <!-- 근거가 "등록된 문서"일 때 -->
+      <div class="field" id="gSlugField" style="margin-top:10px">
+        <label>문서 고르기</label>
+        <select id="gSlug"><option value="">— 고르지 않음 —</option></select>
+      </div>
+
+      <!-- 근거가 "붙여넣기 · 파일"일 때. 둘 중 하나만 쓰면 되고, 둘 다 채우면 파일이 이긴다
+           (아래 collectSource 주석). 블로그 글을 옮겨 오는 자리라 붙여넣기를 위에 둔다. -->
+      <div id="gPasteFields" hidden>
+        <div class="field" style="margin-top:10px">
+          <label>본문 붙여넣기 (최대 20,000자)</label>
+          <textarea id="gText" rows="8" placeholder="블로그 글이나 사내 문서를 그대로 붙여넣으세요."></textarea>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label>또는 파일 (.md / .txt)</label>
+          <input type="file" id="gFile" accept=".md,.txt,text/markdown,text/plain">
+        </div>
+      </div>
+
+      <div class="filters" style="margin-top:12px">
+        <div class="field"><label id="gDomainLabel">도메인</label><select id="gDomain"></select></div>
+        <div class="field"><label id="gDifficultyLabel">난이도</label><select id="gDifficulty"></select></div>
         <div class="field"><label>유형</label><select id="gType"></select></div>
         <div class="field"><label>개수 (1~10)</label><input type="number" id="gCount" value="5" min="1" max="10" style="width:80px"></div>
+        <!-- 묻는 형태 지목(2026-08-25). 비워 두면 모델이 고르는데, 그러면 재료가 가장 풍부한
+             상황형으로 계속 돌아간다(실물 세 번 연속). 검수 뒤 한두 건을 메울 때 특히 필요하다.
+             근거가 "없음"이면 서버가 이 값을 받지 않으므로 잠근다(LlmGenerateRequest에 칸이 없다). -->
+        <div class="field"><label>묻는 형태 (중급)</label><select id="gKind"></select></div>
       </div>
+
       <button id="gSubmitBtn">생성 요청</button>
       <span class="meta" id="gLoading" hidden>생성 중… (수십 초 걸릴 수 있어요)</span>
-    </div>
-
-    <!-- ═══ 문서 업로드 생성 (2026-08-18 신설) ═══
-         위 카드와 따로 둔 이유: 근거가 있고 없고는 결과물의 성격이 다르다.
-         위는 모델의 기억에서, 아래는 준 문서 안에서만 낸다. 한 폼에 체크박스로 합치면
-         지금 어느 쪽으로 만들고 있는지가 흐려진다. -->
-    <div class="card">
-      <h3>문서로 문제 만들기</h3>
-      <p class="meta">고른 문서 <b>안에 있는 내용으로만</b> 문제를 만듭니다. 근거는 <b>셋 중 하나</b>만
-        고릅니다 — 등록된 문서, 올린 파일, 붙여넣은 본문. 도메인·난이도는 <b>직접 골라야 합니다</b> —
-        문서의 주제를 시스템이 알 수 없어 자동 선택을 쓰면 엉뚱한 분야가 붙습니다.</p>
-      <p class="meta"><b>등록된 문서</b>를 고른 경우에만 학습자 화면에 "개념 문서 읽기" 링크가 붙습니다.
-        올린 파일·붙여넣은 본문은 서비스에 없는 문서라 찾아갈 곳이 없습니다.</p>
-      <div id="uMessage"></div>
-      <div class="filters">
-        <div class="field"><label>도메인 (필수)</label><select id="uDomain"></select></div>
-        <div class="field"><label>난이도 (필수)</label><select id="uDifficulty"></select></div>
-        <div class="field"><label>유형</label><select id="uType"></select></div>
-        <div class="field"><label>개수 (1~10)</label><input type="number" id="uCount" value="5" min="1" max="10" style="width:80px"></div>
-        <!-- 묻는 형태 지목(2026-08-25). 비워 두면 모델이 고르는데, 그러면 재료가 가장 풍부한
-             상황형으로 계속 돌아간다(실물 세 번 연속). 검수 뒤 한두 건을 메울 때 특히 필요하다 —
-             개수가 적으면 "상황형 최소 2개" 규칙이 배치를 통째로 차지해 버린다. -->
-        <div class="field"><label>묻는 형태 (중급)</label><select id="uKind"></select></div>
-      </div>
-      <!-- 등록 문서 입구(2026-08-25). 셋 중 맨 위에 둔 이유: 4일 주기 배치가 쓰는 것과 같은
-           경로이고 결과물도 가장 좋다(약속된 절이 있어 난이도별 재료 분리가 실제로 작동한다).
-           고르면 도메인이 자동으로 맞춰지므로 손도 제일 덜 간다. -->
-      <div class="field" style="margin-top:10px">
-        <label>등록된 문서에서 고르기</label>
-        <select id="uSlug"><option value="">— 고르지 않음 —</option></select>
-      </div>
-      <div class="field" style="margin-top:10px">
-        <label>또는 파일 (.md / .txt)</label>
-        <input type="file" id="uFile" accept=".md,.txt,text/markdown,text/plain">
-      </div>
-      <div class="field" style="margin-top:10px">
-        <label>또는 본문 붙여넣기 (최대 20,000자)</label>
-        <textarea id="uText" rows="8" placeholder="문서 내용을 그대로 붙여넣으세요."></textarea>
-      </div>
-      <button id="uSubmitBtn">문서로 생성</button>
-      <span class="meta" id="uLoading" hidden>생성 중… (수십 초 걸릴 수 있어요)</span>
     </div>
 
     <!-- ═══ 주제 범위 (2026-08-29에 이 화면으로 옮김) ═══
@@ -148,9 +168,10 @@
  * 화면이 보내는 값이 곧 enum 이름이라, 갈라지면 400이 난다.
  *
  * [왜 파일 맨 위인가 — 2026-08-25에 여기서 화면이 통째로 죽었다]
- * 처음에는 이 상수를 쓰는 initUploadForm() 바로 아래에 뒀다. 읽기에는 그쪽이 자연스러운데,
- * 아래 초기화 블록이 스크립트 맨 위에서 <먼저> 돈다. const는 선언 줄에 닿기 전까지
- * 접근할 수 없어서(TDZ) initUploadForm()이 ReferenceError로 죽고, 그 뒤가 통째로 실행되지 않았다.
+ * 처음에는 이 상수를 쓰는 초기화 함수(그때 이름은 initUploadForm, 지금은 syncKindOptions)
+ * 바로 아래에 뒀다. 읽기에는 그쪽이 자연스러운데, 아래 초기화 블록이 스크립트 맨 위에서
+ * <먼저> 돈다. const는 선언 줄에 닿기 전까지 접근할 수 없어서(TDZ) 그 함수가
+ * ReferenceError로 죽고, 그 뒤가 통째로 실행되지 않았다.
  *
  * 함수 선언은 호이스팅되므로 아래에 둬도 되지만 const는 아니다. 초기화 블록보다 위에 둔다.
  */
@@ -169,59 +190,90 @@ const QUESTION_KINDS = [
 
 if (initAdminPage("generate")) {
   initGenerateForm();
-  initUploadForm();
   initTopicForm();
   applyDeepLink();
   loadTopicQueue();
 }
 
-function initGenerateForm() {
-  // 도메인·난이도의 첫 옵션은 "자동" — 값이 빈 문자열이면 서버에 null로 보내
-  // "가장 부족한 칸 자동 선택"(docs/13의 빈 칸 채우기 전략)을 태운다.
-  const gd = document.getElementById("gDomain");
-  gd.innerHTML = `<option value="">자동 — 가장 부족한 칸</option>`;
-  DOMAINS.forEach(([v, l]) => gd.insertAdjacentHTML("beforeend", `<option value="${v}">${l}</option>`));
-  const gf = document.getElementById("gDifficulty");
-  gf.innerHTML = `<option value="">자동 — 가장 부족한 칸</option>`;
-  DIFFICULTIES.forEach(([v, l]) => gf.insertAdjacentHTML("beforeend", `<option value="${v}">${l}</option>`));
-  fillSelect(document.getElementById("gType"), TYPES);
-
-  document.getElementById("gSubmitBtn").addEventListener("click", generateProblems);
+/** 지금 고른 근거 — "doc" | "paste" | "none". */
+function selectedSource() {
+  return document.querySelector('input[name="gSource"]:checked').value;
 }
 
-function initUploadForm() {
-  // 업로드 폼에는 "자동" 옵션을 두지 않는다. 올린 문서의 주제를 시스템이 모르는데 칸을
-  // 자동으로 고르면 문서와 무관한 분야가 붙는다 — 서버도 @NotNull로 막고 있다.
-  fillSelect(document.getElementById("uDomain"), DOMAINS);
-  fillSelect(document.getElementById("uDifficulty"), DIFFICULTIES);
-  fillSelect(document.getElementById("uType"), TYPES);
-
-  // 형태는 중급·고급에만 뜻이 있다. 초급은 정의를 묻는 자리라 나눌 것이 없다.
-  // 고급은 다섯 중 셋만 연다 — 판정형은 중급과 구별이 안 되고, 순서형은 "넷 다 그럴듯"이
-  // 성립하지 않아 고급의 정의와 부딪힌다(서버의 ProblemItemRule.ADVANCED_KINDS와 같아야 한다).
-  //
-  // 난이도에 따라 목록 자체를 갈아 끼운다. 전부 보여 주고 서버가 거절하게 두면 요금을 낸 뒤에야
-  // 알게 되고, 잠그기만 하면 "고급은 왜 못 고르지"가 된다.
-  const uk = document.getElementById("uKind");
-  const ADVANCED_KINDS = ["SITUATION", "COMPARISON", "CAUSE"];
-  const syncKindOptions = () => {
-    const difficulty = document.getElementById("uDifficulty").value;
-    const allowed = difficulty === "INTERMEDIATE" ? QUESTION_KINDS
-      : difficulty === "ADVANCED" ? QUESTION_KINDS.filter(([v]) => ADVANCED_KINDS.includes(v))
-      : [];
-    const keep = uk.value;
-    uk.innerHTML = `<option value="">모델이 고름</option>`
-      + allowed.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
-    // 난이도를 바꿔도 고를 수 있는 형태면 선택을 유지한다 — 중급에서 비교형을 고른 뒤
-    // 고급으로 바꿨다고 선택이 풀리면, 바뀐 줄 모르고 그대로 보내게 된다.
-    uk.value = allowed.some(([v]) => v === keep) ? keep : "";
-    uk.disabled = allowed.length === 0;
-  };
-  document.getElementById("uDifficulty").addEventListener("change", syncKindOptions);
+function initGenerateForm() {
+  fillSelect(document.getElementById("gType"), TYPES);
+  syncSourceFields();
   syncKindOptions();
 
-  document.getElementById("uSubmitBtn").addEventListener("click", generateFromDocument);
+  document.querySelectorAll('input[name="gSource"]').forEach(radio =>
+      radio.addEventListener("change", () => { syncSourceFields(); syncKindOptions(); }));
+  document.getElementById("gDifficulty").addEventListener("change", syncKindOptions);
+  document.getElementById("gSubmitBtn").addEventListener("click", generateProblems);
   loadDocumentOptions();
+}
+
+/**
+ * 근거에 따라 칸을 갈아 끼운다 — 2026-09-01.
+ *
+ * <p><b>"자동" 옵션이 근거에 따라 있었다 없었다 하는 것이 이 함수의 핵심이다.</b>
+ * 근거가 없을 때만 "가장 부족한 칸"을 서버가 골라 줄 수 있다(docs/13). 문서를 줬는데 분야를
+ * 자동으로 고르면 <문서와 무관한 분야>가 붙는다 — 서버도 그쪽 경로는 @NotNull로 막는다.
+ * 옵션을 남겨 두고 보낼 때만 막는 방법도 있지만, 고를 수 있게 해 놓고 거절하는 것보다
+ * 고를 수 없게 하는 편이 낫다. 왜 못 고르는지는 라벨에 적는다.
+ */
+function syncSourceFields() {
+  const source = selectedSource();
+  const auto = source === "none";
+
+  document.getElementById("gSlugField").hidden = source !== "doc";
+  document.getElementById("gPasteFields").hidden = source !== "paste";
+
+  // 목록을 다시 그리되 고른 값은 살린다 — 근거를 바꿨다고 채워 둔 분야가 풀리면,
+  // 바뀐 줄 모르고 엉뚱한 분야로 보내게 된다.
+  rebuildOptions("gDomain", DOMAINS, auto);
+  rebuildOptions("gDifficulty", DIFFICULTIES, auto);
+
+  document.getElementById("gDomainLabel").textContent = auto ? "도메인" : "도메인 (필수)";
+  document.getElementById("gDifficultyLabel").textContent = auto ? "난이도" : "난이도 (필수)";
+  document.getElementById("gSubmitBtn").textContent = auto ? "생성 요청" : "문서로 생성";
+}
+
+/** select를 다시 채운다. {@code withAuto}면 맨 위에 "자동"(빈 값)을 둔다. */
+function rebuildOptions(id, options, withAuto) {
+  const sel = document.getElementById(id);
+  const keep = sel.value;
+  sel.innerHTML = (withAuto ? `<option value="">자동 — 가장 부족한 칸</option>` : "")
+      + options.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  if (options.some(([v]) => v === keep)) sel.value = keep;
+  else if (withAuto) sel.value = "";
+}
+
+/**
+ * 묻는 형태는 중급·고급에만 뜻이 있다. 초급은 정의를 묻는 자리라 나눌 것이 없다.
+ * 고급은 다섯 중 셋만 연다 — 판정형은 중급과 구별이 안 되고, 순서형은 "넷 다 그럴듯"이
+ * 성립하지 않아 고급의 정의와 부딪힌다(서버의 ProblemItemRule.ADVANCED_KINDS와 같아야 한다).
+ *
+ * <p>난이도에 따라 목록 자체를 갈아 끼운다. 전부 보여 주고 서버가 거절하게 두면 요금을 낸 뒤에야
+ * 알게 되고, 잠그기만 하면 "고급은 왜 못 고르지"가 된다.
+ *
+ * <p>근거가 "없음"이면 통째로 잠근다. 그 경로의 요청 바디(LlmGenerateRequest)에는 이 칸이
+ * 아예 없어서, 골라 봐야 조용히 버려진다 — 고를 수 있는데 반영되지 않는 것이 가장 나쁘다.
+ */
+function syncKindOptions() {
+  const uk = document.getElementById("gKind");
+  const ADVANCED_KINDS = ["SITUATION", "COMPARISON", "CAUSE"];
+  const difficulty = document.getElementById("gDifficulty").value;
+  const allowed = selectedSource() === "none" ? []
+    : difficulty === "INTERMEDIATE" ? QUESTION_KINDS
+    : difficulty === "ADVANCED" ? QUESTION_KINDS.filter(([v]) => ADVANCED_KINDS.includes(v))
+    : [];
+  const keep = uk.value;
+  uk.innerHTML = `<option value="">모델이 고름</option>`
+    + allowed.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  // 난이도를 바꿔도 고를 수 있는 형태면 선택을 유지한다 — 중급에서 비교형을 고른 뒤
+  // 고급으로 바꿨다고 선택이 풀리면, 바뀐 줄 모르고 그대로 보내게 된다.
+  uk.value = allowed.some(([v]) => v === keep) ? keep : "";
+  uk.disabled = allowed.length === 0;
 }
 
 /**
@@ -238,7 +290,7 @@ function initUploadForm() {
  * 파일 업로드까지 못 쓰게 되면 손해다. 대신 무슨 일이 났는지는 드롭다운에 적어 둔다.
  */
 async function loadDocumentOptions() {
-  const sel = document.getElementById("uSlug");
+  const sel = document.getElementById("gSlug");
   try {
     const data = await api("/api/documents?size=100&sort=createdAt,desc");
     if (data.content.length === 0) {
@@ -256,7 +308,7 @@ async function loadDocumentOptions() {
     // 난이도는 건드리지 않는다. 그건 문서가 아니라 "오늘 무엇을 뽑을지"의 문제다.
     sel.addEventListener("change", () => {
       const domain = sel.selectedOptions[0]?.dataset.domain;
-      if (domain) document.getElementById("uDomain").value = domain;
+      if (domain) document.getElementById("gDomain").value = domain;
     });
   } catch (e) {
     sel.innerHTML = `<option value="">— 목록을 불러오지 못했습니다 —</option>`;
@@ -274,30 +326,71 @@ function applyDeepLink() {
 
 /* ═══════════ 문제 생성 ═══════════ */
 
+/**
+ * 생성 요청 — 근거에 따라 <서로 다른 엔드포인트>로 간다.
+ *
+ * <ul>
+ *   <li>없음 → {@code POST /generate} (JSON). 분야·난이도를 비우면 서버가 가장 부족한 칸을 고른다.
+ *   <li>등록 문서·붙여넣기 → {@code POST /generate-from-document} (multipart). 근거를 실어 보낸다.
+ * </ul>
+ *
+ * <p>한 함수로 합친 이유: 버튼이 하나라서다. 화면에서 고르는 것은 "무엇으로 만들까" 하나이고
+ * 엔드포인트가 둘인 것은 서버 사정이다. 그 사정이 화면에 버튼 두 개로 새어 나오면,
+ * 사용자는 자기가 고른 근거가 아니라 <어느 버튼을 눌렀는지>로 결과가 갈린다고 배우게 된다.
+ */
 async function generateProblems() {
   const msg = document.getElementById("gMessage");
   const btn = document.getElementById("gSubmitBtn");
   const loading = document.getElementById("gLoading");
+  const source = selectedSource();
+
+  // 보내기 전에 막는다. 근거를 고르라고 해 놓고 비운 채 수십 초를 기다렸다가 400을 받는 건
+  // 나쁜 경험이고, 그 사이 요금이 나갔는지도 알 수 없다.
+  if (source === "doc" && !document.getElementById("gSlug").value) {
+    showError(msg, new Error("등록된 문서를 골라 주세요."));
+    return;
+  }
+  const text = document.getElementById("gText").value.trim();
+  const file = document.getElementById("gFile").files[0];
+  if (source === "paste" && !text && !file) {
+    showError(msg, new Error("본문을 붙여넣거나 파일을 올려 주세요."));
+    return;
+  }
+  if (source !== "none"
+      && (!document.getElementById("gDomain").value || !document.getElementById("gDifficulty").value)) {
+    showError(msg, new Error("문서를 근거로 삼을 때는 분야와 난이도를 직접 골라야 합니다."));
+    return;
+  }
+
   btn.disabled = true;      // Claude 호출은 수십 초 — 더블클릭으로 중복 요청(=중복 과금)되는 걸 막는다
   loading.hidden = false;
   try {
-    const drafts = await api("/api/admin/llm-problems/generate", {
-      method: "POST",
-      body: JSON.stringify({
-        domain: document.getElementById("gDomain").value || null,
-        difficulty: document.getElementById("gDifficulty").value || null,
-        type: document.getElementById("gType").value,
-        count: Number(document.getElementById("gCount").value),
-      }),
-    });
-    showGenerated(msg, drafts.length);
+    const count = source === "none"
+        ? await generateWithoutSource()
+        : await generateWithSource(source, text, file);
+    showGenerated(msg, count);
     refreshAdminBadges();
   } catch (e) {
-    showError(msg, e); // LLM_003(API 오류)·LLM_004(키 없음) 메시지가 그대로 표시된다
+    // LLM_003(API 오류)·LLM_004(키 없음)·QUIZ_004(재료 없음) 메시지가 그대로 표시된다
+    showError(msg, e);
   } finally {
     btn.disabled = false;
     loading.hidden = true;
   }
+}
+
+/** 근거 없이 — 모델의 기억에서 낸다. 분야·난이도가 비면 서버가 가장 부족한 칸을 고른다. */
+async function generateWithoutSource() {
+  const drafts = await api("/api/admin/llm-problems/generate", {
+    method: "POST",
+    body: JSON.stringify({
+      domain: document.getElementById("gDomain").value || null,
+      difficulty: document.getElementById("gDifficulty").value || null,
+      type: document.getElementById("gType").value,
+      count: Number(document.getElementById("gCount").value),
+    }),
+  });
+  return drafts.length;
 }
 
 /**
@@ -306,56 +399,38 @@ async function generateProblems() {
  * 브라우저가 boundary까지 포함해 직접 정해야 한다. 헬퍼를 고쳐 분기를 넣는 대신
  * 이 한 곳만 fetch를 직접 쓴다(호출부 하나 때문에 공용 헬퍼를 복잡하게 만들지 않는다).
  */
-async function generateFromDocument() {
-  const msg = document.getElementById("uMessage");
-  const btn = document.getElementById("uSubmitBtn");
-  const loading = document.getElementById("uLoading");
-  const fileInput = document.getElementById("uFile");
-  const text = document.getElementById("uText").value.trim();
-  const file = fileInput.files[0];
-  const slug = document.getElementById("uSlug").value;
-
-  // 서버도 같은 것을 검사하지만(하나도 없음/둘 이상 → 400) 여기서 먼저 막는다.
-  // 파일을 올려 두고 붙여넣기까지 한 채 수십 초를 기다렸다가 400을 받는 건 나쁜 경험이다.
-  // 개수로 세는 것도 서버와 맞춘다 — boolean 비교로 두면 입구가 셋인 지금 조용히 틀린다.
-  const given = (slug ? 1 : 0) + (file ? 1 : 0) + (text ? 1 : 0);
-  if (given === 0) { showError(msg, new Error("등록된 문서를 고르거나, 파일을 올리거나, 본문을 붙여넣어 주세요.")); return; }
-  if (given > 1)   { showError(msg, new Error("등록 문서·파일·붙여넣기 중 하나만 사용해 주세요.")); return; }
-
+async function generateWithSource(source, text, file) {
   const form = new FormData();
-  form.append("domain", document.getElementById("uDomain").value);
-  form.append("difficulty", document.getElementById("uDifficulty").value);
-  form.append("type", document.getElementById("uType").value);
-  form.append("count", document.getElementById("uCount").value);
-  if (slug) form.append("slug", slug);
+  form.append("domain", document.getElementById("gDomain").value);
+  form.append("difficulty", document.getElementById("gDifficulty").value);
+  form.append("type", document.getElementById("gType").value);
+  form.append("count", document.getElementById("gCount").value);
+
+  // 서버는 셋(slug/file/text) 중 <정확히 하나>만 받는다. 화면이 근거를 하나만 펼치므로
+  // 둘을 함께 보내는 일 자체가 없다 — 전에 있던 "하나만 사용해 주세요" 오류가 사라진 이유다.
+  // 붙여넣기 안에서 본문과 파일이 겹칠 때만 파일을 택한다. 파일은 <올리는> 동작이라
+  // 흔적이 남고, 붙여넣은 글은 지운 줄 모르고 남아 있기 쉬워서다.
+  if (source === "doc") form.append("slug", document.getElementById("gSlug").value);
   else if (file) form.append("file", file);
   else form.append("text", text);
 
   // 비었으면 아예 보내지 않는다 — 빈 문자열을 보내면 스프링이 enum 변환에 실패해 400이 난다.
-  const kind = document.getElementById("uKind").value;
+  const kind = document.getElementById("gKind").value;
   if (kind) form.append("questionKind", kind);
 
-  btn.disabled = true;   // 중복 클릭 = 중복 과금
-  loading.hidden = false;
-  try {
-    const headers = {};
-    const token = getToken();
-    if (token) headers["Authorization"] = "Bearer " + token;
-    const res = await fetch("/api/admin/llm-problems/generate-from-document", {
-      method: "POST", headers, body: form,
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json?.error?.message || "생성에 실패했습니다.");
-    }
-    showGenerated(msg, json.data.length);
-    refreshAdminBadges();
-  } catch (e) {
-    showError(msg, e);
-  } finally {
-    btn.disabled = false;
-    loading.hidden = true;
+  // api() 헬퍼를 쓰지 않는다 — 그 헬퍼는 body가 있으면 Content-Type을 application/json으로
+  // 박는데, multipart는 브라우저가 boundary까지 포함해 직접 정해야 한다.
+  const headers = {};
+  const token = getToken();
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch("/api/admin/llm-problems/generate-from-document", {
+    method: "POST", headers, body: form,
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json?.error?.message || "생성에 실패했습니다.");
   }
+  return json.data.length;
 }
 
 /**
