@@ -1,0 +1,67 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-09-01",
+  "generatedAt" : "2026-09-01T06:24:52.616439300Z",
+  "domain" : "NETWORK",
+  "difficulty" : "BEGINNER",
+  "type" : "MATCHING",
+  "model" : "claude-opus-5",
+  "documentSlug" : "diagnosing-connection-failures-by-osi-layer",
+  "problems" : [ {
+    "question" : "OSI 7계층 모형의 각 계층과 그 계층이 하는 일을 짝지으시오.",
+    "answer" : "",
+    "explanation" : "OSI 7계층은 통신 일을 일곱 단계로 쪼갠 표준 모형이고, 각 계층은 맡은 일이 서로 겹치지 않는다. 1계층은 신호 자체를 선에 흘리는 일, 2계층은 같은 네트워크 안에서 이웃 장비에게 프레임을 정확히 넘기는 일, 5계층은 대화를 열고 닫고 이어 붙이는 일, 6계층은 데이터 형식과 암호화·압축을 맞추는 일을 담당한다. 이렇게 층마다 역할을 외워 두면 장애를 \"몇 층에서 났는가\"로 말할 수 있다. (문서의 '바탕이 되는 개념' 절 계층 표를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "물리(Physical) 계층",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : "0과 1을 전기·빛·전파 신호로 바꿔 선에 흘린다"
+    }, {
+      "text" : "데이터링크(Data Link) 계층",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : "같은 네트워크 안에서 MAC 주소로 옆 장비에게 정확히 건넨다"
+    }, {
+      "text" : "세션(Session) 계층",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : "대화를 열고 닫고 끊겼을 때 이어 붙이는 규칙을 다룬다"
+    }, {
+      "text" : "표현(Presentation) 계층",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : "데이터를 어떤 형식으로 쓸지, 암호화·압축을 어떻게 할지 맞춘다"
+    } ],
+    "sourceQuote" : "| 1 | 물리(Physical) | 0과 1을 전기·빛·전파 신호로 바꿔 선에 흘린다 | 랜선, 광케이블, 신호 규격 |",
+    "title" : "OSI 7계층별 담당 역할 구분",
+    "questionKind" : "JUDGMENT"
+  }, {
+    "question" : "연결 실패 증상을 가리키는 용어와 그 용어에서만 참인 설명을 짝지으시오.",
+    "answer" : "",
+    "explanation" : "연결 실패는 이름을 못 찾음, 명시적으로 거절당함, 아무 대답이 없음 셋으로 갈리고 각각이 가리키는 계층이 다르다. 이름 해석 실패는 주소를 정하지 못한 단계라 목적지로 패킷이 나가지도 않고, 연결 거절은 목적지 호스트가 그 포트에 아무도 없다는 답을 보낸 것이며, 연결 타임아웃은 응답이 전혀 없어 클라이언트가 스스로 포기한 것이다. 읽기 타임아웃은 이 셋과 달리 연결이 이미 맺힌 뒤 응답을 기다리다 포기한 경우다. (문서의 '무엇인가' 절과 용어 표를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "이름 해석 실패",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : "도메인 이름을 IP 주소로 바꾸지 못해 어느 주소로 보낼지조차 정하지 못한 상태"
+    }, {
+      "text" : "연결 거절",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : "목적지 호스트가 그 포트에는 아무도 없다고 명시적으로 답을 보낸 상태"
+    }, {
+      "text" : "연결 타임아웃",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : "보낸 요청에 성공도 실패도 없는 침묵만 있어 정해 둔 시간이 지나 스스로 포기한 상태"
+    }, {
+      "text" : "읽기 타임아웃",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : "연결이 맺힌 뒤 응답 바이트를 기다리다 포기한 상태"
+    } ],
+    "sourceQuote" : "- **연결 타임아웃(connection timeout)** — 요청을 보냈지만 성공도 실패도 아닌 침묵만 있어, 정해 둔 시간이 지나 클라이언트가 스스로 포기한 상태다.",
+    "title" : "연결 실패 증상 네 종류의 정의 구분",
+    "questionKind" : "JUDGMENT"
+  } ]
+}
