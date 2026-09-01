@@ -249,6 +249,7 @@ public final class DocumentDraftValidator {
         checkDesignRationaleHeading(structure, checks);
         checkTermList(body, structure, checks);
         checkGlossaryTable(structure, checks);
+        checkMatchingMaterial(body, checks);
         checkUndefinedTerms(body, checks);
         checkBodySections(body, structure, checks);
         checkFailureModeCount(body, structure, checks);
@@ -405,6 +406,31 @@ public final class DocumentDraftValidator {
         if (!GLOSSARY_HEADING.matcher(structure).find()) {
             checks.add(DraftCheck.warning(
                     "'### 용어 한눈에' 표가 없습니다. 뒤쪽 절에서 처음 나오는 용어를 올려 두는 자리입니다."));
+        }
+    }
+
+    /**
+     * 짝짓기 문제를 낼 표 재료가 있는지 — <b>알리기만 한다</b>(2026-09-01).
+     *
+     * <p>이 검사가 앞의 것들과 다른 점: 형식이 틀렸다는 신호가 아니라 <b>"이 문서로는 못 만드는
+     * 유형이 있다"</b>는 정보다. 표가 적은 것 자체는 문서의 흠이 아니다 — 짝지을 개념이 없는
+     * 주제가 실제로 있다.
+     *
+     * <p>그래도 검수자에게 알리는 이유는 <b>알 방법이 여기밖에 없어서다</b>. 이 사실이 드러나는
+     * 다음 자리는 며칠 뒤 짝짓기를 뽑으려다 "재료가 없습니다"로 막히는 순간인데, 그때는 왜
+     * 막혔는지 문서를 다시 열어 봐야 안다. 승인 화면에서 미리 보면 표를 한 줄 채워 넣든,
+     * 이 문서로는 다른 유형을 내든 <b>고를 수 있다</b>.
+     *
+     * <p>세는 일은 {@link TypeMaterialRule}에 맡긴다. 여기서 따로 세면 "검증은 통과했는데
+     * 생성에서 막히는" 어긋남이 나고, 그건 규칙이 둘로 갈렸다는 뜻이다.
+     */
+    private static void checkMatchingMaterial(String body, List<DraftCheck> checks) {
+        int rows = TypeMaterialRule.comparableRowsOf(body);
+        if (rows < TypeMaterialRule.MATCHING_MIN_ROWS) {
+            checks.add(DraftCheck.warning(
+                    "표 재료가 %d행뿐이라 이 문서로는 짝짓기 문제를 만들 수 없습니다(%d행 필요). "
+                            .formatted(rows, TypeMaterialRule.MATCHING_MIN_ROWS)
+                            + "'## 바탕이 되는 개념'이나 '### 용어 한눈에'에 표를 채우면 쓸 수 있습니다."));
         }
     }
 

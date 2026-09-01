@@ -21,6 +21,7 @@ import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.SourceQuoteRule;
 import project.study.study_project.llm.support.TopicQueue;
+import project.study.study_project.llm.support.TypeMaterialRule;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -222,7 +223,7 @@ public final class DraftGeneratorCli {
         LocalDate documentDate = resolveDocumentDate(opts, plan);
         boolean documentPinned = opts.containsKey(DOCUMENT_DATE_OPT);
 
-        ResolvedSource resolved = findSourceDocument(outDir, documentDate, difficulty);
+        ResolvedSource resolved = findSourceDocument(outDir, documentDate, difficulty, type);
         SourceDocument source = resolved == null ? null : resolved.document();
 
         // 지목한 문서를 못 쓰면 <b>폴백하지 않고 실패</b>시킨다. 폴백은 "예약 실행이 그날을 통째로
@@ -404,8 +405,11 @@ public final class DraftGeneratorCli {
      * <p><b>아직 검수 안 한 문서는 그냥 쓴다.</b> 미승인은 부정 신호가 아니라 "아직 안 봤다"일 뿐인데,
      * 승인을 며칠 미뤘다고 그 주기를 날리면 사람의 검수 속도에 배치가 인질로 잡힌다.
      */
-    private static ResolvedSource findSourceDocument(Path outDir, LocalDate documentDate,
-                                                     Difficulty difficulty) {
+    // package-private인 이유는 resolveProblemType·hasMaterialFor와 같다 — 테스트가 부른다.
+    // 여기서 보려는 것은 규칙 자체(그건 TypeMaterialRuleTest의 몫)가 아니라 <이 자리에서 규칙을
+    // 실제로 부르는가>다. 인자를 하나 빠뜨려도 컴파일은 되므로, 그 실수는 테스트로만 잡힌다.
+    static ResolvedSource findSourceDocument(Path outDir, LocalDate documentDate,
+                                             Difficulty difficulty, ProblemType type) {
         if (difficulty == null) {
             return null; // 문서일에는 근거 문서를 찾을 일이 없다(방어)
         }
@@ -428,6 +432,17 @@ public final class DraftGeneratorCli {
             if (!hasMaterialFor(doc.contentMd(), difficulty)) {
                 System.out.printf("근거 문서에 %s 재료가 없어 폴백으로 생성합니다: %s (찾은 절: %s 중 하나도 없음)%n",
                         difficulty, doc.slug(), ClaudeProblemGenerator.SOURCE_SECTIONS.get(difficulty));
+                return null;
+            }
+            // 난이도 재료와 <같은 자리에서> 유형 재료도 본다(2026-09-01). 난이도는 "캘 절이
+            // 있는가", 유형은 "그 절에 짝지을 것이 넷 있는가"를 묻는다 — 둘 다 통과해야 쓴다.
+            //
+            // 여기서 null을 돌려주면 지목 실행은 위쪽 documentPinned 검사에 걸려 <요금 0으로 실패>하고,
+            // 예약 실행은 폴백으로 간다. 새 실패 경로를 만들지 않고 기존 갈래에 얹은 이유가 이것이다.
+            String missing = TypeMaterialRule.missingMaterialOf(doc.contentMd(), type);
+            if (missing != null) {
+                System.out.printf("근거 문서로 %s를 만들 수 없어 폴백으로 생성합니다: %s (%s)%n",
+                        type, doc.slug(), missing);
                 return null;
             }
             return new ResolvedSource(parsed.domain(),
@@ -525,7 +540,7 @@ public final class DraftGeneratorCli {
      * 그 record가 <b>프롬프트에 실릴 내용</b>만 담는 그릇이기 때문이다 — 분야는 프롬프트의
      * 다른 자리(조건 줄)에 이미 들어가므로 문서 블록에 또 넣으면 중복이다.
      */
-    private record ResolvedSource(Domain domain, SourceDocument document) {
+    record ResolvedSource(Domain domain, SourceDocument document) {
     }
 
     /* ── 개념 문서 생성 ───────────────────────────────────────── */

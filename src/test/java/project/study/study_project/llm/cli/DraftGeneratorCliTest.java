@@ -1233,4 +1233,72 @@ class DraftGeneratorCliTest {
                     .hasMessageContaining("MATCHING");
         }
     }
+
+    /**
+     * 근거 문서를 고르는 자리가 <b>유형 재료까지</b> 보는지 — 2026-09-01.
+     *
+     * <p>규칙 자체는 {@code TypeMaterialRuleTest}가 지킨다. 여기서 보는 것은 <b>이 자리에서 그
+     * 규칙을 실제로 부르는가</b>다. 호출을 빠뜨려도 컴파일은 되고, 배치도 초록불로 끝난다 —
+     * 대신 재료 없는 문서로 짝짓기 다섯 개가 요금을 다 쓰고 나온다. 조용한 실패라 테스트로만 잡힌다.
+     *
+     * <p>{@code null}을 돌려주는 것이 곧 두 갈래가 된다: 문서를 지목한 실행은 위쪽에서
+     * <b>요금 0으로 실패</b>하고, 예약 실행은 폴백으로 간다. 그래서 이 한 줄이 두 동작을 다 정한다.
+     */
+    @org.junit.jupiter.api.Nested
+    @DisplayName("근거 문서 고르기 — 유형 재료")
+    class FindSourceDocumentMaterial {
+
+        private static final LocalDate DATE = LocalDate.of(2026, 9, 1);
+
+        /** 초급이 캘 절({@code ## 무엇인가})은 있고, 표 행 수만 갈아 끼우는 문서를 만든다. */
+        private String documentWith(int tableRows) {
+            StringBuilder md = new StringBuilder("# 제목\n\n## 무엇인가\n- **용어** — 뜻\n\n### 용어 한눈에\n\n| 용어 | 뜻 |\n|---|---|\n");
+            for (int i = 1; i <= tableRows; i++) {
+                md.append("| 용어").append(i).append(" | 뜻").append(i).append(" |\n");
+            }
+            return md.toString();
+        }
+
+        private java.nio.file.Path writeDocument(java.nio.file.Path outDir, String contentMd) throws Exception {
+            java.nio.file.Path docDir = outDir.resolve("documents");
+            java.nio.file.Files.createDirectories(docDir);
+            var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
+                    "테스트", DATE.toString(), DATE + "T00:00:00Z", Domain.NETWORK, "test-model",
+                    new project.study.study_project.llm.client.GeneratedDocumentItem(
+                            "제목", "test-slug", contentMd, List.of("net")));
+            new com.fasterxml.jackson.databind.ObjectMapper()
+                    .writeValue(docDir.resolve(DATE + ".json").toFile(), file);
+            return outDir;
+        }
+
+        @Test
+        @DisplayName("표가 모자란 문서로 짝짓기를 부르면 문서를 쓰지 않는다 — 지목 실행은 이걸로 요금 0에 멈춘다")
+        void rejectsDocumentWithoutMatchingMaterial(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tmp)
+                throws Exception {
+            java.nio.file.Path outDir = writeDocument(tmp, documentWith(2));
+
+            assertThat(DraftGeneratorCli.findSourceDocument(
+                    outDir, DATE, Difficulty.BEGINNER, ProblemType.MATCHING)).isNull();
+        }
+
+        @Test
+        @DisplayName("같은 문서라도 객관식이면 그대로 쓴다 — 막는 것은 짝짓기 하나뿐이다")
+        void keepsDocumentForOtherTypes(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tmp)
+                throws Exception {
+            java.nio.file.Path outDir = writeDocument(tmp, documentWith(2));
+
+            assertThat(DraftGeneratorCli.findSourceDocument(
+                    outDir, DATE, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE)).isNotNull();
+        }
+
+        @Test
+        @DisplayName("표가 넉넉하면 짝짓기도 그 문서를 쓴다")
+        void keepsDocumentWithEnoughRows(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tmp)
+                throws Exception {
+            java.nio.file.Path outDir = writeDocument(tmp, documentWith(4));
+
+            assertThat(DraftGeneratorCli.findSourceDocument(
+                    outDir, DATE, Difficulty.BEGINNER, ProblemType.MATCHING)).isNotNull();
+        }
+    }
 }

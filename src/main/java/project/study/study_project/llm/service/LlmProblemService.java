@@ -32,6 +32,7 @@ import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.TypeMaterialRule;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
 import java.util.ArrayList;
@@ -208,6 +209,22 @@ public class LlmProblemService {
         ProblemType type = request.type() != null ? request.type() : ProblemType.MULTIPLE_CHOICE;
         if (type == ProblemType.ESSAY) {
             throw new BusinessException(ErrorCode.QUIZ_002, "서술형(ESSAY)은 자동채점 미지원이라 생성할 수 없습니다.");
+        }
+
+        // 문서에 이 유형을 낼 재료가 있는지 <호출 전에> 본다(2026-09-01). 배치(DraftGeneratorCli)와
+        // 같은 규칙을 같은 클래스에서 부른다 — 규칙이 두 곳에 생기면 "관리 화면으로는 되는데
+        // 배치로는 막히는" 어긋남이 나고, 그때 어느 쪽이 옳은지 아무도 모른다.
+        //
+        // 배치와 달리 여기서는 폴백이 없다. 사람이 문서를 골라 버튼을 누른 실행이라, 근거 없는
+        // 문제를 대신 만들어 주는 것은 요청과 다른 일을 하는 것이다(요금까지 쓰면서).
+        // 올린 문서는 검사하지 않는다. 우리 양식이 아니라 "## 바탕이 되는 개념" 같은 절이 없고,
+        // 없다고 재료가 없는 것도 아니다(SourceDocument.Kind 주석). 여기서 막으면 관리자가 표가
+        // 그득한 문서를 올려도 짝짓기를 못 뽑는다 — 검사가 도우려던 사람을 막는 셈이다.
+        if (document.kind() == SourceDocument.Kind.GENERATED) {
+            String missing = TypeMaterialRule.missingMaterialOf(document.contentMd(), type);
+            if (missing != null) {
+                throw new BusinessException(ErrorCode.QUIZ_004, missing);
+            }
         }
 
         Domain domain = request.domain();
