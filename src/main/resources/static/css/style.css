@@ -355,6 +355,18 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .ox-row { display: flex; gap: 12px; }
 .ox-row .opt { justify-content: center; font-size: 1.5rem; font-weight: 800; padding: 20px 0; }
 
+/* 짝짓기 — 왼쪽(용어)과 오른쪽(설명) 두 열.
+   좁은 화면에서는 아래 미디어 쿼리가 한 줄로 눕힌다. 두 열을 억지로 유지하면
+   설명 문장이 서너 글자씩 줄바꿈되어 무엇이 적혔는지 읽히지 않는다. */
+.match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.match-col { display: flex; flex-direction: column; gap: 8px; }
+/* 지금 고른 왼쪽 — "이제 오른쪽을 누르세요"를 색으로 알린다.
+   .selected(이어짐)와 달라야 한다: 하나는 진행 중, 하나는 끝난 상태다. */
+.opt.active { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+
+/* 짝짓기 정답은 "왼쪽 → 오른쪽"이 여러 줄이라 줄바꿈을 살려야 한다(AnswerDisplay). */
+.answer-line { margin-top: 4px; white-space: pre-line; }
+
 /* 채점 피드백 박스(플레이어 안) */
 .feedback { border-radius: var(--radius-lg); padding: 14px 18px; margin-top: 16px; font-size: .93rem; }
 .feedback.correct { background: var(--correct-bg); border: 1px solid #bbf7d0; }
@@ -872,6 +884,10 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   .opt { padding: 15px 14px; min-height: 48px; font-size: 1rem; }
   .opt .key { width: 30px; height: 30px; font-size: .85rem; }
   .ox-row .opt { padding: 26px 0; }     /* OX는 두 개뿐이라 더 크게 — 가장 누르기 쉬운 형태 */
+
+  /* 짝짓기는 폰에서 한 줄로 눕힌다 — 두 열을 유지하면 설명 문장이 서너 글자씩 끊긴다.
+     위(왼쪽 열)를 누르고 아래(오른쪽 열)를 누르는 흐름은 그대로다. */
+  .match-grid { grid-template-columns: 1fr; gap: 14px; }
 
   /* 제출/다음은 이 화면의 유일한 주 동작이다. 데스크톱에서는 오른쪽 아래 작은 버튼이지만,
      폰에서는 가로를 꽉 채워 엄지가 어디에 있든 닿게 한다. */

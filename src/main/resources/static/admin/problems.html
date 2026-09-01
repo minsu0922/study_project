@@ -40,7 +40,7 @@
         <input type="text" id="pAnswer" style="max-width:420px">
       </div>
       <div id="pChoicesField" hidden>
-        <label class="meta">보기 (라디오로 정답 1개 선택)</label>
+        <label class="meta" id="pChoicesLabel">보기 (라디오로 정답 1개 선택)</label>
         <div id="pChoices"></div>
         <button type="button" class="btn-outline" id="addChoiceBtn" style="margin-top:6px">+ 보기 추가</button>
       </div>
@@ -206,17 +206,43 @@ function listFilterQuery() {
   return query ? "&" + query : "";
 }
 
-/** 유형 선택에 따라 입력 UI를 바꾼다 — 서버의 타입별 검증 규칙(QUIZ_004)과 짝을 맞춘 화면 규칙. */
+/**
+ * 유형 선택에 따라 입력 UI를 바꾼다 — 서버의 타입별 검증 규칙(QUIZ_004)과 짝을 맞춘 화면 규칙.
+ *
+ * 두 축이 독립이라는 점이 이 함수의 핵심이다. "보기 칸을 쓰는가"와 "정답 칸을 쓰는가"는
+ * 서로 반대가 아니다 — 순서 배열은 <둘 다> 쓴다(항목은 보기 칸, 정답 순서는 정답 칸).
+ * 예전에는 isMc 하나로 두 칸을 반대로 켰는데, 그 구조로는 순서 배열을 표현할 수 없다.
+ */
 function renderTypeFields() {
   const type = document.getElementById("pType").value;
-  const isMc = type === "MULTIPLE_CHOICE";
-  document.getElementById("pChoicesField").hidden = !isMc;
-  document.getElementById("pAnswerField").hidden = isMc;
-  document.getElementById("pAnswerLabel").textContent =
-    type === "OX" ? "정답 (O 또는 X)" : "정답 (복수 정답은 | 구분, 예: arp|address resolution protocol)";
-  if (isMc && document.querySelectorAll("#pChoices .choice-row").length === 0) {
+  const usesRows = ["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(type);
+  const usesAnswer = ["OX", "SHORT_ANSWER", "ORDERING"].includes(type);
+
+  document.getElementById("pChoicesField").hidden = !usesRows;
+  document.getElementById("pAnswerField").hidden = !usesAnswer;
+  document.getElementById("pAnswerLabel").textContent = {
+    OX: "정답 (O 또는 X)",
+    ORDERING: "정답 순서 (아래 항목의 번호를 | 로, 예: 3|2|1|4)",
+  }[type] ?? "정답 (복수 정답은 | 구분, 예: arp|address resolution protocol)";
+  document.getElementById("pChoicesLabel").textContent = {
+    MATCHING: "쌍 (왼쪽=용어, 오른쪽=그 용어에서만 참인 설명)",
+    ORDERING: "배열할 항목 (여기 적은 순서가 위 정답 순서의 번호가 됩니다)",
+  }[type] ?? "보기 (라디오로 정답 1개 선택)";
+
+  // 라디오(정답 하나)와 짝 칸은 유형에 따라 나타났다 사라진다. 줄을 다시 만들지 않고
+  // 감추기만 하는 이유: 유형을 잘못 골랐다가 되돌릴 때 적어 둔 글이 살아 있어야 한다.
+  document.querySelectorAll("#pChoices .choice-row").forEach(r => syncRowFields(r, type));
+  if (usesRows && document.querySelectorAll("#pChoices .choice-row").length === 0) {
     addChoiceRow(); addChoiceRow(); addChoiceRow(); addChoiceRow(); // 기본 4칸
   }
+}
+
+/** 한 줄 안에서 유형별로 보일 칸을 정한다 — 객관식만 라디오, 짝짓기만 오른쪽 칸. */
+function syncRowFields(row, type) {
+  row.querySelector("input[type=radio]").hidden = type !== "MULTIPLE_CHOICE";
+  row.querySelector(".choice-match").hidden = type !== "MATCHING";
+  row.querySelector(".choice-rationale").hidden =
+    type !== "MULTIPLE_CHOICE" || row.querySelector("input[type=radio]").checked;
 }
 
 /* 보기 한 줄 = 내용 + 오답 설명(V15).
@@ -228,7 +254,7 @@ function renderTypeFields() {
  * 설계라(Choice.rationale) 여기 적어도 저장 직전에 버려지는데, 칸이 열려 있으면 적어 놓고
  * 사라진 줄 모른다. 값 자체는 지우지 않는다 — 정답을 잘못 눌렀다가 되돌릴 때 쓴 글이
  * 사라지면 그게 더 나쁘다. */
-function addChoiceRow(text = "", correct = false, rationale = "") {
+function addChoiceRow(text = "", correct = false, rationale = "", matchText = "") {
   const row = document.createElement("div");
   row.className = "choice-row";
   row.style.cssText = "display:flex; gap:8px; align-items:flex-start; margin-bottom:6px";
@@ -236,23 +262,25 @@ function addChoiceRow(text = "", correct = false, rationale = "") {
     <input type="radio" name="pCorrect" title="정답으로 선택" style="margin-top:9px" ${correct ? "checked" : ""}>
     <div style="flex:1">
       <input type="text" class="choice-text" placeholder="보기 내용" style="width:100%">
+      <input type="text" class="choice-match" maxlength="500" style="width:100%; margin-top:4px"
+             placeholder="짝지을 오른쪽 설명 (짝짓기 전용)">
       <input type="text" class="choice-rationale" maxlength="1000" style="width:100%; margin-top:4px"
              placeholder="이 오답이 왜 틀렸는지 한 줄 (정답 보기는 비워 둡니다)">
     </div>
     <button type="button" class="btn-outline" style="padding:4px 10px; margin-top:6px">✕</button>`;
   row.querySelector(".choice-text").value = text;
   row.querySelector(".choice-rationale").value = rationale;
+  row.querySelector(".choice-match").value = matchText;
   row.querySelector("button").addEventListener("click", () => row.remove());
   document.getElementById("pChoices").appendChild(row);
-  syncRationaleVisibility();
+  syncRowFields(row, document.getElementById("pType").value);
   return row;
 }
 
 /** 정답으로 선택된 줄의 설명 칸만 감춘다 — 값은 그대로 두어 되돌릴 수 있게 한다. */
 function syncRationaleVisibility() {
-  document.querySelectorAll("#pChoices .choice-row").forEach(r => {
-    r.querySelector(".choice-rationale").hidden = r.querySelector("input[type=radio]").checked;
-  });
+  const type = document.getElementById("pType").value;
+  document.querySelectorAll("#pChoices .choice-row").forEach(r => syncRowFields(r, type));
 }
 
 function collectProblemBody() {
@@ -265,19 +293,26 @@ function collectProblemBody() {
     // 갈려서, 백필 대상을 고르는 IS NULL 조건에 이 행만 걸리지 않는다.
     title: document.getElementById("pTitle").value.trim() || null,
     question: document.getElementById("pQuestion").value,
-    answer: type === "MULTIPLE_CHOICE" ? null : document.getElementById("pAnswer").value || null,
+    // 객관식·짝짓기는 정답이 보기 행 쪽에 있어 answer를 비운다(docs/01, V16).
+    answer: ["MULTIPLE_CHOICE", "MATCHING"].includes(type)
+      ? null : document.getElementById("pAnswer").value || null,
     explanation: document.getElementById("pExplanation").value || null,
     choices: [],
   };
-  if (type === "MULTIPLE_CHOICE") {
+  if (["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(type)) {
     body.choices = [...document.querySelectorAll("#pChoices .choice-row")]
       .filter(r => r.querySelector(".choice-text").value.trim() !== "") // 빈 칸은 제출에서 제외
       .map(r => ({
         text: r.querySelector(".choice-text").value,
-        correct: r.querySelector("input[type=radio]").checked,
+        // 객관식이 아니면 정답 보기 개념이 없다. 유형을 바꾸기 전에 눌러 둔 라디오가
+        // 남아 있을 수 있어 여기서 눕힌다 — 안 그러면 짝짓기 한 쌍만 correct=true로 저장된다.
+        correct: type === "MULTIPLE_CHOICE" && r.querySelector("input[type=radio]").checked,
         // 빈 칸은 null로 보낸다 — 빈 문자열이 저장되면 화면이 "설명이 있는 보기"로 세어
         // 오답 분석 칸을 그리고 그 자리가 비어 나온다(제목을 null로 보내는 것과 같은 이유).
-        rationale: r.querySelector(".choice-rationale").value.trim() || null,
+        rationale: type === "MULTIPLE_CHOICE"
+          ? (r.querySelector(".choice-rationale").value.trim() || null) : null,
+        matchText: type === "MATCHING"
+          ? (r.querySelector(".choice-match").value.trim() || null) : null,
       }));
   }
   return body;
@@ -509,6 +544,15 @@ function displayAnswer(p) {
     const c = p.choices.find(c => c.correct);
     return c ? c.text : "?";
   }
+  // 짝짓기의 정답은 answer가 아니라 행에 있다(V16) — 쌍을 그대로 늘어놓는다.
+  if (p.type === "MATCHING") {
+    return p.choices.map(c => `${c.text} → ${c.matchText ?? "?"}`).join(" / ");
+  }
+  // 순서 배열의 answer는 "3|2|1|4"라 그대로 보여 주면 무슨 순서인지 알 수 없다.
+  if (p.type === "ORDERING") {
+    const textOf = seq => p.choices.find(c => c.seq === Number(seq))?.text ?? seq;
+    return String(p.answer ?? "").split("|").map(textOf).join(" → ");
+  }
   return p.answer ?? "";
 }
 
@@ -528,7 +572,9 @@ async function editProblem(id) {
   document.getElementById("pAnswer").value = p.answer ?? "";
   document.getElementById("pExplanation").value = p.explanation ?? "";
   document.getElementById("pChoices").innerHTML = "";
-  p.choices.forEach(c => addChoiceRow(c.text, c.correct, c.rationale ?? ""));
+  // matchText까지 되채워야 한다 — 빠뜨리면 짝짓기 문제를 한 번 수정할 때마다 오른쪽 열이
+  // 통째로 빠진 채 제출되어 QUIZ_004로 막힌다(AdminProblemDetail.ChoiceDetail 주석).
+  p.choices.forEach(c => addChoiceRow(c.text, c.correct, c.rationale ?? "", c.matchText ?? ""));
   renderTypeFields();
   window.scrollTo({ top: 0, behavior: "smooth" }); // 폼이 위에 있으니 올려 보낸다
 }

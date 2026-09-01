@@ -40,6 +40,12 @@ function startPlayer(mountEl, problems, opts = {}) {
     submitting: false,       // 제출 API 진행 중 — 더블클릭/Enter 연타로 중복 제출 방지
     misses: [],              // 틀린 문제 기록(결과 화면 복기용) {q, my, ans, exp}
     finished: false,
+    // 순서 배열 — 누른 순서대로 담기는 보기 id. 순서를 배열의 위치로만 표현해서
+    // 하나를 빼면 뒤 번호가 저절로 당겨진다(toggleOrder 주석).
+    order: [],
+    // 짝짓기 — 이어진 쌍 [{left: 보기id, token: 오른쪽 토큰}]과 지금 고른 왼쪽.
+    pairs: [],
+    matchLeft: null,
   };
 
   // 퀴즈 API는 id, 복습 API는 problemId — 어느 쪽이 와도 동작하게 여기서 흡수한다.
@@ -64,7 +70,11 @@ function startPlayer(mountEl, problems, opts = {}) {
       // 1~9 = 보기 선택 (OX는 1=O, 2=X)
       const options = p.type === "OX" ? ["O", "X"] : (p.choices || []).map(c => String(c.id));
       const i = Number(e.key) - 1;
-      if (i < options.length) selectOption(options[i]);
+      if (i >= options.length) return;
+      // 순서 배열은 "고르기"가 아니라 "순서대로 쌓기"다 — 같은 숫자키가 다른 일을 한다.
+      // 짝짓기는 두 열이라 숫자 하나로 무엇을 가리키는지 정할 수 없어 단축키를 두지 않는다.
+      if (p.type === "ORDERING") toggleOrder(options[i]);
+      else if (p.type !== "MATCHING") selectOption(options[i]);
     } else if (e.key === "Enter") {
       primaryAction();
     }
@@ -127,14 +137,18 @@ function startPlayer(mountEl, problems, opts = {}) {
         mountEl.querySelector("#submitBtn").disabled = !state.selected;
       });
     } else {
-      mountEl.querySelectorAll(".opt").forEach(btn => {
-        btn.addEventListener("click", () => selectOption(btn.dataset.value));
-      });
+      bindOptions(p);
     }
     mountEl.querySelector("#submitBtn").addEventListener("click", submit);
   }
 
-  /** 문제 유형별 입력 UI — 객관식·OX는 버튼, 단답형은 텍스트 입력. */
+  /**
+   * 문제 유형별 입력 UI — 객관식·OX는 버튼, 단답형은 텍스트 입력,
+   * 순서 배열은 누른 순서대로 번호 매기기, 짝짓기는 두 열을 잇기.
+   *
+   * 순서 배열에 드래그를 쓰지 않은 이유: 모바일에서 드래그는 스크롤과 싸운다.
+   * "순서대로 누른다"는 손가락으로도 정확하고, 키보드 1~9 단축키와도 그대로 이어진다.
+   */
   function renderInput(p) {
     if (p.type === "MULTIPLE_CHOICE") {
       return p.choices.map(c => `
@@ -148,8 +162,55 @@ function startPlayer(mountEl, problems, opts = {}) {
         <button class="opt" data-value="X"><span>❌ X</span></button>
       </div>`;
     }
+    if (p.type === "ORDERING") return renderOrdering(p);
+    if (p.type === "MATCHING") return renderMatching(p);
     // SHORT_ANSWER — Enter 제출은 전역 키 핸들러가 처리
     return `<input type="text" id="shortInput" placeholder="답을 입력하세요" autocomplete="off">`;
+  }
+
+  /** 순서 배열 — 고른 항목에는 누른 순서를, 안 고른 항목에는 점을 찍는다. */
+  function renderOrdering(p) {
+    const rows = p.choices.map(c => {
+      const at = state.order.indexOf(String(c.id));
+      const picked = at >= 0;
+      return `<button class="opt${picked ? " selected" : ""}" data-order="${c.id}">
+        <span class="key">${picked ? at + 1 : "·"}</span><span>${escapeHtml(c.text)}</span>
+      </button>`;
+    }).join("");
+    return `${rows}<div class="kbd-hint">순서대로 누르세요. 다시 누르면 취소됩니다.</div>`;
+  }
+
+  /**
+   * 짝짓기 — 왼쪽을 누르고 오른쪽을 누르면 한 쌍. 이어진 둘에는 같은 번호가 붙는다.
+   *
+   * 선을 그리지 않고 번호로 짝을 보여 주는 이유: 선을 그리려면 두 열의 화면 좌표를 재야 하고,
+   * 창 크기가 바뀌거나 글이 줄바꿈될 때마다 다시 그려야 한다. 번호는 그 전부를 안 해도 된다.
+   */
+  function renderMatching(p) {
+    const pairIndexOfLeft = id => state.pairs.findIndex(x => x.left === String(id));
+    const pairIndexOfToken = t => state.pairs.findIndex(x => x.token === t);
+
+    const left = p.choices.map(c => {
+      const at = pairIndexOfLeft(c.id);
+      const active = state.matchLeft === String(c.id);
+      return `<button class="opt${at >= 0 ? " selected" : ""}${active ? " active" : ""}"
+        data-left="${c.id}">
+        <span class="key">${at >= 0 ? at + 1 : "·"}</span><span>${escapeHtml(c.text)}</span>
+      </button>`;
+    }).join("");
+
+    const right = (p.matchOptions || []).map(o => {
+      const at = pairIndexOfToken(o.token);
+      return `<button class="opt${at >= 0 ? " selected" : ""}" data-token="${escapeHtml(o.token)}">
+        <span class="key">${at >= 0 ? at + 1 : "·"}</span><span>${escapeHtml(o.text)}</span>
+      </button>`;
+    }).join("");
+
+    return `<div class="match-grid">
+        <div class="match-col">${left}</div>
+        <div class="match-col">${right}</div>
+      </div>
+      <div class="kbd-hint">왼쪽을 누른 뒤 오른쪽을 누르면 이어집니다. 이어진 것을 누르면 풀립니다.</div>`;
   }
 
   /** 보기 선택(채점 전) — 선택 표시를 바꾸고 제출 버튼을 활성화한다. */
@@ -160,6 +221,86 @@ function startPlayer(mountEl, problems, opts = {}) {
       btn.classList.toggle("selected", btn.dataset.value === value);
     });
     mountEl.querySelector("#submitBtn").disabled = false;
+  }
+
+  /**
+   * 순서 배열에서 항목 하나를 눌렀을 때 — 이미 고른 것이면 빼고, 아니면 뒤에 붙인다.
+   *
+   * 뺄 때 뒤 번호를 다시 매기지 않아도 되는 이유: 순서는 배열의 <위치>로만 표현하므로
+   * 하나를 빼면 나머지가 저절로 당겨진다. 번호를 따로 들고 있었다면 여기서 재계산이 필요했다.
+   */
+  function toggleOrder(id) {
+    if (state.answered || state.submitting) return;
+    const at = state.order.indexOf(id);
+    if (at >= 0) state.order.splice(at, 1);
+    else state.order.push(id);
+    // 전부 배열했을 때만 제출할 수 있다 — 서버도 개수가 다르면 400으로 막는다(gradeOrdering).
+    const p = problems[state.idx];
+    state.selected = state.order.length === p.choices.length ? state.order.join("|") : "";
+    refreshInput();
+  }
+
+  /** 짝짓기에서 왼쪽을 눌렀을 때 — 이미 이어져 있으면 그 쌍을 풀고, 아니면 "고른 왼쪽"이 된다. */
+  function pickLeft(id) {
+    if (state.answered || state.submitting) return;
+    const at = state.pairs.findIndex(x => x.left === id);
+    if (at >= 0) {
+      state.pairs.splice(at, 1);
+      state.matchLeft = null;
+    } else {
+      // 같은 것을 두 번 누르면 고르기를 취소한다 — 잘못 눌렀을 때 빠져나갈 길을 둔다.
+      state.matchLeft = state.matchLeft === id ? null : id;
+    }
+    syncMatchAnswer();
+  }
+
+  /** 짝짓기에서 오른쪽을 눌렀을 때 — 왼쪽을 고른 상태에서만 쌍이 된다. */
+  function pickRight(token) {
+    if (state.answered || state.submitting) return;
+    const at = state.pairs.findIndex(x => x.token === token);
+    if (at >= 0) {
+      state.pairs.splice(at, 1);   // 이어진 것을 풀기
+    } else if (state.matchLeft) {
+      state.pairs.push({ left: state.matchLeft, token });
+    }
+    state.matchLeft = null;
+    syncMatchAnswer();
+  }
+
+  /** 만들어진 쌍을 제출 문자열로 — 전부 이었을 때만 제출 버튼이 열린다. */
+  function syncMatchAnswer() {
+    const p = problems[state.idx];
+    state.selected = state.pairs.length === p.choices.length
+      ? state.pairs.map(x => `${x.left}-${x.token}`).join("|")
+      : "";
+    refreshInput();
+  }
+
+  /**
+   * 입력 영역만 다시 그린다 — 카드 전체를 다시 그리면 채점 결과 영역이 지워진다.
+   * 이벤트는 innerHTML로 새로 그린 요소에 다시 걸어 준다.
+   */
+  function refreshInput() {
+    const p = problems[state.idx];
+    mountEl.querySelector("#optArea").innerHTML = renderInput(p);
+    bindOptions(p);
+    mountEl.querySelector("#submitBtn").disabled = !state.selected;
+  }
+
+  /** 입력 영역의 버튼에 유형별 클릭 동작을 건다(그린 직후마다 호출). */
+  function bindOptions(p) {
+    mountEl.querySelectorAll("[data-order]").forEach(btn => {
+      btn.addEventListener("click", () => toggleOrder(btn.dataset.order));
+    });
+    mountEl.querySelectorAll("[data-left]").forEach(btn => {
+      btn.addEventListener("click", () => pickLeft(btn.dataset.left));
+    });
+    mountEl.querySelectorAll("[data-token]").forEach(btn => {
+      btn.addEventListener("click", () => pickRight(btn.dataset.token));
+    });
+    mountEl.querySelectorAll("[data-value]").forEach(btn => {
+      btn.addEventListener("click", () => selectOption(btn.dataset.value));
+    });
   }
 
   /* ── 제출/채점 ── */
@@ -209,11 +350,30 @@ function startPlayer(mountEl, problems, opts = {}) {
     }
   }
 
-  /** 내가 낸 답을 사람이 읽는 표기로 — 객관식은 choiceId가 아니라 보기 글로(결과 복기용). */
+  /**
+   * 내가 낸 답을 사람이 읽는 표기로 — 결과 화면 복기용.
+   *
+   * 서버도 오답노트에서 같은 일을 하지만(AnswerDisplay), 이 화면은 채점 응답만 들고 있고
+   * 거기에는 <내 답>이 글자로 들어 있지 않다. 보기 목록은 이미 손에 있으므로 여기서 바꾼다.
+   */
   function displayAnswer(p, value) {
-    if (p.type !== "MULTIPLE_CHOICE") return value;
-    const c = (p.choices || []).find(c => String(c.id) === String(value));
-    return c ? c.text : value;
+    if (p.type === "MULTIPLE_CHOICE") {
+      const c = (p.choices || []).find(c => String(c.id) === String(value));
+      return c ? c.text : value;
+    }
+    if (p.type === "ORDERING") {
+      const textOf = id => (p.choices || []).find(c => String(c.id) === id)?.text ?? id;
+      return String(value).split("|").map(textOf).join(" → ");
+    }
+    if (p.type === "MATCHING") {
+      const leftOf = id => (p.choices || []).find(c => String(c.id) === id)?.text ?? id;
+      const rightOf = t => (p.matchOptions || []).find(o => o.token === t)?.text ?? t;
+      return String(value).split("|").map(entry => {
+        const at = entry.indexOf("-");
+        return at < 0 ? entry : `${leftOf(entry.slice(0, at))} → ${rightOf(entry.slice(at + 1))}`;
+      }).join("\n");
+    }
+    return value;
   }
 
   /* 근거 개념 문서 링크 — 채점 결과 안에만 붙는다(docs/15 3단계).
@@ -276,8 +436,13 @@ function startPlayer(mountEl, problems, opts = {}) {
     // 1) 보기 자체에 색: 정답 보기는 초록, 내가 고른 오답은 빨강.
     //    서버는 정답을 "표시용 텍스트(correctAnswer)"로만 주므로(정답 id는 안 내려줌 — 스펙),
     //    객관식은 보기 text와 문자열 비교로 정답 보기를 찾는다.
+    //    순서 배열·짝짓기는 <보기 하나>에 정오가 붙지 않는다 — 맞고 틀림이 배열 전체,
+    //    연결 전체의 성질이라 어느 버튼을 초록으로 칠할지 정할 수 없다. 그래서 색은 건드리지
+    //    않고 누른 흔적(번호)만 남긴 채 잠근다. 정답은 아래 피드백 상자가 통째로 보여 준다.
+    const wholeAnswer = p.type === "ORDERING" || p.type === "MATCHING";
     mountEl.querySelectorAll(".opt").forEach(btn => {
       btn.disabled = true;
+      if (wholeAnswer) return;
       const val = btn.dataset.value;
       const isMine = String(val) === String(state.selected);
       let isAnswer;
@@ -298,7 +463,7 @@ function startPlayer(mountEl, problems, opts = {}) {
     mountEl.querySelector("#feedback").innerHTML = `
       <div class="feedback ${r.correct ? "correct" : "wrong"} fade-in">
         <span class="verdict">${r.correct ? "🎉 정답입니다!" : "😅 아쉬워요, 오답입니다"}</span>
-        ${r.correct ? "" : `<div style="margin-top:4px">정답: <b>${escapeHtml(r.correctAnswer ?? "")}</b></div>`}
+        ${r.correct ? "" : `<div class="answer-line">정답: <b>${escapeHtml(r.correctAnswer ?? "")}</b></div>`}
         ${r.explanation ? `<div class="explain">${escapeHtml(r.explanation)}</div>` : ""}
         ${wrongAnalysis(p, r)}
         ${docLink(r)}
@@ -323,6 +488,10 @@ function startPlayer(mountEl, problems, opts = {}) {
     state.idx++;
     state.selected = null;
     state.answered = false;
+    // 순서·짝짓기 상태도 같이 비운다 — 안 비우면 다음 문제의 보기에 앞 문제의 번호가 붙는다.
+    state.order = [];
+    state.pairs = [];
+    state.matchLeft = null;
     render();
     window.scrollTo({ top: 0 });   // 긴 해설을 읽고 내려간 스크롤을 문제 위치로 되돌린다
   }

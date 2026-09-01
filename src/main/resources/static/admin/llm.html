@@ -434,8 +434,15 @@ async function loadDrafts(jumpToLast = false) {
     // 오답 설명(V15)은 보기 바로 아래 붙여 보여 준다. 따로 모아 두면 검수자가 "이 설명이
     // 어느 보기 것이지?"를 눈으로 짝지어야 하는데, 그게 정확히 번호 지목을 막은 이유다.
     // 옛 초안은 이 값이 없고, 그때는 줄이 안 생기므로 화면이 예전 그대로다.
-    const choices = (d.choices ?? []).map(c =>
-      `<li>${c.correct ? "✅ " : ""}${escapeHtml(c.text)}${
+    // 짝짓기는 한 줄이 한 쌍이라 오른쪽을 함께 보여 줘야 검수가 된다(V16). 오른쪽만 따로
+    // 모아 두면 "이 설명이 어느 용어 것이지?"를 다시 눈으로 짝지어야 하는데, 그건 이 화면이
+    // 오답 설명을 보기 아래 붙인 이유와 똑같은 문제다.
+    // 순서 배열은 여기서 번호(1..N)를 찍는다 — 아래 정답 줄의 "3|2|1|4"가 이 번호를 가리킨다.
+    const ordering = d.type === "ORDERING";
+    const choices = (d.choices ?? []).map((c, i) =>
+      `<li>${ordering ? `<b>${i + 1}.</b> ` : ""}${c.correct ? "✅ " : ""}${escapeHtml(c.text)}${
+        c.matchText ? `<div class="meta" style="margin-top:2px">↔ ${escapeHtml(c.matchText)}</div>` : ""
+      }${
         c.rationale ? `<div class="meta" style="margin-top:2px">↳ ${escapeHtml(c.rationale)}</div>` : ""
       }</li>`).join("");
     const actions = d.status === "PENDING" ? `

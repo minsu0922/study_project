@@ -164,7 +164,11 @@ const DOMAINS = [
   ["FRONTEND_CS", "프론트엔드CS"], ["INTEGRATED", "통합시나리오"],
 ];
 const DIFFICULTIES = [["BEGINNER", "초급"], ["INTERMEDIATE", "중급"], ["ADVANCED", "고급"]];
-const TYPES = [["MULTIPLE_CHOICE", "객관식"], ["OX", "OX"], ["SHORT_ANSWER", "단답형"]]; // ESSAY는 MVP 제외
+// ESSAY는 자동채점 미지원이라 화면에서도 제외한다(ProblemType.isAutoScored와 같은 기준).
+const TYPES = [
+  ["MULTIPLE_CHOICE", "객관식"], ["OX", "OX"], ["SHORT_ANSWER", "단답형"],
+  ["MATCHING", "짝짓기"], ["ORDERING", "순서 배열"],
+];
 
 function domainLabel(v) { const f = DOMAINS.find(d => d[0] === v); return f ? f[1] : v; }
 function difficultyLabel(v) { const f = DIFFICULTIES.find(d => d[0] === v); return f ? f[1] : v; }
