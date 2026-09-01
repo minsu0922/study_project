@@ -144,12 +144,18 @@ function renderTodo(todo) {
 
   // 배치 상태는 숫자가 아니라 상태라 타일과 다른 모양으로 둔다 — 같은 모양이면
   // "꺼짐"이 0건처럼 읽혀 좋은 소식으로 오해된다.
+  //
+  // 2026-09-01에 뒤에 링크를 붙였다. 이 줄은 "켜졌나 꺼졌나"까지만 답하는데, 실제로 알고 싶은
+  // 것은 대개 그다음이다 — 오늘 무엇이 나오나, 만들어졌는데 아직 안 들어온 파일이 있나.
+  // 그 답은 배치 화면에 있으므로 여기서 바로 갈 수 있게 한다(줄 자체는 그대로 둔다 —
+  // 배치가 꺼진 것은 현황을 볼 때 함께 알아야 하는 사실이라 링크 뒤로 숨기지 않는다).
   const batch = todo.batchEnabled
     ? `<span class="batch-state on">일일 배치 켜짐 — 매일 06:17(KST)</span>`
     : `<span class="batch-state off">일일 배치 <b>꺼짐</b> — 새 초안이 들어오지 않습니다
        (<code>llm.generation.batch-enabled</code>)</span>`;
 
-  document.getElementById("todoRow").innerHTML = tileHtml + `<div class="batch-row">${batch}</div>`;
+  document.getElementById("todoRow").innerHTML = tileHtml
+    + `<div class="batch-row">${batch} <a href="/admin/batch.html">배치 현황 →</a></div>`;
 }
 
 /**
