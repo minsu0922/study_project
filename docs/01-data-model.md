@@ -122,7 +122,7 @@
 | id | BIGINT | PK | |
 | domain | VARCHAR(30) | NOT NULL | enum |
 | difficulty | VARCHAR(15) | NOT NULL | enum `BEGINNER`/`INTERMEDIATE`/`ADVANCED` |
-| type | VARCHAR(20) | NOT NULL | enum `MULTIPLE_CHOICE`/`OX`/`SHORT_ANSWER`/`ESSAY` |
+| type | VARCHAR(20) | NOT NULL | enum `MULTIPLE_CHOICE`/`OX`/`SHORT_ANSWER`/`MATCHING`/`ORDERING`/`ESSAY` |
 | question | TEXT | NOT NULL | |
 | answer | VARCHAR(500) | NULL | 채점 기준값 (타입별 규칙 아래) |
 | explanation | TEXT | NULL | 해설 |
@@ -140,20 +140,31 @@
   - `MULTIPLE_CHOICE` → `NULL` (정답은 Choice.is_correct로 판정)
   - `OX` → `"O"` 또는 `"X"`
   - `SHORT_ANSWER` → 복수 정답을 `|`로 구분 (예 `"tcp|transmission control protocol"`)
+  - `MATCHING` → `NULL` (**V16** — 정답은 Choice 행 자체에 있다. `text` ↔ `match_text`)
+  - `ORDERING` → 정답 순서의 seq 나열 (예 `"3|2|1|4"`). 순서는 **행 사이의** 관계라 어느 한 행에도 담기지 않는다
   - `ESSAY` → MVP 미사용 (enum엔 존재하나 시드/채점 제외)
 
-### Choice (객관식 보기)
+### Choice (보기 · 짝 · 배열 항목)
 | 컬럼 | 타입 | 제약 | 비고 |
 |---|---|---|---|
 | id | BIGINT | PK | |
 | problem_id | BIGINT | FK → Problem(id), NOT NULL | |
-| text | VARCHAR(500) | NOT NULL | 보기 내용 |
-| is_correct | BOOLEAN | NOT NULL | 정답 여부 |
+| text | VARCHAR(500) | NOT NULL | 보기 내용 (짝짓기는 **왼쪽**) |
+| match_text | VARCHAR(500) | NULL | **V16 추가** — 짝짓기의 **오른쪽**. 그 밖의 유형은 NULL |
+| is_correct | BOOLEAN | NOT NULL | 정답 여부 (객관식 전용. 짝짓기·순서 배열은 항상 false) |
+| rationale | VARCHAR(1000) | NULL | **V15 추가** — 이 오답이 왜 틀렸는지(정답 보기는 NULL) |
 | seq | INT | NOT NULL | 보기 순서 (1..N) |
 
 - 인덱스: `idx_choice_problem (problem_id)`
 - FK: `ON DELETE CASCADE`
-- MVP는 단일 정답(정답 Choice 1개) 가정.
+- 객관식은 단일 정답(정답 Choice 1개) 가정.
+- **한 행의 뜻이 유형마다 다르다**: 객관식은 보기 하나, 짝짓기는 **한 쌍**(text↔match_text),
+  순서 배열은 배열할 항목 하나. `ProblemType.usesChoiceRows()`가 이 세 유형을 가른다.
+- **짝짓기의 오른쪽은 행 id로 내보내지 않는다.** 한 행이 한 쌍이라 왼쪽 id와 맞춰 보는 것만으로
+  답이 드러나기 때문이다. 풀이용 응답은 오른쪽을 별도 목록으로 섞고, 식별자로 되돌릴 수 없는
+  토큰을 쓴다(`MatchToken` = SHA-256(problemId + match_text) 앞 12자).
+- **순서 배열의 seq가 곧 `answer`의 번호다.** 관리자가 적는 `"3|2|1|4"`의 3은 입력 화면의
+  세 번째 줄을 가리키고, 저장 시 seq 1..N이 그 순서대로 부여된다.
 
 ### ProblemTag (M:N 연결)
 | 컬럼 | 타입 | 제약 |
@@ -298,9 +309,19 @@
 | MULTIPLE_CHOICE | 선택한 `choice_id` | 해당 Choice의 `is_correct == true` |
 | OX | `"O"` / `"X"` | `Problem.answer` 와 대소문자 무시 비교 |
 | SHORT_ANSWER | 자유 텍스트 | `answer.split("|")` 중 하나와 `trim().toLowerCase()` 후 일치 |
+| MATCHING | `"왼쪽choice_id-오른쪽토큰\|…"` | 왼쪽 행의 `match_text`로 토큰을 다시 계산해 대조. **네 쌍 모두** 맞아야 정답 |
+| ORDERING | 배열한 `choice_id`를 `\|`로 이은 것 | id를 seq로 바꿔 `Problem.answer`("3\|2\|1\|4")와 통째로 비교 |
 | ESSAY | — | MVP 미지원 |
 
 상세는 `03-api-spec.md`의 `POST /api/quiz/submit` 참고.
+
+**부분 정답은 주지 않는다.** `submission.is_correct`가 boolean이라 "네 칸 중 셋"을 담을 자리가
+없다. 다만 제출 원문이 `submission.user_answer`(500자)에 그대로 남으므로, 부분 채점이
+필요해지면 지나간 제출까지 거슬러 분석할 수 있다 — 지금 버리지 않는 것이 요점이다.
+
+**개수가 어긋난 제출은 오답이 아니라 400이다.** 학습자는 화면의 항목을 전부 배열하거나 전부
+이어야 제출 버튼을 누를 수 있으므로, 어긋난 제출은 사용자의 실수가 아니라 클라이언트 버그다.
+조용히 오답으로 처리하면 복습 사다리와 오답노트가 그 버그만큼 오염된다.
 
 ---
 

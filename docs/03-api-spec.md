@@ -192,13 +192,33 @@ refresh 토큰을 폐기한다.
     },
     {
       "id": 101, "type": "OX", "difficulty": "BEGINNER", "domain": "NETWORK",
-      "question": "UDP는 연결지향적이다.", "choices": []
+      "question": "UDP는 연결지향적이다.", "choices": [], "matchOptions": []
+    },
+    {
+      "id": 102, "type": "MATCHING", "difficulty": "BEGINNER", "domain": "DATABASE",
+      "question": "다음 격리 수준과 그 성질을 알맞게 연결하시오.",
+      "choices": [
+        { "id": 7, "seq": 1, "text": "READ COMMITTED" },
+        { "id": 8, "seq": 2, "text": "SERIALIZABLE" }
+      ],
+      "matchOptions": [
+        { "token": "a3f19c024b71", "text": "순차 실행과 같은 결과를 보장한다" },
+        { "token": "77bc0e5d1a3f", "text": "커밋된 값만 읽지만 두 번 읽으면 달라질 수 있다" }
+      ]
     }
   ]
 }
 ```
 - **정답(`is_correct`)·`answer`·`explanation`은 절대 미노출** (채점 시에만 반환).
-- 객관식만 `choices` 채움, OX/단답형은 빈 배열.
+- `choices`는 `choice` 행을 쓰는 유형만 채운다 — 객관식은 보기, **짝짓기는 왼쪽 열**,
+  순서 배열은 배열할 항목. OX/단답형은 빈 배열.
+- `matchOptions`는 **짝짓기만** 채운다(오른쪽 열). 그 밖의 유형은 빈 배열.
+- **오른쪽 열은 행 id가 아니라 `token`으로 나간다.** 짝짓기는 한 `choice` 행이 한 쌍이라
+  (V16), 오른쪽을 그 행의 id와 함께 내보내면 왼쪽 id와 맞춰 보는 것만으로 답이 드러난다.
+  토큰은 `SHA-256(problemId + match_text)` 앞 12자라 되돌릴 수 없고, 텍스트에서 다시 계산되므로
+  서버가 섞은 순서를 기억할 필요도 없다(무상태 유지).
+- **오른쪽 열은 요청마다 다시 섞인다.** 보기 섞기가 정답 위치 편향을 지우려는 *개선*인 것과 달리,
+  이쪽은 안 섞으면 왼쪽 n번째와 오른쪽 n번째가 그대로 짝이 되어 문제가 성립하지 않는다.
 
 ---
 
@@ -274,6 +294,11 @@ refresh 토큰을 폐기한다.
   - MULTIPLE_CHOICE → 선택한 `choiceId`의 문자열(예 `"2"`)
   - OX → `"O"` / `"X"`
   - SHORT_ANSWER → 자유 텍스트(예 `"전송 계층"`)
+  - MATCHING → `"왼쪽choiceId-오른쪽token"`을 `|`로 이은 것(예 `"7-77bc0e5d1a3f|8-a3f19c024b71"`).
+    **이은 순서는 상관없다** — 각 쌍을 독립적으로 판정한다
+  - ORDERING → 배열한 `choiceId`를 순서대로 `|`로 이은 것(예 `"12|9|11|10"`)
+- **MATCHING·ORDERING은 항목을 전부 보내야 한다.** 개수가 다르거나 같은 항목이 두 번 오면
+  오답이 아니라 `400 COMMON_001`이다(사유는 `01-data-model.md`의 채점 로직 요약 참고).
 
 **Response 200**
 ```json
@@ -286,7 +311,9 @@ refresh 토큰을 폐기한다.
   "documentSlug": "osi-7-layer"
 }
 ```
-- `correctAnswer`: 객관식=정답 Choice text, OX=`O`/`X`, 단답형=대표 정답(첫 `|` 토큰).
+- `correctAnswer`: 객관식=정답 Choice text, OX=`O`/`X`, 단답형=대표 정답(첫 `|` 토큰),
+  짝짓기=`"왼쪽 → 오른쪽"` 쌍을 **줄바꿈**으로 이은 것, 순서 배열=항목 글을 `" → "`로 이은 것.
+  저장값(`"3|2|1|4"`, 토큰)을 그대로 내보내면 학습자가 읽을 수 없어 서버가 글자로 되돌린다.
 - `documentSlug`: 이 문제의 **근거 개념 문서**. 프론트가 "이 개념 문서 읽기" 링크를 띄운다.
   근거 문서가 없거나 **그 문서가 아직 승인되지 않았으면 `null`** — 서버가 존재를 확인하고
   없으면 아예 안 내려보낸다. 링크를 눌렀는데 404가 나는 것이 링크가 없는 것보다 나쁘기 때문이다.
