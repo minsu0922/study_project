@@ -6,7 +6,9 @@ import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.QuestionKind;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -56,6 +58,16 @@ public final class ProblemItemRule {
      * 그건 지시를 어긴 것 외에 설명할 길이 없다.
      */
     public static final int EXPECTED_CHOICES = 4;
+
+    /**
+     * OX 참·거짓 쏠림을 재기 시작하는 배치 크기(2026-08-31).
+     *
+     * <p>두 문제뿐인 배치가 둘 다 O인 것은 우연으로 흔하다 — 확률 1/4다. 그런 배치까지
+     * 경고하면 <b>고칠 것이 없는데 뜨는 경고</b>가 되고, 이 저장소가 여러 번 확인했듯 그런
+     * 경고는 목록 전체를 안 보게 만든다(오답 설명 "옛 형식입니다" 경고를 되돌린 일).
+     * 넷이면 한쪽으로 다 몰릴 확률이 1/8이라 우연으로 넘기기 어려워진다.
+     */
+    private static final int OX_BALANCE_MIN_BATCH = 4;
 
     /** 지문이 비었을 때 대신 보여 줄 문구 — 로그에 빈 문자열이 찍히면 무엇이 문제인지 안 보인다. */
     private static final String NO_QUESTION = "(지문 없음)";
@@ -112,23 +124,214 @@ public final class ProblemItemRule {
             }
         }
 
-        if (type == ProblemType.MULTIPLE_CHOICE) {
-            List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
-            int size = choices == null ? 0 : choices.size();
-            long correct = choices == null ? 0
-                    : choices.stream().filter(GeneratedProblemItem.GeneratedChoice::correct).count();
-            if (size < MIN_CHOICES || correct != 1) {
-                return "객관식 보기 규약 위반 (보기 %d개, 정답 %d개)".formatted(size, correct);
-            }
-            return null;
-        }
+        return switch (type) {
+            case MULTIPLE_CHOICE -> multipleChoiceDefectOf(item);
+            case OX -> oxDefectOf(item);
+            // 단답형은 채점 기준값이 없으면 채점 자체를 할 수 없다.
+            // (객관식의 answer는 반대로 <비어 있어야> 정상이다 — 정답이 보기 쪽에 있다, docs/01)
+            case SHORT_ANSWER -> isBlank(item.answer()) ? "단답형 유형인데 answer 없음" : null;
+            case MATCHING -> matchingDefectOf(item);
+            case ORDERING -> orderingDefectOf(item);
+            // 서술형은 애초에 생성 대상이 아니다(ClaudeProblemGenerator.typeRule이 먼저 막는다).
+            // 여기까지 왔다면 유형을 잘못 넘긴 것이므로 초안으로 받지 않는다.
+            case ESSAY -> "서술형(ESSAY)은 자동채점 대상이 아니라 초안으로 받지 않는다";
+        };
+    }
 
-        // OX·단답형은 채점 기준값이 없으면 채점 자체를 할 수 없다.
-        // (객관식의 answer는 반대로 <비어 있어야> 정상이다 — 정답이 보기 쪽에 있다, docs/01)
-        if (isBlank(item.answer())) {
-            return "%s 유형인데 answer 없음".formatted(type);
+    private static String multipleChoiceDefectOf(GeneratedProblemItem item) {
+        List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
+        int size = choices == null ? 0 : choices.size();
+        long correct = choices == null ? 0
+                : choices.stream().filter(GeneratedProblemItem.GeneratedChoice::correct).count();
+        if (size < MIN_CHOICES || correct != 1) {
+            return "객관식 보기 규약 위반 (보기 %d개, 정답 %d개)".formatted(size, correct);
         }
         return null;
+    }
+
+    /**
+     * OX — {@code answer}가 정확히 {@code "O"} 또는 {@code "X"}인지 본다(2026-08-31에 추가).
+     *
+     * <p><b>왜 "비어 있지 않다"로는 부족했나.</b> 예전에는 단답형과 같은 검사 하나("answer 없음")만
+     * 걸려 있었다. 그래서 모델이 {@code "참"}이나 {@code "True"}를 적어도 초안은 <b>멀쩡히
+     * 통과하고 검수 화면에도 정상으로 보였다</b>. 실제 채점은
+     * {@code QuizService.gradeOx}의 {@code equalsIgnoreCase("O")} 비교라, 그런 문제는 학습자가
+     * 무엇을 눌러도 틀린다.
+     *
+     * <p><b>승인 단계에서 막히긴 했다.</b> {@code AdminProblemService.validateByType}이
+     * {@code [OX]} 정규식으로 거른다. 하지만 그건 <b>요금을 다 낸 뒤</b>, 검수자가 승인 버튼을
+     * 누른 순간에 QUIZ_004로 터진다 — 그것도 초안 화면에는 이유가 안 보이는 채로.
+     * 같은 규칙을 만드는 쪽에도 두어 <b>검수 목록에서</b> 이유와 함께 걸리게 한다.
+     *
+     * <p>{@code choices}까지 보는 이유도 같다. OX에 보기가 딸려 오면 승인 때
+     * {@code requireNoChoices}에 걸리는데, 그 역시 검수자가 미리 볼 수 없는 실패다.
+     */
+    private static String oxDefectOf(GeneratedProblemItem item) {
+        if (isBlank(item.answer())) {
+            return "OX 유형인데 answer 없음";
+        }
+        String answer = item.answer().trim();
+        if (!answer.equalsIgnoreCase("O") && !answer.equalsIgnoreCase("X")) {
+            return "OX의 answer는 O 또는 X여야 한다 (\"%s\" — 채점이 O/X 비교라 무엇을 눌러도 틀린다)"
+                    .formatted(answer);
+        }
+        if (!safeChoices(item).isEmpty()) {
+            return "OX인데 보기가 %d개 딸려 왔다 (OX는 보기가 없다)".formatted(safeChoices(item).size());
+        }
+        return null;
+    }
+
+    /**
+     * 짝짓기 — 쌍이 둘 이상이고, 모든 쌍에 오른쪽이 있고, 양쪽 모두 중복이 없는지 본다.
+     *
+     * <p><b>중복을 차단으로 올린 이유.</b> 오른쪽 문장 둘이 같으면 채점이 <b>둘 다 정답으로</b>
+     * 통과한다 — 짝짓기 토큰은 텍스트에서 계산되므로 같은 문장은 같은 토큰이 된다
+     * ({@code MatchToken}). 사람이 보고 판단할 여지가 없는 결함이라 경고가 아니라 여기 있다
+     * (해설이 보기를 번호로 가리키는 검사와 같은 판단).
+     *
+     * <p>쌍의 개수가 <b>정확히 4</b>인지는 여기서 보지 않는다 — 셋이어도 문제는 성립하고
+     * 채점도 된다. "넷이 좋다"는 품질 기준이라 {@code qualityWarningsOf}가 경고로 알린다.
+     */
+    private static String matchingDefectOf(GeneratedProblemItem item) {
+        List<GeneratedProblemItem.GeneratedChoice> pairs = safeChoices(item);
+        if (pairs.size() < MIN_CHOICES) {
+            return "짝짓기인데 쌍이 %d개다 (%d개 이상이어야 한다)".formatted(pairs.size(), MIN_CHOICES);
+        }
+        Set<String> lefts = new HashSet<>();
+        Set<String> rights = new HashSet<>();
+        for (GeneratedProblemItem.GeneratedChoice pair : pairs) {
+            if (isBlank(pair.matchText())) {
+                return "짝짓기인데 오른쪽이 빈 쌍이 있다 (\"%s\"의 짝)".formatted(snippetOf(pair.text()));
+            }
+            if (!lefts.add(pair.text().trim())) {
+                return "짝짓기의 왼쪽이 겹친다 (\"%s\" — 짝이 하나로 정해지지 않는다)"
+                        .formatted(snippetOf(pair.text()));
+            }
+            if (!rights.add(pair.matchText().trim())) {
+                return "짝짓기의 오른쪽이 겹친다 (\"%s\" — 어느 쪽에 이어도 정답이 되어 문제가 성립하지 않는다)"
+                        .formatted(snippetOf(pair.matchText()));
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 순서 배열 — 항목이 둘 이상이고, {@code answer}가 <b>1..N의 순열</b>인지 본다.
+     *
+     * <p><b>순열이 아니면 아무도 맞힐 수 없는 문제가 된다.</b> 채점은 제출 순서를 seq로 바꿔
+     * 이 문자열과 통째로 비교하므로({@code QuizService.gradeOrdering}), 번호가 빠졌거나 겹치면
+     * 어떤 제출로도 같아질 수 없다. 학습자에게는 "몇 번을 풀어도 틀리는데 이유는 안 나오는"
+     * 문제로 보인다 — 조용한 결함이라 기계가 막아야 한다.
+     */
+    private static String orderingDefectOf(GeneratedProblemItem item) {
+        List<GeneratedProblemItem.GeneratedChoice> items = safeChoices(item);
+        if (items.size() < MIN_CHOICES) {
+            return "순서 배열인데 항목이 %d개다 (%d개 이상이어야 한다)".formatted(items.size(), MIN_CHOICES);
+        }
+        if (isBlank(item.answer())) {
+            return "순서 배열인데 answer(정답 순서)가 없음";
+        }
+        Set<Integer> seen = new HashSet<>();
+        for (String token : item.answer().split("\\|")) { // |는 정규식 메타문자라 이스케이프
+            int seq;
+            try {
+                seq = Integer.parseInt(token.trim());
+            } catch (NumberFormatException e) {
+                return "순서 배열의 answer에 숫자가 아닌 값이 있다 (\"%s\")".formatted(token.trim());
+            }
+            if (seq < 1 || seq > items.size() || !seen.add(seq)) {
+                return "순서 배열의 answer가 1~%d의 순열이 아니다 (\"%s\" — 어떤 제출로도 맞힐 수 없다)"
+                        .formatted(items.size(), item.answer().trim());
+            }
+        }
+        if (seen.size() != items.size()) {
+            return "순서 배열의 answer에 빠진 번호가 있다 (항목 %d개, 적힌 번호 %d개)"
+                    .formatted(items.size(), seen.size());
+        }
+        return null;
+    }
+
+    /**
+     * 짝짓기·순서 배열의 품질 경고 — 차단은 아니지만 검수자가 봐야 하는 것들(2026-08-31).
+     *
+     * <p><b>차단({@code defectOf})과 나눈 기준은 이 저장소의 오랜 규칙 그대로다.</b>
+     * "판단해 봐야 답이 하나인 것"만 차단이다 — 오른쪽이 겹치면 어느 쪽에 이어도 정답이 되므로
+     * 사람이 볼 여지가 없다. 반면 "쌍이 셋이다"는 셋짜리 좋은 문제일 수도 있어 사람 몫이다.
+     */
+    private static List<String> typeWarningsOf(GeneratedProblemItem item, ProblemType type) {
+        if (type == null) {
+            return List.of();
+        }
+        List<GeneratedProblemItem.GeneratedChoice> rows = safeChoices(item);
+        List<String> warnings = new ArrayList<>();
+
+        if (type == ProblemType.MATCHING) {
+            if (!rows.isEmpty() && rows.size() != EXPECTED_CHOICES) {
+                warnings.add("짝짓기 쌍이 %d개 (기준 %d개 — 셋이면 하나를 맞히면 나머지가 좁혀진다)"
+                        .formatted(rows.size(), EXPECTED_CHOICES));
+            }
+            // 오른쪽에 왼쪽 용어가 그대로 들어 있으면 답을 적어 준 것이다. 프롬프트에도 적었지만
+            // ("오른쪽 문장에 왼쪽 용어를 쓰지 마라") 문자열로 실제로 <셀 수 있는> 규칙이라 재 둔다.
+            for (GeneratedProblemItem.GeneratedChoice pair : rows) {
+                if (!isBlank(pair.matchText()) && !isBlank(pair.text())
+                        && pair.matchText().contains(pair.text().trim())) {
+                    warnings.add("짝짓기 오른쪽에 왼쪽 용어가 그대로 있음 (\"%s\" — 읽는 즉시 짝이 보인다)"
+                            .formatted(snippetOf(pair.text())));
+                }
+            }
+            String bias = lengthBiasOf(rows.stream().map(GeneratedProblemItem.GeneratedChoice::matchText).toList());
+            if (bias != null) {
+                warnings.add("짝짓기 오른쪽 길이가 쏠림 (%s — 유독 긴 것부터 짝지어진다)".formatted(bias));
+            }
+        }
+
+        if (type == ProblemType.ORDERING) {
+            if (!rows.isEmpty() && rows.size() != EXPECTED_CHOICES) {
+                warnings.add("순서 배열 항목이 %d개 (기준 %d개)".formatted(rows.size(), EXPECTED_CHOICES));
+            }
+            // 항목 안에 순서를 알려 주는 말이 있으면 배열할 것이 없다 — 읽는 순서대로 놓으면 된다.
+            for (GeneratedProblemItem.GeneratedChoice row : rows) {
+                String hint = contextOf(ORDER_HINT_WORD, row.text());
+                if (hint != null) {
+                    warnings.add("순서 배열 항목에 순서를 알려 주는 말이 있음 (\"%s\" — 그게 곧 답이다)"
+                            .formatted(hint));
+                }
+            }
+        }
+        return warnings;
+    }
+
+    /**
+     * 목록에서 가장 긴 것이 가장 짧은 것의 {@link #CHOICE_LENGTH_RATIO}배를 넘으면 그 사실을, 아니면 {@code null}.
+     *
+     * <p>객관식의 {@link #choiceLengthBiasOf}와 <b>재는 것이 다르다</b>. 그쪽은 "정답이 가장 긴가"를
+     * 함께 보지만(정답에만 조건이 붙어 길어지는 성향), 짝짓기에는 정답 보기가 없어 볼 것이 없다.
+     * 남는 것은 길이 편차뿐이고, 그것만으로도 "유독 긴 하나부터 짝지어진다"는 요령이 생긴다.
+     */
+    private static String lengthBiasOf(List<String> texts) {
+        int longest = 0;
+        int shortest = Integer.MAX_VALUE;
+        for (String text : texts) {
+            if (isBlank(text)) {
+                return null; // 빈 값이 섞였으면 defectOf가 볼 몫이다
+            }
+            int length = text.trim().length();
+            longest = Math.max(longest, length);
+            shortest = Math.min(shortest, length);
+        }
+        if (shortest == Integer.MAX_VALUE || longest <= shortest * CHOICE_LENGTH_RATIO) {
+            return null;
+        }
+        return "가장 긴 %d자 / 가장 짧은 %d자".formatted(longest, shortest);
+    }
+
+    /** 오류 메시지에 넣을 짧은 조각 — 긴 문장이 그대로 들어가면 목록에서 다른 경고를 밀어낸다. */
+    private static String snippetOf(String text) {
+        if (text == null) {
+            return "";
+        }
+        String trimmed = text.trim();
+        return trimmed.length() <= 30 ? trimmed : trimmed.substring(0, 30) + "…";
     }
 
     /** 규약을 지켰는지만 알고 싶을 때. */
@@ -445,6 +648,20 @@ public final class ProblemItemRule {
     private static final Pattern MARKDOWN_SYNTAX = Pattern.compile("`|\\*\\*");
 
     /**
+     * 순서 배열 항목에 들어가면 안 되는 <b>순서를 알려 주는 말</b>(2026-08-31).
+     *
+     * <p>항목이 "먼저 값을 검증한다"로 시작하면 배열할 것이 없다 — 읽는 대로 놓으면 정답이다.
+     * 프롬프트에도 적었지만 이건 문자열로 실제로 셀 수 있는 규칙이라 여기서도 잰다
+     * (프롬프트에만 있고 아무도 재지 않던 규칙이 어떻게 되는지는 OX 참·거짓 쏠림에서 겪었다).
+     *
+     * <p><b>"우선"을 빼 둔 이유</b>: 우선순위 큐·우선순위 역전처럼 순서와 무관한 표준 용어가
+     * 이 글자로 시작한다. 헛울리는 경고 하나가 목록 전체의 신뢰를 깎는다는 것을 이 저장소는
+     * 이미 겪었으므로, 애매한 것은 아예 안 잡는 쪽을 택한다.
+     */
+    private static final Pattern ORDER_HINT_WORD =
+            Pattern.compile("먼저|마지막으로|맨 처음|그 다음|다음으로|끝으로|첫 번째로|두 번째로");
+
+    /**
      * 지문이 <b>근거 문서를 가리키는</b> 표현. 문제는 혼자서 성립해야 한다.
      *
      * <p>2026-08-16 4번이 실제로 이랬다: "MVCC가 읽기를 대기 없이 처리할 수 있는 대신 치르는
@@ -556,7 +773,17 @@ public final class ProblemItemRule {
      */
     public static List<String> qualityWarningsOf(GeneratedProblemItem item, Difficulty difficulty,
                                                  boolean hasSourceDocument) {
+        return qualityWarningsOf(item, difficulty, hasSourceDocument, null);
+    }
+
+    /**
+     * 유형까지 아는 품질 점검 — {@code type}이 {@code null}이면 유형별 검사만 건너뛴다(2026-08-31).
+     * 오버로드로 나눈 이유는 {@link #batchWarningsOf(List, Difficulty, ProblemType)} 주석과 같다.
+     */
+    public static List<String> qualityWarningsOf(GeneratedProblemItem item, Difficulty difficulty,
+                                                 boolean hasSourceDocument, ProblemType type) {
         List<String> warnings = new ArrayList<>();
+        warnings.addAll(typeWarningsOf(item, type));
 
         // 제목 — 없어도 퀴즈는 성립하므로 defectOf가 아니라 여기서 본다(화면이 지문으로 대신한다).
         // 다만 조용히 넘기면 제목 없는 문제가 쌓이고, 그러면 목록이 지문 조각으로 채워져
@@ -679,10 +906,42 @@ public final class ProblemItemRule {
      * @param difficulty 그 배치의 난이도
      */
     public static List<String> batchWarningsOf(List<GeneratedProblemItem> items, Difficulty difficulty) {
+        return batchWarningsOf(items, difficulty, null);
+    }
+
+    /**
+     * 유형까지 아는 배치 점검 — {@code type}이 {@code null}이면 유형별 검사만 건너뛴다(2026-08-31).
+     *
+     * <p><b>왜 인자를 늘리는 대신 오버로드인가.</b> 부르는 곳 중 절반은 유형을 모른다
+     * (옛 초안을 다시 재는 경로, 유형 축이 없던 시절의 테스트). 그쪽에 {@code null}을 적게 하면
+     * 호출부마다 "이 null이 무슨 뜻이었지"가 남는다. 짧은 이름은 그대로 두고 아는 쪽만
+     * 긴 것을 부르게 한다 — 이 저장소가 record에 새 필드를 더할 때 쓰는 방법과 같다.
+     */
+    public static List<String> batchWarningsOf(List<GeneratedProblemItem> items, Difficulty difficulty,
+                                               ProblemType type) {
         if (items == null || items.isEmpty()) {
             return List.of();
         }
         List<String> warnings = new ArrayList<>();
+
+        // OX 참·거짓 쏠림 — 2026-08-31에 추가. 프롬프트의 [OX 문제의 조건]에 "참과 거짓을 고르게
+        // 섞는다"가 있었는데 <아무도 재지 않았다>. 다섯 문제가 전부 O로 나와도 그냥 통과했다.
+        //
+        // 이게 유독 아픈 이유: OX는 찍어서 맞을 확률이 이미 1/2인데, 한쪽으로 쏠리면
+        // "모르면 O"라는 요령이 생겨 <풀지 않고도 맞는> 경로가 열린다. 그 정답은 복습 사다리에
+        // "안다"로 기록되므로, 학습자는 모르는 것을 다시 만나지 못하게 된다.
+        //
+        // 상한을 "전부 같은 쪽"이 아니라 비율로 잡지 않은 이유: 한 배치가 보통 5문제라
+        // 4:1까지는 자연스럽게 나온다. 매번 울리는 경고는 목록 전체를 안 보게 만든다.
+        if (type == ProblemType.OX && items.size() >= OX_BALANCE_MIN_BATCH) {
+            long trues = items.stream()
+                    .filter(i -> i.answer() != null && i.answer().trim().equalsIgnoreCase("O"))
+                    .count();
+            if (trues == 0 || trues == items.size()) {
+                warnings.add("OX 정답이 %d개 모두 %s (한쪽으로 몰리면 지문을 안 읽고도 찍힌다)"
+                        .formatted(items.size(), trues == 0 ? "X" : "O"));
+            }
+        }
 
         // 유형 쏠림 — 중급에만 해당한다. 초급은 정의를 묻는 자리라 형태를 나눌 것이 없고,
         // 고급은 정의상 언제나 상황형이라 상한을 걸면 매번 울린다.
@@ -818,7 +1077,13 @@ public final class ProblemItemRule {
      */
     public static List<DraftCheck> checksOf(GeneratedProblemItem item, Difficulty difficulty,
                                             boolean hasSourceDocument) {
-        return qualityWarningsOf(item, difficulty, hasSourceDocument).stream()
+        return checksOf(item, difficulty, hasSourceDocument, null);
+    }
+
+    /** 유형까지 아는 검수 화면용 점검 목록 — 오버로드 이유는 {@link #qualityWarningsOf} 주석과 같다. */
+    public static List<DraftCheck> checksOf(GeneratedProblemItem item, Difficulty difficulty,
+                                            boolean hasSourceDocument, ProblemType type) {
+        return qualityWarningsOf(item, difficulty, hasSourceDocument, type).stream()
                 .map(DraftCheck::warning)
                 .toList();
     }

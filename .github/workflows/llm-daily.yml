@@ -48,6 +48,22 @@ on:
         description: '난이도 (BEGINNER/INTERMEDIATE/ADVANCED). 비우면 날짜 순환'
         required: false
         default: ''
+      problem_type:
+        # 위의 type과 헷갈리기 쉬운 자리다. type은 "문제냐 문서냐", 이쪽은 "어떤 형태의 문제냐"다.
+        # 예약 실행은 이 값을 비워 두므로 지금까지와 똑같이 객관식이 나온다 — 4일 주기에
+        # 유형 축까지 넣으면 한 바퀴가 12일이 되어 검수 리듬이 통째로 바뀌기 때문에,
+        # 먼저 <고를 수 있게>만 하고 주기 편입은 실물을 몇 번 본 뒤로 미룬다.
+        description: '문제 유형 (비우면 객관식). 짝짓기·순서 배열은 새 유형이라 먼저 소량으로 시험해 볼 것'
+        type: choice
+        required: false
+        default: ''
+        options:
+          - ''
+          - MULTIPLE_CHOICE
+          - OX
+          - SHORT_ANSWER
+          - MATCHING
+          - ORDERING
       count:
         description: '생성 개수. 비우면 application.yml의 batch-count'
         required: false
@@ -145,12 +161,15 @@ jobs:
           # 수동 실행에서 'auto'를 고른 경우도 같아야 하므로 빈 값으로 바꿔 넘긴다 —
           # CLI 입장에서 "지정 안 함"과 "auto"는 같은 뜻이고, 그 판단을 여기서 한 번만 한다.
           IN_TYPE: ${{ inputs.type == 'auto' && '' || inputs.type }}
+          # 문제 유형(--problem-type). 위의 IN_TYPE과 다른 축이다 — 이름이 비슷해 헷갈리기 쉬우니
+          # 두 줄을 붙여 둔다. 비면 CLI가 객관식으로 본다(resolveProblemType).
+          IN_PROBLEM_TYPE: ${{ inputs.problem_type }}
           # 주제는 "TCP 혼잡 제어"처럼 공백이 들어간다. -PdraftArgs는 공백으로 인자를 쪼개므로
           # 거기 실으면 단어 단위로 찢어진다 — CLI가 환경변수로 직접 읽게 한다(DraftGeneratorCli 주석).
           DRAFT_TOPIC: ${{ inputs.topic }}
         run: |
           ./gradlew generateDrafts --no-daemon --console=plain \
-            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --document-date=${IN_DOCUMENT_DATE} --suffix=${IN_SUFFIX} --force=${IN_FORCE} --type=${IN_TYPE}"
+            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --document-date=${IN_DOCUMENT_DATE} --suffix=${IN_SUFFIX} --force=${IN_FORCE} --type=${IN_TYPE} --problem-type=${IN_PROBLEM_TYPE}"
 
       - name: 결과 커밋 & 푸시
         run: |

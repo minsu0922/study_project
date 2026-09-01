@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 일일 생성 배치의 실행 진입점 — <b>GitHub Actions 러너에서 돈다</b>(docs/14, ADR-0006 개정).
@@ -64,6 +65,8 @@ import java.util.regex.Pattern;
  *   --topic=슬로우쿼리        문서 주제 강제 지정(문서일에만. 생략 시 주제 대기열 → 모델 자동 선택)
  *                            공백이 든 주제는 환경변수 DRAFT_TOPIC으로 넘긴다
  *   --difficulty=BEGINNER    난이도 강제 지정(생략 시 날짜 순환으로 결정)
+ *   --problem-type=OX        문제 유형(생략 시 객관식). MULTIPLE_CHOICE·OX·SHORT_ANSWER·MATCHING·ORDERING
+ *                            주의: --type과 다른 옵션이다. 그쪽은 "문제냐 문서냐"를 고른다
  *   --count=5                생성 개수 1~10(생략 시 application.yml의 batch-count)
  *   --out=generated          출력 디렉터리
  *   --force=true             batch-enabled=false여도 이번 한 번은 생성(수동 실행 전용)
@@ -96,6 +99,19 @@ public final class DraftGeneratorCli {
 
     /** 결과 파일 이름에 붙일 접미사 옵션. */
     static final String SUFFIX_OPT = "suffix";
+
+    /**
+     * 문제 유형 옵션 이름 — {@code --problem-type}(2026-08-31 신설).
+     *
+     * <p><b>왜 {@code --type}이 아닌가.</b> 그 이름은 이미 <b>"문제를 만들 것인가 문서를 만들
+     * 것인가"</b>에 쓰이고 있다({@link #decideAction}). 같은 이름을 나눠 쓰면 워크플로에서
+     * {@code --type=OX}라고 적었을 때 <b>문서일 판정</b>이 이상해진다 — 그것도 조용히,
+     * "오늘은 쉬는 날"이라는 정상 종료로 끝난다. 요금이 안 나가서 사고가 났다는 것조차 늦게 안다.
+     *
+     * <p>기존 이름을 바꾸는 대신 새 이름을 길게 짓는 쪽을 택했다. {@code --type}은 워크플로
+     * 입력·문서·손에 익은 명령에 이미 퍼져 있어, 바꾸면 그 전부를 같은 날 고쳐야 한다.
+     */
+    static final String PROBLEM_TYPE_OPT = "problem-type";
 
     /**
      * 접미사에 허용하는 글자.
@@ -176,8 +192,7 @@ public final class DraftGeneratorCli {
         Domain domain = opts.containsKey("domain") ? Domain.valueOf(opts.get("domain")) : plan.domain();
         Difficulty difficulty = opts.containsKey("difficulty")
                 ? Difficulty.valueOf(opts.get("difficulty")) : plan.difficulty();
-        // 유형은 객관식 고정 — 보기·해설이 함께 생성돼 검수 가치가 가장 높다(OX·단답형은 관리자 버튼으로)
-        ProblemType type = ProblemType.MULTIPLE_CHOICE;
+        ProblemType type = resolveProblemType(opts.get(PROBLEM_TYPE_OPT));
         int count = resolveCount(opts, defaultCount);
 
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
@@ -809,6 +824,50 @@ public final class DraftGeneratorCli {
     }
 
     /**
+     * {@code --problem-type} 해석 — 비었으면 <b>객관식</b>(2026-08-31 신설).
+     *
+     * <p><b>왜 기본값이 객관식인가.</b> 4일 주기(문서 1일 + 초·중·고급 3일)는 지금 잘 돌고 있고,
+     * 거기에 유형 축을 하나 더 끼우면 한 바퀴가 12일이 되어 <b>검수 리듬이 통째로 바뀐다</b>.
+     * 새 유형은 실물을 몇 번 보고 나서 주기에 넣어도 늦지 않다 — 먼저 <b>고를 수 있게</b>만 한다.
+     * 예약 실행은 이 옵션을 비워 두므로 지금까지와 똑같이 동작한다.
+     *
+     * <p><b>워크플로가 빈 문자열을 넘긴다.</b> 수동 실행에서 아무것도 고르지 않으면
+     * {@code --problem-type=}가 그대로 온다. 그걸 {@code valueOf("")}에 넣으면
+     * {@code IllegalArgumentException}이 나면서 배치가 죽으므로, 공백을 "지정 안 함"으로 본다.
+     *
+     * <p>서술형은 여기서 막는다. {@code ClaudeProblemGenerator.typeRule}도 막지만, 그건
+     * <b>API를 부르기 직전</b>이라 그 전에 근거 문서를 읽고 중복 목록을 만드는 일을 다 한 뒤다.
+     * 값이 잘못된 것은 값을 읽는 자리에서 걸러야 한다.
+     */
+    static ProblemType resolveProblemType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return ProblemType.MULTIPLE_CHOICE;
+        }
+        ProblemType type;
+        try {
+            type = ProblemType.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "--problem-type이 알 수 없는 값입니다(받은 값: \"%s\"). 쓸 수 있는 값: %s"
+                            .formatted(raw, generatableTypes()));
+        }
+        if (!type.isAutoScored()) {
+            throw new IllegalArgumentException(
+                    "--problem-type=%s는 자동채점 대상이 아니라 생성할 수 없습니다. 쓸 수 있는 값: %s"
+                            .formatted(type, generatableTypes()));
+        }
+        return type;
+    }
+
+    /** 오류 메시지에 넣을 "쓸 수 있는 값" 목록 — enum에서 뽑아 쓰므로 유형이 늘면 저절로 따라온다. */
+    private static String generatableTypes() {
+        return Arrays.stream(ProblemType.values())
+                .filter(ProblemType::isAutoScored)
+                .map(Enum::name)
+                .collect(Collectors.joining(", "));
+    }
+
+    /**
      * 결과 파일 이름 — 접미사가 없으면 예전 그대로 {@code {날짜}.json}.
      *
      * <h2>왜 접미사가 필요한가(2026-08-29)</h2>
@@ -1122,7 +1181,7 @@ public final class DraftGeneratorCli {
             // 여기서 usable에서 빼면 경고가 말하는 개수와 실제 검수함 개수가 어긋난다.
             // source가 있으면 해설이 "다시 읽을 절"을 가리켜야 한다(2026-08-25) — 폴백으로
             // 근거 없이 만든 날은 가리킬 곳이 없으므로 그 검사를 켜지 않는다.
-            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty, source != null)) {
+            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty, source != null, type)) {
                 warnings.add("%d번 [%s] — %s".formatted(i + 1, warning, ProblemItemRule.snippet(item)));
             }
             // 인용 검사는 문서를 들고 있어야 해서 규칙이 따로 산다(SourceQuoteRule 클래스 주석).
@@ -1133,9 +1192,10 @@ public final class DraftGeneratorCli {
             }
         }
 
-        // 배치 전체를 봐야 알 수 있는 것 — 유형 쏠림(2026-08-25). 한 문제만 봐서는 알 수 없어
-        // 항목 루프 밖에 둔다. 번호를 붙이지 않는 것도 그래서다: 특정 문제의 잘못이 아니다.
-        warnings.addAll(ProblemItemRule.batchWarningsOf(problems, difficulty));
+        // 배치 전체를 봐야 알 수 있는 것 — 형태 쏠림(2026-08-25)과 OX 참·거짓 쏠림(2026-08-31).
+        // 한 문제만 봐서는 알 수 없어 항목 루프 밖에 둔다. 번호를 붙이지 않는 것도 그래서다:
+        // 특정 문제의 잘못이 아니다.
+        warnings.addAll(ProblemItemRule.batchWarningsOf(problems, difficulty, type));
 
         return new YieldCheck(requested, problems.size(), usable, defects, warnings);
     }

@@ -1194,4 +1194,43 @@ class DraftGeneratorCliTest {
                 new GeneratedProblemItem.GeneratedChoice("오답 2", false),
                 new GeneratedProblemItem.GeneratedChoice("오답 3", false));
     }
+
+    /**
+     * {@code --problem-type} — 2026-08-31 신설.
+     *
+     * <p><b>빈 값 처리가 이 옵션에서 가장 중요하다.</b> 워크플로의 수동 실행에서 아무것도 고르지
+     * 않으면 {@code --problem-type=}가 그대로 넘어온다. 그걸 {@code valueOf("")}에 넣으면
+     * 배치가 통째로 죽는데, 그건 <b>아무것도 안 고른 평범한 실행</b>에서 나는 사고다.
+     */
+    @org.junit.jupiter.api.Nested
+    @DisplayName("--problem-type")
+    class ResolveProblemType {
+
+        @Test
+        @DisplayName("비어 있으면 객관식 — 예약 실행은 이 옵션을 안 쓰므로 지금까지와 똑같이 동작한다")
+        void defaultsToMultipleChoice() {
+            assertThat(DraftGeneratorCli.resolveProblemType(null)).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(DraftGeneratorCli.resolveProblemType("")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(DraftGeneratorCli.resolveProblemType("   ")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+        }
+
+        @Test
+        @DisplayName("새 유형을 이름으로 고를 수 있다 — 소문자와 앞뒤 공백도 받는다")
+        void acceptsNewTypes() {
+            assertThat(DraftGeneratorCli.resolveProblemType("MATCHING")).isEqualTo(ProblemType.MATCHING);
+            assertThat(DraftGeneratorCli.resolveProblemType(" ordering ")).isEqualTo(ProblemType.ORDERING);
+            assertThat(DraftGeneratorCli.resolveProblemType("ox")).isEqualTo(ProblemType.OX);
+        }
+
+        @Test
+        @DisplayName("서술형과 오타는 값을 읽는 자리에서 막는다 — API를 부르기 전에 끝내야 요금이 안 나간다")
+        void rejectsUnusableValues() {
+            assertThatThrownBy(() -> DraftGeneratorCli.resolveProblemType("ESSAY"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("자동채점");
+            assertThatThrownBy(() -> DraftGeneratorCli.resolveProblemType("MATCHNG"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("MATCHING");
+        }
+    }
 }

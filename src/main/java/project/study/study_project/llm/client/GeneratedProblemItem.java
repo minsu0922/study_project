@@ -27,14 +27,18 @@ public record GeneratedProblemItem(
         @JsonPropertyDescription("문제 지문. 한국어. 코드가 필요하면 지문 안에 포함")
         String question,
 
-        @JsonPropertyDescription("채점 기준값. 객관식이면 빈 문자열, OX면 O 또는 X, 단답형이면 정답(복수 정답은 |로 구분)")
+        @JsonPropertyDescription("채점 기준값. 객관식·짝짓기면 빈 문자열, OX면 O 또는 X, "
+                + "단답형이면 정답(복수 정답은 |로 구분), 순서 배열이면 정답 순서를 choices의 번호로 "
+                + "이어 적는다(예: 4|2|1|3)")
         String answer,
 
         @JsonPropertyDescription("해설. <왜 정답인지>의 근거만 쓴다. 오답이 왜 틀렸는지는 "
                 + "각 보기의 rationale에 적으므로 여기서 되풀이하지 않는다")
         String explanation,
 
-        @JsonPropertyDescription("객관식 보기 목록. 객관식이면 정확히 4개(정답 1개), 그 외 유형이면 빈 배열")
+        @JsonPropertyDescription("보기 목록. 객관식이면 정확히 4개(정답 1개), 짝짓기면 4쌍"
+                + "(text=왼쪽, matchText=오른쪽), 순서 배열이면 배열할 항목 4개(correct는 전부 false). "
+                + "OX·단답형이면 빈 배열")
         List<GeneratedChoice> choices,
 
         @JsonPropertyDescription("이 문제의 근거가 된 문서 원문 한 줄. 문서에서 그대로 복사해 옮긴다"
@@ -115,14 +119,33 @@ public record GeneratedProblemItem(
             @JsonPropertyDescription("이 보기가 <오답일 때만> 왜 틀렸는지 한 줄로 적는다"
                     + "(어떤 오해에서 비롯되는지를 밝힌다). 정답 보기면 빈 문자열 — "
                     + "정답의 근거는 explanation이 맡는다. 보기를 번호로 가리키지 마라")
-            String rationale
+            String rationale,
+
+            @JsonPropertyDescription("짝짓기 문제에서만 채운다. 이 항목(text)과 이어질 오른쪽 설명. "
+                    + "그 개념에서만 참인 문장이어야 하고, 왼쪽 용어를 그대로 쓰면 안 된다. "
+                    + "짝짓기가 아니면 빈 문자열")
+            String matchText
     ) {
         /**
          * 설명 없이 만드는 편의 생성자 — 이 필드가 생기기 전 테스트가 그대로 컴파일되게 한다.
          * 바깥 record의 짧은 생성자들과 같은 이유다.
          */
         public GeneratedChoice(String text, boolean correct) {
-            this(text, correct, "");
+            this(text, correct, "", "");
+        }
+
+        /** 짝 없이(객관식·순서 배열) 만드는 편의 생성자 — 같은 이유로 남긴다(2026-08-31). */
+        public GeneratedChoice(String text, boolean correct, String rationale) {
+            this(text, correct, rationale, "");
+        }
+
+        /**
+         * 짝짓기 한 쌍 — 정답 보기 개념이 없으므로 {@code correct}는 {@code false}로 고정한다.
+         * 모델이 객관식 습관대로 {@code true}를 하나 찍어 보내도 저장 단계에서 무시되지만,
+         * 우리 코드가 만드는 쪽은 애초에 그 값을 만들지 않게 한다.
+         */
+        public static GeneratedChoice pair(String text, String matchText) {
+            return new GeneratedChoice(text, false, "", matchText);
         }
     }
 

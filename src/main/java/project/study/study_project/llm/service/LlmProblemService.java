@@ -354,11 +354,15 @@ public class LlmProblemService {
             return java.util.Optional.empty();
         }
 
-        // 객관식 answer는 저장 규칙상 null이다 — 정답은 보기 쪽에 있다(docs/01).
+        // 객관식·짝짓기의 answer는 저장 규칙상 null이다 — 정답이 보기 행 쪽에 있다(docs/01).
+        // 객관식은 is_correct에, 짝짓기는 한 행의 text↔match_text 짝 자체에 있다(V16).
         // 그 외 유형은 스키마상 빈 문자열로 오는 "값 없음"을 여기서 null로 정규화한다.
-        boolean multipleChoice = type == ProblemType.MULTIPLE_CHOICE;
-        String answer = multipleChoice ? null : trimToNull(item.answer());
-        String choicesJson = multipleChoice ? writeChoicesJson(item.choices()) : null;
+        boolean answerInRows = type == ProblemType.MULTIPLE_CHOICE || type == ProblemType.MATCHING;
+        String answer = answerInRows ? null : trimToNull(item.answer());
+        // 행을 쓰는 유형이면 보기 JSON을 남긴다. 예전에는 객관식만 봤는데, 그 조건을 그대로 두면
+        // 짝짓기·순서 배열 초안이 <항목 없이> 저장된다 — 승인 때 "보기가 없다"로 튕기고,
+        // 그때는 이미 요금을 다 낸 뒤다.
+        String choicesJson = type.usesChoiceRows() ? writeChoicesJson(item.choices()) : null;
 
         return java.util.Optional.of(GeneratedProblemDraft.pending(
                 domain, difficulty, type, trimToNull(item.title()), trimToNull(item.question()), answer,
@@ -469,7 +473,11 @@ public class LlmProblemService {
      */
     private String writeChoicesJson(List<GeneratedProblemItem.GeneratedChoice> choices) {
         List<AdminProblemRequest.ChoiceItem> items = choices.stream()
-                .map(c -> new AdminProblemRequest.ChoiceItem(c.text(), c.correct(), c.rationale()))
+                // matchText는 짝짓기에서만 값이 있다(2026-08-31). 빈 문자열을 null로 눕히는 이유:
+                // AdminProblemService가 "짝이 비었나"를 isBlank로 보므로 뜻은 같지만, 저장된 JSON을
+                // 눈으로 볼 때 <짝짓기가 아닌 초안>에 빈 칸이 줄줄이 남는 것이 읽기에 나쁘다.
+                .map(c -> new AdminProblemRequest.ChoiceItem(
+                        c.text(), c.correct(), c.rationale(), trimToNull(c.matchText())))
                 .toList();
         try {
             return objectMapper.writeValueAsString(items);
@@ -521,7 +529,8 @@ public class LlmProblemService {
         // 고칠 방법이 없고, 목록이 지난 경고로 채워지면 정작 봐야 할 대기 건이 묻힌다
         // (LlmDocumentService.toResponse와 같은 판단).
         List<DraftCheck> checks = d.getStatus() == DraftStatus.PENDING
-                ? ProblemItemRule.checksOf(toItem(d, choices), d.getDifficulty(), d.getDocumentSlug() != null)
+                ? ProblemItemRule.checksOf(toItem(d, choices), d.getDifficulty(),
+                        d.getDocumentSlug() != null, d.getType())
                 : List.of();
 
         return new LlmDraftResponse(
@@ -545,9 +554,12 @@ public class LlmProblemService {
                                         List<AdminProblemRequest.ChoiceItem> choices) {
         // rationale까지 되돌려야 한다 — 검수 화면의 "오답 설명 없음" 경고가 이 값을 센다.
         // 빠뜨리면 설명을 제대로 채운 초안이 매번 경고를 달고 나온다.
+        // matchText도 같은 이유로 되돌린다(2026-08-31) — 빠뜨리면 짝짓기 초안이 화면에서
+        // "오른쪽이 빈 쌍이 있다"는 경고를 항상 달게 된다. 멀쩡한 초안에 뜨는 경고다.
         List<GeneratedProblemItem.GeneratedChoice> items = choices == null ? List.of()
                 : choices.stream()
-                .map(c -> new GeneratedProblemItem.GeneratedChoice(c.text(), c.correct(), c.rationale()))
+                .map(c -> new GeneratedProblemItem.GeneratedChoice(
+                        c.text(), c.correct(), c.rationale(), c.matchText()))
                 .toList();
         return new GeneratedProblemItem(d.getQuestion(), d.getAnswer(), d.getExplanation(),
                 items, "", d.getTitle(), d.getQuestionKind());
