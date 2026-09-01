@@ -5,6 +5,7 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.dto.QuizChoiceItem;
+import project.study.study_project.quiz.dto.QuizMatchOption;
 import project.study.study_project.review.domain.ReviewItem;
 
 import java.time.LocalDateTime;
@@ -21,7 +22,8 @@ import java.util.List;
  * 두 API에서 완전히 같아서, 별도 DTO를 만들면 같은 규칙이 두 곳에 생길 뿐이다.
  *
  * @param domainLabel  화면 표기용 한글(예 "네트워크") — docs/02의 표기 규칙
- * @param choices      객관식만 채우고 OX/단답형은 빈 배열(퀴즈 API와 동일한 모양 유지)
+ * @param choices      {@code choice} 행을 쓰는 유형만 채운다(퀴즈 API와 동일한 모양 유지)
+ * @param matchOptions 짝짓기의 오른쪽 열. 그 밖의 유형은 빈 배열
  * @param stage        지금 사다리 몇 번째 칸인지(0..4)
  * @param nextReviewAt 복습 예정이었던 시각 — 목록에 나온 시점엔 이미 지난 시각이다(그래서 due)
  * @param reviewCount  사다리에 오른 뒤 푼 횟수
@@ -34,21 +36,25 @@ public record ReviewTodayItem(
         ProblemType type,
         String question,
         List<QuizChoiceItem> choices,
+        List<QuizMatchOption> matchOptions,
         int stage,
         LocalDateTime nextReviewAt,
         int reviewCount
 ) {
     public static ReviewTodayItem from(ReviewItem r) {
         Problem p = r.getProblem();
-        // 객관식일 때만 LAZY 보기 컬렉션에 접근한다(불필요한 쿼리 방지 — QuizProblemItem과 동일).
+        // 행을 쓰는 유형일 때만 LAZY 보기 컬렉션에 접근한다(불필요한 쿼리 방지 — QuizProblemItem과 동일).
         // 섞는 것도 같이 재사용한다. 복습이야말로 순서를 섞어야 하는 자리다 —
         // 같은 문제를 다시 만나는 화면이라, 순서가 고정이면 내용이 아니라 위치를 외우게 된다.
-        List<QuizChoiceItem> choices = p.getType() == ProblemType.MULTIPLE_CHOICE
+        List<QuizChoiceItem> choices = p.getType().usesChoiceRows()
                 ? QuizChoiceItem.shuffledFrom(p.getChoices())
+                : List.of();
+        List<QuizMatchOption> matchOptions = p.getType() == ProblemType.MATCHING
+                ? QuizMatchOption.shuffledFrom(p.getId(), p.getChoices())
                 : List.of();
         return new ReviewTodayItem(
                 p.getId(), p.getDomain(), p.getDomain().getDisplayName(),
-                p.getDifficulty(), p.getType(), p.getQuestion(), choices,
+                p.getDifficulty(), p.getType(), p.getQuestion(), choices, matchOptions,
                 r.getStage(), r.getNextReviewAt(), r.getReviewCount());
     }
 }

@@ -139,6 +139,18 @@ class DailyQuizFlowIntegrationTest {
             case MULTIPLE_CHOICE -> String.valueOf(item.problem().choices().get(0).id());
             case OX -> "O";
             case SHORT_ANSWER -> "아무 답";
+            // 순서 배열은 항목 전부를, 짝짓기는 쌍 전부를 보내야 400이 아니다(QuizService).
+            // 정답일 필요는 없으므로 <받은 순서 그대로> 잇는다.
+            case ORDERING -> item.problem().choices().stream()
+                    .map(c -> String.valueOf(c.id()))
+                    .collect(java.util.stream.Collectors.joining("|"));
+            case MATCHING -> {
+                var lefts = item.problem().choices();
+                var rights = item.problem().matchOptions();
+                yield java.util.stream.IntStream.range(0, lefts.size())
+                        .mapToObj(i -> lefts.get(i).id() + "-" + rights.get(i).token())
+                        .collect(java.util.stream.Collectors.joining("|"));
+            }
             case ESSAY -> throw new IllegalStateException("세트에 ESSAY가 있으면 안 된다(docs/12)");
         };
     }

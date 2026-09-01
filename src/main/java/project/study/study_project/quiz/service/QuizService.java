@@ -20,10 +20,15 @@ import project.study.study_project.quiz.dto.QuizSubmitRequest;
 import project.study.study_project.quiz.dto.QuizSubmitResponse;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
+import project.study.study_project.quiz.support.MatchToken;
 import project.study.study_project.review.service.ReviewService;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 퀴즈 서비스 — 문제 무작위 조회와 답안 채점. 스펙은 docs/03, 채점 규칙은 docs/01.
@@ -181,6 +186,8 @@ public class QuizService {
             case MULTIPLE_CHOICE -> gradeMultipleChoice(problem, userAnswer);
             case OX -> gradeOx(problem, userAnswer);
             case SHORT_ANSWER -> gradeShortAnswer(problem, userAnswer);
+            case MATCHING -> gradeMatching(problem, userAnswer);
+            case ORDERING -> gradeOrdering(problem, userAnswer);
             case ESSAY -> throw new BusinessException(ErrorCode.QUIZ_002); // 도달 불가(위에서 차단)
         };
     }
@@ -227,5 +234,104 @@ public class QuizService {
         boolean correct = Arrays.stream(problem.getAnswer().split("\\|")) // |는 정규식 메타문자라 이스케이프
                 .anyMatch(a -> a.trim().toLowerCase().equals(normalized));
         return new GradingResult(correct, AnswerDisplay.correctAnswerOf(problem));
+    }
+
+    /**
+     * 순서 배열: userAnswer = 학습자가 배열한 <b>보기 id</b>를 순서대로 {@code |}로 이은 것
+     * (예 {@code "12|9|11|10"}). 그 id들을 seq로 바꿔 {@code problem.answer}("3|2|1|4")와 대조한다.
+     *
+     * <p><b>왜 정답은 seq, 제출은 id인가.</b> 화면의 보기 번호는 요청마다 다시 매겨지므로
+     * ({@code QuizChoiceItem.shuffledFrom}) 채점 기준이 될 수 없고, 학습자가 확실히 알 수 있는
+     * 것은 보기 id뿐이다. 반대로 정답은 화면과 무관하게 DB 안에서 고정돼야 하는데, id는 문제를
+     * 지웠다 다시 등록하면 바뀐다. 그래서 <b>바깥에서 들어오는 것은 id, 안에 적어 두는 것은 seq</b>다.
+     *
+     * <p><b>개수가 다르거나 모르는 id가 오면 오답이 아니라 400</b>이다 — 객관식과 같은 판단이다
+     * ({@link #gradeMultipleChoice} 주석). 학습자는 화면의 항목을 전부 배열해야 제출 버튼을 누를
+     * 수 있으므로, 어긋난 제출은 사용자의 실수가 아니라 클라이언트 버그다. 조용히 오답으로
+     * 처리하면 <b>복습 사다리와 오답노트가 그 버그만큼 오염된다</b>.
+     *
+     * <p><b>부분 정답은 주지 않는다.</b> {@code Submission.correct}가 boolean이라 "네 칸 중 셋"을
+     * 담을 자리가 없다. 다만 제출 원문이 {@code user_answer}에 남으므로, 나중에 부분 채점이
+     * 필요해지면 지나간 제출까지 거슬러 분석할 수 있다(지금 버리지 않는 것이 요점이다).
+     */
+    private GradingResult gradeOrdering(Problem problem, String userAnswer) {
+        List<Choice> arranged = choicesByIdOrder(problem, userAnswer.split("\\|"));
+        String submittedSeqOrder = arranged.stream()
+                .map(c -> String.valueOf(c.getSeq()))
+                .collect(Collectors.joining("|"));
+        // 정답 문자열에 사람이 넣은 공백("3 | 2")이 있어도 같게 보이도록 공백만 지우고 비교한다.
+        String expected = problem.getAnswer().replaceAll("\\s", "");
+        return new GradingResult(expected.equals(submittedSeqOrder),
+                AnswerDisplay.correctAnswerOf(problem));
+    }
+
+    /**
+     * 짝짓기: userAnswer = {@code "왼쪽보기id-오른쪽토큰"} 쌍을 {@code |}로 이은 것
+     * (예 {@code "12-a3f19c024b71|9-77bc0e5d1a3f"}). 네 쌍이 <b>모두</b> 맞아야 정답이다.
+     *
+     * <p><b>정답은 {@code answer}가 아니라 행에 있다</b>(V16). 왼쪽 보기를 id로 찾아 그 행의
+     * {@code matchText}로 토큰을 다시 계산하고, 학습자가 보낸 토큰과 같은지 본다. 서버가 섞은
+     * 순서를 기억할 필요가 없는 이유는 {@link MatchToken} 주석에 있다.
+     *
+     * <p><b>순서는 보지 않는다.</b> 학습자가 어느 쌍부터 이었는지는 채점과 무관하다 —
+     * 아래에서 왼쪽 id로 행을 찾아 각 쌍을 독립적으로 판정하므로 자연히 순서에 영향받지 않는다.
+     */
+    private GradingResult gradeMatching(Problem problem, String userAnswer) {
+        String[] entries = userAnswer.split("\\|");
+        if (entries.length != problem.getChoices().size()) {
+            throw new BusinessException(ErrorCode.COMMON_001);
+        }
+
+        Set<Long> seenLeft = new HashSet<>();
+        boolean allCorrect = true;
+        for (String entry : entries) {
+            int dash = entry.indexOf('-');
+            if (dash < 0) {
+                throw new BusinessException(ErrorCode.COMMON_001);
+            }
+            Choice left = choiceById(problem, entry.substring(0, dash).trim());
+            // 같은 왼쪽 항목을 두 번 이은 제출 — 화면에서 나올 수 없는 모양이라 클라이언트 버그다.
+            if (!seenLeft.add(left.getId())) {
+                throw new BusinessException(ErrorCode.COMMON_001);
+            }
+            String expectedToken = MatchToken.of(problem.getId(), left.getMatchText());
+            // 한 쌍이 어긋나도 끝까지 돈다 — 남은 쌍에 잘못된 id가 섞여 있으면 그건 400으로
+            // 알려야 하는 상태이고, 여기서 일찍 빠져나오면 그 검사를 건너뛴다.
+            if (!entry.substring(dash + 1).trim().equals(expectedToken)) {
+                allCorrect = false;
+            }
+        }
+        return new GradingResult(allCorrect, AnswerDisplay.correctAnswerOf(problem));
+    }
+
+    /** 제출된 id 배열을 보기 행으로 — 개수·중복·소속을 모두 검사한다(어긋나면 400). */
+    private List<Choice> choicesByIdOrder(Problem problem, String[] rawIds) {
+        if (rawIds.length != problem.getChoices().size()) {
+            throw new BusinessException(ErrorCode.COMMON_001);
+        }
+        List<Choice> found = new ArrayList<>(rawIds.length);
+        Set<Long> seen = new HashSet<>();
+        for (String rawId : rawIds) {
+            Choice choice = choiceById(problem, rawId.trim());
+            if (!seen.add(choice.getId())) {
+                throw new BusinessException(ErrorCode.COMMON_001); // 같은 항목을 두 번 배열했다
+            }
+            found.add(choice);
+        }
+        return found;
+    }
+
+    /** 이 문제의 보기 중 그 id를 가진 행. 숫자가 아니거나 남의 보기면 400(객관식과 같은 규칙). */
+    private Choice choiceById(Problem problem, String rawId) {
+        long id;
+        try {
+            id = Long.parseLong(rawId);
+        } catch (NumberFormatException e) {
+            throw new BusinessException(ErrorCode.COMMON_001);
+        }
+        return problem.getChoices().stream()
+                .filter(c -> c.getId() == id)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_001));
     }
 }

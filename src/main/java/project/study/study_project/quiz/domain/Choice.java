@@ -44,6 +44,26 @@ public class Choice {
     @Column(name = "text", nullable = false, length = 500)
     private String text;
 
+    /**
+     * 짝짓기(MATCHING)의 <b>오른쪽 항목</b> — 이 행의 {@link #text}와 짝이다. 그 밖의 유형은 {@code null}(V16).
+     *
+     * <p><b>한 행이 한 쌍이다.</b> 왼쪽(용어)은 {@code text}, 오른쪽(설명)은 여기. 짝을 별도
+     * 문자열이나 JSON으로 두는 대신 데이터 자리에 둔 이유는 V16 주석에 적었다 — 요약하면
+     * 짝이 <b>행 사이의 관계가 아니라 행 안의 값</b>이면 세거나 검증할 때 파싱할 것이 없다.
+     *
+     * <p><b>그래서 짝짓기의 {@code Problem.answer}는 {@code null}이다.</b> 정답이 이 행에 이미
+     * 있으므로 채점 기준값을 따로 둘 이유가 없다(객관식이 {@code is_correct}에 정답을 두고
+     * {@code answer}를 비우는 것과 같은 규약, docs/01). 반대로 순서 배열은 정답이 <b>행 사이의
+     * 순서</b>라 어느 행에도 담기지 않아 {@code answer}에 적는다.
+     *
+     * <p><b>이 값은 그대로 화면에 나가도 된다 — 단, 왼쪽과 짝지어진 채로 나가면 안 된다.</b>
+     * 오른쪽 열을 이 행의 {@code id}와 함께 내보내면 왼쪽 항목의 id와 맞춰 보는 것만으로
+     * 답이 드러난다. 그래서 풀이용 응답은 오른쪽을 별도 목록으로 섞어 내보내고, 식별자로
+     * 행 id 대신 되돌릴 수 없는 토큰을 쓴다({@code MatchToken} 주석 참고).
+     */
+    @Column(name = "match_text", length = 500)
+    private String matchText;
+
     /** 정답 여부 — 채점 전용. 풀이용 API 응답에 노출 금지(클래스 주석 참고). */
     @Column(name = "is_correct", nullable = false)
     private boolean correct;
@@ -72,9 +92,11 @@ public class Choice {
     @Column(nullable = false)
     private int seq;
 
-    private Choice(Problem problem, String text, boolean correct, String rationale, int seq) {
+    private Choice(Problem problem, String text, String matchText, boolean correct,
+                   String rationale, int seq) {
         this.problem = problem;
         this.text = text;
+        this.matchText = matchText;
         this.correct = correct;
         this.rationale = rationale;
         this.seq = seq;
@@ -85,7 +107,22 @@ public class Choice {
      * (관리자가 순서 번호를 직접 관리하게 하면 중복·건너뜀 실수만 늘어난다).
      */
     public static Choice of(Problem problem, String text, boolean correct, String rationale, int seq) {
-        return new Choice(problem, text, correct, rationale, seq);
+        return new Choice(problem, text, null, correct, rationale, seq);
+    }
+
+    /**
+     * 짝짓기 한 쌍을 만든다(V16) — 왼쪽 {@code text}와 오른쪽 {@code matchText}가 한 행이다.
+     *
+     * <p><b>{@code correct}를 받지 않고 {@code false}로 박는 이유.</b> 짝짓기에는 "정답 보기"라는
+     * 것이 없다 — 네 쌍이 전부 정답이고, 학습자가 맞히는 것은 <b>연결</b>이다. 여기서 인자를
+     * 받으면 부르는 쪽마다 {@code true}를 넣을지 {@code false}를 넣을지 고민하게 되고,
+     * 그 값이 무엇을 뜻하는지는 아무도 모른다. 뜻이 없는 칸은 뜻이 없는 값으로 고정한다.
+     *
+     * <p><b>{@code seq}는 왼쪽 열의 표시 순서다.</b> 오른쪽은 내보낼 때 따로 섞으므로
+     * 이 번호와 짝이 어긋나도 상관없다 — 오히려 어긋나야 정상이다.
+     */
+    public static Choice pair(Problem problem, String text, String matchText, int seq) {
+        return new Choice(problem, text, matchText, false, null, seq);
     }
 
     /**
@@ -95,7 +132,7 @@ public class Choice {
      * 처방이다. 손대야 할 곳이 많을수록 정작 봐야 할 변경이 묻힌다.
      */
     public static Choice of(Problem problem, String text, boolean correct, int seq) {
-        return new Choice(problem, text, correct, null, seq);
+        return new Choice(problem, text, null, correct, null, seq);
     }
 
     /**

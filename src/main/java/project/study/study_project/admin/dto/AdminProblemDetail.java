@@ -35,10 +35,16 @@ public record AdminProblemDetail(
      * @param rationale 이 오답이 왜 틀렸는지 한 줄(V15). 정답 보기와 옛 문제는 {@code null}.
      *                  <b>수정 폼이 이 값을 되채운다</b> — 안 내려주면 문제를 한 번 수정할 때마다
      *                  오답 설명이 통째로 지워진다. 폼은 화면에 있는 것만 보내기 때문이다.
+     * @param matchText 짝짓기의 오른쪽 항목(V16). 그 밖의 유형은 {@code null}.
+     *                  <b>같은 이유로 반드시 내려보낸다</b> — 빠뜨리면 짝짓기 문제를 한 번 수정할
+     *                  때마다 오른쪽 열이 통째로 사라지고, 그러면 저장 자체가 QUIZ_004로 막힌다
+     *                  (오답 설명과 달리 조용히 지워지지 않는 것이 그나마 다행인 차이다)
      */
-    public record ChoiceDetail(Long id, int seq, String text, boolean correct, String rationale) {
+    public record ChoiceDetail(Long id, int seq, String text, boolean correct, String rationale,
+                               String matchText) {
         static ChoiceDetail from(Choice c) {
-            return new ChoiceDetail(c.getId(), c.getSeq(), c.getText(), c.isCorrect(), c.getRationale());
+            return new ChoiceDetail(c.getId(), c.getSeq(), c.getText(), c.isCorrect(),
+                    c.getRationale(), c.getMatchText());
         }
     }
 

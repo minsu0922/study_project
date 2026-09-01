@@ -19,7 +19,10 @@ import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * 관리자 문제 관리 — 등록/수정/삭제/조회. 이 기능의 핵심은 <b>타입별 규칙 검증</b>이다.
@@ -32,6 +35,17 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AdminProblemService {
+
+    /**
+     * 짝짓기의 최소 쌍 수. 둘이면 <b>한 쌍을 맞히면 나머지가 저절로 정해져</b> 찍기 확률이 1/2다 —
+     * OX와 다를 바 없어진다. 그래도 하한을 둘로 잡은 이유는, 여기는 <b>사고를 막는 선</b>이고
+     * 품질 기준("넷이 좋다")은 {@code ProblemItemRule}이 경고로 알리기 때문이다.
+     * DB 제약처럼 굴면 셋짜리 좋은 문제를 손으로 등록할 길이 막힌다(V13·V15 주석과 같은 규칙).
+     */
+    private static final int PAIR_MIN = 2;
+
+    /** 순서 배열의 최소 항목 수 — 둘은 "둘 중 하나"라 순서 문제가 성립하는 최소치다. */
+    private static final int ORDER_MIN = 2;
 
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
@@ -148,9 +162,95 @@ public class AdminProblemService {
                             "단답형은 answer가 필수입니다. 복수 정답은 |로 구분하세요. (예: arp|address resolution protocol)");
                 }
             }
+            case MATCHING -> validateMatching(r, hasChoices, hasAnswer);
+            case ORDERING -> validateOrdering(r, hasChoices, hasAnswer);
             // 서술형은 자동채점 미지원(MVP) — 등록을 허용하면 풀 수 없는 문제가 생긴다
             case ESSAY -> throw new BusinessException(ErrorCode.QUIZ_002,
                     "서술형(ESSAY)은 자동채점 미지원이라 아직 등록할 수 없습니다.");
+        }
+    }
+
+    /**
+     * 짝짓기 규칙 — 쌍이 {@value #PAIR_MIN}개 이상, 모든 쌍에 오른쪽이 있고, 양쪽 모두 중복이 없다.
+     *
+     * <p><b>중복을 막는 것이 이 검증의 핵심이다.</b> 오른쪽 문장 둘이 같으면 학습자에게는
+     * 어느 쪽에 이어도 되는 것처럼 보이는데, 채점은 토큰으로 하므로 둘 중 하나만 정답이 된다
+     * ({@code MatchToken}은 텍스트에서 계산되니 같은 문장은 같은 토큰이 되고, 그러면
+     * <b>어느 왼쪽에 이어도 통과</b>해 버린다 — 어느 쪽이든 문제가 성립하지 않는다).
+     * 왼쪽 중복도 같은 이유로 막는다.
+     *
+     * <p><b>answer를 비우게 하는 이유</b>는 객관식과 같다. 정답이 행에 있는데 answer에도 적으면
+     * 두 벌이 되고, 언젠가 한쪽만 고쳐진다(docs/01의 타입별 규약).
+     */
+    private void validateMatching(AdminProblemRequest r, boolean hasChoices, boolean hasAnswer) {
+        if (!hasChoices || r.choices().size() < PAIR_MIN) {
+            throw new BusinessException(ErrorCode.QUIZ_004,
+                    "짝짓기는 쌍을 " + PAIR_MIN + "개 이상 입력해야 합니다.");
+        }
+        if (hasAnswer) {
+            throw new BusinessException(ErrorCode.QUIZ_004,
+                    "짝짓기는 answer를 비워야 합니다. 정답은 각 쌍의 왼쪽·오른쪽으로 지정합니다.");
+        }
+        for (AdminProblemRequest.ChoiceItem item : r.choices()) {
+            if (item.matchText() == null || item.matchText().isBlank()) {
+                throw new BusinessException(ErrorCode.QUIZ_004,
+                        "짝짓기는 모든 쌍에 오른쪽 항목이 있어야 합니다. (\"" + item.text() + "\"의 짝이 비었습니다)");
+            }
+        }
+        requireDistinct(r.choices(), AdminProblemRequest.ChoiceItem::text, "왼쪽 항목");
+        requireDistinct(r.choices(), AdminProblemRequest.ChoiceItem::matchText, "오른쪽 항목");
+    }
+
+    /**
+     * 순서 배열 규칙 — 항목이 {@value #ORDER_MIN}개 이상이고, answer가 <b>1..N의 순열</b>이다.
+     *
+     * <p><b>왜 순열인지까지 보나.</b> answer는 "3|2|1|4"처럼 seq를 늘어놓은 것인데, 여기에
+     * 빠진 번호나 중복이 있으면 <b>어떤 제출로도 맞힐 수 없는 문제</b>가 된다. 채점은 제출한
+     * 순서를 seq로 바꿔 이 문자열과 통째로 비교하므로(QuizService.gradeOrdering), 기준 자체가
+     * 도달 불가능하면 학습자는 몇 번을 풀어도 틀리고 이유는 화면에 나오지 않는다.
+     * 저장 시점에 한 번 재는 것으로 그 부류를 통째로 막는다.
+     */
+    private void validateOrdering(AdminProblemRequest r, boolean hasChoices, boolean hasAnswer) {
+        if (!hasChoices || r.choices().size() < ORDER_MIN) {
+            throw new BusinessException(ErrorCode.QUIZ_004,
+                    "순서 배열은 항목을 " + ORDER_MIN + "개 이상 입력해야 합니다.");
+        }
+        if (!hasAnswer) {
+            throw new BusinessException(ErrorCode.QUIZ_004,
+                    "순서 배열은 answer에 정답 순서를 적어야 합니다. (예: 3|2|1|4 — 입력한 항목의 번호)");
+        }
+        int size = r.choices().size();
+        Set<Integer> seen = new HashSet<>();
+        for (String token : r.answer().split("\\|")) { // |는 정규식 메타문자라 이스케이프
+            int seq;
+            try {
+                seq = Integer.parseInt(token.trim());
+            } catch (NumberFormatException e) {
+                throw new BusinessException(ErrorCode.QUIZ_004,
+                        "순서 배열의 answer는 항목 번호만 |로 이어 적습니다. (\"" + token.trim() + "\"은 숫자가 아닙니다)");
+            }
+            if (seq < 1 || seq > size || !seen.add(seq)) {
+                throw new BusinessException(ErrorCode.QUIZ_004,
+                        "순서 배열의 answer는 1부터 " + size + "까지를 한 번씩 써야 합니다. (\"" + r.answer() + "\")");
+            }
+        }
+        if (seen.size() != size) {
+            throw new BusinessException(ErrorCode.QUIZ_004,
+                    "순서 배열의 answer에 빠진 번호가 있습니다. 항목 " + size + "개를 모두 적으세요. (\"" + r.answer() + "\")");
+        }
+    }
+
+    /** 같은 값이 두 번 들어왔는지 — 어느 열인지 이름을 받아 메시지에 그대로 넣는다. */
+    private void requireDistinct(List<AdminProblemRequest.ChoiceItem> items,
+                                 Function<AdminProblemRequest.ChoiceItem, String> field,
+                                 String columnName) {
+        Set<String> seen = new HashSet<>();
+        for (AdminProblemRequest.ChoiceItem item : items) {
+            String value = field.apply(item).trim();
+            if (!seen.add(value)) {
+                throw new BusinessException(ErrorCode.QUIZ_004,
+                        columnName + "이 겹칩니다. 서로 다르게 적어야 짝이 하나로 정해집니다. (\"" + value + "\")");
+            }
         }
     }
 
@@ -160,28 +260,43 @@ public class AdminProblemService {
         }
     }
 
-    /** 저장 형태 정규화 — OX는 대문자(O/X), 단답형은 trim, 객관식은 null. 채점 로직의 전제와 맞춘다. */
+    /**
+     * 저장 형태 정규화 — 채점 로직의 전제와 맞춘다.
+     * OX는 대문자(O/X), 단답형은 trim, 순서 배열은 공백 제거, 객관식·짝짓기는 null(정답이 행에 있다).
+     */
     private String normalizeAnswer(AdminProblemRequest r) {
         return switch (r.type()) {
-            case MULTIPLE_CHOICE -> null;
+            case MULTIPLE_CHOICE, MATCHING -> null;
             case OX -> r.answer().trim().toUpperCase();
             case SHORT_ANSWER -> r.answer().trim();
+            // "3 | 2 | 1 | 4"처럼 사람이 보기 좋게 띄어 적어도 저장은 한 모양으로 눕힌다.
+            // 채점 쪽도 공백을 지우고 비교하지만(gradeOrdering), 저장 시점에 눕혀 두면
+            // DB를 눈으로 볼 때도 형식이 하나다.
+            case ORDERING -> r.answer().replaceAll("\\s", "");
             case ESSAY -> null; // validateByType에서 이미 차단 — 도달 불가
         };
     }
 
-    /** 보기 목록 생성 — seq는 입력 순서대로 1..N 부여(관리자가 번호를 직접 관리하지 않게). */
+    /**
+     * 보기 목록 생성 — seq는 입력 순서대로 1..N 부여(관리자가 번호를 직접 관리하지 않게).
+     *
+     * <p><b>순서 배열의 seq가 곧 answer의 번호다.</b> 관리자가 "3|2|1|4"라고 적을 때의 3은
+     * 입력 화면에서 <b>세 번째 줄</b>을 가리킨다. 그래서 여기서 부여하는 1..N이 그 번호와 같아야
+     * 하고, 검증({@link #validateOrdering})도 같은 전제로 1..N의 순열인지 본다.
+     */
     private List<Choice> buildChoices(Problem problem, AdminProblemRequest r) {
         List<Choice> choices = new ArrayList<>();
-        if (r.type() == ProblemType.MULTIPLE_CHOICE) {
+        if (r.type().usesChoiceRows()) {
             List<AdminProblemRequest.ChoiceItem> items = r.choices();
             for (int i = 0; i < items.size(); i++) {
                 AdminProblemRequest.ChoiceItem item = items.get(i);
-                choices.add(Choice.of(problem, item.text().trim(), item.correct(),
-                        normalizeRationale(item), i + 1));
+                choices.add(r.type() == ProblemType.MATCHING
+                        ? Choice.pair(problem, item.text().trim(), item.matchText().trim(), i + 1)
+                        : Choice.of(problem, item.text().trim(), item.correct(),
+                                normalizeRationale(item), i + 1));
             }
         }
-        return choices; // 객관식이 아니면 빈 리스트 → replaceChoices가 기존 보기를 정리
+        return choices; // 행을 안 쓰는 유형이면 빈 리스트 → replaceChoices가 기존 보기를 정리
     }
 
     /**
