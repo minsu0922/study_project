@@ -4,7 +4,7 @@
 > 인증: `Authorization: Bearer <accessToken>`. 재발급은 [`POST /api/auth/refresh`](#post-apiauthrefresh).
 > Base URL: `/api` · 🔒 = 로그인 필요 · 🛡️ = **ADMIN 전용**
 
-## 전체 엔드포인트 (48개 — 사용자 15 · 관리자 33)
+## 전체 엔드포인트 (53개 — 사용자 16 · 관리자 37)
 
 | 묶음 | 엔드포인트 | |
 |---|---|---|
@@ -13,11 +13,13 @@
 | **퀴즈** | `GET /api/quiz` · `/{problemId}` · `POST /api/quiz/submit` 🔒 | [↓](#get-apiquiz) |
 | **문제 목록** | `GET /api/problems` 🔒 · `GET /api/me/study-summary` 🔒 | [↓](#get-apiproblems-) |
 | **내 학습** | `GET /api/me/wrong-answers` 🔒<br>`GET /api/me/reviews` · `/reviews/today` 🔒<br>`GET /api/me/daily-quiz` 🔒 | [↓](#get-apimewrong-answers-) |
+| **오류 제보** | `POST /api/me/problem-reports` 🔒 | [↓](#post-apimeproblem-reports-) |
 | **관리자·문제** | `GET`·`POST /api/admin/problems` · `GET`·`PUT`·`DELETE /{id}` · 제목/근거 백필 🛡️ | [↓](#관리자-api-️) |
 | **관리자·문서** | `POST /api/admin/documents` · `PUT`·`DELETE /{id}` 🛡️ | [↓](#관리자-api-️) |
 | **관리자·통계** | `GET /api/admin/dashboard` 🛡️ | [↓](#관리자-api-️) |
 | **관리자·주제 대기열** | `GET`·`POST /api/admin/topic-queue` · `DELETE /{id}` · `/{id}/move` 🛡️ | [↓](#ai-검수-api-️) |
 | **AI 검수** | `/api/admin/llm-problems`(9) · `/llm-documents`(5) 🛡️ | [↓](#ai-검수-api-️) |
+| **관리자·제보함** | `GET /api/admin/reports` · `/pending-count` · `POST /{id}/accept` · `/{id}/dismiss` 🛡️ | [↓](#post-apimeproblem-reports-) |
 
 > 관리자·AI 검수 API는 **경로 접두사 `/api/admin/**` 전체에 `hasRole(ADMIN)`이 한 줄로 걸린다.**
 > 컨트롤러마다 권한을 적지 않는 이유는 하나만 빠뜨려도 뚫리기 때문이다 — 경로가 곧 경계다.
@@ -420,6 +422,50 @@ refresh 토큰을 폐기한다.
 - 같은 날 여러 번 불러도 **같은 세트**가 온다. DB의 `uk_dailyquiz_user_date`가 보장한다.
 - `source`는 그 문항이 어느 배합 칸에서 왔는지(`REVIEW`/`WEAK`/`NEW`/`GENERAL`).
 - 답 제출은 `POST /api/quiz/submit` 그대로 — 한 트랜잭션에서 채점·사다리·세트 진행이 함께 반영된다.
+
+---
+
+## POST /api/me/problem-reports  🔒
+
+문제 오류 제보(V17). 검수를 통과해 출제된 뒤에야 드러나는 결함을 학습자가 알리는 통로다.
+
+**Request**
+```json
+{ "problemId": 42, "reason": "WRONG_ANSWER", "detail": "2번도 정답으로 보입니다" }
+```
+
+**Response 201**
+```json
+{ "id": 7, "problemId": 42, "problemTitle": "…", "question": "…",
+  "reason": "WRONG_ANSWER", "reasonLabel": "정답으로 표시된 보기가 실제로는 틀렸다",
+  "detail": "2번도 정답으로 보입니다", "status": "PENDING",
+  "adminNote": null, "createdAt": "2026-09-02T17:23:40", "resolvedAt": null }
+```
+
+- `reason`은 **필수이고 코드**다(`WRONG_ANSWER` `AMBIGUOUS` `EXPLANATION_MISMATCH`
+  `CONTRADICTS_DOCUMENT` `TYPO` `OTHER`). 자유 입력이 아닌 이유: 이 값이 다음 생성
+  프롬프트로 가는데, 같은 지적이 매번 다른 문장이면 되먹임이 흩어진다(거절 사유 칩과 같은 판단).
+- `detail`은 선택(500자). 제보의 문턱을 낮추는 것이 목적이라 강제하지 않는다.
+- **한 사람당 한 문제에 한 번**(`REPORT_001`). DB의 `uk_report_problem_user`가 최종 방어이고,
+  서비스의 사전 검사는 사람이 읽을 메시지를 주기 위한 것이다.
+- 제보자는 토큰에서 꺼낸다 — 경로에도 본문에도 사용자를 받지 않는 `/api/me/**` 규칙.
+- 목록 조회 API는 **없다**. "내 제보 어떻게 됐지"에 답하려면 알림 통로가 있어야 하는데
+  그것부터 없어서, 화면이 생기는 날 더한다.
+
+### 제보함  🛡️
+
+| 메서드 | 경로 | 비고 |
+|---|---|---|
+| GET | `/api/admin/reports?status=&page=&size=` | 정렬은 상태가 정한다 — 대기는 오래된 순, 나머지는 최신순 |
+| GET | `/api/admin/reports/pending-count` | 메뉴 배지 |
+| POST | `/api/admin/reports/{id}/accept` | 바디 `{"note":"…"}`(선택). **인정된 사유만 프롬프트로 되먹여진다** |
+| POST | `/api/admin/reports/{id}/dismiss` | 지적이 틀렸다는 판정 — 되먹임에 쓰이지 않는다 |
+
+- 인정·기각은 **문제를 고치지 않는다.** 어떻게 고칠지는 문제마다 달라(정답 교체·보기 수정·삭제)
+  API가 대신 정할 수 없다. 화면은 판정 버튼 옆에 문제 수정 화면 링크를 둔다.
+- 되먹임은 거절 사유와 **같은 파일**(`generated/_rejection-notes.json`)로 합류하고,
+  사유 앞에 `[출제 후 제보] `가 붙는다. 파일을 새로 파지 않은 이유는
+  `LlmProblemService.REPORT_NOTE_PREFIX` 주석에 있다.
 
 ---
 

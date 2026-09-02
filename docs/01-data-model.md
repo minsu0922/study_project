@@ -291,6 +291,31 @@
 - 문서 파일은 키에 폴더를 붙인다(`documents/2026-08-13.json`) — 문제 파일과 이름이 같아
   한쪽이 **조용히 건너뛰어지는** 사고를 막기 위해서다(docs/15).
 
+### problem_report — 문제 오류 제보 (`V17__problem_report.sql`)
+
+학습자가 "이 문제 이상해요"를 올리는 표. 되먹임의 <b>반대 방향</b>을 여는 것이 목적이다 —
+만드는 쪽(생성 → 검수 → 거절 사유)에는 통로가 있었는데 푸는 쪽에는 없었다.
+
+| 컬럼 | 타입 | 비고 |
+|---|---|---|
+| problem_id | BIGINT | FK → problem, **CASCADE** |
+| user_id | BIGINT | FK → user, CASCADE |
+| reason | VARCHAR(30) | enum `ReportReason` 6종 — 자유 입력이 아니다 |
+| detail | VARCHAR(500) | 제보자의 한 줄(선택) |
+| status | VARCHAR(15) | `PENDING` → `ACCEPTED` \| `DISMISSED` |
+| admin_note | VARCHAR(500) | 처리 메모(선택) |
+| created_at / resolved_at | DATETIME(6) | 처리 전에는 `resolved_at`이 NULL |
+
+- **`UNIQUE(problem_id, user_id)`** — 한 사람이 같은 문제를 두 번 제보하지 못한다.
+  ReviewItem·DailyQuiz에 이어 세 번째로 적용한 "동시성·중복은 DB 제약으로" 패턴이다.
+  대가는 기각 뒤 재제보가 막힌다는 것 — `status`를 키에 넣어 열면 "PENDING 두 건"이
+  다시 가능해져 막으려던 것이 도로 풀린다.
+- **`(status, created_at)` 인덱스** — 제보함이 읽는 축 그대로(등치 → 정렬).
+- **CASCADE인 이유**: 제보는 그 문제에 딸린 지적이라 문제가 사라지면 가리킬 대상이 없다.
+  이력을 보존해야 하는 `submission`(RESTRICT)과 성격이 다르다.
+- `updated_at`이 없다. 한 번 만들어지고 한 번 처리되면 끝이라 "마지막으로 바뀐 시각"이
+  곧 `resolved_at`이다 — 같은 뜻의 컬럼을 둘 두지 않는다.
+
 ### domain_stats — 통계 뷰 (`R__domain_stats_view.sql`)
 
 도메인별 정답률. **테이블이 아니라 뷰**라 PK가 없고 수정도 안 된다.

@@ -101,6 +101,9 @@ public record FieldError(String field, String reason) {}
 | `LLM_003` | 502 | Claude API 실패 |
 | `LLM_004` | 503 | `ANTHROPIC_API_KEY` 미설정 |
 | `LLM_005` | 409 | 자동 검증에 걸린 문서 초안은 승인 불가 ([15](15-llm-concept-documents.md)) |
+| `REPORT_001` | 409 | 같은 문제를 이미 제보함(한 사람당 한 번 · DB UNIQUE) |
+| `REPORT_002` | 404 | 제보 없음 |
+| `REPORT_003` | 409 | 이미 인정·기각한 제보 |
 
 > 새 에러는 이 표에 추가하고 코드로 `enum ErrorCode`(code, httpStatus, defaultMessage) 관리.
 
