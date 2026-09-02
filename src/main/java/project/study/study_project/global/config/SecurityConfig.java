@@ -79,6 +79,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/documents/**", "/api/quiz/**", "/api/quiz").permitAll()
                         // 공개: API 문서(Swagger)
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        // 공개: 상태 점검. 오케스트레이터(도커 HEALTHCHECK 등)가 부르는 자리라
+                        // 토큰을 줄 수 있는 주체가 없다 — 인증을 걸면 "살았니?"에 영영 401이 돌아온다.
+                        // 새는 것이 없는 이유는 응답이 {"status":"UP"} 한 줄이기 때문이다.
+                        // 어느 부품이 죽었는지(상세)는 application.yml의 show-details=when-authorized가
+                        // ADMIN에게만 보여 준다 — 즉 <경로는 열되 내용은 잠근> 이중 구조다.
+                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
+                        // 나머지 actuator(info 및 앞으로 열게 될 것들)는 관리자만. 지금 열린 것은
+                        // info뿐이라 당장 감출 것이 크지 않지만, 기본을 "잠금"으로 둬야 노출 목록에
+                        // 한 줄 추가하는 순간 함께 공개되는 사고가 나지 않는다.
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         // 보호: 답안 제출 / 내 정보(오답노트 등)
                         .requestMatchers(HttpMethod.POST, "/api/quiz/submit").authenticated()
                         .requestMatchers("/api/me/**").authenticated()

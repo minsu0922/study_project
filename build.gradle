@@ -73,8 +73,16 @@ dependencies {
     // 설계는 docs/13, 결정 배경은 ADR-0006. API 키는 ANTHROPIC_API_KEY 환경변수로만 주입.
     implementation 'com.anthropic:anthropic-java:2.34.0'
 
-    // [모니터링] Actuator (포트폴리오 가점)
-    // implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // [모니터링] Actuator — 앱이 살아 있는지·무엇이 떠 있는지를 <바깥에서> 물을 수 있게 한다.
+    //
+    // 이 프로젝트는 이미지를 GHCR에 올리는 데까지 CD가 닿아 있는데(ci-cd.yml), 정작 그 이미지를
+    // 어디에 띄우든 오케스트레이터(도커·k8s·Fly.io 등)가 "살았니?"를 물어볼 창구가 없었다.
+    // 그러면 앱이 부팅 중이거나 DB를 못 잡아 응답만 못 하는 상태와 정상 상태를 구분하지 못해,
+    // 죽은 컨테이너로 트래픽이 계속 들어간다. Dockerfile의 HEALTHCHECK가 이 창구를 쓴다.
+    //
+    // 노출 범위는 좁게 연다(application.yml의 management 절) — 기본 엔드포인트에는
+    // 환경변수·빈 목록·설정값처럼 밖에 보여선 안 되는 것이 섞여 있다.
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // ── 테스트 ────────────────────────────────
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -89,6 +97,21 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// ── 빌드 정보 파일 (actuator /actuator/info) ──────────────────────
+// "지금 서버에 떠 있는 게 어느 커밋인가"에 답하는 자리. 이미지 태그가 latest면 화면만 봐서는
+// 알 수 없고, 배포가 반영됐는지 확인할 방법이 새로고침밖에 없어진다.
+//
+// time을 일부러 뺐다: 빌드 시각이 들어가면 파일이 <매번> 달라져 processResources 아래의
+// 증분 빌드·테스트 캐시가 늘 무효가 된다. 알고 싶은 것은 "언제 빌드했나"가 아니라
+// "무엇이 떠 있나"라 버전만으로 충분하다.
+springBoot {
+    buildInfo {
+        properties {
+            time = null
+        }
+    }
 }
 
 // ── 로컬 실행 시 API 키 주입 ─────────────────────────────────────
