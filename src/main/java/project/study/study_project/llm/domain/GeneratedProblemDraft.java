@@ -99,6 +99,22 @@ public class GeneratedProblemDraft {
     @Column(nullable = false, length = 50)
     private String model;
 
+    /**
+     * 근거 인용 대조의 결과 — 문제가 없으면 {@code null}(V18, 2026-09-02).
+     *
+     * <p><b>이 저장소에서 유일하게 "저장해 두는 검사 결과"다.</b> 나머지 품질 경고는 조회할 때마다
+     * 다시 잰다({@code LlmProblemService.toResponse}) — 규칙을 고치면 대기 중인 초안도 새 잣대를
+     * 받아야 하기 때문이다. 그런데 이 검사만은 재계산에 필요한 입력이 <b>검수 시점에 사라지고
+     * 없다</b>: 모델이 돌려준 {@code sourceQuote}는 초안에 저장하지 않고(학습자에게 보일 값이
+     * 아니다), 근거 문서 본문은 업로드 경로에서 요청과 함께 사라진다.
+     *
+     * <p>그래서 문서와 인용을 <b>둘 다 손에 쥐고 있는 유일한 순간</b>인 생성 시점에 한 번 재서
+     * 그 결과만 남긴다. 검수 화면은 이 값을 나머지 경고와 같은 자리에 섞어 보여 준다 —
+     * 검수자에게는 "언제 잰 경고인가"가 아니라 "무엇이 걸렸나"만 중요하다.
+     */
+    @Column(name = "source_quote_check", length = 500)
+    private String sourceQuoteCheck;
+
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
@@ -147,7 +163,7 @@ public class GeneratedProblemDraft {
     private GeneratedProblemDraft(Domain domain, Difficulty difficulty, ProblemType type, String title,
                                   String question, String answer, String explanation,
                                   String choicesJson, String model, String documentSlug,
-                                  QuestionKind questionKind) {
+                                  QuestionKind questionKind, String sourceQuoteCheck) {
         this.domain = domain;
         this.difficulty = difficulty;
         this.type = type;
@@ -160,6 +176,7 @@ public class GeneratedProblemDraft {
         this.model = model;
         this.documentSlug = documentSlug;
         this.questionKind = questionKind;
+        this.sourceQuoteCheck = sourceQuoteCheck;
     }
 
     /**
@@ -172,9 +189,10 @@ public class GeneratedProblemDraft {
                                                 String title, String question, String answer,
                                                 String explanation, String choicesJson,
                                                 String model, String documentSlug,
-                                                QuestionKind questionKind) {
+                                                QuestionKind questionKind, String sourceQuoteCheck) {
         return new GeneratedProblemDraft(domain, difficulty, type, title,
-                question, answer, explanation, choicesJson, model, documentSlug, questionKind);
+                question, answer, explanation, choicesJson, model, documentSlug, questionKind,
+                sourceQuoteCheck);
     }
 
     /** 승인 처리 — 생성된 problem.id를 이력으로 남긴다. 이미 처리된 초안이면 LLM_002. */

@@ -67,7 +67,7 @@ class LlmChoiceRationaleIntegrationTest {
                 Domain.SECURITY, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 "오답 설명 배관 테스트",
                 "오답 설명 배관 테스트용 지문 " + UUID.randomUUID(),
-                null, "정답인 이유를 적은 해설입니다.", choicesJson, "test-model", null, null));
+                null, "정답인 이유를 적은 해설입니다.", choicesJson, "test-model", null, null, null));
 
         AdminProblemDetail created = llmProblemService.approve(draft.getId());
 
@@ -109,7 +109,7 @@ class LlmChoiceRationaleIntegrationTest {
                 Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
                 "옛 초안 승인 테스트",
                 "옛 초안 승인 테스트용 지문 " + UUID.randomUUID(),
-                null, "해설입니다.", legacyJson, "test-model", null, null));
+                null, "해설입니다.", legacyJson, "test-model", null, null, null));
 
         AdminProblemDetail created = llmProblemService.approve(draft.getId());
 

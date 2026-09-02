@@ -32,6 +32,7 @@ import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.SourceQuoteRule;
 import project.study.study_project.llm.support.TypeMaterialRule;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.report.service.ProblemReportService;
@@ -67,6 +68,9 @@ public class LlmProblemService {
      * 오래된 사례가 이미 고쳐진 프롬프트를 다시 지적하는 잡음이 된다.
      */
     private static final int REJECTION_NOTE_SIZE = 20;
+
+    /** 인용 대조 결과 저장 상한 = 컬럼 길이(V18). */
+    private static final int QUOTE_CHECK_MAX = 500;
 
     /**
      * 학습자 제보에서 온 사례임을 프롬프트에서 구분하는 표시(V17).
@@ -266,7 +270,8 @@ public class LlmProblemService {
         // 등록 문서만 근거 slug를 남긴다(위 주석). 올린 파일은 가리킬 문서가 없어 비운다.
         String documentSlug = document.kind() == SourceDocument.Kind.GENERATED ? document.slug() : null;
 
-        return saveDrafts(domain, difficulty, type, items, model, documentSlug)
+        // 문서를 손에 쥔 유일한 경로다 — 그대로 넘겨 인용 대조까지 걸리게 한다(V18).
+        return saveDrafts(domain, difficulty, type, items, model, documentSlug, document)
                 .stream().map(this::toResponse).toList();
     }
 
@@ -292,9 +297,26 @@ public class LlmProblemService {
     public List<GeneratedProblemDraft> saveDrafts(Domain domain, Difficulty difficulty, ProblemType type,
                                                   List<GeneratedProblemItem> items, String model,
                                                   String documentSlug) {
+        return saveDrafts(domain, difficulty, type, items, model, documentSlug, null);
+    }
+
+    /**
+     * 근거 문서까지 아는 저장 — 인용 대조를 함께 찍는다(V18, 2026-09-02).
+     *
+     * <p><b>왜 오버로드인가.</b> 문서를 손에 쥔 경로는 {@link #generateFromDocument} 하나뿐이다.
+     * 나머지 둘(칸 자동 선택 생성, 파일 흡수)은 넘길 문서가 없다 — 전자는 근거 없이 만들고,
+     * 후자는 파일만 받는다(문서 본문은 러너에 있었고 여기엔 없다). 없는 경로에 억지로 인자를
+     * 만들어 {@code null}을 적게 하느니, <b>줄 수 있는 쪽만 주게</b> 둔다.
+     *
+     * @param source 근거 문서. {@code null}이면 인용 대조를 건너뛴다 — 대조할 원본이 없는데
+     *               경고를 내면 그 경로의 모든 문제에 헛울린다({@code SourceQuoteRule}의 판단 그대로)
+     */
+    public List<GeneratedProblemDraft> saveDrafts(Domain domain, Difficulty difficulty, ProblemType type,
+                                                  List<GeneratedProblemItem> items, String model,
+                                                  String documentSlug, SourceDocument source) {
         List<GeneratedProblemDraft> drafts = new ArrayList<>();
         for (GeneratedProblemItem item : items) {
-            toDraft(item, domain, difficulty, type, model, documentSlug).ifPresent(drafts::add);
+            toDraft(item, domain, difficulty, type, model, documentSlug, source).ifPresent(drafts::add);
         }
         return draftRepository.saveAll(drafts);
     }
@@ -400,7 +422,8 @@ public class LlmProblemService {
      */
     private java.util.Optional<GeneratedProblemDraft> toDraft(GeneratedProblemItem item,
                                                               Domain domain, Difficulty difficulty, ProblemType type,
-                                                              String model, String documentSlug) {
+                                                              String model, String documentSlug,
+                                                              SourceDocument source) {
         String defect = ProblemItemRule.defectOf(item, type);
         if (defect != null) {
             log.warn("생성 항목 건너뜀: {} — {}", defect, ProblemItemRule.snippet(item));
@@ -417,10 +440,18 @@ public class LlmProblemService {
         // 그때는 이미 요금을 다 낸 뒤다.
         String choicesJson = type.usesChoiceRows() ? writeChoicesJson(item.choices()) : null;
 
+        // 인용 대조는 <지금> 해야 한다. 검수 시점에는 sourceQuote도 문서 본문도 없다
+        // (GeneratedProblemDraft.sourceQuoteCheck 주석). 500자를 넘길 일은 없지만,
+        // 넘쳐서 저장이 통째로 실패하면 요금을 낸 문제를 잃으므로 잘라 넣는다.
+        String quoteCheck = SourceQuoteRule.warningOf(item, source, difficulty);
+        if (quoteCheck != null && quoteCheck.length() > QUOTE_CHECK_MAX) {
+            quoteCheck = quoteCheck.substring(0, QUOTE_CHECK_MAX - 1) + "…";
+        }
+
         return java.util.Optional.of(GeneratedProblemDraft.pending(
                 domain, difficulty, type, trimToNull(item.title()), trimToNull(item.question()), answer,
                 trimToNull(item.explanation()), choicesJson, model, trimToNull(documentSlug),
-                item.questionKind()));
+                item.questionKind(), quoteCheck));
     }
 
     /* ── 검수(목록·승인·거절) ─────────────────────────────── */
@@ -582,8 +613,10 @@ public class LlmProblemService {
         // 고칠 방법이 없고, 목록이 지난 경고로 채워지면 정작 봐야 할 대기 건이 묻힌다
         // (LlmDocumentService.toResponse와 같은 판단).
         List<DraftCheck> checks = d.getStatus() == DraftStatus.PENDING
-                ? ProblemItemRule.checksOf(toItem(d, choices), d.getDifficulty(),
-                        d.getDocumentSlug() != null, d.getType())
+                ? withStoredQuoteCheck(
+                        ProblemItemRule.checksOf(toItem(d, choices), d.getDifficulty(),
+                                d.getDocumentSlug() != null, d.getType()),
+                        d.getSourceQuoteCheck())
                 : List.of();
 
         return new LlmDraftResponse(
@@ -593,6 +626,25 @@ public class LlmProblemService {
                 d.getDocumentSlug(), d.getQuestionKind(),
                 d.getQuestionKind() == null ? null : d.getQuestionKind().getLabel(),
                 checks, d.getCreatedAt(), d.getReviewedAt());
+    }
+
+    /**
+     * 조회 시점에 다시 잰 경고들 뒤에 <b>생성 시점에 찍어 둔 인용 대조 결과</b>를 붙인다(V18).
+     *
+     * <p>검수자에게는 한 목록이어야 한다. "이건 방금 잰 것, 저건 그때 잰 것"은 검수자가 알 필요
+     * 없는 우리 사정이고, 두 자리로 갈라 두면 한쪽을 안 보게 된다.
+     *
+     * <p><b>뒤에 붙이는 이유</b>: 앞의 것들은 문제 자체의 흠(해설 분량·정답 편향)이라 고치면
+     * 사라지지만, 인용 대조는 "이 문제가 정말 그 문서에서 나왔나"라는 <b>출처에 대한 의심</b>이라
+     * 고쳐서 없앨 수 있는 종류가 아니다. 성격이 다른 것을 섞을 바에는 순서라도 지킨다.
+     */
+    private List<DraftCheck> withStoredQuoteCheck(List<DraftCheck> checks, String storedQuoteCheck) {
+        if (storedQuoteCheck == null || storedQuoteCheck.isBlank()) {
+            return checks;
+        }
+        List<DraftCheck> merged = new ArrayList<>(checks);
+        merged.add(DraftCheck.warning(storedQuoteCheck));
+        return merged;
     }
 
     /**

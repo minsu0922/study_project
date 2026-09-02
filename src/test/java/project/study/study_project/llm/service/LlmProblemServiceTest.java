@@ -569,7 +569,8 @@ class LlmProblemServiceTest {
                     "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.",
                     "[{\"text\":\"REQUIRED\",\"correct\":true},{\"text\":\"REQUIRES_NEW\",\"correct\":false}]", // choicesJson
                     "test-model", "spring-transactional-propagation", // model, documentSlug
-                    QuestionKind.SITUATION);
+                    // 인용 대조 결과는 null — 이 테스트가 보는 것은 승인·거절 상태 전이다
+                    QuestionKind.SITUATION, null);
         }
 
         @Test
