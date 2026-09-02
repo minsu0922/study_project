@@ -154,18 +154,27 @@ class ProblemReportIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * <b>절대값이 아니라 변화량을 본다.</b> 처음에는 "대기 1건" → "대기 0건"으로 적었는데,
+     * 그건 <b>이 표에 다른 행이 하나도 없다</b>는 전제에 기대는 것이다. 롤백되는 테스트끼리는
+     * 서로 안 보이지만, 개발 DB에 사람이 남긴 제보가 한 건만 있어도 깨진다 — 실제로 그렇게
+     * 깨졌고, 코드가 아니라 테스트가 틀린 경우였다. 배지가 약속하는 것도 "총 몇 건"이 아니라
+     * "인정하면 대기에서 하나 빠진다"이므로, 재는 것도 그 성질이어야 한다.
+     */
     @Test
-    @DisplayName("인정하면 상태와 처리 시각이 남고, 대기 건수에서 빠진다")
+    @DisplayName("인정하면 상태와 처리 시각이 남고, 대기 건수가 하나 줄어든다")
     void acceptMovesOutOfPending() throws Exception {
         Long problemId = saveProblem().getId();
         String admin = bearer(Role.ADMIN);
+        long pendingBefore = reportRepository.countByStatus(ReportStatus.PENDING);
 
         String created = mockMvc.perform(post(PATH).header("Authorization", bearer(Role.USER))
                         .contentType("application/json").content(body(problemId, "WRONG_ANSWER", null)))
                 .andReturn().getResponse().getContentAsString();
         long reportId = idOf(created);
 
-        assertThat(reportRepository.countByStatus(ReportStatus.PENDING)).isEqualTo(1);
+        assertThat(reportRepository.countByStatus(ReportStatus.PENDING))
+                .as("접수되면 대기가 하나 는다").isEqualTo(pendingBefore + 1);
 
         mockMvc.perform(post("/api/admin/reports/%d/accept".formatted(reportId))
                         .header("Authorization", admin)
@@ -175,7 +184,8 @@ class ProblemReportIntegrationTest {
                 .andExpect(jsonPath("$.data.adminNote").value("맞는 지적"))
                 .andExpect(jsonPath("$.data.resolvedAt").exists());
 
-        assertThat(reportRepository.countByStatus(ReportStatus.PENDING)).isZero();
+        assertThat(reportRepository.countByStatus(ReportStatus.PENDING))
+                .as("인정하면 다시 원래대로 — 이 건이 대기에서 빠졌다").isEqualTo(pendingBefore);
     }
 
     @Test

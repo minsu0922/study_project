@@ -34,6 +34,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class DraftGeneratorCliTest {
 
+    /**
+     * 아래 날짜표 테스트들이 쓰는 앵커 = 에포크 = 앵커가 없던 시절의 위상(2026-09-02 신설).
+     *
+     * <p>실제 설정값(2026-09-03)으로 옮겨 적지 않았다. 이 값들은 <b>2026-08-13 스케줄링 버그를
+     * 잡을 때 손으로 계산한 표</b>이고, 옛 규칙으로 되돌리면 실패하는 것까지 확인하며 만든
+     * 증거다. 위상을 바꿔 다시 적으면 그 증거가 사라진다. 설정값이 제대로 배선됐는지는
+     * {@link #configuredAnchorIsADocumentDay()}가 따로 본다.
+     */
+    private static final LocalDate ANCHOR = GenerationSchedule.DEFAULT_ANCHOR;
+
     @Test
     @DisplayName("배치가 켜져 있으면 생성한다 — 평소의 예약 실행 경로")
     void generatesWhenEnabled() {
@@ -196,8 +206,8 @@ class DraftGeneratorCliTest {
         List<Domain> documentDomains = new ArrayList<>();
         for (int i = 0; i < onePass; i++) {
             LocalDate date = start.plusDays(i);
-            if (GenerationSchedule.planFor(date, CANDIDATES).documentDay()) {
-                documentDomains.add(DraftGeneratorCli.documentDomain(date, CANDIDATES, null));
+            if (GenerationSchedule.planFor(date, CANDIDATES, ANCHOR).documentDay()) {
+                documentDomains.add(DraftGeneratorCli.documentDomain(date, CANDIDATES, null, ANCHOR));
             }
         }
 
@@ -215,13 +225,13 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("문서일마다 주기가 정한 분야가 나온다 — 버그 당시엔 NETWORK·SYSTEM_DESIGN만 번갈아 나왔다")
     void documentDomainMatchesTheCycleOnRealDates() {
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 11), CANDIDATES, null))
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 11), CANDIDATES, null, ANCHOR))
                 .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(Domain.OS);
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, null))
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, null, ANCHOR))
                 .as("버그 당시 실제 값: NETWORK").isEqualTo(Domain.DATABASE);
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 19), CANDIDATES, null))
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 19), CANDIDATES, null, ANCHOR))
                 .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(Domain.DS_ALGORITHM);
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 23), CANDIDATES, null))
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 23), CANDIDATES, null, ANCHOR))
                 .as("버그 당시 실제 값: NETWORK").isEqualTo(Domain.SYSTEM_DESIGN);
     }
 
@@ -233,11 +243,11 @@ class DraftGeneratorCliTest {
     @DisplayName("문서일의 분야 = 뒤따르는 사흘 문제의 분야 — 이 짝이 어긋난 것이 버그였다")
     void documentDomainMatchesTheProblemDaysThatFollow() {
         LocalDate documentDay = LocalDate.of(2026, 8, 15);
-        Domain forDocument = DraftGeneratorCli.documentDomain(documentDay, CANDIDATES, null);
+        Domain forDocument = DraftGeneratorCli.documentDomain(documentDay, CANDIDATES, null, ANCHOR);
 
         for (int i = 1; i <= 3; i++) {
             GenerationSchedule.Plan problemDay =
-                    GenerationSchedule.planFor(documentDay.plusDays(i), CANDIDATES);
+                    GenerationSchedule.planFor(documentDay.plusDays(i), CANDIDATES, ANCHOR);
             assertThat(problemDay.domain())
                     .as("%d일차 문제의 분야", i)
                     .isEqualTo(forDocument);
@@ -250,14 +260,14 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("수동으로 분야를 지정하면 주기를 무시한다 — 워크플로에서 직접 고른 값이 가장 세다")
     void manualDomainBeatsTheCycle() {
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "SECURITY"))
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "SECURITY", ANCHOR))
                 .isEqualTo(Domain.SECURITY);
     }
 
     @Test
     @DisplayName("빈 문자열은 지정 안 한 것으로 본다 — 워크플로 입력을 비우면 이렇게 넘어온다")
     void blankDomainFallsBackToTheCycle() {
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "   "))
+        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "   ", ANCHOR))
                 .isEqualTo(Domain.DATABASE);
     }
 
@@ -276,7 +286,7 @@ class DraftGeneratorCliTest {
     @DisplayName("문서를 지목하면 그 날짜를 쓴다 — 주기가 정한 값을 이긴다")
     void pinnedDocumentDateBeatsTheCycle() {
         // 2026-09-20은 주기상 근거 문서가 2026-09-19지만, 지목한 09-08을 따라야 한다
-        GenerationSchedule.Plan plan = GenerationSchedule.planFor(LocalDate.of(2026, 9, 20), CANDIDATES);
+        GenerationSchedule.Plan plan = GenerationSchedule.planFor(LocalDate.of(2026, 9, 20), CANDIDATES, ANCHOR);
 
         assertThat(DraftGeneratorCli.resolveDocumentDate(
                 Map.of(DraftGeneratorCli.DOCUMENT_DATE_OPT, "2026-09-08"), plan))
@@ -286,7 +296,7 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("지목하지 않으면 주기가 정한 문서를 쓴다 — 예약 실행 경로는 그대로다")
     void unpinnedDocumentDateFollowsTheCycle() {
-        GenerationSchedule.Plan plan = GenerationSchedule.planFor(LocalDate.of(2026, 9, 20), CANDIDATES);
+        GenerationSchedule.Plan plan = GenerationSchedule.planFor(LocalDate.of(2026, 9, 20), CANDIDATES, ANCHOR);
 
         assertThat(DraftGeneratorCli.resolveDocumentDate(Map.of(), plan))
                 .isEqualTo(plan.documentDate());
@@ -1300,5 +1310,48 @@ class DraftGeneratorCliTest {
             assertThat(DraftGeneratorCli.findSourceDocument(
                     outDir, DATE, Difficulty.BEGINNER, ProblemType.MATCHING)).isNotNull();
         }
+    }
+
+    /* ══ 설정 배선 — 규칙이 아니라 <그것을 쓰는 쪽>을 본다 ══════ */
+
+    /**
+     * <b>이 저장소가 두 번 데인 자리다.</b> 2026-08-13에는 {@code planFor}에 테스트가 촘촘했는데
+     * 정작 그것을 부르는 쪽이 옛 규칙을 쓰고 있어 커버리지가 25%로 떨어져 있었고, 아무도 몰랐다.
+     * 앵커도 같은 모양의 함정을 갖는다 — {@code application.yml}에 날짜를 적어 두고 코드가 그것을
+     * 안 읽으면, 배치는 <b>오류 없이</b> 옛 위상으로 계속 돈다.
+     *
+     * <p>그래서 실물 설정 파일을 읽어 확인한다: 거기 적힌 앵커가 정말 문서일인가.
+     * 앵커를 잘못 적었거나(예: 문제일 날짜), CLI가 그 키를 안 읽게 되면 여기서 걸린다.
+     */
+    @Test
+    @DisplayName("application.yml에 적힌 앵커는 실제로 문서일이다 — 적어 두고 안 읽으면 조용히 옛 위상으로 돈다")
+    void configuredAnchorIsADocumentDay() throws Exception {
+        Map<String, Object> generation = DraftGeneratorCli.readGenerationConfig();
+        Object raw = generation.get("cycle-anchor");
+
+        assertThat(raw).as("cycle-anchor 키가 사라지면 위상이 조용히 에포크로 돌아간다").isNotNull();
+        // 문자열로 읽혀야 한다 — YAML이 맨날짜를 Date로 바꾸면 CLI의 파싱이 ClassCastException으로 죽는다
+        assertThat(raw).as("따옴표로 감싸 문자열로 둘 것").isInstanceOf(String.class);
+
+        LocalDate anchor = LocalDate.parse((String) raw);
+        assertThat(GenerationSchedule.planFor(anchor, CANDIDATES, anchor).documentDay())
+                .as("앵커 %s", anchor).isTrue();
+    }
+
+    /**
+     * 화면(관리 콘솔 배치 탭)과 배치가 <b>같은 앵커</b>를 봐야 한다. 어긋나면 화면이
+     * "오늘은 문서일"이라고 띄우는데 배치는 고급 문제를 만든다 — 어느 쪽이 맞는지
+     * 알아내려면 두 코드를 다 읽어야 한다.
+     */
+    @Test
+    @DisplayName("AdminBatchService의 기본 앵커가 GenerationSchedule의 기본값과 같다")
+    void adminDefaultAnchorMatchesTheScheduleDefault() throws Exception {
+        String source = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/project/study/study_project/admin/service/AdminBatchService.java"));
+
+        assertThat(source)
+                .as("@Value의 기본값이 DEFAULT_ANCHOR(%s)와 달라지면 설정이 없을 때 화면과 배치가 갈린다",
+                        GenerationSchedule.DEFAULT_ANCHOR)
+                .contains("${llm.generation.cycle-anchor:" + GenerationSchedule.DEFAULT_ANCHOR + "}");
     }
 }

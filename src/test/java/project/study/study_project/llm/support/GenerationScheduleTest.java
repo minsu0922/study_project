@@ -30,6 +30,16 @@ class GenerationScheduleTest {
             Domain.NETWORK, Domain.OS, Domain.DATABASE, Domain.DS_ALGORITHM,
             Domain.SYSTEM_DESIGN, Domain.SECURITY, Domain.LANGUAGE_RUNTIME, Domain.BACKEND_FRAMEWORK);
 
+    /**
+     * 아래 대부분의 테스트가 쓰는 앵커 = 에포크 = <b>앵커가 없던 시절의 위상</b>.
+     *
+     * <p>기존 테스트를 새 위상으로 옮겨 적지 않고 이 값을 넘기게 둔 이유: 그중 몇은 2026-08-13
+     * 스케줄링 버그를 잡을 때 <b>손으로 계산한 실물 날짜표</b>다(DraftGeneratorCliTest 쪽).
+     * 위상을 바꿔 다시 적으면 그 표가 증거이길 그만둔다 — 옛 규칙으로 되돌렸을 때 실패하는지를
+     * 확인하며 만든 값들이다.
+     */
+    private static final LocalDate ANCHOR = GenerationSchedule.DEFAULT_ANCHOR;
+
     @Test
     @DisplayName("24일이면 8분야 × 3난이도 = 24칸을 정확히 한 번씩 모두 돈다")
     void coversEveryCellExactlyOnceIn24Days() {
@@ -94,10 +104,10 @@ class GenerationScheduleTest {
     void cycleRunsDocumentThenThreeDifficulties() {
         LocalDate cycleStart = firstDayOfCycle(LocalDate.of(2026, 8, 12));
 
-        GenerationSchedule.Plan day0 = GenerationSchedule.planFor(cycleStart, DOMAINS);
-        GenerationSchedule.Plan day1 = GenerationSchedule.planFor(cycleStart.plusDays(1), DOMAINS);
-        GenerationSchedule.Plan day2 = GenerationSchedule.planFor(cycleStart.plusDays(2), DOMAINS);
-        GenerationSchedule.Plan day3 = GenerationSchedule.planFor(cycleStart.plusDays(3), DOMAINS);
+        GenerationSchedule.Plan day0 = GenerationSchedule.planFor(cycleStart, DOMAINS, ANCHOR);
+        GenerationSchedule.Plan day1 = GenerationSchedule.planFor(cycleStart.plusDays(1), DOMAINS, ANCHOR);
+        GenerationSchedule.Plan day2 = GenerationSchedule.planFor(cycleStart.plusDays(2), DOMAINS, ANCHOR);
+        GenerationSchedule.Plan day3 = GenerationSchedule.planFor(cycleStart.plusDays(3), DOMAINS, ANCHOR);
 
         assertThat(day0.documentDay()).as("0일차는 문서를 쓰는 날").isTrue();
         assertThat(day0.difficulty()).as("문서에는 난이도 축이 없다").isNull();
@@ -123,7 +133,7 @@ class GenerationScheduleTest {
         LocalDate cycleStart = firstDayOfCycle(LocalDate.of(2026, 8, 12));
 
         for (int i = 0; i < GenerationSchedule.CYCLE_DAYS; i++) {
-            assertThat(GenerationSchedule.planFor(cycleStart.plusDays(i), DOMAINS).documentDate())
+            assertThat(GenerationSchedule.planFor(cycleStart.plusDays(i), DOMAINS, ANCHOR).documentDate())
                     .as("%d일차가 가리키는 문서 날짜", i)
                     .isEqualTo(cycleStart);
         }
@@ -137,7 +147,7 @@ class GenerationScheduleTest {
 
         for (int cycle = 0; cycle < DOMAINS.size(); cycle++) {
             visited.add(GenerationSchedule
-                    .planFor(cycleStart.plusDays((long) cycle * GenerationSchedule.CYCLE_DAYS), DOMAINS)
+                    .planFor(cycleStart.plusDays((long) cycle * GenerationSchedule.CYCLE_DAYS), DOMAINS, ANCHOR)
                     .domain());
         }
 
@@ -150,8 +160,8 @@ class GenerationScheduleTest {
     void planIsDeterministic() {
         LocalDate date = LocalDate.of(2026, 8, 12);
 
-        assertThat(GenerationSchedule.planFor(date, DOMAINS))
-                .isEqualTo(GenerationSchedule.planFor(date, DOMAINS));
+        assertThat(GenerationSchedule.planFor(date, DOMAINS, ANCHOR))
+                .isEqualTo(GenerationSchedule.planFor(date, DOMAINS, ANCHOR));
     }
 
     @Test
@@ -159,7 +169,7 @@ class GenerationScheduleTest {
     void exactlyOneDocumentDayPerCycle() {
         LocalDate start = LocalDate.of(2026, 8, 12);
         long documentDays = java.util.stream.IntStream.range(0, GenerationSchedule.CYCLE_DAYS)
-                .filter(i -> GenerationSchedule.planFor(start.plusDays(i), DOMAINS).documentDay())
+                .filter(i -> GenerationSchedule.planFor(start.plusDays(i), DOMAINS, ANCHOR).documentDay())
                 .count();
 
         assertThat(documentDays).isEqualTo(1);
@@ -170,8 +180,111 @@ class GenerationScheduleTest {
     void planFallsBackToAllDomainsWhenCandidatesEmpty() {
         LocalDate date = LocalDate.of(2026, 8, 12);
 
-        assertThat(GenerationSchedule.planFor(date, null))
-                .isEqualTo(GenerationSchedule.planFor(date, List.of()));
+        assertThat(GenerationSchedule.planFor(date, null, ANCHOR))
+                .isEqualTo(GenerationSchedule.planFor(date, List.of(), ANCHOR));
+    }
+
+    /* ══ 3단계: 주기의 시작을 옮기는 앵커(2026-09-02) ═══════════ */
+
+    /**
+     * <b>앵커의 존재 이유가 이 한 줄이다.</b> 지정한 날이 문서일이 아니면 "내일부터 새 문서로
+     * 시작"이라는 요구 자체가 성립하지 않는다.
+     *
+     * <p>여러 날짜로 도는 이유: 하나만 보면 <b>그 날이 마침 옛 위상에서도 문서일</b>이라 통과하는
+     * 경우를 구분하지 못한다(4일 중 하나는 그렇다). 넷을 연달아 보면 그중 셋은 옛 위상에서
+     * 문서일이 아니므로, 앵커가 정말 작동해야만 넷 다 통과한다.
+     */
+    @Test
+    @DisplayName("앵커로 지정한 날은 언제나 그 주기의 0일차(문서일)다")
+    void anchorDayIsAlwaysADocumentDay() {
+        for (int i = 0; i < 4; i++) {
+            LocalDate anchor = LocalDate.of(2026, 9, 3).plusDays(i);
+
+            GenerationSchedule.Plan plan = GenerationSchedule.planFor(anchor, DOMAINS, anchor);
+
+            assertThat(plan.documentDay()).as("앵커 %s", anchor).isTrue();
+            assertThat(plan.documentDate()).isEqualTo(anchor);
+        }
+    }
+
+    /**
+     * 새 손잡이가 생겼다고 기존 계산이 조용히 달라지면 안 된다. 이미 만들어진 파일들이
+     * 그 위상 위에 놓여 있어서, 위상이 몰래 바뀌면 어떤 파일이 어느 칸의 것인지 알 수 없게 된다.
+     */
+    @Test
+    @DisplayName("앵커를 안 주거나 에포크를 주면 옛 계산과 완전히 같다")
+    void defaultAnchorReproducesTheOldPhase() {
+        for (int i = 0; i < 40; i++) {
+            LocalDate date = LocalDate.of(2026, 8, 1).plusDays(i);
+
+            GenerationSchedule.Plan explicit = GenerationSchedule.planFor(date, DOMAINS, ANCHOR);
+            GenerationSchedule.Plan fromNull = GenerationSchedule.planFor(date, DOMAINS, null);
+
+            assertThat(fromNull).as("null 앵커는 기본값과 같아야 한다").isEqualTo(explicit);
+            // 옛 규칙을 여기서 직접 다시 계산해 대조한다 — 구현을 부르면 같이 틀려도 통과한다
+            assertThat(explicit.documentDay())
+                    .as("%s의 문서일 여부(옛 규칙: epochDay mod 4 == 0)", date)
+                    .isEqualTo(date.toEpochDay() % GenerationSchedule.CYCLE_DAYS == 0);
+        }
+    }
+
+    /**
+     * 주기의 성질(나흘 = 문서+초·중·고, 사흘이 같은 문서를 가리킴)은 <b>앵커와 무관</b>해야 한다.
+     * 앵커는 시작점을 옮길 뿐 규칙을 바꾸지 않는다 — 이게 깨지면 앵커가 규칙을 오염시킨 것이다.
+     */
+    @Test
+    @DisplayName("어떤 앵커를 줘도 주기의 모양은 그대로다")
+    void cycleShapeIsIndependentOfTheAnchor() {
+        for (LocalDate anchor : List.of(
+                LocalDate.of(2026, 9, 3), LocalDate.of(2026, 1, 1),
+                LocalDate.of(2025, 12, 31), GenerationSchedule.DEFAULT_ANCHOR)) {
+
+            List<Difficulty> difficulties = new java.util.ArrayList<>();
+            for (int i = 0; i < GenerationSchedule.CYCLE_DAYS; i++) {
+                GenerationSchedule.Plan plan = GenerationSchedule.planFor(anchor.plusDays(i), DOMAINS, anchor);
+                assertThat(plan.documentDate()).as("앵커 %s의 %d일차가 가리키는 문서", anchor, i)
+                        .isEqualTo(anchor);
+                if (i > 0) {
+                    difficulties.add(plan.difficulty());
+                }
+            }
+            assertThat(difficulties).as("앵커 %s", anchor)
+                    .containsExactly(Difficulty.BEGINNER, Difficulty.INTERMEDIATE, Difficulty.ADVANCED);
+        }
+    }
+
+    /**
+     * 앵커가 생기면서 <b>음수 offset이 실제로 가능해졌다</b> — 과거 날짜로 손수 실행하면 그렇게 된다.
+     * {@code floorMod}가 아니라 {@code %}였다면 인덱스가 음수가 되어 배치가 통째로 죽는다.
+     * 예전에는 "1970년 이전 날짜가 들어올 일은 없다"며 비용 0의 보험으로만 둔 방어였다.
+     */
+    @Test
+    @DisplayName("앵커보다 앞선 날짜도 죽지 않는다 — 위상만 거꾸로 셀 뿐")
+    void datesBeforeTheAnchorStillWork() {
+        LocalDate anchor = LocalDate.of(2026, 9, 3);
+
+        assertThat(GenerationSchedule.planFor(anchor.minusDays(1), DOMAINS, anchor).difficulty())
+                .as("앵커 하루 전 = 직전 주기의 3일차 = 고급").isEqualTo(Difficulty.ADVANCED);
+        assertThat(GenerationSchedule.planFor(anchor.minusDays(4), DOMAINS, anchor).documentDay())
+                .as("앵커 나흘 전 = 직전 주기의 문서일").isTrue();
+        assertThat(GenerationSchedule.planFor(anchor.minusDays(400), DOMAINS, anchor))
+                .as("한참 전 날짜도 예외 없이 계획이 나온다").isNotNull();
+    }
+
+    /**
+     * 앵커 직후 첫 주기는 후보 목록의 <b>첫 분야</b>다. 그냥 부수 효과가 아니라 알아 두어야 할
+     * 성질이다 — 앵커를 옮기면 그날 이후 분야 배열이 통째로 달라지고, 그래서 옛 위상 기준으로
+     * 미리 만들어 둔 문서를 가리키는 날짜가 사라진다.
+     */
+    @Test
+    @DisplayName("앵커에서 분야 순환도 다시 시작한다 — 첫 주기는 후보 목록의 첫 분야")
+    void domainRotationRestartsAtTheAnchor() {
+        LocalDate anchor = LocalDate.of(2026, 9, 3);
+
+        assertThat(GenerationSchedule.planFor(anchor, DOMAINS, anchor).domain())
+                .isEqualTo(DOMAINS.get(0));
+        assertThat(GenerationSchedule.planFor(anchor.plusDays(GenerationSchedule.CYCLE_DAYS), DOMAINS, anchor).domain())
+                .isEqualTo(DOMAINS.get(1));
     }
 
     /** 주어진 날짜가 속한 주기의 0일차. 테스트가 특정 요일에만 통과하는 일을 막는다. */

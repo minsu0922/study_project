@@ -44,6 +44,15 @@ public final class GenerationSchedule {
     /** 한 주기의 길이 — 문서 1일 + 문제 3일(초급·중급·고급). */
     public static final int CYCLE_DAYS = 1 + 3;
 
+    /**
+     * 앵커를 주지 않았을 때의 기준일 = 에포크(1970-01-01).
+     *
+     * <p>이 값을 넘기면 앵커가 없던 시절과 <b>완전히 같은 위상</b>이 나온다. 계산이
+     * {@code epochDay mod 4}였고 에포크의 epochDay가 0이기 때문이다. 옛 동작을 재현해야 하는
+     * 테스트가 기대는 자리이자, 앵커 설정이 비었을 때의 안전한 기본값이다.
+     */
+    public static final LocalDate DEFAULT_ANCHOR = LocalDate.EPOCH;
+
     private GenerationSchedule() {
     }
 
@@ -68,26 +77,44 @@ public final class GenerationSchedule {
     /**
      * 날짜에 대응하는 계획을 계산한다.
      *
-     * <p>계산식:
+     * <p>계산식({@code offset = date - anchor}):
      * <ul>
-     *   <li>{@code dayInCycle = epochDay mod 4} — 0이면 문서일, 1·2·3이면 각각 초·중·고급 문제일
-     *   <li>{@code cycleIndex = epochDay / 4} — 주기 번호. 이걸 분야 수로 나눈 나머지가 이번 주기의 분야
+     *   <li>{@code dayInCycle = offset mod 4} — 0이면 문서일, 1·2·3이면 각각 초·중·고급 문제일
+     *   <li>{@code cycleIndex = offset / 4} — 주기 번호. 이걸 분야 수로 나눈 나머지가 이번 주기의 분야
      *   <li>{@code documentDate = 오늘 - dayInCycle} — 이번 주기가 시작된 날
      * </ul>
      *
+     * <h2>앵커는 왜 생겼나 (2026-09-02)</h2>
+     *
+     * <p>원래 기준점이 <b>에포크로 고정</b>돼 있었다(`epochDay mod 4`). 날짜만 있으면 러너가 DB 없이
+     * 같은 답을 낸다는 목적에는 충분했지만, <b>주기의 시작을 옮길 방법이 없다</b>는 뜻이기도 했다.
+     * 실제로 그것이 막다른 길이 됐다 — 사람이 손으로 채운 날짜 15개가 결과 파일 이름을 선점해
+     * 그 날의 예약 실행이 죽어 있었고(멱등성 검사), 그중 셋은 주기 전체가 막혀 "문서를 만들고도
+     * 문제를 한 건도 못 받는" 상태였다. 위상을 옮기니 그런 주기가 5개에서 0개가 됐다.
+     *
+     * <p><b>기본값을 에포크로 둔 이유</b>: 앵커를 안 주면 예전과 완전히 같은 답이 나온다
+     * ({@link #DEFAULT_ANCHOR}). 새 손잡이가 생겼다고 기존 계산이 조용히 달라지면 안 된다.
+     *
+     * <p><b>부수 효과 — 분야 순환도 앵커에서 다시 시작한다.</b> {@code cycleIndex}가 앵커 기준이라
+     * 앵커 직후 첫 주기는 후보 목록의 <b>첫 분야</b>다. 앵커를 옮기면 그날 이후의 분야 배열이
+     * 통째로 달라진다는 뜻이라, 이미 만들어 둔 문서를 가리키던 날짜도 함께 어긋난다.
+     * 옮길 때는 그 문서들을 손으로 채울 각오를 해야 한다(docs/14).
+     *
      * <p>{@link Math#floorMod}/{@link Math#floorDiv}를 쓰는 이유: 자바의 {@code %}와 {@code /}는
-     * 음수에서 0 방향으로 자른다. 1970년 이전 날짜가 들어올 일은 없지만, 인덱스 계산에서 음수가
-     * 나오면 {@code IndexOutOfBounds}로 배치가 통째로 죽는다(비용 0의 안전장치).
+     * 음수에서 0 방향으로 자른다. <b>앵커가 생기면서 이 방어가 실제로 필요해졌다</b> — 앵커보다
+     * 앞선 날짜(과거 날짜로 손수 실행하는 경우)에서 offset이 음수가 되기 때문이다.
+     * 그대로 두면 인덱스가 음수가 되어 배치가 {@code IndexOutOfBounds}로 통째로 죽는다.
      *
      * @param date    기준 날짜(UTC가 아니라 <b>한국 날짜</b>를 넘길 것 — 워크플로가 KST로 변환해 전달)
      * @param domains 후보 분야. 비어 있으면 전체를 후보로 본다(설정 누락 시 기능 정지 방지)
+     * @param anchor  주기의 0일차로 삼을 날. {@code null}이면 {@link #DEFAULT_ANCHOR}
      */
-    public static Plan planFor(LocalDate date, List<Domain> domains) {
+    public static Plan planFor(LocalDate date, List<Domain> domains, LocalDate anchor) {
         List<Domain> candidates = candidates(domains);
-        long epochDay = date.toEpochDay();
+        long offset = date.toEpochDay() - (anchor == null ? DEFAULT_ANCHOR : anchor).toEpochDay();
 
-        int dayInCycle = (int) Math.floorMod(epochDay, CYCLE_DAYS);
-        long cycleIndex = Math.floorDiv(epochDay, CYCLE_DAYS);
+        int dayInCycle = (int) Math.floorMod(offset, CYCLE_DAYS);
+        long cycleIndex = Math.floorDiv(offset, CYCLE_DAYS);
 
         Domain domain = candidates.get((int) Math.floorMod(cycleIndex, candidates.size()));
         LocalDate documentDate = date.minusDays(dayInCycle);
@@ -110,6 +137,10 @@ public final class GenerationSchedule {
      * 근거 없이 문제를 만들어야 하는데, 그때 "이번 주기의 난이도"를 그대로 쓰면 같은 분야만
      * 계속 나온다(주기가 통째로 헛돌아도 분야는 진행되지 않으므로). 폴백은 옛 규칙으로
      * 돌아가 분야를 매일 바꾸는 편이 낫다 — 최소한 다양성은 확보된다.
+     *
+     * <p><b>여기에는 앵커가 없다</b>(2026-09-02). 앵커가 옮기는 것은 "주기의 시작"인데 이 규칙에는
+     * 주기가 없다 — 하루 한 칸씩 24칸을 도는 평평한 순환이라 위상을 옮겨도 <b>같은 집합을 다른
+     * 순서로</b> 돌 뿐이다. 인자만 하나 늘고 얻는 것이 없다.
      */
     public static Cell cellFor(LocalDate date, List<Domain> domains) {
         List<Domain> candidates = candidates(domains);

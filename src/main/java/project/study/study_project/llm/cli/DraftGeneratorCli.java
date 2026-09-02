@@ -146,6 +146,8 @@ public final class DraftGeneratorCli {
         String model = (String) generation.getOrDefault("model", "claude-opus-5");
         int defaultCount = (int) generation.getOrDefault("batch-count", 5);
         List<Domain> batchDomains = parseDomains((String) generation.get("batch-domains"));
+        // 주기의 0일차로 삼을 날. 값이 없으면 에포크 = 앵커가 없던 시절과 같은 위상이다.
+        LocalDate cycleAnchor = parseAnchor((String) generation.get("cycle-anchor"));
 
         // ── 2. 중단 스위치 ────────────────────────────────────────
         // 값이 없으면 켜진 것으로 본다 — 설정 키가 사라졌다고 배치가 멈추면
@@ -163,7 +165,7 @@ public final class DraftGeneratorCli {
         // ── 3. 오늘 무엇을 만들지 결정 ────────────────────────────
         // 날짜는 한국 기준. 워크플로는 UTC로 도니까 여기서 변환하지 않으면 하루 어긋난다.
         LocalDate date = resolveDate(opts);
-        GenerationSchedule.Plan plan = GenerationSchedule.planFor(date, batchDomains);
+        GenerationSchedule.Plan plan = GenerationSchedule.planFor(date, batchDomains, cycleAnchor);
 
         // 스냅샷이 낡았는지 여기서 한 번 본다 — 생성 성공/실패와 무관하게 알려야 하므로 맨 앞에 둔다.
         //
@@ -178,7 +180,7 @@ public final class DraftGeneratorCli {
         BatchAction action = decideAction(
                 opts.get("type"), (String) generation.get("batch-type"), plan.documentDay());
         if (action == BatchAction.DOCUMENT) {
-            generateDocument(opts, model, batchDomains);
+            generateDocument(opts, model, batchDomains, cycleAnchor);
             return;
         }
         if (action == BatchAction.SKIP) {
@@ -562,7 +564,7 @@ public final class DraftGeneratorCli {
      * </ul>
      */
     private static void generateDocument(Map<String, String> opts, String model,
-                                         List<Domain> batchDomains) throws Exception {
+                                         List<Domain> batchDomains, LocalDate cycleAnchor) throws Exception {
         LocalDate date = resolveDate(opts);
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Path docDir = outDir.resolve(DOCUMENT_SUBDIR);
@@ -584,7 +586,7 @@ public final class DraftGeneratorCli {
         }
 
         // 분야를 지정하지 않으면 그날의 주기 분야를 쓴다(난이도는 문서에 의미가 없어 버린다)
-        Domain domain = documentDomain(date, batchDomains, opts.get("domain"));
+        Domain domain = documentDomain(date, batchDomains, opts.get("domain"), cycleAnchor);
         String topic = resolveTopic(opts);
 
         // 주제 대기열 — 사람이 미리 적어 둔 세부 주제를 위에서부터 꺼내 쓴다(2026-08-19).
@@ -724,13 +726,16 @@ public final class DraftGeneratorCli {
      * @param date            기준 날짜(한국 기준)
      * @param candidates      후보 분야({@code batch-domains})
      * @param requestedDomain 수동 실행의 {@code --domain}. 비어 있으면 주기에 맡긴다
+     * @param cycleAnchor     주기의 0일차({@code llm.generation.cycle-anchor}). 문제 쪽 배선과
+     *                        <b>같은 값</b>이어야 한다 — 어긋나면 문서와 문제의 분야가 갈린다
      */
-    static Domain documentDomain(LocalDate date, List<Domain> candidates, String requestedDomain) {
+    static Domain documentDomain(LocalDate date, List<Domain> candidates, String requestedDomain,
+                                 LocalDate cycleAnchor) {
         if (requestedDomain != null && !requestedDomain.isBlank()) {
             return Domain.valueOf(requestedDomain.trim());
         }
         // ⚠️ 반드시 planFor다. cellFor로 바꾸면 위 계산대로 두 분야만 반복된다.
-        return GenerationSchedule.planFor(date, candidates).domain();
+        return GenerationSchedule.planFor(date, candidates, cycleAnchor).domain();
     }
 
     /**
@@ -1363,6 +1368,30 @@ public final class DraftGeneratorCli {
         }
         return Arrays.stream(csv.split(",")).map(String::trim).filter(s -> !s.isEmpty())
                 .map(Domain::valueOf).toList();
+    }
+
+    /**
+     * {@code cycle-anchor} 설정값 → 날짜. 비어 있으면 {@link GenerationSchedule#DEFAULT_ANCHOR}.
+     *
+     * <p><b>오타는 조용히 넘기지 않는다.</b> 다른 설정(예: {@code batch-type})은 모르는 값이 오면
+     * 기본값으로 돌아가는데, 여기서는 그러면 안 된다 — 앵커가 조용히 에포크로 되돌아가면
+     * <b>주기 전체가 어제와 다른 날에 떨어지고</b>, 그 사실이 며칠 뒤 "왜 오늘 문서가 안 나오지"로만
+     * 드러난다. 배치가 그날 안 도는 편이 위상이 몰래 바뀌는 것보다 낫다.
+     *
+     * <p>{@code yyyy-MM-dd}로 적어야 한다. YAML이 따옴표 없는 날짜를 {@code java.util.Date}로
+     * 바꿔 버리는 경우가 있어 <b>문자열로 받아 직접 파싱한다</b> — 타입이 오락가락하면
+     * {@code ClassCastException}이 나고, 그건 오타보다 원인을 찾기 어렵다.
+     */
+    private static LocalDate parseAnchor(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return GenerationSchedule.DEFAULT_ANCHOR;
+        }
+        try {
+            return LocalDate.parse(raw.trim());
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "llm.generation.cycle-anchor를 날짜로 읽지 못했습니다(yyyy-MM-dd, 따옴표로 감쌀 것): " + raw, e);
+        }
     }
 
     /** {@code --key=value} 형태만 받는다. 빈 값(--domain=)은 "지정 안 함"으로 본다 — 워크플로 입력이 비면 그렇게 온다. */

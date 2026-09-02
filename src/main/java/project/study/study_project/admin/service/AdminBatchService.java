@@ -66,6 +66,12 @@ public class AdminBatchService {
     @Value("${llm.generation.batch-domains:NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
     private List<Domain> batchDomains;
 
+    // 주기의 0일차(2026-09-02 신설). 이 값이 CLI가 읽는 것과 어긋나면 <b>화면이 거짓말을 한다</b> —
+    // "오늘은 문서일"이라고 띄우는데 배치는 고급 문제를 만든다. 기본값을 에포크로 둔 것도 같은
+    // 이유다: 설정이 없으면 양쪽 다 앵커 없던 시절의 위상을 쓴다(GenerationSchedule.DEFAULT_ANCHOR).
+    @Value("${llm.generation.cycle-anchor:1970-01-01}")
+    private LocalDate cycleAnchor;
+
     @Value("${llm.import.dir:generated}")
     private String importDir;
 
@@ -92,7 +98,7 @@ public class AdminBatchService {
      * 맞춘다. 화면이 주기 분야만 보여 주면 실제로 나오는 것과 달라지므로 <b>둘 다</b> 싣는다.
      */
     private AdminBatchStatus.TodayPlan planOf(LocalDate today, Path dir) {
-        GenerationSchedule.Plan plan = GenerationSchedule.planFor(today, batchDomains);
+        GenerationSchedule.Plan plan = GenerationSchedule.planFor(today, batchDomains, cycleAnchor);
         // dayInCycle을 다시 계산하지 않고 <문서 날짜와의 차이>로 얻는다. 주기 길이를 여기서 또
         // 나눠 세면 GenerationSchedule의 계산과 갈라질 수 있고, 그때 화면만 조용히 틀린다.
         int dayInCycle = (int) (today.toEpochDay() - plan.documentDate().toEpochDay());
