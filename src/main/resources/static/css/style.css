@@ -305,6 +305,9 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .btn-outline { background: var(--card); color: var(--primary); border: 1px solid var(--primary); }
 .btn-outline:hover { background: var(--primary-soft); }
 .btn-lg { padding: 14px 30px; font-size: 1.05rem; border-radius: var(--radius-lg); }  /* 시작하기 등 핵심 동작 */
+/* 본론 옆에 딸린 작은 동작(제보 보내기 등). 기본 버튼과 같은 무게로 두면 화면의 주된 행동이
+   무엇인지 흐려진다 — .btn-lg의 반대쪽 눈금이다. */
+.btn-sm { padding: 6px 14px; font-size: .85rem; }
 
 /* ── 알림/결과 박스 ── */
 .alert { border-radius: var(--radius); padding: 11px 14px; margin: 12px 0; font-size: .9rem; }
@@ -861,6 +864,53 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
  *
  * 버튼이지만 위험한 동작이 아니라 <입력을 돕는 것>이라 작고 조용하게 둔다 —
  * 옆의 "거절 확정"과 같은 무게로 보이면 어느 쪽이 실행 버튼인지 헷갈린다. */
+/* ── 문제 오류 제보 (js/report.js, V17) ─────────────────────────────
+ *
+ * [왜 이렇게 조용한가] 이 입구는 채점 결과 상자 안에 산다. 그 상자의 주인공은 정답과
+ * 해설이고 제보는 <가끔 쓰는 곁문>이다. 버튼처럼 칠하면 매 문제마다 "눌러 달라"고
+ * 조르는 꼴이 되어, 정작 해설을 읽어야 할 시선을 가져간다. 그래서 평소에는 밑줄 친
+ * 작은 글씨로 두고, 열었을 때만 형태를 갖춘다.
+ *
+ * [그래도 눌리는 크기는 지킨다] 44px 최소 탭 영역 규칙(2026-08-20 모바일 개편)은
+ * 조용한 것과 다른 문제다 — 글씨는 작아도 위아래 여백으로 손가락 자리를 만든다. */
+.report { margin-top: 12px; }
+.report-open {
+  background: none; border: none; padding: 10px 0;   /* 세로 여백이 탭 영역을 만든다 */
+  color: var(--muted); font-size: .82rem; text-decoration: underline;
+  text-underline-offset: 3px; cursor: pointer;
+}
+@media (hover: hover) {
+  /* 전역 button:hover(진한 남색 채움)가 이 자리에 오면 곁문이 갑자기 주인공이 된다 */
+  .report-open:hover { background: none; color: var(--text-2); }
+}
+.report-form {
+  border-top: 1px dashed var(--border);
+  margin-top: 4px; padding-top: 10px;
+}
+.report-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+/* 여기 칩은 <입력을 돕는 것>이 아니라 입력 그 자체다(라디오 버튼의 다른 모습).
+   그래서 검수 화면의 .reject-chips와 달리 선택 상태(.on)를 갖는다 — 고른 것이
+   눈에 안 보이면 무엇을 보내는지 모른 채 보내기를 누르게 된다. */
+.report-chips .chip {
+  background: var(--card); color: var(--text-2);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 12px; font-size: .82rem; line-height: 1.4; cursor: pointer;
+}
+@media (hover: hover) {
+  .report-chips .chip:hover { background: var(--fill); color: var(--text); }
+}
+/* 선택 표시는 색만으로 하지 않는다 — 테두리까지 함께 바뀐다(난이도 배지에서 세운 규칙과 같은 이유) */
+.report-chips .chip.on {
+  background: var(--primary-soft); color: var(--primary);
+  border-color: var(--primary); font-weight: 600;
+}
+.report-detail { width: 100%; font-size: .85rem; }
+.report-actions { display: flex; gap: 8px; margin-top: 8px; }
+.report-msg { margin-top: 8px; font-size: .82rem; color: var(--text-2); }
+.report-msg.error { color: var(--wrong); }
+/* 보내고 난 자리. 폼을 지우고 이 한 줄만 남는다 — 같은 문제는 한 번만 보낼 수 있다. */
+.report-done { margin-top: 10px; font-size: .85rem; color: var(--correct); }
+
 .reject-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .reject-chips .chip {
   background: #fff; color: var(--muted);

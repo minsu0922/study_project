@@ -43,6 +43,7 @@
 </main>
 
 <script src="/js/api.js"></script>
+<script src="/js/report.js"></script>
 <script>
 /* 오답노트 페이지 — GET /api/me/wrong-answers (로그인 필수).
  * 페이지 진입 시점에 로그인 여부를 확인해 미리 로그인으로 보낸다.
@@ -148,6 +149,10 @@ function init() {
             ${w.documentSlug ? `<div class="meta" style="margin-top:6px">📖 <a href="/document.html?slug=${
               encodeURIComponent(w.documentSlug)}">이 문제의 개념 문서 읽기</a></div>` : ""}
             <div class="meta" style="margin-top:6px">마지막으로 틀린 날: ${formatDate(w.lastSubmittedAt)}</div>
+            <!-- 제보 입구(V17). 플레이어의 채점 결과와 <같은 함수>를 쓴다(js/report.js).
+                 이 화면에 함께 두는 이유: "왜 틀렸지" 하고 다시 읽다가 문제 쪽이 틀렸다는 것을
+                 깨닫는 자리가 대개 여기다. 채점 직후에는 아직 자기 답을 의심하고 있다. -->
+            ${reportBlock(w.problemId)}
           </div>`).join("");
       }
 

@@ -470,6 +470,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         ${opts.reviewMode ? `<div class="explain" style="font-size:.82rem">${
           r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요 👋"
                     : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요 📅"}</div>` : ""}
+        ${reportBlock(p.id)}
       </div>`;
 
     // 3) 제출 버튼 → 다음/결과 버튼으로 교체

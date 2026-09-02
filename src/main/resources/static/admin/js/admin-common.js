@@ -46,9 +46,19 @@
  * 순서는 맨 끝이다. 메뉴가 일의 단계 순(현황 → 검수 → 생성 → 문제 → 문서)인데 배치는
  * 단계가 아니라 <기계 상태>라 그 흐름에 낄 자리가 없다. 매일 보는 것도 아니다.
  */
+/*
+ * 2026-09-02에 "제보"를 검수 옆에 넣었다(V17). 자리를 그렇게 잡은 이유는 하는 일이 같아서다 —
+ * 둘 다 <읽고 판정하는> 화면이고, 다른 것은 판정 대상이 출제 전이냐 후냐뿐이다.
+ * 검수함이 비면 제보함을 보는 흐름이 자연스럽다.
+ *
+ * 검수 배지에 합치는 안은 버렸다. 배지 하나에 두 화면의 대기 건수가 섞이면 "저기 들어가면
+ * 할 일이 있다"가 어느 저기인지 흐려진다(문제·문서 대기를 하나로 합친 것은 <같은 화면>이라
+ * 가능했던 것이다).
+ */
 const ADMIN_PAGES = [
   ["dashboard", "현황", "/admin/index.html"],
   ["llm", "검수", "/admin/llm.html"],
+  ["reports", "제보", "/admin/reports.html"],
   ["generate", "생성", "/admin/generate.html"],
   ["problems", "문제", "/admin/problems.html"],
   ["documents", "문서", "/admin/documents.html"],
@@ -118,11 +128,12 @@ function renderAdminNav(active) {
  * 요청 3회가 붙지만 예전 탭 방식도 진입 시 같은 수를 불렀다.
  */
 async function refreshAdminBadges() {
-  // 셋을 한꺼번에 보낸다 — 순서대로 기다리면 페이지가 뜨는 데 왕복 3번이 그대로 더해진다.
-  const [problems, documents, topics] = await Promise.all([
+  // 넷을 한꺼번에 보낸다 — 순서대로 기다리면 페이지가 뜨는 데 왕복 4번이 그대로 더해진다.
+  const [problems, documents, topics, reports] = await Promise.all([
     countOf("/api/admin/llm-problems/pending-count"),
     countOf("/api/admin/llm-documents/pending-count"),
     countOf("/api/admin/topic-queue/count"),
+    countOf("/api/admin/reports/pending-count"),
   ]);
 
   // 검수 배지는 문제·문서 대기를 합쳐 하나로 보여 준다 — 한 페이지가 둘 다 다루므로
@@ -135,6 +146,10 @@ async function refreshAdminBadges() {
   // 주제 범위는 뜻이 반대다: 0이면 배치가 모델 자동 선택으로 돌아가므로 0일 때 눈에 띄게 띄운다.
   // 주제 범위가 생성 화면 안으로 들어가면서 배지도 그쪽에 붙는다.
   setBadge("generate", topics === 0 ? "범위 없음" : null, topics === 0);
+
+  // 제보는 주황이다(검수의 회색과 다르다). 검수 대기는 매일 쌓이는 <일상>이지만 제보는
+  // "출제된 문제가 틀렸을지 모른다"는 신호라 하나만 있어도 눈에 걸려야 한다.
+  setBadge("reports", reports, reports > 0);
 }
 
 /** 배지 하나 — 값이 null이거나 0이면 숨긴다(0을 붙여 두면 늘 시끄럽다). */

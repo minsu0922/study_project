@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 제보 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header id="nav"></header>
+
+<main class="container admin">
+  <h1>관리자</h1>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <div class="tabs" id="adminNav"></div>
+
+    <!-- 이 화면이 하는 일과 안 하는 일을 맨 위에 적는다. 검수함과 나란히 있어 같은 화면으로
+         읽히기 쉬운데, 여기서 누르는 버튼은 <문제를 고치지 않는다>. 그 오해를 그대로 두면
+         "인정했는데 왜 문제가 그대로지"가 된다. -->
+    <div class="alert info" style="margin-bottom:16px">
+      학습자가 올린 문제 오류 제보입니다. <b>인정</b>하면 그 사유가 다음 문제 생성 프롬프트에
+      되먹여집니다(거절 사유와 같은 통로 · docs/14). <b>문제 자체는 고쳐지지 않습니다</b> —
+      수정은 각 줄의 <b>문제 고치기</b>로 넘어가서 하세요.
+    </div>
+
+    <div class="tabs" id="statusTabs">
+      <button class="tab-btn active" data-status="PENDING">대기</button>
+      <button class="tab-btn" data-status="ACCEPTED">인정</button>
+      <button class="tab-btn" data-status="DISMISSED">기각</button>
+      <button class="tab-btn" data-status="">전체</button>
+    </div>
+
+    <div id="rMessage"></div>
+    <div id="rList"></div>
+
+    <div class="pager" id="rPager" hidden>
+      <button id="rPrev" class="btn-outline">이전</button>
+      <span class="info" id="rPageInfo"></span>
+      <button id="rNext" class="btn-outline">다음</button>
+    </div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script>
+/* 제보함 — V17.
+ *
+ * [왜 검수함과 별도 화면인가]
+ * 하는 일은 닮았지만(읽고 판정한다) 판정의 뜻이 다르다. 검수는 "이걸 출제할까"이고
+ * 여기는 "이미 출제된 것이 틀렸나"다. 후자는 판정 뒤에 <문제를 고치는 일>이 딸려 오는데,
+ * 그 흐름을 검수함에 섞으면 20장을 훑어 넘기는 리듬이 매번 끊긴다.
+ *
+ * [기본 탭이 대기인 이유]
+ * 이 화면을 여는 이유는 하나다 — 배지에 숫자가 떠서. 열자마자 그 숫자에 해당하는 목록이
+ * 나와야 하고, 다 처리하면 빈 화면이 "오늘 할 일 없음"을 말한다(검수함과 같은 판단).
+ */
+let status = "PENDING";
+let page = 0;
+
+if (initAdminPage("reports")) {
+  document.getElementById("statusTabs").addEventListener("click", e => {
+    const btn = e.target.closest("[data-status]");
+    if (!btn) return;
+    document.querySelectorAll("#statusTabs .tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    status = btn.dataset.status;
+    page = 0;
+    load();
+  });
+  document.getElementById("rPrev").addEventListener("click", () => { page--; load(); });
+  document.getElementById("rNext").addEventListener("click", () => { page++; load(); });
+  load();
+}
+
+async function load() {
+  const msg = document.getElementById("rMessage");
+  msg.innerHTML = "";
+  try {
+    const params = new URLSearchParams({ page });
+    if (status) params.set("status", status);
+    const data = await api("/api/admin/reports?" + params);
+    render(data);
+  } catch (e) {
+    showError(msg, e);
+  }
+}
+
+function render(data) {
+  const list = document.getElementById("rList");
+  if (data.content.length === 0) {
+    list.innerHTML = `<div class="card">${status === "PENDING"
+      ? "대기 중인 제보가 없습니다. 👍"
+      : "해당하는 제보가 없습니다."}</div>`;
+  } else {
+    list.innerHTML = data.content.map(card).join("");
+  }
+
+  const pager = document.getElementById("rPager");
+  pager.hidden = data.totalPages <= 1;
+  document.getElementById("rPageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
+  document.getElementById("rPrev").disabled = data.page === 0;
+  document.getElementById("rNext").disabled = !data.hasNext;
+}
+
+/**
+ * 제보 한 장.
+ *
+ * <p>지문을 <b>전문</b>으로 싣는다. "이 지적이 맞나"를 여기서 판단해야 하는데 앞부분만
+ * 잘라 두면 매번 문제 화면으로 건너가게 된다 — 판단에 필요한 것은 아끼지 않는다.
+ *
+ * <p>제보자는 보여 주지 않는다(서버가 아예 안 내려준다). 누가 냈는지가 보이면 판단이
+ * 내용이 아니라 사람에 끌린다.
+ */
+function card(r) {
+  const done = r.status !== "PENDING";
+  // 처리된 카드의 모양은 검수함과 같은 클래스를 쓴다(.draft-done — 흐림 + 왼쪽 띠).
+  // 이름에 draft가 들어 있지만 뜻은 "이 카드는 처리가 끝났다"이고, 두 화면에서 같은
+  // 상태가 같은 모양으로 보여야 한다. 이름만 맞추려고 같은 규칙을 하나 더 만들지 않는다.
+  return `
+    <div class="card ${done ? "draft-done" : ""}" id="report-${r.id}">
+      <div style="margin-bottom:6px">
+        <span class="badge ${statusClass(r.status)}">${statusLabel(r.status)}</span>
+        <span class="badge">${escapeHtml(r.reasonLabel)}</span>
+        <span class="meta">${formatDate(r.createdAt)}</span>
+      </div>
+
+      <h3>${escapeHtml(r.problemTitle || "(제목 없음)")}</h3>
+      <div class="meta" style="white-space:pre-wrap;margin-bottom:8px">${escapeHtml(r.question)}</div>
+
+      ${r.detail ? `<div class="alert info" style="margin:8px 0">
+        제보자 한마디: ${escapeHtml(r.detail)}</div>` : ""}
+      ${r.adminNote ? `<div class="meta">처리 메모: ${escapeHtml(r.adminNote)}</div>` : ""}
+
+      ${done ? "" : `<input id="note-${r.id}" type="text" maxlength="500"
+             placeholder="처리 메모 (선택) — 특히 기각할 때 '왜 아니라고 봤나'를 남겨 두세요"
+             style="margin-top:10px">`}
+
+      <div class="row-actions" style="margin-top:10px">
+        <!-- 문제 고치기를 <판정 버튼 옆에> 둔다. 인정한 뒤 무엇을 해야 하는지가
+             그 자리에 보이지 않으면, 인정만 눌러 두고 문제는 그대로 남는다. -->
+        <button class="btn-outline" onclick="goProblemEdit(${r.problemId})">문제 고치기 ↗</button>
+        ${done ? "" : `
+          <button onclick="resolve(${r.id}, 'accept', this)">인정</button>
+          <button class="btn-outline" onclick="resolve(${r.id}, 'dismiss', this)">기각</button>`}
+      </div>
+    </div>`;
+}
+
+function statusLabel(s) {
+  return s === "PENDING" ? "대기" : s === "ACCEPTED" ? "인정" : "기각";
+}
+function statusClass(s) {
+  return s === "PENDING" ? "orange" : s === "ACCEPTED" ? "green" : "gray";
+}
+
+/**
+ * 인정·기각.
+ *
+ * <p><b>목록을 다시 그리지 않는다.</b> 처리한 카드만 그 자리에서 바꾼다(검수함의
+ * markCardDone과 같은 방식) — 여러 건을 훑으며 처리하는 화면에서 매번 다시 그리면
+ * 읽던 자리를 잃는다.
+ *
+ * <p>배지는 갱신한다. 대기 수가 줄어든 것이 메뉴에 바로 보여야 "얼마나 남았나"를
+ * 화면을 옮기지 않고 알 수 있다.
+ */
+async function resolve(id, action, btn) {
+  const note = document.getElementById("note-" + id)?.value ?? "";
+  btn.disabled = true;
+  try {
+    const updated = await api(`/api/admin/reports/${id}/${action}`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+    document.getElementById("report-" + id).outerHTML = card(updated);
+    refreshAdminBadges();
+  } catch (e) {
+    btn.disabled = false;
+    showError(document.getElementById("rMessage"), e);
+  }
+}
+</script>
+</body>
+</html>
