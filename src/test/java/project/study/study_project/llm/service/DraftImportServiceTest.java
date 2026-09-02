@@ -71,9 +71,11 @@ class DraftImportServiceTest {
         // documentRepository는 null이다 — 이 테스트가 검증하는 파일 흡수 경로는 등록 문서를
         // 조회하지 않는다(그 입구는 관리 화면 전용). 가짜를 하나 더 만들면 "이 경로도 문서를
         // 읽는다"는 오해만 남는다.
+        // reportService도 null이다 — documentRepository와 같은 이유다. 파일 흡수는 되먹임 목록을
+        // 읽지 않는다(그것을 읽는 것은 생성 경로다). 서비스가 null을 견디게 만들어 둔 자리다.
         LlmProblemService llmProblemService = new LlmProblemService(
                 problemGenerator, draftRepository, problemRepository, adminProblemService,
-                null, objectMapper, event -> { }, "claude-opus-5", List.of(Domain.NETWORK));
+                null, null, objectMapper, event -> { }, "claude-opus-5", List.of(Domain.NETWORK));
         service = new DraftImportService(llmProblemService, importedFileRepository, objectMapper);
 
         // saveAll은 받은 목록을 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내

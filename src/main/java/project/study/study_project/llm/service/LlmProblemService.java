@@ -34,11 +34,13 @@ import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.TypeMaterialRule;
 import project.study.study_project.quiz.repository.ProblemRepository;
+import project.study.study_project.report.service.ProblemReportService;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * LLM 문제 생성·검수 서비스 — 문서 13, ADR-0006.
@@ -66,6 +68,19 @@ public class LlmProblemService {
      */
     private static final int REJECTION_NOTE_SIZE = 20;
 
+    /**
+     * 학습자 제보에서 온 사례임을 프롬프트에서 구분하는 표시(V17).
+     *
+     * <p>제보를 <b>거절 사례와 같은 통로</b>로 흘려보내면서 접두사만 붙였다. 파일을 새로 만들지
+     * 않은 이유: 그러면 {@code DraftGeneratorCli}가 파일을 하나 더 읽고
+     * {@code ClaudeProblemGenerator}가 블록을 하나 더 조립해야 하는데, 그렇게 얻는 것은
+     * "어디서 온 지적인가"의 구분뿐이고 그 구분은 문장 앞의 여섯 글자로도 된다.
+     *
+     * <p>구분 자체는 필요하다. 거절은 <b>검수에서 걸린</b> 것이고 제보는 <b>검수를 통과하고도
+     * 틀린</b> 것이라, 모델에게 후자는 더 무거운 신호다.
+     */
+    private static final String REPORT_NOTE_PREFIX = "[출제 후 제보] ";
+
     private final ProblemGenerator problemGenerator;
     private final GeneratedProblemDraftRepository draftRepository;
     private final ProblemRepository problemRepository;
@@ -76,6 +91,12 @@ public class LlmProblemService {
      * 여기서 필요한 것은 프롬프트에 실을 <b>제목과 본문</b>뿐이다.
      */
     private final DocumentRepository documentRepository;
+    /**
+     * 학습자 제보를 되먹임에 합류시키는 통로(V17). {@code null}을 허용한다 —
+     * 이 클래스를 직접 생성하는 테스트가 제보와 무관한 경로를 볼 때 가짜를 하나 더 만들지
+     * 않아도 되게 한 것이다(documentRepository를 null로 넘기는 것과 같은 판단).
+     */
+    private final ProblemReportService reportService;
     private final ObjectMapper objectMapper;
 
     /** 검수가 끝났음을 알린다 — 스냅샷 내보내기가 커밋 뒤에 듣는다({@link ReviewCompleted}). */
@@ -89,6 +110,7 @@ public class LlmProblemService {
                              ProblemRepository problemRepository,
                              AdminProblemService adminProblemService,
                              DocumentRepository documentRepository,
+                             ProblemReportService reportService,
                              ObjectMapper objectMapper,
                              ApplicationEventPublisher events,
                              @org.springframework.beans.factory.annotation.Value("${llm.generation.model:claude-opus-5}") String model,
@@ -102,6 +124,7 @@ public class LlmProblemService {
         this.problemRepository = problemRepository;
         this.adminProblemService = adminProblemService;
         this.documentRepository = documentRepository;
+        this.reportService = reportService;
         this.objectMapper = objectMapper;
         this.events = events;
         this.model = model;
@@ -341,9 +364,22 @@ public class LlmProblemService {
      * 애너테이션이 <b>조용히 무시된다</b> — 효과 없는 애너테이션은 붙이지 않는 편이 정직하다.
      */
     public List<RejectionNote> findRecentRejectionNotes() {
-        return draftRepository.findRecentRejectionNotes(PageRequest.of(0, REJECTION_NOTE_SIZE)).stream()
+        List<RejectionNote> rejected = draftRepository.findRecentRejectionNotes(PageRequest.of(0, REJECTION_NOTE_SIZE)).stream()
                 .map(v -> new RejectionNote(v.getQuestion(), v.getReason()))
                 .toList();
+
+        // 학습자 제보(V17)를 같은 목록에 합친다. 되먹임 통로를 하나로 유지하면 수동 생성·배치
+        // 스냅샷·프롬프트 조립 세 경로가 자동으로 따라온다 — 새 통로를 파면 세 곳을 다 고쳐야 한다.
+        if (reportService == null) {
+            return rejected;   // 이 클래스를 직접 만든 테스트(필드 주석 참고)
+        }
+        List<RejectionNote> reported = reportService.findAcceptedFeedback().stream()
+                .map(n -> new RejectionNote(n.question(), REPORT_NOTE_PREFIX + n.reason()))
+                .toList();
+
+        // 제보를 <앞에> 둔다. 프롬프트가 길어져 뒤가 잘리는 날, 남아야 하는 것은 검수를 통과하고도
+        // 틀린 사례다 — 거절 사례는 이미 검수가 한 번 걸러 낸 종류의 실수다.
+        return Stream.concat(reported.stream(), rejected.stream()).toList();
     }
 
     /** 중복 회피 목록 — 정식 문제(최신 50) + 아직 검수 안 된 같은 도메인 초안. */

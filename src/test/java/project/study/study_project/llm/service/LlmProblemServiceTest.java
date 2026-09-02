@@ -117,8 +117,10 @@ class LlmProblemServiceTest {
     /** 후보 도메인만 바꿔 서비스를 다시 만드는 헬퍼 — batch-domains 동작 검증용. */
     private LlmProblemService newService(List<Domain> batchDomains) {
         // ObjectMapper는 실물 사용 — JSON 직렬화가 이 서비스의 실제 책임이라 가짜로 대체하면 검증이 빈다
+        // reportService는 null — 이 테스트가 보는 것은 거절 사례 쪽 되먹임이다. 제보가 섞이는
+        // 경로는 ProblemReportFeedbackTest가 진짜 DB로 따로 본다(합류 지점이 여기라는 것까지).
         return new LlmProblemService(fakeGenerator, draftRepository, problemRepository,
-                adminProblemService, documentRepository, new ObjectMapper(), event -> { },
+                adminProblemService, documentRepository, null, new ObjectMapper(), event -> { },
                 "test-model", batchDomains);
     }
 

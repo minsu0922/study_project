@@ -53,7 +53,14 @@ public enum ErrorCode {
     // 대한 것이고, 이쪽은 생성 <전에> 사람이 정해 두는 입력이라 실패의 성격이 다르다.
     TOPIC_001("TOPIC_001", HttpStatus.NOT_FOUND, "주제 대기열 항목을 찾을 수 없습니다."),
     // 409인 이유는 DOC_002와 같다 — 요청 자체는 멀쩡하고 지금 상태와 부딪힐 뿐이다.
-    TOPIC_002("TOPIC_002", HttpStatus.CONFLICT, "같은 분야에 같은 주제 범위가 이미 있습니다.");
+    TOPIC_002("TOPIC_002", HttpStatus.CONFLICT, "같은 분야에 같은 주제 범위가 이미 있습니다."),
+
+    // 문제 오류 제보(V17). 404가 아니라 409가 둘인 이유는 이 기능의 실패가 대부분
+    // "없는 것을 만졌다"가 아니라 "이미 그렇게 돼 있다"이기 때문 — 화면은 이 둘을
+    // 오류가 아니라 안내로 보여 준다(제보자에게는 실패가 아니라 확인이다).
+    REPORT_001("REPORT_001", HttpStatus.CONFLICT, "이미 제보한 문제입니다."),
+    REPORT_002("REPORT_002", HttpStatus.NOT_FOUND, "제보를 찾을 수 없습니다."),
+    REPORT_003("REPORT_003", HttpStatus.CONFLICT, "이미 처리된 제보입니다.");
 
     private final String code;
     private final HttpStatus httpStatus;
