@@ -60,21 +60,28 @@
 계산은 **날짜만으로** 끝난다(`GenerationSchedule.planFor`).
 
 ```
-dayInCycle   = 에포크일 mod 4        → 0이면 문서일, 1·2·3이면 초·중·고급
-cycleIndex   = 에포크일 / 4          → 주기 번호
+offset       = 오늘 - 앵커           ← 앵커 = llm.generation.cycle-anchor
+dayInCycle   = offset mod 4         → 0이면 문서일, 1·2·3이면 초·중·고급
+cycleIndex   = offset / 4           → 주기 번호
 분야          = 후보도메인[cycleIndex mod 8]
 근거 문서 날짜 = 오늘 - dayInCycle    → generated/documents/{그날짜}.json
 ```
 
 후보 도메인이 8개이므로 **한 바퀴에 32일**(8분야 × 4일)이 걸린다.
 
+**앵커**(2026-09-02 신설)는 주기의 0일차로 삼을 날이다. 없으면 에포크(1970-01-01)라
+`epochDay mod 4`였던 옛 계산과 같다. 지금 설정은 `2026-09-03` — 왜 옮겼는지는
+[14 §주기의 시작을 옮기는 앵커](14-llm-batch-automation.md).
+
 ### 직접 세어 보려면
 
 ```powershell
-# 오늘이 주기 며칠차인지
-[int]((Get-Date).Date - (Get-Date "1970-01-01")).TotalDays % 4
+# 오늘이 주기 며칠차인지 (앵커를 빼는 것을 잊지 말 것 — 안 빼면 옛 위상이 나온다)
+[int]((Get-Date).Date - (Get-Date "2026-09-03")).TotalDays % 4
 # 0=문서일 · 1=초급 · 2=중급 · 3=고급
 ```
+
+> 음수가 나오면(앵커 이전 날짜) 4를 더해 읽는다. 코드는 `floorMod`라 알아서 처리한다.
 
 실제 확인된 예 — 2026-08-13은 `2일차`라서 **중급 문제**가 나왔고, 근거 문서는
 `8/13 - 2 = 8/11`의 캐시 전략 문서였다. 생성된 파일의 머리말이 이를 그대로 보여 준다.
