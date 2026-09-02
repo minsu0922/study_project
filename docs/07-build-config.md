@@ -34,12 +34,15 @@
 | QueryDSL | 5.x | 동적 쿼리·fetch join (로드맵 1) → [08](08-performance-experiments.md). |
 | Anthropic Java SDK | — | Claude 호출. 구조화 출력(스키마 강제) 사용 → [13](13-llm-problem-generation.md). |
 | snakeyaml | (Boot BOM) | **Spring 없이** `application.yml`을 읽는 데 쓴다(배치 CLI). |
+| Actuator | (Boot BOM) | 상태 점검 창구. `health`·`info`만 열고 상세는 ADMIN만 (2026-09-02) → 아래 `management` 절. |
 
 ### build.gradle 핵심 규칙
 
 - **버전을 직접 적어야 하는 것**은 `jjwt`(0.12.6)와 `springdoc`(2.7.0)뿐. 나머지는 Boot BOM(`io.spring.dependency-management`)이 알아서 맞춘다 → 버전 충돌 방지.
 - jjwt는 3개로 나눠 넣는다: `jjwt-api`(컴파일), `jjwt-impl`·`jjwt-jackson`(런타임). API만 코드에서 쓰고 구현체는 실행 시점에만 필요해서 이렇게 나눈다.
-- QueryDSL / Redis / Actuator / Testcontainers는 **주석으로 넣어 두고 해당 로드맵에서 해제**한다. 아직 안 쓰는 의존성을 미리 넣으면 빌드만 무거워지므로.
+- QueryDSL / Redis / Actuator / Testcontainers는 **주석으로 넣어 두고 쓰게 될 때 해제**한다. 아직 안 쓰는 의존성을 미리 넣으면 빌드만 무거워지므로.
+  - 해제된 것: QueryDSL(로드맵 1) · Redis(로드맵 2) · **Actuator(2026-09-02)**.
+  - **Testcontainers는 해제하지 않았고, 앞으로도 계획이 없다.** 이 항목은 "아직 안 켠 것"이 아니라 **검토 후 안 쓰기로 한 것**이다 — 로컬은 docker-compose, CI는 서비스 컨테이너로 진짜 MySQL·Redis를 띄워 목적을 이미 달성한다. 주석을 남겨 둔 이유는 그 검토가 있었다는 흔적이라, 지우면 "몰라서 안 썼다"와 구분되지 않는다.
 
 ---
 
@@ -72,6 +75,9 @@ DB 접속·JPA·Flyway·JWT·로깅을 담는다. 값마다 "왜 이 값인지"�
 | `llm.generation.batch-type` | `auto` | `auto`\|`problem`\|`document` — 한쪽만 돌리기. |
 | `llm.generation.batch-count` / `batch-domains` | `5` / 8개 | 회당 문제 수, 순환 후보 분야. |
 | `llm.import.enabled` / `dir` | `true` / `generated` | 기동 시 생성 파일 들여오기. **`dir`는 GitHub Actions가 커밋하는 위치와 반드시 같아야 한다.** |
+| `management.endpoints.web.exposure.include` | `health,info` | **적은 것만 열린다.** 기본 묶음에는 `env`(환경변수 전체)·`beans`처럼 설정과 비밀이 그대로 비치는 자리가 있어, 노출 목록을 유일한 관문으로 둔다. |
+| `management.endpoint.health.show-details` / `roles` | `when-authorized` / `ADMIN` | 비로그인에게는 `{"status":"UP"}` 한 줄만. 어느 부품이 죽었는지는 정보이자 공격 단서다(DB가 내려간 순간을 밖에서 알 수 있다). |
+| `management.endpoint.health.group.essential` | `db,ping` | **fail-open과의 충돌을 푸는 자리.** 기본 집계는 Redis가 죽으면 전체를 DOWN으로 내리는데, 이 앱은 Redis 없이도 일부러 서비스한다. 그 값을 도커 HEALTHCHECK에 물리면 멀쩡한 앱이 재시작 대상이 된다 → "죽으면 진짜 못 파는 것"만 담은 그룹을 기계가 본다(Dockerfile). Redis 상태는 기본 `/actuator/health`에 그대로 남는다 — 감춘 것이 아니라 판정에서 뺐다. |
 | `logging.level.org.hibernate.SQL` | debug | 실행 SQL 로그. |
 | `logging.level.org.hibernate.orm.jdbc.bind` | trace | 바인딩 파라미터 값까지 출력(개발용). 운영에서는 낮춘다(민감정보 로그 방지). |
 

@@ -16,8 +16,8 @@ ADR(Architecture Decision Record)로 남겼고, 핵심 주장(인덱스 효과 �
 - **기간**: 2026-06 ~ 2026-08 (MVP → 로드맵 1~7 전부 완료 + AI 생성 파이프라인 3단계)
 - **형태**: 1인 개발, 백엔드 중심(Spring Boot) + 정적 HTML/JS 프론트엔드
 - **기술 스택**: Java 21 · Spring Boot 3.4.1 · MySQL 8(InnoDB) · Spring Data JPA + QueryDSL ·
-  Spring Security(JWT) · Redis 7 · Flyway · Docker Compose · JUnit5 + Testcontainers ·
-  GitHub Actions(CI/CD) · Claude API(LLM 문제 생성)
+  Spring Security(JWT) · Redis 7 · Flyway · Docker Compose · JUnit5 ·
+  GitHub Actions(CI/CD) · Claude API(LLM 문제 생성) · Actuator
 
 ---
 
@@ -192,7 +192,13 @@ ADR(Architecture Decision Record)로 남겼고, 핵심 주장(인덱스 효과 �
 
 ## 14. 테스트
 
-- JUnit5 + Testcontainers로 JWT 발급, 인증 서비스, HTTP 인증 흐름 등 통합 테스트 작성.
+- JUnit5로 JWT 발급, 인증 서비스, HTTP 인증 흐름 등 통합 테스트 작성.
+- **Testcontainers는 검토했지만 쓰지 않는다.** 의존성을 적어 뒀다가 최종적으로 주석으로
+  남겼고(`build.gradle`), 대신 로컬은 docker-compose, CI는 GitHub Actions 서비스 컨테이너로
+  **진짜 MySQL 8과 Redis 7**을 띄우고 거기에 붙는다. "테스트가 실제 DB를 쓴다"는 목적은
+  같고, 컨테이너 수명 관리를 라이브러리가 아니라 인프라 쪽에 맡긴 형태다.
+  (2026-09-02 정정 — 이 문서가 스택에 Testcontainers를 적어 두고 있었다. 면접 대본은
+  `INTERVIEW_SCRIPT.md` §0에서 이미 "안 씀"으로 정리해 뒀는데 요약본만 어긋나 있었다.)
 - 테스트가 실제 버그를 잡은 사례: LLM 초안 승인 API의 "이미 처리됨" 검사 순서 결함,
   RefreshTokenStore의 Redis 장애 미처리.
 

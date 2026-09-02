@@ -37,11 +37,12 @@
 | 생성·들여오기·검수가 **같은 규칙**을 씀 | ✅ 사실 | 세 지점 모두 `ProblemItemRule.defectOf` |
 | **Redis 캐싱(스탬피드 방지 등)** | ⚠️ **refresh 토큰·요청 제한에는 씀. 조회 캐시는 제한적** | `CacheConfig` 확인 후 말할 것 |
 | **AI가 만든 문제가 바로 서비스에 나간다** | ❌ **아니다 — 반드시 사람 승인** | 이게 설계의 핵심이니 정확히 말할 것 |
-| **Testcontainers** | ❌ **안 씀 (의존성 전부 주석)** | `build.gradle:84-87` |
+| **Testcontainers** | ❌ **안 씀 (의존성 전부 주석)** | `build.gradle:92-95` |
 | **H2 인메모리 DB** | ❌ 안 씀 (의존성 자체가 없음) | `build.gradle` |
 | **실서버 배포(CD)** | ❌ 안 함 (GHCR 이미지 저장까지) | `ci-cd.yml:11` |
 | **리포지토리 슬라이스 테스트(@DataJpaTest)** | ❌ 없음 | 테스트 10개 클래스 전수 확인 |
-| **APM·모니터링(Actuator 등)** | ❌ 안 씀 (주석 처리) | `build.gradle:77` |
+| **상태 점검(Actuator)** | ⚠️ **health·info만 켬 (2026-09-02)** | `build.gradle:85`, `application.yml`의 `management` 절 |
+| **APM·지표 수집(Prometheus 등)** | ❌ 안 씀 | 레지스트리 의존성 없음 |
 
 **Testcontainers 정정 대본** (누가 "Testcontainers 쓰셨죠?"라고 물으면):
 > "아니요, 도입을 검토하고 의존성까지 적어뒀다가 최종적으로는 안 썼습니다.
