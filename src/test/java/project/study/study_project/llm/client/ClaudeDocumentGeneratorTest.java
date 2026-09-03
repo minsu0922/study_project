@@ -169,7 +169,7 @@ class ClaudeDocumentGeneratorTest {
                 .as("용어를 정의 없이 지나가면 초급 재료가 통째로 비는 셈이 된다")
                 .contains("[용어 다루기]")
                 .as("어려운 절을 덜어낸 만큼을 쉽게 푸는 데 쓰라고 상한을 올렸다")
-                .contains("9,000~13,000자")
+                .contains("11,000~14,000자")
                 .as("면접 질문 절은 심화편이 쓴다 — 두 편에 다 있으면 재료 판정이 갈리지 않는다")
                 .doesNotContain("## 면접에서 이렇게 물어본다\n");
     }
@@ -194,7 +194,7 @@ class ClaudeDocumentGeneratorTest {
     void makesRoomForTerminology() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("읽고 나서 되짚는 복습표 — 2026-09-03에 '새 용어를 미리 올리는 자리'에서 뒤집혔다")
-                .contains("### 용어 한눈에")
+                .contains("## 용어 한눈에")
                 .contains("| 용어 | 한 줄 뜻 | 언제 쓰나 |")
                 .contains("<이 글에서 이미 정의한 용어만> 올린다")
                 .as("이름을 풀어 쓴 것으로 정의를 대신하면 뜻이 전달되지 않는다")
@@ -227,9 +227,10 @@ class ClaudeDocumentGeneratorTest {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("숫자가 박힌 지시만 지켜진다 — 상한도 숫자여야 한다")
                 .contains("[새 용어 예산]")
-                .contains("처음 정의하는 전문 용어는 <14개까지>다")
+                .contains("처음 정의하는 전문 용어는 <16개까지>다")
                 .as("예산이 '안 풀고 써도 된다'는 허가로 읽히면 정반대 결과가 된다")
-                .contains("정의하지 않고 쓰는 용어는 0개다")
+                .contains("정의 없이 지나가는 용어는 0개다")
+                .contains("허가가 아니다")
                 .as("영어 약자를 원어로만 풀면 초보자에게는 푼 것이 아니다(TLB 사고)")
                 .contains("<무엇의 약자인지 + 한국어 뜻>");
     }
@@ -301,7 +302,7 @@ class ClaudeDocumentGeneratorTest {
     void allowsSecondAnalogyForInvisibleMechanics() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("무제한으로 풀면 부연이 된다 — 숫자를 박은 지시만 지켜진다")
-                .contains("문서 전체에서 비유는 4개까지다")
+                .contains("본문 문장에 쓰는 비유는 4개까지다")
                 .as("한 낱말에 기댄 설명이 이번 사고의 다른 얼굴이다")
                 .contains("그 절의 설명을 한 낱말에만 기대지 마라");
     }
@@ -567,13 +568,13 @@ class ClaudeDocumentGeneratorTest {
 
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("좁은 주제가 아니라 그 주제가 딛고 선 상위 개념을 다루는 자리다")
-                .contains("주제가 딛고 선 <상위 개념> 하나를 골라 그것부터 설명한다")
+                .contains("주제와 먼 배경 지식에서 출발해, 주제 직전까지 순서대로 설명한다")
                 .as("두 절이 겹치면 같은 말을 두 번 쓰게 된다")
                 .contains("이 문서의 <좁은 주제>를 여기서 정의하지 마라")
                 .as("일곱 층 중 서너 개만 적힌 표가 오는 것을 막는다 — 초급 재료가 그만큼 준다")
                 .contains("일곱 개면 일곱 줄이다")
                 .as("숫자를 박은 지시만 지켜진다는 것이 이 프롬프트에서 세 번 확인된 사실이다")
-                .contains("2,500~3,500자를 쓴다");
+                .contains("3,000~4,000자를 쓴다");
     }
 
     /**

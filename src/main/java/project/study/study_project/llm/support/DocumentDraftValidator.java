@@ -70,8 +70,13 @@ public final class DocumentDraftValidator {
      * 쓰라고 지시했으므로 상한을 낮추면 안 된다. 낮추면 모델이 "덜어 냈으니 짧게"로 읽는다.
      * {@code ## 바탕이 되는 개념}이 1,500~2,500에서 2,500~3,500으로, 코드 예제가 2~4에서
      * 3~5개로 늘어난 것이 그 1,000자의 갈 곳이다.
+     *
+     * <p><b>같은 날 후속으로 14,000이 됐다.</b> 사용자가 프롬프트를 다듬으면서
+     * {@code ## 바탕이 되는 개념}을 다시 3,000~4,000자로 올리고("문서 전체의 30% 가까이를
+     * 여기에 쓰는 것은 의도한 배분이다"), 본론에도 깎지 못하는 최소선 셋을 못 박았다.
+     * 그 몫만큼만 올린 것이라 늘어난 1,000자에는 이미 갈 곳이 정해져 있다.
      */
-    public static final int WARN_LENGTH = 13_000;
+    public static final int WARN_LENGTH = 14_000;
 
     /**
      * 심화편의 권장 분량 상한 — 프롬프트가 요구하는 "7,000~11,000자"의 위쪽 끝(2026-09-03).
@@ -94,9 +99,9 @@ public final class DocumentDraftValidator {
      * 프롬프트를 의심하기까지 시간이 걸린다.
      *
      * <p>2026-08-23에 권장치를 12,000으로 올리면서 같은 1.3배를 유지해 15,600으로 옮겼고,
-     * 2026-09-03에 13,000으로 올리면서 16,900이 됐다.
+     * 2026-09-03에 13,000 → 14,000으로 두 번 오르면서 18,200이 됐다.
      */
-    static final int MAX_LENGTH = 16_900;
+    static final int MAX_LENGTH = 18_200;
 
     /** 심화편의 하드 상한 — {@link #ADVANCED_WARN_LENGTH}의 같은 1.3배. */
     static final int ADVANCED_MAX_LENGTH = 14_300;
@@ -175,8 +180,15 @@ public final class DocumentDraftValidator {
     private static final Pattern FAILURE_MODE_ITEM =
             Pattern.compile("(?m)^(\\*\\*|###\\s+|-\\s+|\\d+\\.\\s+)");
 
-    /** 본론 끝의 용어 표 소제목 — 프롬프트가 못 박은 형태. */
-    private static final Pattern GLOSSARY_HEADING = Pattern.compile("(?m)^###\\s+용어 한눈에");
+    /**
+     * 용어 표 제목. <b>{@code ##}와 {@code ###}를 모두 인정한다</b> — 두 편이 다른 자리에 둔다.
+     *
+     * <p>입문편은 2026-09-03 후속 개정에서 최상위 절({@code ## 용어 한눈에})로 올라가
+     * 필수 절 목록에 들어갔다. 심화편은 여전히 본론 끝의 {@code ### } 소제목이다.
+     * 표가 있는지 세는 이 패턴은 <b>심화편에만</b> 쓴다 — 입문편에서 같이 돌리면
+     * 절이 빠졌을 때 차단(필수 절)과 경고(표 없음)가 <b>한 결함에 두 번</b> 뜬다.
+     */
+    private static final Pattern GLOSSARY_HEADING = Pattern.compile("(?m)^#{2,3}\\s+용어 한눈에");
 
     /**
      * 정의가 있어야 하는 용어 후보 — <b>넓게 잡지 않는다.</b>
@@ -266,12 +278,18 @@ public final class DocumentDraftValidator {
     /**
      * {@code ## 바탕이 되는 개념} 절의 최소 분량 — 프롬프트는 1,500~2,500자를 요구한다.
      *
-     * <p><b>기준을 1,000자로 낮춰 잡은 이유</b>: 이 검사가 잡으려는 것은 "조금 짧다"가 아니라
+     * <p><b>요구치보다 낮춰 잡는 이유</b>: 이 검사가 잡으려는 것은 "조금 짧다"가 아니라
      * <b>절이 이름만 남고 비었다</b>는 상태다. 2026-08-23 이전 문서들이 정확히 그랬다 —
-     * OSI 7계층을 용어 목록 한 줄로 처리하고 넘어갔다. 1,500에 딱 맞춰 경고하면 1,400자짜리
+     * OSI 7계층을 용어 목록 한 줄로 처리하고 넘어갔다. 요구치에 딱 맞춰 경고하면 조금 모자란
      * 멀쩡한 절에도 울리고, 헛울리는 경고는 사람이 경고 전체를 안 보게 만든다.
+     * 요구치의 대략 3분의 2를 기준으로 삼는다.
+     *
+     * <p><b>2026-09-03 후속에 1,000 → 2,000으로 올렸다.</b> 프롬프트 요구가 1,500~2,500에서
+     * 3,000~4,000자가 됐다("문서 전체의 30% 가까이"). 요구가 배로 늘었는데 기준을 그대로 두면
+     * <b>요구의 3분의 1만 써도 통과</b>하므로, 이 검사는 사실상 없는 검사가 된다.
+     * 09-07 실물의 이 절이 1,940자였다 — 새 기준이면 걸린다. 걸리는 게 맞다.
      */
-    private static final int MIN_FOUNDATION_LENGTH = 1_000;
+    private static final int MIN_FOUNDATION_LENGTH = 2_000;
 
     private DocumentDraftValidator() {
     }
@@ -299,7 +317,6 @@ public final class DocumentDraftValidator {
         checkSlug(slug, checks);
         checkTitleMatchesHeading(title, body, structure, checks);
         checkRequiredSections(structure, edition, checks);
-        checkGlossaryTable(structure, checks);
         checkMatchingMaterial(body, checks);
         checkUndefinedTerms(body, checks);
         checkBodySections(body, structure, edition, checks);
@@ -316,6 +333,9 @@ public final class DocumentDraftValidator {
             checkGlossaryIsReview(body, structure, checks);
         } else {
             checkFailureModeCount(body, structure, checks);
+            // 입문편은 '## 용어 한눈에'가 필수 절이라 checkRequiredSections가 이미 차단으로 잡는다.
+            // 여기서 또 세면 한 결함에 메시지가 둘 뜬다.
+            checkGlossaryTable(structure, checks);
         }
         return checks;
     }
@@ -377,11 +397,27 @@ public final class DocumentDraftValidator {
     private static void checkRequiredSections(String structure, DocumentEdition edition,
                                               List<DraftCheck> checks) {
         for (String section : ClaudeDocumentGenerator.requiredSections(edition)) {
-            if (!structure.contains(section)) {
+            if (!hasSectionHeading(structure, section)) {
                 checks.add(DraftCheck.blocking(
                         "%s에 필수 절이 없습니다: %s".formatted(edition.getDisplayName(), section)));
             }
         }
+    }
+
+    /**
+     * 그 제목이 <b>줄 처음에, 그 수준으로</b> 있는지.
+     *
+     * <p><b>{@code contains}로는 안 된다.</b> {@code "## 용어 한눈에"}는 {@code "### 용어 한눈에"}의
+     * 부분 문자열이라, 입문편이 이 표를 본론 안 소제목({@code ###})으로 잘못 넣어도
+     * 필수 절 검사가 <b>조용히 통과</b>한다. 프롬프트가 "본론 절 안의 소제목으로 넣지 마라"라고
+     * 못 박은 바로 그 실수를 못 잡는 셈이다. 두 수준이 함께 쓰이는 제목이 생긴
+     * 2026-09-03 후속 개정부터 실제로 뚫려 있었다.
+     *
+     * <p>줄 <b>시작</b>만 보고 끝은 보지 않는다. 실물이 {@code ## 바탕이 되는 개념: 프로세스}처럼
+     * 제목 뒤에 그날의 주제를 덧붙이기 때문이다 — 그건 정상이고 막을 이유가 없다.
+     */
+    private static boolean hasSectionHeading(String structure, String section) {
+        return Pattern.compile("(?m)^" + Pattern.quote(section)).matcher(structure).find();
     }
 
     /* ── 형식 규칙 ───────────────────────────────────────────────
@@ -679,10 +715,13 @@ public final class DocumentDraftValidator {
      * 원칙대로 <b>오탐이 미탐보다 비싸다</b>. 셋이 모이면 표기 문제가 아니라 습관이 돌아온 것이다.
      */
     private static void checkGlossaryIsReview(String body, String structure, List<DraftCheck> checks) {
-        int start = structure.indexOf("### 용어 한눈에");
-        if (start < 0) {
-            return; // 표가 없는 것은 checkGlossaryTable이 이미 알린다
+        // 제목을 패턴으로 찾는다 — 입문편은 '## 용어 한눈에'(최상위 절), 심화편은 '### '다.
+        // 리터럴로 찾던 코드가 2026-09-03 후속 개정에서 절이 승격되자 아무것도 못 찾게 됐다.
+        Matcher heading = GLOSSARY_HEADING.matcher(structure);
+        if (!heading.find()) {
+            return; // 표가 없는 것은 필수 절 검사가 이미 차단으로 잡는다
         }
+        int start = heading.start();
         // 표보다 <앞>만 본다 — 뒤에서 처음 꺼내는 것은 복습이 아니다.
         String before = body.substring(0, start);
 
@@ -737,8 +776,7 @@ public final class DocumentDraftValidator {
      *
      * <p>그래서 존재가 아니라 <b>분량</b>을 센다. 이 검사가 없으면 모델은 [분량] 압박을 받을
      * 때 이 절부터 줄인다 — 문서의 주제와 가장 먼 절이라 지우기 가장 쉬워 보이기 때문이다.
-     * {@link #MIN_FOUNDATION_LENGTH}의 기준을 프롬프트 요구치(1,500)보다 낮춘 이유는
-     * 그 상수 주석 참고.
+     * {@link #MIN_FOUNDATION_LENGTH}의 기준을 프롬프트 요구치보다 낮춘 이유는 그 상수 주석 참고.
      */
     private static void checkFoundationSection(String body, String structure, List<DraftCheck> checks) {
         Section section = sectionOf(body, structure, "## 바탕이 되는 개념");
@@ -749,7 +787,7 @@ public final class DocumentDraftValidator {
         int length = section.raw().strip().length();
         if (length < MIN_FOUNDATION_LENGTH) {
             checks.add(DraftCheck.warning(
-                    "'## 바탕이 되는 개념'이 %d자입니다(기준 %d자 이상, 프롬프트 요구는 1,500~2,500자). "
+                    "'## 바탕이 되는 개념'이 %d자입니다(기준 %d자 이상, 프롬프트 요구는 3,000~4,000자). "
                             .formatted(length, MIN_FOUNDATION_LENGTH)
                             + "이 절이 얇으면 배경 지식이 없는 사람은 첫 문단에서 막힙니다."));
         }

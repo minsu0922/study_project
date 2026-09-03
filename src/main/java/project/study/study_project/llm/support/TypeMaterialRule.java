@@ -50,8 +50,11 @@ public final class TypeMaterialRule {
     public static final int MATCHING_MIN_ROWS = 4;
 
     /** 짝짓기 재료가 실제로 놓이는 자리. 위 클래스 주석의 실측 근거 참고. */
+    // 용어 표는 편마다 수준이 다르다 — 입문편은 최상위 절(2026-09-03 후속 개정에서 승격),
+    // 심화편은 본론 끝의 소제목이다. 둘 다 넣지 않으면 한쪽 편의 표를 통째로 못 센다.
+    // 실제로 승격한 날 이 목록을 안 고쳐서 "짝짓기 재료 0행" 경고가 멀쩡한 문서에 떴다.
     private static final List<String> MATCHING_SECTIONS =
-            List.of("## 바탕이 되는 개념", "### 용어 한눈에");
+            List.of("## 바탕이 되는 개념", "## 용어 한눈에", "### 용어 한눈에");
 
     /** 코드블록 안의 {@code |}는 표가 아니다 — 셈에서 먼저 지운다. */
     private static final Pattern FENCED_CODE = Pattern.compile("(?s)```.*?```");

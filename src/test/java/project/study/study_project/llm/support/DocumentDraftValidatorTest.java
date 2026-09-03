@@ -22,14 +22,17 @@ class DocumentDraftValidatorTest {
     /**
      * {@code ## 바탕이 되는 개념} 절을 채우는 더미 본문.
      *
-     * <p>이 절만 <b>분량으로</b> 검사받는다({@code MIN_FOUNDATION_LENGTH} 1,000자). 자리를 만들어
+     * <p>이 절만 <b>분량으로</b> 검사받는다({@code MIN_FOUNDATION_LENGTH} 2,000자). 자리를 만들어
      * 놓고 이름만 남기는 것이 2026-08-23에 실제로 막으려던 실패라, 도우미 문서도 그 기준을
-     * 실제로 넘겨야 한다. 문장을 손으로 1,000자 적는 대신 {@code repeat}으로 만든 이유는
+     * 실제로 넘겨야 한다. 문장을 손으로 적는 대신 {@code repeat}으로 만든 이유는
      * 이 내용이 검사 대상이 아니어서다 — 길이만 의미가 있다.
+     *
+     * <p>반복 횟수는 기준을 올릴 때마다 함께 올려야 한다. 안 올리면 <b>이 파일의 테스트 대부분이
+     * 한꺼번에 빨간불</b>이 되는데, 원인은 검사하려던 항목이 아니라 도우미 문서다.
      */
     private static final String FOUNDATION =
             "이 주제가 딛고 선 상위 개념을 처음부터 설명하는 문단이다. 배경 지식이 없어도 읽힌다. "
-                    .repeat(25);
+                    .repeat(50);
 
     @Test
     @DisplayName("정상 문서는 지적 사항이 없다")
@@ -348,14 +351,62 @@ class DocumentDraftValidatorTest {
      * 프롬프트에는 이미 "정의 없이 지나가는 용어가 하나도 없어야 한다"가 있었다.
      * 문구로는 안 되니 세는 쪽으로 넘긴 것인데, 8/15의 하이픈 사고와 정확히 같은 수순이다. */
 
+    /**
+     * <b>{@code ###}로 쓴 용어 표는 입문편의 필수 절을 채우지 못한다</b> — 부분 문자열 함정.
+     *
+     * <p>{@code "## 용어 한눈에"}는 {@code "### 용어 한눈에"} 안에 그대로 들어 있다. 절 존재를
+     * {@code contains}로 보던 코드는 본론 안 소제목으로 잘못 넣은 표를 <b>정상으로 통과</b>시켰다.
+     * 프롬프트가 "본론 절 안의 소제목으로 넣지 마라"라고 못 박은 바로 그 실수다.
+     *
+     * <p>두 수준이 함께 쓰이는 제목은 이것 하나뿐이라, 이 테스트가 없으면 다음에 절 검사를
+     * 손볼 때 다시 {@code contains}로 돌아가도 아무도 모른다.
+     */
     @Test
-    @DisplayName("'### 용어 한눈에' 표가 없으면 알린다 — 뒤쪽 절 용어를 둘 자리가 사라진다")
+    @DisplayName("용어 표를 소제목(###)으로 넣으면 필수 절로 치지 않는다 — 부분 문자열로 통과하면 안 된다")
+    void doesNotAcceptGlossaryAsSubheading() {
+        String demoted = body(TITLE, "본문").replace("## 용어 한눈에", "### 용어 한눈에");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", demoted))
+                .anySatisfy(c -> {
+                    assertThat(c.isBlocking()).isTrue();
+                    assertThat(c.message()).contains("## 용어 한눈에");
+                });
+    }
+
+    /**
+     * 심화편은 표가 없으면 <b>경고</b>다. 본론 끝의 소제목이라 빠져도 글이 성립하기 때문이다.
+     */
+    @Test
+    @DisplayName("심화편에 용어 표가 없으면 알린다 — 뒤쪽 절 용어를 둘 자리가 사라진다")
     void warnsWhenGlossaryTableIsMissing() {
-        String noGlossary = body(TITLE, "본문").replace("### 용어 한눈에", "### 다른 소제목");
+        String noGlossary = advancedBody(TITLE).replace("### 용어 한눈에", "### 다른 소제목");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", noGlossary))
                 .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("'### 용어 한눈에' 표가 없습니다"));
+                .anyMatch(m -> m.contains("용어 한눈에' 표가 없습니다"));
+    }
+
+    /**
+     * 입문편은 <b>차단</b>이다 — 2026-09-03 후속 개정에서 이 표가 최상위 필수 절로 올라왔다.
+     *
+     * <p>등급을 올린 이유: 이 표가 초급 재료의 집합소다. 없으면 다음 날 초급 출제가 그만큼 빈다.
+     * 등급이 갈리므로 <b>경고가 두 번 뜨지 않는지</b>도 함께 본다 — 필수 절 검사와 표 존재 검사가
+     * 같은 결함을 두 번 말하면 검수자는 무엇을 고쳐야 하는지 헷갈린다.
+     */
+    @Test
+    @DisplayName("입문편에 용어 표가 없으면 차단한다 — 초급 재료의 집합소라 경고로는 부족하다")
+    void blocksWhenBeginnerGlossaryIsMissing() {
+        String noGlossary = body(TITLE, "본문").replace("## 용어 한눈에", "## 다른 절");
+
+        List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noGlossary);
+
+        assertThat(checks).anySatisfy(c -> {
+            assertThat(c.isBlocking()).isTrue();
+            assertThat(c.message()).contains("## 용어 한눈에");
+        });
+        assertThat(checks).extracting(DraftCheck::message)
+                .as("한 결함에 메시지가 둘 뜨면 안 된다")
+                .noneMatch(m -> m.contains("표가 없습니다"));
     }
 
     @Test
@@ -754,7 +805,7 @@ class DocumentDraftValidatorTest {
 
                 그래서 이렇게 확인한다.
 
-                ### 용어 한눈에
+                ## 용어 한눈에
 
                 | 용어 | 한 줄 뜻 | 언제 쓰나 |
                 |---|---|---|
