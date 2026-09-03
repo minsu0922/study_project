@@ -1,6 +1,7 @@
 package project.study.study_project.llm.support;
 
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
+import project.study.study_project.llm.client.DocumentEdition;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -63,8 +64,23 @@ public final class DocumentDraftValidator {
      * 있는 완결된 글로 만들고, 기본 개념을 처음부터 설명하는 절({@code ## 바탕이 되는 개념})을
      * 앞에 새로 뒀다. 늘린 5,200자의 갈 곳은 프롬프트 쪽 주석의 배정표에 적어 두었다.
      * 상한만 올리면 부연으로 찬다는 것을 두 번 겪었으므로 개수 지시를 함께 올렸다.
+     *
+     * <p><b>2026-09-03에 12,000 → 13,000으로 올리면서 이 값이 입문편 전용이 됐다.</b>
+     * 한 편을 두 편으로 가르면서 어려운 절 셋이 심화편으로 빠졌는데, 그만큼을 <b>쉽게 푸는 데</b>
+     * 쓰라고 지시했으므로 상한을 낮추면 안 된다. 낮추면 모델이 "덜어 냈으니 짧게"로 읽는다.
+     * {@code ## 바탕이 되는 개념}이 1,500~2,500에서 2,500~3,500으로, 코드 예제가 2~4에서
+     * 3~5개로 늘어난 것이 그 1,000자의 갈 곳이다.
      */
-    public static final int WARN_LENGTH = 12_000;
+    public static final int WARN_LENGTH = 13_000;
+
+    /**
+     * 심화편의 권장 분량 상한 — 프롬프트가 요구하는 "7,000~11,000자"의 위쪽 끝(2026-09-03).
+     *
+     * <p>입문편보다 2,000자 적다. 배경 설명을 하지 않는 대신 지면을 전부 {@code ## 언제 깨지는가}에
+     * 쓰기 때문인데, 그 절은 항목 7개짜리라 물리적 한도가 있다. 입문편과 같은 값을 주면
+     * 남는 지면이 <b>입문편 되풀이</b>로 찬다 — 이 편에서 가장 경계하는 실패다.
+     */
+    public static final int ADVANCED_WARN_LENGTH = 11_000;
 
     /**
      * 하드 상한(차단). 권장치의 약 1.3배.
@@ -77,9 +93,18 @@ public final class DocumentDraftValidator {
      * 상태가 됐을 것이다. 차단은 조용하지 않지만 원인이 엉뚱한 곳(검수 화면)에서 보여서
      * 프롬프트를 의심하기까지 시간이 걸린다.
      *
-     * <p>2026-08-23에 권장치를 12,000으로 올리면서 같은 1.3배를 유지해 15,600으로 옮겼다.
+     * <p>2026-08-23에 권장치를 12,000으로 올리면서 같은 1.3배를 유지해 15,600으로 옮겼고,
+     * 2026-09-03에 13,000으로 올리면서 16,900이 됐다.
      */
-    static final int MAX_LENGTH = 15_600;
+    static final int MAX_LENGTH = 16_900;
+
+    /** 심화편의 하드 상한 — {@link #ADVANCED_WARN_LENGTH}의 같은 1.3배. */
+    static final int ADVANCED_MAX_LENGTH = 14_300;
+
+    /** 편에 해당하는 권장 분량 상한. */
+    public static int warnLengthOf(DocumentEdition edition) {
+        return edition == DocumentEdition.ADVANCED ? ADVANCED_WARN_LENGTH : WARN_LENGTH;
+    }
 
     /** {@code AdminDocumentRequest.slug}의 정규식과 같아야 한다 — 다르면 승인 순간 400으로 튕긴다. */
     private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(-[a-z0-9]+)*$");
@@ -218,6 +243,27 @@ public final class DocumentDraftValidator {
     private static final int MIN_CODE_BLOCKS = 2;
 
     /**
+     * 입문편의 코드 예제 최소 개수 — 프롬프트 {@code [코드 예제]}의 "3~5개"와 짝이다(2026-09-03).
+     *
+     * <p>심화편보다 하나 많은 이유: 입문편은 <b>주장을 코드로 보여 줘야 하는 편</b>이다.
+     * 09-03 실물의 코드 2개가 둘 다 같은 주제였고, 정작 제목이 약속한 대비
+     * ("A는 따로, B는 공유")를 보여 주는 예제가 없었다.
+     */
+    private static final int BEGINNER_MIN_CODE_BLOCKS = 3;
+
+    /**
+     * {@code ### 용어 한눈에}에 본문에서 안 푼 용어가 몇 개부터 경고인가.
+     * 왜 1이 아닌지는 {@link #checkGlossaryIsReview} 주석 참고(표기 차이로 인한 오탐).
+     */
+    private static final int MIN_FRESH_GLOSSARY_TERMS = 3;
+
+    /** 용어 표의 행 — 첫 칸만 꺼낸다. 앞뒤 파이프 사이의 첫 칸이 용어 자리다. */
+    private static final Pattern GLOSSARY_ROW = Pattern.compile("(?m)^\\|([^|]+)\\|");
+
+    /** 마크다운 표의 구분 행 칸({@code ---}, {@code :---:}). 용어로 세면 문서마다 헛울린다. */
+    private static final Pattern SEPARATOR_CELL = Pattern.compile("^:?-{2,}:?$");
+
+    /**
      * {@code ## 바탕이 되는 개념} 절의 최소 분량 — 프롬프트는 1,500~2,500자를 요구한다.
      *
      * <p><b>기준을 1,000자로 낮춰 잡은 이유</b>: 이 검사가 잡으려는 것은 "조금 짧다"가 아니라
@@ -235,28 +281,42 @@ public final class DocumentDraftValidator {
      *
      * <p><b>첫 실패에서 멈추지 않는 이유</b>: 검수자는 한 번에 다 보고 판단하고 싶어 한다.
      * "절이 빠졌다"를 고쳐 다시 뽑았더니 이번엔 "분량 초과"가 나오는 식이면 왕복만 늘어난다.
+     *
+     * <p><b>편은 인자로 받지 않고 본문에서 알아낸다</b>(2026-09-03,
+     * {@link ClaudeDocumentGenerator#editionOf}). 호출부가 넷인데 그중 승인 화면 경로는
+     * 초안 한 건만 들고 있어 편을 알 방법이 없다. 시그니처를 바꾸면 그 자리에서 억지로
+     * 값을 지어내게 되고, 지어낸 값과 본문이 어긋나면 <b>멀쩡한 문서가 통째로 차단된다</b> —
+     * 필수 절 검사가 차단 등급이라 그렇다. 본문에서 읽으면 어긋날 자리가 없다.
      */
     public static List<DraftCheck> validate(String title, String slug, String contentMd) {
         List<DraftCheck> checks = new ArrayList<>();
         String body = contentMd == null ? "" : contentMd;
+        DocumentEdition edition = ClaudeDocumentGenerator.editionOf(body);
 
         // 제목을 찾는 검사들은 <코드블록을 지운 사본>에서 본다. 배경은 maskFencedCode 주석 참고.
         String structure = maskFencedCode(body);
 
         checkSlug(slug, checks);
         checkTitleMatchesHeading(title, body, structure, checks);
-        checkRequiredSections(structure, checks);
-        checkDesignRationaleHeading(structure, checks);
-        checkTermList(body, structure, checks);
+        checkRequiredSections(structure, edition, checks);
         checkGlossaryTable(structure, checks);
         checkMatchingMaterial(body, checks);
         checkUndefinedTerms(body, checks);
-        checkBodySections(body, structure, checks);
-        checkFailureModeCount(body, structure, checks);
-        checkCodeExamples(body, checks);
-        checkFoundationSection(body, structure, checks);
+        checkBodySections(body, structure, edition, checks);
+        checkCodeExamples(body, edition, checks);
         checkHtmlTags(body, checks);
-        checkLength(body, checks);
+        checkLength(body, edition, checks);
+
+        if (edition == DocumentEdition.BEGINNER) {
+            // 아래 넷은 입문편에만 있는 절·규칙을 본다. 심화편에서 돌리면 전부 헛울린다 —
+            // 심화편에는 ## 무엇인가도 ## 바탕이 되는 개념도 없는 것이 정상이다.
+            checkDesignRationaleHeading(structure, checks);
+            checkTermList(body, structure, checks);
+            checkFoundationSection(body, structure, checks);
+            checkGlossaryIsReview(body, structure, checks);
+        } else {
+            checkFailureModeCount(body, structure, checks);
+        }
         return checks;
     }
 
@@ -314,10 +374,12 @@ public final class DocumentDraftValidator {
      * @param structure 코드블록을 지운 사본. 원문으로 보면 코드 주석에 적힌 {@code ## 무엇인가}만으로
      *                  절이 있는 것으로 통과한다.
      */
-    private static void checkRequiredSections(String structure, List<DraftCheck> checks) {
-        for (String section : ClaudeDocumentGenerator.REQUIRED_SECTIONS) {
+    private static void checkRequiredSections(String structure, DocumentEdition edition,
+                                              List<DraftCheck> checks) {
+        for (String section : ClaudeDocumentGenerator.requiredSections(edition)) {
             if (!structure.contains(section)) {
-                checks.add(DraftCheck.blocking("필수 절이 없습니다: " + section));
+                checks.add(DraftCheck.blocking(
+                        "%s에 필수 절이 없습니다: %s".formatted(edition.getDisplayName(), section)));
             }
         }
     }
@@ -513,20 +575,25 @@ public final class DocumentDraftValidator {
      * <p>본론이 얇으면 초급·중급 재료가 함께 마른다. 초급이 캘 곳은 {@code ## 무엇인가}와
      * 본론의 기본 동작이고, 중급의 설계 판단도 대부분 본론에 녹아 있다.
      */
-    private static void checkBodySections(String body, String structure, List<DraftCheck> checks) {
+    private static void checkBodySections(String body, String structure, DocumentEdition edition,
+                                          List<DraftCheck> checks) {
+        List<String> required = ClaudeDocumentGenerator.requiredSections(edition);
         List<String> bodySections = new ArrayList<>();
         // 코드블록 안의 "## " 주석을 본론 섹션으로 세면 본론이 빈 문서가 통과한다
         Matcher m = H2_PATTERN.matcher(structure);
         while (m.find()) {
             String heading = "## " + body.substring(m.start(1), m.end(1)).trim();
-            if (!ClaudeDocumentGenerator.REQUIRED_SECTIONS.contains(heading)) {
+            if (!required.contains(heading)) {
                 bodySections.add(heading);
             }
         }
-        if (bodySections.size() < MIN_BODY_SECTIONS) {
+        // 심화편은 본론 1~2개다 — 지면을 "언제 깨지는가"에 쓰기로 했으므로 2개를 요구하면
+        // 지시대로 쓴 문서에 매번 경고가 뜬다(이 클래스가 가장 경계하는 오탐).
+        int min = edition == DocumentEdition.ADVANCED ? 1 : MIN_BODY_SECTIONS;
+        if (bodySections.size() < min) {
             checks.add(DraftCheck.warning(
-                    "본론 섹션이 %d개입니다(권장 %d~3개). 본론이 얇으면 초급·중급 재료가 함께 마릅니다."
-                            .formatted(bodySections.size(), MIN_BODY_SECTIONS)));
+                    "본론 섹션이 %d개입니다(권장 %d개 이상). 본론이 얇으면 그만큼 문제 재료가 마릅니다."
+                            .formatted(bodySections.size(), min)));
         }
     }
 
@@ -566,13 +633,83 @@ public final class DocumentDraftValidator {
      * 버리는 것보다, 검수자가 승인 전에 한 토막 넣는 편이 싸다. 게다가 주제에 따라서는
      * (설계 원칙·방법론) 코드가 억지가 되는 날도 있어 차단으로 두면 그런 날 길이 막힌다.
      */
-    private static void checkCodeExamples(String body, List<DraftCheck> checks) {
+    private static void checkCodeExamples(String body, DocumentEdition edition, List<DraftCheck> checks) {
+        // 입문편은 3개 이상이다(2026-09-03). 09-03 실물은 코드 2개가 <둘 다 같은 주제>였고,
+        // 정작 제목이 약속한 주장을 보여 주는 예제가 없었다. 개수를 하나 올린 것은 그 자체가
+        // 목적이 아니라 "서로 다른 절을 받쳐라"는 프롬프트 지시가 지켜졌는지 보는 대리 지표다.
+        int min = edition == DocumentEdition.ADVANCED ? MIN_CODE_BLOCKS : BEGINNER_MIN_CODE_BLOCKS;
         int blocks = count(FENCED_CODE, body);
-        if (blocks < MIN_CODE_BLOCKS) {
+        if (blocks < min) {
             checks.add(DraftCheck.warning(
                     "코드 예제가 %d개입니다(기준 %d개 이상). 코드가 없으면 블로그로 옮겼을 때 밀도가 확 떨어집니다."
-                            .formatted(blocks, MIN_CODE_BLOCKS)));
+                            .formatted(blocks, min)));
         }
+    }
+
+    /**
+     * 입문편의 {@code ### 용어 한눈에}가 <b>복습표인지</b> — 새 용어를 몰아넣는 자리가 되지 않았는지.
+     *
+     * <p><b>이 검사가 2026-09-03 개정의 핵심이다.</b> 전에는 프롬프트가 이 표에 "10행 이상,
+     * 앞에서 이미 정의한 용어로 채우지 마라"를 요구했다 — 문서 한 편에 <b>새 용어 10개를
+     * 강제</b>한 셈이고, 09-03 실물에서 용어가 폭증한 진원지가 정확히 여기였다.
+     * 지시를 뒤집었으므로 세는 곳도 뒤집는다.
+     *
+     * <p><b>왜 3개 이상일 때만 울리나.</b> 표의 첫 칸과 본문 정의 줄의 표기가 늘 같지는 않다
+     * ({@code TTL(time to live)} vs {@code TTL}). 하나 어긋난 것으로 경고를 띄우면 표기 차이에
+     * 헛울리고, 이 클래스의 원칙대로 <b>오탐이 미탐보다 비싸다</b>. 셋이 모이면 표기 문제가
+     * 아니라 습관이 돌아온 것이다.
+     */
+    private static void checkGlossaryIsReview(String body, String structure, List<DraftCheck> checks) {
+        int start = structure.indexOf("### 용어 한눈에");
+        if (start < 0) {
+            return; // 표가 없는 것은 checkGlossaryTable이 이미 알린다
+        }
+        // 표보다 <앞에> 있는 정의 줄만 인정한다 — 뒤에서 처음 푸는 것은 복습이 아니다.
+        List<String> before = List.of(body.substring(0, start).split("\n", -1));
+
+        List<String> fresh = new ArrayList<>();
+        Matcher m = GLOSSARY_ROW.matcher(structure.substring(start));
+        while (m.find()) {
+            String term = headTermOf(m.group(1));
+            // 헤더 행과 구분 행(|---|---|)을 걸러 낸다. 구분 행을 안 거르면 <모든> 표에서
+            // "---"가 정의 없는 용어로 잡혀, 이 경고가 문서마다 한 건씩 헛울린다.
+            if (term.isEmpty() || term.equals("용어") || SEPARATOR_CELL.matcher(term).matches()) {
+                continue;
+            }
+            if (before.stream().noneMatch(line -> isDefinitionLine(line) && line.contains(term))) {
+                fresh.add(term);
+            }
+        }
+        if (fresh.size() < MIN_FRESH_GLOSSARY_TERMS) {
+            return;
+        }
+        List<String> listed = fresh.stream().limit(MAX_LISTED_TERMS).toList();
+        String tail = fresh.size() > listed.size() ? " 외 %d개".formatted(fresh.size() - listed.size()) : "";
+        checks.add(DraftCheck.warning(
+                "'### 용어 한눈에'에 본문에서 풀지 않은 용어가 %d개 있습니다: %s%s. "
+                        .formatted(fresh.size(), String.join(", ", listed), tail)
+                        + "입문편의 이 표는 복습표입니다 — 본문에서 먼저 풀거나, 심화편으로 미루세요."));
+    }
+
+    /**
+     * 표 칸에서 용어의 머리 부분만 떼어낸다 — {@code TTL(time to live)} → {@code TTL}.
+     *
+     * <p>괄호 안 원어와 굵게 표시를 걷어내는 이유: 본문 정의 줄과 표기가 미세하게 다른 것이
+     * 흔한데, 그 차이로 "정의가 없다"고 판정하면 헛울린다. 머리만 비교하면 대부분 붙는다.
+     */
+    private static String headTermOf(String cell) {
+        String head = cell.strip().replace("**", "").replace("`", "");
+        int paren = head.indexOf('(');
+        if (paren > 0) {
+            head = head.substring(0, paren);
+        }
+        return head.strip();
+    }
+
+    /** 정의 줄로 인정하는 형태 — {@link #isDefinedSomewhere}과 같은 기준을 쓴다(표 행은 뺀다). */
+    private static boolean isDefinitionLine(String line) {
+        String trimmed = line.strip();
+        return (trimmed.startsWith("- **") || trimmed.startsWith("**")) && trimmed.contains("—");
     }
 
     /**
@@ -715,14 +852,18 @@ public final class DocumentDraftValidator {
     }
 
     /** 분량 — 권장 초과는 경고, 하드 상한 초과는 차단. */
-    private static void checkLength(String body, List<DraftCheck> checks) {
+    private static void checkLength(String body, DocumentEdition edition, List<DraftCheck> checks) {
+        int warn = warnLengthOf(edition);
+        int hard = edition == DocumentEdition.ADVANCED ? ADVANCED_MAX_LENGTH : MAX_LENGTH;
         int length = body.length();
-        if (length > MAX_LENGTH) {
+        if (length > hard) {
             checks.add(DraftCheck.blocking(
-                    "본문이 하드 상한을 넘었습니다: " + length + "자 (상한 " + MAX_LENGTH + "자)"));
-        } else if (length > WARN_LENGTH) {
+                    "본문이 하드 상한을 넘었습니다: " + length + "자 (" + edition.getDisplayName()
+                            + " 상한 " + hard + "자)"));
+        } else if (length > warn) {
             checks.add(DraftCheck.warning(
-                    "본문이 권장 분량을 넘었습니다: " + length + "자 (권장 " + WARN_LENGTH + "자)"));
+                    "본문이 권장 분량을 넘었습니다: " + length + "자 (" + edition.getDisplayName()
+                            + " 권장 " + warn + "자)"));
         }
     }
 

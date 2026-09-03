@@ -228,11 +228,55 @@ class DocumentImportServiceTest {
     /** 실제 배치가 쓰는 것과 같은 형식으로 파일을 만든다(직렬화 경로까지 테스트에 포함). */
     private Path writeDocumentFile(String filename, String model, GeneratedDocumentItem document)
             throws Exception {
+        return writeDocumentFile(filename, model, document, null);
+    }
+
+    private Path writeDocumentFile(String filename, String model, GeneratedDocumentItem document,
+                                   GeneratedDocumentItem advanced) throws Exception {
         GeneratedDocumentFile file = new GeneratedDocumentFile(
                 "테스트용", filename.replace(".json", ""), "2026-08-12T21:17:00Z",
-                Domain.SYSTEM_DESIGN, model, document);
+                Domain.SYSTEM_DESIGN, model, document, advanced);
         Path path = tempDir.resolve(filename);
         objectMapper.writeValue(path.toFile(), file);
         return path;
+    }
+
+    /* ── 2026-09-03: 파일 하나에 두 편 ───────────────────────────── */
+
+    /**
+     * 심화편까지 <b>같은 트랜잭션에서</b> 초안이 되는지.
+     *
+     * <p>흡수 도장({@code imported_draft_file})은 파일 단위다. 입문편만 넣고 도장을 찍으면
+     * 심화편은 <b>다시 시도할 방법이 없다</b> — 다음 부팅에 그 파일은 "이미 처리함"으로
+     * 건너뛰어지고, 나흘 뒤 고급 날에 근거가 없다는 사실만 로그에 남는다.
+     */
+    @Test
+    @DisplayName("입문편과 심화편이 함께 초안이 된다 — 도장이 파일 단위라 한쪽만 넣으면 되돌릴 수 없다")
+    void importsBothEditions() throws Exception {
+        Path file = writeDocumentFile("2026-09-07.json", "claude-opus-5",
+                item("스레드는 무엇을 따로 갖는가", "thread-memory", List.of("os")),
+                item("스레드 공유가 사고가 되는 순간", "thread-memory-advanced", List.of("os")));
+
+        assertThat(service.importFile(file)).isEqualTo(2);
+
+        ArgumentCaptor<ImportedDraftFile> stamp = ArgumentCaptor.forClass(ImportedDraftFile.class);
+        verify(importedFileRepository).save(stamp.capture());
+        assertThat(stamp.getValue().getDraftCount())
+                .as("도장에 적히는 건수도 실제 저장 수를 따라가야 한다")
+                .isEqualTo(2);
+    }
+
+    /**
+     * 심화편이 <b>없어도 정상</b>이다 — 2026-09-03 이전 파일 15개에는 그 칸이 아예 없고,
+     * 심화편 생성만 실패한 날도 있을 수 있다. 여기서 예외를 던지면 옛 파일이 통째로 막히고,
+     * 그 날짜들의 문제 생성이 조용히 폴백으로 떨어진다.
+     */
+    @Test
+    @DisplayName("심화편이 없는 파일도 그대로 흡수한다 — 옛 파일 15개에는 그 칸이 없다")
+    void importsBeginnerOnlyFile() throws Exception {
+        Path file = writeDocumentFile("2026-08-12.json", "claude-opus-5",
+                item("캐시 전략", "cache-strategy", List.of("cache")), null);
+
+        assertThat(service.importFile(file)).isEqualTo(1);
     }
 }

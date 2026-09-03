@@ -149,8 +149,8 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("필수 섹션 목록과 프롬프트의 섹션 제목이 일치한다 — 어긋나면 검증기가 헛돈다")
     void requiredSectionsMatchPrompt() {
-        assertThat(ClaudeDocumentGenerator.REQUIRED_SECTIONS)
-                .allSatisfy(section -> assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_REQUIRED_SECTIONS)
+                .allSatisfy(section -> assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                         .as("프롬프트 [문서 구조]에 '%s'가 있어야 한다", section)
                         .contains(section));
     }
@@ -158,13 +158,19 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("면접 질문 섹션과 용어 정의 규칙이 프롬프트에 살아 있다 — 1차 실물에서 빠졌던 두 가지")
     void keepsInterviewQuestionAndTerminologyRules() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
-                .as("면접 질문은 학습용이자 2단계 문제 생성의 재료다")
-                .contains("## 면접에서 이렇게 물어본다")
+        // 2026-09-03: 면접 질문 절은 심화편으로 갔다. 입문편에 남기면 고급 재료 판정이
+        // 입문편에서도 통과해 어느 편을 근거로 썼는지 가릴 수 없게 된다.
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("면접 질문은 학습용이자 고급 문제 생성의 재료다")
+                .contains("## 면접에서 이렇게 물어본다");
+
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("용어를 정의 없이 지나가면 초급 재료가 통째로 비는 셈이 된다")
                 .contains("[용어 다루기]")
-                .as("분량을 올린 건 고급 재료 절과 면접 질문 절에 지면을 주기 위해서다")
-                .contains("9,000~12,000자");
+                .as("어려운 절을 덜어낸 만큼을 쉽게 푸는 데 쓰라고 상한을 올렸다")
+                .contains("9,000~13,000자")
+                .as("면접 질문 절은 심화편이 쓴다 — 두 편에 다 있으면 재료 판정이 갈리지 않는다")
+                .doesNotContain("## 면접에서 이렇게 물어본다\n");
     }
 
     /**
@@ -185,16 +191,68 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("용어를 둘 자리가 프롬프트에 있다 — 규칙을 세게 적는 것만으로는 안 지켜졌다")
     void makesRoomForTerminology() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
-                .as("뒤쪽 절에서 꺼낼 용어를 미리 올려 두는 자리")
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .as("읽고 나서 되짚는 복습표 — 2026-09-03에 '새 용어를 미리 올리는 자리'에서 뒤집혔다")
                 .contains("### 용어 한눈에")
                 .contains("| 용어 | 한 줄 뜻 | 언제 쓰나 |")
-                .as("가장 어려운 용어가 처음 나오는 절인데 세 줄로 막혀 있었다")
-                .contains("(그 항목만 네 줄)")
+                .contains("<이 글에서 이미 정의한 용어만> 올린다")
                 .as("이름을 풀어 쓴 것으로 정의를 대신하면 뜻이 전달되지 않는다")
                 .contains("이름만으로 동작을 알 수 없는 용어")
                 .as("SQL 구문이 세 번 나오도록 뜻이 없었다")
                 .contains("SQL 구문·명령을 쓰면 그것이 무엇을 하는지 한 줄로 붙인다");
+
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("가장 어려운 용어가 처음 나오는 절인데 세 줄로 막혀 있었다")
+                .contains("(그 항목만 네 줄)")
+                .as("입문편이 푼 용어를 다시 푸는 것이 이 편의 가장 큰 낭비다")
+                .contains("입문편이 이미 정의한 용어는 다시 풀지 마라");
+    }
+
+    /**
+     * <b>2026-09-03 개정의 핵심 — 용어 폭증을 만든 지시를 뒤집었는지.</b>
+     *
+     * <p>09-03 실물에서 레지스터가 12번, 시그널이 13번 나오는데 둘 다 정의가 없었다.
+     * 원인은 규칙이 없어서가 아니라 <b>「용어 한눈에」가 새 용어 10개를 강제</b>했기 때문이다
+     * ("10행 이상 … 앞에서 이미 정의한 용어로 채우지 마라"). 그 지시를 없애기만 하면
+     * 모델은 습관대로 돌아가므로, 정반대 방향의 지시(복습표)와 총량 상한을 함께 넣었다.
+     *
+     * <p>여기서 지키는 것은 <b>상한이 존재한다는 사실</b>이다. 이 프롬프트의 요구가 전부
+     * 하한("몇 개 이상")이었다는 것이 이번 사고의 구조적 원인이었고, 다음에 프롬프트를
+     * 다듬다가 이 한 줄이 빠지면 같은 자리로 되돌아간다.
+     */
+    @Test
+    @DisplayName("입문편에 새 용어 총량 상한이 있다 — 하한만 있는 프롬프트가 용어 폭증을 만들었다")
+    void capsNewTermsInBeginnerEdition() {
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .as("숫자가 박힌 지시만 지켜진다 — 상한도 숫자여야 한다")
+                .contains("[새 용어 예산]")
+                .contains("처음 정의하는 전문 용어는 <14개까지>다")
+                .as("예산이 '안 풀고 써도 된다'는 허가로 읽히면 정반대 결과가 된다")
+                .contains("정의하지 않고 쓰는 용어는 0개다")
+                .as("영어 약자를 원어로만 풀면 초보자에게는 푼 것이 아니다(TLB 사고)")
+                .contains("<무엇의 약자인지 + 한국어 뜻>");
+    }
+
+    /**
+     * 심화편이 <b>입문편을 되풀이하지 않게</b> 막는 장치 셋이 살아 있는지.
+     *
+     * <p>모델에게는 배경을 한 번 더 깔아 주는 쪽이 언제나 안전한 선택이라, 막지 않으면
+     * 심화편의 앞 절반이 입문편 요약이 된다. 장치는 ① 되풀이를 몰아넣을 자리를 따로 주고
+     * ({@code ## 이 글을 읽기 전에}), ② 입문편 절 이름을 금지하고, ③ 「언제 깨지는가」의
+     * 순서를 지정하는 것이다. ③이 필요한 이유는 09-03 실물의 항목 11개 중 다섯이
+     * 자바 개발자가 만날 일 없는 C 영역이었기 때문이다.
+     */
+    @Test
+    @DisplayName("심화편이 입문편을 되풀이하지 못하게 막는다 — 안 막으면 앞 절반이 요약이 된다")
+    void advancedPromptAvoidsRepeatingBeginner() {
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("되풀이를 몰아넣을 자리를 줘야 나머지가 깨끗해진다")
+                .contains("## 이 글을 읽기 전에")
+                .contains("되풀이는 이 절에서 끝낸다")
+                .as("입문편 절 이름을 쓰는 것 자체가 되풀이하고 있다는 신호다")
+                .contains("전부 입문편이 쓰는 이름이다")
+                .as("개수만 박으면 모델은 채우기 쉬운 교과서적 항목부터 채운다")
+                .contains("실무에서 실제로 만나는 것을 앞에 놓고");
     }
 
     /**
@@ -209,7 +267,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("추상적인 동작을 다루는 절에 비유를 하나 더 허용한다 — 스냅샷 하나로 다섯 절을 설명했다")
     void allowsSecondAnalogyForInvisibleMechanics() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("무제한으로 풀면 부연이 된다 — 숫자를 박은 지시만 지켜진다")
                 .contains("문서 전체에서 비유는 4개까지다")
                 .as("한 낱말에 기댄 설명이 이번 사고의 다른 얼굴이다")
@@ -229,14 +287,17 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("새 절 둘에 완성 예시가 붙어 있다 — 형식을 말로만 적으면 매번 다른 모양으로 온다")
     void showsWorkedExamplesForNewSections() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("항목 제목 형식이 흔들려 검증기가 헛울린 자리")
                 .contains("**캐시 스탬피드**")
                 .as("네 번째 줄(새 용어 정의)까지 예시가 보여 줘야 한다")
                 .contains("- **뮤텍스(mutex)** —")
+                .as("이게 빠지면 모든 문서의 깨지는 조건이 캐시 이야기가 된다")
+                .contains("주제(캐시)는 가져다 쓰지 마라");
+
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("칸 이름만 주면 '언제 쓰나' 칸이 흔들린다")
                 .contains("| TTL(time to live) |")
-                .as("이게 빠지면 모든 문서의 깨지는 조건이 캐시 이야기가 된다")
                 .contains("주제(캐시)는 가져다 쓰지 마라");
     }
 
@@ -252,14 +313,14 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("고급 재료에 개수 지시가 박혀 있다 — 이게 빠지면 사흘 뒤 고급 날에 재료가 마른다")
     void pinsAdvancedMaterialQuota() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("고급 전용 절이 모델 재량이면 아예 없는 문서가 나온다")
                 .contains("## 언제 깨지는가")
                 .as("개수를 박은 지시만 실제로 지켜졌다는 것이 실측 결과다")
                 .contains("서로 다른 것으로 7가지 이상")
                 .contains("6개 이하면 실패다")
                 .as("분량이 빠듯할 때 제일 먼저 깎이는 것이 이 절이라, 깎지 말라고 따로 적는다")
-                .contains("상한 때문에 줄이지 않는다");
+                .contains("분량 상한 때문에 줄이지 않는다");
     }
 
     /**
@@ -276,11 +337,17 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("분량 지시와 검증기 경고선이 같은 숫자다 — 어긋나면 지시를 잘 따른 문서가 매번 경고를 단다")
     void lengthInstructionMatchesValidatorWarnLine() {
-        String warnLine = "%,d자".formatted(DocumentDraftValidator.WARN_LENGTH);
+        String beginnerLine = "%,d자".formatted(DocumentDraftValidator.WARN_LENGTH);
+        String advancedLine = "%,d자".formatted(DocumentDraftValidator.ADVANCED_WARN_LENGTH);
 
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
-                .as("프롬프트 [분량]의 상한이 검증기 경고선(%s)과 같아야 한다", warnLine)
-                .contains(warnLine);
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .as("입문편 [분량]의 상한이 검증기 경고선(%s)과 같아야 한다", beginnerLine)
+                .contains(beginnerLine);
+        // 편이 둘이 되면서 짝도 둘이 됐다. 한쪽만 지키면 나머지 편은 지시대로 쓴 문서가
+        // 매번 경고를 달고 나오고, 상시로 뜨는 경고는 사람이 경고 전체를 안 보게 만든다.
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("심화편 [분량]의 상한이 검증기 경고선(%s)과 같아야 한다", advancedLine)
+                .contains(advancedLine);
     }
 
     /**
@@ -290,7 +357,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("정의가 첫 절이고, 군더더기 금지 규칙이 실물 예시와 함께 실린다")
     void putsDefinitionFirstAndBansFiller() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("개념·용어 정의가 문서의 첫 절이어야 한다")
                 .contains("## 무엇인가")
                 .contains("첫 문장이 이 개념의 정의다")
@@ -314,7 +381,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("핵심 용어는 하이픈 목록으로 요구한다 — 줄만 바꾸면 화면에서 한 문단으로 붙는다")
     void requiresBulletedTermList() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .contains("핵심 용어 3~5개를 하이픈 목록으로 정의한다")
                 .as("왜 하이픈이어야 하는지를 함께 적어야 모델이 규칙을 지킨다")
                 .contains("줄만 바꾸면 마크다운이 한 문단으로 붙여 버린다");
@@ -335,7 +402,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("'실무에서는 이렇게 쓴다'는 쓰는 장면을 요구한다 — 카탈로그나 본론 요약으로 변질되지 않게")
     void pinsHowItIsUsedInPracticeSection() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .contains("## 실무에서는 이렇게 쓴다")
                 .as("장면 하나를 처음부터 끝까지 — 이게 이 절의 알맹이다")
                 .contains("장면 하나를 골라 처음부터 끝까지")
@@ -359,7 +426,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("비교는 표로, 순서는 번호 목록으로 — ASCII로 칸을 맞추면 한글 폭 때문에 어차피 어긋난다")
     void bansAsciiColumnAlignment() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .contains("비교·대조는 마크다운 표로 쓴다")
                 .contains("ASCII로 칸을 맞추지 마라")
                 .as("순서 있는 흐름의 대체 수단까지 줘야 ASCII로 돌아가지 않는다")
@@ -381,7 +448,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("소제목은 1개로 줄이되 설계 근거는 남긴다 — 근거까지 줄면 중급 날에 재료가 마른다")
     void keepsDesignRationaleEvenWithOneHeading() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("소제목 반복은 의례가 된다 — 개수를 못 박는다")
                 .contains("문서 전체에서 1개다")
                 .as("제목을 줄인다고 근거까지 줄이면 중급 재료가 3분의 1이 된다")
@@ -403,7 +470,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("'왜 필요한가'는 곤란함·장점·단점을 함께 요구한다 — 장점만 쓰면 광고문이 된다")
     void requiresBenefitAndCostInWhyItMatters() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("문제 제기로만 끝나면 왜 쓰는지가 빠진다")
                 .contains("이어서 썼을 때의 장점을 쓴다")
                 .as("장점은 과장이 가장 나오기 쉬운 자리다")
@@ -429,12 +496,21 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("요청마다 바뀌는 값은 시스템 프롬프트에 없다 — 주제·회피 목록은 user 메시지의 몫이다")
     void systemPromptHasNoPerRequestPlaceholders() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
-                .as("{개념명} 같은 치환 안 된 자리표시자가 그대로 실려 나가면 안 된다")
-                .doesNotMatch("(?s).*\\{[가-힣\\w]+}.*")
-                .as("주제는 user 메시지가 넣는다")
-                .doesNotContain("[주제]")
-                .doesNotContain("[이미 문서가 있는 주제]");
+        // 편이 둘로 늘면서 검사 대상도 둘이 됐다 — 새로 쓴 쪽이 더 위험하다.
+        for (String prompt : List.of(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT,
+                ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)) {
+            assertThat(prompt)
+                    .as("{개념명} 같은 치환 안 된 자리표시자가 그대로 실려 나가면 안 된다")
+                    .doesNotMatch("(?s).*\\{[가-힣\\w]+}.*")
+                    .as("주제는 user 메시지가 넣는다")
+                    .doesNotContain("[주제]")
+                    .doesNotContain("[이미 문서가 있는 주제]");
+        }
+        // 심화편은 입문편 <전문>을 user 메시지로 받는다. 시스템 쪽에 그 자리를 만들면
+        // 요청마다 바뀌는 값이 고정 프롬프트에 섞여 프롬프트 캐시가 통째로 무의미해진다.
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("입문편 본문은 user 메시지의 몫이다")
+                .doesNotContain("--- 입문편 시작 ---");
     }
 
     /**
@@ -453,11 +529,11 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("상위 개념 전용 절이 맨 앞에 있다 — 주제를 좁히랬더니 기본 개념을 통째로 건너뛰었다")
     void putsFoundationSectionFirst() {
-        assertThat(ClaudeDocumentGenerator.REQUIRED_SECTIONS)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_REQUIRED_SECTIONS)
                 .as("이 절은 '## 무엇인가'보다 앞에 온다 — 목록 순서가 곧 문서 순서다")
                 .containsSubsequence("## 바탕이 되는 개념", "## 무엇인가");
 
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("좁은 주제가 아니라 그 주제가 딛고 선 상위 개념을 다루는 자리다")
                 .contains("주제가 딛고 선 <상위 개념> 하나를 골라 그것부터 설명한다")
                 .as("두 절이 겹치면 같은 말을 두 번 쓰게 된다")
@@ -465,7 +541,7 @@ class ClaudeDocumentGeneratorTest {
                 .as("일곱 층 중 서너 개만 적힌 표가 오는 것을 막는다 — 초급 재료가 그만큼 준다")
                 .contains("일곱 개면 일곱 줄이다")
                 .as("숫자를 박은 지시만 지켜진다는 것이 이 프롬프트에서 세 번 확인된 사실이다")
-                .contains("1,500~2,500자를 쓴다");
+                .contains("2,500~3,500자를 쓴다");
     }
 
     /**
@@ -486,12 +562,14 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("요약 절과 코드 예제가 프롬프트에 살아 있다 — 블로그 품질의 실제 격차는 이 둘이었다")
     void allowsSummaryAndCodeExamples() {
-        assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("요약은 정의상 되풀이라, 예외라고 적지 않으면 담백 규칙에 밀려 사라진다")
                 .contains("이 절은 아래 [덜어낼 것]의 되풀이 금지에서 예외다")
                 .as("금지를 푸는 것만으로는 안 나온다 — 개수를 박아야 지켜진다")
                 .contains("[코드 예제]")
-                .contains("코드·명령·설정 예제를 2~4개 넣는다")
+                .contains("코드·명령·설정 예제를 3~5개 넣는다")
+                .as("한 절에 몰아넣으면 개수만 채우고 주장은 못 보여 준다(09-03 실물이 그랬다)")
+                .contains("예제는 서로 다른 절을 받쳐야 한다")
                 .as("코드만 덩그러니 두면 개념 문서가 아니라 스니펫 모음이 된다")
                 .contains("코드는 설명을 대신하지 못한다")
                 .as("모델이 가장 자신 있게 틀리는 자리가 API 시그니처다")

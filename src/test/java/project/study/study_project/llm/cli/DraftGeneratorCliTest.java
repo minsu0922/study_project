@@ -1275,7 +1275,7 @@ class DraftGeneratorCliTest {
             var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
                     "테스트", DATE.toString(), DATE + "T00:00:00Z", Domain.NETWORK, "test-model",
                     new project.study.study_project.llm.client.GeneratedDocumentItem(
-                            "제목", "test-slug", contentMd, List.of("net")));
+                            "제목", "test-slug", contentMd, List.of("net")), null);
             new com.fasterxml.jackson.databind.ObjectMapper()
                     .writeValue(docDir.resolve(DATE + ".json").toFile(), file);
             return outDir;
@@ -1353,5 +1353,45 @@ class DraftGeneratorCliTest {
                 .as("@Value의 기본값이 DEFAULT_ANCHOR(%s)와 달라지면 설정이 없을 때 화면과 배치가 갈린다",
                         GenerationSchedule.DEFAULT_ANCHOR)
                 .contains("${llm.generation.cycle-anchor:" + GenerationSchedule.DEFAULT_ANCHOR + "}");
+    }
+
+    /* ── 2026-09-03: 난이도가 어느 편을 근거로 삼는가 ─────────────
+     * 문서 한 편이 입문편·심화편 두 편으로 갈렸다. 고급만 심화편을 쓰고 나머지는 입문편을 쓴다.
+     * 이 매핑이 어긋나면 실패가 조용하다 — 문제는 정상적으로 만들어지고, 며칠 뒤 사람이
+     * "고급인데 왜 정의를 묻지?"를 알아차릴 때까지 간다. */
+
+    @Test
+    @DisplayName("고급은 심화편을, 초급·중급은 입문편을 근거로 삼는다")
+    void picksEditionByDifficulty() {
+        var beginner = new project.study.study_project.llm.client.GeneratedDocumentItem(
+                "입문편", "thread-memory", "# 입문편\n\n## 무엇인가\n정의.", List.of("os"));
+        var advanced = new project.study.study_project.llm.client.GeneratedDocumentItem(
+                "심화편", "thread-memory-advanced", "# 심화편\n\n## 언제 깨지는가\n조건.", List.of("os"));
+        var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
+                "테스트", "2026-09-07", "2026-09-07T00:00:00Z", Domain.OS, "test-model",
+                beginner, advanced);
+
+        assertThat(DraftGeneratorCli.editionFor(file, Difficulty.BEGINNER)).isSameAs(beginner);
+        assertThat(DraftGeneratorCli.editionFor(file, Difficulty.INTERMEDIATE)).isSameAs(beginner);
+        assertThat(DraftGeneratorCli.editionFor(file, Difficulty.ADVANCED))
+                .as("고급 재료(## 언제 깨지는가)는 심화편에만 있다")
+                .isSameAs(advanced);
+    }
+
+    /**
+     * 2026-09-03 이전 파일 15개에는 심화편 칸이 없다. 여기서 {@code null}을 돌려주면
+     * 그 날짜들의 고급이 근거 없는 폴백으로 떨어지는데, 옛 문서에는 {@code ## 언제 깨지는가}가
+     * 실제로 들어 있으므로 <b>입문편(옛 단일 문서)을 주는 편이 낫다</b>.
+     */
+    @Test
+    @DisplayName("심화편이 없으면 고급도 입문편으로 돌아간다 — 옛 파일 15개에는 그 칸이 없다")
+    void fallsBackToBeginnerWhenNoAdvancedEdition() {
+        var only = new project.study.study_project.llm.client.GeneratedDocumentItem(
+                "옛 단일 문서", "cache-strategy", "# 옛 문서\n\n## 언제 깨지는가\n조건.", List.of("cache"));
+        var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
+                "테스트", "2026-08-12", "2026-08-12T00:00:00Z", Domain.SYSTEM_DESIGN, "test-model",
+                only, null);
+
+        assertThat(DraftGeneratorCli.editionFor(file, Difficulty.ADVANCED)).isSameAs(only);
     }
 }

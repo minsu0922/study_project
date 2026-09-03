@@ -117,12 +117,12 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("필수 절이 빠지면 차단 — 빠진 절 이름을 그대로 알려 준다")
     void blocksMissingRequiredSection() {
-        String content = "# " + TITLE + "\n\n## 왜 필요한가\n내용\n\n## 면접 한 줄 요약\n요약";
+        String content = "# " + TITLE + "\n\n## 왜 필요한가\n내용\n\n## 한 줄로 정리하면\n요약";
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content))
                 .anySatisfy(c -> {
                     assertThat(c.isBlocking()).isTrue();
-                    assertThat(c.message()).contains("## 면접에서 이렇게 물어본다");
+                    assertThat(c.message()).contains("## 자주 하는 오해");
                 });
     }
 
@@ -181,21 +181,24 @@ class DocumentDraftValidatorTest {
         List<DraftCheck> checks = DocumentDraftValidator.validate(
                 "다른 제목", "Bad_Slug", "# 본문 제목\n\n## 왜 필요한가\n내용");
 
+        // 이 본문에는 '## 언제 깨지는가'가 없으므로 <입문편>으로 판정된다(editionOf).
+        //
         // slug 형식 1 + 제목 불일치 1
-        // + 빠진 필수 절 7(핵심 요약·바탕이 되는 개념·무엇인가·실무에서는 이렇게 쓴다·
-        //   언제 깨지는가·면접 질문·한 줄 요약)
-        // + 형식 5(설계 근거 소제목 없음·용어 표 없음·짝짓기 재료 0행·본론 0개·코드 예제 0개) = 14
-        // ('## 무엇인가'·'## 언제 깨지는가'·'## 바탕이 되는 개념'의 형식 검사는 절이 아예 없으면
+        // + 빠진 입문편 필수 절 6(핵심 요약·바탕이 되는 개념·무엇인가·실무에서는 이렇게 쓴다·
+        //   자주 하는 오해·한 줄로 정리하면)
+        // + 형식 5(설계 근거 소제목 없음·용어 표 없음·짝짓기 재료 0행·본론 0개·코드 예제 0개) = 13
+        // ('## 무엇인가'·'## 바탕이 되는 개념'의 형식 검사와 용어 표 복습 검사는 절이 아예 없으면
         //  건너뛴다 — 없는 절을 두고 "하이픈이 없다"고 말하면 원인이 흐려진다)
         //
-        // 2026-09-01에 짝짓기 재료 경고가 늘어 13 → 14가 됐다. 개수를 세는 이 단언을 그대로 두는
-        // 이유는 <검사를 늘릴 때 한 번은 여기서 멈추게> 하기 위해서다. 경고가 는 것을 아무도
-        // 모르는 채 지나가면, 검수 화면이 어느새 읽히지 않는 목록이 된다.
-        assertThat(checks).hasSize(14);
+        // 2026-09-01에 짝짓기 재료 경고가 늘어 13 → 14가 됐고, 2026-09-03에 필수 절이 8개에서
+        // 7개로 줄면서(셋이 심화편으로 감, 둘이 새로 옴) 다시 13이 됐다. 개수를 세는 이 단언을
+        // 그대로 두는 이유는 <검사를 늘릴 때 한 번은 여기서 멈추게> 하기 위해서다. 경고가 는 것을
+        // 아무도 모르는 채 지나가면, 검수 화면이 어느새 읽히지 않는 목록이 된다.
+        assertThat(checks).hasSize(13);
         assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
-                .anyMatch(m -> m.contains("## 면접에서 이렇게 물어본다"))
+                .anyMatch(m -> m.contains("## 자주 하는 오해"))
                 .anyMatch(m -> m.contains("짝짓기"));
     }
 
@@ -286,7 +289,7 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("'언제 깨지는가' 항목이 모자라면 알린다 — 고급 날 재료가 마른다")
     void warnsWhenFailureModesAreTooFew() {
-        String few = body(TITLE, "본문")
+        String few = advancedBody(TITLE)
                 .replace("**4. 넷째 조건**\n", "")
                 .replace("**5. 다섯째 조건**\n", "")
                 .replace("**6. 여섯째 조건**\n", "")
@@ -306,7 +309,7 @@ class DocumentDraftValidatorTest {
     void countsFailureModesInAnyFormat() {
         // 일곱 항목을 통째로 다른 형식으로 갈아 끼운다. 하나만 바꿔서는 나머지 여섯이
         // 받쳐 줘서 통과하므로, 그 형식을 정말 세는지 알 수 없다.
-        String base = body(TITLE, "본문");
+        String base = advancedBody(TITLE);
         String written = """
                 **1. 첫째 조건**
                 **2. 둘째 조건**
@@ -481,14 +484,19 @@ class DocumentDraftValidatorTest {
     }
 
     /**
-     * 코드 예제가 <b>2개 이상</b>인지. 2026-08-23에 "긴 예제는 쓰지 마라"라는 금지를 풀었는데,
+     * 코드 예제가 기준 개수 이상인지. 2026-08-23에 "긴 예제는 쓰지 마라"라는 금지를 풀었는데,
      * <b>푸는 것만으로는 나오지 않는다</b> — 모델에게 코드를 빼는 쪽이 언제나 안전하다.
      * 개수를 박은 지시만 지켜지고, 그 개수는 세는 곳이 있어야 유지된다.
+     *
+     * <p>2026-09-03에 입문편 기준이 3개로 올랐다. 개수 자체가 목적은 아니고, 09-03 실물의
+     * 코드 2개가 <b>둘 다 같은 주제</b>였던 것을 막으려는 대리 지표다.
      */
     @Test
     @DisplayName("코드 예제가 모자라면 알린다 — 금지를 푸는 것만으로는 코드가 나오지 않는다")
     void warnsWhenCodeExamplesAreTooFew() {
-        String noCode = body(TITLE, "본문").replace("```sql\nSELECT 1\n```", "설명으로 대신한다.");
+        String noCode = body(TITLE, "본문")
+                .replace("```sql\nSELECT 1\n```", "설명으로 대신한다.")
+                .replace("```bash\necho done\n```", "설명으로 대신한다.");
 
         List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noCode);
 
@@ -545,7 +553,7 @@ class DocumentDraftValidatorTest {
     void doesNotSplitSectionOnShellComment() {
         // 깨지는 조건 일곱 개 <앞>에 '## '로 시작하는 주석이 든 코드블록을 끼운다.
         // 절이 여기서 끊기면 뒤따르는 일곱 항목이 통째로 다른 절로 밀려 0개로 세어진다.
-        String withComment = body(TITLE, "본문").replace("**1. 첫째 조건**", """
+        String withComment = advancedBody(TITLE).replace("**1. 첫째 조건**", """
                 ```bash
                 ## 커널 파라미터를 확인한다
                 sysctl net.ipv4.ip_local_port_range
@@ -568,15 +576,15 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("코드 주석에 적힌 절 이름은 필수 절로 치지 않는다 — 빈껍데기가 통과한다")
     void doesNotCountSectionNamesInsideCode() {
-        String faked = body(TITLE, "본문").replace("## 면접 한 줄 요약\n한 줄 요약.", """
+        String faked = body(TITLE, "본문").replace("## 한 줄로 정리하면\n\"한 줄 요약.\"", """
                 ```bash
-                ## 면접 한 줄 요약
+                ## 한 줄로 정리하면
                 ```""");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", faked))
                 .anySatisfy(c -> {
                     assertThat(c.isBlocking()).isTrue();
-                    assertThat(c.message()).contains("## 면접 한 줄 요약");
+                    assertThat(c.message()).contains("## 한 줄로 정리하면");
                 });
     }
 
@@ -592,6 +600,74 @@ class DocumentDraftValidatorTest {
     }
 
     /* ── 도우미 ──────────────────────────────────────────────── */
+
+    /* ── 2026-09-03: 입문편·심화편으로 갈렸다 ─────────────────────
+     * 한 편이 초급·중급·고급 재료를 모두 담느라 입문자가 못 읽는 밀도로 굳었고,
+     * 09-03 실물에서 레지스터·시그널이 각각 12·13번 나오면서 정의는 한 번도 없었다.
+     * 편에 따라 도는 검사가 갈리므로, 아래 셋이 그 분업을 지킨다. */
+
+    /**
+     * 심화편도 <b>조용히 통과</b>해야 한다. 입문편 전용 검사(바탕이 되는 개념 분량,
+     * '## 무엇인가'의 하이픈 목록, 설계 근거 소제목, 복습표)가 심화편에서 돌면
+     * 지시대로 쓴 문서에 경고가 넷 붙는다 — 이 클래스가 가장 경계하는 오탐이다.
+     */
+    @Test
+    @DisplayName("심화편도 지적 사항이 없다 — 입문편 전용 검사가 심화편에서 돌면 헛경고가 넷 붙는다")
+    void passesValidAdvancedDocument() {
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", advancedBody(TITLE)))
+                .isEmpty();
+    }
+
+    /**
+     * 입문편의 {@code ### 용어 한눈에}가 <b>못 다 한 설명을 몰아넣는 자리</b>로 돌아가지 않는지.
+     *
+     * <p>전에는 프롬프트가 이 표에 "새 용어를 미리 올려 두라"고 <b>시켰다</b>. 그 지시가
+     * 09-03 실물에서 용어 폭증의 진원지였다. 지시를 복습표로 뒤집었으므로 세는 곳도 뒤집는다 —
+     * 세는 곳이 없으면 몇 주 뒤 조용히 옛 습관으로 돌아간다.
+     */
+    @Test
+    @DisplayName("복습표에 본문에서 안 푼 용어가 쌓이면 알린다 — 전에는 프롬프트가 그걸 시켰다")
+    void warnsWhenGlossaryIntroducesNewTerms() {
+        // 셋째·넷째는 본문에 정의를 남겨 두고, 다섯째~일곱째 정의만 걷어낸다.
+        // 셋이 모여야 울리는 기준(표기 차이로 인한 오탐 방지)을 그대로 확인하려는 것이다.
+        String leaky = body(TITLE, "본문")
+                .replace("- **다섯째 용어** — 한 문장 정의.\n", "")
+                .replace("- **여섯째 용어** — 한 문장 정의.\n", "")
+                .replace("- **일곱째 용어** — 한 문장 정의.\n", "");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", leaky))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("본문에서 풀지 않은 용어가 3개")
+                        && m.contains("다섯째 용어"));
+    }
+
+    /**
+     * 두 편의 분량 기준이 <b>따로</b> 적용되는지. 심화편에 입문편 기준(13,000)을 쓰면
+     * 11,500자짜리 멀쩡한 심화편이 조용히 통과하고, 반대로 입문편에 심화편 기준을 쓰면
+     * 지시대로 쓴 입문편이 매번 경고를 단다.
+     */
+    @Test
+    @DisplayName("분량 기준이 편마다 다르다 — 두 편을 같은 길이로 재면 판정이 갈려야 한다")
+    void appliesLengthLimitPerEdition() {
+        // 두 경고선의 한가운데. 심화편에는 초과이고 입문편에는 미달인 <같은 길이>라,
+        // 편을 안 가리고 재면 둘 중 하나는 반드시 틀린다.
+        int between = (DocumentDraftValidator.ADVANCED_WARN_LENGTH
+                + DocumentDraftValidator.WARN_LENGTH) / 2;
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", padTo(advancedBody(TITLE), between)))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains(
+                        "심화편 권장 " + DocumentDraftValidator.ADVANCED_WARN_LENGTH + "자"));
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", padTo(body(TITLE, "본문"), between)))
+                .as("입문편 상한이 더 높다 — 어려운 절을 덜어낸 만큼을 쉽게 푸는 데 쓰라는 뜻이다")
+                .isEmpty();
+    }
+
+    /** 본문 뒤를 채워 정확히 그 길이로 만든다. 분량 검사만 재려는 것이라 내용은 뜻이 없다. */
+    private String padTo(String content, int length) {
+        return content + "가".repeat(length - content.length());
+    }
 
     /**
      * <b>모든 검사를 통과하는</b> 최소 문서. 검사하려는 항목만 골라 망가뜨려 쓴다.
@@ -622,6 +698,9 @@ class DocumentDraftValidatorTest {
                 ## 첫째 갈래
                 본론 설명. 아래 예제가 그 동작을 보여 준다.
 
+                - **셋째 용어** — 한 문장 정의.
+                - **넷째 용어** — 한 문장 정의.
+
                 ```java
                 var result = compute();
                 ```
@@ -633,6 +712,72 @@ class DocumentDraftValidatorTest {
 
                 ## 둘째 갈래
                 본론 설명. 설정은 이렇게 준다.
+
+                - **다섯째 용어** — 한 문장 정의.
+                - **여섯째 용어** — 한 문장 정의.
+                - **일곱째 용어** — 한 문장 정의.
+
+                ```sql
+                SELECT 1
+                ```
+
+                그래서 이렇게 동작한다.
+
+                ```bash
+                echo done
+                ```
+
+                그래서 이렇게 확인한다.
+
+                ### 용어 한눈에
+
+                | 용어 | 한 줄 뜻 | 언제 쓰나 |
+                |---|---|---|
+                | 셋째 용어 | 한 줄 뜻. | 이럴 때. |
+                | 넷째 용어 | 한 줄 뜻. | 이럴 때. |
+                | 다섯째 용어 | 한 줄 뜻. | 이럴 때. |
+                | 여섯째 용어 | 한 줄 뜻. | 이럴 때. |
+                | 일곱째 용어 | 한 줄 뜻. | 이럴 때. |
+
+                ## 실무에서는 이렇게 쓴다
+                - 이런 상황에서 이렇게 쓴다.
+
+                ## 자주 하는 오해
+                **"믿기 쉬운 문장이다"**
+                그렇지 않다. 맞는 사실은 이것이다.
+
+                ## 한 줄로 정리하면
+                "한 줄 요약."
+                """.formatted(heading, FOUNDATION, content);
+    }
+
+    /**
+     * <b>모든 검사를 통과하는 심화편</b>(2026-09-03). 편에 따라 도는 검사가 갈리므로 짝이 필요하다.
+     *
+     * <p>{@code ## 언제 깨지는가}가 곧 편의 표지다({@code ClaudeDocumentGenerator.editionOf}).
+     * 이 절을 입문편 fixture에 남겨 두면 <b>입문편 검사가 하나도 안 도는</b> 상태로 스무 개
+     * 넘는 테스트가 통과해 버린다 — 초록불인데 아무것도 안 재는, 가장 나쁜 종류의 통과다.
+     */
+    private String advancedBody(String heading) {
+        return """
+                # %s
+
+                ## 핵심 요약
+                - **첫째 요점** — 결론 한 문장.
+                - **둘째 요점** — 결론 한 문장.
+
+                ## 이 글을 읽기 전에
+                - 입문편에서 이것을 다뤘다.
+                - 그리고 저것도 다뤘다.
+
+                ## 깊은 동작
+                본론 설명. 아래 예제가 그 동작을 보여 준다.
+
+                ```java
+                var result = compute();
+                ```
+
+                그래서 결과가 이렇게 나온다.
 
                 ```sql
                 SELECT 1
@@ -650,9 +795,6 @@ class DocumentDraftValidatorTest {
                 | 여섯째 용어 | 한 줄 뜻. | 이럴 때. |
                 | 일곱째 용어 | 한 줄 뜻. | 이럴 때. |
 
-                ## 실무에서는 이렇게 쓴다
-                - 이런 상황에서 이렇게 쓴다.
-
                 ## 언제 깨지는가
                 **1. 첫째 조건**
                 **2. 둘째 조건**
@@ -668,6 +810,6 @@ class DocumentDraftValidatorTest {
 
                 ## 면접 한 줄 요약
                 한 줄 요약.
-                """.formatted(heading, FOUNDATION, content);
+                """.formatted(heading);
     }
 }

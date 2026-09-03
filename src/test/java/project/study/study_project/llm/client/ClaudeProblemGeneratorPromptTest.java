@@ -108,26 +108,51 @@ class ClaudeProblemGeneratorPromptTest {
      * 스스로를 확인하는 것이라, 두 파일이 갈라지는 원래 사고는 못 잡는다.
      * 문서 쪽 프롬프트에 대조해야 <b>문서에 존재할 수 없는 절을 지목하는 상태</b>가 걸린다.
      *
-     * <p>{@code REQUIRED_SECTIONS}가 아니라 {@code SYSTEM_PROMPT}에 대조하는 이유:
+     * <p>{@code REQUIRED_SECTIONS}가 아니라 시스템 프롬프트에 대조하는 이유:
      * 중급이 지목하는 {@code ### 왜 이렇게 설계됐는가}는 본론 안의 소제목이라
-     * {@code REQUIRED_SECTIONS}(문서 최상위 필수 절 목록)에는 없다. 두 종류를 모두 덮으려면
+     * 필수 절 목록에는 없다. 두 종류를 모두 덮으려면
      * "그 제목을 쓰라고 시키는 곳" 하나에 대조하는 것이 맞다.
+     *
+     * <p><b>2026-09-03: 대조 상대가 난이도마다 갈린다.</b> 문서가 입문편·심화편 두 편이 되면서
+     * 초급·중급은 입문편 프롬프트, 고급은 심화편 프롬프트가 절을 시킨다. 이 대응이 이번 분할의
+     * 전제이자 <b>가장 조용히 깨질 수 있는 부분</b>이다 — 절 하나를 반대편으로 옮기면
+     * 그 난이도가 매 주기 폴백으로 떨어지는데, 로그를 보지 않으면 며칠 뒤 문제를 읽고서야 안다.
      */
     @Test
-    @DisplayName("지목한 절 이름을 문서 프롬프트가 실제로 시킨다 — 문서에 없을 절을 지목하면 매일 폴백으로 떨어진다")
+    @DisplayName("지목한 절 이름을 그 난이도가 쓰는 편의 프롬프트가 실제로 시킨다")
     void sourceSectionsExistInDocumentPrompt() {
         assertThat(ClaudeProblemGenerator.SOURCE_SECTIONS)
                 .as("세 난이도 모두 캘 곳이 정해져 있어야 한다")
                 .containsOnlyKeys(Difficulty.BEGINNER, Difficulty.INTERMEDIATE, Difficulty.ADVANCED);
 
         ClaudeProblemGenerator.SOURCE_SECTIONS.forEach((difficulty, sections) -> {
+            // 고급은 심화편에서, 나머지는 입문편에서 캔다(DraftGeneratorCli.editionFor와 같은 매핑)
+            String prompt = difficulty == Difficulty.ADVANCED
+                    ? ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT
+                    : ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT;
             assertThat(sections).as("%s가 캘 절이 하나도 없다", difficulty).isNotEmpty();
             assertThat(sections).allSatisfy(section ->
-                    assertThat(ClaudeDocumentGenerator.SYSTEM_PROMPT)
-                            .as("%s가 지목한 '%s'를 문서 프롬프트가 시키지 않는다 — 문서에 그 절이 안 생긴다",
+                    assertThat(prompt)
+                            .as("%s가 지목한 '%s'를 그 편의 프롬프트가 시키지 않는다 — 문서에 그 절이 안 생긴다",
                                     difficulty, section)
                             .contains(section));
         });
+    }
+
+    /**
+     * 두 편의 필수 절 이름이 <b>하나도 겹치지 않는지</b>(2026-09-03).
+     *
+     * <p>겹치면 {@code DraftGeneratorCli.hasMaterialFor}가 고급 재료를 입문편에서도 찾아내
+     * 잘못된 편으로 문제를 만들고, {@code ClaudeDocumentGenerator.editionOf}의 편 판정도
+     * 함께 무너진다. 둘 다 예외 없이 조용히 어긋나는 종류라 여기서 못 박는다.
+     */
+    @Test
+    @DisplayName("입문편과 심화편의 필수 절 이름이 겹치지 않는다 — 겹치면 어느 편을 근거로 썼는지 가릴 수 없다")
+    void editionsDoNotShareSectionNames() {
+        assertThat(ClaudeDocumentGenerator.BEGINNER_REQUIRED_SECTIONS)
+                .as("겹치는 절이 있으면 편 판정과 재료 판정이 동시에 무너진다")
+                .doesNotContainAnyElementsOf(ClaudeDocumentGenerator.ADVANCED_REQUIRED_SECTIONS
+                        .stream().filter(s -> !s.equals("## 핵심 요약")).toList());
     }
 
     @Test

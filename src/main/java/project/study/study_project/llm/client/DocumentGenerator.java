@@ -14,7 +14,7 @@ import java.util.List;
 public interface DocumentGenerator {
 
     /**
-     * 개념 문서 한 편을 생성한다.
+     * <b>입문편</b> 한 편을 생성한다 — 이 주제를 오늘 처음 보는 사람이 읽는 글.
      *
      * @param domain        분야 (필수)
      * @param topic         주제. {@code null}이면 모델이 {@code avoidTitles}를 피해 알아서 고른다.
@@ -25,4 +25,22 @@ public interface DocumentGenerator {
      */
     GeneratedDocumentItem generate(Domain domain, String topic,
                                    List<String> avoidTitles, List<String> preferredTags);
+
+    /**
+     * <b>심화편</b> 한 편을 생성한다 — 같은 주제의 입문편을 읽고 온 사람이 읽는 글(2026-09-03).
+     *
+     * <p><b>왜 입문편을 인자로 받는가.</b> 두 편을 따로 뽑으면 심화편의 앞 절반이 입문편 요약이
+     * 된다 — 모델에게는 배경을 한 번 더 깔아 주는 쪽이 언제나 안전하기 때문이다. 전문을 넘겨야
+     * "이미 푼 용어는 다시 풀지 마라"가 <b>판정 가능한 지시</b>가 된다.
+     *
+     * <p>주제·중복 회피 목록을 받지 않는 것이 {@link #generate}와의 차이다. 둘 다 입문편이
+     * 이미 결정했고, 여기서 다시 주면 심화편이 다른 주제로 흘러갈 길이 열린다.
+     *
+     * @param domain        분야 — 입문편과 같아야 한다
+     * @param beginner      같은 주제의 입문편(방금 생성한 것). 본문이 비어 있으면 예외
+     * @param preferredTags 기존 태그 목록
+     * @return 생성된 심화편(검증 전 원본)
+     */
+    GeneratedDocumentItem generateAdvanced(Domain domain, GeneratedDocumentItem beginner,
+                                           List<String> preferredTags);
 }

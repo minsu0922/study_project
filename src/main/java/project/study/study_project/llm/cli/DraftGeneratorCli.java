@@ -422,7 +422,7 @@ public final class DraftGeneratorCli {
         }
         try {
             GeneratedDocumentFile parsed = MAPPER.readValue(file.toFile(), GeneratedDocumentFile.class);
-            GeneratedDocumentItem doc = parsed.document();
+            GeneratedDocumentItem doc = editionFor(parsed, difficulty);
             if (doc == null || doc.contentMd() == null || doc.contentMd().isBlank()) {
                 System.out.println("근거 문서 본문이 비어 폴백으로 생성합니다: " + file);
                 return null;
@@ -454,6 +454,35 @@ public final class DraftGeneratorCli {
             System.out.println("근거 문서를 읽지 못해 폴백으로 생성합니다: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 오늘 난이도가 <b>어느 편을 근거로 삼는지</b> — 고급은 심화편, 초급·중급은 입문편(2026-09-03).
+     *
+     * <p><b>왜 이 매핑인가.</b> {@code ClaudeProblemGenerator.SOURCE_SECTIONS}가 난이도별로
+     * 지목하는 절이 두 편의 분할선과 그대로 일치한다 — 초급({@code ## 바탕이 되는 개념},
+     * {@code ## 무엇인가})과 중급({@code ### 왜 이렇게 설계됐는가},
+     * {@code ## 실무에서는 이렇게 쓴다})은 입문편에만 있고, 고급({@code ## 언제 깨지는가},
+     * {@code ## 면접에서 이렇게 물어본다})은 심화편에만 있다. 그래서 그 상수를 고치지 않았다.
+     *
+     * <p><b>심화편이 없으면 입문편으로 돌아간다.</b> 2026-09-03 이전에 만든 파일 15개에는
+     * 심화편 칸이 아예 없고, 심화편 생성만 실패한 날도 있을 수 있다. 여기서 {@code null}을
+     * 돌려주면 그날 고급이 근거 없는 폴백이 되는데, 옛 문서에는 {@code ## 언제 깨지는가}가
+     * 실제로 들어 있으므로 <b>입문편(옛 단일 문서)을 주는 편이 낫다</b>.
+     * 재료가 정말 없으면 바로 다음 검사({@link #hasMaterialFor})가 걸러 준다 —
+     * 여기서 미리 판단하면 그 검사와 판정이 둘로 갈린다.
+     *
+     * <p>두 편을 이어 붙여 넘기는 안은 버렸다. 고급 프롬프트에 입문편이 함께 실리면 모델이
+     * 거기서도 캐서 <b>고급인데 초급 재료로 낸 문제</b>가 섞인다. 근거 인용 대조도 넘긴 본문
+     * 기준이라, 한 편만 주면 그대로 맞아떨어진다.
+     */
+    static GeneratedDocumentItem editionFor(GeneratedDocumentFile parsed, Difficulty difficulty) {
+        if (difficulty == Difficulty.ADVANCED && parsed.advancedDocument() != null
+                && parsed.advancedDocument().contentMd() != null
+                && !parsed.advancedDocument().contentMd().isBlank()) {
+            return parsed.advancedDocument();
+        }
+        return parsed.document();
     }
 
     /**
@@ -513,8 +542,11 @@ public final class DraftGeneratorCli {
     private static void reportDraftChecks(GeneratedDocumentItem document, LocalDate date) {
         List<DraftCheck> checks = DocumentDraftValidator.validate(
                 document.title(), document.slug(), document.contentMd());
+        // 하루에 두 편을 만들게 되면서(2026-09-03) 어느 편의 결과인지 밝히지 않으면
+        // 요약 화면에 같은 모양의 블록이 둘 나란히 서서 구별되지 않는다.
+        String edition = ClaudeDocumentGenerator.editionOf(document.contentMd()).getDisplayName();
         if (checks.isEmpty()) {
-            System.out.println("문서 검증 통과: 형식 문제 없음");
+            System.out.println(edition + " 검증 통과: 형식 문제 없음");
             return;
         }
 
@@ -523,8 +555,8 @@ public final class DraftGeneratorCli {
                 .map(c -> "- %s %s".formatted(c.isBlocking() ? "[차단]" : "[경고]", c.message()))
                 .collect(java.util.stream.Collectors.joining("\n"));
 
-        String rendered = "%s **%s 문서 검증: %d건**%s%n%s%n".formatted(
-                blocking ? "❌" : "⚠️", date, checks.size(),
+        String rendered = "%s **%s %s 검증: %d건**%s%n%s%n".formatted(
+                blocking ? "❌" : "⚠️", date, edition, checks.size(),
                 blocking ? " — 차단 항목이 있어 이대로는 승인되지 않습니다" : "",
                 lines);
 
@@ -610,26 +642,49 @@ public final class DraftGeneratorCli {
         System.out.printf("문서 생성 시작: %s / 주제 %s (모델 %s, 기존 문서 %d편, 태그 %d개)%n",
                 domain, topic == null ? "자동 선택" : topic, model, avoidTitles.size(), tags.size());
 
-        GeneratedDocumentItem document =
-                new ClaudeDocumentGenerator(model).generate(domain, topic, avoidTitles, tags);
+        ClaudeDocumentGenerator generator = new ClaudeDocumentGenerator(model);
+        GeneratedDocumentItem document = generator.generate(domain, topic, avoidTitles, tags);
 
         // 빈 응답은 성공이 아니다 — job을 실패시켜 메일을 받는 쪽이 낫다(문제 생성과 같은 판단)
         if (document == null || document.contentMd() == null || document.contentMd().isBlank()) {
             throw new IllegalStateException("모델이 문서 본문을 반환하지 않았습니다 — 프롬프트/모델 설정을 확인하세요.");
         }
 
+        // 심화편(2026-09-03). 입문편 전문을 넘겨 "이미 푼 용어는 다시 풀지 마라"를 판정 가능하게 만든다.
+        //
+        // 실패해도 job을 죽이지 않는 이유: 이 시점에 입문편은 이미 요금을 내고 만들어져 있다.
+        // 여기서 예외를 던지면 <파일을 쓰기 전>이라 그 입문편이 통째로 증발하고, 다음 날 초급
+        // 문제까지 폴백으로 떨어진다. 심화편만 없으면 고급 날 하루가 입문편 폴백으로 가면 된다
+        // (findSourceDocument가 그 경로를 이미 갖고 있다) — 손해가 사흘에서 하루로 줄어든다.
+        GeneratedDocumentItem advanced = null;
+        try {
+            advanced = generator.generateAdvanced(domain, document, tags);
+        } catch (RuntimeException e) {
+            System.out.println("⚠️ 심화편 생성에 실패했습니다(입문편은 그대로 저장합니다): " + e.getMessage());
+        }
+        if (advanced != null && (advanced.contentMd() == null || advanced.contentMd().isBlank())) {
+            System.out.println("⚠️ 심화편 본문이 비어 버립니다 — 입문편만 저장합니다.");
+            advanced = null;
+        }
+
         GeneratedDocumentFile file = new GeneratedDocumentFile(
                 "GitHub Actions가 자동 생성한 개념 문서 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/15). 승인 전까지는 정식 문서가 아닙니다.",
-                date.toString(), Instant.now().toString(), domain, model, document);
+                date.toString(), Instant.now().toString(), domain, model, document, advanced);
 
         Files.createDirectories(docDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(file));
-        announce("✅ **%s 개념 문서 1편** — %s, 본문 %d자 → `%s`%n%n> %s"
-                .formatted(date, domain, document.contentMd().length(), outFile, document.title()));
+        announce("✅ **%s 개념 문서 %d편** — %s → `%s`%n%n> 입문편(%,d자) %s%n%n> 심화편(%s) %s"
+                .formatted(date, advanced == null ? 1 : 2, domain, outFile,
+                        document.contentMd().length(), document.title(),
+                        advanced == null ? "없음" : "%,d자".formatted(advanced.contentMd().length()),
+                        advanced == null ? "— 고급 날은 입문편으로 폴백합니다" : advanced.title()));
 
         // 문제 쪽의 수확량 점검에 해당하는 자리다. 지금까지 문서에는 이런 점검이 없었고,
         // 검증은 <며칠 뒤 승인 화면에서만> 돌았다. 그 사이 이 문서로 사흘 치 문제가 만들어진다.
         reportDraftChecks(document, date);
+        if (advanced != null) {
+            reportDraftChecks(advanced, date);
+        }
 
         // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
         // 문서는 이미 파일에 있으므로 job을 죽이지 않는다 — 대신 다음 주기에 같은 주제가

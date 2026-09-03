@@ -182,7 +182,7 @@ class AdminBatchStatusIntegrationTest {
 
     private void writeDocumentAt(LocalDate date, String slug) throws Exception {
         var file = new GeneratedDocumentFile("테스트", date.toString(), date + "T00:00:00Z",
-                Domain.NETWORK, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")));
+                Domain.NETWORK, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
         objectMapper.writeValue(DIR.resolve("documents").resolve(date + ".json").toFile(), file);
     }
 
@@ -192,7 +192,7 @@ class AdminBatchStatusIntegrationTest {
 
     private void writeDocument(String name, String slug) throws Exception {
         var file = new GeneratedDocumentFile("테스트", "2026-01-03", "2026-01-03T00:00:00Z",
-                Domain.NETWORK, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")));
+                Domain.NETWORK, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
         objectMapper.writeValue(DIR.resolve("documents").resolve(name).toFile(), file);
     }
 }
