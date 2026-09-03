@@ -16,6 +16,7 @@ import project.study.study_project.llm.service.LlmProblemService;
 import project.study.study_project.llm.support.DraftCheck;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,10 +35,35 @@ import static org.assertj.core.api.Assertions.assertThat;
  * "저장 → 조회 → 응답"의 사슬이 이어져 있는지만 검사한다.
  *
  * <p>MySQL이 필요하다. 클래스 {@code @Transactional}로 롤백된다.
+ *
+ * <h2>{@code llm.import.enabled=false}인 이유 (2026-09-03, CI에서만 깨졌다)</h2>
+ *
+ * <p>{@code DraftImportRunner}는 앱이 뜰 때 {@code generated/*.json}을 초안으로 흡수한다.
+ * 이미 가져온 파일은 {@code imported_draft_file}의 도장을 보고 건너뛰므로 <b>로컬에서는
+ * 아무것도 안 들어온다</b> — 도장 32개가 이미 찍혀 있다. 그런데 CI는 DB가 빈 채로 시작해
+ * 도장도 없으니 <b>파일 32개, 초안 115건이 전부 PENDING으로 들어온 뒤</b> 테스트가 돈다.
+ *
+ * <p>그 상태에서 아래 {@code messagesOf}가 첫 쪽 50건만 뒤지면 방금 만든 초안을 못 찾는다.
+ * 목록이 <b>오래된 순</b>이라 방금 만든 것은 언제나 마지막 쪽에 있기 때문이다.
+ * 로컬에서 통과하고 CI에서만 깨지는 실패였고, 원인은 코드가 아니라 <b>DB에 뭐가 쌓여 있느냐</b>였다.
+ *
+ * <p>두 겹으로 막는다. ① 흡수를 꺼서 이 테스트가 만든 것만 DB에 있게 하고,
+ * ② 그래도 쪽을 넘겨 가며 찾는다({@code messagesOf}) — 로컬 개발 DB에는 이 스위치와 무관하게
+ * 옛 초안이 쌓여 있어서, 흡수를 끄는 것만으로는 같은 실패가 언제든 돌아온다.
+ * ①만 있으면 "지금 로컬에서는 통과한다"에 기대는 셈이다.
+ *
+ * <p>스위치 이름과 이유는 {@code AdminLlmBulkApproveIntegrationTest}에 이미 있었다.
+ * 그 규약을 따르지 않은 것이 이번 실패의 절반이다.
  */
-@SpringBootTest(properties = "ratelimit.enabled=false")
+@SpringBootTest(properties = {"ratelimit.enabled=false", "llm.import.enabled=false"})
 @Transactional
 class SourceQuoteWiringTest {
+
+    /** 초안을 찾으며 넘겨 볼 최대 쪽수 — 무한 루프 대신 분명한 실패로 끝내려는 상한. */
+    private static final int MAX_PAGES = 50;
+
+    /** 한 쪽 크기. 쿼리 수를 줄이려고 크게 잡는다(검수 화면 기본값과 맞출 이유가 없다). */
+    private static final int PAGE_SIZE = 200;
 
     private static final String DOC_BODY = """
             ## 무엇인가
@@ -110,15 +136,29 @@ class SourceQuoteWiringTest {
                 List.of(item), "test-model", null, doc).get(0);
     }
 
-    /** 검수 화면이 실제로 받는 경고 문장들 — 목록 API를 거쳐 꺼낸다(배선을 보는 것이 목적이다). */
+    /**
+     * 검수 화면이 실제로 받는 경고 문장들 — 목록 API를 거쳐 꺼낸다(배선을 보는 것이 목적이다).
+     *
+     * <p><b>쪽을 넘겨 가며 찾는다.</b> 목록이 오래된 순({@code order by createdAt asc})이라
+     * 방금 만든 초안은 언제나 <b>마지막 쪽</b>에 있다. 첫 쪽만 보면 "DB에 초안이 몇 건 쌓여
+     * 있느냐"에 따라 통과했다 깨졌다 하는데, 그건 이 테스트가 재려는 것과 아무 상관이 없다.
+     * 실제로 그 이유로 CI에서만 깨졌다(클래스 주석).
+     */
     private List<String> messagesOf(GeneratedProblemDraft saved) {
-        LlmDraftResponse response = llmProblemService
-                .getDrafts(null, null, null, null, org.springframework.data.domain.PageRequest.of(0, 50))
-                .content().stream()
-                .filter(d -> d.id().equals(saved.getId()))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("방금 저장한 초안이 검수 목록에 없다"));
-        return response.checks().stream().map(DraftCheck::message).toList();
+        for (int page = 0; page < MAX_PAGES; page++) {
+            var result = llmProblemService.getDrafts(null, null, null, null,
+                    org.springframework.data.domain.PageRequest.of(page, PAGE_SIZE));
+            Optional<LlmDraftResponse> hit = result.content().stream()
+                    .filter(d -> d.id().equals(saved.getId()))
+                    .findFirst();
+            if (hit.isPresent()) {
+                return hit.get().checks().stream().map(DraftCheck::message).toList();
+            }
+            if (!result.hasNext()) {
+                break;
+            }
+        }
+        throw new AssertionError("방금 저장한 초안이 검수 목록에 없다");
     }
 
     /** OX 한 건. 규약을 통과해야 저장되므로(defectOf) answer는 O/X여야 한다. */
