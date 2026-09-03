@@ -9,6 +9,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.llm.dto.ExistingDocumentsFile;
+import project.study.study_project.llm.dto.DomainTitle;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.tag.domain.Tag;
 import project.study.study_project.tag.repository.TagRepository;
@@ -79,8 +80,15 @@ public class ExistingDocumentsExporter extends SnapshotExporter {
     protected Snapshot build(boolean fileExists) {
         // 정식 문서 + 아직 검수 안 된 초안. 순서를 고정해야 "내용이 같은데 파일이 바뀐" 것으로
         // 보이지 않는다.
-        List<String> titles = new ArrayList<>(documentRepository.findAllTitles());
-        titles.addAll(draftRepository.findPendingTitles());
+        // 제목 앞에 [분야]를 붙인다(2026-09-03). 새 user 메시지가 "같은 분야에 이미 문서가
+        // 있으면 그 문서가 다룬 메커니즘과 겹치는 것도 고르지 마라"를 요구하는데,
+        // 제목만으로는 모델이 그 판단을 할 수 없다.
+        //
+        // 파일 형식(List<String>)은 그대로 둔다. 구조를 바꾸면 이미 커밋된 스냅샷을 읽는
+        // 배치가 깨지는데, 라벨을 문자열에 녹이면 옛 파일은 라벨 없이 그대로 읽힌다.
+        List<String> titles = new ArrayList<>(
+                documentRepository.findAllDomainTitles().stream().map(DomainTitle::labeled).toList());
+        draftRepository.findPendingDomainTitles().stream().map(DomainTitle::labeled).forEach(titles::add);
 
         List<String> tags = tagRepository.findAll().stream()
                 .map(Tag::getName)

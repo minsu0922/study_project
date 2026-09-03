@@ -1,5 +1,6 @@
 package project.study.study_project.llm.repository;
 
+import project.study.study_project.llm.dto.DomainTitle;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,6 +44,21 @@ public interface GeneratedDocumentDraftRepository extends JpaRepository<Generate
             where d.status = 'PENDING'
             """)
     List<String> findPendingTitles();
+
+    /**
+     * 분야를 함께 뽑는다 — 회피 목록의 <b>[분야] 제목</b> 표기용(2026-09-03).
+     *
+     * <p>바로 위 주석이 "분야로 나누지 않는다"고 적은 것과 어긋나 보이지만 다른 이야기다.
+     * 그 문단은 <b>중복 판정 범위</b>를 좁히지 않겠다는 뜻이고(분야가 흔들려도 중복은 잡아야 한다),
+     * 여기서 분야를 함께 주는 것은 모델에게 <b>추가 정보</b>를 줄 뿐 목록을 걸러 내지 않는다.
+     * 목록은 여전히 전 분야가 통째로 실린다.
+     */
+    @Query("""
+            select new project.study.study_project.llm.dto.DomainTitle(d.domain, d.title)
+            from GeneratedDocumentDraft d
+            where d.status = 'PENDING'
+            """)
+    List<DomainTitle> findPendingDomainTitles();
 
     /**
      * 거절된 문서의 slug — 클라우드 배치가 "이 문서로는 문제를 만들지 마라"를 알기 위한 목록(2단계).

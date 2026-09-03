@@ -1,5 +1,7 @@
 package project.study.study_project.llm.service;
 
+import project.study.study_project.global.common.Domain;
+import project.study.study_project.llm.dto.DomainTitle;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -62,7 +64,9 @@ class ExistingDocumentsExporterTest {
         assertThat(exporter.export(tempDir)).isTrue();
 
         ExistingDocumentsFile snapshot = read();
-        assertThat(snapshot.titles()).containsExactly("OSI 7계층", "캐시 전략");
+        assertThat(snapshot.titles())
+                .as("제목 앞에 [분야]가 붙어야 '같은 분야의 메커니즘과 겹치지 마라'를 모델이 판단할 수 있다")
+                .containsExactly("[네트워크] OSI 7계층", "[데이터베이스] 캐시 전략");
     }
 
     @Test
@@ -142,7 +146,7 @@ class ExistingDocumentsExporterTest {
         given(List.of("OSI 7계층"), List.of(), List.of("network"));
 
         assertThat(exporter.export(tempDir)).isTrue();
-        assertThat(read().titles()).containsExactly("OSI 7계층");
+        assertThat(read().titles()).containsExactly("[네트워크] OSI 7계층");
     }
 
     /* ── 도우미 ──────────────────────────────────────────────── */
@@ -153,8 +157,12 @@ class ExistingDocumentsExporterTest {
 
     private void given(List<String> documentTitles, List<String> draftTitles,
                        List<String> tagNames, List<String> rejectedSlugs) {
-        lenient().when(documentRepository.findAllTitles()).thenReturn(documentTitles);
-        lenient().when(draftRepository.findPendingTitles()).thenReturn(draftTitles);
+        // 저장소가 분야를 함께 준다(2026-09-03). 시험용 분야는 아무거나 쓰되, 두 저장소를
+        // 다르게 둬서 <어느 쪽 라벨이 붙었는지> 구별되게 한다.
+        lenient().when(documentRepository.findAllDomainTitles()).thenReturn(
+                documentTitles.stream().map(t -> new DomainTitle(Domain.NETWORK, t)).toList());
+        lenient().when(draftRepository.findPendingDomainTitles()).thenReturn(
+                draftTitles.stream().map(t -> new DomainTitle(Domain.DATABASE, t)).toList());
         lenient().when(draftRepository.findRejectedSlugs()).thenReturn(rejectedSlugs);
         when(tagRepository.findAll()).thenReturn(tagNames.stream().map(Tag::of).toList());
     }

@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import project.study.study_project.document.domain.Document;
+import project.study.study_project.llm.dto.DomainTitle;
 
 import java.util.Collection;
 import java.util.List;
@@ -35,6 +36,17 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, Docum
      */
     @Query("select d.title from Document d order by d.id")
     List<String> findAllTitles();
+
+    /**
+     * 분야를 함께 뽑는다 — 회피 목록을 <b>[분야] 제목</b> 꼴로 내보내려고(2026-09-03).
+     *
+     * <p>{@link #findAllTitles()}를 두고 하나 더 만든 이유: 제목만 쓰는 자리가 아직 있고,
+     * 쓰지도 않을 분야를 매번 함께 읽을 이유가 없다. 정렬을 id로 고정하는 이유는 위와 같다 —
+     * 순서가 흔들리면 내용이 같은데도 스냅샷 파일이 매번 바뀐 것으로 보인다.
+     */
+    @Query("select new project.study.study_project.llm.dto.DomainTitle(d.domain, d.title) "
+            + "from Document d order by d.id")
+    List<DomainTitle> findAllDomainTitles();
 
     /**
      * 주어진 slug 중 <b>실제로 존재하는 것</b>만 골라 낸다 — 문제 화면의 "개념 문서 읽기" 링크용(3단계).
