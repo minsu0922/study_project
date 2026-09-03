@@ -142,12 +142,16 @@ refresh 토큰을 폐기한다.
   "content": [
     { "id": 10, "domain": "NETWORK", "domainLabel": "네트워크",
       "title": "OSI 7계층", "slug": "osi-7-layer",
-      "tags": ["osi", "network"], "updatedAt": "2026-07-01T12:00:00" }
+      "tags": ["osi", "network"], "updatedAt": "2026-07-01T12:00:00",
+      "edition": null }
   ],
   "page": 0, "size": 20, "totalElements": 1, "totalPages": 1, "hasNext": false
 }
 ```
 - 목록은 `content_md`(본문) 제외 — 단건에서만 반환.
+- `edition`(2026-09-03): `"입문편"` / `"심화편"` / `null`. **짝이 되는 편이 실제로 있을 때만** 채운다.
+  두 편은 제목이 똑같으므로 목록에서 이 값이 유일한 구별 수단이다(docs/15).
+  한 편짜리 문서는 `null`이고 화면은 배지를 그리지 않는다 — 없는 심화편을 있다고 말하지 않기 위해서다.
 - 태그 조인 N+1은 로드맵 1(QueryDSL+fetch join)에서 최적화 → 지금은 기능 우선.
 
 ---
@@ -162,9 +166,16 @@ refresh 토큰을 폐기한다.
   "title": "OSI 7계층", "slug": "osi-7-layer",
   "contentMd": "# OSI 7계층\n...", "source": "https://...",
   "tags": ["osi", "network"],
-  "createdAt": "2026-06-01T09:00:00", "updatedAt": "2026-07-01T12:00:00"
+  "createdAt": "2026-06-01T09:00:00", "updatedAt": "2026-07-01T12:00:00",
+  "edition": "입문편", "counterpartSlug": "osi-7-layer-advanced"
 }
 ```
+- `edition`·`counterpartSlug`(2026-09-03): 짝이 되는 편이 **실제로 있을 때만** 채운다. 없으면 둘 다 `null`.
+  둘을 함께 켜고 끄는 이유는 화면이 배지와 링크를 한 조건으로 그리기 때문이다 —
+  따로 놀면 "다른 편이 있다"고 말해 놓고 갈 길은 안 알려 주는 화면이 나온다.
+- 짝은 저장하지 않고 slug 규칙(`X` ↔ `X-advanced`)으로 파생한다(`DocumentEditions`).
+  파생 가능한 값을 저장하면 그 칸과 slug가 어긋난 채 엉뚱한 문서로 가는 링크가 생긴다.
+
 **에러**: `DOC_001` slug 없음(404)
 
 ---
