@@ -81,10 +81,40 @@ class ClaudeDocumentGeneratorTest {
     void asksToPickUncoveredTopicWithinRange() {
         String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, "Spring 트랜잭션", List.of(), List.of());
 
+        assertThat(prompt).contains("[주제 선정 원칙]");
         assertThat(prompt).contains("범위 전체를 개괄하지 마라");
-        assertThat(prompt).contains("아직").contains("다루지 않은 것이 오늘의 주제다");
-        assertThat(prompt).as("이미 한 편 크기인 범위를 억지로 더 쪼개면 알맹이가 없어진다")
-                .contains("억지로 더 좁히지 마라");
+        assertThat(prompt).as("겹침 판정을 제목 일치에서 <같은 분야의 메커니즘>까지 넓혔다")
+                .contains("그 문서가 다룬 메커니즘과 겹치는 것도 고르지 않는다");
+        assertThat(prompt).as("'한 편 크기'를 감이 아니라 판정 가능한 절차로 준다")
+                .contains("물음표 하나로 끝나지 않으면 아직 넓다");
+        assertThat(prompt).as("좁게 잡는 실패에도 판정이 있어야 한다 — 없으면 부연으로 분량을 메운다")
+                .contains("채우지 못하면 너무 좁게 잡은 것이다");
+        assertThat(prompt).as("예시 주제를 그대로 쓰는 것은 막아야 한다")
+                .contains("주제(캐시)는 가져다 쓰지 마라");
+    }
+
+    /**
+     * <b>주제 선정 예시가 어느 분야에도 기울지 않는지.</b>
+     *
+     * <p>이 저장소는 "예시가 규칙을 이긴다"를 두 번 확인했다(8/15 하이픈 사고, 8/18 절 형식).
+     * 그래서 (X) 예시에 특정 분야의 주제를 쓰면 <b>다른 분야 요청에도 그 분야 냄새가 실린다</b>.
+     * 실제로 이 블록은 처음에 데이터베이스 예시(기본키·외래키)로 들어왔다가 중립 주제로 바뀌었다.
+     *
+     * <p>여기서 지키는 것은 특정 낱말이 아니라 <b>기울지 않았다는 사실</b>이다. 다음에 예시를
+     * 손볼 때 그때 다루던 주제를 그대로 적어 넣기 쉬운데, 증상이 조용하다 —
+     * 문서는 멀쩡히 나오고 주제만 조금씩 한쪽으로 쏠린다.
+     */
+    @Test
+    @DisplayName("주제 선정 예시가 특정 분야로 기울지 않는다 — 예시가 규칙을 이기므로 주제까지 끌고 간다")
+    void topicPickingExamplesStayNeutral() {
+        String prompt = generator.buildPrompt(Domain.OS, "프로세스와 스레드", List.of(), List.of());
+
+        assertThat(prompt)
+                .as("시스템 프롬프트가 이미 예시 주제로 쓰는 캐시라 '이건 예시일 뿐'이 뚜렷하다")
+                .contains("(X) 캐시는 무엇이고 어떻게 무효화하는가")
+                .as("이 요청의 분야(운영체제)와 무관한 예시여야 한다")
+                .doesNotContain("기본키")
+                .doesNotContain("외래키");
     }
 
     @Test
@@ -103,8 +133,7 @@ class ClaudeDocumentGeneratorTest {
     void includesPreferredTags() {
         String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of("tcp", "http"));
 
-        assertThat(prompt).contains("기존 태그");
-        assertThat(prompt).contains("tcp, http");
+        assertThat(prompt).contains("기존 태그: tcp, http");
     }
 
     @Test
@@ -112,9 +141,10 @@ class ClaudeDocumentGeneratorTest {
     void limitsNewTagsWhenPreferredTagsGiven() {
         String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of("tcp", "http"));
 
-        assertThat(prompt).contains("새로 만드는 태그는 1개까지");
+        assertThat(prompt).contains("[태그 부여 규칙]");
+        assertThat(prompt).contains("새로 만들되 1개까지다");
         assertThat(prompt).as("진짜 막아야 하는 건 개수가 아니라 같은 개념이 여러 이름으로 갈라지는 것")
-                .contains("뜻이 겹치는 태그는 절대 새로 만들지 마라");
+                .contains("뜻이 겹치는 태그는 만들지 않는다");
     }
 
     @Test
@@ -123,7 +153,7 @@ class ClaudeDocumentGeneratorTest {
         String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of());
 
         assertThat(prompt).doesNotContain("이미 문서가 있는 주제");
-        assertThat(prompt).doesNotContain("기존 태그");
+        assertThat(prompt).doesNotContain("[태그 부여 규칙]");
     }
 
     @Test
