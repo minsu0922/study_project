@@ -13,6 +13,9 @@ import java.util.List;
  *
  * @param domain      enum 상수명(영문, 예 {@code NETWORK}) — 클라이언트 분기용
  * @param domainLabel 화면 표기용 한글(예 "네트워크")
+ * @param edition     "입문편"/"심화편". <b>짝이 실제로 있을 때만</b> 채운다(2026-09-03).
+ *                    2026-09-03 이전 한 편짜리 문서에는 {@code null}이고, 화면은 배지를 안 그린다.
+ *                    두 편은 제목이 같으므로 목록에서 이 값이 유일한 구별 수단이다
  */
 public record DocumentListItem(
         Long id,
@@ -21,6 +24,11 @@ public record DocumentListItem(
         String title,
         String slug,
         List<String> tags,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        String edition
 ) {
+    /** 편 정보를 채운 사본 — 리포지토리는 짝을 모르므로 서비스가 나중에 붙인다. */
+    public DocumentListItem withEdition(String edition) {
+        return new DocumentListItem(id, domain, domainLabel, title, slug, tags, updatedAt, edition);
+    }
 }

@@ -18,8 +18,10 @@
   <div id="message"></div>
   <article id="doc" hidden>
     <h1 id="title"></h1>
+    <p class="doc-sub" id="edition" hidden></p>
     <div id="badges" style="margin-bottom:12px"></div>
     <div class="doc-body" id="body"></div>
+    <a class="next-edition" id="nextEdition" hidden></a>
     <p class="meta" id="source" style="margin-top:12px"></p>
   </article>
 </main>
@@ -29,6 +31,41 @@
 /* 문서 상세 페이지 — URL의 ?slug=... 로 문서 하나를 불러온다.
  * slug는 사람이 읽는 영문 식별자(예 osi-7-layer)라 URL 공유가 쉽다(docs/01). */
 renderNav("docs");
+
+/* 편(입문/심화) 부제와 짝으로 가는 링크.
+ *
+ * 서버는 <짝이 실제로 있을 때만> edition과 counterpartSlug를 채운다(2026-09-03).
+ * 둘을 한 조건으로 묶어 쓰는 이유: 따로 보면 "부제는 있는데 링크가 없는" 화면이 나올 수 있고,
+ * 그건 읽는 사람에게 다른 편이 어딘가 있다고 말해 놓고 갈 길을 안 알려 주는 셈이다.
+ *
+ * 링크를 두 군데 두는 것은 시점이 다르기 때문이다. 위쪽(부제 옆)은 <잘못 들어온 사람>이
+ * 바로 옮겨 타는 자리이고, 아래쪽 카드는 <다 읽은 사람>이 이어서 읽는 자리다.
+ * 아래쪽만 두면 심화편에 잘못 들어온 초보자가 9,000자를 헤맨 뒤에야 입문편을 만난다. */
+function renderEdition(d) {
+  if (!d.edition || !d.counterpartSlug) {
+    return; // 한 편짜리 문서 — 없는 짝을 가리키느니 아무 말도 안 하는 편이 낫다
+  }
+  const advanced = d.edition === "심화편";
+  const otherName = advanced ? "입문편" : "심화편";
+  const href = "/document.html?slug=" + encodeURIComponent(d.counterpartSlug);
+
+  const sub = document.getElementById("edition");
+  sub.innerHTML =
+    `<span class="edition${advanced ? " advanced" : ""}">${escapeHtml(d.edition)}</span>` +
+    `<a href="${href}">${escapeHtml(otherName)} 보기 →</a>`;
+  sub.hidden = false;
+
+  const next = document.getElementById("nextEdition");
+  next.href = href;
+  // 같은 제목의 다른 편이므로 제목을 다시 적어도 도움이 안 된다. 무엇이 다른지를 적는다.
+  next.innerHTML =
+    `<span class="label">${advanced ? "기초부터 다시" : "이어서 읽기"}</span>` +
+    `<span class="name">${escapeHtml(d.title)} · ${escapeHtml(otherName)}</span>` +
+    `<span class="hint">${advanced
+      ? "이 글이 어려우면 개념부터 설명하는 입문편이 있습니다."
+      : "같은 주제가 실무에서 어떻게 깨지는지, 면접에서 어떻게 물어보는지를 다룹니다."}</span>`;
+  next.hidden = false;
+}
 
 async function loadDoc() {
   const slug = new URLSearchParams(location.search).get("slug");
@@ -41,6 +78,7 @@ async function loadDoc() {
     const d = await api("/api/documents/" + encodeURIComponent(slug));
     document.title = d.title + " — csquiz";
     document.getElementById("title").textContent = d.title;
+    renderEdition(d);
     document.getElementById("badges").innerHTML =
       `<span class="badge">${escapeHtml(d.domainLabel)}</span>` +
       d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("");

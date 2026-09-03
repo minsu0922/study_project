@@ -52,14 +52,25 @@ async function loadDocs() {
     if (domainFilter.value) params.set("domain", domainFilter.value);
     const data = await api("/api/documents?" + params);
 
+    // 제목 아래 부제 한 줄. edition이 없으면 빈 문자열이라 마크업 자체가 생기지 않는다.
+    const editionSubtitle = (edition) => edition
+      ? `<p class="doc-sub"><span class="edition${edition === "심화편" ? " advanced" : ""}">${escapeHtml(edition)}</span></p>`
+      : "";
+
     const list = document.getElementById("docList");
     if (data.content.length === 0) {
       list.innerHTML = `<p class="meta">문서가 없습니다.</p>`;
     } else {
       // 목록은 본문(contentMd) 없이 요약만 온다 — 본문은 클릭해서 상세에서 읽는다(docs/03)
+      //
+      // edition("입문편"/"심화편")은 짝이 실제로 있을 때만 서버가 채워 준다(2026-09-03).
+      // 두 편은 제목이 <똑같으므로> 이 줄이 없으면 목록에 같은 이름이 두 번 서서 구별되지 않는다.
+      // 한 편짜리 옛 문서에는 null이 오고, 그때는 부제를 아예 그리지 않는다 —
+      // 짝이 없는데 "입문편"이라 적으면 읽는 사람이 없는 심화편을 찾아 나선다.
       list.innerHTML = data.content.map(d => `
         <div class="card clickable" onclick="location.href='/document.html?slug=${encodeURIComponent(d.slug)}'">
           <h3><a href="/document.html?slug=${encodeURIComponent(d.slug)}">${escapeHtml(d.title)}</a></h3>
+          ${editionSubtitle(d.edition)}
           <span class="badge">${escapeHtml(d.domainLabel)}</span>
           ${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}
           <div class="meta">수정: ${formatDate(d.updatedAt)}</div>

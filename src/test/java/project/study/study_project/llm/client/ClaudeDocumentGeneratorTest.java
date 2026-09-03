@@ -2,6 +2,7 @@ package project.study.study_project.llm.client;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 
@@ -242,6 +243,37 @@ class ClaudeDocumentGeneratorTest {
      * 순서를 지정하는 것이다. ③이 필요한 이유는 09-03 실물의 항목 11개 중 다섯이
      * 자바 개발자가 만날 일 없는 C 영역이었기 때문이다.
      */
+    /**
+     * <b>제목은 같고 slug만 다르다</b>는 규칙이 프롬프트와 짝짓기 규칙 양쪽에 살아 있는지(2026-09-03).
+     *
+     * <p>두 편은 제목이 똑같아야 한다 — 화면에서 편을 가르는 것은 제목이 아니라 배지이고,
+     * 제목까지 다르면 목록에서 두 편이 남남으로 보인다. 반대로 slug 꼬리는
+     * {@code DocumentEditions.ADVANCED_SUFFIX}와 <b>글자까지 같아야</b> 한다.
+     * 갈라지면 두 편이 정상적으로 만들어지고 승인되는데 <b>서로를 못 찾는다</b> —
+     * 배지도 링크도 안 나오고, 원인은 문자열 하나다. 예외도 로그도 없다.
+     */
+    @Test
+    @DisplayName("제목은 같고 slug 꼬리는 짝짓기 규칙과 같은 값이다 — 갈라지면 두 편이 서로를 못 찾는다")
+    void advancedKeepsTitleAndUsesPairingSuffix() {
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("제목까지 다르면 목록에서 두 편이 남남으로 보인다")
+                .contains("입문편 제목을 글자 하나 다르지 않게 그대로 옮겨 적는다")
+                .as("꼬리는 DocumentEditions.ADVANCED_SUFFIX와 한 값이어야 한다")
+                .contains("\"" + DocumentEditions.ADVANCED_SUFFIX + "\"");
+
+        // user 메시지도 같은 규칙을 실물로 한 번 더 박는다(값을 채우는 자리에 규칙을 붙인다).
+        GeneratedDocumentItem beginner = new GeneratedDocumentItem(
+                "부모 행을 지울 때 자식 행은 어떻게 되는가", "on-delete-actions",
+                "# 제목\n\n## 무엇인가\n정의.", List.of("database"));
+
+        assertThat(generator.buildAdvancedPrompt(Domain.DATABASE, beginner, List.of("database")))
+                .contains("\"부모 행을 지울 때 자식 행은 어떻게 되는가\"")
+                .contains("\"on-delete-actions" + DocumentEditions.ADVANCED_SUFFIX + "\"")
+                .as("입문편 전문을 넘기는 것이 이 편의 존재 이유다")
+                .contains("--- 입문편 시작 ---")
+                .contains("## 무엇인가\n정의.");
+    }
+
     @Test
     @DisplayName("심화편이 입문편을 되풀이하지 못하게 막는다 — 안 막으면 앞 절반이 요약이 된다")
     void advancedPromptAvoidsRepeatingBeginner() {

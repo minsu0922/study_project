@@ -163,6 +163,63 @@ class LlmDocumentFlowIntegrationTest {
                 .andExpect(jsonPath("$.data.tags").isNotEmpty());
     }
 
+    /**
+     * <b>두 편이 승인된 뒤 서로를 가리키는지</b> — 2026-09-03 분할의 화면 쪽 끝단이다.
+     *
+     * <p>편과 짝 slug는 저장하지 않고 slug 규칙으로 파생한다({@code DocumentEditions}).
+     * 그 결정의 대가가 <b>실패가 조용하다</b>는 것이다 — 규칙이 어긋나도 두 문서는 멀쩡히
+     * 승인되고 멀쩡히 조회되며, 배지와 링크만 소리 없이 사라진다. 그래서 규칙 단위 테스트와
+     * 별개로 <b>승인 → 공개 조회</b>까지 이어 붙여 확인한다.
+     *
+     * <p>제목이 같은 것도 함께 본다. 두 편은 제목이 똑같아야 하고(목록에서 배지가 유일한
+     * 구별 수단이다), 그러니 제목이 같다는 사실 자체가 화면 설계의 전제다.
+     */
+    @Test
+    @DisplayName("두 편을 승인하면 공개 조회에서 서로를 가리킨다 — 배지와 링크가 이 값으로 켜진다")
+    void approvedEditionsPointAtEachOther() throws Exception {
+        String slug = uniqueSlug();
+        String advancedSlug = slug + "-advanced";
+        String title = "부모 행을 지울 때 자식 행은 어떻게 되는가";
+
+        approve(saveDraft(title, slug, validContent(title, "입문편 본문.")));
+        // 심화편은 제목이 <같고> slug만 다르다 — 프롬프트가 모델에게 시키는 그대로다.
+        approve(saveDraft(title, advancedSlug, validContent(title, "심화편 본문.")));
+
+        mockMvc.perform(get("/api/documents/" + slug))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.edition").value("입문편"))
+                .andExpect(jsonPath("$.data.counterpartSlug").value(advancedSlug));
+
+        mockMvc.perform(get("/api/documents/" + advancedSlug))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.edition").value("심화편"))
+                .andExpect(jsonPath("$.data.counterpartSlug").value(slug));
+    }
+
+    /**
+     * 짝이 없는 문서에는 편을 붙이지 않는다 — 2026-09-03 이전 문서가 전부 이 경우다.
+     *
+     * <p>"입문편"이라고 적어 두면 읽는 사람은 어딘가에 심화편이 있다고 믿고 찾아 나선다.
+     * 없는 것을 있다고 말하지 않는 것이 이 필드의 규칙이다.
+     */
+    @Test
+    @DisplayName("짝이 없으면 편도 없다 — 없는 심화편을 있다고 말하면 안 된다")
+    void singleDocumentHasNoEdition() throws Exception {
+        String slug = uniqueSlug();
+        approve(saveDraft("혼자 있는 문서", slug, validContent("혼자 있는 문서", "본문.")));
+
+        mockMvc.perform(get("/api/documents/" + slug))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.edition").doesNotExist())
+                .andExpect(jsonPath("$.data.counterpartSlug").doesNotExist());
+    }
+
+    private void approve(GeneratedDocumentDraft draft) throws Exception {
+        mockMvc.perform(post("/api/admin/llm-documents/%d/approve".formatted(draft.getId()))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken()))
+                .andExpect(status().isCreated());
+    }
+
     @Test
     @DisplayName("차단 항목이 있는 초안은 승인이 409로 막히고, 무엇에 걸렸는지 메시지로 알려 준다")
     void blockedDraftCannotBeApproved() throws Exception {

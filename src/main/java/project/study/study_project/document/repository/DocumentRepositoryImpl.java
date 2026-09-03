@@ -88,7 +88,9 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
         List<DocumentListItem> content = rows.stream()
                 .map(r -> new DocumentListItem(
                         r.id(), r.domain(), r.domain().getDisplayName(), r.title(), r.slug(),
-                        tagsByDocId.getOrDefault(r.id(), List.of()), r.updatedAt()))
+                        // 편(입문/심화)은 여기서 채우지 않는다 — 짝이 실제로 있는지 알아야 하는데
+                        // 그건 이 페이지 밖의 문서를 봐야 하는 질문이라 서비스가 한 번에 처리한다.
+                        tagsByDocId.getOrDefault(r.id(), List.of()), r.updatedAt(), null))
                 .toList();
 
         // count는 PageableExecutionUtils에 위임 — 첫 페이지가 꽉 차지 않는 등

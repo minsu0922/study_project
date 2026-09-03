@@ -8,6 +8,7 @@ import com.anthropic.models.messages.ThinkingConfigAdaptive;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -793,11 +794,13 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
             ② 이 글만 보고 고급 문제를 낼 수 있는 재료가 들어 있다.
             ③ 손볼 곳 없이 그대로 기술 블로그에 올릴 수 있는 완결된 글이다.
 
-            [제목]
-            입문편 제목에 " — 심화"를 붙이지 마라. 이 글이 다루는 것을 그대로 제목으로 쓴다.
-            (X) 스레드는 무엇을 따로 갖고 무엇을 함께 쓰는가 — 심화
-            (O) 스레드가 공유하는 것이 사고가 되는 순간
+            [제목] — 입문편과 <똑같이> 쓴다
+            title 필드와 본문 H1에 입문편 제목을 글자 하나 다르지 않게 그대로 옮겨 적는다.
+            "— 심화", "(심화편)" 같은 꼬리를 붙이지 마라. 다시 짓지도 마라.
+            두 글은 한 주제의 1부·2부이고, 화면이 배지로 편을 구별해 준다.
+            제목까지 다르면 목록에서 두 편이 남남으로 보인다.
             slug는 입문편 slug에 "-advanced"를 붙인다. 이건 규칙이니 반드시 지켜라.
+            제목은 같고 slug만 다르다 — 헷갈리지 마라.
 
             [문서 구조]
             # 제목
@@ -987,9 +990,13 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     String buildAdvancedPrompt(Domain domain, GeneratedDocumentItem beginner, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
         sb.append("분야: ").append(domain.getDisplayName()).append(domainHint(domain)).append("\n\n");
-        sb.append("입문편 제목: ").append(beginner.title()).append('\n');
-        sb.append("입문편 slug: ").append(beginner.slug()).append('\n');
-        sb.append("이 글의 slug는 반드시 \"").append(beginner.slug()).append("-advanced\"로 한다.\n\n");
+        // 값을 채우는 자리에 규칙을 붙인다 — 시스템 프롬프트에도 같은 지시가 있지만,
+        // 붙일 대상(입문편 제목·slug)이 요청마다 바뀌는 값이라 거기에는 실물을 적을 수 없다.
+        // 규칙과 재료가 떨어져 있으면 지켜지지 않는다는 것을 이 파이프라인에서 여러 번 겪었다.
+        sb.append("이 글의 제목(title)은 반드시 \"").append(beginner.title()).append("\"다. 그대로 쓴다.\n");
+        sb.append("이 글의 slug는 반드시 \"")
+                .append(beginner.slug()).append(DocumentEditions.ADVANCED_SUFFIX).append("\"다.\n");
+        sb.append("본문 맨 위 H1도 위 제목과 같아야 한다.\n\n");
 
         sb.append("""
                 아래는 같은 주제의 입문편 전문이다. 독자는 이것을 읽고 왔다.

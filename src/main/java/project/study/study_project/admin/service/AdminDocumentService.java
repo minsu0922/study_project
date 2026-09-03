@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.dto.DocumentDetailResponse;
+import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.config.CacheConfig;
 import project.study.study_project.global.exception.BusinessException;
@@ -41,7 +42,12 @@ public class AdminDocumentService {
                 request.domain(), request.title().trim(), request.slug(),
                 request.contentMd(), trimOrNull(request.source()),
                 tagService.resolveTags(request.tags()));
-        return DocumentDetailResponse.from(documentRepository.save(document));
+        Document saved = documentRepository.save(document);
+        // 등록에도 무효화가 필요해졌다(2026-09-03). 단건 응답이 "짝이 되는 편이 있는가"를 함께
+        // 실어 나르기 때문이다 — 심화편을 지금 승인하면 이미 캐시된 입문편은 여전히
+        // "짝 없음"으로 남아, 한쪽에서만 링크가 보이는 상태가 최대 10분(TTL)간 이어진다.
+        evictDocumentCache(DocumentEditions.counterpartSlugOf(request.slug()));
+        return DocumentDetailResponse.from(saved);
     }
 
     /**
@@ -62,7 +68,9 @@ public class AdminDocumentService {
         document.update(request.domain(), request.title().trim(), request.slug(),
                 request.contentMd(), trimOrNull(request.source()),
                 tagService.resolveTags(request.tags()));
-        evictDocumentCache(oldSlug, request.slug());
+        evictDocumentCache(oldSlug, request.slug(),
+                DocumentEditions.counterpartSlugOf(oldSlug),
+                DocumentEditions.counterpartSlugOf(request.slug()));
         return DocumentDetailResponse.from(document); // 변경 감지로 커밋 시 UPDATE
     }
 
@@ -74,7 +82,8 @@ public class AdminDocumentService {
     public void delete(Long id) {
         Document document = findDocument(id);
         documentRepository.delete(document);
-        evictDocumentCache(document.getSlug());
+        evictDocumentCache(document.getSlug(),
+                DocumentEditions.counterpartSlugOf(document.getSlug()));
     }
 
     /**
@@ -92,7 +101,10 @@ public class AdminDocumentService {
                 return;
             }
             for (String slug : slugs) {
-                cache.evict(slug);
+                // 짝 slug는 null일 수 있다(꼬리만 남는 이상한 slug) — 그대로 넘기면 NPE다
+                if (slug != null) {
+                    cache.evict(slug);
+                }
             }
         } catch (RuntimeException e) {
             log.warn("문서 캐시 무효화 실패(TTL이 안전망) slugs={}: {}", String.join(",", slugs), e.getMessage());

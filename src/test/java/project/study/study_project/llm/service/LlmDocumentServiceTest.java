@@ -304,6 +304,6 @@ class LlmDocumentServiceTest {
     private DocumentDetailResponse detail(Long id) {
         return new DocumentDetailResponse(id, Domain.SYSTEM_DESIGN, "시스템 설계",
                 "캐시 전략", "cache-strategy", "본문", null, List.of("cache"),
-                LocalDateTime.now(), LocalDateTime.now());
+                LocalDateTime.now(), LocalDateTime.now(), null, null);
     }
 }

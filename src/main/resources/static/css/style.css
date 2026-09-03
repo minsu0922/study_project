@@ -234,6 +234,37 @@ h1 { font-size: 1.55rem; margin: 8px 0 18px; letter-spacing: -.02em; }
 .badge.lv2 { background: var(--lv2-bg); color: var(--lv2-fg); }
 .badge.lv3 { background: var(--lv3-bg); color: var(--lv3-fg); }
 .badge.orange { background: var(--review-soft); color: #b45309; }   /* 복습 stage 표시용 */
+
+/* ── 문서의 편(입문/심화) — 2026-09-03 ────────────────────────────────
+ * 한 주제가 두 편으로 나뉘면서 <제목이 똑같은 문서 두 개>가 목록에 나란히 선다.
+ * 그래서 편 표시는 장식이 아니라 <유일한 구별 수단>이다. 제목 바로 아래 한 줄로 두는 이유가
+ * 그것이다 — 배지 줄(분야·태그)에만 두면 제목을 읽고 나서 눈이 한 번 더 아래로 내려가야 한다.
+ *
+ * 색을 난이도 배지와 같은 계열(lv1/lv3)로 맞췄다. 입문편-초급, 심화편-고급이 실제로 대응하고
+ * (1·2일차는 입문편, 3일차는 심화편에서 문제가 나온다) 색이 그 관계를 한 번 더 말해 준다.
+ * 색만으로 알리지 않는 규칙은 여기서도 지킨다 — 글자가 항상 함께 있다. */
+.doc-sub {
+  margin: 2px 0 8px;
+  font-size: .82rem; font-weight: 600;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.doc-sub .edition { color: var(--lv1-fg); }
+.doc-sub .edition.advanced { color: var(--lv3-fg); }
+.badge.edition { background: var(--lv1-bg); color: var(--lv1-fg); }
+.badge.edition.advanced { background: var(--lv3-bg); color: var(--lv3-fg); }
+
+/* 다 읽은 사람이 갈 곳. 본문 끝에 두는 이유는 <읽기를 마친 순간>이 다음 편을 고를 유일한
+ * 시점이기 때문이다. 상단 링크만 두면 아직 안 읽은 사람에게 이동을 권하는 셈이 된다. */
+.next-edition {
+  display: block; margin-top: 28px; padding: 16px 18px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--card); text-decoration: none; color: inherit;
+}
+.next-edition:hover { border-color: var(--border-strong); }
+.next-edition .label { font-size: .78rem; font-weight: 700; color: var(--primary); }
+.next-edition .name { display: block; margin-top: 4px; font-weight: 700; }
+.next-edition .hint { display: block; margin-top: 4px; font-size: .82rem; color: var(--muted); }
 .badge.green { background: var(--correct-bg); color: var(--correct); } /* 졸업 표시용 */
 
 .meta { color: var(--muted); font-size: .82rem; }
