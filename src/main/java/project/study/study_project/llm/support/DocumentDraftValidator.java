@@ -654,18 +654,37 @@ public final class DocumentDraftValidator {
      * 강제</b>한 셈이고, 09-03 실물에서 용어가 폭증한 진원지가 정확히 여기였다.
      * 지시를 뒤집었으므로 세는 곳도 뒤집는다.
      *
-     * <p><b>왜 3개 이상일 때만 울리나.</b> 표의 첫 칸과 본문 정의 줄의 표기가 늘 같지는 않다
-     * ({@code TTL(time to live)} vs {@code TTL}). 하나 어긋난 것으로 경고를 띄우면 표기 차이에
-     * 헛울리고, 이 클래스의 원칙대로 <b>오탐이 미탐보다 비싸다</b>. 셋이 모이면 표기 문제가
-     * 아니라 습관이 돌아온 것이다.
+     * <h2>첫 규칙을 실물로 재 보고 버렸다 (2026-09-07)</h2>
+     *
+     * <p>처음에는 "표보다 앞에 {@code - **용어** — 뜻} 꼴 <b>정의 줄</b>이 있는가"로 판정했다.
+     * 첫 실물 두 편에 걸어 보니 <b>입문편에서 여섯 건이 헛울렸다</b> —
+     * 참조 무결성·RESTRICT·NO ACTION·CASCADE·SET NULL·SET DEFAULT. 여섯 다 본문에서 멀쩡히
+     * 설명돼 있었고, 다만 형식이 정의 줄이 아니었을 뿐이다. 절 제목으로 설명한 것
+     * ({@code ## 삭제를 막는 쪽 — RESTRICT와 NO ACTION}), 비교 표의 칸으로 설명한 것,
+     * 줄표 대신 조사로 이은 문장({@code **참조 무결성(referential integrity)** 은 …})이 섞여 있었다.
+     *
+     * <p><b>정의의 형식을 세려 한 것이 잘못이었다.</b> 좋은 글은 용어를 여러 방식으로 푼다.
+     * 그래서 형식이 아니라 <b>등장 여부</b>를 본다 — 표 앞 본문에 그 낱말이 한 번도 안 나왔다면
+     * 그 표가 처음 꺼내는 말이고, 그게 이 검사가 잡으려는 상태다.
+     *
+     * <table border="1">
+     *   <caption>두 규칙을 같은 실물에 걸어 본 결과</caption>
+     *   <tr><th>문서</th><th>정의 줄을 찾는 규칙</th><th>등장 여부를 보는 규칙</th></tr>
+     *   <tr><td>09-03 옛 단일 문서(잡아야 함)</td><td>13건</td><td><b>11건</b></td></tr>
+     *   <tr><td>09-07 입문편(조용해야 함)</td><td>6건 — 전부 오탐</td><td><b>0건</b></td></tr>
+     * </table>
+     *
+     * <p><b>왜 3개 이상일 때만 울리나.</b> 표의 첫 칸과 본문의 표기가 늘 같지는 않다
+     * (고아 행 / 고아). 하나 어긋난 것으로 경고를 띄우면 표기 차이에 헛울리고, 이 클래스의
+     * 원칙대로 <b>오탐이 미탐보다 비싸다</b>. 셋이 모이면 표기 문제가 아니라 습관이 돌아온 것이다.
      */
     private static void checkGlossaryIsReview(String body, String structure, List<DraftCheck> checks) {
         int start = structure.indexOf("### 용어 한눈에");
         if (start < 0) {
             return; // 표가 없는 것은 checkGlossaryTable이 이미 알린다
         }
-        // 표보다 <앞에> 있는 정의 줄만 인정한다 — 뒤에서 처음 푸는 것은 복습이 아니다.
-        List<String> before = List.of(body.substring(0, start).split("\n", -1));
+        // 표보다 <앞>만 본다 — 뒤에서 처음 꺼내는 것은 복습이 아니다.
+        String before = body.substring(0, start);
 
         List<String> fresh = new ArrayList<>();
         Matcher m = GLOSSARY_ROW.matcher(structure.substring(start));
@@ -676,7 +695,7 @@ public final class DocumentDraftValidator {
             if (term.isEmpty() || term.equals("용어") || SEPARATOR_CELL.matcher(term).matches()) {
                 continue;
             }
-            if (before.stream().noneMatch(line -> isDefinitionLine(line) && line.contains(term))) {
+            if (!before.contains(term)) {
                 fresh.add(term);
             }
         }
@@ -686,9 +705,9 @@ public final class DocumentDraftValidator {
         List<String> listed = fresh.stream().limit(MAX_LISTED_TERMS).toList();
         String tail = fresh.size() > listed.size() ? " 외 %d개".formatted(fresh.size() - listed.size()) : "";
         checks.add(DraftCheck.warning(
-                "'### 용어 한눈에'에 본문에서 풀지 않은 용어가 %d개 있습니다: %s%s. "
+                "'### 용어 한눈에'에 본문에 없던 용어가 %d개 처음 나옵니다: %s%s. "
                         .formatted(fresh.size(), String.join(", ", listed), tail)
-                        + "입문편의 이 표는 복습표입니다 — 본문에서 먼저 풀거나, 심화편으로 미루세요."));
+                        + "입문편의 이 표는 복습표입니다 — 본문에서 먼저 다루거나, 심화편으로 미루세요."));
     }
 
     /**
@@ -706,11 +725,6 @@ public final class DocumentDraftValidator {
         return head.strip();
     }
 
-    /** 정의 줄로 인정하는 형태 — {@link #isDefinedSomewhere}과 같은 기준을 쓴다(표 행은 뺀다). */
-    private static boolean isDefinitionLine(String line) {
-        String trimmed = line.strip();
-        return (trimmed.startsWith("- **") || trimmed.startsWith("**")) && trimmed.contains("—");
-    }
 
     /**
      * {@code ## 바탕이 되는 개념} 절이 <b>이름만 남고 비지</b> 않았는지.

@@ -626,9 +626,9 @@ class DocumentDraftValidatorTest {
      * 세는 곳이 없으면 몇 주 뒤 조용히 옛 습관으로 돌아간다.
      */
     @Test
-    @DisplayName("복습표에 본문에서 안 푼 용어가 쌓이면 알린다 — 전에는 프롬프트가 그걸 시켰다")
+    @DisplayName("복습표가 본문에 없던 용어를 처음 꺼내면 알린다 — 전에는 프롬프트가 그걸 시켰다")
     void warnsWhenGlossaryIntroducesNewTerms() {
-        // 셋째·넷째는 본문에 정의를 남겨 두고, 다섯째~일곱째 정의만 걷어낸다.
+        // 다섯째~일곱째를 본문에서 통째로 지운다. 표에만 남으므로 그 표가 처음 꺼내는 말이 된다.
         // 셋이 모여야 울리는 기준(표기 차이로 인한 오탐 방지)을 그대로 확인하려는 것이다.
         String leaky = body(TITLE, "본문")
                 .replace("- **다섯째 용어** — 한 문장 정의.\n", "")
@@ -637,8 +637,33 @@ class DocumentDraftValidatorTest {
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", leaky))
                 .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("본문에서 풀지 않은 용어가 3개")
+                .anyMatch(m -> m.contains("본문에 없던 용어가 3개")
                         && m.contains("다섯째 용어"));
+    }
+
+    /**
+     * <b>본문이 정의 줄 말고 다른 방식으로 푼 용어에는 조용해야 한다</b> — 2026-09-07 실물이 가르쳐 준 것.
+     *
+     * <p>이 검사의 첫 판은 "표보다 앞에 {@code - **용어** — 뜻} 꼴 정의 줄이 있는가"였고,
+     * 첫 실물 입문편에서 <b>여섯 건이 헛울렸다</b>. 여섯 다 본문에서 멀쩡히 설명돼 있었지만
+     * 형식이 달랐다 — 절 제목으로 설명한 것, 비교 표의 칸으로 설명한 것, 줄표 대신 조사로 이은 것.
+     *
+     * <p>좋은 글은 용어를 여러 방식으로 푼다. 그러니 <b>정의의 형식을 세는 검사는 반드시 헛울린다</b>.
+     * 여기서 지키는 것은 규칙의 문구가 아니라 그 교훈이다 — 다음에 이 검사를 조이려는 사람이
+     * 형식 쪽으로 되돌아가면 이 테스트가 먼저 빨간불이 된다.
+     */
+    @Test
+    @DisplayName("정의 줄이 아닌 방식으로 푼 용어에는 조용하다 — 형식을 세는 검사는 반드시 헛울린다")
+    void staysQuietWhenTermsAreExplainedWithoutDefinitionLines() {
+        // 실물이 쓴 세 가지 방식을 그대로 흉내 낸다: 절 제목, 표 칸, 조사로 이은 문장.
+        String otherForms = body(TITLE, "본문")
+                .replace("- **다섯째 용어** — 한 문장 정의.", "**다섯째 용어(fifth)** 는 이런 것이다.")
+                .replace("- **여섯째 용어** — 한 문장 정의.", "| 여섯째 용어 | 이런 것이다 |")
+                .replace("- **일곱째 용어** — 한 문장 정의.", "### 일곱째 용어를 쓰는 자리");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", otherForms))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("용어 한눈에"));
     }
 
     /**
