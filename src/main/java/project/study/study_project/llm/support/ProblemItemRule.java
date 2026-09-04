@@ -635,6 +635,28 @@ public final class ProblemItemRule {
     public static final double CHOICE_LENGTH_RATIO = 1.5;
 
     /**
+     * 정답 보기가 질문과 이만큼(공백 뺀 글자 수) 이어 붙게 겹치면 <b>구절을 옮겨 적은 것</b>으로 본다.
+     *
+     * <p><b>12인 이유는 실측이다.</b> 승인된 객관식 81개를 재 보니 정답 겹침이 12자 이상이면서
+     * 오답보다 4자 넘게 앞선 것이 4개(5%)였고, 그중 둘이 사람이 읽고 "답이 보인다"고 지적한
+     * 문제였다(BSS 14자, 경쟁 상태 27자). 문턱을 8자로 내리면 "Content-Type"처럼 <b>고유명사가
+     * 길어서</b> 겹치는 정상 문제가 함께 걸린다.
+     *
+     * <p>한국어 12자는 "초기값이 없는 전역·정적 변수가" 정도다 — 우연히 같아지는 길이가 아니다.
+     */
+    public static final int GIVEAWAY_MIN_RUN = 12;
+
+    /**
+     * 정답 겹침이 오답 겹침보다 이만큼 앞서야 경고한다.
+     *
+     * <p><b>왜 차이를 보는가.</b> 질문이 "TCP 혼잡 제어에서 ..."로 시작하면 네 보기 모두 그 말을
+     * 담는 것이 정상이다. 그건 결함이 아니라 주제를 공유하는 것뿐이다. 문자열만 견줘 답이
+     * 좁혀지는 것은 <b>정답만</b> 유독 겹칠 때이고, 실측에서 "Write-Through"가 정확히 그 경우였다
+     * (정답 13자 겹침 / 오답도 13자 → 걸리지 않는다, 걸려서도 안 된다).
+     */
+    public static final int GIVEAWAY_MARGIN = 4;
+
+    /**
      * 지문·보기·해설에 섞인 마크다운 문법.
      *
      * <p>이 셋은 화면에 <b>평문 그대로</b> 나간다({@code player.js}의 {@code escapeHtml}) —
@@ -881,6 +903,11 @@ public final class ProblemItemRule {
             warnings.add(lengthBias);
         }
 
+        String giveaway = answerGiveawayOf(item);
+        if (giveaway != null) {
+            warnings.add(giveaway);
+        }
+
         String markdown = markdownTraceOf(item);
         if (markdown != null) {
             warnings.add(markdown);
@@ -1086,6 +1113,97 @@ public final class ProblemItemRule {
         return qualityWarningsOf(item, difficulty, hasSourceDocument, type).stream()
                 .map(DraftCheck::warning)
                 .toList();
+    }
+
+    /**
+     * 정답 보기가 <b>질문 문장을 그대로 되풀이하는가</b> — 되풀이하면 그 사실을, 아니면 {@code null}.
+     *
+     * <h2>왜 필요한가 (2026-09-04)</h2>
+     *
+     * <p>짝짓기에는 이미 같은 검사가 있다({@code typeWarningsOf}의 "오른쪽에 왼쪽 용어가 그대로
+     * 있음"). 객관식에만 없었고, 그래서 <b>질문을 27자 통째로 복사한 정답 보기</b>가 검수를
+     * 그냥 통과했다(실물: "두 스레드가 같은 자리를 동시에 읽고 쓰는 순서에 따라 결과가 달라지는
+     * 상황을 가리키는 용어는?" → 정답 "경쟁 상태 — 두 스레드가 같은 자리를 동시에 읽고 쓰는
+     * 순서에 따라 결과가 달라진다"). 아는 것이 없어도 <b>가장 비슷한 문장을 고르면</b> 맞는다.
+     *
+     * <h2>왜 어절이 아니라 부분문자열인가</h2>
+     *
+     * <p>어절 겹침으로 재면 "스레드"·"메모리" 같은 낱말이 겹치는 정상 문제까지 걸린다. 문제는
+     * 낱말이 아니라 <b>구절이 통째로 옮겨진 것</b>이라, 가장 긴 공통 부분문자열이 실제로 재려는
+     * 것과 맞는다. 공백을 지우고 재는 이유는 띄어쓰기만 바꿔도 피해 가는 검사를 막기 위해서다.
+     *
+     * <h2>왜 오답과 견주는가</h2>
+     *
+     * <p>정답만 보면 안 된다. 질문이 "TCP 혼잡 제어에서 ..."로 시작하면 <b>네 보기 모두</b>
+     * "TCP 혼잡 제어"를 담는 것이 정상이고, 그건 결함이 아니다. 결함은 <b>정답만</b> 길게
+     * 겹치는 경우다 — 그때만 문자열 비교로 답이 좁혀진다. 그래서 차이를 본다.
+     *
+     * <p>차단이 아니라 경고인 이유는 이 절의 다른 규칙과 같다. 정의를 묻는 초급 문제는 질문과
+     * 정답이 어느 정도 겹칠 수밖에 없고, 어디까지가 과한지는 사람이 볼 몫이다.
+     */
+    private static String answerGiveawayOf(GeneratedProblemItem item) {
+        List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
+        if (choices == null || choices.size() < MIN_CHOICES || isBlank(item.question())) {
+            return null; // 객관식이 아니거나 이미 규약 위반 — defectOf가 볼 몫이다
+        }
+
+        String question = squeeze(item.question());
+        int correctOverlap = -1;
+        int wrongOverlap = 0;
+        String fragment = "";
+        for (GeneratedProblemItem.GeneratedChoice choice : choices) {
+            String text = squeeze(choice.text());
+            int overlap = longestCommonRun(question, text);
+            if (choice.correct()) {
+                correctOverlap = overlap;
+                fragment = longestCommonFragment(question, text);
+            } else {
+                wrongOverlap = Math.max(wrongOverlap, overlap);
+            }
+        }
+        if (correctOverlap < GIVEAWAY_MIN_RUN || correctOverlap - wrongOverlap < GIVEAWAY_MARGIN) {
+            return null;
+        }
+        return "정답 보기가 질문을 %d자 되풀이함 (\"%s\" — 오답은 %d자, 문장만 견줘도 답이 좁혀진다)"
+                .formatted(correctOverlap, snippetOf(fragment), wrongOverlap);
+    }
+
+    /** 공백을 지운 사본 — 띄어쓰기만 바꿔 검사를 피해 가는 것을 막는다. */
+    private static String squeeze(String text) {
+        return text == null ? "" : text.replaceAll("\\s+", "");
+    }
+
+    /** 가장 긴 공통 부분문자열의 <b>길이</b>. */
+    private static int longestCommonRun(String a, String b) {
+        return longestCommonFragment(a, b).length();
+    }
+
+    /**
+     * 가장 긴 공통 부분문자열 자체 — 경고 메시지에 <b>무엇이 겹쳤는지</b>를 실으려고 문자열로 돌려준다.
+     *
+     * <p>고전적인 두 줄짜리 동적 계획법이다. 질문은 길어야 수백 자라 O(n·m)이 문제되지 않는다.
+     */
+    private static String longestCommonFragment(String a, String b) {
+        if (a.isEmpty() || b.isEmpty()) {
+            return "";
+        }
+        int[] previous = new int[b.length() + 1];
+        int best = 0;
+        int endOfBest = 0;
+        for (int i = 1; i <= a.length(); i++) {
+            int[] current = new int[b.length() + 1];
+            for (int j = 1; j <= b.length(); j++) {
+                if (a.charAt(i - 1) == b.charAt(j - 1)) {
+                    current[j] = previous[j - 1] + 1;
+                    if (current[j] > best) {
+                        best = current[j];
+                        endOfBest = i;
+                    }
+                }
+            }
+            previous = current;
+        }
+        return a.substring(endOfBest - best, endOfBest);
     }
 
     /**

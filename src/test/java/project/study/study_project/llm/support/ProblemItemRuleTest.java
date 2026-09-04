@@ -537,4 +537,90 @@ class ProblemItemRuleTest {
                     .contains("오답 설명이 보기를 번호로 가리킴");
         }
     }
+
+    /**
+     * <b>정답 보기가 질문을 되풀이하면 경고한다</b>(2026-09-04).
+     *
+     * <p>짝짓기에는 같은 검사가 처음부터 있었다("오른쪽에 왼쪽 용어가 그대로 있음"). 객관식에만
+     * 없어서, 질문을 <b>27자 통째로 복사한</b> 정답 보기가 검수를 그냥 통과해 사이트에 올라갔다.
+     * 아래 두 사례는 그때 실제로 걸러졌어야 할 실물이다 — 지어낸 예가 아니라 승인된 문제다.
+     *
+     * <p>여기서 지키는 것은 <b>양쪽 경계</b>다. 문턱만 재면 헛울리는 쪽을 놓친다 — 네 보기가
+     * 다 같은 주제어를 담는 것은 정상이고, 그걸 걸러 내면 정의를 묻는 초급 문제가 매번 경고를 단다.
+     */
+    @Nested
+    @DisplayName("정답 보기가 질문을 되풀이하면 경고한다")
+    class AnswerGiveaway {
+
+        private List<String> warningsFor(String question,
+                                         String correct, String w1, String w2, String w3) {
+            GeneratedProblemItem item = new GeneratedProblemItem(question, "", goodExplanation(),
+                    List.of(new GeneratedProblemItem.GeneratedChoice(correct, true),
+                            new GeneratedProblemItem.GeneratedChoice(w1, false),
+                            new GeneratedProblemItem.GeneratedChoice(w2, false),
+                            new GeneratedProblemItem.GeneratedChoice(w3, false)),
+                    // 유형은 비워 둔다 — 이 규칙은 형태와 무관하고, 값을 넣으면 형태 규칙의
+                    // 경고가 함께 섞여 "무엇 때문에 걸렸는지"가 흐려진다.
+                    "", "제목", null);
+            return ProblemItemRule.qualityWarningsOf(item, Difficulty.BEGINNER, true);
+        }
+
+        /** 실물 #11392 — 겹침 27자. 승인된 객관식 81개 중 가장 심했다. */
+        @Test
+        @DisplayName("질문 문장을 통째로 옮긴 정답은 걸린다 — 27자짜리가 실제로 통과했다")
+        void catchesVerbatimCopy() {
+            assertThat(warningsFor(
+                    "두 스레드가 같은 자리를 동시에 읽고 쓰는 순서에 따라 결과가 달라지는 상황을 가리키는 용어는?",
+                    "경쟁 상태 — 두 스레드가 같은 자리를 동시에 읽고 쓰는 순서에 따라 결과가 달라진다",
+                    "스택 오버플로 — 호출이 너무 깊어져 스택 영역을 넘어선 상태다",
+                    "가시성 — 한 스레드가 쓴 값이 다른 스레드에게 보이는지의 문제다",
+                    "뮤텍스 — 여럿 중 하나만 통과시키고 나머지를 기다리게 하는 자물쇠다"))
+                    .anySatisfy(w -> assertThat(w).contains("질문을").contains("되풀이"));
+        }
+
+        /**
+         * 실물 #11390 — 겹침 14자, 오답도 9자 겹친다("전역·정적 변수가"를 나눠 갖는다).
+         * 차이만 보면 5자라 놓친다. 그래서 <b>절대 길이도 함께</b> 본다.
+         */
+        @Test
+        @DisplayName("오답도 어느 정도 겹치는 경우까지 잡는다 — 차이만 보면 놓친다")
+        void catchesCopyEvenWhenDistractorsShareWords() {
+            assertThat(warningsFor(
+                    "프로세스 주소 공간에서 초기값이 없는 전역·정적 변수가 놓이며 0으로 채워져 시작하는 영역의 이름은?",
+                    "BSS — 초기값이 없는 전역·정적 변수가 0으로 채워져 시작하는 영역",
+                    "데이터 — 초기값이 있는 전역·정적 변수가 들어가는 영역",
+                    "힙 — 실행 중에 요청해서 받는 메모리로 객체가 사는 영역",
+                    "코드 — 실행 파일에서 읽어 온 기계어 명령이 놓이는 영역"))
+                    .anySatisfy(w -> assertThat(w).contains("질문을").contains("되풀이"));
+        }
+
+        /**
+         * <b>헛울리면 안 되는 쪽.</b> 질문이 주제어를 말하면 네 보기가 모두 그 말을 담는 것이
+         * 정상이다. 실측에서 "Write-Through"가 정확히 이 모양이었다(정답 13자 / 오답 13자).
+         */
+        @Test
+        @DisplayName("네 보기가 다 같은 주제어를 담으면 조용하다 — 그건 결함이 아니다")
+        void staysQuietWhenAllChoicesShareTheSubject() {
+            assertThat(warningsFor(
+                    "Write-Through 캐시 쓰기 전략을 골랐을 때 가장 먼저 나타나는 특징은?",
+                    "Write-Through 전략은 쓰기 지연이 늘어나는 대신 값이 어긋날 틈이 없다",
+                    "Write-Through 전략은 쓰기가 즉시 끝나고 나중에 원본에 반영된다",
+                    "Write-Through 전략은 원본만 고치고 캐시는 지워 다음 조회에 채운다",
+                    "Write-Through 전략은 읽기를 원본으로 우회시켜 캐시를 비워 둔다"))
+                    .noneSatisfy(w -> assertThat(w).contains("되풀이"));
+        }
+
+        /** 낱말 몇 개가 겹치는 것은 정상이다 — 어절이 아니라 <b>이어 붙은 구절</b>만 본다. */
+        @Test
+        @DisplayName("낱말만 겹치는 것은 조용하다 — 구절이 옮겨진 것만 본다")
+        void staysQuietOnScatteredWordOverlap() {
+            assertThat(warningsFor(
+                    "스레드를 하나 더 만들 때 새로 생기는 메모리 영역은 무엇인가?",
+                    "스택 한 벌과 레지스터 저장 자리가 생긴다",
+                    "힙 전체가 한 벌 더 복사된다",
+                    "코드 영역이 스레드 수만큼 늘어난다",
+                    "파일 디스크립터 표가 새로 만들어진다"))
+                    .noneSatisfy(w -> assertThat(w).contains("되풀이"));
+        }
+    }
 }
