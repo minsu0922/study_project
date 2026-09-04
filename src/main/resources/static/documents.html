@@ -53,8 +53,11 @@ async function loadDocs() {
     const data = await api("/api/documents?" + params);
 
     // 제목 아래 부제 한 줄. edition이 없으면 빈 문자열이라 마크업 자체가 생기지 않는다.
+    // 여기는 배지가 아니라 부제라 api.js의 editionBadge를 그대로 쓰지 않는다. 다만
+    // "심화편인가"를 가르는 비교는 공용 함수에 맡긴다 — 그 낱말이 두 곳에 박혀 있으면
+    // 표시 이름을 바꾼 날 한쪽만 고쳐지고, 증상은 색이 조용히 틀리는 것뿐이다.
     const editionSubtitle = (edition) => edition
-      ? `<p class="doc-sub"><span class="edition${edition === "심화편" ? " advanced" : ""}">${escapeHtml(edition)}</span></p>`
+      ? `<p class="doc-sub"><span class="edition${isAdvancedEdition(edition) ? " advanced" : ""}">${escapeHtml(edition)}</span></p>`
       : "";
 
     const list = document.getElementById("docList");

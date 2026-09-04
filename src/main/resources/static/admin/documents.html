@@ -113,7 +113,13 @@ async function loadDocuments() {
       <tr class="click-row" data-id="${d.id}" data-slug="${escapeHtml(d.slug)}" title="이 문서를 수정">
         <td>${d.id}</td>
         <td class="wrap">
-          ${escapeHtml(d.title)}
+          <!-- 배지를 제목 <바로 옆>에 둔다. 두 편은 제목이 글자까지 같아서 목록에서는
+               같은 줄이 둘 있는 것으로 보이고, 그 둘을 가르는 것이 이 배지다. slug 줄에
+               붙여 봤더니 좁은 칸에서 slug가 세 줄로 접히며 배지가 맨 아래로 밀려,
+               정작 가리키는 제목에서 멀어졌다.
+               짝이 없는 한 편짜리 문서에는 서버가 edition을 비워 보내 배지가 생기지
+               않는다(DocumentEditions의 "짝이 없으면 편도 없다"). -->
+          ${escapeHtml(d.title)} ${editionBadge(d.edition)}
           <div class="meta">/${escapeHtml(d.slug)}</div>
         </td>
         <td>${escapeHtml(d.domainLabel)}</td>

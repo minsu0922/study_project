@@ -190,6 +190,32 @@ function difficultyBadge(v) {
   return `<span class="badge ${cls}">${escapeHtml(difficultyLabel(v))}</span>`;
 }
 
+/**
+ * 이 편이 심화편인가 — 색을 가르는 <유일한> 판정(2026-09-04).
+ *
+ * 서버는 편을 표시용 한국어("입문편"/"심화편")로 내려준다(DocumentEdition.getDisplayName).
+ * 그래서 화면은 그 낱말을 비교해 색을 고르는데, 그 비교가 두 곳에 생기면 언젠가 한쪽만
+ * 남는다 — difficultyBadge를 한 곳으로 모은 것과 같은 이유다.
+ *
+ * 값이 없으면(짝이 없는 한 편짜리 문서) 서버가 edition을 비워 보낸다. 그때는 배지 자체를
+ * 그리지 않으므로 여기서도 그냥 false다.
+ */
+function isAdvancedEdition(edition) {
+  return edition === "심화편";
+}
+
+/**
+ * 편 배지 HTML — 짝이 없으면 <빈 문자열>이라 마크업 자체가 생기지 않는다.
+ *
+ * 색은 난이도 배지와 같은 lv1/lv3을 쓴다. 입문편이 초급과, 심화편이 고급과 같은 색인 것은
+ * 우연이 아니라 의도다 — 출제 배치가 실제로 그렇게 갈라 캔다(초·중급은 입문편, 고급은 심화편).
+ */
+function editionBadge(edition) {
+  if (!edition) return "";
+  const cls = isAdvancedEdition(edition) ? "edition advanced" : "edition";
+  return `<span class="badge ${cls}">${escapeHtml(edition)}</span>`;
+}
+
 /** <select>에 "전체" + enum 옵션을 채운다 (목록 필터 공용) */
 function fillSelect(selectEl, pairs, allLabel) {
   selectEl.innerHTML = "";
