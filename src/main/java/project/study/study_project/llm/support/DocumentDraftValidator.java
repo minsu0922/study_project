@@ -488,7 +488,12 @@ public final class DocumentDraftValidator {
     }
 
     /**
-     * 본론 끝에 {@code ### 용어 한눈에} 표가 있는지.
+     * 심화편에 {@code ## 용어 한눈에} 표가 있는지.
+     *
+     * <p><b>2026-09-04: 자리가 본론 안({@code ###})에서 최상위 절({@code ##})로 올라갔다.</b>
+     * 패턴({@link #GLOSSARY_HEADING})이 {@code #{2,3}}을 함께 받으므로 검사 자체는 그대로지만,
+     * 메시지가 옛 자리를 가리키면 검수자가 <b>없는 곳을 찾는다</b>. 옛 심화편 문서도 통과해야
+     * 하므로 패턴은 두 자리를 다 받은 채로 둔다.
      *
      * <p><b>이 표는 뒤쪽 절이 쓸 용어를 미리 올려 두는 자리다.</b> 2026-08-18에 사용자가
      * "문서에 모르는 용어가 설명 없이 나온다"고 지적했고, 실물을 세어 보니 정의된 용어는
@@ -503,7 +508,8 @@ public final class DocumentDraftValidator {
     private static void checkGlossaryTable(String structure, List<DraftCheck> checks) {
         if (!GLOSSARY_HEADING.matcher(structure).find()) {
             checks.add(DraftCheck.warning(
-                    "'### 용어 한눈에' 표가 없습니다. 뒤쪽 절에서 처음 나오는 용어를 올려 두는 자리입니다."));
+                    "'## 용어 한눈에' 표가 없습니다. "
+                            + "본론이 끝난 자리, '## 언제 깨지는가' 바로 앞에 두는 절입니다."));
         }
     }
 

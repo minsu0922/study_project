@@ -232,11 +232,62 @@ class ClaudeDocumentGeneratorTest {
                 .as("SQL 구문이 세 번 나오도록 뜻이 없었다")
                 .contains("SQL 구문·명령을 쓰면 그것이 무엇을 하는지 한 줄로 붙인다");
 
+        // 2026-09-04: "네 줄"이 "세 문장 + 하이픈 한 줄"로 바뀌었다. 줄은 개행으로 세고
+        // 문장은 마침표로 세는데, 한 줄에 두세 문장을 욱여넣는 것을 막으려고 단위를 바꿨다.
+        // 지키는 것은 문구가 아니라 <새 용어 정의를 붙일 자리가 열려 있다>는 사실이다.
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
-                .as("가장 어려운 용어가 처음 나오는 절인데 세 줄로 막혀 있었다")
-                .contains("(그 항목만 네 줄)")
+                .as("가장 어려운 용어가 처음 나오는 절인데 정의를 붙일 자리가 없으면 그냥 지나간다")
+                .contains("그 항목만 세 문장 + 하이픈 한 줄이 된다")
                 .as("입문편이 푼 용어를 다시 푸는 것이 이 편의 가장 큰 낭비다")
-                .contains("입문편이 이미 정의한 용어는 다시 풀지 마라");
+                .contains("입문편이 이미 푼 용어는 넣지 마라");
+    }
+
+    /**
+     * <b>심화편 「용어 한눈에」가 최상위 절이고 「언제 깨지는가」보다 앞인지</b>(2026-09-04).
+     *
+     * <p>소제목({@code ###})으로 두면 <b>마지막 본론 섹션에 딸린 표</b>로 읽혀 그 섹션의 용어만
+     * 올라온다. 입문편이 09-03에 똑같이 겪었고, 그래서 그때도 고친 방법은 문구가 아니라
+     * <b>자리</b>였다. 위치까지 못 박는 이유는 이 표가 {@code ## 언제 깨지는가}가 쓸 용어를
+     * 받는 자리이기 때문이다 — 뒤로 밀리면 정의가 용어보다 늦게 나온다.
+     *
+     * <p>증상이 조용한 종류다. 표는 있고 검증도 통과하는데, 문서를 읽는 사람만 뒤쪽 절에서 막힌다.
+     */
+    @Test
+    @DisplayName("심화편 용어 표가 최상위 절로 '언제 깨지는가' 앞에 있다 — 소제목이면 마지막 섹션 표로 읽힌다")
+    void advancedGlossaryIsTopLevelBeforeFailureModes() {
+        String prompt = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
+
+        assertThat(prompt)
+                .as("### 로 두면 그 섹션의 용어만 올라온다")
+                .contains("## 용어 한눈에")
+                .as("자리를 못 박지 않으면 표가 글 끝으로 밀려 정의가 용어보다 늦게 나온다")
+                .contains("\"## 언제 깨지는가\" 바로 앞에 독립된 절로 둔다");
+
+        assertThat(prompt.indexOf("## 용어 한눈에"))
+                .as("프롬프트의 절 순서가 곧 문서 순서다")
+                .isLessThan(prompt.indexOf("## 언제 깨지는가"));
+    }
+
+    /**
+     * <b>본문에 frontmatter를 시키지 않는지</b>(2026-09-04).
+     *
+     * <p>이 파이프라인은 title·slug·tags를 마크다운 머리말이 아니라 <b>구조화 출력 필드</b>로
+     * 받는다({@code GeneratedDocumentItem}). 프롬프트가 {@code ---} 블록을 요구하면
+     * {@code contentMd} 첫 줄에 {@code title: "..."}이 <b>글자 그대로</b> 들어가고, 문서 화면은
+     * 그 마크다운을 그대로 렌더링하므로 독자에게 보인다.
+     *
+     * <p>예외도 검증 실패도 나지 않는다 — 필드는 필드대로 채워지고 본문만 지저분해진다.
+     * 그래서 사람이 문서를 열어 보기 전까지 아무도 모른다.
+     */
+    @Test
+    @DisplayName("본문 머리말 블록을 시키지 않는다 — title/slug/tags는 구조화 출력 필드의 몫이다")
+    void doesNotAskForFrontmatterInBody() {
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("본문 맨 위 --- 블록은 화면에 글자로 찍힌다")
+                .contains("본문 맨 위에 --- 로 감싼 머리말 블록을 쓰지 마라")
+                .as("머리말 예시가 있으면 예시가 규칙을 이긴다")
+                .doesNotContain("slug: \"")
+                .doesNotContain("title: \"");
     }
 
     /**
