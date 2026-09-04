@@ -27,6 +27,16 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, Docum
     boolean existsBySlug(String slug);
 
     /**
+     * slug 하나의 제목만 — 검수 화면의 <b>짝 편 제목 대조</b>용(2026-09-04, {@code LlmDocumentService}).
+     *
+     * <p>{@link #findBySlug}로도 되지만 그건 엔티티를 통째로 읽는다. 본문이 LONGTEXT라
+     * 12,000자짜리 문서를 <b>제목 한 줄 보려고</b> 끌어오는 셈이 된다. 이 조회는 검수 목록의
+     * 카드마다 한 번씩 도므로 그 낭비가 페이지 크기만큼 곱해진다.
+     */
+    @Query("select d.title from Document d where d.slug = :slug")
+    Optional<String> findTitleBySlug(@Param("slug") String slug);
+
+    /**
      * 모든 문서 제목 — 클라우드 문서 생성 배치의 <b>중복 주제 회피 목록</b>으로 내보낸다(docs/15).
      *
      * <p>제목만 뽑는 이유: 본문(LONGTEXT)까지 딸려오면 수십~수백 KB를 읽어 버리는데, 필요한 건

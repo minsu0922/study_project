@@ -10,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.study.study_project.admin.service.AdminDocumentService;
+import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
@@ -47,6 +48,9 @@ class DocumentImportServiceTest {
     private GeneratedDocumentDraftRepository draftRepository;
     @Mock
     private ImportedDraftFileRepository importedFileRepository;
+    /** 흡수 경로는 짝 편 대조를 타지 않는다(그건 검수 화면의 몫) — 생성자를 채우려고만 둔다. */
+    @Mock
+    private DocumentRepository documentRepository;
     @Mock
     private AdminDocumentService adminDocumentService;
 
@@ -59,7 +63,9 @@ class DocumentImportServiceTest {
     @BeforeEach
     void setUp() {
         LlmDocumentService llmDocumentService =
-                new LlmDocumentService(draftRepository, adminDocumentService, objectMapper, event -> { });
+                new LlmDocumentService(
+                        draftRepository, documentRepository, adminDocumentService,
+                        objectMapper, event -> { });
         service = new DocumentImportService(llmDocumentService, importedFileRepository, objectMapper);
 
         // save는 받은 엔티티를 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내

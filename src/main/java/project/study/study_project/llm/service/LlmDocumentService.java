@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
+import project.study.study_project.document.repository.DocumentRepository;
+import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -24,6 +26,7 @@ import project.study.study_project.llm.repository.GeneratedDocumentDraftReposito
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,6 +52,10 @@ import java.util.List;
 public class LlmDocumentService {
 
     private final GeneratedDocumentDraftRepository draftRepository;
+
+    /** 짝 편 제목 대조용 — 이미 승인돼 사이트에 떠 있는 쪽이 맞춰야 할 대상이다. */
+    private final DocumentRepository documentRepository;
+
     private final AdminDocumentService adminDocumentService;
     private final ObjectMapper objectMapper;
 
@@ -188,6 +195,52 @@ public class LlmDocumentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.LLM_001));
     }
 
+    /* ── 짝 편 대조 ───────────────────────────────────────────── */
+
+    /**
+     * 짝이 되는 편과 <b>제목이 같은지</b> 대조해 다르면 경고 한 줄을 얹는다(2026-09-04).
+     *
+     * <p><b>왜 이 검사가 필요한가.</b> 두 편은 제목이 글자까지 같아야 한다 — 화면에서 편을
+     * 가르는 것은 제목이 아니라 배지이고, 제목이 갈리면 목록에서 두 편이 <b>남남으로 보인다</b>.
+     * 프롬프트와 user 메시지가 둘 다 "입문편 제목을 그대로 쓰라"고 시키지만, 그건 지시일 뿐
+     * <b>어겨도 아무것도 막지 않는다</b>. 실제로 2026-09-07 실물 한 쌍이 제목이 다른 채로
+     * 검수함에 들어와 있는데, 화면에는 아무 표시도 뜨지 않는다.
+     *
+     * <p><b>왜 검증기가 아니라 여기인가.</b> {@link DocumentDraftValidator}는 문자열만 보는
+     * 순수 함수다. 짝을 찾으려면 DB가 필요한데, 그걸 물리는 순간 30개가 넘는 단위 테스트가
+     * 전부 스프링을 띄워야 한다. 얻는 것에 비해 치르는 값이 크다.
+     *
+     * <p><b>왜 차단이 아니라 경고인가.</b> 제목이 다른 두 편도 글 자체는 멀쩡히 읽힌다.
+     * 잃는 것은 목록에서 묶여 보이는 것뿐이고, 검수자가 승인 화면에서 제목을 고쳐 넣으면
+     * 그 자리에서 끝난다 — 사람이 판단해 고칠 수 있는 것은 경고라는 {@link DraftCheck} 기준 그대로다.
+     *
+     * <p>정식 문서를 초안보다 먼저 보는 이유: 승인된 쪽이 이미 <b>사이트에 떠 있는 제목</b>이라,
+     * 맞춰야 할 대상이 그쪽이다. 초안만 있으면(대개 두 편이 같은 날 함께 들어온 경우)
+     * 가장 최근 것을 쓴다.
+     */
+    private List<DraftCheck> withPairingCheck(GeneratedDocumentDraft draft, List<DraftCheck> checks) {
+        String counterpartSlug = DocumentEditions.counterpartSlugOf(draft.getSlug());
+        if (counterpartSlug == null) {
+            return checks;
+        }
+
+        String counterpartTitle = documentRepository.findTitleBySlug(counterpartSlug)
+                .orElseGet(() -> draftRepository.findPairableTitlesBySlug(counterpartSlug).stream()
+                        .findFirst().orElse(null));
+        // 짝이 아예 없으면 조용히 지나간다. 2026-09-03 이전 문서는 한 편짜리이고,
+        // 없는 짝을 두고 "제목이 다르다"고 할 수는 없다(DocumentEditions 주석의 같은 판단).
+        if (counterpartTitle == null || counterpartTitle.equals(draft.getTitle())) {
+            return checks;
+        }
+
+        // 원본 목록은 List.of()로 만들어져 불변일 수 있다. 새 목록에 담아 돌려준다.
+        List<DraftCheck> merged = new ArrayList<>(checks);
+        merged.add(DraftCheck.warning(
+                "짝이 되는 %s과 제목이 다릅니다(\"%s\"). 두 편은 제목이 같아야 목록에서 한 주제로 묶입니다."
+                        .formatted(DocumentEditions.labelOf(counterpartSlug), counterpartTitle)));
+        return merged;
+    }
+
     /* ── 변환 ─────────────────────────────────────────────────── */
 
     /**
@@ -209,7 +262,8 @@ public class LlmDocumentService {
      */
     private LlmDocumentDraftResponse toResponse(GeneratedDocumentDraft d) {
         List<DraftCheck> checks = d.getStatus() == DraftStatus.PENDING
-                ? DocumentDraftValidator.validate(d.getTitle(), d.getSlug(), d.getContentMd())
+                ? withPairingCheck(d, DocumentDraftValidator.validate(
+                        d.getTitle(), d.getSlug(), d.getContentMd()))
                 : List.of();
         return new LlmDocumentDraftResponse(
                 d.getId(), d.getDomain(), d.getDomain().getDisplayName(),

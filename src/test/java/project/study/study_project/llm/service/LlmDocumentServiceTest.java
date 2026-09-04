@@ -13,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
+import project.study.study_project.document.repository.DocumentRepository;
+import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -20,6 +22,7 @@ import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.dto.LlmDocumentDraftResponse;
 import project.study.study_project.llm.support.DocumentDraftValidator;
+import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 
@@ -27,8 +30,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -50,6 +55,8 @@ class LlmDocumentServiceTest {
     @Mock
     private GeneratedDocumentDraftRepository draftRepository;
     @Mock
+    private DocumentRepository documentRepository;
+    @Mock
     private AdminDocumentService adminDocumentService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -57,8 +64,14 @@ class LlmDocumentServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new LlmDocumentService(draftRepository, adminDocumentService, objectMapper, event -> { });
+        service = new LlmDocumentService(
+                draftRepository, documentRepository, adminDocumentService, objectMapper, event -> { });
         lenient().when(draftRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        // 기본값은 "짝이 없다". 2026-09-03 이전 문서는 한 편짜리이므로 이쪽이 보통이고,
+        // 짝을 보는 테스트만 아래에서 덮어쓴다. 안 두면 목록을 훑는 다른 테스트가
+        // Optional 자리에 null을 받아 NPE로 죽는다.
+        lenient().when(documentRepository.findTitleBySlug(any())).thenReturn(Optional.empty());
+        lenient().when(draftRepository.findPairableTitlesBySlug(any())).thenReturn(List.of());
     }
 
     /* ── 승인 ────────────────────────────────────────────────── */
@@ -254,7 +267,147 @@ class LlmDocumentServiceTest {
         assertThat(response.blocked()).isFalse();
     }
 
+    /* ── 짝 편 제목 대조 ─────────────────────────────────────── */
+
+    /**
+     * <b>두 편은 제목이 글자까지 같아야 한다</b>(2026-09-04).
+     *
+     * <p>화면에서 편을 가르는 것은 제목이 아니라 배지다. 제목이 갈리면 목록에서 두 편이
+     * <b>남남으로 보인다</b> — 같은 주제의 1부·2부라는 사실이 독자에게 전달되지 않는다.
+     * 프롬프트와 user 메시지가 둘 다 "그대로 옮겨 적으라"고 시키지만 <b>지시일 뿐</b>이라,
+     * 어겨도 예외도 로그도 나지 않는다. 실제로 2026-09-07 한 쌍이 제목이 다른 채
+     * 검수함에 들어와 있었고 화면에는 아무 표시도 없었다.
+     */
+    @Test
+    @DisplayName("짝 편과 제목이 다르면 경고가 뜬다 — 어긋나도 예외가 안 나던 자리다")
+    void warnsWhenPairedEditionHasDifferentTitle() {
+        when(documentRepository.findTitleBySlug("cache-strategy" + DocumentEditions.ADVANCED_SUFFIX))
+                .thenReturn(Optional.of("캐시를 언제 비울 것인가"));
+        givenDraftPage(DraftStatus.PENDING,
+                pendingDraft("캐시 전략", "cache-strategy", validContent("캐시 전략")));
+
+        LlmDocumentDraftResponse response =
+                service.getDrafts(DraftStatus.PENDING, Pageable.unpaged()).content().get(0);
+
+        assertThat(pairingMessages(response))
+                .as("어느 쪽 제목에 맞춰야 하는지 알려면 짝의 제목이 메시지에 있어야 한다")
+                .singleElement(as(STRING))
+                .contains("심화편")
+                .contains("캐시를 언제 비울 것인가");
+        assertThat(response.blocked())
+                .as("제목이 달라도 글은 멀쩡히 읽힌다 — 사람이 고칠 수 있는 것은 경고다")
+                .isFalse();
+    }
+
+    /**
+     * 두 편은 대개 <b>같은 날 함께 들어와 둘 다 PENDING</b>이다. 정식 {@code document} 테이블만
+     * 보면 그때는 짝을 못 찾는다 — 아직 아무것도 승인되지 않았기 때문이다. 이 경로가 빠지면
+     * 경고가 뜨는 때는 "한쪽을 먼저 승인한 뒤"뿐인데, 그건 이미 늦다.
+     */
+    @Test
+    @DisplayName("짝이 아직 검수 대기 초안이어도 찾아낸다 — 두 편은 대개 같은 날 함께 들어온다")
+    void findsCounterpartAmongPendingDraftsToo() {
+        when(draftRepository.findPairableTitlesBySlug("cache-strategy"))
+                .thenReturn(List.of("캐시를 언제 비울 것인가"));
+        givenDraftPage(DraftStatus.PENDING, pendingDraft(
+                "캐시 전략", "cache-strategy" + DocumentEditions.ADVANCED_SUFFIX, advancedContent("캐시 전략")));
+
+        assertThat(pairingMessages(
+                service.getDrafts(DraftStatus.PENDING, Pageable.unpaged()).content().get(0)))
+                .singleElement(as(STRING))
+                .contains("입문편")
+                .contains("캐시를 언제 비울 것인가");
+    }
+
+    @Test
+    @DisplayName("제목이 같으면 조용하다 — 정상인 쌍에 경고가 뜨면 경고 전체가 값어치를 잃는다")
+    void staysQuietWhenPairedTitlesMatch() {
+        when(documentRepository.findTitleBySlug("cache-strategy")).thenReturn(Optional.of("캐시 전략"));
+        givenDraftPage(DraftStatus.PENDING, pendingDraft(
+                "캐시 전략", "cache-strategy" + DocumentEditions.ADVANCED_SUFFIX, advancedContent("캐시 전략")));
+
+        assertThat(pairingMessages(
+                service.getDrafts(DraftStatus.PENDING, Pageable.unpaged()).content().get(0))).isEmpty();
+    }
+
+    /**
+     * 2026-09-03 이전 문서는 한 편짜리다. 없는 짝을 두고 "제목이 다르다"고 할 수는 없다 —
+     * {@code DocumentEditions}가 배지를 안 다는 것과 같은 판단이다.
+     */
+    @Test
+    @DisplayName("짝이 없으면 조용하다 — 한 편짜리 문서가 대부분이라 여기서 새면 상시 경고가 된다")
+    void staysQuietWhenThereIsNoCounterpart() {
+        givenDraftPage(DraftStatus.PENDING,
+                pendingDraft("캐시 전략", "cache-strategy", validContent("캐시 전략")));
+
+        assertThat(pairingMessages(
+                service.getDrafts(DraftStatus.PENDING, Pageable.unpaged()).content().get(0))).isEmpty();
+    }
+
+    /**
+     * 승인된 쪽이 <b>이미 사이트에 떠 있는 제목</b>이라, 맞춰야 할 대상은 그쪽이다.
+     * 초안 제목을 집으면 아직 아무도 못 본 제목을 기준으로 삼게 된다.
+     */
+    @Test
+    @DisplayName("정식 문서가 있으면 그 제목을 기준으로 삼는다 — 초안이 아니라 사이트에 떠 있는 쪽이 기준이다")
+    void prefersApprovedDocumentTitleOverDraft() {
+        when(documentRepository.findTitleBySlug("cache-strategy")).thenReturn(Optional.of("사이트에 뜬 제목"));
+        lenient().when(draftRepository.findPairableTitlesBySlug("cache-strategy"))
+                .thenReturn(List.of("초안 제목"));
+        givenDraftPage(DraftStatus.PENDING, pendingDraft(
+                "캐시 전략", "cache-strategy" + DocumentEditions.ADVANCED_SUFFIX, advancedContent("캐시 전략")));
+
+        assertThat(pairingMessages(
+                service.getDrafts(DraftStatus.PENDING, Pageable.unpaged()).content().get(0)))
+                .singleElement(as(STRING))
+                .contains("사이트에 뜬 제목")
+                .doesNotContain("초안 제목");
+    }
+
     /* ── 도우미 ──────────────────────────────────────────────── */
+
+    /**
+     * 짝 대조 경고만 골라낸다.
+     *
+     * <p>본문에 걸린 다른 지적(분량·절 구성)까지 함께 세면, 검증 규칙을 하나 늘린 날
+     * 이 테스트가 <b>엉뚱한 이유로</b> 깨진다. 여기서 보고 싶은 것은 짝 대조 하나뿐이다.
+     */
+    private List<String> pairingMessages(LlmDocumentDraftResponse response) {
+        return response.checks().stream()
+                .map(DraftCheck::message)
+                .filter(m -> m.contains("제목이 다릅니다"))
+                .toList();
+    }
+
+    /** 심화편으로 판정되는 최소 본문 — 편 판정 근거는 {@code ## 언제 깨지는가} 하나다. */
+    private String advancedContent(String heading) {
+        return """
+                # %s
+
+                ## 핵심 요약
+                - **요점** — 결론 한 문장.
+
+                ## 이 글을 읽기 전에
+                - 입문편에서 정의를 다뤘다.
+
+                ## 용어 한눈에
+
+                | 용어 | 한 줄 뜻 | 언제 쓰나 |
+                |---|---|---|
+                | 요점 | 한 줄 뜻. | 이럴 때. |
+
+                ## 언제 깨지는가
+                **첫 번째 조건**
+                이럴 때 터진다. 이래서 그렇게 된다. 이렇게 대응한다.
+
+                ## 면접에서 이렇게 물어본다
+                **Q. 무엇인가**
+                요점 두 문장.
+
+                ## 면접 한 줄 요약
+                "한 줄."
+                """.formatted(heading);
+    }
 
     private void givenDraftPage(DraftStatus status, GeneratedDocumentDraft draft) {
         when(draftRepository.findByStatusOrderByCreatedAtAsc(eq(status), any()))

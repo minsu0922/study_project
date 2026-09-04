@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 
@@ -59,6 +60,28 @@ public interface GeneratedDocumentDraftRepository extends JpaRepository<Generate
             where d.status = 'PENDING'
             """)
     List<DomainTitle> findPendingDomainTitles();
+
+    /**
+     * 짝이 될 수 있는 초안의 제목 — 검수 화면의 <b>짝 편 제목 대조</b>용(2026-09-04).
+     *
+     * <p>두 편은 대개 같은 날 함께 들어와 <b>둘 다 PENDING</b>인 상태로 검수를 기다린다.
+     * 그래서 정식 {@code document} 테이블만 봐서는 짝을 못 찾는다 — 아직 아무것도 승인되지
+     * 않았기 때문이다. 여기서 초안 쪽도 함께 보는 이유가 그것이다.
+     *
+     * <p><b>거절된 것은 뺀다.</b> 검수자가 버린 초안의 제목과 대조해 봐야 나올 답이 없다.
+     * 오히려 "버린 문서와 제목이 다르다"는 경고가 뜨면 그것이 곧 오탐이고,
+     * 이 저장소는 오탐이 미탐보다 비싸다는 것을 여러 번 확인했다.
+     *
+     * <p>목록으로 돌려주는 이유: 같은 slug로 다시 뽑은 초안이 여러 건 있을 수 있다
+     * (거절 후 재생성). 어느 것을 근거로 삼을지는 <b>호출부가 정한다</b> — 저장소가
+     * {@code limit 1}로 잘라 버리면 "왜 이 제목이 나왔나"를 되짚을 수 없다.
+     */
+    @Query("""
+            select d.title from GeneratedDocumentDraft d
+            where d.slug = :slug and d.status <> 'REJECTED'
+            order by d.createdAt desc
+            """)
+    List<String> findPairableTitlesBySlug(@Param("slug") String slug);
 
     /**
      * 거절된 문서의 slug — 클라우드 배치가 "이 문서로는 문제를 만들지 마라"를 알기 위한 목록(2단계).
