@@ -33,10 +33,11 @@ import static org.mockito.Mockito.when;
  * DB 없이도 완전히 검증된다. DB가 필요한 부분(UNIQUE 제약, due 쿼리, 백필)은
  * 통합 테스트(ReviewFlowIntegrationTest)가 따로 맡는다 — 각 테스트가 자기 층만 책임.
  *
- * <p><b>시각 검증 방식</b>: 서비스가 내부에서 {@code LocalDateTime.now()}를 부르므로 정확한
- * 시각 비교 대신 "호출 전 now+N일 ≤ 결과 ≤ 호출 후 now+N일" 구간 검증을 쓴다.
- * (Clock 주입으로 시각을 고정할 수도 있지만, 일 단위 간격 검증에는 구간 방식이 충분해서
- * 빈 구성 추가라는 비용을 지불하지 않았다 — 분/초 단위 정밀도가 필요해지면 그때 도입)
+ * <p><b>시각 검증 방식</b>: 서비스가 내부에서 {@code LocalDateTime.now()}를 부르므로, 전이
+ * 테스트는 기대 시각을 {@link ReviewService#dueAfter}로 직접 계산해 맞춰 본다. 규칙 자체의
+ * 경계값(밤 11시·새벽 1시·4시 정각)은 {@code now()}에 기대면 검증할 수 없어서, 시각을
+ * 인자로 받는 그 순수 함수를 {@link StudyDayBoundary}에서 따로 때린다 — Clock 빈을 주입하는
+ * 대신 함수를 순수하게 만들어 같은 목적을 달성했다.
  */
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
@@ -71,17 +72,24 @@ class ReviewServiceTest {
 
     /** stage N까지 올라간 LEARNING 항목을 만든다(오답 1번 + 정답 N번의 실제 전이를 재사용). */
     private ReviewItem learningItemAtStage(int stage) {
-        ReviewItem item = ReviewItem.firstWrong(USER_ID, problem, LocalDateTime.now().plusDays(1));
+        ReviewItem item = ReviewItem.firstWrong(USER_ID, problem,
+                ReviewService.dueAfter(LocalDateTime.now(), 1));
         for (int s = 1; s <= stage; s++) {
-            item.promote(s, LocalDateTime.now().plusDays(ReviewService.INTERVAL_DAYS[s]));
+            item.promote(s, ReviewService.dueAfter(LocalDateTime.now(), ReviewService.INTERVAL_DAYS[s]));
         }
         return item;
     }
 
-    /** 결과 시각이 "기준 구간 + days일" 안에 있는지 — 클래스 주석의 구간 검증 방식. */
-    private static void assertAboutDaysLater(LocalDateTime actual, LocalDateTime before, int days) {
-        assertThat(actual).isAfterOrEqualTo(before.plusDays(days));
-        assertThat(actual).isBeforeOrEqualTo(LocalDateTime.now().plusDays(days));
+    /**
+     * 결과 시각이 "days일 뒤 학습일이 열리는 시각"인지.
+     *
+     * <p>후보를 둘 받는 이유: 서비스가 부르는 {@code now()}와 테스트의 {@code before} 사이에
+     * 학습일 경계(새벽 4시)가 끼면 기대값이 하루 갈린다. 실제로 그 순간에 걸릴 일은 거의
+     * 없지만, "1년에 한 번 새벽에 깨지는 테스트"는 원인을 찾는 데 드는 시간이 훨씬 비싸다.
+     */
+    private static void assertDueOnStudyDayAfter(LocalDateTime actual, LocalDateTime before, int days) {
+        assertThat(actual).isIn(ReviewService.dueAfter(before, days),
+                ReviewService.dueAfter(LocalDateTime.now(), days));
     }
 
     @Nested
@@ -103,7 +111,7 @@ class ReviewServiceTest {
             assertThat(saved.getStage()).isZero();
             assertThat(saved.getStatus()).isEqualTo(ReviewStatus.LEARNING);
             assertThat(saved.getReviewCount()).isZero(); // 사다리 "진입"은 풀이 횟수로 안 센다
-            assertAboutDaysLater(saved.getNextReviewAt(), before, 1);
+            assertDueOnStudyDayAfter(saved.getNextReviewAt(), before, 1);
         }
 
         @Test
@@ -119,7 +127,7 @@ class ReviewServiceTest {
             assertThat(item.getStage()).isZero();
             assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
             assertThat(item.getReviewCount()).isEqualTo(countBefore + 1);
-            assertAboutDaysLater(item.getNextReviewAt(), before, 1);
+            assertDueOnStudyDayAfter(item.getNextReviewAt(), before, 1);
             verify(reviewItemRepository, never()).save(any()); // 기존 행 변경 감지에 맡긴다(INSERT 없음)
         }
 
@@ -136,7 +144,7 @@ class ReviewServiceTest {
 
             assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
             assertThat(item.getStage()).isZero();
-            assertAboutDaysLater(item.getNextReviewAt(), before, 1);
+            assertDueOnStudyDayAfter(item.getNextReviewAt(), before, 1);
         }
     }
 
@@ -166,7 +174,7 @@ class ReviewServiceTest {
             assertThat(item.getStage()).isEqualTo(1);
             assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
             assertThat(item.getReviewCount()).isEqualTo(1);
-            assertAboutDaysLater(item.getNextReviewAt(), before, 3); // 사다리 두 번째 칸 간격
+            assertDueOnStudyDayAfter(item.getNextReviewAt(), before, 3); // 사다리 두 번째 칸 간격
         }
 
         @Test
@@ -213,7 +221,7 @@ class ReviewServiceTest {
             reviewService.onSubmission(USER_ID, problem, true);
             assertThat(item.getStage()).isEqualTo(expectedStage);
             assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
-            assertAboutDaysLater(item.getNextReviewAt(), before,
+            assertDueOnStudyDayAfter(item.getNextReviewAt(), before,
                     ReviewService.INTERVAL_DAYS[expectedStage]);
         }
 
@@ -221,5 +229,81 @@ class ReviewServiceTest {
         reviewService.onSubmission(USER_ID, problem, true);
         assertThat(item.getStatus()).isEqualTo(ReviewStatus.GRADUATED);
         assertThat(item.getReviewCount()).isEqualTo(5);
+    }
+
+    /**
+     * 학습일 경계 규칙({@link ReviewService#dueAfter}) — "며칠 뒤"를 24시간이 아니라
+     * 학습일로 세는지. 시각을 인자로 받는 순수 함수라 경계값을 직접 넣어 볼 수 있다.
+     */
+    @Nested
+    @DisplayName("학습일 경계 — '며칠 뒤'는 24시간이 아니다")
+    class StudyDayBoundary {
+
+        @Test
+        @DisplayName("저녁에 틀리면 다음 날 새벽 4시부터 복습 대상")
+        void eveningWrongIsDueNextMorning() {
+            LocalDateTime evening = LocalDateTime.of(2026, 9, 5, 21, 0);
+
+            assertThat(ReviewService.dueAfter(evening, 1))
+                    .isEqualTo(LocalDateTime.of(2026, 9, 6, 4, 0));
+        }
+
+        @Test
+        @DisplayName("밤 11시에 틀려도 마찬가지 — 다음 날 밤 11시까지 기다리지 않는다")
+        void lateNightWrongDoesNotSlipToNextNight() {
+            LocalDateTime lateNight = LocalDateTime.of(2026, 9, 5, 23, 0);
+
+            assertThat(ReviewService.dueAfter(lateNight, 1))
+                    .isEqualTo(LocalDateTime.of(2026, 9, 6, 4, 0));
+        }
+
+        @Test
+        @DisplayName("자정을 넘긴 새벽 1시는 아직 '어제의 공부' — 오늘 새벽 4시가 다음 차례")
+        void pastMidnightStillCountsAsPreviousStudyDay() {
+            // 이 규칙이 없으면 밤을 새우는 사람은 한자리에서 이틀 치 복습을 받게 된다.
+            LocalDateTime pastMidnight = LocalDateTime.of(2026, 9, 6, 1, 0);
+
+            assertThat(ReviewService.dueAfter(pastMidnight, 1))
+                    .isEqualTo(LocalDateTime.of(2026, 9, 6, 4, 0));
+        }
+
+        @Test
+        @DisplayName("새벽 4시 정각부터 새 학습일 — 3시 59분과 하루가 갈린다")
+        void rolloverHourStartsNewStudyDay() {
+            LocalDateTime justBefore = LocalDateTime.of(2026, 9, 6, 3, 59);
+            LocalDateTime exactly = LocalDateTime.of(2026, 9, 6, 4, 0);
+
+            assertThat(ReviewService.dueAfter(justBefore, 1))
+                    .isEqualTo(LocalDateTime.of(2026, 9, 6, 4, 0)); // 아직 9/5의 학습일
+            assertThat(ReviewService.dueAfter(exactly, 1))
+                    .isEqualTo(LocalDateTime.of(2026, 9, 7, 4, 0)); // 여기부터 9/6의 학습일
+        }
+
+        @Test
+        @DisplayName("사다리 위쪽 칸도 같은 규칙 — 3·7·14·30일 뒤 학습일이 열리는 시각")
+        void appliesToEveryRungOfTheLadder() {
+            LocalDateTime evening = LocalDateTime.of(2026, 9, 5, 21, 0);
+
+            assertThat(ReviewService.dueAfter(evening, 3)).isEqualTo(LocalDateTime.of(2026, 9, 8, 4, 0));
+            assertThat(ReviewService.dueAfter(evening, 7)).isEqualTo(LocalDateTime.of(2026, 9, 12, 4, 0));
+            assertThat(ReviewService.dueAfter(evening, 14)).isEqualTo(LocalDateTime.of(2026, 9, 19, 4, 0));
+            assertThat(ReviewService.dueAfter(evening, 30)).isEqualTo(LocalDateTime.of(2026, 10, 5, 4, 0));
+        }
+
+        @Test
+        @DisplayName("회귀: 매일 비슷한 시간에 공부하는 사용자가 어제 틀린 문제를 오늘 만난다")
+        void regularLearnerSeesYesterdaysMistakeToday() {
+            // 이 테스트가 이 수정의 이유 그 자체다.
+            // 어제 밤 10시 30분에 틀렸고, 오늘도 밤 9시에 앉았다.
+            LocalDateTime wrongLastNight = LocalDateTime.of(2026, 9, 4, 22, 30);
+            LocalDateTime studyingTonight = LocalDateTime.of(2026, 9, 5, 21, 0);
+
+            // 지금 규칙: 오늘 새벽 4시에 이미 열렸으므로 저녁에 들어오면 복습할 게 있다.
+            assertThat(ReviewService.dueAfter(wrongLastNight, 1)).isBefore(studyingTonight);
+
+            // 예전 규칙(now.plusDays(1) = 정확히 24시간)이었다면 9/5 22:30이 예정 시각이라,
+            // 밤 9시에 들어온 이 사용자는 "오늘 복습할 문제가 없어요"를 봤다 — 1시간 30분 차이로.
+            assertThat(wrongLastNight.plusDays(1)).isAfter(studyingTonight);
+        }
     }
 }

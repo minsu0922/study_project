@@ -113,7 +113,7 @@ class ReviewFlowIntegrationTest {
         ReviewItem item = myItem();
         assertThat(item.getStage()).isZero();
         assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
-        assertThat(item.getNextReviewAt()).isAfter(LocalDateTime.now()); // 약 1일 뒤
+        assertThat(item.getNextReviewAt()).isAfter(LocalDateTime.now()); // 다음 학습일이 열리는 시각
         assertThat(today().content()).isEmpty();
 
         // ── 2. 하루 뒤(시간 여행) → 오늘의 복습에 등장. 풀이용 형태(정답 없음) + 복습 메타 확인 ──
@@ -132,7 +132,12 @@ class ReviewFlowIntegrationTest {
             ReviewItem promoted = myItem();
             assertThat(promoted.getStage()).isEqualTo(expectedStage);
             int days = ReviewService.INTERVAL_DAYS[expectedStage];
-            assertThat(promoted.getNextReviewAt()).isAfterOrEqualTo(before.plusDays(days));
+            // 예정 시각은 "days일 뒤 학습일이 열리는 새벽 4시"다(24시간 뒤가 아니다).
+            // 후보를 둘 두는 건 before와 서비스의 now() 사이에 경계가 끼는 경우 대비 —
+            // ReviewServiceTest.assertDueOnStudyDayAfter와 같은 이유.
+            assertThat(promoted.getNextReviewAt()).isIn(
+                    ReviewService.dueAfter(before, days),
+                    ReviewService.dueAfter(LocalDateTime.now(), days));
             // 승급했으니 예정일이 미래로 밀림 → 오늘의 복습에서 빠진다
             assertThat(today().content()).isEmpty();
             timeTravelToDue(); // 다음 복습일까지 또 시간 여행

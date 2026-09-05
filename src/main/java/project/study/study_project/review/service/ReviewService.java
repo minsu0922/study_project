@@ -15,7 +15,9 @@ import project.study.study_project.review.dto.ReviewListItem;
 import project.study.study_project.review.dto.ReviewTodayItem;
 import project.study.study_project.review.repository.ReviewItemRepository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +26,7 @@ import java.util.Optional;
  *
  * <p><b>간격 사다리(망각곡선)</b>: 복습할 때마다 잊는 속도가 느려지므로 복습 간격을
  * 1 → 3 → 7 → 14 → 30일로 점점 벌린다. 틀리면 처음(1일)으로 리셋, 마지막 칸에서 맞히면 졸업.
+ * 여기서 "며칠 뒤"는 24시간 단위가 아니라 <b>학습일</b> 단위다({@link #dueAfter} 참고).
  *
  * <p><b>쓰기 경로는 {@link #onSubmission} 하나뿐</b> — 별도 "복습 제출" API를 만들지 않고
  * 기존 채점 경로(QuizService.submit)가 이 메서드를 부른다. 채점 경로가 하나면 ReviewItem
@@ -41,10 +44,52 @@ public class ReviewService {
      */
     public static final int[] INTERVAL_DAYS = {1, 3, 7, 14, 30};
 
+    /**
+     * 학습일이 바뀌는 기준 시각 — 새벽 4시.
+     *
+     * <p><b>왜 자정이 아닌가.</b> 밤 12시를 넘겨 공부하는 사람이 있다. 새벽 1시에 푼 것을
+     * 벌써 "다음 날"로 세면 그 사람은 한자리에 앉아 이틀 치 복습을 받게 된다. 경계를 새벽
+     * 4시에 두면 자정을 넘긴 공부가 전날 몫으로 남는다(간격 반복 도구들의 관행).
+     */
+    private static final LocalTime DAY_ROLLOVER = LocalTime.of(4, 0);
+
     /** 목록 조회 size 상한(docs/10). 정책은 서비스 책임(QuizService.MAX_SIZE와 같은 판단). */
     private static final int MAX_SIZE = 50;
 
     private final ReviewItemRepository reviewItemRepository;
+
+    /**
+     * "지금부터 {@code days}일 뒤"의 복습 예정 시각 — <b>시각이 아니라 학습일로 센다</b>.
+     *
+     * <p><b>왜 {@code now.plusDays(days)}가 아닌가(2026-09-05 수정).</b> 그건 정확히 24시간
+     * 뒤다. 밤 10시에 틀린 문제는 다음 날 밤 10시에야 복습 목록에 오른다. 그런데 사람은
+     * 대개 비슷한 시간대에 공부하므로, 매일 저녁 9시에 들어오는 사용자는 <b>거의 매번</b>
+     * "오늘 복습할 문제가 없어요"를 보게 된다 — 어제 틀린 문제가 한 시간 차이로 안 뜬다.
+     * 간격 반복에서 "하루"는 24시간이 아니라 <b>공부하는 하루</b>여야 한다.
+     *
+     * <p>그래서 지금이 어느 학습일인지 먼저 정하고({@link #DAY_ROLLOVER} 기준), 거기에
+     * {@code days}를 더한 날이 열리는 시각(새벽 4시)을 예정 시각으로 삼는다. 그 결과 실제
+     * 간격은 {@code days-1}일 남짓에서 {@code days}일 사이로 <b>짧아지는 쪽</b>으로 흔들린다.
+     * 늦은 밤에 풀수록 짧아지는 셈인데(밤 11시 → 5시간 뒤), 하루가 통째로 밀려 복습을 아예
+     * 못 하는 것보다 몇 시간 이른 편이 낫다고 봤다. 간격의 정확도보다 "들어오면 할 게 있다"가
+     * 이 기능의 값어치다.
+     *
+     * <p><b>{@code static} 순수 함수인 이유</b>: 경계값(밤 11시·새벽 1시·4시 정각)은 안에서
+     * {@code now()}를 부르는 한 테스트할 수 없다. {@code Clock} 빈을 주입하는 방법도 있지만,
+     * 시각을 인자로 받게 하면 빈 구성이라는 비용 없이 테스트가 원하는 시각을 직접 넣는다.
+     * {@code public}인 이유는 {@link #INTERVAL_DAYS}와 같다 — 통합 테스트가 기대값을 여기서
+     * 얻어 가므로, 규칙을 바꾸면 테스트가 저절로 따라온다.
+     *
+     * @param now  기준 시각(보통 {@code LocalDateTime.now()})
+     * @param days 사다리 간격(일)
+     */
+    public static LocalDateTime dueAfter(LocalDateTime now, int days) {
+        // 새벽 4시 전이면 아직 어제의 학습일이다 — 자정 넘겨 푼 것을 전날 공부로 친다.
+        LocalDate studyDay = now.toLocalTime().isBefore(DAY_ROLLOVER)
+                ? now.toLocalDate().minusDays(1)
+                : now.toLocalDate();
+        return studyDay.plusDays(days).atTime(DAY_ROLLOVER);
+    }
 
     /**
      * 채점 결과를 사다리에 반영한다 — QuizService.submit()이 Submission 저장 직후 호출.
@@ -77,12 +122,12 @@ public class ReviewService {
 
         if (!correct) {
             if (found.isEmpty()) {
-                // 처음 틀림 → 사다리 진입. 첫 복습은 첫 칸 간격(1일) 뒤.
+                // 처음 틀림 → 사다리 진입. 첫 복습은 첫 칸 간격(1일) 뒤 = 다음 학습일.
                 reviewItemRepository.save(
-                        ReviewItem.firstWrong(userId, problem, now.plusDays(INTERVAL_DAYS[0])));
+                        ReviewItem.firstWrong(userId, problem, dueAfter(now, INTERVAL_DAYS[0])));
             } else {
                 // 또 틀림 → 맨 아래 칸으로 리셋. GRADUATED였어도 LEARNING으로 복귀(엔티티가 처리).
-                found.get().resetToStart(now.plusDays(INTERVAL_DAYS[0]));
+                found.get().resetToStart(dueAfter(now, INTERVAL_DAYS[0]));
             }
             return;
         }
@@ -97,7 +142,7 @@ public class ReviewService {
                 item.graduate(); // 마지막 칸에서 정답 → 졸업 🎓
             } else {
                 // 승급 — 다음 복습은 "승급 후 칸"의 간격만큼 뒤(칸이 오를수록 멀어진다).
-                item.promote(nextStage, now.plusDays(INTERVAL_DAYS[nextStage]));
+                item.promote(nextStage, dueAfter(now, INTERVAL_DAYS[nextStage]));
             }
         });
         // 변경 감지(dirty checking)로 UPDATE — MANDATORY로 합류한 submit 트랜잭션이 커밋할 때 반영된다.
