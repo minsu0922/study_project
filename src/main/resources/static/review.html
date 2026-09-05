@@ -24,7 +24,7 @@
     </div>
 
     <p class="meta">틀렸던 문제를 <b>1일 → 3일 → 7일 → 14일 → 30일</b> 간격으로 다시 만나요.
-      맞힐 때마다 간격이 늘고, 다섯 번 통과하면 졸업 🎓 (틀리면 처음부터!)<br>
+      맞힐 때마다 간격이 늘고, 다섯 번 통과하면 졸업 🎓 (틀리면 한 칸만 내려가요)<br>
       <!-- 학습일 경계(2026-09-05) 안내 — "어제 틀렸는데 왜 아직 안 뜨지?"를 없애는 한 줄. -->
       복습은 <b>그 날 아침부터</b> 열려요. 밤늦게 푼 문제도 다음 날이면 올라옵니다.</p>
 
@@ -75,6 +75,11 @@ const overviewEl = document.getElementById("overview");
 const playerEl = document.getElementById("player");
 let page = 0;
 
+/* 한 판에 내보내는 복습 문제 수(2026-09-05). 20인 이유는 오답노트 한 페이지와 같은 수라
+   "한 번에 다루는 양"의 감각이 사이트 안에서 일정하기 때문이다. 서버 상한은 50이지만
+   상한을 다 쓰는 것과 사람이 한자리에서 풀 수 있는 양은 다른 문제다. */
+const SESSION_SIZE = 20;
+
 if (!isLoggedIn()) {
   document.getElementById("message").innerHTML =
     `<div class="alert info">복습은 <b>내 계정의 기록</b>이라 로그인이 필요합니다.
@@ -88,9 +93,12 @@ if (!isLoggedIn()) {
 async function loadToday() {
   const box = document.getElementById("todayBox");
   try {
-    // size=50: /today의 최대 페이지 크기(docs/10). 밀린 게 50개를 넘으면 한 판 끝낸 뒤
-    // 다시 들어오면 나머지가 이어서 나온다 — 한 번에 50문제 넘게 푸는 건 어차피 무리다.
-    const data = await api("/api/me/reviews/today?size=50");
+    // 한 판은 SESSION_SIZE(20)문제까지만 받는다(2026-09-05).
+    // 전에는 50개를 받아 한 번에 다 풀렸다. 며칠 안 들어오면 "복습 47문제"가 뜨는데,
+    // 그 숫자를 본 사람은 시작을 미루고, 미루면 다음 날 더 쌓인다. 밀린 복습이 사람을
+    // 쫓아내는 흔한 실패다. 서버가 오래 밀린 순으로 주므로 앞에서 20개를 떼면
+    // "제일 급한 것부터 한 판"이 된다.
+    const data = await api(`/api/me/reviews/today?size=${SESSION_SIZE}`);
     if (data.totalElements === 0) {
       box.innerHTML = `
         <div class="card" style="text-align:center;padding:28px">
@@ -101,11 +109,16 @@ async function loadToday() {
         </div>`;
       return;
     }
+    // 밀린 게 한 판을 넘으면 "전부"가 아니라 "이번 판 몫"을 앞세운다. 47개를 들이미는 대신
+    // 20개를 보여 주고 남은 건 괄호로 밀어 두는 것만으로도 시작하기가 훨씬 쉬워진다.
+    const inSession = data.content.length;
+    const rest = data.totalElements - inSession;
     box.innerHTML = `
       <div class="card" style="text-align:center;padding:28px">
         <div style="font-size:1.6rem">📅</div>
-        <b>오늘 복습할 문제가 ${data.totalElements}개 있어요</b>
-        <div class="meta" style="margin-top:4px">오래 밀린 문제부터 차례로 나와요</div>
+        <b>오늘 복습할 문제 ${inSession}개를 골랐어요</b>
+        <div class="meta" style="margin-top:4px">오래 밀린 문제부터 차례로 나와요${
+          rest > 0 ? `<br>남은 ${rest}개는 이 판을 끝내면 이어서 나와요 — 한 번에 다 안 해도 돼요` : ""}</div>
         <button id="startReviewBtn" class="btn-lg" style="margin-top:12px">복습 시작 ✍️</button>
       </div>`;
     document.getElementById("startReviewBtn").addEventListener("click", () => {
@@ -157,9 +170,22 @@ async function loadStatus() {
         // 예정 시각은 "그 날 새벽 4시"라 시·분을 그대로 보여주면 "9/6 04:00"이 된다 —
         // 새벽 4시에 일어나라는 말로 읽힌다. 실제로 중요한 건 <어느 날부터 열리는가>이므로
         // 날짜만 쓴다(2026-09-05 학습일 경계 도입과 함께).
-        const dueLabel = r.status === "GRADUATED" ? "복습 끝! 다시 안 나와요"
+        const on = formatDate(r.nextReviewAt).substring(0, 10);
+
+        // 졸업생은 nextReviewAt이 "재확인 예정일"이다(2026-09-05). 서버의 due 값은 졸업생에게
+        // 늘 false라 여기서 직접 비교한다 — due는 "오늘의 복습 대상"이라는 뜻이고, 재확인은
+        // 그 목록에 넣지 않기로 한 별개의 권유이기 때문이다.
+        const recheckDue = r.status === "GRADUATED" && new Date(r.nextReviewAt) <= new Date();
+
+        const dueLabel = r.status === "GRADUATED"
+          ? (recheckDue
+              // 링크는 문제 지목 풀이 경로다. 틀리면 자동으로 사다리에 다시 오르고,
+              // 맞히면 다음 재확인으로 미뤄진다 — 어느 쪽이든 서버가 알아서 처리한다.
+              ? `<a href="/quiz.html?problemId=${r.problemId}" style="color:var(--review);font-weight:700"
+                   >오래 안 봤어요 — 다시 확인해볼까요? 🔍</a>`
+              : `복습 끝! ${on}에 한 번만 다시 확인해요 🎓`)
           : r.due ? `<span style="color:var(--review);font-weight:700">지금 복습할 시간!</span>`
-                  : `다음 복습: ${formatDate(r.nextReviewAt).substring(0, 10)}부터`;
+                  : `다음 복습: ${on}부터`;
         return `
           <div class="card">
             <div style="margin-bottom:4px">
