@@ -29,6 +29,14 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
+# 컨테이너 기본 시간대를 한국으로 — 리눅스 이미지의 기본값은 UTC다.
+# 이게 없으면 복습 예정 시각 계산(ReviewService.dueAfter)의 "학습일 경계 = 새벽 4시"가
+# UTC 4시 = 한국 오후 1시가 되어, 아침에 들어온 사용자에게 복습이 안 뜬다.
+# JDBC URL은 이미 serverTimezone=Asia/Seoul을 쓰고 있었으므로(application.yml) 앱과 DB의
+# 기준을 여기서 맞추는 셈이기도 하다. TZ 하나만 두는 이유: -Duser.timezone을 ENTRYPOINT에
+# 따로 박으면 자바만 한국 시간이고 컨테이너 로그·cron은 UTC라 둘이 어긋난다.
+ENV TZ=Asia/Seoul
+
 COPY --from=build /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
