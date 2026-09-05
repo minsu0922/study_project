@@ -53,6 +53,16 @@ public class ReviewService {
      */
     private static final LocalTime DAY_ROLLOVER = LocalTime.of(4, 0);
 
+    /**
+     * 졸업생을 다시 확인해 보기까지의 간격(일) — 사다리 마지막 칸(30일)의 두 배(2026-09-05).
+     *
+     * <p>왜 두 배인가: 졸업은 "30일 간격을 한 번 통과했다"는 뜻이지 영구 보증이 아니다. 그렇다고
+     * 곧바로 다시 물으면 졸업이라는 말이 무색해지므로, 통과한 간격보다 확실히 긴 값을 골랐다.
+     * 근거 데이터가 있어서 60일인 게 아니라 "30일보다 눈에 띄게 길다"가 기준이다 — 사용자
+     * 기록이 쌓이면 조정할 값이다.
+     */
+    public static final int GRADUATION_RECHECK_DAYS = 60;
+
     /** 목록 조회 size 상한(docs/10). 정책은 서비스 책임(QuizService.MAX_SIZE와 같은 판단). */
     private static final int MAX_SIZE = 50;
 
@@ -97,9 +107,10 @@ public class ReviewService {
      * <p>상태 전이 표(docs/10 — 이 표가 곧 이 메서드의 명세):
      * <table>
      *   <tr><th>결과</th><th>항목 없음</th><th>LEARNING</th><th>GRADUATED</th></tr>
-     *   <tr><td>오답</td><td>생성(stage 0, 다음 학습일)</td><td>stage 0 리셋</td><td>LEARNING 복귀 + stage 0</td></tr>
+     *   <tr><td>오답</td><td>생성(stage 0, 다음 학습일)</td><td>stage−1 강등 + 다음 학습일</td>
+     *       <td>LEARNING 복귀 + stage 0</td></tr>
      *   <tr><td>정답</td><td>아무것도 안 함</td><td>예정일이 지났으면 stage+1(마지막 칸이면 졸업),
-     *       아직이면 그대로</td><td>그대로</td></tr>
+     *       아직이면 그대로</td><td>재확인일이 지났으면 다음 재확인으로 미룸, 아직이면 그대로</td></tr>
      * </table>
      *
      * <p><b>{@code Propagation.MANDATORY}</b>: 반드시 호출자(submit)의 트랜잭션에 합류만 하고,
@@ -141,8 +152,18 @@ public class ReviewService {
                 reviewItemRepository.save(
                         ReviewItem.firstWrong(userId, problem, dueAfter(now, INTERVAL_DAYS[0])));
             } else {
-                // 또 틀림 → 맨 아래 칸으로 리셋. GRADUATED였어도 LEARNING으로 복귀(엔티티가 처리).
-                found.get().resetToStart(dueAfter(now, INTERVAL_DAYS[0]));
+                ReviewItem item = found.get();
+                if (item.getStatus() == ReviewStatus.GRADUATED) {
+                    // 졸업생이 틀림 → 맨 아래 칸으로. 오래전에 통과한 뒤 통째로 잊은 것이므로
+                    // 처음부터가 맞다. LEARNING 복귀는 엔티티가 함께 처리한다.
+                    item.resetToStart(dueAfter(now, INTERVAL_DAYS[0]));
+                } else {
+                    // 학습 중에 틀림 → 한 칸만 강등(2026-09-05). 30일 칸까지 올라간 문제를 한 번
+                    // 미끄러졌다고 맨 아래로 떨어뜨리면 다시 55일이라, 사다리를 오를 의욕이 꺾인다.
+                    // 다음 복습은 강등된 칸의 간격이 아니라 다음 학습일이다 — 방금 모른다고
+                    // 확인된 문제를 14일 뒤에 보자는 건 앞뒤가 안 맞는다.
+                    item.demote(Math.max(0, item.getStage() - 1), dueAfter(now, INTERVAL_DAYS[0]));
+                }
             }
             return;
         }
@@ -150,7 +171,13 @@ public class ReviewService {
         // 정답인데 사다리에 없다? → 틀린 적 없는 문제 = 복습할 이유가 없다. 아무것도 안 만든다.
         found.ifPresent(item -> {
             if (item.getStatus() != ReviewStatus.LEARNING) {
-                return; // 졸업 후 또 맞힘 → 그대로 (전이 표의 "그대로" 칸)
+                // 졸업생이 또 맞힘. 재확인 예정일이 지난 뒤였다면 "아직 기억한다"가 확인된
+                // 것이므로 다음 재확인만 미룬다. 예정일 전이었다면 아무 일도 없다 — 학습 중
+                // 항목의 조기 정답을 무시하는 것과 같은 규칙이다.
+                if (!now.isBefore(item.getNextReviewAt())) {
+                    item.recheckPassed(dueAfter(now, GRADUATION_RECHECK_DAYS));
+                }
+                return;
             }
             if (now.isBefore(item.getNextReviewAt())) {
                 // 아직 복습할 때가 아니다 → 사다리를 움직이지 않는다. reviewCount도 올리지 않는데,
@@ -160,7 +187,9 @@ public class ReviewService {
             }
             int nextStage = item.getStage() + 1;
             if (nextStage >= INTERVAL_DAYS.length) {
-                item.graduate(); // 마지막 칸에서 정답 → 졸업 🎓
+                // 마지막 칸에서 정답 → 졸업 🎓. 재확인 예정일을 함께 심어 둬서 졸업이
+                // 영구 퇴장이 되지 않게 한다(2026-09-05).
+                item.graduate(dueAfter(now, GRADUATION_RECHECK_DAYS));
             } else {
                 // 승급 — 다음 복습은 "승급 후 칸"의 간격만큼 뒤(칸이 오를수록 멀어진다).
                 item.promote(nextStage, dueAfter(now, INTERVAL_DAYS[nextStage]));

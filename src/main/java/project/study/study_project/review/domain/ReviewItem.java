@@ -76,7 +76,11 @@ public class ReviewItem {
     /**
      * 다음 복습 예정 시각. "복습할 때가 됐는지(due)"는 이 값과 현재 시각의 비교로 조회 시점에
      * 계산한다 — 상태로 저장하지 않는다(ReviewStatus 주석 참고).
-     * 졸업 후에는 의미 없는 값이지만 NOT NULL 유지 — 조회가 항상 status로 먼저 거르므로 무해하다.
+     *
+     * <p>졸업 후에는 <b>재확인 예정 시각</b>이 된다(2026-09-05, {@link #graduate} 참고).
+     * 한 컬럼이 상태에 따라 두 가지를 뜻하는 셈인데, 둘 다 "이 문제를 다음에 언제 볼까"라는
+     * 같은 질문의 답이라 컬럼을 나누지 않았다. 나누면 어느 쪽을 봐야 하는지 매번 status를
+     * 확인해야 하고, NOT NULL이던 값이 nullable 둘로 늘어난다.
      */
     @Column(name = "next_review_at", nullable = false)
     private LocalDateTime nextReviewAt;
@@ -113,11 +117,34 @@ public class ReviewItem {
      * 오답 — 사다리 맨 아래로 리셋. 졸업했던 문제도 다시 LEARNING으로 복귀한다
      * ("기억은 영구 보증이 아니다", docs/10).
      *
+     * <p><b>2026-09-05부터 이 메서드는 졸업생이 틀렸을 때만 쓴다.</b> 학습 중인 항목은
+     * 한 칸만 내리는 {@link #demote}로 간다 — 30일 칸까지 올라간 문제를 한 번 미끄러졌다고
+     * 맨 아래로 떨어뜨리면 다시 55일이 걸려서, 사용자가 사다리를 오를 의욕을 잃는다.
+     * 졸업생은 다르다. 오래전에 통과한 뒤 통째로 잊은 것이므로 처음부터가 맞다.
+     *
      * @param nextReviewAt 다음 복습 예정 시각(서비스가 첫 칸 간격으로 계산)
      */
     public void resetToStart(LocalDateTime nextReviewAt) {
         this.stage = 0;
         this.status = ReviewStatus.LEARNING;
+        this.nextReviewAt = nextReviewAt;
+        this.reviewCount++;
+    }
+
+    /**
+     * 오답 — 한 칸 아래로 강등(2026-09-05). 학습 중인 항목이 틀렸을 때의 기본 처리다.
+     *
+     * <p>{@link #promote}와 하는 일이 같은데 이름을 나눈 이유: 호출부에서 <b>전이 방향이
+     * 드러나야</b> 상태 전이 표와 코드를 나란히 읽을 수 있다. 하나로 합치면
+     * {@code promote(stage - 1, ...)} 같은 "승급인데 칸이 내려간다"는 문장이 생긴다.
+     *
+     * @param nextStage    강등 후 칸(0 미만이 되지 않게 계산하는 것은 사다리를 아는 서비스 몫)
+     * @param nextReviewAt 다음 복습 예정 시각 — 틀렸으므로 첫 칸 간격(다음 학습일)이다.
+     *                     강등된 칸의 간격이 아니다: 방금 모른다고 확인된 문제를 14일 뒤에
+     *                     다시 보자는 건 앞뒤가 안 맞는다
+     */
+    public void demote(int nextStage, LocalDateTime nextReviewAt) {
+        this.stage = nextStage;
         this.nextReviewAt = nextReviewAt;
         this.reviewCount++;
     }
@@ -135,11 +162,36 @@ public class ReviewItem {
     }
 
     /**
-     * 마지막 칸에서 정답 — 졸업. 더는 복습 추천에 나오지 않는다.
+     * 마지막 칸에서 정답 — 졸업. "오늘의 복습"에는 더 나오지 않는다.
      * stage는 마지막 칸 그대로 둔다(졸업 시점의 위치 기록 — 되돌릴 때는 어차피 stage 0부터).
+     *
+     * <p><b>재확인 예정일을 함께 받는다(2026-09-05)</b>. 전에는 졸업하면
+     * {@code nextReviewAt}을 졸업 전 값 그대로 두고 "의미 없는 값"으로 취급했다. 그랬더니
+     * 졸업이 <b>영구 퇴장</b>이 됐다 — 다시 사다리에 오르는 유일한 길이 "그 문제를 어쩌다 또
+     * 틀리는 것"인데, 무작위 퀴즈에서 그 문제가 다시 뽑힐 운에 기대야 했다. 30일 뒤에 잊는
+     * 기억이 60일 뒤라고 남아 있으리란 법이 없다.
+     *
+     * <p>이제 졸업 시각에 재확인 예정일을 심어 둔다. 이 날짜가 지나면 복습 화면이 "오래 안 본
+     * 문제"로 다시 꺼내 준다. <b>"오늘의 복습" 목록에는 넣지 않는다</b> — 밀린 복습과 섞으면
+     * 당장 해야 할 일이 흐려지므로, 재확인은 여유 있을 때 하는 별도 권유로 남긴다.
+     *
+     * @param nextRecheckAt 다시 확인해 볼 시각(간격은 정책이라 서비스가 계산해서 넘긴다)
      */
-    public void graduate() {
+    public void graduate(LocalDateTime nextRecheckAt) {
         this.status = ReviewStatus.GRADUATED;
+        this.nextReviewAt = nextRecheckAt;
         this.reviewCount++;
+    }
+
+    /**
+     * 졸업생 재확인 통과 — 졸업 상태를 유지하고 다음 재확인만 미룬다(2026-09-05).
+     *
+     * <p>{@code reviewCount}를 올리지 않는 이유: 그 값의 뜻이 "졸업<b>까지</b> 몇 번 걸렸나"라
+     * 졸업 뒤의 풀이를 세면 통계가 흐려진다(예정일 전 정답을 세지 않는 것과 같은 이유).
+     *
+     * @param nextRecheckAt 다음 재확인 시각
+     */
+    public void recheckPassed(LocalDateTime nextRecheckAt) {
+        this.nextReviewAt = nextRecheckAt;
     }
 }

@@ -90,6 +90,23 @@ class ReviewServiceTest {
     }
 
     /**
+     * 졸업한 항목을 만든다.
+     *
+     * @param recheckAt 재확인 예정 시각 — 미래면 "졸업하고 아직 확인할 때가 아님",
+     *                  과거면 "오래 안 봐서 다시 확인할 때가 됨"(2026-09-05)
+     */
+    private ReviewItem graduatedItem(LocalDateTime recheckAt) {
+        ReviewItem item = learningItemAtStage(4);
+        item.graduate(recheckAt);
+        return item;
+    }
+
+    /** 재확인은 아직 한참 남았다 — 갓 졸업한 상태를 뜻한다. */
+    private static LocalDateTime recheckFarOff() {
+        return LocalDateTime.now().plusDays(ReviewService.GRADUATION_RECHECK_DAYS);
+    }
+
+    /**
      * 결과 시각이 "days일 뒤 학습일이 열리는 시각"인지.
      *
      * <p>후보를 둘 받는 이유: 서비스가 부르는 {@code now()}와 테스트의 {@code before} 사이에
@@ -124,8 +141,9 @@ class ReviewServiceTest {
         }
 
         @Test
-        @DisplayName("LEARNING(stage 2) → stage 0으로 리셋, 다음 복습 1일 뒤")
-        void resetsLearningItemToStageZero() {
+        @DisplayName("LEARNING(stage 2) → stage 1로 강등, 다음 복습 1일 뒤")
+        void demotesLearningItemOneRung() {
+            // 2026-09-05 이전에는 stage 0으로 리셋했다. 칸별 규칙은 Demotion에서 자세히 본다.
             ReviewItem item = learningItemAtStage(2);
             int countBefore = item.getReviewCount();
             givenExisting(item);
@@ -133,7 +151,7 @@ class ReviewServiceTest {
 
             reviewService.onSubmission(USER_ID, problem, false);
 
-            assertThat(item.getStage()).isZero();
+            assertThat(item.getStage()).isEqualTo(1);
             assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
             assertThat(item.getReviewCount()).isEqualTo(countBefore + 1);
             assertDueOnStudyDayAfter(item.getNextReviewAt(), before, 1);
@@ -143,8 +161,8 @@ class ReviewServiceTest {
         @Test
         @DisplayName("GRADUATED → LEARNING으로 복귀 + stage 0 (기억은 영구 보증이 아니다)")
         void graduatedItemReturnsToLadder() {
-            ReviewItem item = learningItemAtStage(4);
-            item.graduate();
+            // 졸업생만 맨 아래로 떨어진다 — 학습 중 항목은 한 칸만 내려간다(아래 Demotion 참고).
+            ReviewItem item = graduatedItem(recheckFarOff());
             assertThat(item.getStatus()).isEqualTo(ReviewStatus.GRADUATED); // 전제 확인
             givenExisting(item);
             LocalDateTime before = LocalDateTime.now();
@@ -201,10 +219,9 @@ class ReviewServiceTest {
         }
 
         @Test
-        @DisplayName("GRADUATED → 그대로 (졸업 후 또 맞혀도 변화 없음)")
+        @DisplayName("GRADUATED → 그대로 (재확인일 전에 또 맞혀도 변화 없음)")
         void graduatedItemStaysUnchanged() {
-            ReviewItem item = learningItemAtStage(4);
-            item.graduate();
+            ReviewItem item = graduatedItem(recheckFarOff());
             int countBefore = item.getReviewCount();
             LocalDateTime nextBefore = item.getNextReviewAt();
             givenExisting(item);
@@ -245,6 +262,108 @@ class ReviewServiceTest {
 
         assertThat(lastRung.getStatus()).isEqualTo(ReviewStatus.GRADUATED);
         assertThat(lastRung.getReviewCount()).isEqualTo(5);
+    }
+
+    /**
+     * 오답 강등 규칙(2026-09-05) — 학습 중 항목은 한 칸만 내려간다. 전에는 맨 아래로
+     * 리셋했는데, 30일 칸에서 한 번 미끄러지면 다시 55일이라 사다리를 오를 의욕이 꺾였다.
+     */
+    @Nested
+    @DisplayName("오답 강등 — 한 칸만 내려간다")
+    class Demotion {
+
+        @Test
+        @DisplayName("stage 4에서 틀리면 stage 3으로 (맨 아래가 아니다)")
+        void wrongAnswerDropsOneRungOnly() {
+            ReviewItem item = learningItemAtStage(4);
+            givenExisting(item);
+            LocalDateTime before = LocalDateTime.now();
+
+            reviewService.onSubmission(USER_ID, problem, false);
+
+            assertThat(item.getStage()).isEqualTo(3);
+            assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
+            // 강등된 칸(14일)이 아니라 다음 학습일이다 — 방금 모른다고 확인된 문제를
+            // 14일 뒤에 보자는 건 앞뒤가 안 맞는다.
+            assertDueOnStudyDayAfter(item.getNextReviewAt(), before, 1);
+        }
+
+        @Test
+        @DisplayName("stage 0에서 틀려도 음수로 내려가지 않는다")
+        void stageNeverGoesBelowZero() {
+            ReviewItem item = learningItemAtStage(0);
+            givenExisting(item);
+
+            reviewService.onSubmission(USER_ID, problem, false);
+
+            assertThat(item.getStage()).isZero();
+        }
+
+        @Test
+        @DisplayName("연달아 틀리면 한 칸씩 내려와 결국 맨 아래에 닿는다")
+        void repeatedMistakesWalkDownTheLadder() {
+            // 한 칸 강등이 "틀려도 벌이 없다"는 뜻은 아니다 — 계속 틀리면 결국 처음으로 온다.
+            ReviewItem item = learningItemAtStage(4);
+            givenExisting(item);
+
+            assertThat(item.getStage()).isEqualTo(4);
+            for (int expected : new int[]{3, 2, 1, 0, 0}) {
+                reviewService.onSubmission(USER_ID, problem, false);
+                assertThat(item.getStage()).isEqualTo(expected);
+            }
+        }
+    }
+
+    /**
+     * 졸업 재확인(2026-09-05) — 졸업은 영구 퇴장이 아니다. 재확인 예정일이 지나면
+     * 복습 화면이 "오래 안 본 문제"로 다시 꺼내 준다.
+     */
+    @Nested
+    @DisplayName("졸업 재확인 — 졸업이 영구 퇴장은 아니다")
+    class GraduationRecheck {
+
+        @Test
+        @DisplayName("졸업할 때 재확인 예정일이 함께 심긴다")
+        void graduationPlantsRecheckDate() {
+            ReviewItem item = learningItemAtStage(4);
+            givenExisting(item);
+            LocalDateTime before = LocalDateTime.now();
+
+            reviewService.onSubmission(USER_ID, problem, true);
+
+            assertThat(item.getStatus()).isEqualTo(ReviewStatus.GRADUATED);
+            assertDueOnStudyDayAfter(item.getNextReviewAt(), before,
+                    ReviewService.GRADUATION_RECHECK_DAYS);
+        }
+
+        @Test
+        @DisplayName("재확인일이 지난 뒤 맞히면 다음 재확인으로 미뤄진다 (졸업 유지)")
+        void passingRecheckPushesNextRecheck() {
+            ReviewItem item = graduatedItem(DUE_NOW); // 오래 안 봐서 확인할 때가 됐다
+            int countBefore = item.getReviewCount();
+            givenExisting(item);
+            LocalDateTime before = LocalDateTime.now();
+
+            reviewService.onSubmission(USER_ID, problem, true);
+
+            assertThat(item.getStatus()).isEqualTo(ReviewStatus.GRADUATED); // 졸업은 유지
+            assertDueOnStudyDayAfter(item.getNextReviewAt(), before,
+                    ReviewService.GRADUATION_RECHECK_DAYS);
+            // 졸업 뒤의 풀이는 세지 않는다 — reviewCount는 "졸업까지 몇 번"이라는 뜻이므로.
+            assertThat(item.getReviewCount()).isEqualTo(countBefore);
+        }
+
+        @Test
+        @DisplayName("재확인 때 틀리면 사다리 맨 아래로 돌아온다")
+        void failingRecheckReturnsToLadder() {
+            ReviewItem item = graduatedItem(DUE_NOW);
+            givenExisting(item);
+
+            reviewService.onSubmission(USER_ID, problem, false);
+
+            assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
+            assertThat(item.getStage()).isZero(); // 졸업생은 한 칸 강등이 아니라 처음부터
+        }
     }
 
     /**
