@@ -24,7 +24,9 @@
     </div>
 
     <p class="meta">틀렸던 문제를 <b>1일 → 3일 → 7일 → 14일 → 30일</b> 간격으로 다시 만나요.
-      맞힐 때마다 간격이 늘고, 다섯 번 통과하면 졸업 🎓 (틀리면 처음부터!)</p>
+      맞힐 때마다 간격이 늘고, 다섯 번 통과하면 졸업 🎓 (틀리면 처음부터!)<br>
+      <!-- 학습일 경계(2026-09-05) 안내 — "어제 틀렸는데 왜 아직 안 뜨지?"를 없애는 한 줄. -->
+      복습은 <b>그 날 아침부터</b> 열려요. 밤늦게 푼 문제도 다음 날이면 올라옵니다.</p>
 
     <div id="message"></div>
     <div id="todayBox"></div>
@@ -152,9 +154,12 @@ async function loadStatus() {
         const stageBadge = r.status === "GRADUATED"
           ? `<span class="badge green">졸업 🎓</span>`
           : `<span class="badge orange">${r.stage + 1}단계</span>`;
+        // 예정 시각은 "그 날 새벽 4시"라 시·분을 그대로 보여주면 "9/6 04:00"이 된다 —
+        // 새벽 4시에 일어나라는 말로 읽힌다. 실제로 중요한 건 <어느 날부터 열리는가>이므로
+        // 날짜만 쓴다(2026-09-05 학습일 경계 도입과 함께).
         const dueLabel = r.status === "GRADUATED" ? "복습 끝! 다시 안 나와요"
           : r.due ? `<span style="color:var(--review);font-weight:700">지금 복습할 시간!</span>`
-                  : `다음 복습: ${formatDate(r.nextReviewAt)}`;
+                  : `다음 복습: ${formatDate(r.nextReviewAt).substring(0, 10)}부터`;
         return `
           <div class="card">
             <div style="margin-bottom:4px">
