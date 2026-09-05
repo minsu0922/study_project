@@ -30,6 +30,7 @@ import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
+import project.study.study_project.llm.support.DifficultyMaterialRule;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.SourceQuoteRule;
@@ -251,6 +252,23 @@ public class LlmProblemService {
             String missing = TypeMaterialRule.missingMaterialOf(document.contentMd(), type);
             if (missing != null) {
                 throw new BusinessException(ErrorCode.QUIZ_004, missing);
+            }
+
+            // 난이도 재료도 같은 자리에서 본다(2026-09-05). 배치는 원래 둘 다 봤는데
+            // (DraftGeneratorCli.findSourceDocument) 이 경로는 유형만 보고 있었다.
+            //
+            // 그 틈으로 새는 것이 <입문편 + 고급>이다. 두 편은 제목이 완전히 같고 slug만
+            // -advanced가 붙어서, 드롭다운에서 엉뚱한 쪽을 고르기가 아주 쉽다. 그렇게 고르면
+            // 프롬프트는 고급에게 "## 언제 깨지는가"를 캐라고 지목하는데 입문편에는 그 절이
+            // 없고, 없는 절을 지목당한 모델은 멈추지 않고 알아서 다른 절을 판다.
+            // 실패가 아니라 조용한 품질 저하라, 요금을 다 낸 뒤 사람이 읽어야 알아차린다.
+            //
+            // 배치와 달리 폴백하지 않고 던지는 이유는 위 유형 검사와 같다 — 사람이 문서를 골라
+            // 버튼을 누른 실행에서 근거를 조용히 버리는 것은 요청과 다른 일을 하는 것이다.
+            String missingForDifficulty =
+                    DifficultyMaterialRule.missingMaterialOf(document.contentMd(), request.difficulty());
+            if (missingForDifficulty != null) {
+                throw new BusinessException(ErrorCode.QUIZ_004, missingForDifficulty);
             }
         }
 

@@ -70,6 +70,10 @@
       <div class="field" id="gSlugField" style="margin-top:10px">
         <label>문서 고르기</label>
         <select id="gSlug"><option value="">— 고르지 않음 —</option></select>
+        <!-- 편과 난이도가 어긋났을 때의 안내(2026-09-05). 서버도 같은 조합을 거절하지만
+             (LlmProblemService.generateFromDocument), 그건 버튼을 누른 뒤다. 두 편은 제목이
+             같아서 잘못 고르기가 쉬우므로 <고르는 그 자리에서> 보이게 한다. -->
+        <p class="meta" id="gEditionHint" hidden></p>
       </div>
 
       <!-- 근거가 "붙여넣기 · 파일"일 때. 둘 중 하나만 쓰면 되고, 둘 다 채우면 파일이 이긴다
@@ -205,9 +209,17 @@ function initGenerateForm() {
   syncSourceFields();
   syncKindOptions();
 
+  // 근거를 "붙여넣기·파일"이나 "없음"으로 바꾸면 고른 문서가 무의미해지므로 안내도 걷는다.
   document.querySelectorAll('input[name="gSource"]').forEach(radio =>
-      radio.addEventListener("change", () => { syncSourceFields(); syncKindOptions(); }));
-  document.getElementById("gDifficulty").addEventListener("change", syncKindOptions);
+      radio.addEventListener("change", () => {
+        syncSourceFields();
+        syncKindOptions();
+        updateEditionHint();
+      }));
+  document.getElementById("gDifficulty").addEventListener("change", () => {
+    syncKindOptions();
+    updateEditionHint();
+  });
   document.getElementById("gSubmitBtn").addEventListener("click", generateProblems);
   loadDocumentOptions();
 }
@@ -277,6 +289,41 @@ function syncKindOptions() {
 }
 
 /**
+ * 고른 문서의 편과 난이도가 맞는지 <고르는 자리에서> 알려 준다 — 2026-09-05 신설.
+ *
+ * <p><b>왜 필요한가.</b> 입문편과 심화편은 제목이 완전히 같고 slug만 {@code -advanced}로
+ * 갈린다. 배치는 난이도에 따라 편을 <자동으로> 고르지만(DraftGeneratorCli.editionFor:
+ * 고급은 심화편, 초급·중급은 입문편) 이 화면은 사람이 둘을 <따로> 고른다. 어긋나게 고르면
+ * 프롬프트가 없는 절을 지목하고, 모델은 멈추지 않고 알아서 다른 절을 판다.
+ *
+ * <p><b>왜 잠그지 않고 안내만 하나.</b> 2026-09-03 이전 문서 15편은 두 편으로 갈리기 전의
+ * 한 편짜리라 초급 재료와 고급 재료를 <한 문서에> 갖고 있다. 그런 문서에는 서버가 edition을
+ * 비워 보내므로 여기서도 아무 말 하지 않고, 실제 판정은 절이 있는지를 보는 서버가 한다
+ * (DifficultyMaterialRule). 화면이 이름으로 앞질러 막으면 멀쩡한 조합까지 막힌다 —
+ * 여기서 하는 일은 <있을 법한 실수를 눈에 띄게 하는 것>까지다.
+ */
+function updateEditionHint() {
+  const hint = document.getElementById("gEditionHint");
+  const edition = document.getElementById("gSlug").selectedOptions[0]?.dataset.edition;
+  const difficulty = document.getElementById("gDifficulty").value;
+  // 근거가 등록 문서가 아니면 고른 slug는 쓰이지 않는다. 선택은 남아 있으므로
+  // 여기서 걸러 주지 않으면 붙여넣기로 바꾼 뒤에도 경고가 그대로 떠 있는다.
+  if (selectedSource() !== "doc" || !edition || !difficulty) {
+    hint.hidden = true;   // 편을 모르거나(한 편짜리) 난이도가 자동이면 할 말이 없다
+    return;
+  }
+
+  const wanted = difficulty === "ADVANCED" ? "심화편" : "입문편";
+  if (edition === wanted) {
+    hint.hidden = true;
+    return;
+  }
+  hint.hidden = false;
+  hint.textContent = `⚠️ ${difficultyLabel(difficulty)}는 ${wanted}에서 뽑습니다.`
+    + ` 지금 고른 문서는 ${edition}이라 캘 절이 없을 수 있어요 — 같은 제목의 ${wanted}를 확인하세요.`;
+}
+
+/**
  * 등록 문서 드롭다운을 채운다 — 2026-08-25 신설.
  *
  * <p>관리자 전용 목록 API를 새로 만들지 않고 공개 조회 API를 그대로 쓴다. 문서 목록은
@@ -298,10 +345,21 @@ async function loadDocumentOptions() {
       return;
     }
     // 분야를 제목 앞에 붙인다. 문서가 늘면 제목만으로는 어느 분야 것인지 바로 안 보인다.
+    //
+    // 편(입문/심화)도 같이 붙인다(2026-09-05). 두 편은 <제목이 완전히 같고> slug만
+    // -advanced로 갈린다. 그래서 편이 없으면 드롭다운에 글자 하나 다르지 않은 두 줄이
+    // 나란히 서고, 어느 것이 심화편인지 알 방법이 화면에 아예 없었다.
+    // 서버는 <짝이 실제로 있을 때만> edition을 채우므로(DocumentEditions 주석) 한 편짜리
+    // 옛 문서에는 아무것도 안 붙는다 — 없는 심화편을 찾아 나서게 만들지 않는다.
     sel.innerHTML = `<option value="">— 고르지 않음 —</option>`
-      + data.content.map(d =>
-          `<option value="${escapeHtml(d.slug)}" data-domain="${escapeHtml(d.domain)}">`
-          + `[${escapeHtml(d.domainLabel)}] ${escapeHtml(d.title)}</option>`).join("");
+      + data.content.map(d => {
+          const head = d.edition
+            ? `[${escapeHtml(d.domainLabel)} · ${escapeHtml(d.edition)}]`
+            : `[${escapeHtml(d.domainLabel)}]`;
+          return `<option value="${escapeHtml(d.slug)}" data-domain="${escapeHtml(d.domain)}"`
+            + ` data-edition="${escapeHtml(d.edition ?? "")}">`
+            + `${head} ${escapeHtml(d.title)}</option>`;
+        }).join("");
 
     // 문서를 고르면 분야를 맞춰 준다. 손이 덜 가는 것보다 중요한 건 <틀릴 수 없게> 하는 것이다 —
     // 등록 문서는 분야가 이미 정해져 있는데 사람이 다른 분야를 고르면 조용히 어긋난 문제가 나온다.
@@ -309,6 +367,7 @@ async function loadDocumentOptions() {
     sel.addEventListener("change", () => {
       const domain = sel.selectedOptions[0]?.dataset.domain;
       if (domain) document.getElementById("gDomain").value = domain;
+      updateEditionHint();
     });
   } catch (e) {
     sel.innerHTML = `<option value="">— 목록을 불러오지 못했습니다 —</option>`;

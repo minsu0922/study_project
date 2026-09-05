@@ -251,10 +251,20 @@ class LlmProblemServiceTest {
 
         private static final String SLUG = "tcp-time-wait-2msl";
 
-        /** 저장소가 돌려줄 문서 — 엔티티에 setter가 없어 등록용 정적 팩터리를 그대로 쓴다. */
+        /**
+         * 저장소가 돌려줄 문서 — 엔티티에 setter가 없어 등록용 정적 팩터리를 그대로 쓴다.
+         *
+         * <p><b>초급·중급이 캘 절을 둘 다 담는다</b>(2026-09-05). 전에는 {@code ## 무엇인가}
+         * 하나뿐이었는데, 그건 초급 절이라 중급으로 부르는 아래 테스트들이 사실 <b>재료 없는
+         * 문서로 중급을 뽑는</b> 요청이었다. 아무도 안 재고 있어서 통과했을 뿐이다
+         * ({@code DifficultyMaterialRule}이 생기며 드러났다). 입문편이 실제로 갖는 모양에
+         * 맞춰 둔다 — 심화편 절({@code ## 언제 깨지는가})은 <b>일부러 넣지 않는다</b>.
+         * 그래야 "입문편 + 고급"이 막히는 것을 아래에서 잴 수 있다.
+         */
         private Document registered() {
             return Document.create(Domain.NETWORK, "TIME_WAIT — 2MSL을 더 기다리는 이유", SLUG,
-                    "## 무엇인가\n\n본문이다.", null, java.util.Set.of());
+                    "## 무엇인가\n\n본문이다.\n\n### 왜 이렇게 설계됐는가\n\n그래서 이렇게 했다.\n",
+                    null, java.util.Set.of());
         }
 
         /**
@@ -341,6 +351,58 @@ class LlmProblemServiceTest {
             assertThatThrownBy(() -> service.findRegisteredDocument("gone"))
                     .isInstanceOf(BusinessException.class)
                     .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.DOC_001));
+        }
+
+        /**
+         * <b>2026-09-05 — 입문편에 고급을 걸면 막는다.</b>
+         *
+         * <p>배치는 난이도 재료를 원래 봤는데({@code DraftGeneratorCli.findSourceDocument})
+         * 이 경로는 유형 재료만 보고 있었다. 그 틈으로 새는 조합이 정확히 <b>입문편 + 고급</b>이다 —
+         * 두 편은 제목이 완전히 같고 slug만 {@code -advanced}로 갈려서 드롭다운에서 잘못 고르기가
+         * 쉽다. 잘못 고르면 프롬프트가 없는 절({@code ## 언제 깨지는가})을 지목하고, 모델은
+         * 멈추지 않고 알아서 다른 절을 판다. 요금을 다 낸 뒤 사람이 읽어야 알아차리는 결함이다.
+         *
+         * <p><b>모델을 부르기 전에</b> 막혔는지까지 잰다. 부르고 나서 버리면 요금은 이미 나갔다.
+         */
+        @Test
+        @DisplayName("입문편에 고급을 걸면 호출 전에 막는다 — 두 편은 제목이 같아 잘못 고르기 쉽다")
+        void rejectsAdvancedOnBeginnerEdition() {
+            when(documentRepository.findBySlug(SLUG)).thenReturn(Optional.of(registered()));
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+
+            SourceDocument source = service.findRegisteredDocument(SLUG);
+
+            assertThatThrownBy(() -> service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.QUIZ_004))
+                    .as("무엇을 고쳐야 하는지까지 말해야 문서가 아니라 드롭다운을 고치러 간다")
+                    .hasMessageContaining("심화편");
+
+            assertThat(fakeGenerator.calledRequestedKind)
+                    .as("호출 전에 막아야 요금이 0이다")
+                    .isNull();
+            org.mockito.Mockito.verify(draftRepository, org.mockito.Mockito.never()).saveAll(any());
+        }
+
+        /**
+         * 2026-09-03 이전 문서 15편은 두 편으로 갈리기 전의 <b>한 편짜리</b>라 초급 재료와 고급
+         * 재료를 한 문서에 갖고 있다. 그런 문서로 고급을 뽑는 것은 <b>정상</b>이므로 막으면 안 된다 —
+         * 판정이 slug의 꼬리가 아니라 절의 존재를 보는 이유다.
+         */
+        @Test
+        @DisplayName("한 편짜리 옛 문서로는 고급도 뽑힌다 — 이름이 아니라 절이 있는지를 본다")
+        void allowsAdvancedOnLegacySingleEditionDocument() {
+            Document legacy = Document.create(Domain.NETWORK, "TIME_WAIT", SLUG,
+                    "## 무엇인가\n\n본문이다.\n\n## 언제 깨지는가\n\n이럴 때 깨진다.\n", null, java.util.Set.of());
+            when(documentRepository.findBySlug(SLUG)).thenReturn(Optional.of(legacy));
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+
+            SourceDocument source = service.findRegisteredDocument(SLUG);
+            service.generateFromDocument(new LlmDocumentGenerateRequest(
+                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source);
+
+            org.mockito.Mockito.verify(draftRepository).saveAll(any());
         }
     }
 

@@ -186,8 +186,9 @@ async function loadProblemDocumentFilter() {
   const sel = document.getElementById("fpDocument");
   try {
     const slugs = await api("/api/admin/problems/document-slugs");
+    // 보이는 글에만 편을 붙인다 — 값은 slug 그대로여야 서버 필터가 그대로 먹는다(llm.html과 같다).
     sel.innerHTML = `<option value="">전체</option>`
-      + slugs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+      + slugs.map(s => `<option value="${escapeHtml(s)}">${slugWithEdition(s)}</option>`).join("");
   } catch (e) {
     // 필터 하나를 못 채웠다고 목록까지 막지 않는다.
     sel.innerHTML = `<option value="">전체</option>`;

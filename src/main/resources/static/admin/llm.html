@@ -381,8 +381,10 @@ async function loadDocumentSlugFilter() {
   const status = document.getElementById("gStatusFilter").value;
   try {
     const slugs = await api(`/api/admin/llm-problems/document-slugs?status=${status}`);
+    // 값은 slug 그대로지만 <보이는 글>에는 편을 붙인다(2026-09-05). 두 편은 제목이 같고
+    // slug 끝의 -advanced로만 갈려서, 그대로 찍으면 줄 끝 글자를 눈으로 찾아야 한다.
     sel.innerHTML = `<option value="">전체</option>`
-      + slugs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+      + slugs.map(s => `<option value="${escapeHtml(s)}">${slugWithEdition(s)}</option>`).join("");
     sel.value = slugs.includes(keep) ? keep : "";
   } catch (e) {
     sel.innerHTML = `<option value="">전체</option>`;
@@ -502,7 +504,7 @@ async function loadDrafts(jumpToLast = false) {
              문서가 아직 승인 전이면 링크가 404가 되는데, 그건 정상 상황이라 막지 않는다:
              초안 문제가 초안 문서보다 먼저 검수될 수 있고, 그 순서를 강제할 이유가 없다. -->
         <div class="meta" style="margin-top:6px">
-          근거 문서: <a href="/document.html?slug=${encodeURIComponent(d.documentSlug)}" target="_blank">${escapeHtml(d.documentSlug)}</a>
+          근거 문서: <a href="/document.html?slug=${encodeURIComponent(d.documentSlug)}" target="_blank">${slugWithEdition(d.documentSlug)}</a>
         </div>` : ""}
         <!-- 목록 제목(V13) — 검수자가 "이 제목으로 목록에 뜬다"를 지문과 나란히 보게 둔다.
              비었으면 그 사실을 적는다. 조용히 감추면 제목 없는 문제가 그대로 승인되고,

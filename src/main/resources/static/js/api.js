@@ -216,6 +216,41 @@ function editionBadge(edition) {
   return `<span class="badge ${cls}">${escapeHtml(edition)}</span>`;
 }
 
+/** 심화편 slug의 꼬리 — 서버의 DocumentEditions.ADVANCED_SUFFIX와 같아야 한다. */
+const ADVANCED_SLUG_SUFFIX = "-advanced";
+
+/**
+ * slug만 손에 쥐었을 때 붙일 편 이름 — 심화편이면 "심화편", 아니면 <빈 문자열>(2026-09-05).
+ *
+ * 왜 editionBadge를 못 쓰나. 두 가지가 다르다.
+ *
+ * 1) 쓰는 자리가 <option>과 <code>다. <option> 안에서는 HTML이 마크업으로 그려지지 않고
+ *    태그가 글자로 보인다. 그래서 배지가 아니라 <글>이어야 한다.
+ * 2) 손에 있는 것이 edition이 아니라 slug다. 근거 문서를 보여 주는 자리들
+ *    (검수 목록 필터·문제 목록 필터·배치 현황)은 서버에서 slug 문자열만 받는다.
+ *    편을 서버가 계산해 주는 곳은 문서 API뿐인데, 그쪽은 짝의 존재까지 DB로 확인한다.
+ *
+ * <b>입문편은 일부러 비워 둔다.</b> 꼬리가 없다고 입문편인 것이 아니다 — 2026-09-03 이전
+ * 문서 15편은 두 편으로 갈리기 전의 <한 편짜리>라 꼬리가 없다. 거기에 "입문편"이라 적으면
+ * 읽는 사람이 없는 심화편을 찾아 나선다. 서버가 "짝이 있을 때만 편을 붙인다"고 정한 것과
+ * 같은 판단이다(DocumentEditions 클래스 주석). 반대로 -advanced 꼬리는 심화편 생성기만
+ * 만들므로, 그 꼬리가 붙었다면 심화편인 것은 <확실하다>. 아는 것만 말한다.
+ */
+function editionOfSlug(slug) {
+  return typeof slug === "string" && slug.endsWith(ADVANCED_SLUG_SUFFIX) ? "심화편" : "";
+}
+
+/**
+ * 근거 문서 slug를 화면에 적을 때 쓰는 한 줄 — 심화편이면 뒤에 "(심화편)"을 붙인다.
+ *
+ * 두 편은 <제목이 완전히 같고> slug만 꼬리로 갈린다. 그래서 slug를 그대로 찍으면
+ * 사람이 줄 끝의 -advanced를 눈으로 찾아내야 한다. 읽는 사람이 글자를 세게 하지 않는다.
+ */
+function slugWithEdition(slug) {
+  const edition = editionOfSlug(slug);
+  return edition ? `${escapeHtml(slug)} (${edition})` : escapeHtml(slug);
+}
+
 /** <select>에 "전체" + enum 옵션을 채운다 (목록 필터 공용) */
 function fillSelect(selectEl, pairs, allLabel) {
   selectEl.innerHTML = "";

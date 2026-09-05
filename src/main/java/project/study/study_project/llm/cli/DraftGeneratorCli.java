@@ -15,6 +15,7 @@ import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
 import project.study.study_project.llm.support.BatchCountRule;
+import project.study.study_project.llm.support.DifficultyMaterialRule;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.GenerationLimits;
@@ -517,18 +518,17 @@ public final class DraftGeneratorCli {
      * <b>캘 곳이 하나도 없는 문서</b>다 — 문턱을 낮게 두어야 오탐이 안 난다.
      * (오탐으로 폴백이 잦아지면 2단계 구조 자체가 헛돈다.)
      *
+     * <p><b>2026-09-05에 판정을 {@link DifficultyMaterialRule}로 옮겼다.</b> 여기 있던 규칙이
+     * <b>배치에만</b> 있어서, 관리자 화면의 "문서로 문제 만들기"는 입문편에 고급을 걸어도 그대로
+     * 통과했다. {@link TypeMaterialRule}이 유형에 대해 이미 같은 이유로 뽑혀 나온 것과 같다.
+     * 이 메서드는 <b>이름과 폴백 동작</b>을 지키려고 남긴 얇은 껍데기다 — 부르는 자리의 주석과
+     * 테스트가 이 이름에 걸려 있고, 위임만 하므로 두 벌이 될 여지는 없다.
+     *
      * @param contentMd  문서 본문 마크다운
      * @param difficulty 오늘 만들 난이도. {@code null}이면 검사할 것이 없으므로 통과
      */
     static boolean hasMaterialFor(String contentMd, Difficulty difficulty) {
-        if (contentMd == null || difficulty == null) {
-            return true; // 판단 근거가 없으면 막지 않는다 — 확신 없이 버리는 쪽이 더 나쁘다
-        }
-        List<String> sections = ClaudeProblemGenerator.SOURCE_SECTIONS.get(difficulty);
-        if (sections == null || sections.isEmpty()) {
-            return true; // 지목하는 절이 없는 난이도는 검사 대상이 아니다(방어)
-        }
-        return sections.stream().anyMatch(contentMd::contains);
+        return DifficultyMaterialRule.hasMaterialFor(contentMd, difficulty);
     }
 
     /**
