@@ -607,6 +607,10 @@ async function loadTopicQueue() {
   const locked = topicQuery !== "";
   const lockHint = locked ? ' title="검색 중에는 순서를 바꿀 수 없습니다 — 검색어를 지우세요" disabled' : ' title="한 칸 위로"';
   const lockHintDown = locked ? ' title="검색 중에는 순서를 바꿀 수 없습니다 — 검색어를 지우세요" disabled' : ' title="한 칸 아래로"';
+  // 맨 위로(2026-09-05). ↑만 있던 동안은 40번째 줄을 올리려면 39번을 눌러야 했고,
+  // 20줄씩 쪽이 갈려 실제로는 불가능에 가까웠다. 검색 중 잠그는 이유는 ↑↓와 같다 —
+  // "맨 위"는 화면이 아니라 <전체 순서의> 맨 위라, 걸러진 목록에서 누르면 결과가 안 보인다.
+  const lockHintTop = locked ? ' title="검색 중에는 순서를 바꿀 수 없습니다 — 검색어를 지우세요" disabled' : ' title="맨 위로"';
 
   // 다음 차례 판정(next)은 서버가 계산해 보낸다. 화면에서 다시 계산하면 규칙이 두 곳이 되고,
   // 배치가 실제로 고르는 것과 화면 표시가 언젠가 어긋난다.
@@ -625,8 +629,14 @@ async function loadTopicQueue() {
         <td>${t.usedCount === 0 ? `<span class="meta">—</span>` : `${t.usedCount}편`}</td>
         <td class="meta">${t.lastUsedAt ? escapeHtml(t.lastUsedAt) : "아직 안 씀"}</td>
         <td class="row-actions">
+          <button class="btn-outline" data-action="top"${lockHintTop}>⤒</button>
           <button class="btn-outline" data-action="up"${lockHint}>↑</button>
           <button class="btn-outline" data-action="down"${lockHintDown}>↓</button>
+          <!-- 이력 지우기는 <쓴 줄에만> 뜬다. 안 쓴 줄에 두면 눌러도 아무 일이 없는
+               버튼이 63줄에 붙는데, 그런 버튼은 목록을 읽는 눈만 어지럽힌다. -->
+          ${t.usedCount === 0 && !t.lastUsedAt
+            ? ""
+            : `<button class="btn-outline" data-action="reset" title="사용 기록을 지워 '아직 안 씀'으로 되돌립니다">이력 지우기</button>`}
           <button class="danger" data-action="delete">삭제</button>
         </td>
       </tr>`).join("");
@@ -640,7 +650,13 @@ async function loadTopicQueue() {
       armedDelete(btn, () => deleteTopic(id));
       return;
     }
-    moveTopic(id, btn.dataset.action === "up" ? "UP" : "DOWN");
+    if (btn.dataset.action === "reset") {
+      // 삭제와 달리 2단계 확인을 걸지 않는다. 잘못 눌러도 잃는 것은 날짜 한 칸이고,
+      // 그 줄이 "안 쓴 범위" 무리에 합류할 뿐이다 — 되돌리려면 다시 쓰이면 된다.
+      resetTopicUsage(id);
+      return;
+    }
+    moveTopic(id, { top: "TOP", up: "UP", down: "DOWN" }[btn.dataset.action]);
   };
 }
 
@@ -665,7 +681,31 @@ async function moveTopic(id, direction) {
   if (direction === "UP" && wasFirst && topicPage > 0) {
     showOk(document.getElementById("tMessage"), "앞 쪽으로 옮겼습니다.");
   }
+  // 맨 위로는 <늘> 1쪽으로 간다. 3쪽에서 눌러 놓고 그 자리에 남아 있으면 줄이 통째로
+  // 사라진 것처럼 보이므로, 옮긴 줄이 보이는 쪽으로 화면을 함께 옮긴다.
+  if (direction === "TOP" && topicPage > 0) {
+    topicPage = 0;
+    showOk(document.getElementById("tMessage"), "맨 위로 옮겼습니다. generated/_topics.json을 커밋하세요.");
+  }
   loadTopicQueue();
+}
+
+/**
+ * 사용 기록 지우기 — 그 줄을 "아직 안 씀"으로 되돌린다.
+ *
+ * <p>배치는 문서를 <b>만들기로 정한 시점</b>에 기록을 찍으므로, 그 뒤 문서가 거절되거나
+ * 지워지면 실물 없이 기록만 남는다. 그러면 다음 차례 규칙("안 쓴 것 먼저")에 밀려
+ * 그 범위는 차례가 영영 안 돌아온다. 되돌릴 문이 필요한 이유다.
+ */
+async function resetTopicUsage(id) {
+  const msg = document.getElementById("tMessage");
+  try {
+    await api(`/api/admin/topic-queue/${id}/reset-usage`, { method: "POST" });
+    showOk(msg, "사용 기록을 지웠습니다. generated/_topics.json을 커밋하세요.");
+    loadTopicQueue();
+  } catch (e) {
+    showError(msg, e);
+  }
 }
 
 async function deleteTopic(id) {

@@ -64,9 +64,16 @@ public class TopicQueueService {
     /** 대기열이 바뀌면 파일을 다시 내보내야 한다 — 듣는 쪽은 {@link TopicQueueExporter}. */
     private final ApplicationEventPublisher events;
 
-    /** 순서 이동 방향. 문자열("up")을 그대로 받으면 오타가 런타임까지 살아남는다. */
+    /**
+     * 순서 이동 방향. 문자열("up")을 그대로 받으면 오타가 런타임까지 살아남는다.
+     *
+     * <p>{@link #TOP}은 2026-09-05에 더했다. {@link #UP}만 있으면 <b>한 칸씩</b>이라
+     * 40번째 줄을 맨 위로 올리는 데 39번을 눌러야 한다. 게다가 목록이 20줄씩 나뉘고
+     * 검색 중에는 이동이 잠기므로(화면 주석 참고), 실제로는 "찾아서 올리기"가 불가능했다.
+     * 대기열이 67줄까지 늘면서 순서를 다시 잡는 일 자체가 막힌 상태였다.
+     */
     public enum Direction {
-        UP, DOWN
+        UP, DOWN, TOP
     }
 
     /* ── 조회 ─────────────────────────────────────────────────── */
@@ -235,6 +242,15 @@ public class TopicQueueService {
 
         List<TopicQueueItem> all = repository.findAllByOrderBySortOrderAsc();
         int index = indexOf(all, id);
+
+        // 맨 위로는 <맞바꾸기가 아니라 밀어내기>다. 한 칸 이동과 같은 방식으로 처리할 수 없다 —
+        // 1번과 자리를 맞바꾸면 원래 1번이 내가 있던 자리(40번째)로 떨어진다. 사람이 기대하는
+        // 것은 "내가 맨 위로 가고 나머지는 한 칸씩 밀린다"이지 "1번과 자리를 바꾼다"가 아니다.
+        if (direction == Direction.TOP) {
+            moveToTop(item, all, index);
+            return;
+        }
+
         int target = direction == Direction.UP ? index - 1 : index + 1;
         if (index < 0 || target < 0 || target >= all.size()) {
             return; // 이미 끝이다 — 할 일이 없다
@@ -253,6 +269,50 @@ public class TopicQueueService {
         if (mine == theirs) {
             neighbor.changeOrder(mine + (direction == Direction.UP ? 1 : -1));
         }
+        events.publishEvent(new TopicQueueChanged());
+    }
+
+    /**
+     * 맨 위로 — 나를 1번으로 올리고 위에 있던 것들을 <b>한 칸씩</b> 아래로 민다.
+     *
+     * <p><b>왜 전체를 다시 번호 매기나.</b> {@code sortOrder}는 지금까지 맞바꾸기로만 다뤄져
+     * 값이 연속이라는 보장이 없다(옛 데이터·흡수 과정에서 겹치기도 한다 — {@link #move}의
+     * 보정 주석 참고). 그 위에서 "1번 것보다 하나 작은 값"을 계산하면 음수로 내려가거나
+     * 이미 있는 값과 겹친다. 옮기는 김에 0부터 다시 매기면 그 불확실성이 사라지고,
+     * 목록이 67줄 규모라 한 번에 다시 매기는 비용도 무시할 만하다.
+     *
+     * <p>이미 맨 위면 아무 일도 하지 않는다 — 눌러도 파일이 다시 나가지 않아야
+     * "커밋할 것이 계속 생기는" 상태가 안 된다({@code SnapshotExporter}의 판단과 같다).
+     */
+    private void moveToTop(TopicQueueItem item, List<TopicQueueItem> all, int index) {
+        if (index <= 0) {
+            return; // 없는 항목이거나 이미 1번이다
+        }
+        item.changeOrder(0);
+        for (int i = 0, order = 1; i < all.size(); i++) {
+            if (i != index) {
+                all.get(i).changeOrder(order++);
+            }
+        }
+        events.publishEvent(new TopicQueueChanged());
+    }
+
+    /**
+     * 사용 기록을 지워 <b>다음 차례 1순위</b>로 되돌린다 — 2026-09-05 신설.
+     *
+     * <p>기록은 배치가 <b>문서를 만들기로 정한 시점</b>에 찍히므로, 그 뒤 문서가 거절되거나
+     * 지워지면 실물 없이 기록만 남는다. 그 상태에서는 차례가 영영 안 돌아온다 —
+     * 안 쓴 범위가 수십 개 남아 있는 한 계속 뒤로 밀리기 때문이다.
+     * 사유와 되돌리는 방식은 {@link TopicQueueItem#clearUsage()} 주석에 적었다.
+     *
+     * <p><b>순서는 건드리지 않는다.</b> 이력을 지우면 "안 쓴 범위" 무리에 합류할 뿐이고,
+     * 그 안에서 몇 번째인지는 여전히 사람이 정한 순서가 정한다. 맨 위로 올리고 싶으면
+     * {@link Direction#TOP}을 따로 부르면 된다 — 두 가지를 한 버튼에 묶으면 "이력만 지우고
+     * 순서는 두고 싶다"를 할 수 없게 된다.
+     */
+    @Transactional
+    public void resetUsage(Long id) {
+        find(id).clearUsage();
         events.publishEvent(new TopicQueueChanged());
     }
 

@@ -92,15 +92,36 @@ public class AdminTopicQueueController {
     }
 
     /**
-     * 순서 이동 — {@code ?direction=UP|DOWN}. 이웃과 자리를 맞바꾼다.
+     * 순서 이동 — {@code ?direction=UP|DOWN|TOP}. UP·DOWN은 이웃과 자리를 맞바꾸고,
+     * TOP은 1번으로 올리며 나머지를 한 칸씩 민다(2026-09-05).
      *
      * <p>PATCH가 아니라 POST인 이유: 이 요청은 "필드 하나를 이 값으로 고쳐라"가 아니라
      * <b>두 행의 자리를 맞바꿔라</b>는 동작이다. 어떤 값이 될지는 서버가 정한다.
+     *
+     * <p>TOP에 엔드포인트를 새로 만들지 않은 것은 <b>같은 동작의 정도 차이</b>이기 때문이다.
+     * {@code /move-to-top}을 따로 두면 화면이 두 주소를 알아야 하고, 다음에 "맨 아래로"가
+     * 생기면 셋이 된다. 방향은 이미 인자로 받고 있으니 값 하나를 늘리는 편이 맞다.
      */
     @PostMapping("/{id}/move")
     public ApiResponse<Void> move(@PathVariable Long id,
                                   @RequestParam TopicQueueService.Direction direction) {
         topicQueueService.move(id, direction);
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 사용 기록 지우기 — 그 범위를 <b>아직 안 쓴 상태</b>로 되돌린다(2026-09-05 신설).
+     *
+     * <p>배치는 문서를 만들기로 정한 시점에 기록을 찍는다. 그 뒤 문서가 거절되거나 지워지면
+     * 실물 없이 기록만 남고, 그러면 <b>차례가 영영 안 돌아온다</b>(안 쓴 범위가 늘 우선이라).
+     * 실제로 {@code 기본키와 외래키} 범위가 그 상태였다.
+     *
+     * <p>순서는 건드리지 않는다 — 필요하면 {@code /move?direction=TOP}을 이어서 부른다.
+     * 두 동작을 하나로 묶으면 "이력만 지우기"를 할 수 없어진다.
+     */
+    @PostMapping("/{id}/reset-usage")
+    public ApiResponse<Void> resetUsage(@PathVariable Long id) {
+        topicQueueService.resetUsage(id);
         return ApiResponse.ok();
     }
 }

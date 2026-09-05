@@ -182,6 +182,89 @@ class TopicQueueServiceTest {
         assertThat(second.getSortOrder()).isEqualTo(1);
     }
 
+    /**
+     * <b>2026-09-05 신설 — 맨 위로.</b>
+     *
+     * <p>↑만 있던 동안은 40번째 줄을 올리는 데 39번을 눌러야 했다. 대기열이 67줄까지 늘고
+     * 20줄씩 쪽이 갈리면서 순서를 다시 잡는 일 자체가 막혔다.
+     *
+     * <p>여기서 지키는 것은 <b>맞바꾸기가 아니라 밀어내기</b>라는 점이다. 1번과 자리를
+     * 맞바꾸면 원래 1번이 내가 있던 40번째로 <b>떨어진다</b> — 사람이 기대하는 것은
+     * "내가 맨 위로 가고 나머지는 한 칸씩 밀린다"이지 그게 아니다.
+     */
+    @Test
+    @DisplayName("맨 위로 옮기면 나머지가 한 칸씩 밀린다 — 1번과 자리를 맞바꾸는 것이 아니다")
+    void moveToTopShiftsOthersDown() {
+        TopicQueueItem first = item(1L, Domain.OS, "메모리 관리", 1);
+        TopicQueueItem second = item(2L, Domain.NETWORK, "TCP", 2);
+        TopicQueueItem third = item(3L, Domain.DATABASE, "인덱스", 3);
+        when(repository.findById(3L)).thenReturn(Optional.of(third));
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(first, second, third));
+
+        service.move(3L, TopicQueueService.Direction.TOP);
+
+        assertThat(third.getSortOrder()).as("옮긴 줄이 맨 앞").isEqualTo(0);
+        assertThat(first.getSortOrder()).as("원래 1번은 한 칸만 밀린다").isEqualTo(1);
+        assertThat(second.getSortOrder()).as("사이 순서는 그대로 유지된다").isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("이미 맨 위인데 맨 위로 눌러도 아무 일도 없다 — 파일이 괜히 다시 나가면 안 된다")
+    void moveToTopAtTopDoesNothing() {
+        TopicQueueItem first = item(1L, Domain.OS, "메모리 관리", 1);
+        TopicQueueItem second = item(2L, Domain.NETWORK, "TCP", 2);
+        when(repository.findById(1L)).thenReturn(Optional.of(first));
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(first, second));
+
+        service.move(1L, TopicQueueService.Direction.TOP);
+
+        assertThat(first.getSortOrder()).isEqualTo(1);
+        assertThat(second.getSortOrder()).isEqualTo(2);
+        verify(events, never()).publishEvent(any(TopicQueueChanged.class));
+    }
+
+    /* ── 사용 기록 지우기 (2026-09-05) ─────────────────────────── */
+
+    /**
+     * 기록은 배치가 <b>문서를 만들기로 정한 시점</b>에 찍힌다. 그 뒤 문서가 거절되거나
+     * 지워지면 실물 없이 기록만 남고, 그 상태에서는 다음 차례가 영영 안 돌아온다 —
+     * "안 쓴 것 먼저" 규칙에 계속 밀리기 때문이다. 실물이 그랬다({@code 기본키와 외래키}).
+     *
+     * <p>{@code recordUse}는 날짜를 앞으로만 옮기므로 이 되돌리기를 대신할 수 없다.
+     */
+    @Test
+    @DisplayName("사용 기록을 지우면 '안 쓴 범위'로 돌아간다 — 거절된 문서의 기록이 차례를 영영 막는다")
+    void resetUsageMakesItUnusedAgain() {
+        TopicQueueItem item = used(1L, Domain.DATABASE, "기본키와 외래키", 1, LocalDate.of(2026, 9, 7));
+        when(repository.findById(1L)).thenReturn(Optional.of(item));
+
+        service.resetUsage(1L);
+
+        assertThat(item.getLastUsedAt()).isNull();
+        assertThat(item.getUsedCount()).as("날짜만 지우면 '안 썼는데 1편'이라는 줄이 남는다").isZero();
+        verify(events).publishEvent(any(TopicQueueChanged.class)); // 파일도 다시 나가야 한다
+    }
+
+    /**
+     * 지운 뒤 곧바로 차례가 오는지까지 본다. 엔티티만 비우고 {@code pickNext}가 그것을
+     * 반영하지 않으면 화면의 "다음 차례" 배지는 그대로라, 사람 눈에는 안 지워진 것으로 보인다.
+     */
+    @Test
+    @DisplayName("지운 범위가 곧바로 다음 차례가 된다 — 배지까지 따라와야 지운 값을 한다")
+    void resetUsageBringsTheTurnBack() {
+        TopicQueueItem cleared = used(1L, Domain.DATABASE, "기본키와 외래키", 1, LocalDate.of(2026, 9, 7));
+        TopicQueueItem other = used(2L, Domain.NETWORK, "TCP", 2, LocalDate.of(2026, 8, 15));
+        when(repository.findById(1L)).thenReturn(Optional.of(cleared));
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(cleared, other));
+
+        service.resetUsage(1L);
+
+        assertThat(service.getAll())
+                .filteredOn(TopicQueueItemResponse::next)
+                .singleElement()
+                .satisfies(r -> assertThat(r.topic()).isEqualTo("기본키와 외래키"));
+    }
+
     /* ── 파일 → DB 동기화 ─────────────────────────────────────── */
 
     @Test
