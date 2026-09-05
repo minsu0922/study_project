@@ -86,7 +86,9 @@ function renderState(s) {
     <p>${state}</p>
     <table>
       <tr><th>무엇을 만드나 (batch-type)</th><td>${escapeHtml(s.batchType)}${s.batchType === "auto" ? " — 주기대로(문서일엔 문서, 나머지는 문제)" : ""}</td></tr>
-      <tr><th>한 번에 (batch-count)</th><td>${s.count}건</td></tr>
+      <!-- 개수는 <오늘 난이도의> 값이다(2026-09-05). 난이도마다 다르므로(초7·중5·고3)
+           설정 키 이름을 그대로 쓰면 "batch-count가 7이네?" 하고 엉뚱한 줄을 고치게 된다. -->
+      <tr><th>오늘 만들 개수</th><td>${s.count}건</td></tr>
       <tr><th>오늘 (KST)</th><td>${escapeHtml(s.today)}</td></tr>
     </table>`;
 }

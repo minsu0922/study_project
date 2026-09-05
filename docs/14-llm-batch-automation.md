@@ -178,7 +178,7 @@ ADR-0006에서 배치를 채택할 때의 논리는 이랬다.
 
 | 구역 | 답 |
 |---|---|
-| 지금 상태 | `batch-enabled`·`batch-type`·`batch-count` |
+| 지금 상태 | `batch-enabled`·`batch-type`·**오늘 난이도의** 생성 개수 |
 | 오늘의 주기 | 며칠차·나올 것·**나올 분야**·근거 문서 slug |
 | 아직 안 들어온 파일 | `generated/`에 있는데 이력 테이블에 없는 것 |
 | 막힌 주기 | 결과 파일이 이미 있어 **앞으로** 건너뛸 날짜 |
@@ -279,7 +279,8 @@ llm:
     model: claude-opus-5   # CLI도 이 값을 읽는다(설정의 단일 출처)
     batch-enabled: true    # 중단 스위치 (아래 참고)
     batch-type: auto       # 무엇을 만들지 — auto | problem | document (아래 참고)
-    batch-count: 5
+    batch-count: 5         # 폴백 — 아래 난이도별 값이 없을 때만
+    batch-count-by-difficulty: BEGINNER=7,INTERMEDIATE=5,ADVANCED=3   # 난이도별 개수
     batch-domains: NETWORK,OS,DATABASE,...   # 이 순서가 곧 날짜 순환 순서
   import:
     enabled: true          # 들여오기만 따로 끌 수 있다

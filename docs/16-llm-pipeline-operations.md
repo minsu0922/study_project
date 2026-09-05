@@ -110,7 +110,7 @@ cycleIndex   = offset / 4           → 주기 번호
 
 ## 3. 설정 — `application.yml`
 
-건드릴 값은 실질적으로 **네 개**다.
+건드릴 값은 실질적으로 **다섯 개**다.
 
 ```yaml
 llm:
@@ -118,10 +118,11 @@ llm:
     model: claude-opus-5      # CLI도 이 값을 읽는다(설정의 단일 출처)
     batch-enabled: true       # ① 전체 중단 스위치
     batch-type: auto          # ② 무엇을 만들지 (auto | problem | document)
-    batch-count: 5            # 문제일 1회당 생성 개수
+    batch-count: 5            # 폴백 — 아래 값이 없을 때만 쓴다
+    batch-count-by-difficulty: BEGINNER=7,INTERMEDIATE=5,ADVANCED=3   # ③ 난이도별 생성 개수
     batch-domains: NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK
   import:
-    enabled: true             # ③ 기동 시 들여오기 여부
+    enabled: true             # ④ 기동 시 들여오기 여부
     dir: generated            # Actions가 커밋하는 위치와 반드시 같아야 한다
 ```
 
@@ -141,6 +142,25 @@ llm:
 
 > ⚠️ 이 설정은 **커밋해야 반영된다.** 배치는 클라우드에서 저장소의 `application.yml`을 읽는다.
 > 로컬에서만 바꾸면 아무 일도 일어나지 않는다.
+
+### ③ `batch-count-by-difficulty` — 난이도마다 몇 개씩
+
+한 주기(문서·초·중·고)가 난이도마다 5개씩이라 초·중·고급이 정확히 1:1:1로 쌓였다. 목표 비율은
+그게 아니다 — **초급이 가장 많고 고급이 가장 적어야** 한다. 처음 보는 개념은 용어부터 여러 번
+만나야 하고, 고급은 한 주제에 두세 문제면 충분하다.
+
+| 난이도 | 개수 | 근거 |
+|---|---|---|
+| 초급 | 7 | 문서의 `## 용어 한눈에`에 용어가 13~15개 있는데 초급 5문제가 실제로 쓴 것은 0~5개뿐이었다(2026-09-05 실측). 재료가 남는다 |
+| 중급 | 5 | 그대로 |
+| 고급 | 3 | 이미 5개를 못 채운 날이 있다(08-14 3개, 09-23 4개). 3으로 내리면 수확량 경고가 함께 줄어든다 |
+
+- **해석 순서는 `--count` > 난이도별 > `batch-count`다.** 손으로 지목한 개수가 가장 세다 —
+  적은 대로 안 나오는 옵션은 없느니만 못하다.
+- 항목에 오타가 있으면 **그 난이도만** 폴백으로 간다. 오타 하나로 그날 배치를 죽이지 않는다.
+  다만 범위(1~10) 밖 숫자는 거부한다. 그건 오타가 아니라 요금이 걸린 값이다.
+- 하루에 두 난이도를 섞는 안(고급 날 = 고급 2 + 초급 3)은 접었다. 초급과 고급은 읽는 문서가
+  달라(입문편/심화편) API 호출이 두 번이 되고, 배치 파일 스키마가 "하루 = 한 난이도"를 전제한다.
 
 ### 우선순위
 
@@ -177,7 +197,7 @@ llm:
 | `topic` | 모델이 기존 제목 피해 자동 선택 | 문서 주제 지정 (`type=document`일 때만) |
 | `domain` | 날짜 주기 | `NETWORK` 등 분야 강제 |
 | `difficulty` | 날짜 주기 | `BEGINNER`/`INTERMEDIATE`/`ADVANCED` |
-| `count` | `batch-count`(5) | 개수 강제 |
+| `count` | 난이도별 배분(초7·중5·고3) | 개수 강제. 배분보다 세다 |
 | `date` | 오늘(한국 시간) | 특정 날짜로 생성 |
 | `force` | 꺼짐 | `batch-enabled=false`여도 이번 한 번만 생성 |
 

@@ -14,6 +14,7 @@ import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
+import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.GenerationLimits;
@@ -68,7 +69,8 @@ import java.util.stream.Collectors;
  *   --difficulty=BEGINNER    난이도 강제 지정(생략 시 날짜 순환으로 결정)
  *   --problem-type=OX        문제 유형(생략 시 객관식). MULTIPLE_CHOICE·OX·SHORT_ANSWER·MATCHING·ORDERING
  *                            주의: --type과 다른 옵션이다. 그쪽은 "문제냐 문서냐"를 고른다
- *   --count=5                생성 개수 1~10(생략 시 application.yml의 batch-count)
+ *   --count=5                생성 개수 1~10. 생략하면 난이도별 배분
+ *                            (batch-count-by-difficulty, 초7·중5·고3) → batch-count 순
  *   --out=generated          출력 디렉터리
  *   --force=true             batch-enabled=false여도 이번 한 번은 생성(수동 실행 전용)
  * </pre>
@@ -145,6 +147,9 @@ public final class DraftGeneratorCli {
         Map<String, Object> generation = readGenerationConfig();
         String model = (String) generation.getOrDefault("model", "claude-opus-5");
         int defaultCount = (int) generation.getOrDefault("batch-count", 5);
+        // 난이도별 배분. 없으면 null로 두고 resolveCount가 위 폴백을 쓰게 한다 —
+        // 여기서 기본 문자열을 끼워 넣으면 설정을 지운 사람이 <지운 대로> 못 돌게 된다.
+        String countSpec = (String) generation.get("batch-count-by-difficulty");
         List<Domain> batchDomains = parseDomains((String) generation.get("batch-domains"));
         // 주기의 0일차로 삼을 날. 값이 없으면 에포크 = 앵커가 없던 시절과 같은 위상이다.
         LocalDate cycleAnchor = parseAnchor((String) generation.get("cycle-anchor"));
@@ -196,7 +201,9 @@ public final class DraftGeneratorCli {
         Difficulty difficulty = opts.containsKey("difficulty")
                 ? Difficulty.valueOf(opts.get("difficulty")) : plan.difficulty();
         ProblemType type = resolveProblemType(opts.get(PROBLEM_TYPE_OPT));
-        int count = resolveCount(opts, defaultCount);
+        // 난이도가 정해진 <뒤에> 부른다 — 개수가 난이도에 딸려 있으므로 순서가 뒤바뀌면
+        // 늘 폴백(5)이 나온다. 컴파일로는 안 걸리는 종류의 실수라 테스트가 따로 지킨다.
+        int count = resolveCount(opts, countSpec, difficulty, defaultCount);
 
         Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Path outFile = outDir.resolve(outFileName(date, opts.get(SUFFIX_OPT)));
@@ -857,7 +864,7 @@ public final class DraftGeneratorCli {
     }
 
     /**
-     * 만들 개수 — 옵션이 있으면 그것, 없으면 {@code application.yml}의 {@code batch-count}.
+     * 만들 개수 — <b>{@code --count} &gt; 난이도별 설정 &gt; {@code batch-count}</b> 순으로 정한다.
      *
      * <h2>왜 검증이 필요한가(2026-08-29)</h2>
      *
@@ -872,28 +879,40 @@ public final class DraftGeneratorCli {
      * <p>범위를 벗어나면 잘라 쓰지 않고 던진다({@link GenerationLimits} 참고). 호출 전이라
      * 요금은 0이고, job이 빨간불로 끝나 메일이 온다 — 조용히 10개가 나오는 것보다 낫다.
      *
-     * @param fallback 옵션이 없을 때 쓸 값(설정에서 읽은 {@code batch-count})
+     * <h2>2026-09-05 — 난이도별 개수가 끼어들었다</h2>
+     *
+     * <p>초·중·고급이 모두 같은 5개라 1:1:1로 쌓였는데, 원하는 비율은 <b>초급이 가장 많고
+     * 고급이 가장 적은</b> 쪽이다. 배분 자체의 근거와 대안 검토는 {@link BatchCountRule}에 적었다.
+     *
+     * <p><b>{@code --count}가 여전히 가장 세다.</b> 손으로 지목하는 실행은 "오늘은 이만큼"이라는
+     * 뜻이 분명하고, 그 자리에서 난이도별 배분이 덮어써 버리면 <b>적은 대로 안 나오는</b> 옵션이
+     * 된다. 이 저장소가 지목 인자에 늘 두는 판단이다 — 사람이 고른 것이 규칙을 이긴다
+     * ({@code ClaudeProblemGenerator}가 형태 지목을 받으면 배분 규칙을 끄는 것과 같다).
+     *
+     * @param countSpec  난이도별 배분 문자열({@code batch-count-by-difficulty}). {@code null} 가능
+     * @param difficulty 오늘 난이도. {@code null}이면 난이도별 값을 찾지 않는다
+     * @param fallback   둘 다 없을 때 쓸 값(설정에서 읽은 {@code batch-count})
      * @throws IllegalArgumentException 숫자가 아니거나 허용 범위 밖일 때
      */
-    static int resolveCount(Map<String, String> opts, int fallback) {
+    static int resolveCount(Map<String, String> opts, String countSpec,
+                            Difficulty difficulty, int fallback) {
         String raw = opts.get("count");
-        boolean fromOption = raw != null;
-
-        int count;
-        if (fromOption) {
+        if (raw != null) {
+            int count;
             try {
                 count = Integer.parseInt(raw);
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("--count는 숫자여야 합니다(받은 값: \"%s\")".formatted(raw));
             }
-        } else {
-            count = fallback;
+            BatchCountRule.requireInRange(count, "--count");
+            return count;
         }
 
-        if (count < GenerationLimits.MIN_COUNT || count > GenerationLimits.MAX_COUNT) {
-            throw new IllegalArgumentException("%s는 %d~%d 사이여야 합니다(받은 값: %d)".formatted(
-                    fromOption ? "--count" : "application.yml의 llm.generation.batch-count",
-                    GenerationLimits.MIN_COUNT, GenerationLimits.MAX_COUNT, count));
+        // 난이도별 값이 있으면 그것, 없으면 batch-count. 범위 검사는 규칙 안에서 이미 하지만
+        // (난이도별 항목마다) 폴백으로 내려온 값은 아직 아무도 안 쟀으므로 여기서 한 번 더 본다.
+        int count = BatchCountRule.countFor(countSpec, difficulty, fallback);
+        if (count == fallback) {
+            BatchCountRule.requireInRange(count, "application.yml의 llm.generation.batch-count");
         }
         return count;
     }

@@ -65,7 +65,7 @@ on:
           - MATCHING
           - ORDERING
       count:
-        description: '생성 개수. 비우면 application.yml의 batch-count'
+        description: '생성 개수. 비우면 난이도별 배분(초7·중5·고3) → batch-count 순'
         required: false
         default: ''
       date:

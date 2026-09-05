@@ -323,22 +323,27 @@ class DraftGeneratorCliTest {
      * 워크플로 수동 입력의 {@code 500}이 그대로 요금이 됐다. 검증이 없는 쪽이 하필
      * 사람이 손으로 숫자를 적어 넣는 쪽이었다(2026-08-29).
      */
+    /** 난이도별 배분이 없던 시절과 같은 상황 — 그 경로가 그대로 도는지부터 지킨다. */
+    private static int count(Map<String, String> opts, int fallback) {
+        return DraftGeneratorCli.resolveCount(opts, null, null, fallback);
+    }
+
     @Test
     @DisplayName("옵션이 없으면 설정값을 쓴다 — 예약 실행의 평소 경로")
     void countFallsBackToTheConfiguredValue() {
-        assertThat(DraftGeneratorCli.resolveCount(Map.of(), 5)).isEqualTo(5);
+        assertThat(count(Map.of(), 5)).isEqualTo(5);
     }
 
     @Test
     @DisplayName("옵션이 있으면 그 값을 쓴다")
     void countOptionWins() {
-        assertThat(DraftGeneratorCli.resolveCount(Map.of("count", "3"), 5)).isEqualTo(3);
+        assertThat(count(Map.of("count", "3"), 5)).isEqualTo(3);
     }
 
     @Test
     @DisplayName("상한을 넘으면 거부한다 — 잘라 쓰면 50을 적은 사람이 50이 나온 줄 안다")
     void countAboveTheCapIsRejected() {
-        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of("count", "500"), 5))
+        assertThatThrownBy(() -> count(Map.of("count", "500"), 5))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("--count");
     }
@@ -346,18 +351,55 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("0과 음수도 거부한다 — '만들지 않겠다'가 아니라 오타다")
     void countBelowOneIsRejected() {
-        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of("count", "0"), 5))
+        assertThatThrownBy(() -> count(Map.of("count", "0"), 5))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of("count", "-1"), 5))
+        assertThatThrownBy(() -> count(Map.of("count", "-1"), 5))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("숫자가 아니면 무엇을 받았는지 알려 준다 — NumberFormatException만 뜨면 원인을 못 찾는다")
     void countMustBeANumber() {
-        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of("count", "다섯"), 5))
+        assertThatThrownBy(() -> count(Map.of("count", "다섯"), 5))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("다섯");
+    }
+
+    /**
+     * <b>2026-09-05 — 난이도별 개수.</b>
+     *
+     * <p>초·중·고급이 모두 5개라 1:1:1로 쌓이던 것을 7·5·3으로 바꿨다. 여기서 지키는 것은
+     * <b>해석 순서</b>다 — 옵션 &gt; 난이도별 &gt; {@code batch-count}. 순서가 뒤집히면 조용히
+     * 틀린다: 난이도별이 옵션을 이기면 손으로 지목한 개수가 안 나오고, 폴백이 난이도별을 이기면
+     * 설정을 고쳐도 늘 5개가 나온다. 둘 다 예외 없이 <b>그럴듯한 개수</b>가 나오므로
+     * 사람이 파일을 세어 보기 전에는 모른다.
+     */
+    @Test
+    @DisplayName("난이도별 개수를 쓴다 — 초급이 가장 많고 고급이 가장 적어야 한다")
+    void countComesFromTheDifficultySpec() {
+        String spec = "BEGINNER=7,INTERMEDIATE=5,ADVANCED=3";
+
+        assertThat(DraftGeneratorCli.resolveCount(Map.of(), spec, Difficulty.BEGINNER, 5))
+                .isEqualTo(7);
+        assertThat(DraftGeneratorCli.resolveCount(Map.of(), spec, Difficulty.ADVANCED, 5))
+                .isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("--count는 난이도별 배분을 이긴다 — 사람이 고른 것이 규칙을 이긴다")
+    void countOptionBeatsTheDifficultySpec() {
+        assertThat(DraftGeneratorCli.resolveCount(
+                Map.of("count", "2"), "BEGINNER=7", Difficulty.BEGINNER, 5))
+                .isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("배분에 없는 난이도는 batch-count로 내려간다 — 설정을 지운 사람이 지운 대로 돌아야 한다")
+    void countFallsBackWhenTheDifficultyIsAbsent() {
+        assertThat(DraftGeneratorCli.resolveCount(Map.of(), "BEGINNER=7", Difficulty.ADVANCED, 5))
+                .isEqualTo(5);
+        assertThat(DraftGeneratorCli.resolveCount(Map.of(), null, Difficulty.ADVANCED, 5))
+                .isEqualTo(5);
     }
 
     /**
@@ -368,7 +410,7 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("설정값이 범위를 벗어나도 거부하고, 고칠 곳을 알려 준다")
     void configuredCountIsCheckedToo() {
-        assertThatThrownBy(() -> DraftGeneratorCli.resolveCount(Map.of(), 100))
+        assertThatThrownBy(() -> count(Map.of(), 100))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("batch-count");
     }

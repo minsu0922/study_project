@@ -73,7 +73,9 @@ DB 접속·JPA·Flyway·JWT·로깅을 담는다. 값마다 "왜 이 값인지"�
 | `llm.generation.model` | `claude-opus-5` | **배치 CLI도 이 값을 읽는다** — 설정의 단일 출처. |
 | `llm.generation.batch-enabled` | `true` | 생성 중단 스위치 → [16 §5](16-llm-pipeline-operations.md). |
 | `llm.generation.batch-type` | `auto` | `auto`\|`problem`\|`document` — 한쪽만 돌리기. |
-| `llm.generation.batch-count` / `batch-domains` | `5` / 8개 | 회당 문제 수, 순환 후보 분야. |
+| `llm.generation.batch-count` | `5` | 폴백 회당 문제 수. 아래 난이도별 값이 없을 때만 쓴다. |
+| `llm.generation.batch-count-by-difficulty` | 초7·중5·고3 | 난이도별 회당 문제 수. 초급을 가장 많이, 고급을 가장 적게 쌓는다 → [16 §5](16-llm-pipeline-operations.md). |
+| `llm.generation.batch-domains` | 8개 | 순환 후보 분야(= 날짜 순환 순서). |
 | `llm.import.enabled` / `dir` | `true` / `generated` | 기동 시 생성 파일 들여오기. **`dir`는 GitHub Actions가 커밋하는 위치와 반드시 같아야 한다.** |
 | `management.endpoints.web.exposure.include` | `health,info` | **적은 것만 열린다.** 기본 묶음에는 `env`(환경변수 전체)·`beans`처럼 설정과 비밀이 그대로 비치는 자리가 있어, 노출 목록을 유일한 관문으로 둔다. |
 | `management.endpoint.health.show-details` / `roles` | `when-authorized` / `ADMIN` | 비로그인에게는 `{"status":"UP"}` 한 줄만. 어느 부품이 죽었는지는 정보이자 공격 단서다(DB가 내려간 순간을 밖에서 알 수 있다). |

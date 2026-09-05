@@ -10,6 +10,7 @@ import project.study.study_project.admin.dto.AdminBatchStatus;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
+import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.GenerationSchedule;
 
 import java.io.IOException;
@@ -61,6 +62,12 @@ public class AdminBatchService {
     @Value("${llm.generation.batch-count:5}")
     private int batchCount;
 
+    // 난이도별 배분(2026-09-05). 이 값이 CLI가 읽는 것과 어긋나면 화면이 거짓말을 한다 —
+    // cycle-anchor에 적어 둔 것과 같은 이유다. 기본값 문자열도 BatchCountRule.DEFAULT_SPEC에서
+    // 꺼내 쓰고 싶지만 @Value는 상수 표현식만 받으므로, 어긋나지 않게 테스트가 둘을 대조한다.
+    @Value("${llm.generation.batch-count-by-difficulty:BEGINNER=7,INTERMEDIATE=5,ADVANCED=3}")
+    private String batchCountByDifficulty;
+
     // 기본값 문자열이 AdminStatsService·LlmProblemService와 같아야 한다. 갈라지면 화면이 말하는
     // "이번 주기의 분야"와 배치가 실제로 고르는 분야가 어긋난다(그쪽 주석의 판단을 따른다).
     @Value("${llm.generation.batch-domains:NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
@@ -82,9 +89,17 @@ public class AdminBatchService {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         Path dir = Path.of(importDir);
 
+        AdminBatchStatus.TodayPlan plan = planOf(today, dir);
+        // 개수는 <오늘 난이도의> 값을 싣는다(2026-09-05). 난이도별 배분이 생긴 뒤로도
+        // batch-count를 그대로 보여 주면 초급 날에도 화면은 "5건"이라 말하는데 실제로는 7건이
+        // 나온다 — 이 화면의 존재 이유가 "설정과 실제가 어긋난 것을 한눈에 보는 것"이라
+        // (클래스 주석) 그 자리에서 어긋나면 화면이 없느니만 못하다.
+        // 문서일에는 difficulty가 null이고, 그때는 만들 문제가 없으므로 폴백 값이 실린다.
+        int count = BatchCountRule.countFor(batchCountByDifficulty, plan.difficulty(), batchCount);
+
         return new AdminBatchStatus(
-                batchEnabled, batchType, batchCount, today,
-                planOf(today, dir),
+                batchEnabled, batchType, count, today,
+                plan,
                 recentImports(),
                 waitingFiles(dir),
                 blockedDates(dir, today));

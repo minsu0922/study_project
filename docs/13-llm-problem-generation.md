@@ -118,7 +118,8 @@ llm:
     model: claude-opus-5       # 초안의 model 컬럼에 기록 — 모델별 승인율 비교 재료
     batch-enabled: true        # 중단 스위치
     batch-type: auto           # auto | problem | document — 한쪽만 돌리고 싶을 때
-    batch-count: 5             # 배치 1회당 생성 문제 수
+    batch-count: 5             # 폴백 — 아래 난이도별 값이 없을 때만
+    batch-count-by-difficulty: BEGINNER=7,INTERMEDIATE=5,ADVANCED=3   # 난이도별 생성 개수
     batch-domains: NETWORK,OS,DATABASE,...   # 배치 후보 도메인(= 날짜 순환 순서)
   import:
     enabled: true              # 기동 시 generated/*.json 들여오기
