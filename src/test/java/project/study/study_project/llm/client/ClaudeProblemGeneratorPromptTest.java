@@ -874,6 +874,78 @@ class ClaudeProblemGeneratorPromptTest {
     }
 
     /**
+     * <b>2026-09-05 신설 — (O) 예시가 전부 상황형이면 "최대 2개"는 이기지 못한다.</b>
+     *
+     * <p>2026-09-05 배치가 상황형 3개로 나와 {@code SITUATION_MAX_PER_BATCH} 경고에 걸렸다.
+     * 상한은 08-25에 이미 숫자로 박혀 있었으니, 원인은 숫자가 아니라 <b>숫자를 이긴 본보기</b>다 —
+     * {@code [같은 문제를 다섯 번 내지 마라]}의 (X)/(O) 예시 여섯이 전부 실무 장면이었다.
+     * 이 저장소가 반복해 확인한 것이 "추상적 금지는 무시되고 실물 예시는 지켜진다"이므로,
+     * 예시가 전부 상황형인 한 상한은 한 줄짜리 부탁으로 남는다.
+     *
+     * <p>그래서 (O)를 <b>형태 이름이 붙은 다섯 줄 배치</b>로 바꿨다. 여기서 지키는 것은
+     * 그 배분이 상한과 같은 모양인가다 — 상황 둘, 나머지 셋. 이 테스트가 없으면 다음에
+     * 예시를 손볼 때 상황형 줄을 하나 더 늘려도 아무도 모른다. 그때는 프롬프트가 다시
+     * <b>말과 그림이 어긋난 상태</b>로 돌아가고, 그 어긋남이 이 사고의 원인이었다.
+     */
+    @Test
+    @DisplayName("(O) 예시는 형태를 섞은 한 배치다 — 예시가 전부 상황형이면 상한은 한 줄짜리 부탁이 된다")
+    void showsAMixedKindBatchInTheGoodExample() {
+        String good = ClaudeProblemGenerator.SYSTEM_PROMPT
+                .substring(ClaudeProblemGenerator.SYSTEM_PROMPT.indexOf("(O) SITUATION"));
+
+        assertThat(good)
+                .as("형태 이름을 붙여야 '이게 무슨 형태인지'가 예시에서 읽힌다")
+                .contains("(O) SITUATION")
+                .contains("COMPARISON").contains("CAUSE").contains("JUDGMENT")
+                .as("배분을 눈으로 보고도 놓칠까 봐 말로도 한 번 더 짚는다")
+                .contains("장면으로 쓴 것은 앞의 둘뿐이고");
+
+        // 예시 안의 상황형 줄 수가 상한과 같은지 <센다>. 문자열 단언만으로는
+        // "SITUATION 줄이 하나 더 늘었다"를 못 잡는다 — 늘어난 줄도 contains는 통과한다.
+        long situations = good.lines()
+                .filter(line -> line.strip().startsWith("(O) SITUATION") || line.strip().startsWith("SITUATION"))
+                .count();
+        assertThat(situations)
+                .as("본보기의 상황형 개수가 상한과 달라지면 프롬프트의 말과 그림이 다시 어긋난다")
+                .isEqualTo(ProblemItemRule.SITUATION_MAX_PER_BATCH);
+    }
+
+    /**
+     * <b>2026-09-05 신설 — 개수는 요구하면서 광산을 안 알려 주면 상황형으로 채운다.</b>
+     *
+     * <p>사고 난 배치의 근거 문서에는 비교에 쓸 절과 인과에 쓸 절이 하나씩뿐이었다. 각각을 한
+     * 문제가 쓰고 나자 남은 세 자리를 채울 곳이 상황형밖에 없었다 — 상황형은 어느 절을 읽어도
+     * 장면을 지어낼 수 있기 때문이다. 그래서 형태마다 {@code 재료:} 줄로 캘 절을 지목했다.
+     *
+     * <p><b>이 테스트가 진짜로 지키는 것은 지목한 절이 실재하는가다.</b> 없는 절을 가리키면
+     * 그 줄은 도움이 아니라 방해가 된다 — 모델이 찾다 실패하고 결국 원래 하던 대로 장면을
+     * 짓는다. 그래서 문자열을 견주지 않고 {@code BEGINNER_REQUIRED_SECTIONS}와 <b>대조</b>한다.
+     * 같은 정보가 두 곳에 적혀 갈라지는 것이 이 저장소의 단골 사고이고
+     * ({@code ProblemItemRule} 클래스 주석), 필수 절 목록이 바뀌는 날 여기가 함께 울어야 한다.
+     */
+    @Test
+    @DisplayName("형태마다 캘 절을 지목한다 — 지목한 절은 모든 입문편에 반드시 있는 것이어야 한다")
+    void pointsEachKindAtSectionsThatEveryDocumentHas() {
+        List<String> cited = ClaudeProblemGenerator.SYSTEM_PROMPT.lines()
+                .map(String::strip)
+                .filter(line -> line.startsWith("재료:"))
+                .flatMap(line -> java.util.regex.Pattern.compile("##[^·—\n]+").matcher(line).results())
+                .map(match -> match.group().strip())
+                .toList();
+
+        assertThat(cited)
+                .as("네 형태(b~e)가 각각 캘 곳을 갖는다 — 하나라도 비면 그 형태는 안 나온다")
+                .hasSizeGreaterThanOrEqualTo(4)
+                .as("없는 절을 가리키면 모델이 찾다 실패하고 결국 장면을 짓는다")
+                .allSatisfy(section -> assertThat(ClaudeDocumentGenerator.BEGINNER_REQUIRED_SECTIONS)
+                        .contains(section));
+
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .as("재료가 없다는 도피로를 닫는다 — 오해 절과 왜 필요한가 절은 늘 있다")
+                .contains("c와 d는 언제나 낼 수 있다는 뜻이다");
+    }
+
+    /**
      * <b>2026-08-25 신설 — 사람이 형태를 지목했을 때.</b>
      *
      * <p>중급에 다섯 형태를 열었더니 실물이 세 번 연속 상황형으로만 나왔다. 모델이 게을러서가
