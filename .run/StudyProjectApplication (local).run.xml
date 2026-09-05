@@ -34,11 +34,32 @@
 
     두 값의 출처: build.gradle의 tasks.named('bootRun') 블록. 한쪽만 바꾸면
     "IDE에서는 되는데 gradlew에서는 안 되는" 상태가 되므로 항상 같이 바꾼다.
+
+    [IntelliJ가 이 주석을 지운다 — 2026-09-05에 실제로 겪었다]
+    실행 구성을 IDE에서 한 번이라도 편집하면 IntelliJ가 이 파일을 자기 형식으로 다시 쓰는데,
+    그때 <b>주석이 전부 사라진다</b>. 실제로 그렇게 38줄이 날아간 채 커밋되지 않은 상태로
+    며칠 방치돼 있었다(같은 편집에서 SPRING_BOOT_MAIN_CLASS가 함께 추가됐다).
+    tracked 파일인데도 diff를 눈여겨보지 않으면 모른 채 지나간다.
+
+    그러니 `git diff`에 이 파일이 뜨면 <b>값이 바뀐 것인지 주석만 날아간 것인지</b>를 먼저 보라.
+    주석만 날아간 것이면 되살리되, <b>같이 들어온 새 option까지 버리지는 말 것</b> —
+    `git checkout`으로 통째로 되돌리면 IDE가 추가한 설정도 함께 사라진다.
+
+    덧붙여, 이 주석을 손볼 때 본문에 하이픈 두 개를 잇달아 쓰지 마라. XML 주석 안에서는
+    금지된 문자열이라 파일이 통째로 파싱 실패하고, 그러면 IDE의 초록 실행 버튼이 사라진다
+    (이 문단을 쓰다 실제로 한 번 냈다).
   -->
   <configuration default="false" name="StudyProjectApplication (local)"
                  type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <option name="MAIN_CLASS_NAME" value="project.study.study_project.StudyProjectApplication" />
     <module name="study_project.main" />
+    <!--
+      SPRING_BOOT_MAIN_CLASS는 IntelliJ가 2026-09-05 편집에서 스스로 넣었다.
+      MAIN_CLASS_NAME과 값이 같지만 읽는 쪽이 다르다 — 앞의 것은 일반 실행 구성이,
+      이것은 Spring Boot 플러그인이 본다. 지워도 IDE가 다음에 열 때 다시 채워 넣으므로
+      그대로 둔다(지웠다 다시 생기면 이 파일의 diff가 또 흔들린다).
+    -->
+    <option name="SPRING_BOOT_MAIN_CLASS" value="project.study.study_project.StudyProjectApplication" />
     <envs>
       <!-- HS384 서명이라 384비트(48바이트) 이상이어야 한다. 짧으면 JwtTokenProvider 생성 단계에서 터진다. -->
       <env name="JWT_SECRET" value="csquiz-local-development-only-signing-key-not-used-in-production-0123456789" />
