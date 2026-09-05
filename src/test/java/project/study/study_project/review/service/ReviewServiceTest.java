@@ -44,6 +44,9 @@ class ReviewServiceTest {
 
     private static final Long USER_ID = 1L;
 
+    /** "복습 차례가 이미 지났다"를 뜻하는 예정 시각 — 1분 전이면 충분하다. */
+    private static final LocalDateTime DUE_NOW = LocalDateTime.now().minusMinutes(1);
+
     @Mock
     private ReviewItemRepository reviewItemRepository;
 
@@ -70,12 +73,18 @@ class ReviewServiceTest {
                 .thenReturn(Optional.empty());
     }
 
-    /** stage N까지 올라간 LEARNING 항목을 만든다(오답 1번 + 정답 N번의 실제 전이를 재사용). */
+    /**
+     * stage N까지 올라간 LEARNING 항목을 만든다(오답 1번 + 정답 N번의 실제 전이를 재사용).
+     *
+     * <p><b>예정일은 과거로 둔다</b> — 승급은 "복습할 때가 됐을 때"만 일어나므로(2026-09-05),
+     * 아무 준비 없이 만든 항목은 전부 예정일 전이라 승급 테스트가 성립하지 않는다. 즉 이
+     * 헬퍼가 만드는 것은 "사다리 N칸에 있고 <b>지금 복습 차례인</b> 문제"다.
+     * 예정일 전 상태가 필요한 테스트는 {@link EarlyAnswer}가 따로 만든다.
+     */
     private ReviewItem learningItemAtStage(int stage) {
-        ReviewItem item = ReviewItem.firstWrong(USER_ID, problem,
-                ReviewService.dueAfter(LocalDateTime.now(), 1));
+        ReviewItem item = ReviewItem.firstWrong(USER_ID, problem, DUE_NOW);
         for (int s = 1; s <= stage; s++) {
-            item.promote(s, ReviewService.dueAfter(LocalDateTime.now(), ReviewService.INTERVAL_DAYS[s]));
+            item.promote(s, DUE_NOW);
         }
         return item;
     }
@@ -209,26 +218,100 @@ class ReviewServiceTest {
     }
 
     @Test
-    @DisplayName("전체 여정: 틀림 → 정답 5연속 = 간격 1→3→7→14→30일로 벌어지다 졸업")
+    @DisplayName("전체 여정: 복습일이 될 때마다 맞히면 간격이 1→3→7→14→30일로 벌어지다 졸업")
     void fullLadderJourney() {
-        // 사다리 여정을 한 번에 재생 — 각 칸 간격이 INTERVAL_DAYS와 정확히 일치하는지 본다.
-        ReviewItem item = ReviewItem.firstWrong(USER_ID, problem, LocalDateTime.now().plusDays(1));
-        givenExisting(item);
-
-        // 정답 4번: stage 1..4 승급, 간격 3/7/14/30일 확인
-        for (int expectedStage = 1; expectedStage <= 4; expectedStage++) {
+        // 칸마다 "복습 차례가 된 항목"을 새로 만든다. 한 항목으로 연달아 돌리지 <않는> 것이
+        // 곧 규칙이다 — 예정일 전 정답은 승급하지 않으므로, 실제로도 칸을 오르려면 날이 바뀌어야
+        // 한다(그렇게 연달아 돌아가던 것이 2026-09-05에 막은 조기 승급 구멍이었다).
+        for (int stage = 0; stage <= 3; stage++) {
+            ReviewItem item = learningItemAtStage(stage);
+            givenExisting(item);
             LocalDateTime before = LocalDateTime.now();
+
             reviewService.onSubmission(USER_ID, problem, true);
-            assertThat(item.getStage()).isEqualTo(expectedStage);
+
+            assertThat(item.getStage()).isEqualTo(stage + 1);
             assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
             assertDueOnStudyDayAfter(item.getNextReviewAt(), before,
-                    ReviewService.INTERVAL_DAYS[expectedStage]);
+                    ReviewService.INTERVAL_DAYS[stage + 1]);
         }
 
-        // 5번째 정답(마지막 칸) → 졸업, 총 5회 풀이 기록
+        // 마지막 칸(stage 4)에서 맞히면 졸업 — 사다리에 오른 뒤 총 5회 풀이가 찍힌다
+        // (승급 4번 + 졸업 1번. 사다리 진입이 된 최초 오답은 세지 않는다).
+        ReviewItem lastRung = learningItemAtStage(4);
+        givenExisting(lastRung);
+
         reviewService.onSubmission(USER_ID, problem, true);
-        assertThat(item.getStatus()).isEqualTo(ReviewStatus.GRADUATED);
-        assertThat(item.getReviewCount()).isEqualTo(5);
+
+        assertThat(lastRung.getStatus()).isEqualTo(ReviewStatus.GRADUATED);
+        assertThat(lastRung.getReviewCount()).isEqualTo(5);
+    }
+
+    /**
+     * 예정일 전 정답 — 사다리를 움직이지 않는다(2026-09-05). 문제를 지목해 푸는 경로가 생기면서
+     * 같은 문제를 연달아 맞혀 몇 초 만에 졸업시킬 수 있었던 구멍을 막은 규칙이다.
+     */
+    @Nested
+    @DisplayName("예정일 전 풀이 — 조기 승급을 막는다")
+    class EarlyAnswer {
+
+        /** 아직 복습할 때가 아닌 항목(stage 1, 예정일은 사흘 뒤). */
+        private ReviewItem notDueYet() {
+            ReviewItem item = ReviewItem.firstWrong(USER_ID, problem, DUE_NOW);
+            item.promote(1, LocalDateTime.now().plusDays(3));
+            return item;
+        }
+
+        @Test
+        @DisplayName("예정일 전 정답 → 단계·예정일·풀이 횟수 모두 그대로")
+        void earlyCorrectAnswerChangesNothing() {
+            ReviewItem item = notDueYet();
+            int stageBefore = item.getStage();
+            int countBefore = item.getReviewCount();
+            LocalDateTime dueBefore = item.getNextReviewAt();
+            givenExisting(item);
+
+            reviewService.onSubmission(USER_ID, problem, true);
+
+            assertThat(item.getStage()).isEqualTo(stageBefore);
+            assertThat(item.getNextReviewAt()).isEqualTo(dueBefore);
+            // 사다리를 움직이지 않은 풀이는 세지 않는다 — "졸업까지 몇 번 걸렸나"가 흐려지므로.
+            assertThat(item.getReviewCount()).isEqualTo(countBefore);
+        }
+
+        @Test
+        @DisplayName("회귀: 같은 문제를 연달아 맞혀도 졸업하지 못한다")
+        void repeatedCorrectAnswersCannotGraduate() {
+            // 이 테스트가 이 규칙의 존재 이유다. 예전에는 /quiz.html?problemId=N 으로 같은 문제를
+            // 다섯 번 맞히면 30일 칸까지 올라간 문제가 1분 만에 추천에서 사라졌다.
+            ReviewItem item = learningItemAtStage(0); // 지금 복습 차례인 문제
+            givenExisting(item);
+
+            for (int i = 0; i < 10; i++) {
+                reviewService.onSubmission(USER_ID, problem, true);
+            }
+
+            // 첫 제출만 먹힌다 — 승급하는 순간 예정일이 미래로 밀려 나머지는 전부 "예정일 전"이 된다.
+            assertThat(item.getStage()).isEqualTo(1);
+            assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
+            assertThat(item.getReviewCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("예정일 전 오답은 그대로 리셋 — 모른다는 신호에는 언제든 반응한다")
+        void earlyWrongAnswerStillResets() {
+            // 비대칭이 의도다. 방금 본 문제를 맞히는 건 기억이 남아 있다는 뜻이라 정보가 거의
+            // 없지만, 틀리는 건 언제 나와도 "모른다"는 확실한 신호다.
+            ReviewItem item = notDueYet();
+            givenExisting(item);
+            LocalDateTime before = LocalDateTime.now();
+
+            reviewService.onSubmission(USER_ID, problem, false);
+
+            assertThat(item.getStage()).isZero();
+            assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);
+            assertDueOnStudyDayAfter(item.getNextReviewAt(), before, 1);
+        }
     }
 
     /**

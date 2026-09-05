@@ -97,8 +97,9 @@ public class ReviewService {
      * <p>상태 전이 표(docs/10 — 이 표가 곧 이 메서드의 명세):
      * <table>
      *   <tr><th>결과</th><th>항목 없음</th><th>LEARNING</th><th>GRADUATED</th></tr>
-     *   <tr><td>오답</td><td>생성(stage 0, 내일)</td><td>stage 0 리셋</td><td>LEARNING 복귀 + stage 0</td></tr>
-     *   <tr><td>정답</td><td>아무것도 안 함</td><td>stage+1(마지막 칸이면 졸업)</td><td>그대로</td></tr>
+     *   <tr><td>오답</td><td>생성(stage 0, 다음 학습일)</td><td>stage 0 리셋</td><td>LEARNING 복귀 + stage 0</td></tr>
+     *   <tr><td>정답</td><td>아무것도 안 함</td><td>예정일이 지났으면 stage+1(마지막 칸이면 졸업),
+     *       아직이면 그대로</td><td>그대로</td></tr>
      * </table>
      *
      * <p><b>{@code Propagation.MANDATORY}</b>: 반드시 호출자(submit)의 트랜잭션에 합류만 하고,
@@ -111,9 +112,23 @@ public class ReviewService {
      * 제약(V4)이다. 한쪽이 제약 위반으로 실패하면 그 제출 트랜잭션째 롤백되는데, 더블클릭
      * 중복 제출은 하나만 성공하면 충분하므로 재시도 로직은 넣지 않았다(의도된 단순화).
      *
-     * <p><b>예정일 전에 맞혀도 승급한다(트레이드오프)</b>: 엄격한 간격 반복은 예정일 전 풀이를
-     * 무시하지만, "일부러 미리 푼 사용자를 승급 안 시키는" 동작이 더 이상하다고 판단(docs/10).
-     * 규칙이 단순할수록 사용자가 시스템을 예측할 수 있다.
+     * <p><b>예정일 전 정답은 사다리를 움직이지 않는다(2026-09-05 변경)</b>: 원래는 "미리 푼
+     * 사용자를 승급 안 시키는 게 더 이상하다"고 보고 언제 맞히든 승급시켰다. 그런데 문제 목록에
+     * 문제를 지목해 푸는 경로(`/quiz.html?problemId=N`)가 생기면서, 같은 문제를 <b>연달아 다섯 번
+     * 맞히면 1분 만에 졸업</b>하는 길이 열렸다. 30일 간격까지 올라간 문제가 실제로는 1분 만에
+     * 추천에서 사라지는 것이라, 간격 반복이라는 기능 자체가 무의미해진다.
+     *
+     * <p>고친 방법은 조건 하나다 — 예정일 전 정답이면 아무것도 하지 않는다. 이 한 줄이
+     * <b>연속 승급을 통째로 막는다</b>: 승급하면 예정일이 미래로 밀리므로, 바로 다음 정답은
+     * 자동으로 "예정일 전"이 되기 때문이다. 하루 몇 회 제한 같은 별도 장치가 필요 없다.
+     *
+     * <p><b>정답과 오답을 다르게 대하는 이유(비대칭)</b>: 예정일 전 <b>오답</b>은 그대로 리셋한다.
+     * 방금 본 문제를 맞히는 것은 기억이 아직 남아 있다는 뜻이라 정보가 거의 없지만, 틀리는 것은
+     * 언제 나와도 "모른다"는 확실한 신호다. 사다리는 모른다는 신호에는 항상 반응해야 한다.
+     *
+     * <p><b>치른 값</b>: 일부러 미리 복습한 사용자에게 아무 일도 일어나지 않는다. 원래 우려가
+     * 그대로 살아난 셈인데, "미리 푼 보람이 없다"보다 "5초 만에 졸업해 복습이 사라진다" 쪽이
+     * 이 기능을 더 크게 망가뜨린다고 판단했다(docs/10).
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public void onSubmission(Long userId, Problem problem, boolean correct) {
@@ -136,6 +151,12 @@ public class ReviewService {
         found.ifPresent(item -> {
             if (item.getStatus() != ReviewStatus.LEARNING) {
                 return; // 졸업 후 또 맞힘 → 그대로 (전이 표의 "그대로" 칸)
+            }
+            if (now.isBefore(item.getNextReviewAt())) {
+                // 아직 복습할 때가 아니다 → 사다리를 움직이지 않는다. reviewCount도 올리지 않는데,
+                // 그 값의 뜻이 "졸업까지 몇 번 걸렸나"라서 사다리를 움직이지 않은 풀이를 세면
+                // 통계가 흐려지기 때문이다(졸업 후 풀이를 안 세는 것과 같은 이유).
+                return;
             }
             int nextStage = item.getStage() + 1;
             if (nextStage >= INTERVAL_DAYS.length) {

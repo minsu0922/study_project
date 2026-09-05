@@ -185,6 +185,33 @@ class ReviewFlowIntegrationTest {
         assertThat(reviewItemRepository.findByUserIdAndProblemId(userId, problem.getId())).isEmpty();
     }
 
+    @Test
+    @DisplayName("조기 승급 구멍: 같은 문제를 연달아 맞혀도 졸업하지 못한다(2026-09-05)")
+    void repeatedSubmissionsCannotRushGraduation() {
+        // 실제 제출 경로(QuizService.submit)를 그대로 태운 회귀 테스트다. 단위 테스트가 규칙을
+        // 검증한다면 이쪽은 "밖에서 두드려도 안 뚫린다"를 본다 — 문제 목록에서 문제를 지목해
+        // 푸는 경로(/quiz.html?problemId=N)가 열려 있어 실제로 두드릴 수 있는 구멍이었다.
+        submit("X");                       // 사다리 진입(stage 0, 예정일은 다음 학습일)
+        timeTravelToDue();                 // 복습 차례가 됐다
+        submit("O");                       // 정당한 승급 1회 → stage 1, 예정일 사흘 뒤
+
+        for (int i = 0; i < 9; i++) {      // 여기서부터는 전부 예정일 전 풀이다
+            submit("O");
+        }
+
+        ReviewItem item = myItem();
+        assertThat(item.getStage()).isEqualTo(1);                       // 칸이 오르지 않았다
+        assertThat(item.getStatus()).isEqualTo(ReviewStatus.LEARNING);  // 졸업도 없다
+        assertThat(item.getReviewCount()).isEqualTo(1);                 // 헛 제출은 세지도 않는다
+
+        // 이력(Submission)은 제출한 만큼 그대로 쌓인다 — 사다리를 막는 것이지 풀이를 막는 게 아니다.
+        Long submissions = em.createQuery(
+                        "select count(s) from Submission s where s.userId = :userId", Long.class)
+                .setParameter("userId", userId)
+                .getSingleResult();
+        assertThat(submissions).isEqualTo(11);
+    }
+
     /* ── problemIds 필터 (2026-08-20) ───────────────────────────────
      *
      * 오답노트가 복습 단계 배지를 그리려고 쓰는 경로다. 전에는 내 복습 현황 전체를 50개씩
