@@ -104,20 +104,30 @@ function startPlayer(mountEl, problems, opts = {}) {
     const extraBadge = p.badgeText
       ? `<span class="badge orange">${escapeHtml(p.badgeText)}</span>` : "";
 
+    /* 얇은 띠 + 메타 줄 + 카드. 2026-09-06 개편에서 이 셋으로 갈랐다.
+     *
+     * [배지가 카드 밖으로 나왔다] 예전에는 문제 카드 안 맨 위에 있었다. 밖으로 내면 카드는
+     * 지문과 보기만 담게 되고, "이 문제가 무엇인가"는 카드 위에서 한 번에 읽힌다.
+     * 폰에서는 이 줄이 상단 바 아래에 달라붙어, 지문이 길어도 몇 번째인지가 안 사라진다.
+     *
+     * [맞힌 수를 뺐다] 푸는 중에 점수를 보여 주면 남은 문제를 푸는 태도가 바뀐다 —
+     * "이미 셋 틀렸으니 대충"이 되기 쉽다. 점수는 다 끝난 뒤 결과 화면에서 한 번 본다.
+     * state.score는 그 결과 화면이 계속 쓴다. */
     mountEl.innerHTML = `
-      <div class="player-top">
-        <span class="count">문제 ${state.idx + 1} / ${total}</span>
-        <div class="progress"><div style="width:${progressPct}%"></div></div>
-        <span class="score">맞힌 수 ${state.score}</span>
-      </div>
-
-      <div class="card player-card fade-in">
-        <div>
+      <div class="play-sticky">
+        <div class="play-rail" role="progressbar" aria-label="퀴즈 진행률"
+             aria-valuenow="${state.idx}" aria-valuemin="0" aria-valuemax="${total}"
+          ><i style="width:${progressPct}%"></i></div>
+        <div class="play-head">
           <span class="badge">${escapeHtml(domainLabel(p.domain))}</span>
           ${difficultyBadge(p.difficulty)}
           <span class="badge gray">${escapeHtml(typeLabel(p.type))}</span>
           ${reviewBadge}${extraBadge}
+          <span class="count">${state.idx + 1} / ${total}</span>
         </div>
+      </div>
+
+      <div class="card player-card fade-in">
         <div class="q-text">${escapeHtml(p.question)}</div>
         <div id="optArea">${renderInput(p)}</div>
         <div id="feedback"></div>
@@ -452,8 +462,16 @@ function startPlayer(mountEl, problems, opts = {}) {
         const c = (p.choices || []).find(c => String(c.id) === val);
         isAnswer = c && c.text === r.correctAnswer;
       }
-      if (isAnswer) btn.classList.add("is-correct");
-      else if (isMine && !r.correct) btn.classList.add("is-wrong");
+      // 색 <그리고> 글자. 초록과 빨강이 같은 회색으로 보이는 사람에게 테두리 색은
+      // 아무 정보도 아니라, 어느 보기가 답이었는지 알 방법이 없어진다.
+      // "내 답"은 틀렸을 때만 붙인다 — 맞았으면 정답 보기가 곧 내 답이라 두 번 말할 필요가 없다.
+      if (isAnswer) {
+        btn.classList.add("is-correct");
+        btn.insertAdjacentHTML("beforeend", `<span class="mark">✓ 정답</span>`);
+      } else if (isMine && !r.correct) {
+        btn.classList.add("is-wrong");
+        btn.insertAdjacentHTML("beforeend", `<span class="mark">✕ 내 답</span>`);
+      }
       btn.classList.remove("selected");
     });
     const shortInput = mountEl.querySelector("#shortInput");
