@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 기록 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container">
+  <h1>내 기록</h1>
+  <!-- "2026년 7월 12일에 시작 · 57일째" 같은 줄을 두려다 뺐다.
+       가입일을 주는 API가 없고, 없는 값을 만들어 채우면 화면이 거짓말을 한다.
+       필요해지면 그때 서버에 한 필드를 더한다. -->
+
+  <div class="stat-row" id="stats"></div>
+
+  <div class="section-label">
+    <span>분야별</span>
+    <span class="seg" id="sortSeg">
+      <button class="seg-btn active" data-sort="solved">진도순</button>
+      <button class="seg-btn" data-sort="name">이름순</button>
+    </span>
+  </div>
+  <div class="progress-grid" id="progList"></div>
+
+  <div class="section-label" id="weakLabel" hidden><span>약한 곳</span></div>
+  <div id="weakSpot"></div>
+
+  <div class="section-label"><span>더 보기</span></div>
+  <div class="setting-row" style="border-top:0">
+    <div>
+      <b>오답노트</b>
+      <div class="meta">틀린 문제와 내가 쓴 답을 다시 읽습니다</div>
+    </div>
+    <a class="btn btn-outline" href="/wrong-answers.html">열기</a>
+  </div>
+  <div class="setting-row">
+    <div>
+      <b>설정</b>
+      <div class="meta">테마·글자 크기·퀴즈 기본값</div>
+    </div>
+    <a class="btn btn-outline" href="/settings.html">열기</a>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+/* 내 기록 — 홈이 "오늘 뭐부터 하지"라면 이 화면은 "나 얼마나 왔지"다.
+ *
+ * [왜 홈과 나누나]
+ * 두 질문의 답은 다른 속도로 바뀐다. 오늘 할 일은 하루에 여러 번 보고, 전체 진도는
+ * 일주일에 한 번 본다. 한 화면에 두면 자주 보는 것이 가끔 보는 것에 밀린다 —
+ * 홈에서 진도를 여섯 개로 줄이고 나머지를 여기로 넘긴 이유이기도 하다.
+ *
+ * [활동 격자(잔디밭)를 안 넣는다]
+ * 붙일 자리지만 뺐다. 이 앱은 이미 스트릭(연속 며칠)을 안 쓰기로 정했다 —
+ * 목표 페이스가 주 3회라 주마다 끊기고, 잘하고 있는데 실패한 것처럼 보이는 숫자가
+ * 되기 때문이다(docs/12). 격자도 같은 종류의 압박이라 같은 이유로 뺀다.
+ *
+ * [폰에서 이 화면이 "나" 탭이다]
+ * 탭 다섯이 상한이라 설정을 따로 못 걸었다. 그래서 아래 "더 보기"에 입구를 둔다 —
+ * 사이드바에서는 설정이 따로 서 있어 이 줄이 없어도 되지만, 좁은 화면에서는 여기가
+ * 유일한 길이다. 넓은 화면에서 한 번 더 보이는 것은 그 대가다.
+ *
+ * [요청은 하나다]
+ * study-summary가 통계와 분야별을 함께 준다. 이 화면이 필요로 하는 것이 그 둘뿐이라
+ * 새 API를 만들지 않았다. */
+if (!isLoggedIn()) {
+  // 남의 기록을 볼 화면이 아니다. 비로그인으로 오면 로그인부터.
+  location.href = "/login.html";
+} else {
+  renderShell({ active: "me", title: "내 기록" });
+  loadMe();
+
+  document.getElementById("sortSeg").addEventListener("click", e => {
+    const btn = e.target.closest(".seg-btn");
+    if (!btn) return;
+    document.querySelectorAll("#sortSeg .seg-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    drawProgress(btn.dataset.sort);
+  });
+}
+
+/** 이 화면이 그리는 모든 것의 출처. 정렬을 바꿀 때 다시 부르지 않으려고 들고 있는다. */
+let summary = null;
+
+async function loadMe() {
+  try {
+    summary = await api("/api/me/study-summary");
+  } catch (e) {
+    document.getElementById("stats").innerHTML =
+      `<p class="meta">기록을 불러오지 못했어요. 잠시 뒤 새로고침해 주세요.</p>`;
+    return;
+  }
+
+  const s = summary.stats;
+  // 전체 문제 수는 분야별 분모를 더해서 낸다 — 따로 부를 API가 없고, 이미 온 값이다.
+  const totalAll = summary.domains.reduce((a, d) => a + d.total, 0);
+
+  document.getElementById("stats").innerHTML = [
+    ["푼 문제", `${s.solvedTotal}<span class="of"> / ${totalAll}</span>`, ""],
+    ["정답률", s.correctRate === null ? null : s.correctRate + "%", ""],
+    ["이번 주", String(s.solvedThisWeek), ""],
+    ["복습 대기", String(s.reviewDue), s.reviewDue > 0 ? " due" : ""],
+  ].map(([label, v, extra]) => `
+    <div class="stat">
+      <div class="label">${label}</div>
+      <div class="num${v === null ? " none" : extra}">${v === null ? "아직 기록 없음" : v}</div>
+    </div>`).join("");
+
+  drawProgress("solved");
+  drawWeakSpot();
+}
+
+/**
+ * 분야별 — <b>열둘을 전부</b> 그린다.
+ *
+ * <p>홈은 여섯만 보여 주고 문제가 0개인 분야를 뺀다. 여기는 다르다 —
+ * "이 분야는 아직 문제가 없다"도 이 화면에서는 정보다. 무엇이 준비돼 있고 무엇이
+ * 비어 있는지가 "나 얼마나 왔지"의 답에 포함된다.
+ *
+ * <p><b>정렬이 둘뿐인 이유.</b> 정답률순도 자연스러운 후보지만 <b>서버가 분야별 정답률을
+ * 주지 않는다</b>. 없는 값으로 만든 정렬은 화면에서만 그럴듯하고 눌러도 순서가 안 바뀐다.
+ * 있는 값으로 할 수 있는 것만 둔다.
+ */
+function drawProgress(sort) {
+  const list = [...summary.domains].sort(
+    sort === "solved"
+      ? (a, b) => b.solved - a.solved
+      : (a, b) => a.label.localeCompare(b.label, "ko"));
+
+  document.getElementById("progList").innerHTML = list.map(d => {
+    // 분모가 0이면 막대를 0으로 둔다. 0으로 나누면 NaN이 style에 들어가 막대가 사라진다.
+    const pct = d.total > 0 ? Math.round(d.solved / d.total * 100) : 0;
+    // 문제가 없는 분야는 숫자 대신 그렇다고 말한다 — "0 / 0"은 읽는 사람이 뜻을 지어내야 한다.
+    const num = d.total === 0
+      ? `<span class="of">준비 중</span>`
+      : `${d.solved} <span class="of">/ ${d.total}</span>`;
+    return `<div class="progress-item">
+      <div class="row">
+        <span class="name">${escapeHtml(d.label)}</span>
+        <span class="num">${num}</span>
+      </div>
+      <div class="bar" role="progressbar" aria-label="${escapeHtml(d.label)} 진도"
+           aria-valuenow="${d.solved}" aria-valuemin="0" aria-valuemax="${d.total}"
+        ><i style="width:${pct}%"></i></div>
+    </div>`;
+  }).join("");
+}
+
+/**
+ * 약한 곳 — 손을 가장 덜 댄 분야 하나.
+ *
+ * <p><b>왜 정답률이 아니라 진도인가.</b> "약한 곳"의 정의로는 정답률이 더 맞지만 서버가
+ * 분야별 정답률을 주지 않는다. 없는 값을 추측해서 보여 주느니 있는 값으로 정직한 말을
+ * 한다 — 그래서 화면에도 "가장 적게 푼 분야"라고 그대로 적는다.
+ * (분야별 정답률이 생기면 여기부터 바꾼다.)
+ *
+ * <p>문제가 0개인 분야는 후보에서 뺀다. 안 그러면 아직 문제를 안 만든 분야가 늘 1등이 되고,
+ * 그 분야로 보내 봐야 풀 것이 없다.
+ *
+ * <p>다 풀었으면 이 구역을 통째로 감춘다 — 약한 곳이 없는데 억지로 하나를 고르면
+ * 잘하고 있는 사람에게 없는 문제를 만들어 주는 셈이다.
+ */
+function drawWeakSpot() {
+  const candidates = summary.domains.filter(d => d.total > 0 && d.solved < d.total);
+  if (candidates.length === 0) return;
+
+  const weak = candidates.reduce((a, b) =>
+    (a.solved / a.total) <= (b.solved / b.total) ? a : b);
+
+  document.getElementById("weakLabel").hidden = false;
+  document.getElementById("weakSpot").innerHTML = `
+    <div class="card" style="display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <b>${escapeHtml(weak.label)}</b>
+        <div class="meta">가장 적게 푼 분야예요 — ${weak.total}문제 중 ${weak.solved}개</div>
+      </div>
+      <a class="btn btn-outline" href="/problems.html?domain=${encodeURIComponent(weak.domain)}">
+        이 분야만 풀기</a>
+    </div>`;
+}
+</script>
+</body>
+</html>

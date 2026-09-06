@@ -917,6 +917,36 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 .landing-points b { display: block; margin: var(--sp-1) 0 var(--sp-1); }
 
 .landing-sample { text-align: left; margin-top: var(--sp-5); }
+
+/* ── 두세 갈래 전환 (내 기록의 정렬, 설정의 항목) ─────────────────────
+ * 드롭다운 대신 이걸 쓰는 이유: 선택지가 셋 이하면 <펼치지 않고> 다 보이는 편이 빠르고,
+ * 지금 무엇이 골라져 있는지도 한눈에 보인다. 드롭다운은 값을 확인하려고 한 번,
+ * 바꾸려고 또 한 번 눌러야 한다.
+ *
+ * 넷 이상이면 드롭다운이 낫다 — 가로가 길어져 좁은 화면에서 줄바꿈된다. */
+.seg {
+  display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; background: var(--card);
+}
+.seg-btn {
+  padding: 6px var(--sp-3); min-height: 32px;
+  background: none; border: 0; border-right: 1px solid var(--border);
+  color: var(--text-2); font-family: inherit; font-size: var(--fs-1);
+  font-weight: 600; cursor: pointer;
+  /* .section-label 안에 들어가면 그 대문자·자간 규칙을 물려받는다 — 여기서 되돌린다 */
+  text-transform: none; letter-spacing: 0;
+}
+.seg-btn:last-child { border-right: 0; }
+.seg-btn:hover { background: var(--fill); }
+.seg-btn.active { background: var(--primary); color: var(--on-primary); font-weight: 700; }
+
+/* ── 설정 줄 (설정 화면·내 기록의 "더 보기") ── */
+.setting-row {
+  display: flex; align-items: center; gap: var(--sp-4);
+  padding: var(--sp-3) 0; border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.setting-row > div:first-child { flex: 1; min-width: 160px; }
 /* 미리보기 문제의 보기 — 누를 수 없는 <견본>이라 버튼이 아니라 칸이다.
    진짜 보기 버튼(.opt)과 생김새를 일부러 다르게 둔다: 눌러도 아무 일이 없는 것이
    눌리게 생겼으면, 그 순간이 이 화면의 첫인상이 된다. */
@@ -1141,7 +1171,9 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 .progress-item .row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); }
 .progress-item .name { font-size: var(--fs-2); }
 .progress-item .num { font-size: var(--fs-2); font-weight: 700; font-variant-numeric: tabular-nums; }
-.progress-item .num .of { color: var(--muted); font-weight: 400; }
+/* 분모·보조 표기. 통계 타일과 진도 줄이 함께 쓴다 — "31 / 40"에서 뒤쪽이 이것이다.
+   앞의 숫자가 주인공이고 분모는 거드는 값이라, 굵기와 색을 함께 낮춘다. */
+.num .of { color: var(--muted); font-weight: 400; font-size: var(--fs-2); }
 
 /* 진도 막대. 공용이다 — 히어로의 오늘 진행률도 같은 것을 쓴다. */
 .bar { height: 7px; border-radius: 999px; background: var(--fill); overflow: hidden; margin-top: var(--sp-1); }
