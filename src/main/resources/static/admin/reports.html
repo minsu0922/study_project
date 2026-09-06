@@ -4,17 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>관리자 · 제보 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지.
+   자세한 이유는 사용자 화면의 같은 주석 참고. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
 <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-<header id="nav"></header>
+<body class="admin-shell">
+<div id="shell"></div>
 
 <main class="container admin">
   <h1>관리자</h1>
   <div id="guard"></div>
 
   <div id="adminUi" hidden>
-    <div class="tabs" id="adminNav"></div>
 
     <!-- 이 화면이 하는 일과 안 하는 일을 맨 위에 적는다. 검수함과 나란히 있어 같은 화면으로
          읽히기 쉬운데, 여기서 누르는 버튼은 <문제를 고치지 않는다>. 그 오해를 그대로 두면
@@ -45,6 +52,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
 <script src="/admin/js/admin-common.js"></script>
 <script>
 /* 제보함 — V17.

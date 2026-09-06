@@ -4,17 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>관리자 · AI 검수 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지.
+   자세한 이유는 사용자 화면의 같은 주석 참고. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
 <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-<header id="nav"></header>
+<body class="admin-shell">
+<div id="shell"></div>
 
 <main class="container admin">
   <h1>관리자</h1>
   <div id="guard"></div>
 
   <div id="adminUi" hidden>
-    <div class="tabs" id="adminNav"></div>
 
 
     <!-- 승인·거절 실패 메시지 자리. 예전에는 생성 폼의 gMessage를 같이 썼는데, 생성이
@@ -93,6 +100,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
 <script src="/admin/js/admin-common.js"></script>
 <script>
 /* AI 검수 — 모델이 만든 문제와 문서를 사람이 보고 승인·거절하는 곳.

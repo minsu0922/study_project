@@ -89,6 +89,37 @@ class AdminPageStructureTest {
         }
     }
 
+    @Test
+    @DisplayName("모든 콘솔 화면이 셸 자리를 두고, 옛 내비 자리는 남기지 않는다")
+    void everyPageHasAdminShell() throws IOException {
+        for (String page : ADMIN_PAGES) {
+            String html = read(page);
+
+            // renderAdminShell이 채울 자리. 없으면 그 화면만 메뉴가 조용히 사라진다
+            assertThat(html).as("%s: <div id=\"shell\">가 없다", page).contains("id=\"shell\"");
+
+            // body 클래스가 콘솔 grid 배치를 켠다. 없으면 띠와 기둥이 자리를 못 찾는다
+            assertThat(html).as("%s: <body class=\"admin-shell\">이 아니다", page)
+                    .contains("class=\"admin-shell\"");
+
+            assertThat(html).as("%s: admin-shell.js를 안 싣는다", page)
+                    .contains("/admin/js/admin-shell.js");
+
+            // 옛 자리가 남아 있으면 빈 요소가 화면 맨 위에 여백으로 남는다
+            assertThat(html).as("%s: 옛 id=\"nav\"가 남아 있다", page).doesNotContain("id=\"nav\"");
+            assertThat(html).as("%s: 옛 id=\"adminNav\"가 남아 있다", page)
+                    .doesNotContain("id=\"adminNav\"");
+
+            // 테마 스크립트가 스타일시트보다 앞이어야 첫 그림이 안 번쩍인다(FOUC).
+            // 개발자 기기가 라이트면 손으로 아무리 확인해도 안 걸리는 종류다.
+            int theme = html.indexOf("csquiz_theme");
+            int css = html.indexOf("/css/style.css");
+            assertThat(theme).as("%s: 테마 인라인 스크립트가 없다", page).isNotNegative();
+            assertThat(theme).as("%s: 테마 스크립트가 style.css보다 앞에 와야 한다", page)
+                    .isLessThan(css);
+        }
+    }
+
     /**
      * 폴더에 있는데 목록에 없는 화면(그리고 그 반대)을 잡는다.
      *

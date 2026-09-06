@@ -1027,6 +1027,82 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 
 .landing-sample { text-align: left; margin-top: var(--sp-5); }
 
+/* ═════════════════════════════════════════════════════════════════════
+ * 관리 콘솔 셸 — 상단 진한 띠 + 기둥 (2026-09-06)
+ * ---------------------------------------------------------------------
+ * 기둥(.shell-side/.shell-link)은 사용자 화면 것을 <그대로> 쓴다. 두 벌을 두면 여백
+ * 하나를 고칠 때 한쪽만 고치게 되고, 그 어긋남은 두 화면을 나란히 놓아야만 보인다.
+ * 콘솔에만 있는 것은 <상단 띠>와 <묶음 제목>뿐이다.
+ *
+ * [콘솔에는 탭바가 없다] 사용자 화면은 좁으면 아래 탭바로 바뀌지만, 콘솔은 항목이
+ * 여섯이라 다섯 칸에 안 들어가고 이름이 잘린다. 대신 기둥을 가로 줄로 눕힌다 —
+ * 관리 작업은 메뉴를 자주 오가므로 접어 두면 매번 펴야 한다.
+ * ═══════════════════════════════════════════════════════════════════ */
+body.admin-shell {
+  grid-template-areas: "top" "side" "main";
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+@media (min-width: 768px) {
+  body.admin-shell {
+    grid-template-areas: "top top" "side main";
+    grid-template-columns: 208px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  /* 띠가 화면 폭을 가로지르므로 기둥은 그 아래에서 시작한다 */
+  body.admin-shell .shell-side { height: calc(100vh - var(--shell-top-h)); top: var(--shell-top-h); }
+}
+
+/* 상단 진한 띠 — "여기는 관리"를 색으로 알린다.
+ *
+ * --text를 바탕으로 쓰는 이유: 라이트에서 가장 진한 색이고, 다크에서는 밝은 색으로
+ * 뒤집혀 여전히 본문과 대비된다. 글자는 그 반대인 --bg다. 새 색을 만들지 않고
+ * <있는 두 값을 서로 바꿔> 쓰면 테마가 바뀔 때 따라올 걱정이 없다. */
+.admin-bar {
+  grid-area: top;
+  display: flex; align-items: center; gap: var(--sp-3);
+  height: var(--shell-top-h); padding: 0 var(--sp-4);
+  background: var(--text); color: var(--bg);
+  position: sticky; top: 0; z-index: 60;   /* 기둥(50)보다 위 */
+  font-size: var(--fs-2);
+}
+.admin-bar .brand { font-weight: 800; color: var(--bg); text-decoration: none; flex: none; }
+.admin-bar .who { color: var(--bg); opacity: .65; }
+.admin-bar .spacer { flex: 1; }
+/* 바 높이만큼 누를 수 있게 — 글자 높이대로 두면 표적이 44px에 한참 못 미친다 */
+.admin-bar a {
+  display: inline-flex; align-items: center; align-self: stretch;
+  color: var(--bg); text-decoration: none; white-space: nowrap;
+}
+.admin-bar a:hover { opacity: .75; }
+
+/* 기둥 안의 묶음 제목(할 일 / 콘텐츠 / 생성) */
+.shell-group {
+  font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700;
+  padding: var(--sp-3) var(--sp-2) var(--sp-1);
+}
+.shell-side .shell-group:first-of-type { padding-top: var(--sp-2); }
+/* 배지는 항목 오른쪽 끝에 — 이름 길이가 달라도 눈이 찾는 자리는 늘 같다 */
+.shell-link .badge { margin-left: auto; flex: none; }
+
+/* 좁은 화면: 기둥을 가로 줄로 눕힌다 */
+@media (max-width: 767px) {
+  body.admin-shell .shell-side {
+    /* display:flex를 <반드시> 적는다. 사용자 화면의 기본 규칙이 .shell-side를
+       display:none으로 두고(좁으면 탭바가 대신한다) 768px부터 flex로 되살리는 구조라,
+       여기서 안 켜면 콘솔에는 탭바도 없어서 <메뉴가 통째로 사라진다>. 실제로 그렇게
+       한 번 만들었고 375px에서 화면을 띄워 보고 알았다. */
+    display: flex;
+    flex-direction: row; align-items: center; overflow-x: auto; height: auto;
+    position: static; border-right: 0; border-bottom: 1px solid var(--border);
+    gap: var(--sp-1); padding: var(--sp-2);
+  }
+  /* 가로 줄에서는 묶음 제목과 브랜드가 자리만 먹는다 — 항목 여섯이 이미 넘친다 */
+  body.admin-shell .shell-side .brand,
+  body.admin-shell .shell-group { display: none; }
+  body.admin-shell .shell-link { white-space: nowrap; flex: none; }
+}
+
 /* ── 두세 갈래 전환 (내 기록의 정렬, 설정의 항목) ─────────────────────
  * 드롭다운 대신 이걸 쓰는 이유: 선택지가 셋 이하면 <펼치지 않고> 다 보이는 편이 빠르고,
  * 지금 무엇이 골라져 있는지도 한눈에 보인다. 드롭다운은 값을 확인하려고 한 번,

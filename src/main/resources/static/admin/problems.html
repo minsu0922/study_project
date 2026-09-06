@@ -4,17 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>관리자 · 문제 관리 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지.
+   자세한 이유는 사용자 화면의 같은 주석 참고. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
 <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-<header id="nav"></header>
+<body class="admin-shell">
+<div id="shell"></div>
 
 <main class="container admin">
   <h1>관리자</h1>
   <div id="guard"></div>
 
   <div id="adminUi" hidden>
-    <div class="tabs" id="adminNav"></div>
 
     <div class="card">
       <h3 id="pFormTitle">새 문제 등록</h3>
@@ -101,6 +108,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
 <script src="/admin/js/admin-common.js"></script>
 <script>
 /* 문제 관리 — 등록·수정·삭제·목록.

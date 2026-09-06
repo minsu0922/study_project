@@ -1,4 +1,8 @@
-/* 관리 화면 공통 — 네비게이션·가드·배지·자잘한 도우미.
+/* 관리 화면 공통 — 가드·화면 간 이동·삭제 확인·복사 같은 도우미.
+ *
+ * [셸은 여기 없다] 상단 띠·기둥·배지는 admin/js/admin-shell.js로 옮겼다(2026-09-06 개편).
+ * 이 파일은 <화면이 무엇을 하든 필요한 것>만 맡는다 — 셸이 사이드바에서 다른 모양으로
+ * 바뀌어도 여기는 안 바뀌어야 한다.
  *
  * [왜 /admin/js/ 안에 두나]
  * 이 파일은 관리 API 경로를 그대로 담고 있다. /js/ 에 두면 관리자 쿠키의 Path=/admin에
@@ -16,150 +20,29 @@
  */
 
 /**
- * 관리 화면 목록 — 네비게이션과 "여기가 어디인지" 표시에 함께 쓴다.
+ * 관리 화면 공통 초기화 — 가드 → 셸 순서로 한 번에 처리한다.
  *
- * <h2>순서를 일의 단계로 바꿨다 (2026-08-29)</h2>
- *
- * <p>예전 메뉴는 <b>무엇에 대한 것인가</b>(문제/문서/주제)로 나뉘어 있었는데, 실제 일은
- * <b>어느 단계인가</b>로 흐른다: 현황을 보고 → 만들고 → 검수하고 → 정식 콘텐츠를 손본다.
- * 그 어긋남이 불편의 뿌리였다.
- *
- * <p>가장 뚜렷했던 것이 옛 "AI 검수"다. 이름은 검수인데 실제로는 셋을 했다 —
- * 생성(요금)·문제 검수·문서 검수. 생성을 떼어내니 검수 화면은 열자마자 대기 목록이 되고
- * (다 처리하면 빈 화면 = "오늘 할 일 없음"), <b>요금이 나가는 버튼이 생성 한 곳에 모인다.</b>
- *
- * <p>"주제 범위"는 별도 메뉴에서 생성 안으로 들어갔다. 주제를 정하는 것은 생성의 입력이지
- * 별개 작업이 아닌데, 메뉴 맨 끝에 있어 실제 순서(주제 → 생성)와 반대로 놓여 있었다.
- * 옛 주소 {@code /admin/topics.html}은 생성으로 넘겨 준다(북마크·문서 링크 보호).
- */
-/*
- * 2026-09-01에 "배치"를 맨 끝에 더했다. 메뉴를 여섯에서 넷으로 줄인 것이 8/29 결정이었으므로
- * 늘리는 쪽은 되돌리는 셈인데, 그래도 더한 이유는 <이 정보가 지금 네 곳에 흩어져 있어서>다:
- * application.yml의 스위치, GitHub Actions의 워크플로, generated/ 폴더의 파일, DB의 이력.
- * "왜 요즘 문제가 안 들어오지?"를 몇 주 뒤에 알아차린 사고가 이 프로젝트에 두 번 있었고,
- * 그 답은 늘 저 넷 중 하나였다(docs/14).
- *
- * 현황(index) 안에 넣는 안도 있었다. 거기 이미 배치 켜짐/꺼짐 한 줄이 있으니 자연스럽지만,
- * 보여 줄 것이 한 화면 분량이라 현황의 본래 목적(출제 분포·승인율)이 묻힌다.
- * 대신 현황의 그 한 줄은 이 탭으로 가는 링크를 겸한다.
- *
- * 순서는 맨 끝이다. 메뉴가 일의 단계 순(현황 → 검수 → 생성 → 문제 → 문서)인데 배치는
- * 단계가 아니라 <기계 상태>라 그 흐름에 낄 자리가 없다. 매일 보는 것도 아니다.
- */
-/*
- * 2026-09-02에 "제보"를 검수 옆에 넣었다(V17). 자리를 그렇게 잡은 이유는 하는 일이 같아서다 —
- * 둘 다 <읽고 판정하는> 화면이고, 다른 것은 판정 대상이 출제 전이냐 후냐뿐이다.
- * 검수함이 비면 제보함을 보는 흐름이 자연스럽다.
- *
- * 검수 배지에 합치는 안은 버렸다. 배지 하나에 두 화면의 대기 건수가 섞이면 "저기 들어가면
- * 할 일이 있다"가 어느 저기인지 흐려진다(문제·문서 대기를 하나로 합친 것은 <같은 화면>이라
- * 가능했던 것이다).
- */
-const ADMIN_PAGES = [
-  ["dashboard", "현황", "/admin/index.html"],
-  ["llm", "검수", "/admin/llm.html"],
-  ["reports", "제보", "/admin/reports.html"],
-  ["generate", "생성", "/admin/generate.html"],
-  ["problems", "문제", "/admin/problems.html"],
-  ["documents", "문서", "/admin/documents.html"],
-  ["batch", "배치", "/admin/batch.html"],
-];
-
-/**
- * 관리 페이지 공통 초기화 — 가드 → 네비 → 배지 순서로 한 번에 처리한다.
- *
- * <p>가드가 먼저인 이유: 관리자가 아니면 네비를 그릴 이유가 없다. 그리고 이 가드는
+ * <p>가드가 먼저인 이유: 관리자가 아니면 셸을 그릴 이유가 없다. 그리고 이 가드는
  * <b>장식</b>이다 — 진짜 방어는 서버 두 겹이다(정적 파일은 AdminGateFilter의 쿠키 검사,
  * API는 SecurityConfig의 hasRole). 여기서 막는 것은 "로그아웃한 채 뒤로가기로 돌아온"
  * 상황에서 빈 화면 대신 안내를 보여 주기 위해서다.
  *
- * @param active 지금 페이지의 키(ADMIN_PAGES의 첫 칸)
+ * <p>셸은 <b>가드를 통과한 뒤에만</b> 그린다. 관리자가 아닌 사람에게 관리 메뉴 이름을
+ * 늘어놓을 이유가 없다 — 데이터가 새지는 않지만 "무엇이 있는지"는 그 자체로 정보다.
+ *
+ * @param active ADMIN_MENUS의 key(admin-shell.js)
  * @returns 관리자면 true — 호출부는 이 값이 false면 데이터 적재를 건너뛴다
  */
 function initAdminPage(active) {
-  renderConsoleNav();   // 콘솔 전용 상단 바 — 여기서는 학습 메뉴를 보여 주지 않는다
-
   if (!isAdmin()) {
     document.getElementById("guard").innerHTML =
       `<div class="alert error">관리자 전용 페이지입니다. 관리자 계정으로 <a href="/login.html">로그인</a>해 주세요.</div>`;
     return false;
   }
   document.getElementById("adminUi").hidden = false;
-  renderAdminNav(active);
+  renderAdminShell(active);
   refreshAdminBadges();
   return true;
-}
-
-/**
- * 콘솔 상단 바 — <b>학습 메뉴가 없다</b>는 것이 사용자 화면과의 차이다.
- *
- * <p>관리 콘솔은 별도 영역이다. 여기에 홈·자유 퀴즈·복습이 함께 떠 있으면 "지금 어느 쪽에
- * 있는지"가 흐려지고, 검수하다가 잘못 눌러 나가기도 쉽다. 대신 <b>나가는 문 하나</b>를
- * 왼쪽에 크게 둔다 — 관리자도 학습자라 오갈 일이 있고, 막을 이유는 없다.
- *
- * <p>로그인 표시와 로그아웃은 사용자 화면과 <b>같은 함수</b>를 쓴다({@code authAreaHtml},
- * {@code wireLogout}). 복사해 두면 서버 토큰 폐기가 빠진 사본이 생겨, 콘솔에서 로그아웃했을
- * 때만 서버에 출입증이 남는 상태가 된다.
- */
-function renderConsoleNav() {
-  const el = document.getElementById("nav");
-  if (!el) return;
-  el.className = "nav";
-  el.innerHTML = `
-    <a class="brand" href="/admin/index.html">csquiz 관리</a>
-    <a href="/">← 학습 화면으로</a>
-    <span class="spacer"></span>
-    ${authAreaHtml()}`;
-  wireLogout();
-}
-
-/** 관리 화면 사이를 오가는 링크 줄. 예전 탭 버튼과 같은 모양(.tabs)을 쓴다. */
-function renderAdminNav(active) {
-  document.getElementById("adminNav").innerHTML = ADMIN_PAGES.map(([key, label, href]) =>
-    `<a class="tab-btn ${key === active ? "active" : ""}" href="${href}">${label}
-       <span id="badge-${key}" class="badge gray" hidden></span></a>`).join("");
-}
-
-/**
- * 네비의 배지 셋을 갱신한다 — 검수 대기 2종 + 주제 범위 수.
- *
- * <p>배지를 <b>모든 페이지</b>에서 부르는 것은 의도다. "검수할 게 남았다"는 지금 보고 있는
- * 화면과 무관하게 알아야 하는 정보이고, 페이지를 옮길 때마다 최신값이 보인다.
- * 요청 3회가 붙지만 예전 탭 방식도 진입 시 같은 수를 불렀다.
- */
-async function refreshAdminBadges() {
-  // 넷을 한꺼번에 보낸다 — 순서대로 기다리면 페이지가 뜨는 데 왕복 4번이 그대로 더해진다.
-  const [problems, documents, topics, reports] = await Promise.all([
-    countOf("/api/admin/llm-problems/pending-count"),
-    countOf("/api/admin/llm-documents/pending-count"),
-    countOf("/api/admin/topic-queue/count"),
-    countOf("/api/admin/reports/pending-count"),
-  ]);
-
-  // 검수 배지는 문제·문서 대기를 합쳐 하나로 보여 준다 — 한 페이지가 둘 다 다루므로
-  // 배지도 하나여야 "저기 들어가면 할 일이 있다"가 정확해진다.
-  //
-  // 이 화면이 검수만 하게 된 뒤로(2026-08-29) 이 숫자가 곧 "읽어야 할 건수"가 됐다.
-  // 예전에는 같은 페이지에 생성 폼이 있어서 배지가 가리키는 곳과 화면이 어긋났다.
-  setBadge("llm", problems + documents, false);
-
-  // 주제 범위는 뜻이 반대다: 0이면 배치가 모델 자동 선택으로 돌아가므로 0일 때 눈에 띄게 띄운다.
-  // 주제 범위가 생성 화면 안으로 들어가면서 배지도 그쪽에 붙는다.
-  setBadge("generate", topics === 0 ? "범위 없음" : null, topics === 0);
-
-  // 제보는 주황이다(검수의 회색과 다르다). 검수 대기는 매일 쌓이는 <일상>이지만 제보는
-  // "출제된 문제가 틀렸을지 모른다"는 신호라 하나만 있어도 눈에 걸려야 한다.
-  setBadge("reports", reports, reports > 0);
-}
-
-/** 배지 하나 — 값이 null이거나 0이면 숨긴다(0을 붙여 두면 늘 시끄럽다). */
-function setBadge(key, value, highlight) {
-  const el = document.getElementById("badge-" + key);
-  if (!el) return;
-  const hide = value === null || value === 0;
-  el.textContent = value;
-  el.className = highlight ? "badge orange" : "badge gray";
-  el.hidden = hide;
 }
 
 /** 배지용 개수 조회. 실패하면 0 — 배지는 장식이라 화면 기능을 막지 않는다. */

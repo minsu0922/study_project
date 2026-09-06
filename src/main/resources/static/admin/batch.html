@@ -4,17 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>관리자 · 배치 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지.
+   자세한 이유는 사용자 화면의 같은 주석 참고. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
 <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-<header id="nav"></header>
+<body class="admin-shell">
+<div id="shell"></div>
 
 <main class="container admin">
   <h1>관리자</h1>
   <div id="guard"></div>
 
   <div id="adminUi" hidden>
-    <div class="tabs" id="adminNav"></div>
 
     <!-- 이 화면은 <읽기만> 한다. 배치는 GitHub Actions에서 돌고 스위치는 application.yml에 있어
          앱에는 켜거나 즉시 실행할 수단이 없다. 버튼을 두면 눌러 놓고 안 돌아간 이유를 다시
@@ -58,6 +65,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
 <script src="/admin/js/admin-common.js"></script>
 <script>
 if (initAdminPage("batch")) {
