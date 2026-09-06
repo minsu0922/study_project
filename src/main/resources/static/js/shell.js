@@ -127,6 +127,9 @@ const MENUS = [
  *               "지금 어디인지"를 말해 줄 자리가 여기밖에 없다
  */
 function renderShell({ active = "", title = "" } = {}) {
+  applyStoredTheme();
+  applyStoredFontSize();
+
   const el = document.getElementById("shell");
   if (!el) return;
 
@@ -273,4 +276,72 @@ async function loadReviewBadge() {
       });
     }
   } catch (e) { /* 배지 실패는 무시(위 주석) */ }
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * 사용자 설정 — 브라우저에만 저장한다 (2026-09-06)
+ * ---------------------------------------------------------------------
+ * [왜 서버가 아닌가] 이 값들(테마·글자 크기·퀴즈 기본값)은 <기기의 성질>이지 계정의
+ * 성질이 아니다. 낮에 회사 모니터에서 라이트, 밤에 폰에서 다크가 자연스럽다.
+ * 서버에 두면 기기를 옮길 때마다 도로 바뀐다.
+ *
+ * [대가] 브라우저 데이터를 지우면 사라진다. 그래서 설정 화면에 "지금 쓰는 브라우저에만
+ * 저장됩니다"라고 적는다 — 사라지는 것이 버그로 보이지 않게.
+ *
+ * [기본값이 한 곳에 있다] 부르는 쪽마다 기본값을 적으면 "이 설정의 기본이 뭔가"의 답이
+ * 여러 곳에 생기고, 하나만 고치면 화면마다 다르게 동작한다.
+ *
+ * [try/catch를 두르는 이유] 시크릿 모드나 사이트 데이터 차단에서는 localStorage에
+ * <접근하는 것 자체>가 예외를 던진다. 설정을 못 읽는다고 앱이 멈추면 안 된다.
+ * ═══════════════════════════════════════════════════════════════════ */
+const PREF_DEFAULTS = {
+  csquiz_theme: "auto",       // auto | light | dark
+  csquiz_fontsize: "normal",  // small | normal | large
+  csquiz_quizsize: "10",      // 자유 퀴즈 한 판의 문제 수
+  csquiz_keyhint: "on",       // on | off — 보기 아래 숫자키 안내 줄
+};
+
+/** 저장된 값(없으면 기본값). 읽기가 실패해도 기본값으로 계속 간다. */
+function getPref(key) {
+  try {
+    return localStorage.getItem(key) ?? PREF_DEFAULTS[key];
+  } catch (e) {
+    return PREF_DEFAULTS[key];
+  }
+}
+
+/** 저장. 실패해도 조용히 넘어간다 — 이번 화면에는 이미 적용돼 있다. */
+function setPref(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* 저장 못 해도 진행 */ }
+}
+
+/**
+ * 저장된 테마를 <html>에 붙인다.
+ *
+ * <p>"auto"는 <b>속성을 지우는 것</b>으로 표현한다. 값을 넣지 않으면 기기 설정을 보는
+ * 미디어 쿼리가 살아나기 때문이다 — 즉 자동은 "아무것도 강제하지 않음"이다.
+ *
+ * <p>첫 그림이 번쩍이는 것(FOUC)을 막는 진짜 장치는 각 화면 {@code <head>}의 인라인
+ * 한 줄이다(개편 마지막 단계). 이 함수는 그 뒤에 한 번 더 부르는 안전망이라,
+ * head 한 줄을 빠뜨린 화면이 생겨도 늦게나마 맞는다.
+ */
+function applyStoredTheme() {
+  try {
+    const t = getPref("csquiz_theme");
+    if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+    else delete document.documentElement.dataset.theme;
+  } catch (e) { /* 기본(자동)으로 둔다 */ }
+}
+
+/**
+ * 글자 크기 — <html>에 클래스를 붙이고 CSS가 <b>문제 지문만</b> 키운다.
+ *
+ * <p>본문 전체를 키우지 않는 이유: 메뉴·목록까지 커지면 한 화면에 들어가는 줄이 줄어
+ * 오히려 읽기 나빠진다. 키워서 득을 보는 것은 오래 들여다보는 문제 지문이다.
+ */
+function applyStoredFontSize() {
+  const v = getPref("csquiz_fontsize");
+  document.documentElement.classList.remove("fs-small", "fs-large");
+  if (v === "small") document.documentElement.classList.add("fs-small");
+  if (v === "large") document.documentElement.classList.add("fs-large");
 }

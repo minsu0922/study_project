@@ -57,6 +57,11 @@ fillSelect(document.getElementById("fDomain"), DOMAINS, "전체");
 fillSelect(document.getElementById("fLevel"), DIFFICULTIES, "전체");
 fillSelect(document.getElementById("fType"), TYPES, "전체");
 
+// 한 판 문제 수는 설정 화면에서 고른 값으로 시작한다(없으면 10 — PREF_DEFAULTS).
+// 여기서 <읽기만> 한다: 이 화면에서 바꾼 값은 이번 판에만 쓰이고 저장하지 않는다.
+// "이번엔 5개만"이 다음부터의 기본값이 되면, 설정 화면에서 정한 값이 조용히 덮인다.
+document.getElementById("fSize").value = getPref("csquiz_quizsize");
+
 // 문제 조회는 공개 API지만 채점은 로그인 필수 — 풀기 전에 미리 알려주는 게 친절
 if (!isLoggedIn()) {
   document.getElementById("loginNotice").innerHTML =

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>설정 — csquiz</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container narrow" style="max-width:560px">
+  <h1>설정</h1>
+  <p class="meta">이 설정은 지금 쓰는 브라우저에만 저장됩니다.</p>
+
+  <div class="section-label"><span>화면</span></div>
+  <div class="setting-row" style="border-top:0">
+    <div>
+      <b>테마</b>
+      <div class="meta">기기 설정을 따르거나 직접 고릅니다</div>
+    </div>
+    <span class="seg" data-pref="csquiz_theme">
+      <button class="seg-btn" data-value="auto">자동</button>
+      <button class="seg-btn" data-value="light">라이트</button>
+      <button class="seg-btn" data-value="dark">다크</button>
+    </span>
+  </div>
+  <div class="setting-row">
+    <div>
+      <b>글자 크기</b>
+      <div class="meta">문제 지문에 적용됩니다</div>
+    </div>
+    <span class="seg" data-pref="csquiz_fontsize">
+      <button class="seg-btn" data-value="small">작게</button>
+      <button class="seg-btn" data-value="normal">보통</button>
+      <button class="seg-btn" data-value="large">크게</button>
+    </span>
+  </div>
+
+  <div class="section-label"><span>퀴즈</span></div>
+  <div class="setting-row" style="border-top:0">
+    <div>
+      <b>한 판 문제 수</b>
+      <div class="meta">자유 퀴즈를 시작할 때의 기본값</div>
+    </div>
+    <span class="seg" data-pref="csquiz_quizsize">
+      <button class="seg-btn" data-value="5">5</button>
+      <button class="seg-btn" data-value="10">10</button>
+      <button class="seg-btn" data-value="20">20</button>
+    </span>
+  </div>
+  <div class="setting-row">
+    <div>
+      <b>숫자키 안내 보이기</b>
+      <div class="meta">보기 아래의 "1~9 보기 선택 · Enter 제출" 줄</div>
+    </div>
+    <span class="seg" data-pref="csquiz_keyhint">
+      <button class="seg-btn" data-value="on">켬</button>
+      <button class="seg-btn" data-value="off">끔</button>
+    </span>
+  </div>
+
+  <div class="section-label"><span>계정</span></div>
+  <div class="setting-row" style="border-top:0">
+    <div id="accountLine"></div>
+    <button class="btn btn-outline" id="logoutLink">로그아웃</button>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+/* 설정 — 전부 브라우저에 저장한다(서버를 건드리지 않는다).
+ *
+ * [비밀번호 변경이 없는 이유]
+ * 그 API가 서버에 없다. 만들려면 현재 비밀번호 검증과 refresh 토큰 전체 폐기(다른 기기
+ * 로그아웃)까지 따라오는데, 이번 작업은 화면 개편이다. 눌러도 아무 일이 안 나는 버튼을
+ * 두느니 항목을 빼는 편이 정직하다 — 있는 척하는 화면은 한 번 속고 나면 나머지도 의심받는다.
+ *
+ * [저장 버튼이 없는 이유]
+ * 항목이 넷뿐이고 전부 되돌리기 쉬운 것들이라, 고른 즉시 적용한다. "저장"을 따로 두면
+ * 눌렀는데 아무 변화가 없고 한 번 더 눌러야 하는 상태가 생겨 오히려 헷갈린다.
+ *
+ * [테마와 글자 크기는 이 화면에서 바로 보인다]
+ * 고르고 나서 다른 화면에 가야 확인되면 무엇이 바뀌는 설정인지 알 수 없다.
+ * 나머지 둘(문제 수·숫자키 안내)은 퀴즈 화면에서만 뜻이 있어 여기서는 표시만 바뀐다. */
+if (!isLoggedIn()) {
+  location.href = "/login.html";
+} else {
+  renderShell({ active: "settings", title: "설정" });
+  markCurrent();
+
+  document.getElementById("accountLine").innerHTML =
+    `<b>${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")}</b>
+     <div class="meta">${isAdmin() ? "관리자" : "일반 사용자"}</div>`;
+
+  // 전환 묶음 전체에 리스너 하나. 항목이 늘어도 여기 코드는 안 는다.
+  document.querySelectorAll(".seg[data-pref]").forEach(seg => {
+    seg.addEventListener("click", e => {
+      const btn = e.target.closest(".seg-btn");
+      if (!btn) return;
+      setPref(seg.dataset.pref, btn.dataset.value);
+      markCurrent();
+      applyStoredTheme();
+      applyStoredFontSize();
+    });
+  });
+
+  // 로그아웃은 셸과 <같은 함수>를 쓴다. 복사해 두면 서버 토큰 폐기가 빠진 사본이 생겨,
+  // 이 화면에서 로그아웃했을 때만 서버에 14일짜리 출입증이 남는 상태가 된다.
+  wireLogout();
+}
+
+/**
+ * 저장된 값에 맞춰 눌린 버튼을 표시한다.
+ *
+ * <p>화면을 다시 열어도 지금 값이 보인다 — 설정 화면이 자기가 저장한 것을 못 읽으면
+ * 사용자는 저장이 됐는지를 다른 화면에 가서 확인해야 한다.
+ */
+function markCurrent() {
+  document.querySelectorAll(".seg[data-pref]").forEach(seg => {
+    const now = getPref(seg.dataset.pref);
+    seg.querySelectorAll(".seg-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.value === now));
+  });
+}
+</script>
+</body>
+</html>

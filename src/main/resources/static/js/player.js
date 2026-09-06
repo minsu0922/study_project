@@ -134,7 +134,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         <div class="player-actions">
           <button id="submitBtn" disabled>제출</button>
         </div>
-        <div class="kbd-hint"><kbd>1</kbd>~<kbd>9</kbd> 보기 선택 · <kbd>Enter</kbd> 제출/다음</div>
+        ${keyHint(`<kbd>1</kbd>~<kbd>9</kbd> 보기 선택 · <kbd>Enter</kbd> 제출/다음`)}
       </div>`;
 
     // 보기 버튼/입력에 이벤트 연결 (innerHTML로 그린 뒤라 여기서 바인딩)
@@ -150,6 +150,21 @@ function startPlayer(mountEl, problems, opts = {}) {
       bindOptions(p);
     }
     mountEl.querySelector("#submitBtn").addEventListener("click", submit);
+  }
+
+  /**
+   * 숫자키 안내 줄 — 설정에서 끄면 안 그린다.
+   *
+   * <p><b>여기만 끌 수 있다.</b> 순서 배열의 "순서대로 누르세요"나 짝짓기의 "왼쪽을 누른 뒤
+   * 오른쪽을"은 같은 {@code .kbd-hint} 모양이지만 성격이 다르다 — 그건 <b>조작 방법</b>이라
+   * 없으면 무엇을 해야 하는지 알 수 없다. 이 줄은 마우스로도 다 되는 일에 대한
+   * <b>단축키 안내</b>라, 아는 사람에게는 매 문제 반복되는 소음이다.
+   *
+   * <p>번호 칩(.opt .key)은 이 설정과 무관하게 남는다. 칩은 힌트가 아니라 <b>보기의 이름</b>이라,
+   * 키보드를 안 써도 "3번 보기"라고 말할 수 있어야 한다.
+   */
+  function keyHint(html) {
+    return getPref("csquiz_keyhint") === "off" ? "" : `<div class="kbd-hint">${html}</div>`;
   }
 
   /**

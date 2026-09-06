@@ -718,6 +718,13 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
   margin: 0 0 var(--sp-4); line-height: 1.55; letter-spacing: -.01em;
 }
 
+/* 글자 크기 설정 — <b>문제 지문에만</b> 건다(설정 화면에서 고른다).
+ * 메뉴·목록까지 키우면 한 화면에 들어가는 줄이 줄어 오히려 읽기 나빠진다.
+ * 키워서 득을 보는 것은 오래 들여다보는 지문이다.
+ * .q-text로 잡는 이유: 랜딩의 견본 문제도 같은 클래스를 쓰므로 함께 따라온다. */
+.fs-small .q-text { font-size: var(--fs-3); }
+.fs-large .q-text { font-size: var(--fs-5); }
+
 /* 새 문제가 나타날 때 살짝 떠오르는 등장 효과 — "다음으로 넘어갔다"는 시각 신호 */
 .fade-in { animation: fadeUp .25s ease; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

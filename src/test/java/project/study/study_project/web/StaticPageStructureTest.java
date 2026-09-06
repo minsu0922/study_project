@@ -79,6 +79,7 @@ class StaticPageStructureTest {
             "problems.html",
             "quiz.html",
             "review.html",
+            "settings.html",
             "signup.html",
             "wrong-answers.html");
 
