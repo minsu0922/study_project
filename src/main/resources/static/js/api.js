@@ -1,10 +1,15 @@
 /* =====================================================================
- * csquiz 공용 스크립트 — API 호출 / 토큰 보관 / 내비게이션
+ * csquiz 공용 스크립트 — API 호출 / 토큰 보관
  * ---------------------------------------------------------------------
- * 모든 페이지가 이 파일을 먼저 불러온다. 역할 세 가지:
+ * 모든 페이지가 이 파일을 <먼저> 불러온다. 역할 세 가지:
  *   1) api()      : 백엔드 호출을 한 곳으로 통일 (토큰 부착 + 공통 봉투 해석)
  *   2) 토큰 보관   : localStorage에 저장 (아래 "왜 localStorage인가" 참고)
- *   3) renderNav(): 모든 페이지 공통 상단 메뉴를 그린다 (로그인 상태 반영)
+ *   3) 라벨/포맷   : 분야·난이도·유형 이름표와 날짜 표기
+ *
+ * 화면을 그리는 일은 <b>여기 없다</b> — js/shell.js가 맡는다(2026-09-06에 분리).
+ * 이 파일은 화면이 있는지도 모르는 채로 동작해야 한다. 그래야 관리 콘솔처럼
+ * 셸이 다른 곳에서도 그대로 쓰이고, 인증을 고치러 들어와 메뉴 배열을 지나치는
+ * 일이 없다. 자세한 이유는 shell.js 상단 주석에 있다.
  *
  * [왜 localStorage인가]
  * 브라우저에 토큰을 두는 곳은 크게 localStorage vs 쿠키(HttpOnly) 두 가지다.
@@ -275,156 +280,7 @@ function formatDate(iso) {
   return iso.replace("T", " ").substring(0, 16);
 }
 
-/**
- * 공통 상단 메뉴. 각 페이지의 <header id="nav">에 그린다.
- * @param active 현재 페이지 키("home"|"docs"|"quiz"|"review"|"wrong"|"admin") — 해당 메뉴를 강조
- *
- * v2 구조: 홈(/)이 문서 목록이 아니라 "시작 화면"이 됐다(퀴즈 사이트 리뉴얼).
- * 문서 목록은 /documents.html로 이동. 복습 메뉴에는 "오늘 몇 개"인지 배지가 붙는다
- * (아래 loadReviewBadge — 할 일이 남아 있음을 어느 페이지에서든 보이게 하는 장치).
- */
-/* ── 권한 세 등급 ─────────────────────────────────────────────
- * 비로그인(anon) → 로그인 사용자(user) → 관리자(admin). 넓은 쪽이 좁은 쪽을 포함한다 —
- * 관리자도 학습자이므로 사용자 화면을 그대로 쓴다(관리 콘솔만 따로 있다).
- *
- * [이건 UX이지 보안이 아니다] 메뉴를 감추는 것은 "누를 곳을 줄여 주는 것"이지 막는 것이
- * 아니다. JWT payload는 조작할 수 있으므로 아래 판정은 전부 장식이다. 진짜 방어는 서버
- * 두 겹이다 — API는 SecurityConfig의 hasRole, 관리 화면 파일은 AdminGateFilter의 쿠키.
- * 그래서 이 표가 틀려도 데이터는 새지 않는다. 반대로 서버만 있고 이 표가 없으면
- * "눌렀더니 401"이 반복돼 화면이 고장 난 것처럼 보인다. */
-const ROLE_RANK = { public: 0, user: 1, admin: 2 };
-
-/** 지금 이 브라우저의 등급. */
-function currentRole() {
-  if (isAdmin()) return "admin";
-  if (isLoggedIn()) return "user";
-  return "anon";
-}
-
-/** need("public"|"user"|"admin") 이상의 권한을 가졌는가. 페이지 가드도 이걸 쓰면 된다. */
-function hasRole(need) {
-  const have = { anon: 0, user: 1, admin: 2 }[currentRole()];
-  return have >= (ROLE_RANK[need] ?? 0);
-}
-
-/**
- * 메뉴 선언 — <b>"이 메뉴는 어느 권한이 필요한가"를 적어 두는 유일한 곳</b>.
- *
- * 예전에는 renderNav 안에 링크가 하드코딩돼 있었고 관리자 링크만 조건부였다. 그래서
- * 비로그인 방문자에게도 복습·오답노트가 보였고, 누르면 그제야 "로그인하세요"가 떴다.
- * 권한이 셋이 된 지금 그 방식은 조건문이 링크 수만큼 흩어진다는 뜻이라, 표로 옮긴다.
- * 메뉴가 늘어도 여기 한 줄만 추가하면 내비게이션이 알아서 걸러 준다.
- *
- * 메뉴 이름은 기능명이 아니라 "언제 누르는지"가 드러나게 짓는다(UX 1단계 개편) —
- * "문서"는 무엇의 문서인지 모호해 "개념 문서"로 바꿨다.
- *
- * <h2>여섯에서 넷으로 (2026-08-29)</h2>
- *
- * <p>메뉴를 코드로 훑어 보니 셋이 어긋나 있었다.
- * <ul>
- *   <li><b>오늘의 퀴즈가 메뉴에 없었다.</b> 이 앱이 내건 약속은 "매일 조금씩"이고 매일 하는
- *       행동이 데일리인데, 거기 가려면 홈의 히어로 버튼이나 자유 퀴즈 안내문의 링크를
- *       찾아야 했다. 가장 중요한 행동이 메뉴에 없는 상태였다.
- *   <li><b>"자유 퀴즈"와 "문제"가 같은 일을 했다.</b> 둘 다 풀 것을 고르는 자리다 — 한쪽은
- *       조건을 걸고 무작위 열 문제, 다른 쪽은 목록에서 하나. 이름만 봐서는 어디로 들어가야
- *       하는지 안 갈린다. 자유 퀴즈는 문제 목록 안의 <b>"무작위로 10문제"</b> 버튼이 됐다.
- *   <li><b>"복습"과 "오답노트"도 한 쌍이었다.</b> 복습 화면이 아예 "내 답·해설을 다시 읽고
- *       싶으면 → 오답노트"라고 안내한다 — 화면이 스스로 자기가 반쪽이라고 말한 셈이다.
- *       둘을 한 구역으로 묶고 화면 안 탭으로 오간다.
- * </ul>
- *
- * <p>홈이 <b>"오늘"</b>이 됐다. 첫 화면이 광고가 아니라 오늘 할 일이 되므로 이름도 그것을
- * 가리켜야 한다. 데일리 화면(daily.html)도 이 메뉴에 걸린다 — 같은 구역이다.
- *
- * <p>"개념 문서"는 줄이지 않았다. 시안에서는 "개념"으로 짧게 뒀지만, 위 주석에 적힌
- * 과거 판단("문서만으로는 무엇의 문서인지 모호하다")이 여전히 맞다. 넷이면 자리가 넉넉하다.
- */
-const MENUS = [
-  { key: "today", label: "오늘", href: "/", need: "public" },
-  // 문제 목록은 내 풀이 기록을 함께 보여 주는 화면이라 로그인 사용자에게만 띄운다(docs/18)
-  { key: "problems", label: "문제", href: "/problems.html", need: "user" },
-  // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
-  { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge" },
-  { key: "docs", label: "개념 문서", href: "/documents.html", need: "public" },
-  // 관리 콘솔은 "다른 영역으로 나간다"는 뜻이라 화살표를 붙여 다른 메뉴와 구분한다
-  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/index.html", need: "admin" },
-];
-
-/**
- * 사용자 화면 상단 내비게이션 — 권한에 맞는 메뉴만 그린다.
- *
- * v2 구조: 홈(/)이 문서 목록이 아니라 "시작 화면"이 됐다(퀴즈 사이트 리뉴얼).
- * 문서 목록은 /documents.html로 이동.
- */
-function renderNav(active) {
-  const el = document.getElementById("nav");
-  if (!el) return;
-  el.className = "nav";
-  el.innerHTML = `
-    <a class="brand" href="/">csquiz</a>
-    ${MENUS.filter(m => hasRole(m.need)).map(m =>
-      `<a class="${m.key === active ? "active" : ""}" href="${m.href}">${m.label}` +
-      `${m.badge ? `<span id="${m.badge}"></span>` : ""}</a>`).join("")}
-    <span class="spacer"></span>
-    ${authAreaHtml()}`;
-  loadReviewBadge();
-  wireLogout();
-}
-
-/** 로그인 상태 표시 영역 — 사용자 화면과 관리 콘솔이 함께 쓴다. */
-function authAreaHtml() {
-  return isLoggedIn()
-    ? `<span class="user-email">${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")}</span>
-       <a href="#" id="logoutLink">로그아웃</a>`
-    : `<a href="/login.html">로그인</a>
-       <a href="/signup.html" class="btn btn-outline" style="padding:5px 14px">회원가입</a>`;
-}
-
-/**
- * 로그아웃 링크에 동작을 붙인다 — <b>두 내비게이션이 같은 함수를 쓴다</b>.
- *
- * 복사해 두면 안 되는 코드다: 서버의 refresh 토큰 폐기가 빠진 사본이 생기면
- * "로그아웃했는데 서버에는 14일짜리 출입증이 살아 있는" 상태가 그쪽 화면에서만 생긴다.
- */
-function wireLogout() {
-  const logout = document.getElementById("logoutLink");
-  if (!logout) return;
-  logout.addEventListener("click", async e => {
-    e.preventDefault();
-    // 서버의 refresh 토큰을 먼저 폐기(로드맵 2) — 브라우저만 지우면 서버엔 14일짜리
-    // 출입증이 살아 있는 셈이라, "로그아웃 = 서버에서도 회수"가 올바른 순서다.
-    // 관리 화면 출입증 쿠키도 이 응답에서 함께 지워진다(AdminGateCookie).
-    const refreshToken = localStorage.getItem(REFRESH_KEY);
-    if (refreshToken) {
-      try {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
-      } catch (err) { /* 서버 폐기 실패해도 로컬 로그아웃은 진행(TTL이 안전망) */ }
-    }
-    clearLogin();
-    location.href = "/"; // 로그아웃 후 첫 화면으로
-  });
-}
-
-/**
- * 복습 메뉴 배지 — "오늘 복습할 문제 N개"를 메뉴에 작은 숫자로 표시한다.
- *
- * 이유: 간격 반복(로드맵 4)은 "때가 됐을 때 다시 보는 것"이 핵심이라, 사용자가
- * 복습 페이지에 일부러 들어가지 않아도 할 일이 있음을 어디서든 알 수 있어야 한다.
- * size=1로 요청하는 이유: 필요한 건 목록이 아니라 totalElements(개수)뿐이라
- * 본문 전송을 최소화한다. 실패는 조용히 무시 — 배지는 있으면 좋은 정보일 뿐,
- * 이것 때문에 페이지가 에러를 띄우면 주객전도다.
- */
-async function loadReviewBadge() {
-  if (!isLoggedIn()) return;
-  try {
-    const data = await api("/api/me/reviews/today?size=1");
-    const el = document.getElementById("reviewBadge");
-    if (el && data.totalElements > 0) {
-      el.innerHTML = `<span class="nav-badge">${data.totalElements}</span>`;
-    }
-  } catch (e) { /* 배지 실패는 무시(위 주석) */ }
-}
+/* 내비게이션·권한 판정·로그인 표시는 js/shell.js로 옮겼다(2026-09-06 화면 개편).
+   이 파일은 <토큰 보관·HTTP 호출·응답 봉투 해석>과 라벨/포맷 헬퍼만 맡는다.
+   의존 방향은 shell.js → api.js 한쪽이다 — 이 파일이 화면을 아는 순간
+   화면 없이 쓰는 곳(관리 콘솔·테스트)이 셸을 함께 끌고 오게 된다. */

@@ -109,12 +109,25 @@ class StaticPageStructureTest {
     }
 
     @Test
-    @DisplayName("모든 사용자 화면이 api.js를 싣는다")
-    void everyPageLoadsApiJs() throws IOException {
+    @DisplayName("모든 사용자 화면이 api.js를 싣고, 그 뒤에 shell.js를 싣는다")
+    void everyPageLoadsApiThenShell() throws IOException {
         for (String page : USER_PAGES) {
+            String html = read(page);
+
+            int api = html.indexOf("/js/api.js");
+            int shell = html.indexOf("/js/shell.js");
+
             // 토큰 보관과 HTTP 호출이 여기 있다. 빠지면 그 화면은 로그인 상태조차 모른다.
-            assertThat(read(page)).as("%s: /js/api.js를 안 싣는다", page)
-                    .contains("/js/api.js");
+            assertThat(api).as("%s: /js/api.js를 안 싣는다", page).isNotNegative();
+
+            // 내비게이션이 여기 있다. 빠지면 그 화면만 메뉴가 통째로 사라진다.
+            assertThat(shell).as("%s: /js/shell.js를 안 싣는다", page).isNotNegative();
+
+            // 순서가 곧 의존성이다. 번들러가 없어 전역 함수로 이어 붙이는 구조라,
+            // shell.js가 먼저 실행되면 그 안에서 부르는 escapeHtml·isAdmin·api가 아직 없다.
+            // 사람이 지켜야 하는 규칙은 언젠가 깨지므로 이 줄이 대신 지킨다.
+            assertThat(shell).as("%s: shell.js는 api.js 뒤에 와야 한다", page)
+                    .isGreaterThan(api);
         }
     }
 
