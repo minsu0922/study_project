@@ -12,7 +12,11 @@
 
 ## Global Constraints
 
-- **프런트엔드 테스트 도구가 없다.** 이 저장소에 `package.json`도, JS 테스트 러너도 없다. 도구를 새로 들이는 것은 기술 스택 변경이라 이 계획의 범위 밖이다. **서버를 건드리는 Task 4·5만 TDD**로 하고, 화면 작업은 **앱을 띄워 눈으로 확인**하는 것이 검증이다.
+- **프런트엔드 테스트 도구를 새로 들이지 않는다.** `package.json`도 JS 테스트 러너도 없고, 넣으면 "빌드 도구 없는 정적 HTML"이라는 전제가 흔들린다. 대신 세 겹으로 본다.
+  1. **서버를 건드리는 Task 4·5는 TDD** — 기존 JUnit·MockMvc 그대로
+  2. **화면 구조는 스모크 테스트(Task 1B)** — 스프링도 브라우저도 안 띄우고 HTML 파일을 읽어 규칙을 확인한다. 의존성 0개. HTML 13개를 전부 건드리는 작업이라 script 태그 하나 빠뜨린 화면이 조용히 죽는 것을 막는다
+  3. **눈으로 보는 것은 앱을 띄워서** — 375/768/1280 세 폭. 브라우저 자동화 도구가 붙어 있으면 스크린샷과 콘솔 오류 확인에 쓴다(저장소에는 안 남긴다)
+- **시각 회귀 테스트(스크린샷 비교)는 넣지 않는다.** 모든 화면이 바뀌는 개편이라 기준 이미지를 매 커밋 갱신하게 되고, 그러면 잡아주는 것이 없다.
 - 화면 확인 폭은 **375px · 768px · 1280px** 셋. 매 화면 작업마다 셋 다 본다.
 - **브라우저 콘솔 오류 0**을 유지한다. 지금 0인 상태다.
 - 대비는 **WCAG AA** — 본문 4.5:1, 큰 글자(18.66px 이상 또는 굵은 14px 이상) 3:1. 라이트·다크 양쪽에서 잰다.
@@ -54,6 +58,7 @@ DevTools를 열고 **Console 탭에 빨간 줄이 없는지**, **Toggle device t
 | `quiz/repository/ProblemRepository.java` | 분야별 전체 개수 쿼리 | 수정 |
 | `quiz/controller/PublicStatsController.java` | 공개 집계 | **신규** |
 | `quiz/dto/PublicStatsResponse.java` | 공개 집계 응답 | **신규** |
+| `test/.../web/StaticPageStructureTest.java` | 화면 구조 스모크 테스트 | **신규** |
 
 ---
 
@@ -238,6 +243,196 @@ Claude-Session: https://claude.ai/code/session_01KAnMirEG161iMhDTvY6LAH
 
 ---
 
+## Task 1B: 화면 구조 스모크 테스트
+
+**번호가 1B인 이유:** 뒤 Task들의 번호를 그대로 두려는 것이다. 이 Task는 나중에 끼워
+넣기로 한 것이라, 2~12를 한 칸씩 밀면 문서 곳곳의 "Task 5(랜딩)" 같은 참조가 전부
+어긋난다. 순서상 두 번째로 한다.
+
+**지금 통과하는 규칙만 넣는다.** 셸·테마처럼 아직 안 만든 것의 규칙은 그것을 만드는
+Task에서 이 테스트에 이어 붙인다 — 그래야 빌드가 여러 커밋 동안 빨갛지 않다.
+
+**Files:**
+- Create: `src/test/java/project/study/study_project/web/StaticPageStructureTest.java`
+
+**Interfaces:**
+- Consumes: 없음 (스프링 컨텍스트를 안 띄운다)
+- Produces: `USER_PAGES` 상수 — Task 2·3·12가 규칙을 더할 때 이 목록을 그대로 쓴다
+
+- [ ] **Step 1: 테스트를 쓴다**
+
+```java
+package project.study.study_project.web;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * 사용자 화면 HTML의 <b>구조</b>를 지키는 스모크 테스트.
+ *
+ * <h2>왜 이 테스트가 있나</h2>
+ *
+ * <p>2026-09-06 화면 개편에서 HTML 13개를 <b>전부</b> 건드린다. 이런 작업에서 가장 흔한
+ * 사고는 논리 오류가 아니라 <b>한 파일을 빠뜨리는 것</b>이다 — script 태그 하나가 없으면
+ * 그 화면만 조용히 죽는데, 나머지 열두 개가 멀쩡하니 눈으로는 좀처럼 안 걸린다.
+ * 실제로 이 저장소에서 포커스 링 규칙이 한 화면에만 있던 일이 있었다(docs/19).
+ *
+ * <h2>왜 스프링도 브라우저도 안 띄우나</h2>
+ *
+ * <p>확인하려는 것이 <b>파일의 내용</b>이지 실행 결과가 아니다. 톰캣을 띄우면 몇 초가 들고,
+ * 브라우저를 띄우면 의존성과 CI 시간이 붙는데, 잡는 결함은 똑같다.
+ * {@code AdminGateRealServerTest}가 진짜 서버를 띄우면서 "이 방식을 다른 테스트로
+ * 넓히지 않는다"고 적어 둔 것도 같은 판단이다.
+ *
+ * <p>대신 <b>못 잡는 것</b>이 있다: 실행 중에 나는 JS 오류. 그건 개발 중에 앱을 띄워
+ * 콘솔로 본다. 이 테스트는 "재료가 다 들어갔나"만 본다.
+ *
+ * <h2>목록을 손으로 적고 <em>동시에</em> 검사한다</h2>
+ *
+ * <p>{@link #USER_PAGES}는 사람이 적는 목록이다. 그런데 목록만 있으면 화면을 새로
+ * 만들고 목록에 안 넣는 순간 그 화면은 영원히 검사 밖이 된다 — 정작 새 화면이 가장
+ * 위험한데. 그래서 {@link #everyPageIsListed()}가 <b>폴더를 훑어 목록과 대조</b>한다.
+ * 새 HTML을 만들면 그 테스트가 먼저 빨개져서 목록에 넣으라고 말한다.
+ */
+class StaticPageStructureTest {
+
+    private static final Path STATIC_DIR = Path.of("src", "main", "resources", "static");
+
+    /** 사용자 화면. 관리 콘솔(admin/)은 개편 2단계라 여기 없다. */
+    private static final List<String> USER_PAGES = List.of(
+            "index.html", "daily.html", "document.html", "documents.html",
+            "login.html", "problems.html", "quiz.html", "review.html",
+            "signup.html", "wrong-answers.html");
+
+    @Test
+    @DisplayName("모든 사용자 화면이 한국어·모바일 대응·제목·공용 스타일을 갖춘다")
+    void everyPageHasTheBasics() throws IOException {
+        for (String page : USER_PAGES) {
+            String html = read(page);
+
+            // lang이 없으면 스크린 리더가 영어로 읽는다. 한국어 화면에서 치명적이다
+            assertThat(html).as("%s: lang=\"ko\"", page).contains("lang=\"ko\"");
+
+            // 이게 없으면 폰이 데스크톱 폭으로 그린 뒤 축소한다 — 모바일 우선 설계가 통째로 무의미해진다
+            assertThat(html).as("%s: viewport meta", page)
+                    .contains("name=\"viewport\"");
+
+            // 탭 제목. 여러 탭을 열어 두는 화면이라 "무엇의 화면인지"가 제목에 있어야 한다
+            assertThat(html).as("%s: <title>", page).contains("<title>");
+
+            // 공용 스타일을 안 물면 그 화면만 토큰 밖에 남는다
+            assertThat(html).as("%s: style.css", page).contains("/css/style.css");
+        }
+    }
+
+    @Test
+    @DisplayName("모든 사용자 화면이 api.js를 싣는다")
+    void everyPageLoadsApiJs() throws IOException {
+        for (String page : USER_PAGES) {
+            assertThat(read(page)).as("%s: api.js", page).contains("/js/api.js");
+        }
+    }
+
+    /**
+     * 폴더에 있는데 목록에 없는 화면을 잡는다.
+     *
+     * <p>이 테스트가 이 클래스의 핵심이다. 위의 규칙들은 목록에 든 것만 검사하므로,
+     * 목록을 갱신하지 않으면 새 화면이 조용히 빠져나간다. 새 화면이야말로 규칙을
+     * 빠뜨리기 가장 쉬운 곳이다.
+     */
+    @Test
+    @DisplayName("static 폴더의 모든 화면이 검사 목록에 들어 있다")
+    void everyPageIsListed() throws IOException {
+        try (Stream<Path> files = Files.list(STATIC_DIR)) {
+            List<String> found = files
+                    .map(p -> p.getFileName().toString())
+                    .filter(name -> name.endsWith(".html"))
+                    .sorted()
+                    .toList();
+
+            assertThat(found)
+                    .as("새 화면을 만들었다면 USER_PAGES에도 넣어야 이 검사를 받는다")
+                    .containsExactlyInAnyOrderElementsOf(USER_PAGES);
+        }
+    }
+
+    private String read(String page) throws IOException {
+        Path path = STATIC_DIR.resolve(page);
+        assertThat(Files.exists(path)).as("%s 파일이 있어야 한다", page).isTrue();
+        return Files.readString(path);
+    }
+}
+```
+
+- [ ] **Step 2: 테스트를 돌려 통과를 확인한다**
+
+```powershell
+.\gradlew.bat test --tests "*StaticPageStructureTest*" --console=plain
+```
+
+기대: **PASS 3건.** 지금 상태를 그대로 적은 규칙이라 처음부터 초록이다.
+
+빨간불이 나오면 그건 **테스트가 틀린 게 아니라 화면 하나가 이미 규칙을 어기고 있는 것**이다.
+어느 화면인지 메시지에 나온다 — 그 화면을 고친다(규칙을 낮추지 않는다).
+
+- [ ] **Step 3: 일부러 깨뜨려 본다**
+
+테스트가 진짜 잡는지 확인한다. `login.html`에서 `<script src="/js/api.js"></script>` 줄을
+잠깐 지우고:
+
+```powershell
+.\gradlew.bat test --tests "*StaticPageStructureTest*" --console=plain
+```
+
+기대: **실패**, 메시지에 `login.html: api.js`가 뜬다.
+**확인했으면 지운 줄을 되돌린다.**
+
+- [ ] **Step 4: 전체 테스트**
+
+```powershell
+.\gradlew.bat test --console=plain
+```
+
+기대: 전부 통과.
+
+- [ ] **Step 5: 커밋**
+
+```powershell
+git add src/test/java
+git commit -m @'
+test(web): 화면 구조 스모크 테스트를 둔다
+
+이번 개편에서 HTML 13개를 전부 건드린다. 이런 작업에서 가장 흔한 사고는
+논리 오류가 아니라 한 파일을 빠뜨리는 것이다 — script 태그 하나가 없으면
+그 화면만 조용히 죽는데, 나머지 열두 개가 멀쩡하니 눈으로는 안 걸린다.
+docs/19에서 포커스 링 규칙이 한 화면에만 있던 일이 실제로 있었다.
+
+스프링도 브라우저도 안 띄운다. 확인하려는 것이 파일의 내용이지 실행
+결과가 아니다. AdminGateRealServerTest가 진짜 서버를 띄우면서 "이 방식을
+다른 테스트로 넓히지 않는다"고 적어 둔 것과 같은 판단이다.
+
+핵심은 폴더를 훑어 목록과 대조하는 세 번째 테스트다. 규칙 검사는 목록에
+든 것만 보므로, 목록을 갱신하지 않으면 새 화면이 조용히 빠져나간다.
+새 화면이야말로 규칙을 빠뜨리기 가장 쉬운 곳이다.
+
+지금 통과하는 규칙만 넣었다. 셸·테마의 규칙은 그것을 만드는 단계에서
+이어 붙인다 — 그래야 빌드가 여러 커밋 동안 빨갛지 않다.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KAnMirEG161iMhDTvY6LAH
+'@
+```
+
+---
+
 ## Task 2: `shell.js`를 떼어낸다 (동작은 그대로)
 
 `api.js`가 지금 인증·통신·화면을 다 하고 있다(430줄). 화면 쪽을 새 파일로 옮긴다.
@@ -330,10 +525,42 @@ Get-Content src/main/resources/static/js/api.js | Select-Object -Skip 285 -First
 - 관리 콘솔(`/admin/index.html`) 상단 바와 로그아웃도 동작한다
 - **콘솔에 `renderNav is not defined` 같은 빨간 줄이 없다** — 있으면 script 태그를 빠뜨린 파일이다
 
-- [ ] **Step 6: 커밋**
+- [ ] **Step 6: 스모크 테스트에 규칙을 이어 붙인다**
+
+`StaticPageStructureTest`의 `everyPageLoadsApiJs`를 이렇게 넓힌다:
+
+```java
+    @Test
+    @DisplayName("모든 사용자 화면이 api.js를 싣고, 그 뒤에 shell.js를 싣는다")
+    void everyPageLoadsApiThenShell() throws IOException {
+        for (String page : USER_PAGES) {
+            String html = read(page);
+
+            int api = html.indexOf("/js/api.js");
+            int shell = html.indexOf("/js/shell.js");
+
+            assertThat(api).as("%s: api.js", page).isNotNegative();
+            assertThat(shell).as("%s: shell.js", page).isNotNegative();
+
+            // 순서가 곧 의존성이다. 번들러가 없어 전역 함수로 이어 붙이는 구조라,
+            // shell.js가 먼저 실행되면 그 안에서 부르는 escapeHtml·api가 아직 없다.
+            // 사람이 지켜야 하는 규칙이므로 사람 대신 이 줄이 지킨다.
+            assertThat(shell).as("%s: shell.js는 api.js 뒤에 와야 한다", page)
+                    .isGreaterThan(api);
+        }
+    }
+```
+
+돌려서 통과를 확인한다:
 
 ```powershell
-git add src/main/resources/static
+.\gradlew.bat test --tests "*StaticPageStructureTest*" --console=plain
+```
+
+- [ ] **Step 7: 커밋**
+
+```powershell
+git add src/main/resources/static src/test/java
 git commit -m @'
 refactor(shell): 내비게이션을 api.js에서 shell.js로 떼어낸다
 
@@ -648,10 +875,39 @@ main        { grid-area: main; min-width: 0; }   /* min-width:0이 없으면 긴
   이걸 확인하지 않으면 같은 일이 되풀이된다
 - 콘솔 빨간 줄 0
 
-- [ ] **Step 6: 커밋**
+- [ ] **Step 6: 스모크 테스트에 셸 규칙을 더한다**
+
+`StaticPageStructureTest`에 테스트를 하나 더한다:
+
+```java
+    @Test
+    @DisplayName("모든 사용자 화면이 셸 자리를 두고, 옛 내비 자리는 남기지 않는다")
+    void everyPageHasShellMount() throws IOException {
+        for (String page : USER_PAGES) {
+            String html = read(page);
+
+            // renderShell이 채울 자리. 없으면 그 화면만 메뉴가 통째로 사라진다
+            assertThat(html).as("%s: <div id=\"shell\">", page)
+                    .contains("id=\"shell\"");
+
+            // 옛 자리가 남아 있으면 빈 <header>가 화면 맨 위에 여백으로 남는다.
+            // 눈에 잘 안 띄는 종류의 잔재라 사람보다 이 줄이 낫다.
+            assertThat(html).as("%s: 옛 id=\"nav\"가 남아 있다", page)
+                    .doesNotContain("id=\"nav\"");
+        }
+    }
+```
+
+돌려서 통과를 확인한다:
 
 ```powershell
-git add src/main/resources/static
+.\gradlew.bat test --tests "*StaticPageStructureTest*" --console=plain
+```
+
+- [ ] **Step 7: 커밋**
+
+```powershell
+git add src/main/resources/static src/test/java
 git commit -m @'
 feat(shell): 상단 가로바를 사이드바와 하단 탭바로 바꾼다
 
@@ -2507,7 +2763,39 @@ docs/19에서 스펙 값을 그대로 옮겼다가 같은 자리에서 걸린 �
 
 다크를 맞추다 라이트가 깨지는 일이 흔하다. 12개 화면을 라이트에서 다시 본다.
 
-- [ ] **Step 6: 전체 빌드**
+- [ ] **Step 6: 스모크 테스트에 테마 규칙을 더한다**
+
+`USER_PAGES`에 `me.html` `settings.html` 둘을 더하고(Task 10·11에서 만든 것들 —
+`everyPageIsListed`가 이미 빨간불로 알려 줬을 것이다), 테스트를 하나 더한다:
+
+```java
+    @Test
+    @DisplayName("모든 사용자 화면이 스타일시트보다 먼저 테마를 붙인다")
+    void themeIsAppliedBeforeStylesheet() throws IOException {
+        for (String page : USER_PAGES) {
+            String html = read(page);
+
+            int theme = html.indexOf("csquiz_theme");
+            int css = html.indexOf("/css/style.css");
+
+            assertThat(theme).as("%s: <head>의 테마 인라인 스크립트", page).isNotNegative();
+
+            // 순서가 전부다. 스타일시트보다 늦으면 다크를 고른 사람도 첫 그림이
+            // 라이트로 한 번 번쩍인다(FOUC). 눈에 확실히 보이는 결함인데
+            // 화면 하나에서만 빠뜨리면 개발자 기기에서는 잘 안 걸린다.
+            assertThat(theme).as("%s: 테마 스크립트가 style.css보다 앞에 와야 한다", page)
+                    .isLessThan(css);
+        }
+    }
+```
+
+돌려서 통과를 확인한다:
+
+```powershell
+.\gradlew.bat test --tests "*StaticPageStructureTest*" --console=plain
+```
+
+- [ ] **Step 7: 전체 빌드**
 
 ```powershell
 .\gradlew.bat build --console=plain
@@ -2515,10 +2803,10 @@ docs/19에서 스펙 값을 그대로 옮겼다가 같은 자리에서 걸린 �
 
 기대: 통과.
 
-- [ ] **Step 7: 커밋**
+- [ ] **Step 8: 커밋**
 
 ```powershell
-git add src/main/resources/static
+git add src/main/resources/static src/test/java
 git commit -m @'
 feat(theme): 다크 모드를 실제로 켜고 대비를 재서 맞춘다
 
