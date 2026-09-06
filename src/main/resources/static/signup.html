@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>회원가입 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — 이 화면들에서 유일하게 인라인인 코드다.
+   shell.js는 <body> 끝에서 도는데 거기서 붙이면 다크를 고른 사람도 첫 그림이 라이트로
+   한 번 번쩍인다(FOUC). 눈에 확실히 보이는 결함이라 예외를 하나만 만들었다.
+   나머지 테마 코드(전환 UI·저장·기기 설정 감지)는 전부 shell.js와 style.css에 있다. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>

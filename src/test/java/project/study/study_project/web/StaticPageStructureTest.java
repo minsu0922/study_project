@@ -155,6 +155,29 @@ class StaticPageStructureTest {
         }
     }
 
+    @Test
+    @DisplayName("모든 사용자 화면이 스타일시트보다 먼저 테마를 붙인다")
+    void themeIsAppliedBeforeStylesheet() throws IOException {
+        for (String page : USER_PAGES) {
+            String html = read(page);
+
+            int theme = html.indexOf("csquiz_theme");
+            int css = html.indexOf("/css/style.css");
+
+            assertThat(theme).as("%s: <head>에 테마 인라인 스크립트가 없다", page).isNotNegative();
+
+            // 순서가 전부다. 스타일시트보다 늦으면 다크를 고른 사람도 첫 그림이 라이트로
+            // 한 번 번쩍인다(FOUC). 눈에 확실히 보이는 결함인데, 개발자 기기가 라이트면
+            // 손으로 아무리 확인해도 안 걸린다.
+            //
+            // 실제로 이 규칙을 넣기 직전에 settings.html 하나가 빠져 있었다 —
+            // 그 화면은 마크업에 이미 "csquiz_theme"라는 글자가 있어서(테마 전환 버튼의
+            // data-pref) 일괄 삽입 스크립트가 "이미 들어갔다"고 판단하고 건너뛰었다.
+            assertThat(theme).as("%s: 테마 스크립트가 style.css보다 앞에 와야 한다", page)
+                    .isLessThan(css);
+        }
+    }
+
     /**
      * 폴더에 있는데 목록에 없는 화면(그리고 그 반대)을 잡는다.
      *
