@@ -1875,15 +1875,28 @@ Get-Content src/main/resources/static/js/player.js
 
 ```javascript
   /* 색만으로 알리지 않는다 — 초록·빨강이 같은 회색으로 보이는 사람에게
-     테두리 색은 아무 정보도 아니다. 배지 글자가 진짜 신호다. */
+     테두리 색은 아무 정보도 아니다. 배지 글자가 진짜 신호다.
+     .verdict를 쓰고 .meta를 안 쓰는 이유는 바로 아래 참고. */
   correctEl.classList.add("correct");
   correctEl.insertAdjacentHTML("beforeend",
-    `<span class="meta" style="margin-left:auto">✓ 정답</span>`);
+    `<span class="verdict">✓ 정답</span>`);
   if (myEl && myEl !== correctEl) {
     myEl.classList.add("wrong");
     myEl.insertAdjacentHTML("beforeend",
-      `<span class="meta" style="margin-left:auto">✕ 내 답</span>`);
+      `<span class="verdict">✕ 내 답</span>`);
   }
+```
+
+**`.meta`(흐린 글자)를 쓰면 안 된다.** Task 1에서 실제로 재 보니 라이트에서
+`--muted`를 `--wrong-bg` 위에 올리면 **4.35:1**로 AA(4.5:1)에 못 미친다.
+흰 배경에서는 4.76:1로 통과하던 색이라 눈으로는 안 걸린다 — 색이 있는 판 위로
+옮기면 기준을 다시 재야 한다는 사례가 하나 더 생긴 셈이다.
+한 단계 진한 `--text-2`를 쓴다(라이트 7.58:1, 다크 10.01:1).
+
+```css
+/* 정답/오답 판 위에 얹히는 짧은 라벨. 흐린 글자(--muted)를 쓰면 색이 있는 판 위에서
+   대비가 4.35:1로 미달한다 — 흰 배경에서 통과하던 값이라 눈으로는 안 걸린다. */
+.opt .verdict { margin-left: auto; color: var(--text-2); font-size: var(--fs-1); font-weight: 700; }
 ```
 
 (4) 짝짓기·순서 배열은 폰에서 1열로 세운다:

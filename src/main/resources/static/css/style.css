@@ -162,65 +162,63 @@
  * 밝은 쪽으로 올리고 배경은 같은 계열의 아주 어두운 값으로 뒤집었다.
  * 색만으로 알리지 않는 규칙은 그대로다 — 배지 안에 "초급/중급/고급" 글자가 있다.
  * ═══════════════════════════════════════════════════════════════════ */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0b1120;
-    --card: #151d2e;
-    --fill: #1e293b;
-    --text: #e2e8f0;
-    --text-2: #cbd5e1;
-    --muted: #94a3b8;
-    --border: #293548;
-    --border-strong: #3b4a63;
+/* [기기 설정 자동 감지는 아직 켜지 않았다]
+ *
+ * 처음에는 @media (prefers-color-scheme: dark) 블록을 여기 함께 뒀다. 그 결과
+ * <b>기기가 다크인 사람의 화면이 그 자리에서 깨졌다</b> — 글자색은 토큰을 따라 밝아지는데
+ * 카드·버튼 배경은 아직 흰색이 하드코딩돼 있어 흰 글자에 흰 배경이 됐다.
+ *
+ * 토큰을 먼저 선언하고 컴포넌트를 나중에 옮기는 순서 자체는 맞다. 틀린 것은 <b>자동
+ * 감지를 그 순서의 첫 칸에 켠 것</b>이다. 자동 감지는 "아무도 아무것도 안 했는데 화면이
+ * 바뀌는" 스위치라, 준비가 덜 된 상태에서 켜면 그 사이 기간을 사용자가 뒤집어쓴다.
+ * 반면 아래 [data-theme="dark"]는 <b>누군가 명시적으로 고른 경우</b>에만 켜지고,
+ * 지금은 그걸 고를 화면(설정)이 아직 없어 아무 일도 일어나지 않는다.
+ *
+ * 그래서 자동 감지는 <b>모든 컴포넌트가 변수만 쓰게 된 뒤</b>(개편 마지막 단계)에
+ * 되살린다. 그때 붙일 블록은 아래와 값이 같고 선택자만 이렇게 다르다:
+ *   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { … } }
+ * :not([data-theme="light"])가 붙는 이유 — 이게 없으면 기기가 다크인 사람이
+ * "라이트"를 골라도 다크가 이긴다. */
 
-    --primary: #818cf8;
-    --primary-dark: #a5b4fc;
-    --primary-soft: #1e1b4b;
-    --primary-border: #3730a3;
-
-    --review: #fbbf24;
-    --review-soft: #78350f;
-
-    --correct: #34d399;
-    --wrong: #f87171;
-    --correct-bg: #064e3b;
-    --wrong-bg: #7f1d1d;
-
-    --lv1-bg: #064e3b; --lv1-fg: #34d399; --lv1-solid: #34d399;
-    --lv2-bg: #78350f; --lv2-fg: #fbbf24; --lv2-solid: #fbbf24;
-    --lv3-bg: #7f1d1d; --lv3-fg: #f87171; --lv3-solid: #f87171;
-
-    --overlay-shadow: 0 8px 24px rgba(0, 0, 0, .45);
-  }
-}
-
-/* 수동으로 다크를 고른 경우 — 기기 설정이 라이트여도 이긴다. 위 블록과 값이 같다. */
+/* 수동으로 다크를 고른 경우에만 켜진다. */
 :root[data-theme="dark"] {
-  --bg: #0b1120;
-  --card: #151d2e;
-  --fill: #1e293b;
+  /* 바탕이 #0f172a인 것은 우연이 아니다 — <라이트의 본문 글자색(--text)이 그대로
+     다크의 바탕>이다. 처음에는 한 단계 더 어두운 #0b1120이었는데 화면이 무거웠다.
+     새 값을 지어내는 대신 이미 쓰던 눈금에서 골랐다: 지어낸 값은 나머지 색과
+     온도가 어긋나기 쉽고, "이 값은 어디서 왔나"에 답할 수 없다. */
+  --bg: #0f172a;
+  --card: #1c2740;
+  --fill: #273350;
   --text: #e2e8f0;
   --text-2: #cbd5e1;
   --muted: #94a3b8;
-  --border: #293548;
-  --border-strong: #3b4a63;
+  --border: #334155;
+  --border-strong: #475569;
 
   --primary: #818cf8;
   --primary-dark: #a5b4fc;
-  --primary-soft: #1e1b4b;
-  --primary-border: #3730a3;
+  --primary-soft: #262052;
+  --primary-border: #4338ca;
 
   --review: #fbbf24;
-  --review-soft: #78350f;
+  --review-soft: #422006;
 
   --correct: #34d399;
   --wrong: #f87171;
-  --correct-bg: #064e3b;
-  --wrong-bg: #7f1d1d;
+  --correct-bg: #052e22;
+  --wrong-bg: #4c1414;
 
-  --lv1-bg: #064e3b; --lv1-fg: #34d399; --lv1-solid: #34d399;
-  --lv2-bg: #78350f; --lv2-fg: #fbbf24; --lv2-solid: #fbbf24;
-  --lv3-bg: #7f1d1d; --lv3-fg: #f87171; --lv3-solid: #f87171;
+  /* [색 있는 배경은 <아주 어둡게>, 글자는 <아주 밝게>]
+   * 처음에는 라이트의 배지 색을 그대로 어둡게만 한 중간톤(#7f1d1d 위에 #f87171)을 썼다.
+   * 재 보니 3.62:1로 AA 미달이었다 — 어두운 화면에서 중간톤 위의 중간톤은 둘 다
+   * "회색빛 빨강"이 되어 서로 안 갈린다. 배경을 더 내리고 글자를 더 올려야 벌어진다.
+   * 지금 값은 8~10:1이다.
+   *
+   * --lv*-solid만 중간톤을 유지한다. 이건 글자가 아니라 <막대·점>에 쓰는 면색이라
+   * 대비 기준이 다르고(3:1), 너무 밝으면 진도 막대가 눈을 찌른다. */
+  --lv1-bg: #052e22; --lv1-fg: #6ee7b7; --lv1-solid: #34d399;
+  --lv2-bg: #422006; --lv2-fg: #fcd34d; --lv2-solid: #fbbf24;
+  --lv3-bg: #4c1414; --lv3-fg: #fca5a5; --lv3-solid: #f87171;
 
   --overlay-shadow: 0 8px 24px rgba(0, 0, 0, .45);
 }
@@ -230,9 +228,7 @@
    우리가 못 칠하는 브라우저 UI를 맞추는 유일한 수단이다. */
 :root { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { color-scheme: dark; }
-}
+/* 자동 감지 분기는 위 주석대로 개편 마지막 단계에서 함께 되살린다. */
 
 * { box-sizing: border-box; }
 
