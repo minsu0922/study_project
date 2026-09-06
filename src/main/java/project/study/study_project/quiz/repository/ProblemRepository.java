@@ -137,6 +137,33 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     }
 
     /**
+     * 분야별 전체 문제 수 — 학습 요약의 진도 막대가 쓰는 <b>분모</b>(2026-09-06).
+     *
+     * <p><b>왜 {@link #countGroupByDomainAndDifficulty}를 재사용하지 않나.</b> 난이도까지
+     * 묶는 그 쿼리로도 값은 나온다. 하지만 그러면 난이도 축을 합치는 코드를 <b>쓰는 쪽</b>이
+     * 들고 있어야 하고, 그 코드가 화면 둘(홈·내 기록)에 각각 생긴다. 합치는 방법이 두 벌이
+     * 되는 순간 한쪽만 고치는 사고가 가능해진다. 쿼리 한 줄이 그보다 싸다.
+     *
+     * <p><b>왜 상태 조건이 없나.</b> {@code Problem} 테이블에는 <b>승인된 문제만</b> 있다 —
+     * AI 초안은 {@code GeneratedProblemDraft}라는 다른 테이블에 산다. 그래서 조건 없이 세어도
+     * "지금 풀 수 있는 문제"만 세어진다. 언젠가 이 테이블에 상태 컬럼이 생기면
+     * <b>여기부터</b> 고쳐야 한다 — 검수 대기 중인 문제가 분모에 잡히면 사용자는
+     * 풀 수 없는 문제 때문에 진도가 안 오르는 것으로 보인다.
+     */
+    @Query("""
+            select p.domain as domain, count(p) as cnt
+            from Problem p
+            group by p.domain
+            """)
+    List<DomainCount> countGroupByDomain();
+
+    /** {@link #countGroupByDomain} 결과 행 — select 별칭과 getter 이름이 매핑 규약이다. */
+    interface DomainCount {
+        Domain getDomain();
+        long getCnt();
+    }
+
+    /**
      * LLM 문제 생성(docs/13)의 중복 회피용 — 해당 도메인의 최신 질문 텍스트만 뽑는다.
      * 엔티티 전체가 아니라 question 컬럼만 프로젝션하는 이유: 프롬프트에 넣을 문자열만
      * 필요한데 Problem을 통째로 로딩하면 TEXT 본문 + 보기(LAZY) 부담만 커진다.

@@ -112,20 +112,37 @@ public class ProblemListService {
     }
 
     /**
-     * 분야별 맞힌 개수 — <b>모든 분야를 0으로라도 채워</b> 돌려준다.
+     * 분야별 진척 — <b>모든 분야를 0으로라도 채워</b> 돌려준다.
      *
-     * <p>집계 쿼리는 맞힌 적 없는 분야를 아예 안 준다(GROUP BY의 성질). 그대로 내려보내면
-     * 사이드바에서 <b>손대지 않은 분야가 사라져</b>, 정작 "여기부터 해 볼까"의 후보가 안 보인다.
+     * <p>집계 쿼리는 해당 행이 없는 분야를 아예 안 준다(GROUP BY의 성질). 그대로 내려보내면
+     * 화면에서 <b>손대지 않은 분야가 사라져</b>, 정작 "여기부터 해 볼까"의 후보가 안 보인다.
      * 빠진 분야를 만들어 내려면 Domain 목록이 필요한데 그건 자바가 아는 것이라 여기서 채운다.
+     *
+     * <h2>왜 조인 한 방으로 안 묶나</h2>
+     *
+     * <p>분자(내가 맞힌 수)와 분모(전체 문제 수)는 출처가 다르다 — 앞은 내 제출 이력,
+     * 뒤는 문제 테이블. SQL 하나로 묶을 수도 있지만 그러면 <b>제출이 0건인 분야가 조인에서
+     * 떨어져 나가</b>, 위의 "빈 칸을 0으로 채우는" 장치가 다시 깨진다. 그 사고는 아무 문제도
+     * 안 푼 새 사용자에게만 나타나서 개발 중에는 잘 안 보인다.
+     *
+     * <p>대가는 쿼리가 하나 는다는 것인데, 둘 다 분야 수(여덟)만큼의 행만 돌려주는
+     * 집계라 무겁지 않다. 이 화면은 필터를 바꿔도 다시 부르지 않는다(위 주석 참고).
      */
     private List<StudySummaryResponse.DomainProgress> domainProgress(Long userId) {
         Map<Domain, Long> solved = new EnumMap<>(Domain.class);
         submissionRepository.countSolvedByDomain(userId)
                 .forEach(row -> solved.put(row.getDomain(), row.getSolved()));
 
+        Map<Domain, Long> total = new EnumMap<>(Domain.class);
+        problemRepository.countGroupByDomain()
+                .forEach(row -> total.put(row.getDomain(), row.getCnt()));
+
         return java.util.Arrays.stream(Domain.values())
                 .map(domain -> new StudySummaryResponse.DomainProgress(
-                        domain, domain.getDisplayName(), solved.getOrDefault(domain, 0L)))
+                        domain,
+                        domain.getDisplayName(),
+                        solved.getOrDefault(domain, 0L),
+                        total.getOrDefault(domain, 0L)))
                 .toList();
     }
 }

@@ -17,9 +17,19 @@ import java.util.List;
  * 통계는 그때마다 바뀌지 않는다. 합쳐 두면 필터를 만질 때마다 집계 쿼리 넷이 같이 돈다.
  *
  * @param stats   통계 카드 넷
- * @param domains 분야별 진척 — <b>맞힌 개수만</b> 준다. 전체 문제 수(분모)를 함께 주지 않는
- *                이유는 배치가 매일 문제를 더해 분모가 커지기 때문이다. 어제 40%가 오늘 37%가
- *                되면 아무것도 잘못하지 않았는데 뒷걸음질친 것처럼 보인다
+ * @param domains 분야별 진척 — 맞힌 개수와 그 분야의 전체 문제 수(분모).
+ *
+ *                <p><b>분모는 원래 일부러 주지 않았다.</b> 배치가 매일 문제를 더해 분모가
+ *                커지므로, 어제 40%가 오늘 37%가 되면 아무것도 잘못하지 않았는데
+ *                뒷걸음질친 것처럼 보이기 때문이다.
+ *
+ *                <p><b>2026-09-06 화면 개편에서 뒤집었다.</b> 분야별 진도를 막대로 보여
+ *                주기로 했는데, 막대는 분모 없이는 그릴 수 없다. 숫자만 늘어놓으면
+ *                40개 중 31개와 33개 중 9개가 같은 무게로 읽힌다.
+ *
+ *                <p>위 걱정은 여전히 맞아서 <b>화면에서</b> 눌렀다 — 주인공은 절대값
+ *                (31 / 40)이고 막대는 그 아래 얇은 보조이며, 퍼센트 숫자는 아예 쓰지 않는다.
+ *                문제 목록 개편에서 정한 "게이지 → 절대값"과 같은 방향이다.
  */
 public record StudySummaryResponse(
         Stats stats,
@@ -41,7 +51,13 @@ public record StudySummaryResponse(
     ) {
     }
 
-    /** 분야 한 줄. {@code label}을 서버가 함께 주는 것은 이 프로젝트의 기존 규칙이다. */
-    public record DomainProgress(Domain domain, String label, long solved) {
+    /**
+     * 분야 한 줄. {@code label}을 서버가 함께 주는 것은 이 프로젝트의 기존 규칙이다.
+     *
+     * @param solved 내가 맞힌 적 있는 문제 수
+     * @param total  그 분야의 전체 문제 수. 배치가 문제를 더하면 <b>커진다</b> —
+     *               그래서 화면은 이 둘로 퍼센트를 만들지 않는다(위 주석 참고)
+     */
+    public record DomainProgress(Domain domain, String label, long solved, long total) {
     }
 }
