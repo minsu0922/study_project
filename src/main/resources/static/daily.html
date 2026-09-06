@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<header id="nav"></header>
+<div id="shell"></div>
 
 <main class="container">
   <!-- 화면 1: 오늘 세트 현황(미시작/진행 중/완료) — 시작하면 숨기고 플레이어로 전환.
@@ -33,7 +33,7 @@
  *      서버 submit이 세트 진행률까지 한 트랜잭션으로 반영하므로 이 페이지는 아무것도 안 해도 됨)
  *   3) 결과 화면에서 [오늘의 퀴즈로] → 현황 재조회(완료면 완료 카드 + 스트릭)
  * 어제 세트는 서버가 리셋(새 날짜 = 새 세트)하므로 클라이언트에 날짜 로직이 없다. */
-renderNav("today");
+renderShell({ active: "today", title: "오늘의 퀴즈" });
 
 const statusEl = document.getElementById("status");
 const statusBody = document.getElementById("statusBody");

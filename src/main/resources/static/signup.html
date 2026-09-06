@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<header id="nav"></header>
+<div id="shell"></div>
 
 <main class="container narrow">
   <h1>회원가입</h1>
@@ -36,7 +36,7 @@
 <script>
 /* 회원가입 페이지 — 가입 성공 시 같은 계정으로 곧바로 로그인까지 해 준다.
  * (가입 → 로그인 화면 → 또 입력의 번거로움 제거. 실패해도 가입은 된 상태라 로그인 페이지로 안내) */
-renderNav();
+renderShell({ title: "회원가입" });
 
 document.getElementById("signupForm").addEventListener("submit", async e => {
   e.preventDefault();

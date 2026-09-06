@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<header id="nav"></header>
+<div id="shell"></div>
 
 <main class="container">
   <!-- 화면 1: 오늘의 복습 요약 + 시작 버튼 + 내 복습 현황 -->
@@ -70,7 +70,7 @@
  *      채점 결과가 서버에서 자동으로 사다리 승급/리셋에 반영된다(별도 복습 제출 API 없음).
  *   3) 아래에는 전체 현황(GET /api/me/reviews) — 문제별로 몇 단계인지, 다음 복습이 언제인지.
  * 복습은 "내 기록"이라 전부 로그인 필수. */
-renderNav("review");
+renderShell({ active: "review", title: "복습" });
 
 const overviewEl = document.getElementById("overview");
 const playerEl = document.getElementById("player");

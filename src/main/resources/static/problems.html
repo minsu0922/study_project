@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<header id="nav"></header>
+<div id="shell"></div>
 
 <main class="container problem-list">
   <!-- 자유 퀴즈로 가는 입구(2026-08-29 메뉴 개편). 예전에는 상단 메뉴에 "자유 퀴즈"가
@@ -74,7 +74,7 @@
  * 이 목록의 모든 줄이 "나와의 관계"를 달고 있다 — 맞혔나, 언제 풀었나, 복습할 때인가.
  * 그것을 뺀 목록은 그냥 카탈로그이고 그건 자유 퀴즈가 이미 하는 일이다. */
 
-renderNav("problems");
+renderShell({ active: "problems", title: "문제" });
 
 const DOMAIN_PREVIEW = 5;   // 사이드바 기본 노출 수 — 12개를 다 펴면 사이드바가 본문보다 길어진다
 const PAGE_SIZE = 20;

@@ -7,8 +7,9 @@
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<!-- 공통 메뉴: js/api.js의 renderNav()가 채운다 (페이지마다 메뉴 HTML을 복붙하지 않기 위함) -->
-<header id="nav"></header>
+<!-- 셸(기둥·탭바·상단바): js/shell.js의 renderShell()이 채운다
+     — 화면마다 메뉴 HTML을 복붙하면 화면이 하나 늘 때마다 빠뜨릴 자리가 같이 는다 -->
+<div id="shell"></div>
 
 <main class="container">
   <h1>개념 문서</h1>
@@ -38,7 +39,7 @@
 /* 문서 목록 페이지 (v2에서 index.html → documents.html로 이동 — 홈은 퀴즈 시작 화면이 됐다)
  * GET /api/documents?domain=&page= 를 불러와 카드 목록으로 그린다.
  * 상태는 "현재 페이지 번호 + 선택한 도메인" 두 개뿐이라 전역 변수로 충분하다. */
-renderNav("docs");
+renderShell({ active: "docs", title: "개념 문서" });
 
 const domainFilter = document.getElementById("domainFilter");
 fillSelect(domainFilter, DOMAINS, "전체 도메인");

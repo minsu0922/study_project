@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<header id="nav"></header>
+<div id="shell"></div>
 
 <main class="container">
   <h1>복습</h1>
@@ -49,7 +49,7 @@
 /* 오답노트 페이지 — GET /api/me/wrong-answers (로그인 필수).
  * 페이지 진입 시점에 로그인 여부를 확인해 미리 로그인으로 보낸다.
  * (API를 호출해 401을 받고 나서야 알려주는 것보다 빠르고 친절) */
-renderNav("review");
+renderShell({ active: "review", title: "오답노트" });
 
 if (!isLoggedIn()) {
   // 로그인 후 다시 돌아올 수 있게 안내만 하고 자동 이동은 하지 않는다

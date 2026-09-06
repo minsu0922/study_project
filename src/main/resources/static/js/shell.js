@@ -78,23 +78,124 @@ function hasRole(need) {
  *
  * <p>"개념 문서"는 줄이지 않았다. 시안에서는 "개념"으로 짧게 뒀지만, 위 주석에 적힌
  * 과거 판단("문서만으로는 무엇의 문서인지 모호하다")이 여전히 맞다. 넷이면 자리가 넉넉하다.
+ *
+ * <h2>넷에서 여섯으로, 그리고 탭 다섯 (2026-09-06)</h2>
+ *
+ * <p>내 기록·설정이 생기면서 항목이 여섯이 됐다. 사이드바에는 여섯이 이름째로 들어가지만
+ * <b>폰 탭바는 다섯이 상한</b>이다 — 375px에서 여섯을 넣으면 "개념 문서"가 두 줄이 되거나
+ * 잘린다. 그래서 {@code tab}이 있는 것만 탭바에 오르고, 설정은 탭에서 빠져 내 기록 화면
+ * 안의 입구로 들어간다("나" 탭 하나가 둘을 대표한다).
+ *
+ * <p><b>관리 콘솔에 tab이 없는 이유</b>는 자리가 모자라서가 아니다. 콘솔은 다른 영역이라
+ * 학습하다 잘못 눌러 넘어가면 안 된다 — admin-common.js가 같은 이유로 콘솔 쪽에
+ * 학습 메뉴를 두지 않는다.
  */
 const MENUS = [
-  { key: "today", label: "오늘", href: "/", need: "public" },
+  { key: "today", label: "오늘", href: "/", need: "public", tab: "☀️" },
   // 문제 목록은 내 풀이 기록을 함께 보여 주는 화면이라 로그인 사용자에게만 띄운다(docs/18)
-  { key: "problems", label: "문제", href: "/problems.html", need: "user" },
+  { key: "problems", label: "문제", href: "/problems.html", need: "user", tab: "🗂️" },
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
-  { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge" },
-  { key: "docs", label: "개념 문서", href: "/documents.html", need: "public" },
+  { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: "🔁" },
+  { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: "📚" },
+  // 탭 라벨만 "나"로 줄인다 — 탭 다섯 칸에 "내 기록"은 안 들어간다
+  { key: "me", label: "내 기록", href: "/me.html", need: "user", tab: "🙂", tabLabel: "나" },
+  // 탭 없음: 다섯 상한을 지키느라 뺐다. 입구는 사이드바와 내 기록 화면 안에 있다
+  { key: "settings", label: "설정", href: "/settings.html", need: "user", icon: "⚙️" },
   // 관리 콘솔은 "다른 영역으로 나간다"는 뜻이라 화살표를 붙여 다른 메뉴와 구분한다
-  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/index.html", need: "admin" },
+  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/index.html", need: "admin", icon: "🛠" },
 ];
 
 /**
- * 사용자 화면 상단 내비게이션 — 권한에 맞는 메뉴만 그린다.
+ * 화면을 감싸는 껍데기를 그린다 — 넓으면 왼쪽 기둥, 좁으면 위 얇은 바 + 아래 탭바.
  *
- * v2 구조: 홈(/)이 문서 목록이 아니라 "시작 화면"이 됐다(퀴즈 사이트 리뉴얼).
- * 문서 목록은 /documents.html로 이동.
+ * <p><b>[왜 HTML마다 안 적고 JS가 그리나]</b> 이 프로젝트는 빌드 도구도, head를 공유하는
+ * 틀도 없다. 사이드바 마크업을 HTML 열몇 개에 복붙하면 화면이 하나 늘 때마다
+ * <b>빠뜨릴 자리가 같이 는다</b>. 실제로 포커스 링 규칙이 한 화면에만 있던 일이 있었다.
+ *
+ * <p><b>[한 벌로 둘을 그린다]</b> 사이드바와 탭바를 같은 {@link MENUS}에서 만든다.
+ * 둘을 따로 적으면 메뉴를 하나 더할 때 한쪽만 고치고 넘어가게 된다.
+ *
+ * <p><b>[본문을 감싸지 않는다]</b> 셸이 본문을 innerHTML로 감싸면 각 화면이 이미 잡아 둔
+ * DOM 참조가 끊긴다. 대신 셸을 본문의 <b>형제</b>로 두고 CSS grid가 자리를 옮긴다 —
+ * 마크업 순서와 화면 배치를 떼어놓는 것이 grid를 쓰는 이유다.
+ *
+ * <p><b>[비로그인도 셸을 본다]</b> 로그인·가입 화면에도 그린다. 예전에는 그 화면들도
+ * 상단 바를 띄웠고, 없애면 "여기가 어디지"가 된다. 메뉴는 권한 필터가 알아서 줄인다.
+ *
+ * @param active MENUS의 key. 지금 화면을 굵게 표시한다. 해당 없으면 빈 문자열
+ * @param title  폰 상단 바에 뜨는 화면 이름. 좁은 화면에는 기둥이 없어
+ *               "지금 어디인지"를 말해 줄 자리가 여기밖에 없다
+ */
+function renderShell({ active = "", title = "" } = {}) {
+  const el = document.getElementById("shell");
+  if (!el) return;
+
+  const visible = MENUS.filter(m => hasRole(m.need));
+  // 학습 메뉴 / 개인 메뉴 / 콘솔 — 사이드바에서 가로줄로 나뉘는 세 묶음.
+  // 묶음을 key로 집어 나누는 이유: 순서만으로 나누면 MENUS에 항목을 끼워 넣을 때
+  // 엉뚱한 묶음에 들어가고, 그 사고는 화면을 봐야만 보인다.
+  const PERSONAL = ["me", "settings"];   // 내 것을 보는 화면 — 학습 행동과 성격이 다르다
+  const study = visible.filter(m => !PERSONAL.includes(m.key) && m.key !== "admin");
+  const personal = visible.filter(m => PERSONAL.includes(m.key));
+  const console_ = visible.filter(m => m.key === "admin");
+
+  // 탭바는 tab이 있는 것만, 그리고 다섯까지. slice는 안전장치다 —
+  // 나중에 tab을 단 항목이 여섯 번째로 늘어도 탭바가 무너지지 않는다.
+  const tabs = visible.filter(m => m.tab).slice(0, 5);
+
+  el.innerHTML = `
+    <header class="shell-top">
+      <a class="brand" href="/">csquiz</a>
+      ${title ? `<span class="shell-title">${escapeHtml(title)}</span>` : ""}
+      <span class="spacer"></span>
+      ${authAreaHtml()}
+    </header>
+
+    <nav class="shell-side" aria-label="주 메뉴">
+      <a class="brand" href="/">csquiz</a>
+      ${sideLinks(study, active)}
+      ${personal.length ? `<div class="shell-rule"></div>${sideLinks(personal, active)}` : ""}
+      <span class="spacer"></span>
+      ${console_.length ? sideLinks(console_, active) : ""}
+      <div class="shell-rule"></div>
+      <div class="shell-side-auth">${authAreaHtml()}</div>
+    </nav>
+
+    <nav class="shell-tabs" aria-label="주 메뉴">
+      ${tabs.map(m => `
+        <a class="shell-tab${m.key === active ? " active" : ""}" href="${m.href}"
+           ${m.key === active ? 'aria-current="page"' : ""}>
+          <span class="ic" aria-hidden="true">${m.tab}</span>${escapeHtml(m.tabLabel || m.label)}
+          ${m.badge ? `<span id="${m.badge}-tab"></span>` : ""}
+        </a>`).join("")}
+    </nav>`;
+
+  loadReviewBadge();
+  wireLogout();
+}
+
+/**
+ * 사이드바 링크 한 묶음.
+ *
+ * <p>아이콘은 {@code tab}(탭바용 그림)을 그대로 재사용하고, 탭에 안 오르는 항목만
+ * {@code icon}을 따로 갖는다. 같은 메뉴가 두 자리에서 다른 그림으로 뜨면
+ * "이게 그거였나"를 매번 다시 잇게 된다.
+ */
+function sideLinks(items, active) {
+  return items.map(m =>
+    `<a class="shell-link${m.key === active ? " active" : ""}" href="${m.href}"
+        ${m.key === active ? 'aria-current="page"' : ""}>
+       <span class="ic" aria-hidden="true">${m.tab || m.icon || ""}</span>
+       <span>${escapeHtml(m.label)}</span>
+       ${m.badge ? `<span id="${m.badge}"></span>` : ""}
+     </a>`).join("");
+}
+
+/**
+ * 관리 콘솔이 쓰는 옛 상단 가로바 — <b>사용자 화면에는 더 이상 쓰지 않는다</b>.
+ *
+ * <p>콘솔은 개편 2단계라 아직 이 마크업 위에 서 있다. 그때 이 함수와
+ * {@code .nav} CSS를 함께 걷어낸다. 지금 지우면 콘솔이 메뉴 없이 뜬다.
  */
 function renderNav(active) {
   const el = document.getElementById("nav");
@@ -162,9 +263,14 @@ async function loadReviewBadge() {
   if (!isLoggedIn()) return;
   try {
     const data = await api("/api/me/reviews/today?size=1");
-    const el = document.getElementById("reviewBadge");
-    if (el && data.totalElements > 0) {
-      el.innerHTML = `<span class="nav-badge">${data.totalElements}</span>`;
+    if (data.totalElements > 0) {
+      const html = `<span class="nav-badge">${data.totalElements}</span>`;
+      // 같은 숫자가 두 자리에 뜬다 — 넓은 화면은 사이드바, 좁은 화면은 탭바.
+      // 둘 중 하나만 화면에 보이지만 어느 쪽인지는 CSS가 정하므로 여기서는 둘 다 채운다.
+      ["reviewBadge", "reviewBadge-tab"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+      });
     }
   } catch (e) { /* 배지 실패는 무시(위 주석) */ }
 }

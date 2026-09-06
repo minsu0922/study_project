@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<header id="nav"></header>
+<div id="shell"></div>
 
 <main class="container">
   <!-- ═══ 비로그인: 처음 온 사람에게는 여전히 히어로가 맞다 ═══
@@ -81,7 +81,7 @@
  *
  * [실패해도 화면은 남는다]
  * 둘 중 하나가 실패해도 나머지는 그린다. 첫 화면이 통째로 비면 앱이 죽은 것처럼 보인다. */
-renderNav("today");
+renderShell({ active: "today", title: "오늘" });
 
 if (!isLoggedIn()) {
   document.getElementById("intro").hidden = false;

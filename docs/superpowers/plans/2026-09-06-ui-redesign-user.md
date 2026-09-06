@@ -2017,7 +2017,14 @@ Select-String -Path src/main/resources/static -Pattern "#[0-9a-fA-F]{3,6}" -Recu
 
 | 화면 | 특히 볼 것 |
 | --- | --- |
-| `problems.html` | 필터 줄이 375px에서 감싸지는지. docs/18에서 다듬은 화면이라 배치는 안 바꾼다 |
+| `problems.html` | **분야 필터가 좁은 폭에서 깨져 있다** — 아래 참고. 그 외 배치는 안 바꾼다(docs/18에서 다듬은 화면) |
+
+**`problems.html`의 분야 필터 (Task 3에서 발견, 셸과 무관한 기존 결함).**
+좁은 폭에서 분야 목록이 가로 스크롤 칩 줄로 바뀌게 돼 있는데(`.pl-domains`),
+실제로는 칩 하나가 폭을 통째로 먹어 **"네트워크" 한 줄만 보이고 가로·세로 스크롤바가
+둘 다 생긴다**. 375px와 768px에서 같다 — 셸을 넣기 전에도 같은 규칙을 타고 있었다.
+`.pl-domain`이 원래 블록 요소라 `flex: none`만으로는 폭이 안 줄어드는 것이 원인으로 보인다.
+이 화면을 옮길 때 실제로 띄워 확인하고 고친다.
 | `documents.html` | 카드 그리드가 1열로 서는지 |
 | `document.html` | 본문 글줄 길이. 읽는 화면이라 `max-width: 68ch` 정도로 잡는다 |
 | `wrong-answers.html` | 목록 줄이 잘리지 않는지 |

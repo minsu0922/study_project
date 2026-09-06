@@ -131,6 +131,28 @@ class StaticPageStructureTest {
         }
     }
 
+    @Test
+    @DisplayName("모든 사용자 화면이 셸 자리를 두고, 옛 내비 자리는 남기지 않는다")
+    void everyPageHasShellMount() throws IOException {
+        for (String page : USER_PAGES) {
+            String html = read(page);
+
+            // renderShell이 채울 자리. 없으면 그 화면만 메뉴가 통째로 사라진다 —
+            // 게다가 조용히 사라진다(renderShell은 자리가 없으면 그냥 돌아간다).
+            assertThat(html).as("%s: <div id=\"shell\">가 없다", page)
+                    .contains("id=\"shell\"");
+
+            // 옛 자리가 남아 있으면 빈 <header>가 화면 맨 위에 여백으로 남는다.
+            // 눈에 잘 안 띄는 종류의 잔재라 사람보다 이 줄이 낫다.
+            assertThat(html).as("%s: 옛 id=\"nav\"가 남아 있다", page)
+                    .doesNotContain("id=\"nav\"");
+
+            // 자리만 있고 부르지 않으면 셸이 영영 비어 있다.
+            assertThat(html).as("%s: renderShell을 부르지 않는다", page)
+                    .contains("renderShell(");
+        }
+    }
+
     /**
      * 폴더에 있는데 목록에 없는 화면(그리고 그 반대)을 잡는다.
      *
