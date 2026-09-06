@@ -577,7 +577,19 @@ body {
   /* 기둥은 208px이라 가입 버튼이 통째로 들어간다 — 가로바에서 쓰던 인라인 폭 지정을 덮는다 */
   .shell-side-auth .btn { width: 100%; text-align: center; padding: 6px 10px !important; }
 
-  .container { padding: 28px 24px 56px; }
+  /* 본문을 <왼쪽에 붙인다>. 기둥이 생긴 뒤로 가운데 정렬이 어색해졌다.
+   *
+   * 가운데 정렬은 본문이 화면 전체를 쓸 때의 규칙이다. 왼쪽에 208px 기둥이 서면
+   * "기둥 + 빈칸 + 본문 + 빈칸"이 되어, 1440px에서 기둥과 카드 사이가 210px씩 벌어진다.
+   * 눈은 그 빈칸을 여백이 아니라 <버려진 자리>로 읽는다 — 실제로 그렇게 보인다는
+   * 지적을 받고 고쳤다.
+   *
+   * margin-left만 0으로 만든다. 오른쪽은 auto로 남겨 두어야 max-width(860px)를 넘는
+   * 넓은 화면에서 남는 자리를 오른쪽이 흡수한다. 본문 자체의 글줄 길이는 그대로다 —
+   * 바뀌는 것은 덩어리가 놓이는 자리뿐이다.
+   *
+   * (좁은 화면에는 기둥이 없고 max-width도 안 걸려 이 규칙이 필요 없다.) */
+  .container { padding: 28px 24px 56px; margin-left: 0; }
 }
 
 h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
@@ -814,7 +826,12 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 
 /* 보기 버튼(객관식) — 라디오 대신 버튼 전체가 클릭 영역(모바일에서도 누르기 쉽게) */
 .opt {
-  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  /* justify-content를 <반드시> 적는다. 공용 button 규칙이 손가락 표적을 만들려고
+     inline-flex + justify-content:center를 걸고 있어서, 여기서 안 되돌리면 보기 글자가
+     버튼 안에서 가운데로 몰린다 — 보기마다 글자 길이가 달라 줄마다 시작점이 어긋나고,
+     눈이 보기를 위아래로 훑을 수 없게 된다. display만 flex로 바꾸면 정렬은 안 따라온다. */
+  display: flex; align-items: center; justify-content: flex-start;
+  gap: 12px; width: 100%; text-align: left;
   background: var(--card); color: var(--text);
   border: 2px solid var(--border); border-radius: var(--radius-lg);
   padding: 13px 16px; margin-bottom: var(--sp-2);
