@@ -12,7 +12,8 @@
 <main class="container">
   <!-- ═══ 비로그인: 처음 온 사람에게는 여전히 히어로가 맞다 ═══
        무엇을 하는 곳인지 모르는 사람에게 "오늘 할 일"을 보여 줄 수는 없다.
-       로그인하면 이 자리가 통째로 오늘 화면으로 바뀐다. -->
+       로그인하면 이 자리가 통째로 오늘 화면으로 바뀐다.
+       이 구역은 개편 8단계(랜딩)에서 다시 짠다 — 지금은 예전 모습 그대로다. -->
   <section class="hero" id="intro" hidden>
     <h1>CS 면접, <span class="accent">매일 조금씩</span></h1>
     <p>매일 나에게 맞춘 10문제 — 틀린 건 잊어버릴 때쯤 다시 만나요.</p>
@@ -23,238 +24,272 @@
     </div>
   </section>
 
-  <!-- ═══ 로그인: 오늘 할 일 ═══ -->
+  <!-- ═══ 로그인: 오늘 할 일 ═══
+       세 덩이다 — 히어로(오늘 할 일) / 통계 넷 / 분야별 진도 여섯.
+       그 아래 최근 개념 문서는 "가만히 둬도 늘어나는 것"이라 새 소식 자리로 남긴다. -->
   <section id="today" hidden>
-    <h1>오늘</h1>
+    <!-- 히어로가 통째로 상황을 말한다(할 일 있음 / 오늘 몫 끝 / 첫날).
+         화면 제목 <h1>도 이 안에 있다 — 상황마다 문구가 달라지기 때문이다. -->
+    <div id="hero"></div>
 
-    <!-- 기록이 0일 때만 뜬다. 첫 문제를 풀면 이 자리를 통계 세 칸이 물려받는다. -->
-    <div class="onboard" id="onboard" hidden></div>
+    <!-- 첫날에는 감춘다. 0이 넷 뜨는 것보다 히어로 안의 "여기 있는 것"이 맞는 정보다. -->
+    <div class="stat-row" id="stats" hidden></div>
 
-    <div id="tasks"></div>
-    <div class="stat-row" id="stats"></div>
+    <div class="section-label" id="progLabel" hidden>
+      <span>분야별 진도</span>
+      <a href="/me.html">전체 보기 →</a>
+    </div>
+    <div class="progress-grid" id="progList" hidden></div>
 
-    <!-- 라벨 문구가 상황에 따라 달라져 비워 둔다(비어 있는 분야가 있나 / 없나) -->
-    <div class="section-label" id="domLabel" hidden></div>
-    <div class="dom-list" id="domList" hidden></div>
-
-    <div class="section-label" id="docLabel" hidden>최근 개념 문서</div>
+    <div class="section-label" id="docLabel" hidden><span>최근 개념 문서</span></div>
     <div id="docList"></div>
-
-    <div class="section-label">더 하고 싶다면</div>
-    <section class="quick-grid">
-      <a class="quick-card" href="/problems.html">
-        <div class="icon">🗂️</div>
-        <h3>문제 고르기</h3>
-        <p>안 푼 것·틀린 것을 걸러 하나씩 고르고 싶을 때</p>
-      </a>
-      <a class="quick-card" href="/quiz.html">
-        <div class="icon">🎲</div>
-        <h3>무작위 10문제</h3>
-        <p>고르기도 귀찮고 그냥 풀고 싶을 때</p>
-      </a>
-      <a class="quick-card" href="/documents.html">
-        <div class="icon">📚</div>
-        <h3>개념 문서</h3>
-        <p>문제보다 개념 정리를 먼저 읽고 싶을 때</p>
-      </a>
-    </section>
   </section>
 </main>
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script>
-/* 첫 화면 — 2026-08-29에 "홈"에서 "오늘"로 바꿨다.
+/* 첫 화면 — "홈"이 아니라 "오늘"이다(2026-08-29에 바꿨고, 2026-09-06에 다시 짰다).
  *
- * [왜 바꿨나]
+ * [왜 광고가 아닌가]
  * 예전 홈은 큰 문구 + 시작 버튼 + 바로가기 카드였다. 처음 온 사람에게는 친절하지만
- * <매일 오는 사람에게는 매일 같은 광고>다. 이 앱은 1인용이고 약속이 "매일 조금씩"이라
+ * <매일 오는 사람에게는 매일 같은 광고>다. 이 앱의 약속이 "매일 조금씩"이라
  * 첫 화면이 답해야 하는 질문은 "이게 뭐 하는 곳인가"가 아니라 <오늘 뭐부터 하지>다.
+ * 개편 시안에서 색이 찬 큰 판이 후보로 올라왔을 때 그것을 접은 근거도 이 문단이다.
  *
- * [할 일이 없으면 조용해진다]
- * 오늘 것을 다 했으면 줄이 하나도 안 뜨고 "오늘 몫은 끝났습니다" 한 줄만 남는다.
- * 화면이 비는 것 자체가 정보다 — 뭔가 늘 떠 있으면 그게 할 일인지 장식인지 구별이 안 된다.
+ * [세 덩이로 합쳤다]
+ * 예전에는 컴포넌트가 넷이었다 — 할 일 줄, 첫 방문 안내, 분야 추천 줄, 통계 세 칸.
+ * 넷이 "누가 어느 자리를 차지하나"를 서로 조건문으로 나눠 갖고 있었다.
+ * 지금은 히어로 하나 / 통계 넷 / 진도 여섯이고, 앞의 둘은 히어로의 세 얼굴이 됐다.
+ * "무엇을 보여 줄까"의 판단이 renderHero 한 곳에 모인다.
  *
- * [필요한 데이터는 이미 다 있었다]
- * 진행률은 오늘의 퀴즈 API, 복습 대기·이번 주·정답률은 문제 목록 화면을 만들며 붙인
- * study-summary가 그대로 준다. 새로 만든 서버 코드는 없다.
+ * [요청 둘을 나란히 보낸다]
+ * 오늘의 퀴즈와 학습 요약은 히어로가 함께 봐야 해서 같이 보내고, 먼저 오는 쪽을
+ * 기다리지 않는다(Promise.allSettled). 하나가 실패해도 나머지는 그린다 —
+ * 첫 화면이 통째로 비면 앱이 죽은 것처럼 보인다.
  *
- * [실패해도 화면은 남는다]
- * 둘 중 하나가 실패해도 나머지는 그린다. 첫 화면이 통째로 비면 앱이 죽은 것처럼 보인다. */
+ * [진도의 분모는 이번에 서버에 생겼다]
+ * study-summary의 domains[].total. 뒤집은 판단이라 사연이 길다 — StudySummaryResponse
+ * 주석 참고. 화면 쪽 결론만 적으면 <절대값이 주인공이고 퍼센트는 안 쓴다>. */
 renderShell({ active: "today", title: "오늘" });
 
 if (!isLoggedIn()) {
   document.getElementById("intro").hidden = false;
 } else {
   document.getElementById("today").hidden = false;
-  loadToday();
-  loadSummary();
+  loadHome();
   loadRecentDocs();
 }
 
-/**
- * 오늘 할 일 줄 — 있는 것만 그린다.
- *
- * <p>순서는 <b>급한 것부터</b>다: 복습은 "잊을 때가 됐다"는 시한이 붙은 일이고,
- * 데일리는 오늘 안에 하면 되는 일이다. 둘 다 없으면 끝났다는 한 줄만 남는다.
- *
- * <p>이 화면을 여는 것이 곧 {@code GET /api/me/daily-quiz}라, 그날 첫 방문이 세트를
- * 만든다(지연 생성, docs/12). 예전 홈과 같은 동작이다.
- */
-async function loadToday() {
-  const box = document.getElementById("tasks");
-  const rows = [];
+/** 오늘 화면의 세 덩이를 그린다. 두 요청을 나란히 보내고 결과를 나눠 쓴다. */
+async function loadHome() {
+  const [dailyRes, summaryRes] = await Promise.allSettled([
+    api("/api/me/daily-quiz"),
+    api("/api/me/study-summary"),
+  ]);
+  const daily = dailyRes.status === "fulfilled" ? dailyRes.value : null;
+  const summary = summaryRes.status === "fulfilled" ? summaryRes.value : null;
 
-  // ① 복습 — 시한이 붙은 일이라 맨 위
-  try {
-    const due = await api("/api/me/reviews/today?size=1");   // 개수만 필요
-    if (due.totalElements > 0) {
-      rows.push(`<a class="task due" href="/review.html">
-          <span class="what">복습 ${due.totalElements}문제가 오늘 차례입니다</span>
-          <span class="go">복습하러 가기 →</span></a>`);
-    }
-  } catch (e) { /* 조용히 넘어간다 — 아래 데일리 줄은 그려야 한다 */ }
-
-  // ② 오늘의 퀴즈 — 세 상태
-  try {
-    const d = await api("/api/me/daily-quiz");
-    const { total, solved } = d.progress;
-    if (!d.completed) {
-      rows.push(`<a class="task" href="/daily.html">
-          <span class="what">오늘의 퀴즈 ${solved > 0 ? `· ${solved} / ${total}` : `· ${total}문제`}</span>
-          <span class="go">${solved > 0 ? "이어서 풀기" : "시작하기"} →</span></a>`);
-    }
-  } catch (e) {
-    // 세트를 못 불러와도 입구는 남긴다 — 이 앱에서 매일 하는 행동이라 링크가 사라지면 안 된다.
-    rows.push(`<a class="task" href="/daily.html">
-        <span class="what">오늘의 퀴즈</span><span class="go">가기 →</span></a>`);
+  renderHero(daily, summary);
+  if (summary) {
+    // 첫날에는 통계를 감춘다. 히어로가 이미 "여기 있는 것"(문제 N개·분야 M개·문서 K편)을
+    // 말하고 있는데 그 아래에 0이 넷 더 뜨면, 같은 화면이 "많다"와 "없다"를 동시에 말한다.
+    if (summary.stats.solvedTotal > 0) renderStats(summary.stats);
+    renderProgress(summary.domains);
   }
-
-  box.innerHTML = rows.length
-    ? rows.join("")
-    : `<div class="task done">오늘 몫은 끝났습니다 · 더 풀고 싶으면 아래에서 골라 보세요</div>`;
 }
 
 /**
- * 통계 세 칸 + 분야 진척 — 요청 <한 번>으로 둘 다 그린다.
+ * 히어로 — 상황이 문구·색·버튼을 다 정한다.
  *
- * <p>study-summary는 예전부터 {@code stats}와 {@code domains}를 같이 주는데(문제 목록
- * 화면을 만들며 붙였다) 이 화면은 stats만 꺼내 쓰고 분야 12개를 버리고 있었다. 새 API를
- * 만들 필요 없이 이미 오는 것을 쓴다.
+ * <p>[왜 한 함수가 세 얼굴을 다 그리나] 셋은 <같은 자리에 번갈아> 뜬다. 함수를 셋으로
+ * 나누면 "지금 어느 것이 떠 있나"를 부르는 쪽이 관리하게 되고, 둘이 동시에 뜨거나
+ * 하나도 안 뜨는 상태가 생길 자리가 만들어진다. 한 함수가 innerHTML을 통째로 쓰면
+ * 그런 상태 자체가 있을 수 없다.
+ *
+ * <p>[순서가 곧 우선순위다] 첫날 → 오늘 몫 끝 → 할 일 있음 → 못 불러옴.
+ * 첫날이 맨 앞인 이유: 기록이 0인 사람에게는 "6문제 남았어요"보다 "여기가 뭐 하는
+ * 곳인지"가 먼저다. 이 화면을 여는 것이 곧 세트 생성이라(지연 생성, docs/12)
+ * 첫날에도 daily는 정상적으로 온다 — 그래서 데이터로는 안 갈리고 순서로 갈라야 한다.
  */
-async function loadSummary() {
-  let summary;
-  try {
-    summary = await api("/api/me/study-summary");
-  } catch (e) {
-    return;   // 통계는 부가 정보다 — 못 불러오면 자리를 비운다
-  }
-  const s = summary.stats;
+function renderHero(daily, summary) {
+  const el = document.getElementById("hero");
+  const due = summary ? summary.stats.reviewDue : 0;
+  const reviewBtn = due > 0
+    ? `<a class="btn btn-outline" href="/review.html">복습 ${due}개 ↻</a>` : "";
 
-  // 기록이 하나도 없으면 통계 대신 안내를 띄운다. 자세한 이유는 style.css의 .onboard 주석.
-  // 통계 칸은 <숨긴다> — 비워만 두면 .stat-row의 아래 여백이 빈 줄로 남는다.
-  if (s.solvedTotal === 0) {
-    document.getElementById("stats").hidden = true;
-    renderOnboard(summary.domains.length);
-  } else {
-    renderStats(s);
+  // ① 첫날 — 아직 아무 기록이 없다
+  if (summary && summary.stats.solvedTotal === 0) {
+    el.innerHTML = heroHtml({
+      eyebrow: todayLabel(),
+      title: "첫 문제를 풀어볼까요",
+      lead: "오늘의 퀴즈 10문제면 첫 기록이 남고, 내일부터 복습이 붙습니다.",
+      actions: `<a class="btn" href="/daily.html">오늘의 퀴즈 시작 →</a>`,
+    });
+    renderFacts(summary.domains.length);
+    return;
   }
-  renderDomains(summary.domains);
+
+  // ② 오늘 몫을 끝낸 날 — 색과 문구가 함께 바뀐다(✓는 색으로만 알리지 않기 위한 것이다)
+  if (daily && (daily.completed || daily.progress.solved >= daily.progress.total)) {
+    el.innerHTML = heroHtml({
+      cls: "done",
+      eyebrow: todayLabel(),
+      title: "오늘 몫은 끝났어요 ✓",
+      lead: `${daily.progress.total}문제 전부 · 내일 아침에 새 문제가 준비돼요`,
+      actions: `<a class="btn btn-outline" href="/quiz.html">더 풀어보기</a>${reviewBtn}`,
+    });
+    return;
+  }
+
+  // ③ 할 일이 남았다
+  if (daily) {
+    const total = daily.progress.total;
+    const solved = daily.progress.solved;
+    const left = Math.max(total - solved, 0);
+    el.innerHTML = heroHtml({
+      eyebrow: `${todayLabel()} · 오늘의 퀴즈`,
+      title: `${left}문제 남았어요`,
+      lead: "10분이면 끝나요.",
+      bar: total > 0 ? Math.round(solved / total * 100) : 0,
+      barNow: solved,
+      barMax: total,
+      actions: `<a class="btn" href="/daily.html">${solved > 0 ? "이어서 풀기" : "시작하기"} →</a>${reviewBtn}`,
+    });
+    return;
+  }
+
+  // ④ 오늘 세트를 못 불러왔다 — 그래도 들어갈 문은 남긴다.
+  //    이 앱에서 매일 하는 행동이라 링크가 사라지면 화면이 고장 난 것으로 읽힌다.
+  el.innerHTML = heroHtml({
+    eyebrow: todayLabel(),
+    title: "오늘의 퀴즈",
+    lead: "지금은 진행 상황을 불러오지 못했어요.",
+    actions: `<a class="btn" href="/daily.html">오늘의 퀴즈로</a>${reviewBtn}`,
+  });
 }
 
-/** 통계 세 칸 — 문제 목록 화면과 <같은 API·같은 규칙>을 쓴다.
+/** 히어로 마크업 한 벌. bar가 있으면 진행 바를 함께 그린다. */
+function heroHtml({ cls = "", eyebrow, title, lead, bar, barNow, barMax, actions }) {
+  return `<div class="hero-card ${cls}">
+    <div class="eyebrow">${escapeHtml(eyebrow)}</div>
+    <h1>${escapeHtml(title)}</h1>
+    <p class="lead">${escapeHtml(lead)}</p>
+    ${bar === undefined ? "" : `<div class="bar" role="progressbar"
+         aria-label="오늘의 퀴즈 진행률"
+         aria-valuenow="${barNow}" aria-valuemin="0" aria-valuemax="${barMax}"
+      ><i style="width:${bar}%"></i></div>`}
+    <div class="actions">${actions}</div>
+  </div>`;
+}
+
+/**
+ * 첫날 히어로 안의 "여기 있는 것" 숫자 — 문제 N개 · 분야 M개 · 문서 K편.
+ *
+ * <p><b>왜 필요한가.</b> 통계는 "0 / 0 / 아직 기록 없음"으로 시작한다. 숫자로는 맞지만
+ * 처음 온 사람에게 0 셋은 <이 앱에 아무것도 없다>로 읽힌다. 실제로는 문제 백 개가
+ * 이미 있다. 그래서 첫날에는 "내가 쌓은 것"이 아니라 "여기 있는 것"을 센다.
+ *
+ * <p>예전에는 목록 API 둘을 {@code size=1}로 불러 {@code totalElements}만 빌려 썼다.
+ * 이번 개편에서 랜딩용으로 만든 {@code GET /api/stats}가 같은 숫자를 한 번에 주므로
+ * 요청 둘이 하나가 됐다 — 세는 것만을 위한 API를 새로 만든 게 아니라 이미 만든 것을
+ * 여기서도 쓴다.
+ *
+ * <p>실패하면 이 줄만 안 뜬다. 히어로 본문은 이미 그려져 있다.
+ */
+async function renderFacts(domainCount) {
+  try {
+    const s = await api("/api/stats");
+    const facts = [
+      [s.problemCount, "문제"],
+      [domainCount || s.domainCount, "분야"],
+      [s.documentCount, "편의 개념 문서"],
+    ];
+    const card = document.querySelector("#hero .hero-card");
+    if (!card) return;
+    card.insertAdjacentHTML("beforeend",
+      `<div class="facts">${facts.map(([v, label]) =>
+        `<div><b>${v}</b>${escapeHtml(label)}</div>`).join("")}</div>`);
+  } catch (e) { /* 숫자를 못 세면 그 줄만 없다 */ }
+}
+
+/**
+ * 통계 넷 — 푼 문제 / 정답률 / 이번 주 / 복습 대기.
  *
  * <p>정답률이 null이면 "0%"로 채우지 않는다. 0%는 "다 틀렸다"는 뜻이라 아직 시작도 안 한
  * 사람에게 정반대 신호를 준다(대시보드·문제 목록에서 이미 정한 규칙).
  *
- * <p>"이번 주"가 스트릭 자리를 대신한다. 연속 일수는 하루만 쉬어도 0이 되어, 주 3회 페이스를
- * 지키는 사람에게 매주 실패를 알렸다(docs/12의 제거 절). */
+ * <p>"이번 주"가 스트릭 자리를 대신한다. 연속 일수는 하루만 쉬어도 0이 되어, 주 3회
+ * 페이스를 지키는 사람에게 매주 실패를 알렸다(docs/12의 제거 절).
+ *
+ * <p>복습 대기만 색을 쓴다 — 넷 중 <시한이 붙은> 유일한 값이다. 0이면 색을 빼서
+ * "할 일 없음"이 조용히 남는다. 색으로만 알리지 않게 라벨이 "복습 대기"라고 직접 말한다.
+ *
+ * <p>라벨을 숫자 <위>에 둔 것은 개편에서 뒤집은 것이다. 예전에는 큰 숫자가 먼저였는데,
+ * 넷이 나란히 서면 숫자만 눈에 들어오고 그것이 무엇의 숫자인지 매번 아래를 봐야 했다.
+ */
 function renderStats(s) {
   const cards = [
-    [String(s.solvedTotal), "푼 문제"],
-    [s.correctRate === null ? null : s.correctRate + "%", "정답률"],
-    [String(s.solvedThisWeek), "이번 주"],
+    [String(s.solvedTotal), "푼 문제", ""],
+    [s.correctRate === null ? null : s.correctRate + "%", "정답률", ""],
+    [String(s.solvedThisWeek), "이번 주", ""],
+    [String(s.reviewDue), "복습 대기", s.reviewDue > 0 ? " due" : ""],
   ];
-  document.getElementById("stats").innerHTML = cards.map(([v, label]) => `
+  const box = document.getElementById("stats");
+  box.innerHTML = cards.map(([v, label, extra]) => `
     <div class="stat">
-      <div class="num${v === null ? " none" : ""}">${v === null ? "아직 기록 없음" : escapeHtml(v)}</div>
       <div class="label">${label}</div>
+      <div class="num${v === null ? " none" : extra}">${v === null ? "아직 기록 없음" : escapeHtml(v)}</div>
     </div>`).join("");
-}
-
-/**
- * 첫 방문 안내 — "내가 쌓은 것"이 아직 없으니 "여기 있는 것"을 센다.
- *
- * <p>문제 수와 문서 수는 목록 API의 {@code totalElements}를 빌린다({@code size=1}로 요청해
- * 본문은 한 건만 받는다 — 필요한 건 개수뿐이다). 세는 것만을 위한 API를 새로 만들지 않는다.
- *
- * <p>둘 중 하나가 실패해도 안내는 띄운다 — 숫자가 없는 문장이 될 뿐, 첫 화면이 비는 것보다 낫다.
- */
-async function renderOnboard(domainCount) {
-  const box = document.getElementById("onboard");
-  const [problems, docs] = await Promise.all([
-    api("/api/problems?size=1").then(d => d.totalElements).catch(() => null),
-    api("/api/documents?size=1").then(d => d.totalElements).catch(() => null),
-  ]);
-  const facts = [
-    [problems, "문제"],
-    [domainCount, "분야"],
-    [docs, "편의 개념 문서"],
-  ].filter(([v]) => v !== null);
-
-  box.innerHTML = `
-    <p class="lead">아직 푼 문제가 없습니다.</p>
-    <p class="sub">오늘의 퀴즈 10문제면 첫 기록이 남고, 내일부터 복습이 붙습니다.</p>
-    <div class="facts">
-      ${facts.map(([v, label]) => `<div><b>${v}</b>${escapeHtml(label)}</div>`).join("")}
-    </div>`;
   box.hidden = false;
 }
 
 /**
- * "다음에 뭘 할까"에 답하는 분야 세 줄.
+ * 분야별 진도 — 여섯 줄.
  *
- * <p>12개를 다 늘어놓지 않는다. 그건 문제 목록 화면의 사이드바가 이미 하는 일이라,
- * 여기서 되풀이하면 같은 방으로 가는 문이 둘이 된다. 이 자리는 <b>고르는 곳이 아니라
- * 추천하는 곳</b>이라 셋만 뽑는다.
+ * <p><b>왜 여섯만.</b> 분야가 열둘인데 홈에 다 깔면 스크롤이 한 판 더 는다. 홈이 답해야
+ * 하는 질문은 "오늘 뭐부터 하지"이지 "나 얼마나 왔지"가 아니다. 뒤쪽 질문은 내 기록
+ * 화면이 맡고, 여기에는 [전체 보기 →]만 둔다.
  *
- * <p>뽑는 기준은 상황에 따라 다르고, 라벨도 같이 바뀐다 — 라벨이 고정이면 "비어 있습니다"
- * 아래에 0이 아닌 숫자가 놓이는 날이 온다.
- * <ul>
- *   <li>안 푼 분야가 있다 → 그중 셋 ("이 분야가 비어 있습니다")
- *   <li>전부 한 번씩은 풀었다 → 가장 적게 푼 셋 ("가장 적게 푼 분야")
- * </ul>
+ * <p><b>왜 많이 푼 순인가.</b> 적게 푼 순도 후보였다("다음에 뭘 할까"에 답한다). 그런데
+ * 그러면 <매일 0에 가까운 분야가 첫 줄>이라 화면이 매일 똑같다 — 숫자가 바뀌는 것이
+ * 이 목록의 값어치인데 그게 사라진다. "다음에 뭘 할까"는 내 기록 화면의 "약한 곳"이 맡는다.
  *
- * <p>첫날에는 12개가 모두 0이라 "비어 있다"는 말이 정보가 되지 못한다. 그때만 안내 한 줄을
- * 앞에 붙이고, 서버가 주는 순서(네트워크·운영체제·데이터베이스…)의 앞 셋을 권한다 —
- * 그 순서는 임의가 아니라 Domain enum의 선언 순서이고, 기초부터 쌓이도록 짜여 있다.
+ * <p>첫날에는 전부 0이라 정렬이 무의미한데, 자바스크립트 sort는 안정 정렬이라 서버가
+ * 준 순서(Domain enum 선언 순서 = 기초부터 쌓이는 순서)가 그대로 남는다.
  */
-function renderDomains(domains) {
+function renderProgress(domains) {
   if (!domains || domains.length === 0) return;
 
-  const untouched = domains.filter(d => d.solved === 0);
-  const allZero = untouched.length === domains.length;
+  // 문제가 아직 한 개도 없는 분야는 뺀다. "0 / 0"은 진도가 아니라 <빈 서랍>이라,
+  // 홈처럼 여섯 자리뿐인 곳에서는 실제로 풀 수 있는 분야의 자리를 빼앗는다.
+  // (내 기록 화면은 열둘을 다 보여 준다 — 거기는 "여기가 아직 비어 있다"도 정보다.)
+  const usable = domains.filter(d => d.total > 0);
+  if (usable.length === 0) return;
 
-  // 안 푼 분야가 있으면 그쪽, 없으면 적게 푼 순. 원본 배열은 정렬로 건드리지 않는다.
-  const picks = (untouched.length > 0 ? untouched : [...domains].sort((a, b) => a.solved - b.solved))
-    .slice(0, 3);
+  const top = usable.sort((a, b) => b.solved - a.solved).slice(0, 6);
 
-  const max = domains.reduce((m, d) => Math.max(m, d.solved), 0);
-  const note = allZero
-    ? `<div class="dom-row note">아직 아무 분야도 시작하지 않았습니다 — 기초부터 쌓이는 순서로 권합니다</div>`
-    : "";
+  document.getElementById("progList").innerHTML = top.map(d => {
+    // 분모가 0이면 막대를 0으로 둔다. 0으로 나누면 NaN이 style에 들어가 막대가 사라진다.
+    const pct = d.total > 0 ? Math.round(d.solved / d.total * 100) : 0;
+    return `<div class="progress-item">
+      <div class="row">
+        <span class="name">${escapeHtml(d.label)}</span>
+        <span class="num">${d.solved} <span class="of">/ ${d.total}</span></span>
+      </div>
+      <div class="bar" role="progressbar" aria-label="${escapeHtml(d.label)} 진도"
+           aria-valuenow="${d.solved}" aria-valuemin="0" aria-valuemax="${d.total}"
+        ><i style="width:${pct}%"></i></div>
+    </div>`;
+  }).join("");
 
-  document.getElementById("domList").innerHTML = note + picks.map(d => `
-    <a class="dom-row" href="/problems.html?domain=${encodeURIComponent(d.domain)}">
-      <span class="nm">${escapeHtml(d.label)}</span>
-      <span class="bar"><i style="width:${max === 0 ? 0 : Math.round(d.solved / max * 100)}%"></i></span>
-      <span class="n">${d.solved}문제</span>
-    </a>`).join("");
+  document.getElementById("progLabel").hidden = false;
+  document.getElementById("progList").hidden = false;
+}
 
-  const label = document.getElementById("domLabel");
-  label.textContent = untouched.length > 0 ? "다음은 이 분야가 비어 있습니다" : "가장 적게 푼 분야";
-  label.hidden = false;
-  document.getElementById("domList").hidden = false;
+/** "9월 6일 토요일" — 히어로 맨 윗줄. 매일 오는 화면이라 날짜가 바뀌는 것 자체가 정보다. */
+function todayLabel() {
+  return new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
 }
 
 /**

@@ -809,32 +809,24 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .hero h1 .accent { color: var(--primary); }
 .hero p { color: var(--muted); margin: 0 0 22px; }
 
-/* 빠른 시작 카드 그리드 — 화면이 좁아지면 자동으로 1열 */
-.quick-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 14px; margin-top: 10px;
-}
-.quick-card {
-  display: block; text-decoration: none; color: var(--text);
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 22px;
-  transition: border-color .12s, background .12s;
-}
-.quick-card:hover { border-color: var(--primary); background: var(--primary-soft); }
-.quick-card .icon { font-size: 1.7rem; }
-.quick-card h3 { margin: 8px 0 4px; font-size: 1.02rem; }
-.quick-card p { margin: 0; color: var(--muted); font-size: .84rem; }
-/* 할 일이 있는 카드는 주황 테두리로 살짝 재촉한다 */
-.quick-card.due { border-color: var(--review); background: var(--review-soft); }
+/* 빠른 시작 카드 그리드(.quick-grid/.quick-card)를 걷어냈다 — 2026-09-06.
+   사이드바가 늘 떠 있으니 같은 링크(문제·자유 퀴즈·개념 문서)를 본문 아래에 한 번 더
+   깔 이유가 없어졌다. 예전에는 상단 가로바가 좁아 본문에 큰 입구가 필요했다. */
 
-/* 홈 섹션 라벨 — "더 하고 싶다면" 같은 상황 구분선(UX 1단계 개편).
- * 카드 수를 줄이지 않고도 위계(오늘 할 일 vs 그 외)를 만들어 난잡함을 없애는 장치. */
+/* 섹션 라벨 — 구역을 가르는 작은 제목.
+ * 오른쪽 [전체 보기 →] 같은 링크를 함께 놓을 수 있게 space-between으로 바꿨다
+ * (2026-09-06). 예전에는 ::after로 남는 자리를 선이 채웠는데, 그러면 라벨 오른쪽에
+ * 무언가를 놓을 수 없었다. 선을 없앤 대신 대문자·자간으로 라벨임을 표시한다. */
 .section-label {
-  display: flex; align-items: center; gap: 10px;
-  color: var(--muted); font-size: .82rem; font-weight: 600;
-  margin: 30px 0 2px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  color: var(--muted); font-size: var(--fs-1); font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase;
+  margin: var(--sp-5) 0 var(--sp-2);
 }
-.section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.section-label a {
+  text-transform: none; letter-spacing: 0; font-weight: 700;
+  color: var(--primary); text-decoration: none; font-size: var(--fs-2);
+}
 
 /* 히어로 아래 보조 안내 한 줄(비로그인 유도문 등) */
 .hero .note { color: var(--muted); font-size: .84rem; margin-top: 12px; }
@@ -922,86 +914,112 @@ button:disabled { background: #d1d5db; cursor: default; transform: none; }
 .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 .tab-btn.active:hover { background: var(--primary-dark); color: #fff; }
 
-.stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-.stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
-.stat .num { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
-.stat .label { color: var(--muted); font-size: .85rem; }
+/* ── 오늘 화면의 세 덩이 (index.html) ── 2026-09-06 전면 개편 ──────────
+ *
+ * 예전에는 이 자리에 네 벌의 컴포넌트가 있었다: 할 일 줄(.task), 첫 방문 안내(.onboard),
+ * 분야 추천 줄(.dom-row), 통계 세 칸(.stat). 넷 다 이 화면에서만 쓰였고, 서로
+ * "누가 어느 자리를 차지하나"를 조건문으로 나눠 갖고 있었다.
+ *
+ * 세 덩이로 합쳤다 — <히어로 하나 / 통계 넷 / 진도 여섯>. 할 일과 첫 방문 안내는
+ * 히어로의 세 얼굴이 됐고, 분야 추천은 진도 목록이 됐다. 자리를 나눠 갖던 조건문이
+ * 사라지고 "무엇을 보여 줄까"가 히어로 안 한 곳으로 모인다.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 히어로: 오늘 할 일 ──
+ * [왜 옅은 판인가] 진한 그라데이션 판도 후보였고 처음 오는 사람에게는 그쪽이 명확하다.
+ * 하지만 이 화면은 <매일 오는 사람>의 것이고, index.html의 기존 주석이 이미
+ * "매일 오는 사람에게 매일 같은 광고를 보이지 않는다"를 결정으로 적어 두었다.
+ * 진한 판은 몇 주면 배경이 된다 — 그때는 자리만 차지하고 아무 말도 하지 않는다.
+ *
+ * [왼쪽 4px 띠] 옅은 판은 배경에 묻히기 쉬워 시작 지점을 표시할 것이 필요하다.
+ * 테두리를 통째로 진하게 하는 대신 한 변만 굵히면, 판을 세게 만들지 않고도
+ * "여기부터 오늘 할 일"이 읽힌다.
+ *
+ * [세 얼굴] 할 일 있음(인디고) / 오늘 몫 끝(초록) / 첫날(인디고 + 여기 있는 것 세기).
+ * 색만으로 알리지 않는다 — 끝난 상태는 문구에 ✓가 함께 있다. */
+.hero-card {
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4) var(--sp-5);
+}
+.hero-card .eyebrow {
+  color: var(--primary); font-size: var(--fs-1); font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.hero-card h1 {
+  font-size: var(--fs-5); font-weight: 800; letter-spacing: -.02em;
+  margin: var(--sp-2) 0 var(--sp-1);
+}
+.hero-card .lead { color: var(--text-2); margin: 0; }
+.hero-card .actions {
+  display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-3);
+}
+/* 오늘 몫을 끝낸 날. 초록으로 바뀌는 것만으로 알리지 않고 문구에 ✓를 함께 둔다. */
+.hero-card.done {
+  background: var(--correct-bg);
+  border-color: var(--correct);
+  border-left-color: var(--correct);
+}
+.hero-card.done .eyebrow { color: var(--correct); }
+
+/* 첫날에 히어로 안에 뜨는 "여기 있는 것" 숫자 — 문제 N개 · 분야 M개 · 문서 K편.
+ * [왜 이게 필요한가] 통계는 "0 / 0 / 아직 기록 없음"으로 시작한다. 숫자로는 맞지만
+ * 처음 온 사람에게 0 셋은 <이 앱에 아무것도 없다>로 읽힌다. 실제로는 문제 백 개가
+ * 이미 있다. 그래서 첫날에는 "내가 쌓은 것"이 아니라 "여기 있는 것"을 센다. */
+.hero-card .facts { display: flex; gap: var(--sp-5); flex-wrap: wrap; margin-top: var(--sp-3); }
+.hero-card .facts div { font-size: var(--fs-1); color: var(--muted); }
+.hero-card .facts b {
+  display: block; font-size: var(--fs-5); color: var(--text); font-weight: 800;
+  font-variant-numeric: tabular-nums;   /* 숫자 폭 고정 — 세 값이 세로로 안 흔들린다 */
+}
+
+/* ── 통계 넷 ──
+ * 채움색이 --card인 이유: --bg를 쓰면 페이지 배경과 같은 색이라 타일이 통째로 사라진다.
+ * docs/19에서 실제로 한 번 겪었다. */
+.stat-row {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+@media (min-width: 640px) { .stat-row { grid-template-columns: repeat(4, 1fr); } }
+.stat {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--sp-2) var(--sp-3);
+}
+.stat .label { color: var(--muted); font-size: var(--fs-1); }
+.stat .num {
+  font-size: var(--fs-5); font-weight: 800; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
 /* 값이 없는 칸 — 숫자 자리를 비우지 않고 이유를 적는다.
    정답률 0%는 "다 틀렸다"는 뜻이라, 아직 시작도 안 한 사람에게 정반대 신호를 준다. */
-.stat .num.none { font-size: .95rem; font-weight: 400; color: var(--muted); padding: 6px 0; }
+.stat .num.none { font-size: var(--fs-2); font-weight: 400; color: var(--muted); }
+/* 복습 대기만 색을 쓴다 — 시한이 붙은 유일한 값이라 눈에 먼저 들어와야 한다.
+   0일 때는 색을 빼서 "할 일 없음"이 조용하게 남는다(JS가 클래스를 붙인다). */
+.stat .num.due { color: var(--lv2-fg); }
 
-/* ── 오늘 할 일 줄 (index.html) ── 2026-08-29
- *
- * 첫 화면이 "홈"에서 "오늘"로 바뀌면서 생긴 자리. 오늘 해야 할 것을 한 줄에 하나씩,
- * <있는 것만> 그린다. 다 했으면 .done 한 줄만 남는다 — 화면이 비는 것 자체가
- * "오늘 몫은 끝났다"는 정보다.
- *
- * 복습 줄(.due)만 색을 쓴다. 복습은 <시한이 붙은 일>이고 데일리는 오늘 안에 하면 되는
- * 일이라, 급한 쪽에만 색을 준다. 둘 다 칠하면 어느 쪽이 급한지가 사라진다.
- * 색만으로 알리지 않게 문구가 "오늘 차례입니다"라고 직접 말한다. */
-.task {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 14px 18px; margin-bottom: 10px;
-  text-decoration: none; color: var(--text);
-  transition: border-color .12s, background .12s;
+/* ── 분야별 진도 ──
+ * [절대값이 주인공이다] "31 / 40"을 글자로 두고 막대는 그 아래 7px로 얇게 깐다.
+ * 퍼센트 숫자는 아예 쓰지 않는다 — 배치가 매일 문제를 더해 분모가 커지므로 퍼센트는
+ * 가만히 있어도 줄어든다. 맞힌 개수는 줄지 않는다. 문제 목록 개편에서 정한
+ * "게이지 → 절대값"과 같은 방향이고, 분모를 서버에 더하며 뒤집은 판단의 대가다
+ * (StudySummaryResponse 주석 참고). */
+.progress-grid {
+  display: grid; grid-template-columns: 1fr; gap: var(--sp-3) var(--sp-5);
+  margin-top: var(--sp-2);
 }
-a.task:hover { border-color: var(--primary); background: var(--primary-soft); }
-.task .what { flex: 1; min-width: 0; font-size: .98rem; }
-.task .go { color: var(--primary); font-size: .88rem; flex: none; }
-.task.due { border-color: var(--review); background: var(--review-soft); }
-.task.due .what { color: #b45309; }
-.task.due .go { color: #b45309; }
-a.task.due:hover { border-color: #b45309; background: var(--review-soft); }
-.task.done { color: var(--muted); font-size: .92rem; justify-content: center; }
+@media (min-width: 640px) { .progress-grid { grid-template-columns: 1fr 1fr; } }
+.progress-item .row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); }
+.progress-item .name { font-size: var(--fs-2); }
+.progress-item .num { font-size: var(--fs-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+.progress-item .num .of { color: var(--muted); font-weight: 400; }
 
-/* ── 첫 방문 안내 (index.html) ── 2026-08-29
- *
- * 기록이 하나도 없을 때만 뜨고, 첫 문제를 풀면 영영 안 보인다. 그 자리에 통계 세 칸이
- * 들어선다 — 둘은 같은 자리를 나눠 쓰는 관계다.
- *
- * <b>왜 필요한가</b>: 통계는 "0 / 0 / 아직 기록 없음"으로 시작한다. 숫자로는 맞지만
- * 처음 온 사람에게 세 개의 0은 <이 앱에 아무것도 없다>로 읽힌다. 실제로는 문제 76개와
- * 문서 6편이 이미 있다. 그래서 첫날에는 "내가 쌓은 것"이 아니라 "여기 있는 것"을 센다. */
-.onboard {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 20px 22px; margin-bottom: 20px;
-}
-.onboard .lead { font-size: 1.02rem; margin: 0 0 4px; }
-.onboard .sub { color: var(--muted); font-size: .86rem; margin: 0 0 14px; }
-.onboard .facts { display: flex; gap: 26px; flex-wrap: wrap; }
-.onboard .facts div { font-size: .84rem; color: var(--muted); }
-.onboard .facts b {
-  display: block; font-size: 1.35rem; color: var(--text); font-weight: 700;
-  font-variant-numeric: tabular-nums;   /* 숫자 폭을 고정 — 세 값이 세로로 안 흔들린다 */
-}
-
-/* ── 분야별 진척 줄 (index.html) ── 2026-08-29
- *
- * 문제 목록 화면의 사이드바(.pl-domain)와 <같은 데이터, 다른 목적>이다. 거기는 12개를
- * 다 늘어놓는 필터고, 여기는 "다음에 뭘 할까"에 답하는 추천 3줄이다. 그래서 격자가
- * 아니라 줄이고, 눌러 이동하는 링크다(필터 버튼이 아니다).
- *
- * 분모는 여기서도 안 쓴다 — 이유는 문제 목록 renderDomains()의 주석과 같다.
- * 바는 "이 사람 안에서의 상대 비교"일 뿐이라, 전부 0인 첫날에는 빈 채로 남는다. */
-.dom-list {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 6px 18px;
-}
-.dom-row {
-  display: flex; align-items: center; gap: 14px;
-  padding: 10px 0; border-bottom: 1px solid var(--border);
-  font-size: .92rem; text-decoration: none; color: var(--text);
-}
-.dom-row:last-child { border-bottom: 0; }
-a.dom-row:hover .nm { color: var(--primary-dark); }
-.dom-row .nm { width: 132px; flex: none; }
-.dom-row .bar { flex: 1; height: 6px; background: var(--fill); border-radius: 999px; overflow: hidden; }
-.dom-row .bar i { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
-.dom-row .n { width: 52px; text-align: right; flex: none; color: var(--muted); font-size: .84rem; font-variant-numeric: tabular-nums; }
-/* 안내 한 줄 — 줄이 아니라 설명이라 이름 칸의 고정 폭을 쓰지 않는다 */
-.dom-row.note { color: var(--muted); font-size: .86rem; }
-@media (max-width: 560px) { .dom-row .nm { width: 100px; } .dom-row .bar { display: none; } }
+/* 진도 막대. 공용이다 — 히어로의 오늘 진행률도 같은 것을 쓴다. */
+.bar { height: 7px; border-radius: 999px; background: var(--fill); overflow: hidden; margin-top: var(--sp-1); }
+.bar > i { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
+/* 히어로 안에서는 바탕이 옅은 인디고라 회색 트랙이 안 보인다 */
+.hero-card .bar { background: var(--primary-border); max-width: 320px; margin-top: var(--sp-3); }
 
 /* ── 최근 개념 문서 줄 (index.html) ──
  *
