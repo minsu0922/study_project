@@ -885,10 +885,51 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 /* =====================================================================
  * 홈(index.html) — 히어로 + 빠른 시작 카드
  * ===================================================================== */
-.hero { text-align: center; padding: 44px 16px 28px; }
-.hero h1 { font-size: 2rem; margin: 0 0 10px; letter-spacing: -.03em; }
+/* ── 랜딩(비로그인 첫 화면) ── 2026-09-06 전면 개편 ────────────────────
+ *
+ * 예전에는 히어로 한 덩이가 전부였다 — 큰 문구, 시작 버튼, 안내 한 줄. 무엇을 하는
+ * 곳인지 모르는 사람에게 설명 없이 "시작하기"만 내밀고 있었다.
+ *
+ * [핵심은 실제 문제를 하나 보여 주는 것] 설명 열 줄보다 문제 한 개가 낫다. 이 서비스가
+ * 뭘 주는지는 "CS 면접 대비"라는 말이 아니라 실제 문제의 <난이도와 결>이 말한다.
+ * 문제 조회는 공개 API라 로그인 없이 가져올 수 있다 — "화면과 문제는 누구나, 채점만
+ * 로그인"이라는 이 프로젝트의 원칙이 여기서 값어치를 한다.
+ *
+ * [로그인한 사람은 이 구역을 영영 안 본다] 같은 주소(/)에서 갈린다. 그래서 여기 있는
+ * 것들은 <처음 한 번>만 읽히면 되고, 매일 보는 화면의 규칙(질리지 않게)이 적용되지 않는다. */
+.hero { text-align: center; padding: var(--sp-6) var(--sp-4) var(--sp-5); }
+.hero h1 {
+  font-size: var(--fs-6); font-weight: 800;
+  margin: 0 0 var(--sp-2); letter-spacing: -.035em; line-height: 1.25;
+}
 .hero h1 .accent { color: var(--primary); }
-.hero p { color: var(--muted); margin: 0 0 22px; }
+.hero .lead { color: var(--text-2); font-size: var(--fs-3); margin: 0 0 var(--sp-4); }
+.hero .cta { display: flex; gap: var(--sp-2); justify-content: center; flex-wrap: wrap; }
+
+/* 셋으로 나눈 설명. 폰에서는 1열로 쌓인다 — 세 칸을 억지로 유지하면 한 줄에 두 글자가 된다. */
+.landing-points {
+  display: grid; grid-template-columns: 1fr; gap: var(--sp-2);
+  margin-top: var(--sp-6); text-align: left;
+}
+@media (min-width: 640px) { .landing-points { grid-template-columns: repeat(3, 1fr); } }
+.landing-points .card { margin: 0; }
+.landing-points .ic { font-size: 20px; line-height: 1; }
+.landing-points b { display: block; margin: var(--sp-1) 0 var(--sp-1); }
+
+.landing-sample { text-align: left; margin-top: var(--sp-5); }
+/* 미리보기 문제의 보기 — 누를 수 없는 <견본>이라 버튼이 아니라 칸이다.
+   진짜 보기 버튼(.opt)과 생김새를 일부러 다르게 둔다: 눌러도 아무 일이 없는 것이
+   눌리게 생겼으면, 그 순간이 이 화면의 첫인상이 된다. */
+.sample-choices {
+  display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin-top: var(--sp-3);
+}
+@media (min-width: 640px) { .sample-choices { grid-template-columns: 1fr 1fr; } }
+.sample-choice {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3); font-size: var(--fs-2); color: var(--text-2);
+  display: flex; gap: var(--sp-2);
+}
+.sample-choice span:first-child { color: var(--muted); font-weight: 700; flex: none; }
 
 /* 빠른 시작 카드 그리드(.quick-grid/.quick-card)를 걷어냈다 — 2026-09-06.
    사이드바가 늘 떠 있으니 같은 링크(문제·자유 퀴즈·개념 문서)를 본문 아래에 한 번 더

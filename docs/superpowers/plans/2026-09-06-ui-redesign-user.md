@@ -2074,8 +2074,13 @@ Claude-Session: https://claude.ai/code/session_01KAnMirEG161iMhDTvY6LAH
 - Modify: `src/main/resources/static/css/style.css` (랜딩 전용)
 
 **Interfaces:**
-- Consumes: `GET /api/stats`(Task 5), `GET /api/problems?size=1`
+- Consumes: `GET /api/stats`(Task 5), `GET /api/quiz?size=1`
 - Produces: 없음
+
+**`/api/problems`가 아니라 `/api/quiz`다.** 실제로 불러 보니 목록 API는 **401**이다 —
+그 화면이 내 풀이 기록을 함께 보여 주기 때문에 인증을 요구한다. 랜딩에 필요한 것은
+"아무 문제 하나"뿐이라 공개 API인 자유 퀴즈 조회를 쓴다.
+응답은 `{ problems: [...] }`이고 각 문제에 `domain·difficulty·type·question·choices`가 있다.
 
 - [ ] **Step 1: 랜딩 CSS를 쓴다**
 
