@@ -77,6 +77,13 @@ public class SecurityConfig {
                         // 들어오는 GET /api/quiz/{id}가 생겼다(docs/18). 이 클래스가 세운 원칙
                         // "화면과 문제는 누구나, 채점만 로그인"이 그대로 적용되는 자리다.
                         .requestMatchers(HttpMethod.GET, "/api/documents/**", "/api/quiz/**", "/api/quiz").permitAll()
+                        // 공개: 랜딩(비로그인 첫 화면)이 부르는 집계 — "문제 N개 · 문서 M편".
+                        // 여기가 막히면 401이 나가고, 정작 <로그인하지 않은 사람>이 아무 숫자도
+                        // 못 본다. 개발자는 대개 로그인한 상태로 확인하므로 손으로는 안 걸린다 —
+                        // PublicStatsIntegrationTest가 이 자리를 지킨다.
+                        // 새는 것이 없는 이유: 문제의 내용이 아니라 개수뿐이고, 내용은 이미
+                        // 위 줄에서 공개다("화면과 문제는 누구나, 채점만 로그인").
+                        .requestMatchers(HttpMethod.GET, "/api/stats").permitAll()
                         // 공개: API 문서(Swagger)
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // 공개: 상태 점검. 오케스트레이터(도커 HEALTHCHECK 등)가 부르는 자리라
