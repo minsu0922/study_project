@@ -778,6 +778,33 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
   clip-path: inset(50%); overflow: hidden; white-space: nowrap;
 }
 
+/* ── 문서 목차 ── 2026-09-08
+ *
+ * 접힌 채로 시작한다. 절이 열둘이라 펼쳐 두면 본문이 한 화면 아래로 밀리는데,
+ * 문서를 연 사람의 첫 목적은 <읽는 것>이지 고르는 것이 아니다.
+ * 대신 요약 줄에 절 수를 적어("목차 · 12절") 눌러 보지 않고도 알 수 있게 했다. */
+.doc-toc {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--fill); padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.doc-toc > summary { cursor: pointer; font-weight: 700; font-size: var(--fs-2); }
+.doc-toc ol { margin: var(--sp-2) 0 var(--sp-1); padding-left: 1.4em; }
+.doc-toc li { margin: 2px 0; font-size: var(--fs-2); }
+/* 번호가 이미 순서를 말하므로 링크는 밑줄 없이 둔다 — 목록 전체가 링크 덩어리라
+   밑줄이 열둘 겹치면 오히려 글자가 안 읽힌다. 대신 호버·초점에서 분명히 바뀐다. */
+.doc-toc a { color: var(--text); text-decoration: none; }
+.doc-toc a:hover { color: var(--primary-dark); text-decoration: underline; }
+
+/* 문서를 다 읽은 사람이 갈 곳 — 본문 끝. */
+#practice { margin-top: var(--sp-5); }
+
+/* 근거 문서로 좁혀졌을 때 문제 목록 위에 뜨는 줄(#tagFilter와 같은 모양). */
+#docFilter {
+  display: flex; align-items: center; gap: var(--sp-2);
+  flex-wrap: wrap; margin-bottom: var(--sp-3);
+}
+
 #tagFilter {
   display: flex; align-items: center; gap: var(--sp-2);
   flex-wrap: wrap; margin-bottom: var(--sp-3);

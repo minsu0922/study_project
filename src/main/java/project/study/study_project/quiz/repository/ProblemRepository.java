@@ -349,6 +349,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
               and (:keyword is null
                    or lower(p.question) like lower(concat('%', :keyword, '%'))
                    or lower(p.title) like lower(concat('%', :keyword, '%')))
+              and (:documentSlug is null or p.documentSlug = :documentSlug)
             order by p.domain,
                      case p.difficulty
                           when project.study.study_project.global.common.Difficulty.BEGINNER then 1
@@ -373,6 +374,16 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      * (docs/08의 인덱스 실험과 같은 이야기다), 수만 건이 되면 그때 전문 검색으로 갈아탄다.
      * 그 시점은 "느려진 것 같다"가 아니라 <b>재서</b> 정한다.
      *
+     * <h2>documentSlug — 문서에서 문제로 잇는 고리 (2026-09-08)</h2>
+     *
+     * <p>문제를 틀리면 채점 결과에 "이 문제의 개념 문서 읽기"가 붙는데 <b>반대가 없었다</b>.
+     * 문서를 다 읽은 사람이 할 수 있는 다음 행동이 메뉴로 돌아가 도메인을 다시 고르는
+     * 것뿐이었다. 도메인으로 잇지 않고 문서로 잇는 이유는 정확도다 — "네트워크 문제"는
+     * 방금 읽은 것과 상관없는 문제를 잔뜩 준다.
+     *
+     * <p>{@code like}가 아니라 <b>정확히 같은지</b>로 본다. slug는 사람이 치는 말이 아니라
+     * 기계가 만든 열쇠라, 부분 일치를 허용할 이유가 없다(그리고 인덱스를 탄다).
+     *
      * <p>설명을 여기 적은 이유: 쿼리 문자열 안에 {@code /* *}{@code /}를 넣었더니 JPQL 문법
      * 오류로 애플리케이션이 아예 안 떴다. 주석이 못 들어가는 자리가 있다.
      */
@@ -381,6 +392,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             @Param("domain") Domain domain,
             @Param("difficulty") Difficulty difficulty,
             @Param("keyword") String keyword,
+            @Param("documentSlug") String documentSlug,
             @Param("state") String state,
             @Param("onlyDue") boolean onlyDue,
             @Param("now") LocalDateTime now,

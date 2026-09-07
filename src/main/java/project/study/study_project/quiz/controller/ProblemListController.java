@@ -58,10 +58,12 @@ public class ProblemListController {
             @RequestParam(required = false, defaultValue = "false") boolean reviewDue,
             // 지문·제목에서 찾을 말. 비어 있으면 안 거른다(서비스의 blankToNull)
             @RequestParam(required = false) String keyword,
+            // 근거 개념 문서의 slug. 문서 화면의 "이 문서로 만든 문제 풀기"가 쓴다.
+            @RequestParam(required = false) String documentSlug,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return ApiResponse.ok(problemListService.getList(
-                userId, domain, difficulty, state, reviewDue, keyword, pageable));
+                userId, domain, difficulty, state, reviewDue, keyword, documentSlug, pageable));
     }
 
     /** 통계 카드 + 분야별 진척. 화면을 열 때 한 번 부른다(필터를 바꿔도 다시 부르지 않는다). */

@@ -51,10 +51,12 @@ public class ProblemListService {
     @Transactional(readOnly = true)
     public PageResponse<ProblemListItem> getList(Long userId, Domain domain, Difficulty difficulty,
                                                  ProblemListItem.SolveState state, boolean onlyDue,
-                                                 String keyword, Pageable pageable) {
+                                                 String keyword, String documentSlug,
+                                                 Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
         return PageResponse.from(problemRepository
-                .findListForUser(userId, domain, difficulty, blankToNull(keyword),
+                .findListForUser(userId, domain, difficulty,
+                        blankToNull(keyword), blankToNull(documentSlug),
                         state == null ? null : state.name(), onlyDue, now, pageable)
                 .map(row -> new ProblemListItem(
                         row.getId(),

@@ -129,11 +129,47 @@ class KeywordSearchIntegrationTest {
                 .andExpect(jsonPath("$.data.content").value(hasSize(1)));
     }
 
+    @Test
+    @DisplayName("문제 — 근거 문서로 좁힌다(문서 → 문제 고리)")
+    void findsProblemsByDocumentSlug() throws Exception {
+        String slug = "doc-" + 고유어;
+        problemRepository.save(ox("이 문서로 만든 문제 1", slug));
+        problemRepository.save(ox("이 문서로 만든 문제 2", slug));
+        problemRepository.save(ox("다른 문서로 만든 문제", "doc-other-" + 고유어));
+        problemRepository.save(ox("근거 문서가 없는 문제", null));
+
+        mockMvc.perform(get("/api/problems").param("documentSlug", slug)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").value(hasSize(2)));
+    }
+
+    @Test
+    @DisplayName("문제 — 근거 문서와 검색어를 함께 걸 수 있다")
+    void documentSlugCombinesWithKeyword() throws Exception {
+        // 화면이 둘을 함께 보낼 일은 드물지만, 필터끼리 배타적이면 나중에 조합할 때
+        // 하나가 조용히 무시된다. and로 이어졌는지 확인해 둔다.
+        String slug = "doc-" + 고유어;
+        problemRepository.save(ox("소켓 이야기 " + 고유어, slug));
+        problemRepository.save(ox("전혀 다른 이야기", slug));
+
+        mockMvc.perform(get("/api/problems")
+                        .param("documentSlug", slug)
+                        .param("keyword", 고유어)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").value(hasSize(1)));
+    }
+
     /* ── 헬퍼 ── */
 
     private Problem ox(String question) {
+        return ox(question, null);
+    }
+
+    private Problem ox(String question, String documentSlug) {
         return Problem.create(Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
-                null, question, "O", "해설", null);
+                null, question, "O", "해설", documentSlug);
     }
 
     private Document doc(String title, String body, String suffix) {
