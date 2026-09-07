@@ -377,8 +377,8 @@ body {
    * [모바일 우선] 기본 규칙이 폰이고 min-width로 넓은 화면을 덧쓴다. 반대로 짜면
    * 폰에서 데스크톱 규칙을 하나씩 되돌리게 되고, 되돌리기를 빠뜨린 자리가 곧 버그다.
    *
-   * 관리 콘솔은 아직 옛 .nav를 쓴다. 그쪽 body에는 #shell이 없어 "top"과 "tabs" 칸이
-   * 비는데, grid는 빈 칸을 0으로 접으므로 화면이 달라지지 않는다. */
+   * 로그인·회원가입처럼 셸이 없는 화면도 이 grid를 쓴다. 그쪽 body에는 #shell이 없어
+   * "top"과 "tabs" 칸이 비는데, grid는 빈 칸을 0으로 접으므로 화면이 달라지지 않는다. */
   display: grid;
   grid-template-areas: "top" "main" "tabs";
   grid-template-rows: auto 1fr auto;
@@ -395,43 +395,8 @@ body {
    #shell 자신이 칸을 차지하면 셋을 서로 다른 자리로 보낼 수 없다. */
 #shell { display: contents; }
 
-/* ── 상단 내비게이션 (모든 페이지 공통, js/api.js의 renderNav가 채움) ── */
-.nav {
-  position: sticky; top: 0; z-index: 50;   /* 긴 문서를 읽다가도 메뉴는 항상 손에 닿게 */
-  background: rgba(255, 255, 255, .9);
-  backdrop-filter: blur(8px);              /* 스크롤 시 내용이 살짝 비쳐 "떠 있는 바" 느낌 */
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  display: flex; align-items: center; gap: 4px;
-  height: 58px;
-
-  /* 항목이 넘치면 가로로 밀린다(위 .nav a 주석 참고). 스크롤바는 숨긴다 —
-     58px짜리 바에 스크롤바가 뜨면 메뉴 글자를 덮는다. */
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.nav::-webkit-scrollbar { display: none; }
-.nav .brand { flex: none; }
-.nav .brand {
-  font-weight: 800; font-size: 1.2rem; color: var(--primary);
-  text-decoration: none; margin-right: 16px; letter-spacing: -.02em;
-}
-/* 메뉴 항목은 줄이지도, 접지도 않는다.
- *
- * 이게 없으면 좁은 화면에서 메뉴가 무너진다 — flex 항목은 기본적으로 줄어들 수 있어서
- * 폭이 모자라면 글자 단위로 세로로 접힌다. 390px(아이폰 기준)에서 실제로 "자유 퀴즈"가
- * 세로 3글자로 쪼개지고 앞글자가 잘려 "유퀴즈"로 보였다(2026-08-20 실측).
- * flex:none으로 줄어들기를 막고 nowrap으로 접기를 막은 뒤, 넘치는 만큼은
- * .nav의 가로 스크롤에 맡긴다 — 메뉴는 잘려 보이는 것보다 밀려 있는 편이 낫다. */
-.nav a { color: var(--text); text-decoration: none; font-size: .93rem; padding: 6px 10px; border-radius: 8px;
-  white-space: nowrap; flex: none; }
-.nav a:hover { background: var(--primary-soft); color: var(--primary); }
-.nav a.active { color: var(--primary); font-weight: 700; background: var(--primary-soft); }
-.nav .spacer { flex: 1; }
-.nav .user-email { color: var(--muted); font-size: .85rem; margin-right: 4px; }
-
 /* "복습 N" 알림 배지 — 오늘 복습할 게 있으면 주황으로 눈에 띄게.
-   선택자에 .nav를 붙이지 않는다: 같은 배지가 사이드바·하단 탭바·옛 상단바 세 곳에 뜨는데,
+   자리를 선택자에 넣지 않는다: 같은 배지가 사이드바와 하단 탭바 두 곳에 뜨는데,
    자리마다 규칙을 두면 한 곳을 고칠 때 나머지를 잊는다. 배지는 어디에 놓이든 배지다. */
 .nav-badge {
   display: inline-block; min-width: 18px; text-align: center;
@@ -1638,11 +1603,6 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
  * 누를 수 있는 크기, 엄지가 닿는 위치, 스크롤해도 사라지면 안 되는 정보.
  * (2026-08-20 개편 — docs/REVIEW_2026-08-20 §2.1) */
 @media (max-width: 560px) {
-  .nav { padding: 0 12px; gap: 2px; }
-  .nav .user-email { display: none; }   /* 좁으면 이메일은 생략(로그아웃 버튼이 더 중요) */
-  /* 메뉴도 손가락으로 누르는 것 — 실측 43.7px이라 권장 최소 탭 영역(44px)에 살짝 못 미쳤다.
-     글자 크기는 그대로 두고 위아래 여백만 키워 누를 수 있는 넓이를 확보한다. */
-  .nav a { padding: 10px; }
   .container { padding-top: 18px; }
   .player-card { padding: 20px 16px; }
   .player-card .q-text { font-size: 1.08rem; }

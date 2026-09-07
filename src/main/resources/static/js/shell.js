@@ -50,7 +50,7 @@ function hasRole(need) {
 /**
  * 메뉴 선언 — <b>"이 메뉴는 어느 권한이 필요한가"를 적어 두는 유일한 곳</b>.
  *
- * 예전에는 renderNav 안에 링크가 하드코딩돼 있었고 관리자 링크만 조건부였다. 그래서
+ * 예전에는 상단 가로바를 그리는 함수 안에 링크가 하드코딩돼 있었고 관리자 링크만 조건부였다. 그래서
  * 비로그인 방문자에게도 복습·오답노트가 보였고, 누르면 그제야 "로그인하세요"가 떴다.
  * 권한이 셋이 된 지금 그 방식은 조건문이 링크 수만큼 흩어진다는 뜻이라, 표로 옮긴다.
  * 메뉴가 늘어도 여기 한 줄만 추가하면 내비게이션이 알아서 걸러 준다.
@@ -192,27 +192,6 @@ function sideLinks(items, active) {
        <span>${escapeHtml(m.label)}</span>
        ${m.badge ? `<span id="${m.badge}"></span>` : ""}
      </a>`).join("");
-}
-
-/**
- * 관리 콘솔이 쓰는 옛 상단 가로바 — <b>사용자 화면에는 더 이상 쓰지 않는다</b>.
- *
- * <p>콘솔은 개편 2단계라 아직 이 마크업 위에 서 있다. 그때 이 함수와
- * {@code .nav} CSS를 함께 걷어낸다. 지금 지우면 콘솔이 메뉴 없이 뜬다.
- */
-function renderNav(active) {
-  const el = document.getElementById("nav");
-  if (!el) return;
-  el.className = "nav";
-  el.innerHTML = `
-    <a class="brand" href="/">csquiz</a>
-    ${MENUS.filter(m => hasRole(m.need)).map(m =>
-      `<a class="${m.key === active ? "active" : ""}" href="${m.href}">${m.label}` +
-      `${m.badge ? `<span id="${m.badge}"></span>` : ""}</a>`).join("")}
-    <span class="spacer"></span>
-    ${authAreaHtml()}`;
-  loadReviewBadge();
-  wireLogout();
 }
 
 /** 로그인 상태 표시 영역 — 사용자 화면과 관리 콘솔이 함께 쓴다. */
