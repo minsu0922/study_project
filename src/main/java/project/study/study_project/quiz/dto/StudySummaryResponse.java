@@ -37,13 +37,26 @@ public record StudySummaryResponse(
 ) {
 
     /**
-     * @param solvedTotal    맞힌 적 있는 문제 수(제출 건수가 아니라 문제 수)
+     * <h2>attemptedTotal과 solvedTotal은 <b>다른 질문</b>에 답한다 (2026-09-07)</h2>
+     *
+     * <p>"얼마나 했나"와 "얼마나 아나"다. 예전에는 뒤의 값 하나뿐이었고, 화면이 그것을
+     * "푼 문제"라는 <b>앞의 이름</b>으로 쓰고 있었다. 그래서 한 문제를 풀고 틀린 사람에게
+     * 오늘의 퀴즈는 "1 / 10"이라 하고 홈은 "첫 문제를 풀어볼까요"라 했다.
+     * 틀린 것이 안 푼 것이 되어, 방금 한 일이 없던 일이 됐다.
+     *
+     * <p>값이 틀렸던 것이 아니라 이름이 두 뜻을 감당하고 있었다. 하나를 더 만들어 가른다.
+     *
+     * @param attemptedTotal 제출한 적 있는 문제 수. <b>맞았든 틀렸든</b> 센다 —
+     *                       "얼마나 했나"에 답하는 값이라 채점 결과와 무관하다
+     * @param solvedTotal    맞힌 적 있는 문제 수(제출 건수가 아니라 문제 수).
+     *                       분야별 진도가 쓰는 값이다
      * @param correctRate    전체 제출 중 정답 비율(0~100). <b>제출이 없으면 null</b> —
      *                       0%(다 틀렸다)와 "아직 안 풀었다"는 정반대 신호다
      * @param solvedThisWeek 이번 주(월요일 0시부터) 맞힌 문제 수. 스트릭을 대신하는 값이다
      * @param reviewDue      지금 복습할 차례인 문제 수
      */
     public record Stats(
+            long attemptedTotal,
             long solvedTotal,
             Integer correctRate,
             long solvedThisWeek,

@@ -149,6 +149,29 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     long countSolvedProblems(@Param("userId") Long userId);
 
     /**
+     * 내가 <b>제출한 적 있는</b> 문제 수 — 목록 화면의 "푼 문제" 카드.
+     *
+     * <p>위 {@link #countSolvedProblems}와 <b>한 줄만 다르다</b>({@code correct = true}가
+     * 없다). 그런데 그 한 줄이 화면이 하는 말을 바꾼다.
+     *
+     * <p>예전에는 이 값이 없어서 "푼 문제" 카드가 <b>맞힌</b> 수를 쓰고 있었다. 그래서
+     * 첫 문제를 틀린 사람에게 앱이 "첫 문제를 풀어볼까요"라고 했다 — 오답노트에는 그
+     * 문제가 들어가 있고 문제 목록에는 ✗가 붙어 있는데도. <b>틀린 것이 안 푼 것이 됐다.</b>
+     *
+     * <p>맞힌 수를 없애지 않고 <b>둘 다</b> 두는 이유: 분야별 진도는 맞힌 수라야 뜻이
+     * 통한다. 틀린 것을 진도로 치면 막대가 "안다"고 거짓말한다. 두 질문이 다르므로
+     * 두 값이 필요하다 — "얼마나 했나"와 "얼마나 아나".
+     *
+     * <p>제출 건수가 아니라 <b>문제 수</b>를 세는 것은 위와 같다. 한 문제를 세 번 틀려도
+     * 내가 건드린 문제는 하나다.
+     */
+    @Query("""
+            select count(distinct s.problem.id) from Submission s
+            where s.userId = :userId
+            """)
+    long countAttemptedProblems(@Param("userId") Long userId);
+
+    /**
      * 기간 안에 맞힌 문제 수 — "이번 주" 카드.
      *
      * <p><b>스트릭 대신 쓰는 값이다.</b> 연속 일수는 하루만 쉬어도 0으로 떨어져, 주 3회 페이스를

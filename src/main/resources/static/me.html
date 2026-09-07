@@ -112,7 +112,8 @@ async function loadMe() {
   const totalAll = summary.domains.reduce((a, d) => a + d.total, 0);
 
   document.getElementById("stats").innerHTML = [
-    ["푼 문제", `${s.solvedTotal}<span class="of"> / ${totalAll}</span>`, ""],
+    // 제출한 문제 수다(맞힌 수가 아니다). 맞힌 수는 아래 "분야별"이 말한다.
+    ["푼 문제", `${s.attemptedTotal}<span class="of"> / ${totalAll}</span>`, ""],
     ["정답률", s.correctRate === null ? null : s.correctRate + "%", ""],
     ["이번 주", String(s.solvedThisWeek), ""],
     ["복습 대기", String(s.reviewDue), s.reviewDue > 0 ? " due" : ""],

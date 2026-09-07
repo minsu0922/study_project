@@ -166,7 +166,9 @@ function renderStats() {
     return;
   }
   const cards = [
-    [String(s.solvedTotal), "푼 문제"],
+    // 목록에 ✗로 표시되는 문제도 여기 포함된다 — 예전에는 맞힌 수를 써서,
+    // 같은 화면 위쪽이 "푼 문제 0"인데 아래 목록에는 ✗가 붙어 있었다.
+    [String(s.attemptedTotal), "푼 문제"],
     [s.correctRate === null ? null : s.correctRate + "%", "정답률"],
     [String(s.solvedThisWeek), "이번 주"],
     [String(s.reviewDue), "복습 대기"],

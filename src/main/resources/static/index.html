@@ -178,7 +178,7 @@ async function loadHome() {
   if (summary) {
     // 첫날에는 통계를 감춘다. 히어로가 이미 "여기 있는 것"(문제 N개·분야 M개·문서 K편)을
     // 말하고 있는데 그 아래에 0이 넷 더 뜨면, 같은 화면이 "많다"와 "없다"를 동시에 말한다.
-    if (summary.stats.solvedTotal > 0) renderStats(summary.stats);
+    if (summary.stats.attemptedTotal > 0) renderStats(summary.stats);
     renderProgress(summary.domains);
   }
 }
@@ -202,8 +202,13 @@ function renderHero(daily, summary) {
   const reviewBtn = due > 0
     ? `<a class="btn btn-outline" href="/review.html">복습 ${due}개 ↻</a>` : "";
 
-  // ① 첫날 — 아직 아무 기록이 없다
-  if (summary && summary.stats.solvedTotal === 0) {
+  /* ① 첫날 — 아직 아무 기록이 없다
+   *
+   * <attemptedTotal>으로 가른다. 예전에는 solvedTotal(맞힌 수)을 봤는데, 그러면
+   * 한 문제를 풀고 틀린 사람에게 이 문구가 뜬다 — 오늘의 퀴즈는 "1 / 10"이라 하고
+   * 오답노트에는 그 문제가 들어가 있는데도 홈만 "첫 문제를 풀어볼까요"라고 한다.
+   * 방금 한 일이 없던 일이 되고, 초보자일수록 첫 문제를 틀린다. */
+  if (summary && summary.stats.attemptedTotal === 0) {
     el.innerHTML = heroHtml({
       eyebrow: todayLabel(),
       title: "첫 문제를 풀어볼까요",
@@ -314,7 +319,9 @@ async function renderFacts(domainCount) {
  */
 function renderStats(s) {
   const cards = [
-    [String(s.solvedTotal), "푼 문제", ""],
+    // "푼 문제"는 제출한 수다. 맞힌 수는 아래 분야별 진도가 말한다 —
+    // 두 값이 다른 질문에 답하므로 한 화면에 나란히 있어도 어긋나지 않는다.
+    [String(s.attemptedTotal), "푼 문제", ""],
     [s.correctRate === null ? null : s.correctRate + "%", "정답률", ""],
     [String(s.solvedThisWeek), "이번 주", ""],
     [String(s.reviewDue), "복습 대기", s.reviewDue > 0 ? " due" : ""],

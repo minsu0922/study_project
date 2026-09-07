@@ -103,6 +103,8 @@ public class ProblemListService {
                                 / overall.getTotal());
 
         var stats = new StudySummaryResponse.Stats(
+                // "얼마나 했나"와 "얼마나 아나"는 다른 질문이라 값이 둘이다(Stats 주석 참고)
+                submissionRepository.countAttemptedProblems(userId),
                 submissionRepository.countSolvedProblems(userId),
                 correctRate,
                 submissionRepository.countSolvedProblemsSince(userId, weekStart),
