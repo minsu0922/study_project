@@ -137,8 +137,14 @@ function loadDocuments() {
           ${escapeHtml(d.title)} ${editionBadge(d.edition)}
           <div class="meta">/${escapeHtml(d.slug)}</div>` },
       { head: "도메인", width: "90px", cell: d => escapeHtml(d.domainLabel) },
-      { head: "태그", width: "180px",
-        cell: d => d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("") },
+      // wrap이 <반드시> 있어야 한다. 표의 width는 요청일 뿐이고, 칸 안이 nowrap이면
+      // 내용이 그 요청을 밀어낸다 — 태그가 넷이면 이 칸이 180px가 아니라 400px를 먹고,
+      // 표 전체가 자리보다 넓어져 <오른쪽 끝의 삭제 버튼이 잘렸다>.
+      //
+      // 제목 칸은 접히는데 태그 칸은 안 접히던 것이 문제였다. 접혀야 할 것과 아닌 것이
+      // 뒤바뀌어 있었다 — 제목은 읽어야 하니 넓어야 하고, 태그는 있는지만 보면 된다.
+      { head: "태그", width: "180px", wrap: true,
+        cell: d => d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join(" ") },
       { head: "수정", width: "100px", className: "meta", cell: d => escapeHtml(shortDate(d.updatedAt)) },
       { head: "", width: "220px", className: "row-actions", cell: () => `
           <button class="btn-outline" data-action="copy-md" title="본문 마크다운을 클립보드에 복사">MD 복사</button>
