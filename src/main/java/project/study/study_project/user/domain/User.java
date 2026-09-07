@@ -85,4 +85,15 @@ public class User {
         this.passwordHash = passwordHash;
         this.role = (role != null) ? role : Role.USER;
     }
+    /**
+     * 비밀번호 교체 — <b>이미 해시된 값</b>만 받는다.
+     *
+     * <p>원문을 받아 여기서 해시하지 않는 이유: 그러면 엔티티가 {@code PasswordEncoder}를
+     * 알아야 하고, 도메인이 스프링 시큐리티에 매인다. 해시는 서비스가 하고 엔티티는
+     * <b>바꾼다</b>는 사실만 안다. 매개변수 이름을 {@code passwordHash}로 둔 것도
+     * "여기 원문을 넣으면 안 된다"는 말을 이름으로 하기 위해서다.
+     */
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 }

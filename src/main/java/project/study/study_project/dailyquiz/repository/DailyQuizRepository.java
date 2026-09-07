@@ -1,11 +1,13 @@
 package project.study.study_project.dailyquiz.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import project.study.study_project.dailyquiz.domain.DailyQuiz;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -42,4 +44,22 @@ public interface DailyQuizRepository extends JpaRepository<DailyQuiz, Long> {
             """)
     Optional<DailyQuiz> findWithItems(@Param("userId") Long userId,
                                       @Param("quizDate") LocalDate quizDate);
+    /**
+     * 탈퇴 — 이 사용자의 데일리 <b>항목</b>부터 (2026-09-08).
+     *
+     * <p>세트보다 <b>먼저</b> 불러야 한다. 자식이 남은 채로 부모를 지우면 외래 키에 걸린다.
+     *
+     * <p>JPA의 연쇄(cascade)에 맡기지 않은 이유는 {@code AccountService.withdraw} 주석에
+     * 적었다 — 엔티티 삭제는 플러시 때 나가고 그 순서를 하이버네이트가 정하는데,
+     * User와 DailyQuiz 사이에 매핑된 연관이 없어 앞뒤가 보장되지 않는다.
+     */
+    @Modifying
+    @Query("delete from DailyQuizItem i where i.dailyQuiz.id in "
+            + "(select q.id from DailyQuiz q where q.userId = :userId)")
+    void deleteItemsByUserId(@Param("userId") Long userId);
+
+    /** 탈퇴 — 항목을 지운 뒤 세트를 지운다(위 메서드 다음에 부른다). */
+    @Modifying
+    @Query("delete from DailyQuiz q where q.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

@@ -3,7 +3,9 @@ package project.study.study_project.report.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import project.study.study_project.report.domain.ProblemReport;
 import project.study.study_project.report.domain.ReportStatus;
 
@@ -71,4 +73,18 @@ public interface ProblemReportRepository extends JpaRepository<ProblemReport, Lo
             order by r.resolvedAt desc
             """)
     List<ProblemReport> findAcceptedForFeedback(Pageable pageable);
+    /**
+     * 탈퇴할 때 이 사용자의 것을 통째로 지운다 (2026-09-08).
+     *
+     * <p>엔티티를 읽어 와 하나씩 지우지 않고 <b>한 문장</b>으로 지운다. 오래 쓴 계정은
+     * 제출이 수백 건이라, 지우려고 전부 메모리에 올릴 이유가 없다.
+     *
+     * <p>{@code @Modifying}이 없으면 스프링 데이터가 이것을 <b>조회</b>로 알고 실행하려다
+     * 터진다. 벌크 연산은 영속성 컨텍스트를 건너뛰므로, 같은 트랜잭션에서 이 엔티티를
+     * 다시 읽는 코드가 있다면 지운 것이 살아 있는 것처럼 보인다 — 탈퇴 흐름은 지운 뒤
+     * 아무것도 안 읽으므로 그 함정에 걸리지 않는다.
+     */
+    @Modifying
+    @Query("delete from ProblemReport pr where pr.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }
