@@ -131,6 +131,20 @@ async function refreshAdminBadges() {
   setBadge("llm", problems + documents, false);
   setBadge("generate", topics === 0 ? "범위 없음" : null, topics === 0);
   setBadge("reports", reports, reports > 0);
+
+  /* 센 숫자를 화면 쪽에도 흘린다.
+   *
+   * 검수 화면 위의 요약 넷이 이 값과 <같은 숫자>다. 화면이 직접 세게 두면 같은 주소를
+   * 네 번 더 부르게 되고, 그보다 나쁜 것은 두 숫자가 어긋나는 순간이 생긴다는 점이다 —
+   * 승인 직후 배지는 줄었는데 요약은 그대로면, 보는 사람은 어느 쪽을 믿어야 할지 모른다.
+   *
+   * 함수를 부르지 않고 알림(이벤트)으로 흘리는 이유는 <부르는 자리가 일곱>이라서다.
+   * 검수 화면은 승인·거절·일괄승인 등 일곱 곳에서 이 함수를 부르는데, 요약 갱신을
+   * 그 일곱 곳에 손으로 붙이면 여덟 번째를 더하는 날 하나를 빠뜨린다.
+   * 여기서 한 번 알리면 듣는 쪽이 알아서 따라온다. */
+  document.dispatchEvent(new CustomEvent("admin:counts", {
+    detail: { problems, documents, topics, reports },
+  }));
 }
 
 /** 배지 하나 — 값이 null이거나 0이면 숨긴다(0을 붙여 두면 늘 시끄럽다). */
