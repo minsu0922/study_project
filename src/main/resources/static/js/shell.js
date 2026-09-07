@@ -112,7 +112,8 @@ const MENUS = [
   // 콘솔은 가끔 들르는 부록이 아니라 매일 들어가는 작업장이고(검수·제보가 쌓인다),
   // spacer 뒤는 화면 높이에 따라 위치가 달라져 눈이 매번 다시 찾아야 한다.
   // 맨 위는 어느 화면에서나 같은 자리다. "다른 방"이라는 뜻은 구분선과 ↗로 지킨다.
-  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/index.html", need: "admin", icon: "🛠" },
+  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/index.html", need: "admin", icon: "🛠",
+    badge: "adminBadge" },
 ];
 
 /**
@@ -165,7 +166,7 @@ function renderShell({ active = "", title = "" } = {}) {
            tab 속성이 있는 것만 담는데 콘솔에는 그것이 없다(다섯 칸을 학습 화면이
            다 쓴다). 그래서 폰에서 관리자는 주소를 직접 치는 수밖에 없었다.
            콘솔 쪽 띠에 있는 "← 학습 화면으로"와 짝이 되는 문이다. -->
-      ${console_.length ? `<a class="shell-door" href="/admin/index.html">🛠 관리</a>` : ""}
+      ${console_.length ? `<a class="shell-door" href="/admin/index.html">🛠 관리<span id="adminBadge-door"></span></a>` : ""}
       ${authAreaHtml()}
     </header>
 
@@ -189,6 +190,7 @@ function renderShell({ active = "", title = "" } = {}) {
     </nav>`;
 
   loadReviewBadge();
+  loadAdminBadge();
   wireLogout();
 }
 
@@ -304,6 +306,58 @@ async function loadReviewBadge() {
       });
     }
   } catch (e) { /* 배지 실패는 무시(위 주석) */ }
+}
+
+/**
+ * 관리 콘솔 배지 — "지금 들어갈 이유"를 학습 화면에서 알려 준다.
+ *
+ * <h2>왜 학습 화면에 다나</h2>
+ *
+ * <p>콘솔 <b>안</b>에는 이미 검수·제보 배지가 있다. 그런데 그건 <b>들어간 뒤에야</b>
+ * 보인다 — 들어갈지 말지를 정할 때는 못 본다. 관리자는 학습자이기도 해서 하루 대부분을
+ * 이쪽 화면에서 보내는데, 그동안 콘솔에 무엇이 쌓였는지 알 방법이 없었다.
+ * 복습 배지가 "오늘 복습할 게 남았다"를 어느 화면에서든 알려 주는 것과 같은 이유다.
+ *
+ * <h2>무엇을 세나</h2>
+ *
+ * <p><b>사람이 판정해야 하는 것</b>만 센다 — 검수 대기(문제 초안 + 문서 초안)와
+ * 제보 대기. 셋 다 "읽고 결정한다"는 같은 종류의 일이라 한 숫자로 묶어도 뜻이 흐려지지
+ * 않는다.
+ *
+ * <p>주제 대기열은 <b>일부러 뺐다</b>. 그 값은 0일 때가 문제인데(생성이 멈춘다),
+ * 그러면 "0이면 숨긴다"는 배지의 규칙과 뜻이 정반대가 된다. 한 배지에 방향이 다른 두
+ * 신호를 섞으면 숫자가 커진 것이 좋은 소식인지 나쁜 소식인지 알 수 없어진다.
+ * 그건 콘솔 안의 "생성 실행" 배지가 따로 맡는다.
+ *
+ * <h2>비용</h2>
+ *
+ * <p>주소 셋을 한꺼번에(Promise.all) 부른다. 관리자가 아니면 <b>한 번도</b> 안 부른다 —
+ * 일반 사용자에게는 이 링크 자체가 그려지지 않기 때문이다. 실패는 조용히 넘긴다.
+ * 배지는 있으면 좋은 정보일 뿐, 이것 때문에 학습 화면이 에러를 띄우면 주객전도다.
+ */
+async function loadAdminBadge() {
+  if (!isAdmin()) return;
+  const 세기 = async path => {
+    try { return (await api(path)).count ?? 0; } catch (e) { return 0; }
+  };
+  const [문제, 문서, 제보] = await Promise.all([
+    세기("/api/admin/llm-problems/pending-count"),
+    세기("/api/admin/llm-documents/pending-count"),
+    세기("/api/admin/reports/pending-count"),
+  ]);
+  const 합 = 문제 + 문서 + 제보;
+  if (합 === 0) return;   // 0은 안 띄운다 — 늘 붙어 있으면 숫자가 신호이기를 그만둔다
+
+  // 무엇으로 이루어진 숫자인지 마우스를 올리면 보이게 한다. 배지는 좁아서 한 숫자만
+  // 들어가는데, 3이 "제보 3"인지 "검수 3"인지에 따라 갈 화면이 다르다.
+  const 풀이 = `검수 대기 ${문제 + 문서} · 제보 대기 ${제보}`;
+  const html = `<span class="nav-badge" title="${풀이}">${합}</span>`;
+  // 넓은 화면은 기둥, 좁은 화면은 상단 바의 문. 어느 쪽이 보이는지는 CSS가 정하므로
+  // 여기서는 둘 다 채운다(복습 배지와 같은 방식).
+  ["adminBadge", "adminBadge-door"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
 }
 
 /* ═════════════════════════════════════════════════════════════════════
