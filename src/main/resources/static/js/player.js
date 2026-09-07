@@ -175,16 +175,31 @@ function startPlayer(mountEl, problems, opts = {}) {
    * "순서대로 누른다"는 손가락으로도 정확하고, 키보드 1~9 단축키와도 그대로 이어진다.
    */
   function renderInput(p) {
+    /* [보기에 aria-pressed를 다는 이유 — 2026-09-07]
+     *
+     * 보기는 <button>인데 role도 상태도 없었다. 스크린리더는 "버튼"이라고만 읽어서,
+     * 넷 중 하나를 고르는 자리라는 것도, 지금 무엇을 골랐는지도 전달되지 않았다.
+     * 화면에는 남보라 테두리가 생기지만 그건 <눈으로만> 보이는 신호다.
+     *
+     * role="radio"로 가지 않은 이유: 라디오 그룹은 <화살표로 옮기고 탭은 그룹을 통째로
+     * 건너뛴다>는 약속이 붙어 있다. 이 화면의 키보드 규약은 이미 다르다 — 숫자키로
+     * 고르고 탭으로 보기를 하나씩 지난다. 역할만 라디오로 바꾸면 스크린리더 사용자가
+     * 화살표를 눌렀는데 아무 일도 안 일어나는, <말과 행동이 다른> 상태가 된다.
+     * 지금 있는 규약을 정확히 설명하는 쪽을 골랐다: 누를 수 있는 것들이고(button),
+     * 그중 눌린 것이 있다(aria-pressed).
+     *
+     * 묶음에는 이름을 준다. 그래야 "보기, 4개 중 1번" 같은 안내가 나온다. */
     if (p.type === "MULTIPLE_CHOICE") {
-      return p.choices.map(c => `
-        <button class="opt" data-value="${c.id}">
+      const opts = p.choices.map(c => `
+        <button class="opt" data-value="${c.id}" aria-pressed="false">
           <span class="key">${c.seq}</span><span>${escapeHtml(c.text)}</span>
         </button>`).join("");
+      return `<div role="group" aria-label="보기 ${p.choices.length}개">${opts}</div>`;
     }
     if (p.type === "OX") {
-      return `<div class="ox-row">
-        <button class="opt" data-value="O"><span>⭕ O</span></button>
-        <button class="opt" data-value="X"><span>❌ X</span></button>
+      return `<div class="ox-row" role="group" aria-label="보기 2개">
+        <button class="opt" data-value="O" aria-pressed="false"><span>⭕ O</span></button>
+        <button class="opt" data-value="X" aria-pressed="false"><span>❌ X</span></button>
       </div>`;
     }
     if (p.type === "ORDERING") return renderOrdering(p);
@@ -198,11 +213,14 @@ function startPlayer(mountEl, problems, opts = {}) {
     const rows = p.choices.map(c => {
       const at = state.order.indexOf(String(c.id));
       const picked = at >= 0;
-      return `<button class="opt${picked ? " selected" : ""}" data-order="${c.id}">
+      return `<button class="opt${picked ? " selected" : ""}" data-order="${c.id}"
+        aria-pressed="${picked}">
         <span class="key">${picked ? at + 1 : "·"}</span><span>${escapeHtml(c.text)}</span>
       </button>`;
     }).join("");
-    return `${rows}<div class="kbd-hint">순서대로 누르세요. 다시 누르면 취소됩니다.</div>`;
+    // 고른 것에는 몇 번째인지가 .key에 들어가 이름의 일부로 읽힌다("3 파일을 연다").
+    return `<div role="group" aria-label="보기 ${p.choices.length}개, 순서대로 고르기">${rows}</div>
+      <div class="kbd-hint">순서대로 누르세요. 다시 누르면 취소됩니다.</div>`;
   }
 
   /**
@@ -219,21 +237,22 @@ function startPlayer(mountEl, problems, opts = {}) {
       const at = pairIndexOfLeft(c.id);
       const active = state.matchLeft === String(c.id);
       return `<button class="opt${at >= 0 ? " selected" : ""}${active ? " active" : ""}"
-        data-left="${c.id}">
+        data-left="${c.id}" aria-pressed="${at >= 0}">
         <span class="key">${at >= 0 ? at + 1 : "·"}</span><span>${escapeHtml(c.text)}</span>
       </button>`;
     }).join("");
 
     const right = (p.matchOptions || []).map(o => {
       const at = pairIndexOfToken(o.token);
-      return `<button class="opt${at >= 0 ? " selected" : ""}" data-token="${escapeHtml(o.token)}">
+      return `<button class="opt${at >= 0 ? " selected" : ""}" data-token="${escapeHtml(o.token)}"
+        aria-pressed="${at >= 0}">
         <span class="key">${at >= 0 ? at + 1 : "·"}</span><span>${escapeHtml(o.text)}</span>
       </button>`;
     }).join("");
 
     return `<div class="match-grid">
-        <div class="match-col">${left}</div>
-        <div class="match-col">${right}</div>
+        <div class="match-col" role="group" aria-label="왼쪽 항목">${left}</div>
+        <div class="match-col" role="group" aria-label="오른쪽 항목">${right}</div>
       </div>
       <div class="kbd-hint">왼쪽을 누른 뒤 오른쪽을 누르면 이어집니다. 이어진 것을 누르면 풀립니다.</div>`;
   }
@@ -243,7 +262,10 @@ function startPlayer(mountEl, problems, opts = {}) {
     if (state.answered || state.submitting) return;
     state.selected = value;
     mountEl.querySelectorAll(".opt").forEach(btn => {
-      btn.classList.toggle("selected", btn.dataset.value === value);
+      const 눌림 = btn.dataset.value === value;
+      btn.classList.toggle("selected", 눌림);
+      // 클래스만 바꾸면 <보이는 상태>만 바뀐다. 소리로도 바뀌어야 하므로 함께 적는다.
+      btn.setAttribute("aria-pressed", String(눌림));
     });
     mountEl.querySelector("#submitBtn").disabled = false;
   }

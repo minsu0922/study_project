@@ -33,10 +33,13 @@ try {
 
     <div class="card">
       <div class="filters" style="margin-bottom:0">
-        <div class="field"><label>도메인</label><select id="fDomain"></select></div>
-        <div class="field"><label>난이도</label><select id="fLevel"></select></div>
-        <div class="field"><label>유형</label><select id="fType"></select></div>
-        <div class="field"><label>문제 수</label>
+      <!-- label에 for를 반드시 적는다. 글자를 칸 위에 <놓기만> 하면 눈에는 짝으로
+           보이지만 그건 배치일 뿐이고, 스크린리더에게는 이름 없는 칸 넷이 된다.
+           라벨을 누르면 칸이 잡히는 것도 for가 있어야 생긴다(손가락 표적이 넓어진다). -->
+        <div class="field"><label for="fDomain">도메인</label><select id="fDomain"></select></div>
+        <div class="field"><label for="fLevel">난이도</label><select id="fLevel"></select></div>
+        <div class="field"><label for="fType">유형</label><select id="fType"></select></div>
+        <div class="field"><label for="fSize">문제 수</label>
           <select id="fSize"><option>5</option><option selected>10</option><option>20</option></select>
         </div>
       </div>

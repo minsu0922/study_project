@@ -158,6 +158,18 @@ function renderShell({ active = "", title = "" } = {}) {
   const tabs = visible.filter(m => m.tab).slice(0, 5);
 
   el.innerHTML = `
+    <!-- 반복 영역 건너뛰기 — 평소에는 화면 밖에 있다가 탭으로 초점을 받으면 나타난다.
+         (KWCAG 5.1.2 · WCAG 2.4.1)
+
+         [왜 필요한가] 키보드만 쓰는 사람은 화면을 옮길 때마다 메뉴 일고여덟 개를 탭으로
+         지나야 본문에 닿는다. 화면 열 몇 개를 오가는 앱에서 그 비용은 매번 붙는다.
+         랜드마크(main·nav)는 스크린리더에게만 우회로를 주고 <키보드만 쓰는 사람에게는
+         아무 도움이 안 된다> — 그래서 링크가 따로 있어야 한다.
+
+         [왜 셸이 그리나] 화면마다 손으로 넣으면 새 화면에서 반드시 빠뜨린다.
+         셸은 모든 화면이 부르는 한 곳이라, 여기 있으면 빠질 자리가 없다. -->
+    <a class="skip-link" href="#main">본문 바로가기</a>
+
     <header class="shell-top">
       <a class="brand" href="/">csquiz</a>
       ${title ? `<span class="shell-title">${escapeHtml(title)}</span>` : ""}
@@ -188,6 +200,20 @@ function renderShell({ active = "", title = "" } = {}) {
           ${m.badge ? `<span id="${m.badge}-tab"></span>` : ""}
         </a>`).join("")}
     </nav>`;
+
+  /* 건너뛰기 링크가 닿을 자리를 여기서 챙긴다.
+   *
+   * 화면마다 <main id="main">이라고 적게 하면 새 화면에서 반드시 빠뜨린다.
+   * 셸은 모든 화면이 부르는 한 곳이므로 여기서 붙이면 빠질 자리가 없다.
+   *
+   * tabindex="-1"이 함께 필요하다. 없으면 브라우저에 따라 <스크롤만 내려가고 초점은
+   * 메뉴에 남는다> — 그러면 다음 탭이 본문이 아니라 메뉴의 그다음 항목으로 간다.
+   * -1이라 탭 순서에는 안 들어가고, 링크로 보낼 때만 초점을 받는다. */
+  const main = document.querySelector("main");
+  if (main) {
+    if (!main.id) main.id = "main";
+    main.setAttribute("tabindex", "-1");
+  }
 
   loadReviewBadge();
   loadAdminBadge();
