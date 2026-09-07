@@ -194,42 +194,76 @@ function sideLinks(items, active) {
      </a>`).join("");
 }
 
-/** 로그인 상태 표시 영역 — 사용자 화면과 관리 콘솔이 함께 쓴다. */
+/**
+ * 계정 영역 — 셸의 상단 바와 기둥 아래에 같은 것이 들어간다.
+ *
+ * <h2>로그아웃이 여기 없다 (2026-09-07)</h2>
+ *
+ * <p>예전에는 이 마크업에 로그아웃 링크가 들어 있었다. 그런데 이 함수를 셸이 <b>두 번</b>
+ * 부른다(상단 바 · 기둥). 링크에 {@code id="logoutLink"}가 박혀 있었으므로 문서에 같은 id가
+ * 둘이 됐고, {@code getElementById}는 그중 <b>먼저 나오는 상단 바 것</b>만 돌려준다.
+ * 넓은 화면에서 상단 바는 {@code display:none}이라, <b>보이는 쪽 링크에는 아무 동작도
+ * 안 붙어 있었다</b> — 눌러도 조용히 아무 일이 없었다. 설정 화면에는 같은 id가 셋이었다.
+ *
+ * <p>고치는 방법이 둘이었다. id를 자리마다 다르게 주고 배선을 늘리거나, <b>로그아웃을
+ * 한 자리에만 두거나</b>. 뒤를 골랐다 — 로그아웃은 드물게 쓰는 동작인데 늘 보이는 자리를
+ * 둘이나 차지하고 있었고, 자리가 하나면 "어느 것이 동작하는가"를 물을 일 자체가 없다.
+ * 지금 로그아웃은 <b>설정 화면</b>에 있다(관리 콘솔은 설정이 없어 띠에 남긴다).
+ *
+ * <p>비로그인 상태에서는 <b>회원가입이 주 버튼</b>이다. 처음 온 사람에게 이 자리에서
+ * 가장 중요한 것이 그것인데, 예전에는 로그인과 나란한 테두리 버튼이라 무게가 같았다.
+ */
 function authAreaHtml() {
+  const name = escapeHtml(localStorage.getItem(USERNAME_KEY) || "");
   return isLoggedIn()
-    ? `<span class="user-email">${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")}</span>
-       <a href="#" id="logoutLink">로그아웃</a>`
+    // title을 함께 준다 — 기둥이 208px이라 긴 아이디는 잘린다.
+    ? `<span class="user-email" title="${name}">${name}</span>`
     : `<a href="/login.html">로그인</a>
-       <a href="/signup.html" class="btn btn-outline" style="padding:5px 14px">회원가입</a>`;
+       <a href="/signup.html" class="btn">회원가입</a>`;
 }
 
 /**
- * 로그아웃 링크에 동작을 붙인다 — <b>두 내비게이션이 같은 함수를 쓴다</b>.
+ * 로그아웃에 동작을 붙인다 — <b>{@code data-action="logout"}인 것 전부</b>.
+ *
+ * <p>id로 하나만 잡던 것을 속성으로 바꿨다. id는 문서에 하나여야 하는데 로그아웃이 놓이는
+ * 자리가 여럿이라(설정 화면 · 관리 콘솔 띠) 규칙을 어기고 있었고, 그 대가로 <b>보이는
+ * 버튼이 안 눌리는</b> 버그가 있었다({@link authAreaHtml} 주석).
+ *
+ * <p><b>두 번 걸지 않는다.</b> 설정 화면은 셸이 그려진 뒤 자기도 이 함수를 부른다.
+ * 그 버튼은 정적 마크업이라 셸 차례에 이미 걸려 있어서, 표시가 없으면 리스너가 둘이 되고
+ * 로그아웃 요청이 두 번 나간다. 걸어 둔 자리에 표를 남겨 두 번째를 건너뛴다.
+ */
+function wireLogout() {
+  document.querySelectorAll('[data-action="logout"]').forEach(el => {
+    if (el.dataset.logoutWired) return;
+    el.dataset.logoutWired = "1";
+    el.addEventListener("click", onLogout);
+  });
+}
+
+/**
+ * 로그아웃 본체.
  *
  * 복사해 두면 안 되는 코드다: 서버의 refresh 토큰 폐기가 빠진 사본이 생기면
  * "로그아웃했는데 서버에는 14일짜리 출입증이 살아 있는" 상태가 그쪽 화면에서만 생긴다.
  */
-function wireLogout() {
-  const logout = document.getElementById("logoutLink");
-  if (!logout) return;
-  logout.addEventListener("click", async e => {
-    e.preventDefault();
-    // 서버의 refresh 토큰을 먼저 폐기(로드맵 2) — 브라우저만 지우면 서버엔 14일짜리
-    // 출입증이 살아 있는 셈이라, "로그아웃 = 서버에서도 회수"가 올바른 순서다.
-    // 관리 화면 출입증 쿠키도 이 응답에서 함께 지워진다(AdminGateCookie).
-    const refreshToken = localStorage.getItem(REFRESH_KEY);
-    if (refreshToken) {
-      try {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
-      } catch (err) { /* 서버 폐기 실패해도 로컬 로그아웃은 진행(TTL이 안전망) */ }
-    }
-    clearLogin();
-    location.href = "/"; // 로그아웃 후 첫 화면으로
-  });
+async function onLogout(e) {
+  e.preventDefault();
+  // 서버의 refresh 토큰을 먼저 폐기(로드맵 2) — 브라우저만 지우면 서버엔 14일짜리
+  // 출입증이 살아 있는 셈이라, "로그아웃 = 서버에서도 회수"가 올바른 순서다.
+  // 관리 화면 출입증 쿠키도 이 응답에서 함께 지워진다(AdminGateCookie).
+  const refreshToken = localStorage.getItem(REFRESH_KEY);
+  if (refreshToken) {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+    } catch (err) { /* 서버 폐기 실패해도 로컬 로그아웃은 진행(TTL이 안전망) */ }
+  }
+  clearLogin();
+  location.href = "/"; // 로그아웃 후 첫 화면으로
 }
 
 /**

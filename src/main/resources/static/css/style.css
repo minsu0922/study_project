@@ -456,7 +456,10 @@ body {
  * 글자 높이대로 두면 표적이 21~28px이라 44px 하한에 한참 못 미친다. 글자를 키우는 대신
  * 세로를 꽉 채우면 생김새는 그대로 두고 누를 넓이만 는다 — 상단 바는 글자가 커지면
  * 바 자체가 두꺼워져 본문을 밀어내는 자리라, 키울 수 있는 것은 표적뿐이다. */
-.shell-top a {
+/* 버튼을 뺀다(:not). 이 규칙은 (0,1,1)이라 .btn(0,1,0)을 이겨서, 그냥 두면
+   회원가입 버튼의 글자색까지 가져간다 — 남보라 바탕에 --text-2 글씨가 된다.
+   .card a가 .btn을 이겨 복습 화면 버튼이 2.84:1이던 것과 같은 사고다(2026-09-07). */
+.shell-top a:not(.btn):not(.btn-outline) {
   display: inline-flex; align-items: center; align-self: stretch;
   color: var(--text-2); text-decoration: none; font-size: var(--fs-2); white-space: nowrap;
 }
@@ -536,10 +539,18 @@ body {
     display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
     padding: 4px 8px 8px; font-size: var(--fs-1);
   }
-  .shell-side-auth a { color: var(--text-2); text-decoration: none; }
-  .shell-side-auth a:hover { color: var(--primary); }
-  .shell-side-auth .user-email { color: var(--muted); }
-  /* 기둥은 208px이라 가입 버튼이 통째로 들어간다 — 가로바에서 쓰던 인라인 폭 지정을 덮는다 */
+  /* 버튼은 제 색을 지킨다 — 위 .shell-top a와 같은 이유 */
+  .shell-side-auth a:not(.btn):not(.btn-outline) { color: var(--text-2); text-decoration: none; }
+  .shell-side-auth a:not(.btn):not(.btn-outline):hover { color: var(--primary); }
+  /* 로그인한 사람에게는 이 자리에 아이디 한 줄만 남는다(로그아웃은 설정 화면으로 갔다).
+     208px이라 긴 아이디는 잘리는데, 자르는 대신 접으면 줄이 늘어 기둥 아래가 흔들린다 —
+     전체 이름은 title 툴팁으로 준다(shell.js authAreaHtml). */
+  .shell-side-auth .user-email {
+    color: var(--muted); max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* 기둥은 208px이라 가입 버튼이 통째로 들어간다.
+     비로그인 상태에서 <이 자리의 주인공은 회원가입>이라 꽉 채운 버튼을 쓴다. */
   .shell-side-auth .btn { width: 100%; text-align: center; padding: 6px 10px !important; }
 
   /* 본문은 <남은 자리의 가운데>에 둔다. 여백만 넓히고 정렬은 건드리지 않는다.

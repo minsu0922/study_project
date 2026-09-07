@@ -81,7 +81,9 @@ function renderAdminShell(active = "") {
       <span class="who">${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")}</span>
       <span class="spacer"></span>
       <a href="/">← 학습 화면으로</a>
-      <a href="#" id="logoutLink">로그아웃</a>
+      <!-- 콘솔에는 설정 화면이 없어 로그아웃이 띠에 남는다. 사용자 화면 쪽은
+           설정 안으로 옮겼다(shell.js authAreaHtml 주석). -->
+      <a href="#" data-action="logout">로그아웃</a>
     </header>
 
     <nav class="shell-side" aria-label="관리 메뉴">

@@ -73,7 +73,10 @@ try {
   <div class="section-label"><span>계정</span></div>
   <div class="setting-row" style="border-top:0">
     <div id="accountLine"></div>
-    <button class="btn btn-outline" id="logoutLink">로그아웃</button>
+    <!-- id가 아니라 data-action이다. 로그아웃이 놓이는 자리가 여럿이라(여기 · 콘솔 띠)
+         id로 잡으면 문서에 같은 id가 둘 이상 생기고, getElementById가 그중 하나만
+         돌려주는 바람에 <보이는 버튼이 안 눌리는> 일이 실제로 있었다(shell.js 주석). -->
+    <button class="btn btn-outline" data-action="logout">로그아웃</button>
   </div>
 </main>
 
