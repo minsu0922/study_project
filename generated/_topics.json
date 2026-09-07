@@ -1,6 +1,42 @@
 {
   "note" : "관리자 화면의 '주제 범위' 탭에서 내보낸 파일입니다. 배치가 문서일마다 범위 하나를 골라 그 안에서 세부 주제를 정해 문서를 씁니다. 다음 차례는 '아직 안 쓴 범위 먼저, 그다음은 가장 오래 안 쓴 범위'로 정해지고, 줄은 없어지지 않습니다. lastUsedAt·usedCount는 배치가 적는 칸입니다. id는 DB 행 번호이니 지우지 마세요 — 지우면 같은 범위가 한 벌 더 생깁니다. id 없이 손으로 적어 넣은 줄은 다음 기동에 DB로 흡수됩니다. 이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.",
   "topics" : [ {
+    "id" : 56,
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "DI와 IoC — 생성자 주입을 쓰는 이유(순환 참조·불변·테스트)",
+    "memo" : "스프링 1단계. 개념 소개가 되지 않게, 필드 주입으로는 못 하는 일 세 가지를 축으로 꿸 것."
+  }, {
+    "id" : 59,
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "DispatcherServlet의 흐름 — 요청 하나가 지나가는 자리들",
+    "memo" : "스프링 2단계. 구성요소 사전이 되지 않게, 404와 415가 각각 어디서 결정되는지로 꿸 것."
+  }, {
+    "id" : 62,
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "필터와 인터셉터 — 어디서 갈리고 인증을 어느 쪽에 두는가",
+    "memo" : "스프링 2단계. 서블릿 앞이냐 스프링 안이냐가 축. 이 저장소의 JWT 필터가 실물 예다."
+  }, {
+    "id" : 47,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "스택과 힙 — OutOfMemory와 StackOverflow가 갈리는 자리",
+    "memo" : "자바 2단계. 메모리 구조 그림 나열이 되지 않게, 두 오류가 각각 어떤 코드에서 나는지로 꿸 것."
+  }, {
+    "id" : 29,
+    "domain" : "DATABASE",
+    "topic" : "SELECT의 실행 순서 — WHERE와 HAVING이 갈리는 지점",
+    "memo" : "DB 1단계. 문법 소개가 아니라 '집계 전이냐 후냐' 한 축으로 설명할 것."
+  }, {
+    "id" : 2,
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "JPA 영속성 컨텍스트의 1차 캐시와 변경 감지(dirty checking)"
+  }, {
+    "id" : 9,
+    "domain" : "NETWORK",
+    "topic" : "OSI 7계층 — 장애가 어느 계층에서 났는지 가려내는 법",
+    "memo" : "정보처리기사 대비. 계층 나열은 암기라 '언제 깨지는가'를 못 채운다 — 장애를 가르는 자리로 잡았다",
+    "lastUsedAt" : "2026-08-23",
+    "usedCount" : 1
+  }, {
     "id" : 18,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "오버로딩과 오버라이딩 — 컴파일 시점과 실행 시점에 정해지는 것",
@@ -97,18 +133,9 @@
     "topic" : "페이지 교체와 스래싱 — 메모리를 늘려도 안 나아지는 지점",
     "memo" : "정보처리기사 4단계. LRU·FIFO 비교만으로는 얕아 스래싱을 축으로 뒀다"
   }, {
-    "id" : 27,
-    "domain" : "SOFTWARE_ENGINEERING",
-    "topic" : "폭포수와 애자일 — 요구사항이 바뀔 때 각각 무엇을 치르는가",
-    "memo" : "정보처리기사 4단계. 방법론 나열이 되지 않게 요구사항 변경 비용으로 각도를 잡았다"
-  }, {
     "id" : 5,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "synchronized와 volatile의 차이 — 가시성과 원자성은 다른 문제다"
-  }, {
-    "id" : 2,
-    "domain" : "BACKEND_FRAMEWORK",
-    "topic" : "JPA 영속성 컨텍스트의 1차 캐시와 변경 감지(dirty checking)"
   }, {
     "id" : 3,
     "domain" : "LANGUAGE_RUNTIME",
@@ -122,22 +149,10 @@
     "domain" : "OS",
     "topic" : "컨텍스트 스위칭의 비용 — 스레드를 늘려도 빨라지지 않는 지점"
   }, {
-    "id" : 9,
-    "domain" : "NETWORK",
-    "topic" : "OSI 7계층 — 장애가 어느 계층에서 났는지 가려내는 법",
-    "memo" : "정보처리기사 대비. 계층 나열은 암기라 '언제 깨지는가'를 못 채운다 — 장애를 가르는 자리로 잡았다",
-    "lastUsedAt" : "2026-08-23",
-    "usedCount" : 1
-  }, {
     "id" : 28,
     "domain" : "DATABASE",
     "topic" : "기본키를 무엇으로 잡는가 — 자연키와 대리키, 나중에 바꾸기 어려워지는 자리",
     "memo" : "DB 1단계. 정의 나열이 되지 않게, 주민번호처럼 '바뀌지 않는다고 믿었던 값'을 키로 잡았다가 겪는 장면에서 출발할 것."
-  }, {
-    "id" : 29,
-    "domain" : "DATABASE",
-    "topic" : "SELECT의 실행 순서 — WHERE와 HAVING이 갈리는 지점",
-    "memo" : "DB 1단계. 문법 소개가 아니라 '집계 전이냐 후냐' 한 축으로 설명할 것."
   }, {
     "id" : 30,
     "domain" : "DATABASE",
@@ -224,11 +239,6 @@
     "topic" : "제네릭과 타입 소거 — 실행 시점에 사라지는 것과 그래서 못 하는 일",
     "memo" : "자바 1단계. 문법 소개가 아니라 'new T[]가 왜 안 되는가'처럼 막히는 자리로 각도를 잡을 것."
   }, {
-    "id" : 47,
-    "domain" : "LANGUAGE_RUNTIME",
-    "topic" : "스택과 힙 — OutOfMemory와 StackOverflow가 갈리는 자리",
-    "memo" : "자바 2단계. 메모리 구조 그림 나열이 되지 않게, 두 오류가 각각 어떤 코드에서 나는지로 꿸 것."
-  }, {
     "id" : 48,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "Stop-the-world — GC 로그의 무엇을 보고 튜닝을 판단하는가",
@@ -269,11 +279,6 @@
     "topic" : "스트림과 반복문 — 언제 느려지고 언제 읽기 쉬워지는가",
     "memo" : "자바 4단계. 취향 논쟁이 되지 않게, 디버깅과 조기 종료처럼 갈리는 지점으로 좁힐 것."
   }, {
-    "id" : 56,
-    "domain" : "BACKEND_FRAMEWORK",
-    "topic" : "DI와 IoC — 생성자 주입을 쓰는 이유(순환 참조·불변·테스트)",
-    "memo" : "스프링 1단계. 개념 소개가 되지 않게, 필드 주입으로는 못 하는 일 세 가지를 축으로 꿸 것."
-  }, {
     "id" : 57,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "빈 스코프와 생명주기 — 싱글턴 빈에 상태를 두면 벌어지는 일",
@@ -284,11 +289,6 @@
     "topic" : "컴포넌트 스캔 — 언제 @Configuration을 직접 써야 하는가",
     "memo" : "스프링 1단계. 남의 라이브러리 클래스처럼 @Component를 붙일 수 없는 경우가 핵심."
   }, {
-    "id" : 59,
-    "domain" : "BACKEND_FRAMEWORK",
-    "topic" : "DispatcherServlet의 흐름 — 요청 하나가 지나가는 자리들",
-    "memo" : "스프링 2단계. 구성요소 사전이 되지 않게, 404와 415가 각각 어디서 결정되는지로 꿸 것."
-  }, {
     "id" : 60,
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "@RequestBody와 검증 — 어디서 걸러지고 어떤 예외가 나는가",
@@ -298,11 +298,6 @@
     "domain" : "BACKEND_FRAMEWORK",
     "topic" : "전역 예외 처리 — @ControllerAdvice가 잡는 것과 못 잡는 것",
     "memo" : "스프링 2단계. 필터에서 난 예외는 지나쳐 버린다는 사각이 핵심. 요청 제한 429 버그가 그 자리였다."
-  }, {
-    "id" : 62,
-    "domain" : "BACKEND_FRAMEWORK",
-    "topic" : "필터와 인터셉터 — 어디서 갈리고 인증을 어느 쪽에 두는가",
-    "memo" : "스프링 2단계. 서블릿 앞이냐 스프링 안이냐가 축. 이 저장소의 JWT 필터가 실물 예다."
   }, {
     "id" : 63,
     "domain" : "BACKEND_FRAMEWORK",
