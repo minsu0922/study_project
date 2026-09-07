@@ -55,9 +55,9 @@
    * 문제 목록처럼 둘이 한 줄에 서는 자리가 늘면 --review를 옮겨야 한다.
    * (그때 옮길 쪽은 --review다 — 난이도 3색은 초록·주황·빨강이라는
    *  널리 읽히는 순서가 있어 대체할 색이 마땅치 않다.) */
-  --lv1-bg: #ecfdf5; --lv1-fg: #047857; --lv1-solid: #10b981;   /* 초급 */
-  --lv2-bg: #fffbeb; --lv2-fg: #b45309; --lv2-solid: #f59e0b;   /* 중급 */
-  --lv3-bg: #fef2f2; --lv3-fg: #b91c1c; --lv3-solid: #ef4444;   /* 고급 */
+  --lv1-bg: #ecfdf5; --lv1-fg: #065f46; --lv1-solid: #10b981;   /* 초급 — 배지 위 7.29:1 */
+  --lv2-bg: #fffbeb; --lv2-fg: #92400e; --lv2-solid: #f59e0b;   /* 중급 — 배지 위 6.84:1 */
+  --lv3-bg: #fef2f2; --lv3-fg: #991b1b; --lv3-solid: #ef4444;   /* 고급 — 배지 위 7.6:1 */
 
   /* ── 중립색: slate 계열 (2026-08-29 개편 4단계) ─────────────────
    * 문제 목록 화면이 쓰던 slate 눈금을 앱 전체로 올렸다. 순수 회색보다 파란빛이
@@ -78,7 +78,15 @@
   --fill: #f1f5f9;               /* slate-100 */
   --text: #0f172a;               /* slate-900 */
   --text-2: #475569;             /* slate-600 — 본문보다 한 단계 여린 글자 */
-  --muted: #64748b;              /* slate-500 — 보조 설명. 대비 4.76:1 */
+  /* 재어서 한 단계 진하게 했다 — 2026-09-07.
+     이 값은 화면에서 <가장 많이 쓰이는 회색>이다(.meta·.label·.hint·표 머리·빈 상태…).
+     그런데 그 글자들은 대개 11~12px이라 작다. 예전 #64748b는 흰 카드 위 4.76:1로
+     AA는 넘겼지만, 작은 글자에서 AA는 "읽을 수 있다"이지 "읽기 편하다"가 아니다.
+     실제로 "잘 안 보인다"는 지적을 받고 재어 보니 옅은 판(--fill) 위에서는 4.34:1까지
+     떨어지고 있었다. 6.2:1(카드) / 5.66:1(옅은 판)로 올린다.
+     --text-2(7.47:1)까지 올리지 않은 이유: 그러면 두 단계가 한 색이 되어
+     "본문보다 여린 글자"와 "보조 설명"의 구분이 사라진다. */
+  --muted: #556274;
   --border: #e2e8f0;             /* slate-200 */
   --border-strong: #cbd5e1;      /* slate-300 — 호버·강조 테두리 */
 
@@ -132,6 +140,11 @@
    * 글자는 읽혀야 한다. */
   --correct-fg: #15803d;
   --wrong-fg: #b91c1c;
+  /* 삭제 버튼의 면색. --wrong(#dc2626)을 그대로 쓰면 그 위의 흰 글자가 4.83:1이라
+     13px 버튼 글자로는 얇게 보인다. 되돌릴 수 없는 동작의 이름표라 더 또렷해야 한다.
+     --wrong을 통째로 어둡게 하지 않은 이유: 그 값은 글자·테두리에도 쓰여서,
+     면색 하나 때문에 오류 문구까지 칙칙해진다. */
+  --danger-solid: #a01717;
 
   /* ── 타이포 눈금 6단 (2026-09-06 개편) ──────────────────────────────
    * 지금까지는 화면마다 임의값(14·16·18·22…)이 섞여 있었다. 눈금이 있으면
@@ -140,7 +153,11 @@
    * 6단인 이유: 보조글자 / 본문 / 조금 큰 본문 / 소제목 / 화면 제목 / 랜딩 제목.
    * 일곱 번째가 필요해지면 그건 대개 눈금이 모자란 게 아니라 위계가 꼬인 것이다 —
    * 같은 화면에 제목이 셋 있는지부터 의심한다. */
-  --fs-1: 11px;   /* 보조 설명, 메타 */
+  /* 11px에서 12px로 올렸다 — 2026-09-07.
+     가독성은 대비만의 문제가 아니다. 같은 대비라도 11px과 12px은 읽는 부담이 다르고,
+     이 크기가 붙는 자리(메타·라벨·배지)는 화면에서 <수가 가장 많은> 글자다.
+     대비를 올리는 것과 함께 해야 체감이 바뀐다. */
+  --fs-1: 12px;   /* 보조 설명, 메타 */
   --fs-2: 13px;   /* 본문 */
   --fs-3: 15px;   /* 조금 큰 본문, 목록 제목 */
   --fs-4: 17px;   /* 문제 지문, 소제목 */
@@ -226,7 +243,7 @@
   --fill: #273350;
   --text: #e2e8f0;
   --text-2: #cbd5e1;
-  --muted: #94a3b8;
+  --muted: #adbacb;
   --border: #334155;
   --border-strong: #475569;
 
@@ -243,7 +260,10 @@
   --on-wrong: #0f172a;
   /* 판이 아주 어두워서 면색을 그대로 글자로 써도 넉넉하다(7.69 / 5.36) */
   --correct-fg: #34d399;
-  --wrong-fg: #f87171;
+  --wrong-fg: #fca5a5;   /* 오류 <글자>. #f87171은 --wrong-bg 위에서 5.36:1이라 한 단계 밝혔다(7.81:1) */
+  /* 다크에서는 면이 밝고 글자가 어둡다(--on-primary). 이미 6.45:1이라 그대로 쓴다 —
+     라이트처럼 어둡게 만들면 어두운 배경에 묻혀 "삭제"라는 신호가 죽는다. */
+  --danger-solid: #f87171;
 
   --review: #fbbf24;
   --review-soft: #422006;
@@ -281,7 +301,7 @@
     --fill: #273350;
     --text: #e2e8f0;
     --text-2: #cbd5e1;
-    --muted: #94a3b8;
+    --muted: #adbacb;
     --border: #334155;
     --border-strong: #475569;
 
@@ -298,7 +318,8 @@
     --on-wrong: #0f172a;
     /* 판이 아주 어두워서 면색을 그대로 글자로 써도 넉넉하다(7.69 / 5.36) */
     --correct-fg: #34d399;
-    --wrong-fg: #f87171;
+    --wrong-fg: #fca5a5;   /* 오류 <글자>. #f87171은 --wrong-bg 위에서 5.36:1이라 한 단계 밝혔다(7.81:1) */
+    --danger-solid: #f87171;
 
     --review: #fbbf24;
     --review-soft: #422006;
@@ -528,7 +549,7 @@ body {
     min-height: 36px;
   }
   .shell-link:hover { background: var(--fill); }
-  .shell-link.active { background: var(--primary-soft); color: var(--primary); font-weight: 700; }
+  .shell-link.active { background: var(--primary-soft); color: var(--primary-dark); font-weight: 700; }
   .shell-link .ic { flex: none; }
   .shell-link .nav-badge { margin-left: auto; }
   .shell-rule { border-top: 1px solid var(--border); margin: 8px 0; }
@@ -596,9 +617,17 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
 .card.clickable:hover { border-color: var(--primary); background: var(--primary-soft); }
 
 /* 도메인·난이도 등 작은 라벨 */
+/* ── 옅은 남보라 판 위의 글자는 --primary-dark를 쓴다 ── 2026-09-07
+ *
+ * --primary(#4f46e5)를 --primary-soft(#eef2ff) 위에 얹으면 5.62:1이다. AA는 넘지만
+ * 이 조합이 붙는 자리는 죄다 <작고 강조하려던> 글자다 — 활성 메뉴, 히어로의 날짜,
+ * 고른 필터 칩, 배지, 안내 상자. 강조하려고 색을 준 글자가 오히려 덜 읽히는 셈이었다.
+ *
+ * 한 값만 바꿔 다섯 자리를 함께 고친다. 면색(--primary)은 그대로 두고 글자만 한 단계
+ * 진하게 — 테두리 버튼에서 쓴 것과 같은 판단이다(.btn-outline 주석). */
 .badge {
   display: inline-block;
-  background: var(--primary-soft); color: var(--primary);
+  background: var(--primary-soft); color: var(--primary-dark);
   border-radius: 999px; padding: 2px 11px;
   font-size: .74rem; font-weight: 600; margin-right: 6px;
 }
@@ -698,6 +727,11 @@ input[type=text], input[type=email], input[type=password], select, textarea {
 }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
 
+/* 안내 글씨(placeholder)에 색을 <직접> 준다. 브라우저 기본값은 4.61:1이라 흐리고,
+   그 값은 브라우저마다 다르다 — 우리가 정하지 않으면 화면이 어디서 열리느냐에 따라
+   읽히는 정도가 달라진다. 입력한 값(--text)보다는 여려야 "아직 안 쓴 칸"으로 읽힌다. */
+::placeholder { color: var(--muted); opacity: 1; }
+
 /* 칸 하나가 틀렸을 때 — 그 칸 바로 아래 한 줄.
  *
  * 화면 위쪽 알림 상자(#message)와 나눠 쓴다. 상자는 <서버가 거절했다>는 소식이고,
@@ -735,7 +769,11 @@ button, .btn {
 }
 button:active, .btn:active { transform: scale(.98); }   /* 눌리는 느낌 */
 button:disabled { background: var(--border-strong); cursor: default; transform: none; }
-.btn-outline { background: var(--card); color: var(--primary); border: 1px solid var(--primary); }
+/* 글자는 --primary가 아니라 --primary-dark다. 테두리와 글자를 같은 값으로 두면
+   "테두리가 잘 보이는 굵기"와 "글자가 잘 읽히는 진하기"가 한 값에 묶인다 —
+   둘은 다른 요구다. 테두리는 --primary로 두고 글자만 한 단계 진하게 한다.
+   실측: 카드 위 6.29 → 7.9, 옅은 판 위 5.74 → 7.21 (다크 4.98 → 7.45). */
+.btn-outline { background: var(--card); color: var(--primary-dark); border: 1px solid var(--primary); }
 .btn-outline:hover { background: var(--primary-soft); }
 .btn-lg { padding: 14px 30px; font-size: 1.05rem; border-radius: var(--radius-lg); }  /* 시작하기 등 핵심 동작 */
 /* 본론 옆에 딸린 작은 동작(제보 보내기 등). 기본 버튼과 같은 무게로 두면 화면의 주된 행동이
@@ -748,7 +786,7 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
    4.41:1로 AA(4.5)에 아슬아슬하게 못 미친다 — 오류 문구는 <제일 읽혀야 하는 글자>라
    그 자리에서 아끼지 않는다. --wrong-fg는 같은 자리에서 6.3:1이다. */
 .alert.error { background: var(--wrong-bg); color: var(--wrong-fg); }
-.alert.info { background: var(--primary-soft); color: var(--primary); }
+.alert.info { background: var(--primary-soft); color: var(--primary-dark); }
 
 /* (구)채점 결과 박스 — 오답노트 등에서 계속 사용 */
 .result { border-radius: var(--radius); padding: 12px 16px; margin-top: 12px; font-size: .92rem; }
@@ -1295,7 +1333,7 @@ body.admin-shell {
   padding: var(--sp-4) var(--sp-5);
 }
 .hero-card .eyebrow {
-  color: var(--primary); font-size: var(--fs-1); font-weight: 700;
+  color: var(--primary-dark); font-size: var(--fs-1); font-weight: 700;
   letter-spacing: .08em; text-transform: uppercase;
 }
 .hero-card h1 {
@@ -1422,8 +1460,10 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
  * 주면 table-cell이 아니게 되어 표 레이아웃이 깨진다. */
 .row-actions button { padding: 4px 10px; font-size: .8rem; }
 .row-actions button + button, .row-actions button + .btn { margin-left: 6px; }
-.danger { background: var(--wrong); }
-.danger:hover { background: var(--wrong-fg); }
+.danger { background: var(--danger-solid); }
+/* 호버는 한 단계 더 진하게. 라이트에서 --wrong-fg(#b91c1c)는 면색(#a01717)보다
+   <밝아서> 눌리는 느낌이 거꾸로 난다 — 어두워지는 쪽으로 섞는다. */
+.danger:hover { background: color-mix(in srgb, var(--danger-solid) 82%, var(--text)); }
 
 /* 목록이 비었을 때 자리 — "고장 났나?"로 읽히지 않게 이유를 적는 상자.
  * 그냥 회색 한 줄로 두면 로딩 실패와 구분이 안 된다. */
@@ -1772,7 +1812,7 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 }
 .pl-chip:hover { border-color: var(--border-strong); }
 .pl-chip[aria-checked="true"] {
-  background: var(--primary-soft); border-color: var(--primary); color: var(--primary);
+  background: var(--primary-soft); border-color: var(--primary); color: var(--primary-dark);
 }
 
 /* ── 목록 ─────────────────────────────────────────────────────── */
