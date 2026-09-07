@@ -20,5 +20,6 @@ public interface DocumentRepositoryCustom {
      * 문서 목록 화면용 조회 — 필터(도메인·태그) + 페이징 + 정렬을 QueryDSL로 처리하고,
      * <b>목록에 필요한 컬럼만</b> 뽑아 DTO로 바로 만든다(본문 content_md는 읽지 않음 — 구현 주석 참고).
      */
-    Page<DocumentListItem> searchListItems(Domain domain, List<String> tagNames, Pageable pageable);
+    Page<DocumentListItem> searchListItems(Domain domain, List<String> tagNames,
+                                           String keyword, Pageable pageable);
 }

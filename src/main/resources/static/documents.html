@@ -24,13 +24,27 @@ try {
 <main class="container">
   <h1>개념 문서</h1>
 
-  <!-- 필터: 도메인 선택 시 목록을 다시 불러온다. 태그 필터는 UI 단순화를 위해 생략(API는 지원) -->
+  <!-- 도메인은 고르는 것이고, 태그는 <따라 들어오는> 것이다.
+       그래서 셀렉트가 둘이 아니라 하나다 — 태그는 문서를 읽다가 배지를 눌러 들어오고,
+       여기서는 "지금 무엇으로 걸러져 있나"와 "푸는 법"만 보여 준다. 목록에 태그 셀렉트를
+       더 두면 "전체 태그" 목록을 내려 줄 API가 필요해지는데, 지금 흐름에는 그럴 자리가 없다. -->
   <div class="filters">
     <div class="field">
       <label for="domainFilter">도메인</label>
       <select id="domainFilter"></select>
     </div>
   </div>
+
+  <!-- 태그로 들어왔을 때만 보인다. 걸려 있다는 사실과 푸는 법을 같은 자리에 둔다 —
+       거르고 있다는 표시가 없으면 "문서가 왜 이것뿐이지"가 된다. -->
+  <form class="pl-search" id="searchForm" role="search">
+    <label for="q" class="visually-hidden">문서 검색</label>
+    <input type="search" id="q" placeholder="제목·본문에서 찾기"
+           autocomplete="off" enterkeyhint="search">
+    <button type="submit" class="btn-outline btn-sm">찾기</button>
+  </form>
+
+  <div id="tagFilter" hidden></div>
 
   <div id="message"></div>
   <div id="docList"></div>
@@ -56,12 +70,37 @@ fillSelect(domainFilter, DOMAINS, "전체 도메인");
 
 let page = 0; // 0부터 시작 (백엔드 Pageable 규칙과 동일)
 
+/* 주소로 들어온 태그. 문서 상세에서 배지를 누르면 여기로 온다.
+ *
+ * 화면 상태를 <주소에> 두는 이유: 그래야 "#java 문서 모음"을 북마크하거나 남에게
+ * 링크로 줄 수 있다. 변수에만 담아 두면 새로고침하는 순간 사라진다. */
+const activeTag = new URLSearchParams(location.search).get("tag");
+/** 지금 걸린 검색어. 입력할 때마다가 아니라 <제출할 때만> 바뀐다(문제 목록과 같은 판단). */
+let keyword = "";
+renderTagFilter();
+
+/** 걸린 태그 표시 — 태그로 들어왔을 때만 그린다. */
+function renderTagFilter() {
+  const box = document.getElementById("tagFilter");
+  if (!activeTag) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = `<span class="meta">태그로 좁힘</span>
+    <span class="badge">#${escapeHtml(activeTag)}</span>
+    <a class="meta" href="/documents.html">전체 문서 보기 →</a>`;
+}
+
 async function loadDocs() {
   const msg = document.getElementById("message");
   msg.innerHTML = "";
   try {
     const params = new URLSearchParams({ page });
     if (domainFilter.value) params.set("domain", domainFilter.value);
+    // 서버는 예전부터 tag 필터를 받고 있었다(DocumentRepositoryImpl). 화면에 입구가
+    // 없었을 뿐이라, 여기서는 넘겨 주기만 하면 된다.
+    if (activeTag) params.set("tag", activeTag);
+    // 본문까지 뒤진다 — 제목이 기억 안 나는 채로 "TIME_WAIT 얘기 나왔던 글"을 찾는
+    // 상황이 실제 쓰임이다(DocumentRepositoryImpl 주석).
+    if (keyword) params.set("keyword", keyword);
     const data = await api("/api/documents?" + params);
 
     // 제목 아래 부제 한 줄. edition이 없으면 빈 문자열이라 마크업 자체가 생기지 않는다.
@@ -74,7 +113,13 @@ async function loadDocs() {
 
     const list = document.getElementById("docList");
     if (data.content.length === 0) {
-      list.innerHTML = `<p class="meta">문서가 없습니다.</p>`;
+      // 왜 없는지를 상황마다 다르게 말한다 — 검색어가 먼저다(방금 친 것이므로).
+      list.innerHTML = keyword
+        ? `<div class="empty-state">'${escapeHtml(keyword)}'로 찾은 문서가 없습니다.</div>`
+        : activeTag
+        ? `<div class="empty-state">#${escapeHtml(activeTag)} 태그가 달린 문서가 없습니다.
+           <a href="/documents.html">전체 문서 보기</a></div>`
+        : `<p class="meta">문서가 없습니다.</p>`;
     } else {
       // 목록은 본문(contentMd) 없이 요약만 온다 — 본문은 클릭해서 상세에서 읽는다(docs/03)
       //
@@ -118,6 +163,15 @@ async function loadDocs() {
 }
 
 domainFilter.addEventListener("change", () => { page = 0; loadDocs(); }); // 필터 바꾸면 1페이지부터
+
+// 검색은 제출할 때만 보낸다(problems.html의 같은 자리 주석 참고).
+// 칸을 비우고 제출하면 풀린다 — 지우는 것도 같은 동작이라 배울 것이 하나다.
+document.getElementById("searchForm").addEventListener("submit", e => {
+  e.preventDefault();
+  keyword = document.getElementById("q").value.trim();
+  page = 0;
+  loadDocs();
+});
 document.getElementById("prevBtn").addEventListener("click", () => { page--; loadDocs(); });
 document.getElementById("nextBtn").addEventListener("click", () => { page++; loadDocs(); });
 

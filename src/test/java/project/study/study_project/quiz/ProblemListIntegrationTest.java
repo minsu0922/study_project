@@ -238,7 +238,8 @@ class ProblemListIntegrationTest {
     }
 
     private PageResponse<ProblemListItem> list(SolveState state, boolean onlyDue) {
+        // keyword는 null — 이 테스트가 보는 것은 상태·복습 필터라 검색은 걸지 않는다
         return problemListService.getList(
-                userId, null, null, state, onlyDue, PageRequest.of(0, 500));
+                userId, null, null, state, onlyDue, null, PageRequest.of(0, 500));
     }
 }

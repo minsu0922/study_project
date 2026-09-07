@@ -346,6 +346,9 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
                                where r.userId = :userId and r.problem = p
                                  and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
                                  and r.nextReviewAt <= :now))
+              and (:keyword is null
+                   or lower(p.question) like lower(concat('%', :keyword, '%'))
+                   or lower(p.title) like lower(concat('%', :keyword, '%')))
             order by p.domain,
                      case p.difficulty
                           when project.study.study_project.global.common.Difficulty.BEGINNER then 1
@@ -354,10 +357,30 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
                      end,
                      p.id
             """)
+    /**
+     * 목록 한 판. 필터는 전부 <b>"널이면 안 거른다"</b> 꼴이라 조합이 자유롭다.
+     *
+     * <h2>keyword — 지문과 제목을 함께 본다 (2026-09-08)</h2>
+     *
+     * <p>제목까지 보는 이유: 제목은 <b>선택</b> 필드라 없는 문제가 많지만, 있는 문제는
+     * 그 한 줄이 <b>목록에서 보이는 전부</b>다. 눈에 보이는 말로 못 찾으면 검색이 된 건지
+     * 안 된 건지를 사람이 판단할 수 없다.
+     *
+     * <p><b>보기(choices)는 안 뒤진다.</b> 정답이 보기 글에 들어 있으므로, 보기로 검색되면
+     * 답을 모르는 채 "정답 같은 말"을 넣어 후보를 좁히는 길이 열린다.
+     *
+     * <p>{@code like '%x%'}라 인덱스를 못 탄다. 지금 문제가 100개 남짓이라 풀스캔이 더 빠르고
+     * (docs/08의 인덱스 실험과 같은 이야기다), 수만 건이 되면 그때 전문 검색으로 갈아탄다.
+     * 그 시점은 "느려진 것 같다"가 아니라 <b>재서</b> 정한다.
+     *
+     * <p>설명을 여기 적은 이유: 쿼리 문자열 안에 {@code /* *}{@code /}를 넣었더니 JPQL 문법
+     * 오류로 애플리케이션이 아예 안 떴다. 주석이 못 들어가는 자리가 있다.
+     */
     Page<ProblemListRow> findListForUser(
             @Param("userId") Long userId,
             @Param("domain") Domain domain,
             @Param("difficulty") Difficulty difficulty,
+            @Param("keyword") String keyword,
             @Param("state") String state,
             @Param("onlyDue") boolean onlyDue,
             @Param("now") LocalDateTime now,

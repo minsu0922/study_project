@@ -754,6 +754,35 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
 }
 .badge.gray { background: var(--fill); color: var(--text-2); }
 
+/* 누를 수 있는 태그 배지(문서 상세). 밑줄을 남기는 것이 여기서는 <신호>다 —
+   바로 옆 도메인 배지가 생김새가 같은데 그쪽은 링크가 아니다. 밑줄이 둘을 가른다.
+   색은 .badge.gray가 이미 정하고 있어 전역 a 규칙이 못 이긴다(클래스 둘 대 요소 하나). */
+.tag-link:hover { background: var(--border-strong); color: var(--text); }
+
+/* 태그로 좁혀졌을 때 목록 위에 뜨는 줄. 걸린 사실과 푸는 법을 한 줄에 둔다. */
+/* 목록 위 검색 줄 — 문제·문서가 같은 것을 쓴다. */
+.pl-search { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.pl-search input { flex: 1; min-width: 0; }
+.pl-search button { flex: none; }
+
+/* 눈에는 안 보이지만 스크린리더는 읽는 글.
+ *
+ * display:none이나 visibility:hidden을 쓰면 안 된다 — 그 둘은 <읽히지도> 않는다.
+ * 1px 상자로 잘라 두면 화면에서만 사라지고 접근성 트리에는 남는다.
+ *
+ * 검색 칸에 쓴다. 화면에서는 placeholder("지문·제목에서 찾기")가 무엇을 넣는 칸인지
+ * 말해 주지만, placeholder는 <값을 넣으면 사라지는> 글이라 라벨을 대신할 수 없다. */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
+
+#tagFilter {
+  display: flex; align-items: center; gap: var(--sp-2);
+  flex-wrap: wrap; margin-bottom: var(--sp-3);
+}
+
 /* 난이도 배지 3색 — 2026-08-29 개편 3단계.
  *
  * [왜 색을 나눴나] 지금까지 난이도는 한 색이라 초·중·고가 <글자로만> 갈렸다. 목록에서

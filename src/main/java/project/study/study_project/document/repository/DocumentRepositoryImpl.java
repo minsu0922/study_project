@@ -58,7 +58,8 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
     }
 
     @Override
-    public Page<DocumentListItem> searchListItems(Domain domain, List<String> tagNames, Pageable pageable) {
+    public Page<DocumentListItem> searchListItems(Domain domain, List<String> tagNames,
+                                                 String keyword, Pageable pageable) {
         QDocument d = QDocument.document;
 
         BooleanBuilder where = new BooleanBuilder();
@@ -69,6 +70,22 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
             // any() → EXISTS 서브쿼리로 번역된다. 태그를 join으로 걸면 태그 수만큼 행이
             // 복제돼 distinct가 필요해지고 페이징 계산도 꼬인다 — EXISTS는 행을 안 불린다.
             where.and(d.tags.any().name.in(tagNames));
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            /* 제목과 <본문>을 함께 본다.
+             *
+             * 본문까지 뒤지는 이유: 문서를 찾는 상황은 대개 "제목이 기억 안 나는데
+             * TIME_WAIT 얘기가 나왔던 글"이다. 제목만 보면 그 검색이 안 된다.
+             *
+             * 본문은 한 편에 9,000자쯤 되는 TEXT 컬럼이라 like '%x%'가 인덱스를 못 탄다.
+             * 지금 문서가 10편이라 전부 읽어도 100KB 남짓이고, 그 정도는 한 번의
+             * 디스크 읽기보다 싸다. 수백 편이 되면 그때 전문 검색으로 갈아탄다 —
+             * 그 시점은 "느려졌다"가 아니라 <재서> 정한다(docs/08과 같은 규칙).
+             *
+             * 목록 조회는 본문을 select에서 빼 두었는데(위 ① 주석), where에서는 읽는다.
+             * 그 둘은 다른 이야기다 — 안 내려보내는 것과 안 보는 것은 다르다. */
+            String k = keyword.trim();
+            where.and(d.title.containsIgnoreCase(k).or(d.contentMd.containsIgnoreCase(k)));
         }
 
         // ① 목록 페이지: 필요한 컬럼만 DTO로 (content_md는 select 자체에 없음)

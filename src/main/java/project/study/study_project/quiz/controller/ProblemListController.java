@@ -56,10 +56,12 @@ public class ProblemListController {
             @RequestParam(required = false) Difficulty difficulty,
             @RequestParam(required = false) ProblemListItem.SolveState state,
             @RequestParam(required = false, defaultValue = "false") boolean reviewDue,
+            // 지문·제목에서 찾을 말. 비어 있으면 안 거른다(서비스의 blankToNull)
+            @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(
-                problemListService.getList(userId, domain, difficulty, state, reviewDue, pageable));
+        return ApiResponse.ok(problemListService.getList(
+                userId, domain, difficulty, state, reviewDue, keyword, pageable));
     }
 
     /** 통계 카드 + 분야별 진척. 화면을 열 때 한 번 부른다(필터를 바꿔도 다시 부르지 않는다). */

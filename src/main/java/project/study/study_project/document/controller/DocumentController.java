@@ -39,9 +39,11 @@ public class DocumentController {
     public ApiResponse<PageResponse<DocumentListItem>> list(
             @RequestParam(required = false) Domain domain,
             @RequestParam(required = false, name = "tag") List<String> tags,
+            // 제목·본문에서 찾을 말. 비어 있으면 안 거른다.
+            @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ApiResponse.ok(documentService.getDocuments(domain, tags, pageable));
+        return ApiResponse.ok(documentService.getDocuments(domain, tags, keyword, pageable));
     }
 
     /** 문서 단건(본문 포함). 예: {@code GET /api/documents/osi-7-layer} */

@@ -90,9 +90,26 @@ async function loadDoc() {
     document.title = d.title + " — csquiz";
     document.getElementById("title").textContent = d.title;
     renderEdition(d);
+    /* 태그 배지는 <링크>다 — 2026-09-08.
+     *
+     * 지금까지 배지는 누를 수 없는 글씨였다. 서버는 태그 필터를 처음부터 받고 있었는데
+     * 화면 어디에도 그 입구가 없어서, "이 태그의 다른 글"로 가려면 목록으로 돌아가
+     * 도메인으로 대충 좁히는 수밖에 없었다.
+     *
+     * 입구를 목록이 아니라 <여기>에 둔 이유: 태그가 필요해지는 순간은 문서를 고를 때가
+     * 아니라 <다 읽고 나서>다. "이거 재미있네, 비슷한 거 더" 하는 자리가 글의 끝이다.
+     * 게다가 목록의 카드는 이제 카드 전체가 링크라, 그 안에 태그 링크를 넣으면
+     * 링크 안의 링크가 된다(접근성 점검에서 방금 고친 그 문제다).
+     *
+     * 도메인 배지는 링크로 만들지 않는다. 도메인은 목록의 셀렉트로 고르는 것이고,
+     * 같은 일을 하는 입구가 둘이면 어느 쪽이 "지금 걸린 것"인지 흐려진다. */
     document.getElementById("badges").innerHTML =
       `<span class="badge">${escapeHtml(d.domainLabel)}</span>` +
-      d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("");
+      d.tags.map(t => {
+        const q = encodeURIComponent(t);
+        return `<a class="badge gray tag-link" href="/documents.html?tag=${q}"
+                   title="#${escapeHtml(t)} 태그가 달린 문서 모아 보기">#${escapeHtml(t)}</a>`;
+      }).join("");
 
     const bodyEl = document.getElementById("body");
     if (window.marked) {

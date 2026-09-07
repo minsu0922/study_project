@@ -39,11 +39,14 @@ public class DocumentService {
      * 문서 목록. 도메인·태그 필터는 선택. 본문은 제외한 요약 항목으로 페이지를 만든다.
      *
      * @param domain 도메인 필터(없으면 전체)
-     * @param tags   태그명 필터(없으면 전체). 주어지면 <b>그 중 하나라도 달린</b> 문서를 반환(OR).
+     * @param tags    태그명 필터(없으면 전체). 주어지면 <b>그 중 하나라도 달린</b> 문서를 반환(OR).
+     * @param keyword 제목·본문에서 찾을 말(없거나 공백뿐이면 전체). 대소문자를 안 가린다.
      */
     @Transactional(readOnly = true)
-    public PageResponse<DocumentListItem> getDocuments(Domain domain, List<String> tags, Pageable pageable) {
-        return PageResponse.from(withEditions(documentRepository.searchListItems(domain, tags, pageable)));
+    public PageResponse<DocumentListItem> getDocuments(Domain domain, List<String> tags,
+                                                      String keyword, Pageable pageable) {
+        return PageResponse.from(withEditions(
+                documentRepository.searchListItems(domain, tags, keyword, pageable)));
     }
 
     /**
