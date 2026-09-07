@@ -1075,6 +1075,19 @@ body.admin-shell {
 }
 .admin-bar a:hover { opacity: .75; }
 
+/* 전체 건수 + 페이저를 한 줄에. 왼쪽이 "얼마나 있나", 오른쪽이 "어디를 보고 있나"다.
+ *
+ * 전체 건수를 늘 적는 이유: 필터를 걸었을 때 "몇 건으로 좁혀졌나"가 곧 답인 경우가 많은데,
+ * 쪽수만으로는 그걸 알 수 없다(쪽이 하나면 페이저 자체가 숨는다). */
+.pager-row {
+  display: flex; align-items: center; gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.pager-row .spacer { flex: 1; }
+/* 페이저 버튼은 표 아래 보조 동작이라 공용 44px 하한을 면제한다 —
+   본문 버튼과 같은 크기면 목록보다 페이저가 더 눈에 띈다. */
+.pager-row button { min-height: 32px; padding: 5px 12px; }
+
 /* 기둥 안의 묶음 제목(할 일 / 콘텐츠 / 생성) */
 .shell-group {
   font-size: 9px; letter-spacing: .1em; text-transform: uppercase;

@@ -41,13 +41,15 @@ try {
     </div>
 
     <h3>문서 목록 <span class="meta">(행을 누르면 위 폼에서 수정 · [보기]는 실제 문서 화면 · [MD 복사]는 본문 마크다운을 클립보드로)</span></h3>
-    <div class="table-wrap"><table class="grid" id="documentTable"></table></div>
+    <!-- 표·페이저·빈 상태는 admin-table.js가 통째로 그린다. 여기는 자리만 둔다. -->
+    <div id="documentList"></div>
   </div>
 </main>
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script src="/admin/js/admin-shell.js"></script>
+<script src="/admin/js/admin-table.js"></script>
 <script src="/admin/js/admin-common.js"></script>
 <script>
 /* 문서 관리 — 개념 문서 등록·수정·삭제.
@@ -101,56 +103,51 @@ function resetDocumentForm() {
   ["dTitle", "dSlug", "dContent", "dTags", "dSource"].forEach(id => document.getElementById(id).value = "");
 }
 
-async function loadDocuments() {
-  // 조회는 공개 API 재사용(관리 전용 목록 API를 따로 두지 않은 이유는 AdminDocumentService 주석 참고)
-  const data = await api("/api/documents?size=100");
-  const table = document.getElementById("documentTable");
-  if (data.content.length === 0) {
-    table.innerHTML = `<tr><td class="meta">등록된 문서가 없습니다. 위 폼으로 직접 쓰거나, AI 검수 화면에서 초안을 승인하세요.</td></tr>`;
-    table.onclick = null;
-    return;
-  }
-
-  /* 열 구성을 바꿨다. 이전에는 제목이 wrap(줄바꿈 허용)이고 slug·태그가 nowrap이라,
-   * 정작 짧은 slug가 화면을 넓게 차지하고 정보인 제목이 두세 줄로 접혔다 —
-   * 폭은 "가장 많이 읽는 것"에 줘야 한다. 그래서 slug를 회색 작은 글씨로 제목 아래에 붙이고
-   * 열 하나를 줄였다. 대신 수정일을 넣었다: 어떤 문서를 최근에 손봤는지가 관리 화면에서
-   * 제일 자주 하는 질문인데, 지금까지 이 화면에서는 알 방법이 없었다. */
-  table.innerHTML =
-    `<tr><th>ID</th><th>제목</th><th>도메인</th><th>태그</th><th>수정</th><th></th></tr>` +
-    data.content.map(d => `
-      <tr class="click-row" data-id="${d.id}" data-slug="${escapeHtml(d.slug)}" title="이 문서를 수정">
-        <td>${d.id}</td>
-        <td class="wrap">
+/**
+ * 문서 목록.
+ *
+ * <p>조회는 <b>공개 API를 재사용</b>한다(관리 전용 목록 API를 따로 두지 않은 이유는
+ * AdminDocumentService 주석 참고).
+ *
+ * <p>예전에는 {@code size=100}으로 통째로 받고 페이저가 아예 없었다. 문서가 100편을
+ * 넘기는 날 <b>조용히 잘린다</b> — 화면 어디에도 "더 있다"는 표시가 없어 알아차릴 방법이
+ * 없었다. 공용 렌더러로 옮기며 쪽을 나눈다.
+ *
+ * <p>열 구성은 그대로다. 제목이 wrap이고 slug가 그 아래 회색 작은 글씨인 것은 2026-08-23의
+ * 판단이다 — 폭은 "가장 많이 읽는 것"에 줘야 하는데, 짧은 slug가 열 하나를 차지하고
+ * 정작 제목이 두세 줄로 접히고 있었다.
+ */
+function loadDocuments() {
+  return renderAdminTable("#documentList", {
+    url: "/api/documents",
+    columns: [
+      { head: "ID", width: "60px", cell: d => d.id },
+      { head: "제목", wrap: true, cell: d => `
           <!-- 배지를 제목 <바로 옆>에 둔다. 두 편은 제목이 글자까지 같아서 목록에서는
                같은 줄이 둘 있는 것으로 보이고, 그 둘을 가르는 것이 이 배지다. slug 줄에
                붙여 봤더니 좁은 칸에서 slug가 세 줄로 접히며 배지가 맨 아래로 밀려,
-               정작 가리키는 제목에서 멀어졌다.
-               짝이 없는 한 편짜리 문서에는 서버가 edition을 비워 보내 배지가 생기지
-               않는다(DocumentEditions의 "짝이 없으면 편도 없다"). -->
+               정작 가리키는 제목에서 멀어졌다. -->
           ${escapeHtml(d.title)} ${editionBadge(d.edition)}
-          <div class="meta">/${escapeHtml(d.slug)}</div>
-        </td>
-        <td>${escapeHtml(d.domainLabel)}</td>
-        <td>${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}</td>
-        <td class="meta">${escapeHtml(shortDate(d.updatedAt))}</td>
-        <td class="row-actions">
+          <div class="meta">/${escapeHtml(d.slug)}</div>` },
+      { head: "도메인", width: "90px", cell: d => escapeHtml(d.domainLabel) },
+      { head: "태그", width: "180px",
+        cell: d => d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("") },
+      { head: "수정", width: "100px", className: "meta", cell: d => escapeHtml(shortDate(d.updatedAt)) },
+      { head: "", width: "220px", className: "row-actions", cell: () => `
           <button class="btn-outline" data-action="copy-md" title="본문 마크다운을 클립보드에 복사">MD 복사</button>
           <button class="btn-outline" data-action="view">보기</button>
-          <button class="danger" data-action="delete">삭제</button>
-        </td>
-      </tr>`).join("");
-
-  table.onclick = e => {
-    const tr = e.target.closest(".click-row");
-    if (!tr) return;
-    const action = e.target.closest("button[data-action]")?.dataset.action;
-    // 보기는 새 탭으로 — 편집 중에 관리 화면을 잃지 않게 한다(돌아올 자리가 폼 상태를 들고 있다)
-    if (action === "view") { window.open("/document.html?slug=" + encodeURIComponent(tr.dataset.slug), "_blank"); return; }
-    if (action === "copy-md") { copyMarkdown(e.target.closest("button"), tr.dataset.slug); return; }
-    if (action === "delete") { deleteDocument(e.target.closest("button"), Number(tr.dataset.id)); return; }
-    editDocument(tr.dataset.slug, Number(tr.dataset.id));
-  };
+          <button class="danger" data-action="delete">삭제</button>` },
+    ],
+    // 행 전체가 "수정"이고, 버튼이 눌리면 그쪽이 이긴다(렌더러가 버튼을 먼저 판별한다).
+    onRowClick: (d, action, btn) => {
+      // 보기는 새 탭으로 — 편집 중에 관리 화면을 잃지 않게 한다(돌아올 자리가 폼 상태를 들고 있다)
+      if (action === "view") { window.open("/document.html?slug=" + encodeURIComponent(d.slug), "_blank"); return; }
+      if (action === "copy-md") { copyMarkdown(btn, d.slug); return; }
+      if (action === "delete") { deleteDocument(btn, d.id); return; }
+      editDocument(d.slug, d.id);
+    },
+    emptyText: "등록된 문서가 없습니다. 위 폼으로 직접 쓰거나, AI 검수 화면에서 초안을 승인하세요.",
+  });
 }
 
 /**
