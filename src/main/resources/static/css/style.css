@@ -551,6 +551,21 @@ body {
    위아래 여백이 2px씩만 남아 버튼이 바를 꽉 채운 것처럼 보인다. 바 자체가 이미 표적이다. */
 .shell-top .btn { min-height: 32px; padding: 5px 14px !important; }
 
+/* 좁은 화면에서 관리 콘솔로 가는 문 — 관리자에게만 그려진다(shell.js MENUS).
+ *
+ * 링크지만 <칩> 모양이다. 이 바의 다른 링크는 브랜드와 로그인 안내뿐이라 글자만으로도
+ * 구분되지만, 이건 "다른 방으로 나간다"는 뜻이라 눌러야 할 것처럼 보여야 한다.
+ *
+ * 색은 --primary-dark on --primary-soft다(라이트 6.99:1 · 다크 7.55:1).
+ * .shell-top a의 --text-2를 덮어야 해서 클래스 두 개짜리 선택자로 적는다 — 그쪽이
+ * (0,1,1)이라 클래스 하나로는 못 이긴다. */
+.shell-top .shell-door {
+  color: var(--primary-dark); font-weight: 600;
+  background: var(--primary-soft);
+  padding: 4px 10px; border-radius: 999px;
+  font-size: var(--fs-1); flex: none; align-self: center;
+}
+
 /* ── 폰: 아래쪽 탭바 ── */
 .shell-tabs {
   display: flex;

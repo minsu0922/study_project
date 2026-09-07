@@ -101,7 +101,17 @@ const MENUS = [
   { key: "me", label: "내 기록", href: "/me.html", need: "user", tab: "🙂", tabLabel: "나" },
   // 탭 없음: 다섯 상한을 지키느라 뺐다. 입구는 사이드바와 내 기록 화면 안에 있다
   { key: "settings", label: "설정", href: "/settings.html", need: "user", icon: "⚙️" },
-  // 관리 콘솔은 "다른 영역으로 나간다"는 뜻이라 화살표를 붙여 다른 메뉴와 구분한다
+  // 관리 콘솔은 "다른 영역으로 나간다"는 뜻이라 화살표를 붙여 다른 메뉴와 구분한다.
+  //
+  // need:"admin"이라 <관리자에게만> 보인다. 일반 사용자에게는 이 항목 자체가 안 그려지고,
+  // 주소를 직접 쳐도 AdminGateFilter가 404로 막는다(화면과 서버 두 겹).
+  //
+  // [자리를 맨 아래에서 맨 위로 옮겼다 — 2026-09-07]
+  // 처음에는 "다른 방으로 나가는 문이지 이 화면의 메뉴가 아니다"라는 이유로 기둥
+  // 맨 아래(spacer 뒤)에 뒀다. 분류로는 맞았지만 <쓰는 사람>을 못 봤다 — 관리자에게
+  // 콘솔은 가끔 들르는 부록이 아니라 매일 들어가는 작업장이고(검수·제보가 쌓인다),
+  // spacer 뒤는 화면 높이에 따라 위치가 달라져 눈이 매번 다시 찾아야 한다.
+  // 맨 위는 어느 화면에서나 같은 자리다. "다른 방"이라는 뜻은 구분선과 ↗로 지킨다.
   { key: "admin", label: "관리 콘솔 ↗", href: "/admin/index.html", need: "admin", icon: "🛠" },
 ];
 
@@ -151,15 +161,20 @@ function renderShell({ active = "", title = "" } = {}) {
       <a class="brand" href="/">csquiz</a>
       ${title ? `<span class="shell-title">${escapeHtml(title)}</span>` : ""}
       <span class="spacer"></span>
+      <!-- 좁은 화면에서 콘솔로 가는 <유일한> 입구다. 기둥은 숨겨지고, 아래 탭바는
+           tab 속성이 있는 것만 담는데 콘솔에는 그것이 없다(다섯 칸을 학습 화면이
+           다 쓴다). 그래서 폰에서 관리자는 주소를 직접 치는 수밖에 없었다.
+           콘솔 쪽 띠에 있는 "← 학습 화면으로"와 짝이 되는 문이다. -->
+      ${console_.length ? `<a class="shell-door" href="/admin/index.html">🛠 관리</a>` : ""}
       ${authAreaHtml()}
     </header>
 
     <nav class="shell-side" aria-label="주 메뉴">
       <a class="brand" href="/">csquiz</a>
+      ${console_.length ? `${sideLinks(console_, active)}<div class="shell-rule"></div>` : ""}
       ${sideLinks(study, active)}
       ${personal.length ? `<div class="shell-rule"></div>${sideLinks(personal, active)}` : ""}
       <span class="spacer"></span>
-      ${console_.length ? sideLinks(console_, active) : ""}
       <div class="shell-rule"></div>
       <div class="shell-side-auth">${authAreaHtml()}</div>
     </nav>
