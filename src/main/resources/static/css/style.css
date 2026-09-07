@@ -698,6 +698,18 @@ input[type=text], input[type=email], input[type=password], select, textarea {
 }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
 
+/* 칸 하나가 틀렸을 때 — 그 칸 바로 아래 한 줄.
+ *
+ * 화면 위쪽 알림 상자(#message)와 나눠 쓴다. 상자는 <서버가 거절했다>는 소식이고,
+ * 이 줄은 <이 칸이 문제다>라는 지목이다. 둘을 한곳에 몰면, 칸이 여럿인 폼에서
+ * "그래서 어디를 고쳐야 하나"를 다시 찾게 된다.
+ *
+ * 색만 쓰지 않고 테두리도 함께 바꾸는 이유는 늘 같다 — 색 구분이 어려운 사람에게
+ * 빨간 글씨는 그냥 글씨다. 위치(칸 바로 아래)와 테두리가 다른 축을 하나씩 더 준다. */
+.field-error { color: var(--wrong-fg); font-size: var(--fs-1); margin-top: var(--sp-1); }
+input.invalid { border-color: var(--wrong); }
+input.invalid:focus { outline-color: var(--wrong); }
+
 .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: end; }
 .filters .field { margin: 0; flex: 1; min-width: 130px; }
 

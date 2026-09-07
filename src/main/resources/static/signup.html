@@ -21,7 +21,10 @@ try {
 
 <main class="container narrow">
   <h1>회원가입</h1>
-  <div id="message"></div>
+  <!-- 실패가 여기 뜬다. aria-live="assertive"는 <읽던 것을 끊고 지금 이걸 읽으라>는 뜻이다.
+       polite는 하던 말이 끝난 뒤에 읽는데, 그 사이 사용자는 이미 다음 칸으로 넘어가 있다.
+       가입 실패는 <더 진행할 수 없다>는 뜻이라 끊어도 되는 몇 안 되는 알림이다. -->
+  <div id="message" role="alert" aria-live="assertive"></div>
 
   <form id="signupForm" class="card">
     <div class="field">
@@ -33,7 +36,26 @@ try {
     </div>
     <div class="field">
       <label for="password">비밀번호 (8자 이상, 영문+숫자 포함)</label>
-      <input type="password" id="password" required autocomplete="new-password">
+      <!-- 서버(SignupRequest)와 <같은 정규식>이다. 아이디에는 pattern이 있는데 비밀번호에는
+           없어서, 규칙이 라벨에만 적혀 있고 어긋난 값은 서버를 다녀와야 알 수 있었다.
+           앞을 내다보는 검사(?=...)는 HTML pattern에서도 그대로 동작한다. -->
+      <input type="password" id="password" required autocomplete="new-password"
+             pattern="(?=.*[A-Za-z])(?=.*\d).{8,}"
+             title="8자 이상이며 영문과 숫자를 포함해야 합니다">
+    </div>
+    <div class="field">
+      <label for="password2">비밀번호 확인</label>
+      <!-- [이 칸이 왜 필요한가]
+           이 앱에는 비밀번호를 되찾을 방법이 <아예 없다>. 이메일을 받지 않으므로
+           재설정 메일을 보낼 곳이 없고, 그것은 서버 설계상 그렇다(SignupRequest).
+           게다가 가입에 성공하면 곧바로 자동 로그인되기 때문에, 오타로 가입해도
+           그 자리에서는 아무 이상이 없다 — 다음에 로그인할 때 비로소 막힌다.
+           그때는 무엇을 잘못 쳤는지 기억할 방법이 없다. 오타 한 번이 계정을 영구히
+           잃게 만드는 구조라, 확인 칸은 편의가 아니라 안전장치다. -->
+      <input type="password" id="password2" required autocomplete="new-password">
+      <!-- 불일치는 제출 전에 이 자리에 뜬다. 제출 버튼을 막는 대신 글로 알리는 이유:
+           눌리지 않는 버튼은 <왜 안 되는지>를 말해 주지 않는다. -->
+      <div class="field-error" id="pw2Error" hidden>비밀번호가 서로 다릅니다.</div>
     </div>
     <button type="submit" id="submitBtn" style="width:100%">가입하기</button>
   </form>
@@ -48,10 +70,43 @@ try {
  * (가입 → 로그인 화면 → 또 입력의 번거로움 제거. 실패해도 가입은 된 상태라 로그인 페이지로 안내) */
 renderShell({ title: "회원가입" });
 
+/* 두 비밀번호가 같은지 본다.
+ *
+ * <입력하는 동안>에도 검사하지만, 두 번째 칸에 손을 댄 뒤부터만 한다. 처음부터 켜면
+ * 첫 글자를 치자마자 "서로 다릅니다"가 떠서, 아직 다 치지도 않은 사람을 나무라게 된다.
+ *
+ * 브라우저의 setCustomValidity도 함께 쓴다. 그래야 폼 제출이 실제로 막히고,
+ * 화면의 글과 브라우저의 판단이 <같은 사실>을 말하게 된다. */
+const pw = document.getElementById("password");
+const pw2 = document.getElementById("password2");
+const pw2Error = document.getElementById("pw2Error");
+let pw2Touched = false;
+
+function checkPasswordMatch() {
+  const mismatch = pw2.value !== "" && pw.value !== pw2.value;
+  pw2.setCustomValidity(mismatch ? "비밀번호가 서로 다릅니다." : "");
+  pw2Error.hidden = !(mismatch && pw2Touched);
+  pw2.classList.toggle("invalid", mismatch && pw2Touched);
+}
+
+pw2.addEventListener("input", () => { pw2Touched = true; checkPasswordMatch(); });
+// 첫 칸을 나중에 고치는 경우도 있다 — 그때도 판단이 따라와야 한다.
+pw.addEventListener("input", checkPasswordMatch);
+
 document.getElementById("signupForm").addEventListener("submit", async e => {
   e.preventDefault();
   const btn = document.getElementById("submitBtn");
   const msg = document.getElementById("message");
+
+  // 서버에 보내기 전에 한 번 더 본다. 입력 중 검사만 믿으면, 붙여넣기처럼
+  // input 이벤트를 거치지 않는 경로로 어긋난 값이 그대로 나갈 수 있다.
+  pw2Touched = true;
+  checkPasswordMatch();
+  if (pw.value !== pw2.value) {
+    pw2.focus();
+    return;
+  }
+
   btn.disabled = true;
   msg.innerHTML = "";
   // 서버도 소문자로 낮춰 저장하므로(AuthService) 여기서도 맞춰 보낸다 —

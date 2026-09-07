@@ -21,7 +21,9 @@ try {
 
 <main class="container narrow">
   <h1>로그인</h1>
-  <div id="message"></div>
+  <!-- 실패를 스크린리더에도 알린다. 회원가입 화면과 같은 이유(그쪽 주석 참고) —
+       로그인 실패는 더 진행할 수 없다는 뜻이라 읽던 것을 끊어도 되는 알림이다. -->
+  <div id="message" role="alert" aria-live="assertive"></div>
 
   <form id="loginForm" class="card">
     <div class="field">
