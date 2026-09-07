@@ -42,11 +42,9 @@ try {
     <div id="rMessage"></div>
     <div id="rList"></div>
 
-    <div class="pager" id="rPager" hidden>
-      <button id="rPrev" class="btn-outline">이전</button>
-      <span class="info" id="rPageInfo"></span>
-      <button id="rNext" class="btn-outline">다음</button>
-    </div>
+    <!-- 전체 건수 + 페이저. 마크업은 admin-table.js의 renderAdminPager가 만든다 —
+         쪽 넘기기는 목록의 생김새와 무관한 동작이라 카드든 표든 같은 것을 쓴다. -->
+    <div class="pager-row" id="rPagerRow"></div>
   </div>
 </main>
 
@@ -80,8 +78,6 @@ if (initAdminPage("reports")) {
     page = 0;
     load();
   });
-  document.getElementById("rPrev").addEventListener("click", () => { page--; load(); });
-  document.getElementById("rNext").addEventListener("click", () => { page++; load(); });
   load();
 }
 
@@ -108,11 +104,22 @@ function render(data) {
     list.innerHTML = data.content.map(card).join("");
   }
 
-  const pager = document.getElementById("rPager");
-  pager.hidden = data.totalPages <= 1;
-  document.getElementById("rPageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
-  document.getElementById("rPrev").disabled = data.page === 0;
-  document.getElementById("rNext").disabled = !data.hasNext;
+  /* 페이저는 표 목록과 <같은 것>을 쓴다. 이 화면은 카드 목록이지만(제보는 본문이 긴
+   * 글이라 칸에 넣으면 잘린다) 쪽 넘기기는 목록의 생김새와 무관한 동작이다.
+   *
+   * renderAdminPager는 마크업만 만들고 동작은 안 붙인다 — 한 화면에 목록이 둘인 경우가
+   * 있어(검수 화면) "어느 목록의 쪽을 넘기는가"는 부르는 쪽이 정해야 한다.
+   *
+   * 전체 건수를 왼쪽에 늘 적는다. 상태 탭을 옮겼을 때 "몇 건으로 좁혀졌나"가 곧 답인데,
+   * 쪽수만으로는 알 수 없다(쪽이 하나면 페이저 자체가 숨는다). */
+  const row = document.getElementById("rPagerRow");
+  row.innerHTML = `
+    <span class="meta">전체 ${data.totalElements}건</span>
+    <span class="spacer"></span>
+    ${renderAdminPager(data)}`;
+  row.querySelectorAll("[data-page]").forEach(btn => {
+    btn.addEventListener("click", () => { page = Number(btn.dataset.page); load(); });
+  });
 }
 
 /**
