@@ -2153,6 +2153,11 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   margin: 0 0 8px;
 }
 .pl-side h2.second { margin-top: 20px; }
+/* 제목 옆에 붙는 <단위> — 목록의 숫자가 무엇인지 말한다.
+   색을 더 여리게 두려다 되돌렸다: --muted가 이 앱에서 <읽으라고 만든> 가장 여린 색이고,
+   그보다 어두운 값(--border-strong)은 선을 그으라고 만든 색이라 글자로 쓰면 안 읽힌다.
+   대신 가운뎃점으로 제목과 갈라 둔다 — 무게는 같아도 역할이 다르다는 표시다. */
+.pl-side h2 .pl-unit::before { content: "·"; margin: 0 4px; }
 
 /* 도메인 한 줄 — 이름 + 개수 + 진척 바 */
 .pl-domain {

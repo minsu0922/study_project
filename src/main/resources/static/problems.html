@@ -37,7 +37,11 @@ try {
 
     <div class="pl-body">
       <aside class="pl-side">
-        <h2>분야</h2>
+        <!-- 옆 숫자가 무엇인지 제목에서 말한다 — 2026-09-08.
+             숫자만 두면 "네트워크 0"이 <문제가 0개>로 읽힌다(실제로는 35개가 있다).
+             분모를 붙이지 않기로 한 결정은 그대로다(renderDomains 주석: 배치가 매일 문제를
+             더하므로 분수는 어제 40%가 오늘 37%가 된다). 분모 대신 <이름>을 붙인다. -->
+        <h2>분야 <span class="pl-unit">맞힌 수</span></h2>
         <div class="pl-domains" id="domains"></div>
 
         <h2 class="second">난이도</h2>
@@ -233,7 +237,8 @@ function renderDomains() {
 
   const html = shown.map(d => `
     <button class="pl-domain" data-domain="${d.domain}"
-            aria-pressed="${selectedDomain === d.domain}">
+            aria-pressed="${selectedDomain === d.domain}"
+            aria-label="${escapeHtml(d.label)}, 맞힌 문제 ${d.solved}개">
       <span class="row"><span class="name">${escapeHtml(d.label)}</span><span class="n">${d.solved}</span></span>
       <span class="pl-bar"><i style="width:${max === 0 ? 0 : Math.round(d.solved / max * 100)}%"></i></span>
     </button>`).join("");
