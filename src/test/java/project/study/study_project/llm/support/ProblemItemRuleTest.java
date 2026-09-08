@@ -623,4 +623,110 @@ class ProblemItemRuleTest {
                     .noneSatisfy(w -> assertThat(w).contains("되풀이"));
         }
     }
+
+    /**
+     * <b>보기 전부가 같은 문장을 되풀이하면 경고한다</b>(2026-09-08).
+     *
+     * <p>아래 걸려야 하는 둘과 걸리면 안 되는 둘은 <b>전부 실물</b>이다 — 생성된 객관식 초안
+     * 128개를 재서, 공유 구절이 가장 길었던 넷을 그대로 옮겼다. 지어낸 예로 경계를 재면
+     * 문턱을 내 마음대로 정하게 된다.
+     *
+     * <p>실측 분포가 두 덩어리로 갈렸다는 것이 이 검사의 근거다 — 27자·22자 둘, 그리고 나머지
+     * 126개가 전부 7자 이하. 그 빈 구간에 문턱을 두었으므로, 여기서 재는 것은 문턱 자체가 아니라
+     * <b>양쪽 덩어리가 각각 어느 편에 남는가</b>다.
+     */
+    @Nested
+    @DisplayName("보기 전부가 같은 문장을 되풀이하면 경고한다")
+    class SharedChoiceText {
+
+        private List<String> warningsFor(String question, String correct, String w1, String w2, String w3) {
+            GeneratedProblemItem item = new GeneratedProblemItem(question, "", goodExplanation(),
+                    List.of(new GeneratedProblemItem.GeneratedChoice(correct, true),
+                            new GeneratedProblemItem.GeneratedChoice(w1, false),
+                            new GeneratedProblemItem.GeneratedChoice(w2, false),
+                            new GeneratedProblemItem.GeneratedChoice(w3, false)),
+                    "", "제목", null);
+            return ProblemItemRule.qualityWarningsOf(item, Difficulty.BEGINNER, true);
+        }
+
+        /** 실물 2026-09-08 — 공유 22자(가장 긴 보기의 85%). 사용자가 읽다 짚은 바로 그 문제다. */
+        @Test
+        @DisplayName("뜻이 넷 다 같고 용어만 갈리면 걸린다 — 짝짓기를 물어 놓고 한쪽을 고정한 꼴이다")
+        void catchesIdenticalPredicate() {
+            assertThat(warningsFor(
+                    "나중에 넣은 것을 먼저 꺼내는 순서 규칙으로 값을 담는 자료구조의 이름과 뜻이 바르게 짝지어진 것은?",
+                    "스택 — 나중에 넣은 값을 먼저 꺼내는 규칙으로 값을 담는다",
+                    "큐 — 나중에 넣은 값을 먼저 꺼내는 규칙으로 값을 담는다",
+                    "힙 영역 — 나중에 넣은 값을 먼저 꺼내는 규칙으로 값을 담는다",
+                    "반환 주소 — 나중에 넣은 값을 먼저 꺼내는 규칙으로 값을 담는다"))
+                    .anySatisfy(w -> assertThat(w).contains("같은 문장을 되풀이"));
+        }
+
+        /** 같은 배치의 다른 한 건 — 공유 27자. 한 배치에 둘이 나왔다는 것이 우연이 아니라는 증거다. */
+        @Test
+        @DisplayName("보기가 길어도 대부분이 같은 문장이면 걸린다")
+        void catchesIdenticalPredicateEvenWhenLong() {
+            assertThat(warningsFor(
+                    "재귀 함수 안에서 되감기를 시작하는 지점이 되는 조건의 이름과 뜻이 바르게 짝지어진 것은?",
+                    "기저 조건 — 더 이상 자기 자신을 부르지 않고 값을 그대로 돌려주는 조건이다",
+                    "재귀 깊이 — 더 이상 자기 자신을 부르지 않고 값을 그대로 돌려주는 조건이다",
+                    "스택 오버플로 — 더 이상 자기 자신을 부르지 않고 값을 그대로 돌려주는 조건이다",
+                    "반환 주소 — 더 이상 자기 자신을 부르지 않고 값을 그대로 돌려주는 조건이다"))
+                    .anySatisfy(w -> assertThat(w).contains("같은 문장을 되풀이"));
+        }
+
+        /**
+         * <b>헛울리면 안 되는 쪽 (1) — 실물, 공유 7자.</b> 네 보기가 {@code "…"를 알리는 표시}로
+         * 끝난다. 결이 맞는 보기는 오히려 좋은 문제의 표시다 — 끝이 같으니 <b>다른 곳</b>을 봐야 갈린다.
+         */
+        @Test
+        @DisplayName("보기의 끝맺음이 같은 것은 조용하다 — 결을 맞춘 것은 결함이 아니다")
+        void staysQuietOnSharedEnding() {
+            assertThat(warningsFor(
+                    "TCP 세그먼트에 붙는 플래그 중 FIN이 뜻하는 것은?",
+                    "\"내 쪽 보낼 것 끝났다\"를 알리는 표시",
+                    "\"연결 시작하자\"를 알리는 표시",
+                    "\"거기까지 잘 받았다\"를 알리는 표시",
+                    "\"이 연결 무효, 즉시 끊어\"를 알리는 표시"))
+                    .noneSatisfy(w -> assertThat(w).contains("같은 문장을 되풀이"));
+        }
+
+        /**
+         * <b>헛울리면 안 되는 쪽 (2) — 실물, 공유 7자.</b> 이쪽은 <b>용어를 고정하고 뜻을 갈랐다</b>.
+         * 걸린 실물과 정확히 반대 모양이고, 이것이 {@code 용어 — 뜻} 꼴의 올바른 형태다.
+         * 이 테스트가 없으면 다음 사람이 "용어가 겹치면 걸자"로 검사를 뒤집을 수 있다.
+         */
+        @Test
+        @DisplayName("용어를 고정하고 뜻을 가른 것은 조용하다 — 그게 이 꼴의 올바른 형태다")
+        void staysQuietWhenTermIsFixedAndMeaningsDiffer() {
+            assertThat(warningsFor(
+                    "XSS 방어에서 말하는 '출력 컨텍스트(output context)'의 뜻으로 옳은 것은?",
+                    "출력 컨텍스트 — 문자열이 최종적으로 삽입되는 문법 자리를 뜻한다",
+                    "출력 컨텍스트 — 특별한 뜻을 가진 글자를 안전한 표기로 바꾸는 처리를 뜻한다",
+                    "출력 컨텍스트 — 삽입된 값이 자기 자리의 울타리를 닫고 밖으로 빠져나가는 것을 뜻한다",
+                    "출력 컨텍스트 — 문자열이 코드나 마크업으로 해석되는 지점을 뜻한다"))
+                    .noneSatisfy(w -> assertThat(w).contains("같은 문장을 되풀이"));
+        }
+
+        /**
+         * 순서 배열·짝짓기는 재지 않는다. 항목이 "~한다"로 끝나며 구절을 나눠 가지는 것이 정상이라,
+         * 객관식 문턱을 그대로 들이대면 멀쩡한 문제가 걸린다. 유형 값이 없어도 <b>모양</b>으로
+         * 갈리는지를 확인한다 — 정답 표시가 없으면 객관식이 아니다.
+         */
+        @Test
+        @DisplayName("정답 표시가 없는 항목 묶음은 재지 않는다 — 순서·짝짓기는 겹치는 것이 정상이다")
+        void ignoresNonMultipleChoiceShapes() {
+            GeneratedProblemItem ordering = new GeneratedProblemItem(
+                    "커밋이 끝나기까지의 순서를 바르게 놓으시오.", "1|2|3|4", goodExplanation(),
+                    // 일부러 문턱을 넘게 지었다(공유 12자, 가장 긴 항목의 57%) — 모양으로 거르지
+                    // 않으면 걸리는 값이라야 이 테스트가 무언가를 지킨다.
+                    List.of(new GeneratedProblemItem.GeneratedChoice("트랜잭션을 시작하고 잠금을 잡은 뒤 로그를 남긴다", false),
+                            new GeneratedProblemItem.GeneratedChoice("변경을 버퍼에 쌓고 잠금을 잡은 뒤 로그를 남긴다", false),
+                            new GeneratedProblemItem.GeneratedChoice("페이지를 고치고 잠금을 잡은 뒤 로그를 남긴다", false),
+                            new GeneratedProblemItem.GeneratedChoice("커밋 표시를 찍고 잠금을 잡은 뒤 로그를 남긴다", false)),
+                    "", "제목", null);
+            assertThat(ProblemItemRule.qualityWarningsOf(ordering, Difficulty.BEGINNER, true))
+                    .noneSatisfy(w -> assertThat(w).contains("같은 문장을 되풀이"));
+        }
+    }
 }

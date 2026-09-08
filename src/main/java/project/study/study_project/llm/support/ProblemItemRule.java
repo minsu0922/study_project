@@ -635,6 +635,39 @@ public final class ProblemItemRule {
     public static final double CHOICE_LENGTH_RATIO = 1.5;
 
     /**
+     * <b>모든 보기</b>가 공유하는 구절이 이만큼(공백 뺀 글자 수)을 넘으면 되풀이로 본다 — 2026-09-08 신설.
+     *
+     * <p><b>10인 근거는 실측이다.</b> 지금까지 만든 객관식 초안 128개에서 "네 보기 전부에 들어 있는
+     * 가장 긴 구절"을 재 봤다. 분포가 두 덩어리로 딱 갈렸다 —
+     * <b>27자·22자짜리 둘</b>(둘 다 이 규칙을 만들게 한 2026-09-08 배치), 그리고 <b>나머지 126개는
+     * 모두 7자 이하</b>였다. 그 사이가 통째로 비어 있어서 8~20 어디에 그어도 결과가 같다.
+     * 가운데인 10에 그어 양쪽으로 여유를 뒀다.
+     *
+     * <p>바로 아래 7자짜리가 <b>걸리면 안 되는 쪽</b>이다: FIN 플래그를 묻는 문제의 네 보기가
+     * {@code "…"를 알리는 표시}로 끝난다. 보기의 결이 같은 것은 오히려 좋은 문제의 표시라
+     * (다른 곳을 봐야 갈린다) 여기 걸리면 검사가 반대로 일한다.
+     */
+    public static final int SHARED_CHOICE_MIN_RUN = 10;
+
+    /**
+     * 공유 구절이 <b>가장 긴 보기</b>의 이 비율을 넘어야 되풀이로 본다.
+     *
+     * <p><b>왜 길이만으로 재지 않는가.</b> 보기가 긴 고급 문제는 80자짜리 네 개가 12자쯤을 자연스럽게
+     * 나눠 가진다. 그건 주제를 공유하는 것뿐이라 결함이 아니다({@link #GIVEAWAY_MARGIN}이 정답 겹침을
+     * 오답 겹침과 견주는 것과 같은 이유 — <b>절대량이 아니라 비중</b>이 문제다).
+     * 잡으려는 것은 보기가 <b>사실상 한 문장</b>이고 앞의 용어만 갈리는 모양이라, 공유 구절이
+     * 보기 대부분을 차지해야 한다.
+     *
+     * <p>실측도 같은 말을 한다 — 걸린 둘은 82%·85%였고, 정상인 것 중 가장 높은 것이 39%다
+     * (위 FIN 문제). 절반에 그으면 양쪽에서 멀다.
+     *
+     * <p><b>가장 짧은 보기가 아니라 가장 긴 보기 기준</b>인 이유: 짧은 쪽으로 재면 유독 짧은 보기
+     * 하나 때문에 비율이 부풀어 헛울린다. 긴 쪽으로 재면 "<b>어느 보기를 봐도</b> 대부분이 같은
+     * 문장"일 때만 걸린다 — 그게 실제로 문제가 되는 상태다.
+     */
+    public static final double SHARED_CHOICE_MIN_SHARE = 0.5;
+
+    /**
      * 정답 보기가 질문과 이만큼(공백 뺀 글자 수) 이어 붙게 겹치면 <b>구절을 옮겨 적은 것</b>으로 본다.
      *
      * <p><b>12인 이유는 실측이다.</b> 승인된 객관식 81개를 재 보니 정답 겹침이 12자 이상이면서
@@ -908,6 +941,13 @@ public final class ProblemItemRule {
             warnings.add(giveaway);
         }
 
+        // 보기끼리 같은 문장을 되풀이하는가 — 위 giveaway와 재는 축이 다르다(질문 대 정답 vs 보기끼리).
+        // 네 보기가 <똑같이> 겹치면 giveaway는 차이가 0이라 조용하다. sharedChoiceTextOf 주석 참고.
+        String shared = sharedChoiceTextOf(item);
+        if (shared != null) {
+            warnings.add(shared);
+        }
+
         String markdown = markdownTraceOf(item);
         if (markdown != null) {
             warnings.add(markdown);
@@ -1166,6 +1206,102 @@ public final class ProblemItemRule {
         }
         return "정답 보기가 질문을 %d자 되풀이함 (\"%s\" — 오답은 %d자, 문장만 견줘도 답이 좁혀진다)"
                 .formatted(correctOverlap, snippetOf(fragment), wrongOverlap);
+    }
+
+    /**
+     * <b>보기 전부가 같은 문장을 되풀이하는가</b> — 되풀이하면 그 사실을, 아니면 {@code null}.
+     *
+     * <h2>왜 필요한가 (2026-09-08 실물)</h2>
+     *
+     * <p>사용자가 그날 배치를 읽다 짚었다. 지문은 "이름과 뜻이 <b>바르게 짝지어진</b> 것은?"인데
+     * 네 보기의 <b>뜻이 전부 같은 문장</b>이었다:
+     * <pre>
+     *   스택    — 나중에 넣은 값을 먼저 꺼내는 규칙으로 값을 담는다  (정답)
+     *   큐      — 나중에 넣은 값을 먼저 꺼내는 규칙으로 값을 담는다
+     *   힙 영역 — 나중에 넣은 값을 먼저 꺼내는 규칙으로 값을 담는다
+     *   반환 주소 — 나중에 넣은 값을 먼저 꺼내는 규칙으로 값을 담는다
+     * </pre>
+     * 짝짓기를 물어 놓고 <b>한쪽을 고정해</b> 실제로는 용어 하나만 고르는 문제가 됐다. 더 나쁜 것은
+     * 오답 설명이 보기와 <b>어긋난다</b>는 점이다 — 보기는 "큐가 후입선출"이라고 적어 놓고, 그 설명은
+     * "먼저 넣은 것을 먼저 꺼내는 것이 큐"라고 말한다. 학습자는 둘 중 어느 쪽을 믿을지 알 수 없다.
+     *
+     * <h2>왜 기존 검사가 못 잡았나</h2>
+     *
+     * <p>{@link #answerGiveawayOf}가 겹침을 재긴 한다. 하지만 그것은 <b>정답만 유독</b> 질문과
+     * 겹치는 경우를 찾는다({@link #GIVEAWAY_MARGIN}). 이 문제는 네 보기가 <b>똑같이</b> 겹쳐서
+     * 차이가 0이라 조용히 통과했다 — 그 검사가 "주제를 공유하는 것은 정상"이라며 일부러 넘기는
+     * 모양과 구분이 안 됐다. 재는 축이 다르다: 그쪽은 <b>질문 대 정답</b>, 여기는 <b>보기끼리</b>다.
+     *
+     * <p>짝짓기에는 같은 취지의 검사가 이미 있다({@code typeWarningsOf}의 "오른쪽이 겹친다" 차단).
+     * 객관식에서 보기를 {@code 용어 — 뜻} 꼴로 쓰면 사실상 같은 사고인데 그쪽만 비어 있었다.
+     *
+     * <h2>왜 차단이 아니라 경고인가</h2>
+     *
+     * <p>짝짓기의 겹침은 <b>채점이 둘 다 맞다고 한다</b>. 여기는 그렇지 않다 — 정답은 하나로
+     * 정해져 있고 문제도 풀린다. 나쁜 문제이지 성립하지 않는 문제가 아니라서, 이 저장소가
+     * 계속 써 온 기준({@link DraftCheck.Severity})대로 사람이 볼 몫이다. 게다가 검수자는 보기
+     * 서술부만 고쳐 <b>그 자리에서 좋은 문제로 만들 수 있다</b> — 버리면 요금 낸 지문·해설까지 잃는다.
+     *
+     * <p><b>정답이 정확히 하나일 때만 본다.</b> 순서 배열은 항목들이 "~한다"로 끝나 구절을 나눠
+     * 가지는 것이 정상이고, 짝짓기는 왼쪽이 용어라 애초에 겹칠 것이 없다. 유형 값을 못 믿는
+     * 경로가 있어({@code type}이 {@code null}로 들어오는 옛 초안) 유형 대신 <b>모양</b>으로 가른다 —
+     * {@link #choiceLengthBiasOf}·{@link #answerGiveawayOf}가 쓰는 방법과 같다.
+     */
+    private static String sharedChoiceTextOf(GeneratedProblemItem item) {
+        List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
+        if (choices == null || choices.size() < MIN_CHOICES) {
+            return null;
+        }
+        if (choices.stream().filter(GeneratedProblemItem.GeneratedChoice::correct).count() != 1) {
+            return null; // 객관식 모양이 아니다 — 위 주석의 "정답이 정확히 하나일 때만" 참고
+        }
+
+        List<String> texts = new ArrayList<>();
+        for (GeneratedProblemItem.GeneratedChoice choice : choices) {
+            if (isBlank(choice.text())) {
+                return null; // 빈 보기는 defectOf가 볼 몫이다
+            }
+            texts.add(squeeze(choice.text()));
+        }
+
+        String shared = longestCommonFragmentOfAll(texts);
+        int longest = texts.stream().mapToInt(String::length).max().orElse(0);
+        if (shared.length() < SHARED_CHOICE_MIN_RUN || longest == 0
+                || (double) shared.length() / longest < SHARED_CHOICE_MIN_SHARE) {
+            return null;
+        }
+        return "보기 %d개가 같은 문장을 되풀이함 (%d자 \"%s\", 가장 긴 보기의 %.0f%% — 실제로 갈리는 것은 나머지뿐이다)"
+                .formatted(texts.size(), shared.length(), snippetOf(shared),
+                        100.0 * shared.length() / longest);
+    }
+
+    /**
+     * 목록 <b>전부</b>에 들어 있는 가장 긴 부분문자열. 없으면 빈 문자열.
+     *
+     * <p>{@link #longestCommonFragment}(둘 사이)를 이어 붙이는 방법은 쓰지 않았다.
+     * {@code LCS(LCS(a,b), c)}는 <b>더 짧은 답을 내놓을 수 있다</b> — a와 b가 마침 다른 구절을
+     * 가장 길게 공유하면 셋 모두가 가진 진짜 구절을 첫 단계에서 이미 버린다. 그러면 못 잡는
+     * 문제가 생기는데, 이 검사는 문턱이 높아 놓치면 아무 일도 안 하는 셈이 된다.
+     *
+     * <p>대신 <b>가장 짧은 보기의 부분문자열을 훑어</b> 나머지 전부가 담고 있는지 본다. 보기는
+     * 길어야 100자 남짓이고 넷뿐이라 이 정직한 방법으로 충분하다 — 빠른 알고리즘(접미사 배열)을
+     * 쓸 이유가 없고, 읽기 어려운 코드는 6개월 뒤의 내가 손대지 못한다.
+     */
+    private static String longestCommonFragmentOfAll(List<String> texts) {
+        String base = texts.stream().min((a, b) -> a.length() - b.length()).orElse("");
+        String best = "";
+        for (int from = 0; from < base.length(); from++) {
+            // 뒤에서부터 줄여 가며 처음 걸리는 것이 이 시작점의 최장이다.
+            // 지금 답보다 짧아지는 지점에서 멈추면 헛돌지 않는다.
+            for (int to = base.length(); to > from + best.length(); to--) {
+                String fragment = base.substring(from, to);
+                if (texts.stream().allMatch(text -> text.contains(fragment))) {
+                    best = fragment;
+                    break;
+                }
+            }
+        }
+        return best;
     }
 
     /** 공백을 지운 사본 — 띄어쓰기만 바꿔 검사를 피해 가는 것을 막는다. */
