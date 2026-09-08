@@ -105,6 +105,29 @@ public class QuizService {
     }
 
     /**
+     * 자유 퀴즈의 유형 필터에 <b>실제로 고를 수 있는</b> 유형만 — 2026-09-08.
+     *
+     * <p>화면은 유형 다섯을 늘 보여 줬는데 DB에는 셋(객관식·짝짓기·순서 배열)뿐이라, OX와 단답형을
+     * 고르면 언제나 "조건에 맞는 문제가 없습니다"가 떴다. 검수 화면의 근거 문서 필터에서 세운 규칙과
+     * 같다 — <b>고를 수 있는 것만 보여 주는 목록이 고르고 나서 실망하지 않는 목록이다</b>
+     * ({@code GeneratedProblemDraftRepository.findDocumentSlugsByStatus}).
+     *
+     * <p>서술형은 뺀다. 자동 채점이 안 되는 유형이라 {@link #getQuiz}가 400으로 막는 쪽이다.
+     * 지금은 관리 등록도 ESSAY를 거절하므로 앱을 거쳐서는 생길 수 없지만, DB에 손으로 넣은
+     * 옛 데이터까지 믿을 수는 없다 — 한 줄이면 "고를 수 있는 것만"이라는 이 메서드의 약속을
+     * 그런 경우에도 지킬 수 있다.
+     *
+     * <p>차례를 여기서 정하지 않는 이유: 화면의 TYPES 배열이 이미 객관식 → OX → 단답형 →
+     * 짝짓기 → 순서라는 <b>뜻이 있는 차례</b>를 갖는다. 서버가 또 정하면 두 곳이 언젠가 어긋난다.
+     */
+    @Transactional(readOnly = true)
+    public List<ProblemType> availableTypes() {
+        return problemRepository.findDistinctTypes().stream()
+                .filter(ProblemType::isAutoScored)
+                .toList();
+    }
+
+    /**
      * 답안 제출 → 즉시 채점 → 이력 저장 → 정답·해설 반환. (docs/03 POST /api/quiz/submit)
      *
      * <p>정답이든 오답이든 <b>Submission은 항상 저장</b>한다 — 오답만 저장하면 "몇 번 만에

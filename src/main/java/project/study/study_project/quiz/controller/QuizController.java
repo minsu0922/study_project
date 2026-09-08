@@ -20,6 +20,8 @@ import project.study.study_project.quiz.dto.QuizSubmitRequest;
 import project.study.study_project.quiz.dto.QuizSubmitResponse;
 import project.study.study_project.quiz.service.QuizService;
 
+import java.util.List;
+
 /**
  * 퀴즈 API — 풀이용 문제 조회(공개) + 답안 제출·채점(인증 필요). 명세는 docs/03.
  * 경로별 인증 규칙은 SecurityConfig: GET /api/quiz는 permitAll, POST /api/quiz/submit은 authenticated.
@@ -46,6 +48,20 @@ public class QuizController {
             @RequestParam(required = false, defaultValue = "" + QuizService.DEFAULT_SIZE) int size
     ) {
         return ApiResponse.ok(quizService.getQuiz(domain, level, type, size));
+    }
+
+    /**
+     * 지금 <b>고를 수 있는</b> 문제 유형 — 자유 퀴즈의 유형 칸을 채운다(2026-09-08).
+     *
+     * <p>경로가 {@code /{problemId}}보다 <b>앞에</b> 놓여 있지만 순서 때문은 아니다. 스프링은 글자
+     * 그대로인 경로를 변수 경로보다 먼저 맞춰 보므로 {@code /types}가 id로 해석될 일은 없다.
+     * 사람이 읽을 때 "목록을 채우는 것 → 하나를 꺼내는 것" 차례가 자연스러워 여기에 둔다.
+     *
+     * <p>공개다. 비로그인도 자유 퀴즈를 풀 수 있으므로(익명 채점) 필터도 함께 열려 있어야 한다.
+     */
+    @GetMapping("/types")
+    public ApiResponse<List<ProblemType>> types() {
+        return ApiResponse.ok(quizService.availableTypes());
     }
 
     /**

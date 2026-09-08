@@ -188,6 +188,23 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     List<String> findDistinctDocumentSlugs();
 
     /**
+     * 지금 <b>문제가 한 건이라도 있는</b> 유형 — 자유 퀴즈의 유형 필터를 채운다(2026-09-08).
+     *
+     * <p>화면은 {@code ProblemType} 상수를 그대로 늘어놓고 있었다. 그런데 실제로는 객관식·짝짓기·
+     * 순서 배열 셋뿐이라, OX와 단답형을 고르면 <b>언제나</b> "조건에 맞는 문제가 없습니다"가 떴다.
+     * 고를 수 있는데 고르면 아무것도 없는 칸은, 쓰는 사람에게는 고장과 구분되지 않는다.
+     *
+     * <p>목록을 코드에서 지우지 않고 <b>세어서</b> 만드는 이유: 생성기는 OX·단답형을 이미 만들 줄
+     * 안다(프롬프트에 [OX 문제의 조건]·[단답형 문제의 조건]이 있고 검증기도 있다). 배치가 그 유형을
+     * 뽑는 날이 오면 필터에 저절로 다시 나타나야 한다 — 상수에서 지우면 그날 아무도 기억하지 못한다.
+     *
+     * <p>정렬은 화면이 한다. 여기서 {@code order by p.type}을 걸면 enum 이름의 알파벳 순서가 되어
+     * "객관식 → OX → 단답형"이라는 <b>뜻이 있는 차례</b>가 깨진다(그 차례는 api.js의 TYPES가 갖는다).
+     */
+    @Query("select distinct p.type from Problem p")
+    List<ProblemType> findDistinctTypes();
+
+    /**
      * 분야 + 지문만 최신순으로 — 클라우드 배치가 읽을 중복 회피 스냅샷을 만드는 데 쓴다(docs/14).
      *
      * <p>{@link #findQuestionTextsByDomain}과 달리 <b>분야를 함께</b> 뽑고 전 분야를 한 번에
