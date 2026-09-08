@@ -86,7 +86,7 @@ async function loadBatchStatus() {
     renderState(s);
     renderPlan(s);
     renderWaiting(s.waitingFiles);
-    renderBlocked(s.blockedDates);
+    renderBlocked(s.blockedDates, s.today);
     renderImports(s.recentImports);
   } catch (e) {
     showError(document.getElementById("bMessage"), e);
@@ -151,19 +151,43 @@ function renderWaiting(files) {
     + `<ul>${files.map(f => `<li><code>${escapeHtml(f)}</code></li>`).join("")}</ul>`;
 }
 
-function renderBlocked(dates) {
+/**
+ * 막힌 날짜 — <b>지나간 것과 앞으로의 것을 가른다</b>(2026-09-08).
+ *
+ * <p>둘은 뜻이 정반대인데 한 덩이로 세고 있었다. 화면에는 "13일이 막혀 있습니다"만 굵게
+ * 떠서 사고처럼 읽혔는데, 실제로는 열셋 <b>전부가 앞으로의 날짜</b>였다 — 그날 몫을
+ * 이미 만들어 뒀다는 뜻이고, 오히려 좋은 상태다.
+ *
+ * <ul>
+ *   <li><b>지나간 날짜</b>: 그날 몫이 안 나왔다. 필요하면 손으로 돌릴지 판단해야 한다.
+ *   <li><b>앞으로의 날짜</b>: 파일이 미리 있어 그날 예약 실행이 건너뛴다. 할 일이 없다.
+ * </ul>
+ *
+ * <p>되돌릴 방법이 없다는 안내는 <b>지나간 쪽에만</b> 붙인다. 파일명이 곧 들여오기 이력의
+ * 도장이라 파일을 지워도 그 날짜는 되살아나지 않는다(docs/14). 앞으로의 날짜에 그 말을
+ * 붙이면 고칠 것이 없는데 고치라는 말이 된다.
+ */
+function renderBlocked(dates, today) {
   const el = document.getElementById("bBlocked");
   if (dates.length === 0) {
     el.innerHTML = `없습니다 — 앞으로의 예약 실행이 막힌 날짜가 없습니다.`;
     return;
   }
-  // 되돌릴 방법이 없다는 것을 함께 적는다. 파일명이 곧 들여오기 이력의 도장이라
-  // 파일을 지워도 그 날짜는 되살아나지 않는다(docs/14).
-  el.innerHTML = `<p><b>${dates.length}일</b>이 막혀 있습니다. 파일을 지워도 되살아나지 않으니,
-      그날 몫이 필요하면 <code>--suffix</code>를 붙여 손으로 돌리세요.</p>`
-    + `<table><thead><tr><th>날짜</th><th>원인 파일</th></tr></thead><tbody>`
-    + dates.map(d => `<tr><td>${escapeHtml(d.date)}</td><td><code>${escapeHtml(d.filename)}</code></td></tr>`).join("")
+  // 날짜는 "2026-09-11" 꼴이라 문자열 비교가 곧 날짜 비교다(사전순 = 시간순).
+  const 지난 = dates.filter(d => d.date < today);
+  const 앞으로 = dates.filter(d => d.date >= today);
+
+  const 표 = rows => `<table><thead><tr><th>날짜</th><th>원인 파일</th></tr></thead><tbody>`
+    + rows.map(d => `<tr><td>${escapeHtml(d.date)}</td><td><code>${escapeHtml(d.filename)}</code></td></tr>`).join("")
     + `</tbody></table>`;
+
+  el.innerHTML =
+    (지난.length ? `<p><b>지나간 ${지난.length}일</b>은 그날 몫이 나오지 않았습니다.
+        파일을 지워도 되살아나지 않으니, 그 몫이 필요하면 <code>--suffix</code>를 붙여 손으로 돌리세요.</p>`
+      + 표(지난) : "")
+    + (앞으로.length ? `<p${지난.length ? ' style="margin-top:14px"' : ""}>앞으로 <b>${앞으로.length}일</b>은
+        결과 파일이 이미 있어 그날 예약 실행이 건너뜁니다 — <b>미리 만들어 둔 몫</b>이라 할 일은 없습니다.</p>`
+      + 표(앞으로) : "");
 }
 
 function renderImports(rows) {
