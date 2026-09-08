@@ -114,10 +114,14 @@ const MENUS = [
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
   { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: "🔁" },
   { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: "📚" },
-  // "내 기록"이었다 — 2026-09-08에 계정(비밀번호·탈퇴)을 이 화면으로 옮기면서 이름도 옮겼다.
-  // 기록만 있던 화면이 아니게 됐으므로 이름이 내용보다 좁아졌기 때문이다.
-  // 탭 라벨만 "나"로 줄인다 — 탭 다섯 칸에 "마이페이지"는 안 들어간다.
-  { key: "me", label: "마이페이지", href: "/me.html", need: "user", tab: "🙂", tabLabel: "나" },
+  // 탭 라벨만 "나"로 줄인다 — 탭 다섯 칸에 "내 기록"은 안 들어간다
+  { key: "me", label: "내 기록", href: "/me.html", need: "user", tab: "🙂", tabLabel: "나" },
+  // 마이페이지(계정) — 2026-09-08 신설. 탭 없음: 다섯 상한을 학습 화면이 다 쓴다.
+  //
+  // [왜 내 기록과 따로인가] 한 번은 내 기록 안에 넣었다가 갈랐다. 통계와 진도를 보러 온
+  // 화면 끝에 탈퇴 폼이 달려 있었기 때문이다 — 설정 화면이 겪던 문제를 그대로 옮긴 셈이었다.
+  // 지금은 셋이 각자 한 가지만 한다: 내 기록=학습 데이터, 마이페이지=계정, 설정=취향.
+  { key: "mypage", label: "마이페이지", href: "/mypage.html", need: "user", icon: "🙋" },
   // 탭 없음: 다섯 상한을 지키느라 뺐다. 입구는 사이드바와 내 기록 화면 안에 있다
   { key: "settings", label: "설정", href: "/settings.html", need: "user", icon: "⚙️" },
   // 관리 콘솔은 "다른 영역으로 나간다"는 뜻이라 화살표를 붙여 다른 메뉴와 구분한다.
@@ -167,7 +171,9 @@ function renderShell({ active = "", title = "" } = {}) {
   // 학습 메뉴 / 개인 메뉴 / 콘솔 — 사이드바에서 가로줄로 나뉘는 세 묶음.
   // 묶음을 key로 집어 나누는 이유: 순서만으로 나누면 MENUS에 항목을 끼워 넣을 때
   // 엉뚱한 묶음에 들어가고, 그 사고는 화면을 봐야만 보인다.
-  const PERSONAL = ["me", "settings"];   // 내 것을 보는 화면 — 학습 행동과 성격이 다르다
+  // 내 것을 보는 화면 — 학습 행동과 성격이 다르다. 셋의 역할은 서로 겹치지 않는다:
+  // me=학습 데이터, mypage=계정, settings=이 브라우저의 취향(MENUS의 mypage 주석).
+  const PERSONAL = ["me", "mypage", "settings"];
   const study = visible.filter(m => !PERSONAL.includes(m.key) && m.key !== "admin");
   const personal = visible.filter(m => PERSONAL.includes(m.key));
   const console_ = visible.filter(m => m.key === "admin");

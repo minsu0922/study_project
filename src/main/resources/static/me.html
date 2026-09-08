@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>마이페이지 — csquiz</title>
+<title>내 기록 — csquiz</title>
 <script>
 /* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — 이 화면들에서 유일하게 인라인인 코드다.
    shell.js는 <body> 끝에서 도는데 거기서 붙이면 다크를 고른 사람도 첫 그림이 라이트로
@@ -20,7 +20,7 @@ try {
 <div id="shell"></div>
 
 <main class="container">
-  <h1>마이페이지</h1>
+  <h1>내 기록</h1>
   <!-- "2026년 7월 12일에 시작 · 57일째" 같은 줄을 두려다 뺐다.
        가입일을 주는 API가 없고, 없는 값을 만들어 채우면 화면이 거짓말을 한다.
        필요해지면 그때 서버에 한 필드를 더한다. -->
@@ -49,94 +49,32 @@ try {
   </div>
   <div class="setting-row">
     <div>
+      <b>마이페이지</b>
+      <div class="meta">아이디·비밀번호 변경·로그아웃·탈퇴</div>
+    </div>
+    <a class="btn btn-outline" href="/mypage.html">열기</a>
+  </div>
+  <div class="setting-row">
+    <div>
       <b>설정</b>
       <div class="meta">테마·글자 크기·퀴즈 기본값</div>
     </div>
     <a class="btn btn-outline" href="/settings.html">열기</a>
   </div>
 
-  <!-- ═══ 계정 ═══ 2026-09-08에 설정 화면에서 옮겨 왔다.
-       옮긴 이유: 설정 화면이 <취향과 계정> 두 가지를 담고 있었다. 앞의 둘(화면·퀴즈)은
-       이 브라우저에만 저장되는 취향이고, 뒤의 둘(비밀번호·탈퇴)은 서버의 내 계정을 건드리는
-       일이다. 성격이 다른 것을 한 화면에 두니 "설정"이라는 이름이 절반만 맞았다.
-
-       화면을 새로 만들지 않고 이 화면을 넓힌 이유: "내 것"을 보는 화면이 이미 둘(기록·설정)
-       인데 셋이 되면 "비밀번호 어디서 바꾸지"의 후보가 셋으로 는다. 이 화면은 원래
-       <나에 대한 것>을 모으는 자리라, 계정이 여기 오면 이름과 내용이 맞아떨어진다. -->
-  <div class="section-label"><span>계정</span></div>
-  <div class="setting-row" style="border-top:0">
-    <div id="accountLine"></div>
-    <!-- id가 아니라 data-action이다. 로그아웃이 놓이는 자리가 여럿이라(여기 · 콘솔 띠)
-         id로 잡으면 문서에 같은 id가 둘 이상 생기고, getElementById가 그중 하나만
-         돌려주는 바람에 <보이는 버튼이 안 눌리는> 일이 실제로 있었다(shell.js 주석). -->
-    <button class="btn btn-outline" data-action="logout">로그아웃</button>
-  </div>
-
-  <!-- 비밀번호 변경 — 접어 둔다. 자주 하는 일이 아니라 늘 펼쳐 두면
-       이 화면이 기록이 아니라 폼으로 읽힌다. -->
-  <details class="setting-row" style="display:block" id="pwPanel">
-    <summary><b>비밀번호 변경</b></summary>
-    <div id="pwMessage" role="alert" aria-live="assertive"></div>
-    <form id="pwForm" style="margin-top:10px; max-width:420px">
-      <div class="field">
-        <label for="curPw">지금 비밀번호</label>
-        <input type="password" id="curPw" required autocomplete="current-password">
-      </div>
-      <div class="field">
-        <label for="newPw">새 비밀번호 (8자 이상, 영문+숫자 포함)</label>
-        <input type="password" id="newPw" required autocomplete="new-password"
-               pattern="(?=.*[A-Za-z])(?=.*\d).{8,}"
-               title="8자 이상이며 영문과 숫자를 포함해야 합니다">
-      </div>
-      <div class="field">
-        <label for="newPw2">새 비밀번호 확인</label>
-        <input type="password" id="newPw2" required autocomplete="new-password">
-        <div class="field-error" id="pw2Error" hidden>비밀번호가 서로 다릅니다.</div>
-      </div>
-      <!-- 가입·로그인 화면과 같은 장치다(그쪽 주석 참고). 여기서는 칸이 셋이라
-           오타 한 번의 값이 가장 크다 — 지금 비밀번호를 틀리면 아무것도 안 바뀌고,
-           새 비밀번호를 잘못 치면 <다음 로그인에서야> 알게 된다. -->
-      <label class="pw-reveal">
-        <input type="checkbox" id="pwReveal"> 비밀번호 보기
-      </label>
-      <button type="submit" id="pwSubmit">비밀번호 바꾸기</button>
-    </form>
-
-    <!-- 못 하는 것을 숨기지 않는다. 이 앱은 이메일을 안 받으므로 재설정 메일을 보낼
-         곳이 없다 — 구현을 미룬 것이 아니라 지금 구조에서 불가능하다.
-         모르면 잊은 뒤에야 알게 되고, 그때는 늦다. -->
-    <p class="meta warn-note" style="margin-top:12px">
-      비밀번호를 <b>잊었을 때 되찾는 방법은 아직 없습니다</b> —
-      이 앱은 이메일을 받지 않아 재설정 메일을 보낼 곳이 없습니다.
-      바꾸려면 지금 비밀번호를 알고 있어야 합니다.
-    </p>
-  </details>
-
-  <div class="section-label"><span>위험한 일</span></div>
-  <details class="setting-row" style="display:block; border-top:0" id="byePanel">
-    <summary><b>회원 탈퇴</b></summary>
-    <p class="meta" style="margin-top:8px">
-      계정과 <b>내 학습 기록이 전부 사라집니다</b> — 풀이 기록, 복습 일정, 오답노트,
-      오늘의 퀴즈, 보낸 제보까지. <b>되돌릴 수 없고</b> 되살려 줄 방법도 없습니다.
-    </p>
-    <div id="byeMessage" role="alert" aria-live="assertive"></div>
-    <form id="byeForm" style="margin-top:10px; max-width:420px">
-      <div class="field">
-        <label for="byePw">확인을 위해 비밀번호를 입력하세요</label>
-        <input type="password" id="byePw" required autocomplete="current-password">
-      </div>
-      <!-- 두 번 눌러야 지워진다(armedDelete와 같은 생각). 첫 누름은 "정말?"이고
-           둘째 누름이 진짜다 — confirm 창을 띄우는 것보다 되돌리기 쉽다. -->
-      <button type="submit" class="danger" id="byeSubmit">탈퇴하기</button>
-    </form>
-  </details>
 </main>
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script>
-/* 마이페이지 — 홈이 "오늘 뭐부터 하지"라면 이 화면은 "나 얼마나 왔지"와 "내 계정"이다.
- * ("내 기록"이었다. 2026-09-08에 계정 구역이 설정 화면에서 옮겨 오면서 이름이 넓어졌다.)
+/* 내 기록 — 홈이 "오늘 뭐부터 하지"라면 이 화면은 "나 얼마나 왔지"다.
+ *
+ * [계정은 여기 없다 — 2026-09-08]
+ * 한 번 넣어 봤다가 뺐다. 화면 수를 안 늘리려고 비밀번호 변경·탈퇴를 이 화면 아래에
+ * 붙였는데, 띄워 보니 <통계와 진도를 보러 온 화면 끝에 탈퇴 폼이 달려> 있었다.
+ * 설정 화면이 겪던 문제(성격이 다른 것이 한 화면에)를 그대로 옮겨 온 셈이라 화면을 갈랐다.
+ * 지금은 셋이 각자 한 가지만 한다 — 여기는 <학습 데이터>, 마이페이지는 <계정>,
+ * 설정은 <취향>. 입구는 아래 "더 보기"에 둔다.
  *
  * [왜 홈과 나누나]
  * 두 질문의 답은 다른 속도로 바뀐다. 오늘 할 일은 하루에 여러 번 보고, 전체 진도는
@@ -160,7 +98,7 @@ if (!isLoggedIn()) {
   // 남의 기록을 볼 화면이 아니다. 비로그인으로 오면 로그인부터.
   location.href = "/login.html";
 } else {
-  renderShell({ active: "me", title: "마이페이지" });
+  renderShell({ active: "me", title: "내 기록" });
   loadMe();
 
   document.getElementById("sortSeg").addEventListener("click", e => {
@@ -171,123 +109,6 @@ if (!isLoggedIn()) {
     drawProgress(btn.dataset.sort);
   });
 
-  // ── 계정 구역 (2026-09-08에 설정 화면에서 옮겨 왔다) ──
-  document.getElementById("accountLine").innerHTML =
-    `<b>${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")}</b>
-     <div class="meta">${isAdmin() ? "관리자" : "일반 사용자"}</div>`;
-
-  // 로그아웃은 셸과 <같은 함수>를 쓴다. 복사해 두면 서버 토큰 폐기가 빠진 사본이 생겨,
-  // 이 화면에서 로그아웃했을 때만 서버에 14일짜리 출입증이 남는 상태가 된다.
-  wireLogout();
-  wirePasswordChange();
-  wireWithdraw();
-}
-
-/**
- * 비밀번호 변경.
- *
- * <p>확인 칸 검사는 가입 화면과 <b>같은 방식</b>이다 — 두 번째 칸에 손을 댄 뒤부터만
- * 말하고, 브라우저의 setCustomValidity로 제출 자체를 막는다. 화면의 글과 브라우저의
- * 판단이 같은 사실을 말하게 하려는 것이다(signup.html 주석).
- *
- * <p>성공하면 <b>폼을 지운다.</b> 값이 남아 있으면 "저장이 된 건가" 싶어 한 번 더 누르게
- * 되는데, 두 번째 누름은 지금 비밀번호가 이미 바뀌었으므로 실패한다 — 성공 뒤에 실패
- * 메시지를 보는 흐름이 된다.
- */
-function wirePasswordChange() {
-  const cur = document.getElementById("curPw");
-  const pw = document.getElementById("newPw");
-  const pw2 = document.getElementById("newPw2");
-  const err = document.getElementById("pw2Error");
-  const msg = document.getElementById("pwMessage");
-  const btn = document.getElementById("pwSubmit");
-  let touched = false;
-
-  function match() {
-    const 다름 = pw2.value !== "" && pw.value !== pw2.value;
-    pw2.setCustomValidity(다름 ? "비밀번호가 서로 다릅니다." : "");
-    err.hidden = !(다름 && touched);
-    pw2.classList.toggle("invalid", 다름 && touched);
-  }
-  pw2.addEventListener("input", () => { touched = true; match(); });
-  pw.addEventListener("input", match);
-
-  // 칸 셋을 함께 여닫는다 — 하나만 열면 "지금 보이는 게 어느 칸이지"를 되묻게 된다.
-  document.getElementById("pwReveal").addEventListener("change", e => {
-    const type = e.target.checked ? "text" : "password";
-    [cur, pw, pw2].forEach(el => el.type = type);
-  });
-
-  document.getElementById("pwForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    touched = true; match();
-    if (pw.value !== pw2.value) { pw2.focus(); return; }
-
-    btn.disabled = true;
-    msg.innerHTML = "";
-    try {
-      await api("/api/me/password", { method: "PATCH", body: JSON.stringify({
-        currentPassword: cur.value, newPassword: pw.value }) });
-      // 값을 지운다 — 위 주석 참고
-      [cur, pw, pw2].forEach(el => { el.value = ""; el.classList.remove("invalid"); });
-      err.hidden = true;
-      msg.innerHTML = `<div class="alert" style="background:var(--correct-bg); color:var(--correct-fg)">
-        비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.</div>`;
-    } catch (e2) {
-      msg.innerHTML = `<div class="alert error">${escapeHtml(e2.message)}</div>`;
-    } finally {
-      btn.disabled = false;
-    }
-  });
-}
-
-/**
- * 탈퇴 — <b>두 번 눌러야</b> 지워진다.
- *
- * <p>confirm 창을 안 쓰는 이유: 그 창은 습관적으로 엔터를 눌러 넘기게 된다. 버튼 글자가
- * "정말 지웁니다"로 바뀌는 방식은 <b>화면에 남아</b> 있어서, 손이 멈춘 자리에서 무엇을
- * 하려던 참인지 다시 읽게 된다. 관리 화면의 armedDelete가 같은 생각이다.
- *
- * <p>되돌리는 것도 쉽다 — 다른 곳을 누르거나 5초를 두면 원래대로 돌아온다.
- */
-function wireWithdraw() {
-  const form = document.getElementById("byeForm");
-  const btn = document.getElementById("byeSubmit");
-  const msg = document.getElementById("byeMessage");
-  const 원래글 = btn.textContent;
-  let 준비됨 = false;
-  let 타이머 = null;
-
-  function 되돌리기() {
-    준비됨 = false;
-    btn.textContent = 원래글;
-    clearTimeout(타이머);
-  }
-
-  form.addEventListener("submit", async e => {
-    e.preventDefault();
-    if (!준비됨) {
-      준비됨 = true;
-      btn.textContent = "한 번 더 누르면 정말 지웁니다";
-      타이머 = setTimeout(되돌리기, 5000);
-      return;
-    }
-    되돌리기();
-    btn.disabled = true;
-    msg.innerHTML = "";
-    try {
-      await api("/api/me", { method: "DELETE", body: JSON.stringify({
-        password: document.getElementById("byePw").value }) });
-      // 서버에서 계정이 사라졌으므로 이 브라우저의 토큰도 함께 버린다.
-      // 안 지우면 다음 요청이 401을 받고 "로그인이 풀렸다"로 보인다 — 탈퇴한 사실이
-      // 아니라 오류처럼 읽힌다.
-      clearLogin();
-      location.href = "/";
-    } catch (e2) {
-      msg.innerHTML = `<div class="alert error">${escapeHtml(e2.message)}</div>`;
-      btn.disabled = false;
-    }
-  });
 }
 
 /** 이 화면이 그리는 모든 것의 출처. 정렬을 바꿀 때 다시 부르지 않으려고 들고 있는다. */

@@ -76,6 +76,7 @@ class StaticPageStructureTest {
             "documents.html",
             "login.html",
             "me.html",
+            "mypage.html",
             "problems.html",
             "quiz.html",
             "review.html",
