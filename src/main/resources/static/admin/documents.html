@@ -30,8 +30,13 @@ try {
 
   <div id="adminUi" hidden>
 
-    <div class="card">
-      <h3 id="dFormTitle">새 문서 등록</h3>
+    <!-- 문제 화면과 같은 처방으로 접어 둔다 — 2026-09-08.
+         문서는 문제보다 더 손으로 만들지 않는다: GitHub Actions가 4일에 한 편 쓰고,
+         사람은 검수에서 승인만 한다. 여기서 하는 일은 <이미 있는 문서를 고치는 것>인데
+         등록 폼(본문 마크다운 칸이 열 줄이다)이 늘 펼쳐져 목록을 밀어내고 있었다.
+         수정으로 들어오면 저절로 펼쳐진다(editDocument). -->
+    <details class="card form-panel" id="dFormPanel">
+      <summary id="dFormTitle">새 문서 등록</summary>
       <div id="dMessage"></div>
       <div class="filters">
         <div class="field"><label>도메인</label><select id="dDomain"></select></div>
@@ -45,7 +50,7 @@ try {
       </div>
       <button id="dSubmitBtn">등록</button>
       <button id="dCancelBtn" class="btn-outline" hidden>수정 취소</button>
-    </div>
+    </details>
 
     <h3>문서 목록 <span class="meta">(행을 누르면 위 폼에서 수정 · [보기]는 실제 문서 화면 · [MD 복사]는 본문 마크다운을 클립보드로)</span></h3>
     <!-- 표·페이저·빈 상태는 admin-table.js가 통째로 그린다. 여기는 자리만 둔다. -->
@@ -103,6 +108,8 @@ async function submitDocument() {
 }
 
 function resetDocumentForm() {
+  // 수정을 취소하면 폼도 접는다 — 문제 화면과 같은 규칙이다.
+  document.getElementById("dFormPanel").open = false;
   editingDocumentId = null;
   document.getElementById("dFormTitle").textContent = "새 문서 등록";
   document.getElementById("dSubmitBtn").textContent = "등록";
@@ -188,6 +195,8 @@ async function copyMarkdown(btn, slug) {
 }
 
 async function editDocument(slug, id) {
+  // 고치러 들어온 사람에게 "폼을 펼치라"는 한 걸음을 시키지 않는다.
+  document.getElementById("dFormPanel").open = true;
   const d = await api("/api/documents/" + encodeURIComponent(slug)); // 본문은 단건 API에만 있다
   editingDocumentId = id;
   document.getElementById("dFormTitle").textContent = `문서 수정 (ID ${id})`;
