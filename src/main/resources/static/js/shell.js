@@ -114,8 +114,10 @@ const MENUS = [
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
   { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: "🔁" },
   { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: "📚" },
-  // 탭 라벨만 "나"로 줄인다 — 탭 다섯 칸에 "내 기록"은 안 들어간다
-  { key: "me", label: "내 기록", href: "/me.html", need: "user", tab: "🙂", tabLabel: "나" },
+  // "내 기록"이었다 — 2026-09-08에 계정(비밀번호·탈퇴)을 이 화면으로 옮기면서 이름도 옮겼다.
+  // 기록만 있던 화면이 아니게 됐으므로 이름이 내용보다 좁아졌기 때문이다.
+  // 탭 라벨만 "나"로 줄인다 — 탭 다섯 칸에 "마이페이지"는 안 들어간다.
+  { key: "me", label: "마이페이지", href: "/me.html", need: "user", tab: "🙂", tabLabel: "나" },
   // 탭 없음: 다섯 상한을 지키느라 뺐다. 입구는 사이드바와 내 기록 화면 안에 있다
   { key: "settings", label: "설정", href: "/settings.html", need: "user", icon: "⚙️" },
   // 관리 콘솔은 "다른 영역으로 나간다"는 뜻이라 화살표를 붙여 다른 메뉴와 구분한다.
