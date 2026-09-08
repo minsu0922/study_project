@@ -854,6 +854,51 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
    밑줄이 열둘 겹치면 오히려 글자가 안 읽힌다. 대신 호버·초점에서 분명히 바뀐다. */
 .doc-toc a { color: var(--text); text-decoration: none; }
 .doc-toc a:hover { color: var(--primary-dark); text-decoration: underline; }
+/* 지금 읽고 있는 절 — 굵기와 색을 함께 바꾼다. 색만 바꾸면 색을 구별하기 어려운 사람에게
+   아무 표시도 아니고, 굵기만 바꾸면 한글에서는 차이가 작다(document.html markCurrentSection). */
+.doc-toc a.current {
+  color: var(--primary-dark); font-weight: 700;
+  /* 색·굵기만으로는 열두 줄 사이에서 눈에 덜 걸려서 옅은 판을 함께 깐다.
+     inline-block과 음수 여백은 판이 글자에만 붙지 않고 줄 폭으로 퍼지게 하는 장치다. */
+  display: inline-block; background: var(--primary-soft);
+  border-radius: 4px; padding: 0 4px; margin: 0 -4px;
+}
+
+/* ── 넓은 화면: 목차가 본문 옆에 선다 ── 2026-09-08
+ *
+ * 좁은 화면에서 접어 두는 이유(본문이 밀린다)는 넓은 화면에서 성립하지 않는다.
+ * 거기에는 본문 옆에 쓰지 않는 여백이 있고, 목차를 그 자리에 세우면 9,000자짜리 문서에서
+ * "지금 어디쯤이고 무엇이 남았나"가 읽는 내내 보인다.
+ *
+ * 1,100px인 이유: 학습 화면의 기둥이 208px을 먼저 가져가고, 본문이 읽기 좋은 폭을 유지한 채
+ * 목차 236px이 들어가는 가장 좁은 폭이다.
+ *
+ * position:sticky가 먹으려면 그 칸이 <스크롤할 만큼 길어야> 한다. 그래서 목차를
+ * 오른쪽 열 전체에 걸쳐 놓고 align-self:start로 위에 붙인다 — 칸이 본문 높이만큼
+ * 늘어나고, 그 안에서 목차가 따라 내려온다.
+ *
+ * <span 99>인 이유(-1이 아니라): grid-template-rows가 없으면 행이 전부 암시적으로 생기는데,
+ * 그때 -1은 <암시 행의 끝>이 아니라 명시 그리드의 첫 라인을 가리킨다. 실제로 -1로 뒀더니
+ * 목차가 1행만 차지해서 제목 줄이 목차 높이만큼 늘어났다(제목 아래에 빈 판이 생겼다).
+ * 큰 수를 적어 필요한 만큼 암시 행을 만들게 한다. */
+@media (min-width: 1100px) {
+  #doc {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 236px;
+    column-gap: var(--sp-5);
+    align-items: start;
+  }
+  #doc > * { grid-column: 1; }
+  #doc > .doc-toc {
+    grid-column: 2; grid-row: 1 / span 99; align-self: start;
+    position: sticky; top: var(--sp-4);
+    max-height: calc(100vh - var(--sp-6)); overflow-y: auto;
+    margin-bottom: 0;
+  }
+  /* 펼쳐 둔 자리라 손잡이는 <제목>으로 읽혀야 한다 — 접었다 펴는 삼각형은 남기되
+     "누르면 사라진다"는 인상은 줄인다. 좁은 화면으로 줄이면 다시 손잡이로 돌아간다. */
+  #doc > .doc-toc > summary { color: var(--muted); font-size: var(--fs-1); }
+}
 
 /* 문서를 다 읽은 사람이 갈 곳 — 본문 끝. */
 #practice { margin-top: var(--sp-5); }

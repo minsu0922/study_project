@@ -31,7 +31,8 @@ try {
     <p class="doc-sub" id="edition" hidden></p>
     <div id="badges" style="margin-bottom:12px"></div>
 
-    <!-- 목차 — 본문 위, 접힌 채로. 자세한 판단은 buildToc 주석. -->
+    <!-- 목차 — 좁은 화면에서는 본문 위에 접힌 채로, 넓은 화면에서는 오른쪽에 고정된 기둥으로
+         선다(style.css의 "문서 목차" 절). 자세한 판단은 buildToc 주석. -->
     <details class="doc-toc" id="toc" hidden>
       <summary id="tocSummary">목차</summary>
       <nav aria-label="문서 목차"><ol id="tocList"></ol></nav>
@@ -160,11 +161,18 @@ loadDoc();
  * <p>문서는 h2 아래 h3까지 있는데 h3까지 넣으면 목차가 서른 줄이 된다. 목차가 본문만큼
  * 길면 그것도 훑어야 하는 글이 된다. 절 이름만으로 어디쯤인지 알 수 있으면 충분하다.
  *
- * <h2>왜 접어 두나</h2>
+ * <h2>좁은 화면에서는 접고, 넓은 화면에서는 세워 둔다 — 2026-09-08</h2>
  *
- * <p>절이 열두 개라 펼쳐 두면 본문이 한 화면 아래로 밀린다. 문서를 연 사람의 첫 목적은
- * <b>읽는 것</b>이지 고르는 것이 아니다. 대신 요약 줄에 절 수를 적어("목차 · 12절")
- * 여기 무엇이 있는지 눌러 보지 않고도 알 수 있게 했다.
+ * <p>좁은 화면에서 접는 이유는 그대로다: 절이 열두 개라 펼쳐 두면 본문이 한 화면 아래로
+ * 밀린다. 문서를 연 사람의 첫 목적은 <b>읽는 것</b>이지 고르는 것이 아니다. 대신 요약 줄에
+ * 절 수를 적어("목차 · 12절") 눌러 보지 않고도 무엇이 있는지 알 수 있게 했다.
+ *
+ * <p>그런데 넓은 화면에는 본문 옆에 <b>쓰지 않는 여백</b>이 있다. 거기에 목차를 세우면
+ * 본문을 밀어내지 않고도 문서 전체가 늘 보인다 — 9,000자짜리 글에서 "지금 어디쯤이고
+ * 앞으로 무엇이 남았나"는 읽는 내내 필요한 정보다. 접힌 목차는 그 답을 <b>누를 때만</b> 준다.
+ *
+ * <p>기준은 1,100px이다. 기둥(208px)과 본문을 빼고 목차 236px이 남는 폭이고, 그보다 좁으면
+ * 본문이 읽기 힘들 만큼 눌린다.
  *
  * <h2>id를 여기서 붙인다</h2>
  *
@@ -182,7 +190,64 @@ function buildToc(bodyEl) {
   document.getElementById("tocList").innerHTML = 절
     .map(h => `<li><a href="#${h.id}">${escapeHtml(h.textContent.trim())}</a></li>`)
     .join("");
-  document.getElementById("toc").hidden = false;
+  const toc = document.getElementById("toc");
+  toc.hidden = false;
+
+  // 넓은 화면에서는 펼친 채로 둔다 — 그 폭에서는 목차가 본문 옆 기둥이라 본문을 밀지 않는다.
+  // details를 그대로 쓰는 이유: 폭이 줄면(창을 좁히거나 폰으로 열면) 같은 마크업이 다시
+  // 접히는 손잡이가 된다. 두 벌을 만들면 목차 항목을 고칠 때 한쪽만 고쳐진다.
+  const wide = window.matchMedia("(min-width: 1100px)");
+  const sync = () => { toc.open = wide.matches; };
+  sync();
+  wide.addEventListener("change", sync);
+
+  markCurrentSection(절);
+}
+
+/**
+ * 지금 읽는 절을 목차에서 표시한다 — 2026-09-08.
+ *
+ * <p>목차가 늘 보이게 된 뒤에야 뜻이 생기는 장치다. 접혀 있을 때는 "지금 어디쯤"을 물어도
+ * 답이 화면에 없었지만, 세워 두면 그 답을 <b>가만히 있어도</b> 줄 수 있다.
+ *
+ * <p><b>IntersectionObserver를 쓰다 걷어냈다.</b> 제목이 판정선을 드나들 때만 깨워 주니
+ * 싸 보였는데, <b>스크롤을 크게 건너뛰면 아무도 깨우지 않는다</b> — 목차 링크를 눌러 8절로
+ * 뛰거나 브라우저가 읽던 위치를 복원하면, 제목들이 판정선을 <b>지나가지 않고 사라졌다가</b>
+ * 나타난다. 실측으로 7,000px 지점에서 목차가 "핵심 요약"에 머물러 있었다.
+ *
+ * <p>지금은 스크롤을 듣고 프레임마다 한 번만 다시 잰다(requestAnimationFrame). 잴 것이
+ * 제목 열두 개의 위치뿐이라 프레임 예산에서 차지하는 몫이 없다시피 하고, 무엇보다
+ * <b>어떻게 도착했든 답이 같다</b> — 관찰자 방식이 못 지킨 것이 그 성질이다.
+ *
+ * <p>판정선은 화면 높이의 30% 지점이다. 가운데나 아래를 기준으로 하면 제목이 한참 지나간
+ * 뒤에야 목차가 바뀐다.
+ */
+function markCurrentSection(절) {
+  const links = new Map([...document.querySelectorAll("#tocList a")]
+    .map(a => [a.getAttribute("href").slice(1), a]));
+
+  function pick() {
+    const line = window.innerHeight * 0.3;
+    let 지금 = 절[0];
+    for (const h of 절) {
+      if (h.getBoundingClientRect().top <= line) 지금 = h;
+      else break;   // 제목은 문서 순서대로라 하나가 아래에 있으면 나머지도 아래다
+    }
+    links.forEach(a => a.classList.remove("current"));
+    links.get(지금.id)?.classList.add("current");
+  }
+
+  // 프레임당 한 번으로 묶는다. 스크롤 이벤트는 한 프레임에 여러 번 오는데,
+  // 그때마다 재면 같은 답을 여러 번 계산하는 셈이다.
+  let 예약됨 = false;
+  const onScroll = () => {
+    if (예약됨) return;
+    예약됨 = true;
+    requestAnimationFrame(() => { 예약됨 = false; pick(); });
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });  // 판정선이 화면 높이에 달렸다
+  pick();
 }
 
 /**
