@@ -68,6 +68,10 @@ try {
         <span class="meta">(행을 누르면 수정)</span>
       </h3>
       <div class="table-wrap"><table class="grid" id="statsTable"></table></div>
+      <!-- 접힌 줄이 몇 개인지 숫자로 말한다(renderProblemStats 주석). 처음에는 감춰져 있고
+           줄 수가 상한을 넘을 때만 나타난다 — 늘 떠 있으면 누를 것이 없는 버튼이 된다. -->
+      <button type="button" class="btn-outline btn-sm" id="statsMore" hidden
+              style="margin-top:8px"></button>
     </details>
   </div>
 </main>
@@ -333,8 +337,16 @@ function renderLlmReview(review) {
  *
  * <p>기록 없는 문제(correctRate === null)는 <b>어느 정렬에서도</b> 맨 아래다. 0%(다 틀렸다)와
  * "아직 아무도 안 풀었다"는 정반대 신호인데, 섞이면 이 표가 거짓말을 한다.
+ *
+ * <p><b>기본은 {@link #PROBLEM_ROWS}줄까지만 그린다(2026-09-08).</b> 전에는 문제 수만큼 전부
+ * 그렸다 — 105문제일 때 이 표 하나로 화면이 6천 픽셀이 됐고, 대시보드가 <b>훑는 화면이 아니라
+ * 스크롤하는 화면</b>이 됐다. 문제가 늘수록 나빠지기만 하는 구조다.
+ *
+ * <p>정렬이 이미 "먼저 볼 것"을 위로 올려 주므로(낮은 순·높은 순·제출 많은 순) 위쪽 스무 줄이
+ * 이 표를 보는 이유의 대부분이다. 나머지는 "%d개 더 보기"로 편다. 정렬을 바꾸면 <b>다시
+ * 접는다</b> — 기준이 바뀌면 "위에서 스무 개"의 뜻도 바뀌기 때문이다.
  */
-function renderProblemStats(stats) {
+function renderProblemStats(stats, expanded = false) {
   const mode = document.getElementById("problemSort").value;
   const sorted = [...stats].sort((a, b) => {
     // 기록 없는 문제는 정렬 기준과 무관하게 늘 맨 아래다. 0%(다 틀렸다)와 "아직 아무도
@@ -346,10 +358,11 @@ function renderProblemStats(stats) {
     if (mode === "attempts") return b.attempts - a.attempts;
     return mode === "desc" ? b.correctRate - a.correctRate : a.correctRate - b.correctRate;
   });
+  const shown = expanded ? sorted : sorted.slice(0, PROBLEM_ROWS);
   const table = document.getElementById("statsTable");
   table.innerHTML =
     `<tr><th>ID</th><th>문제</th><th>도메인</th><th>유형</th><th>제출</th><th>정답</th><th>정답률</th></tr>` +
-    sorted.map(s => `
+    shown.map(s => `
       <tr class="click-row" data-id="${s.problemId}" title="이 문제를 수정">
         <td>${s.problemId}</td>
         <td class="wrap">${escapeHtml(cut(s.question, 40))}</td>
@@ -364,7 +377,25 @@ function renderProblemStats(stats) {
     const tr = e.target.closest(".click-row");
     if (tr) goProblemEdit(Number(tr.dataset.id));
   };
+
+  // 더 보기 — 접힌 줄이 몇 개인지 숫자로 말한다. "더 보기"만 있으면 몇 개가 숨었는지
+  // 몰라 누를지 말지를 못 정한다(문제 목록의 "+ 7개 더 보기"와 같은 방식).
+  const more = document.getElementById("statsMore");
+  const rest = sorted.length - shown.length;
+  more.hidden = rest === 0;
+  if (rest > 0) {
+    more.textContent = `${rest}개 더 보기`;
+    more.onclick = () => renderProblemStats(stats, true);
+  }
 }
+
+/**
+ * 대시보드에 기본으로 그릴 문제별 정답률 줄 수.
+ *
+ * <p>스물인 근거: 이 표를 여는 이유는 "손볼 문제 몇 개를 고른다"이고, 한 번에 손볼 수 있는
+ * 양이 그 정도다. 화면 한 판(1080px)에 표 머리와 함께 대략 들어가는 줄 수이기도 하다.
+ */
+const PROBLEM_ROWS = 20;
 
 /**
  * 도메인별 정답률 가로 막대 차트 — 데이터 출처는 DB 뷰 domain_stats(R__ 마이그레이션).
