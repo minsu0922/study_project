@@ -175,4 +175,30 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
 
         long getCnt();
     }
+
+    /**
+     * <b>최근 기간</b>의 상태별 초안 수 — 배치 현황의 "수확" 집계(2026-09-08).
+     *
+     * <p>{@link #countGroupByModelAndStatus}가 있는데 왜 또 세는가: 그것은 <b>모델을 비교하려고</b>
+     * 전 기간을 세는 쿼리라, 프롬프트를 여러 번 고친 지금은 몇 달 전 숫자까지 섞인다. 배치 현황이
+     * 답해야 하는 것은 "요즘 잘 돌고 있나"라 <b>기간이 잘려 있어야</b> 한다. 같은 쿼리에 조건만
+     * 더하면 대시보드의 모델 비교가 기간에 갇히므로 나눴다.
+     *
+     * <p>{@code createdAt} 기준이지 검수 시각 기준이 아니다. 이 집계는 "그 기간에 <b>만든</b> 것이
+     * 어디까지 갔나"를 보는 것이라, 어제 만든 초안이 아직 대기인 것도 결과의 일부다.
+     */
+    @Query("""
+            select d.status as status, count(d) as cnt
+            from GeneratedProblemDraft d
+            where d.createdAt >= :since
+            group by d.status
+            """)
+    List<StatusCount> countByStatusSince(@Param("since") java.time.LocalDateTime since);
+
+    /** 상태별 집계 프로젝션 — 위 쿼리 전용이라 모델 축이 없다. */
+    interface StatusCount {
+        DraftStatus getStatus();
+
+        long getCnt();
+    }
 }

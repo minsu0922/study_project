@@ -8,7 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminBatchStatus;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
+import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
+import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.GenerationSchedule;
@@ -17,9 +20,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -50,7 +57,21 @@ public class AdminBatchService {
     /** 개념 문서가 쌓이는 하위 폴더({@code DraftGeneratorCli}와 같은 이름이어야 한다). */
     private static final String DOCUMENT_SUBDIR = "documents";
 
+    /**
+     * 달력이 거슬러 올라가는 주기 수(과거)와 앞서 보여 주는 주기 수(미래).
+     *
+     * <p>4 + 1 + 1(오늘이 든 주기) = 6줄 24일. 더 늘리면 화면을 스크롤해야 하고, 줄이면
+     * "언제부터 빠졌나"를 답하지 못한다 — 배치가 조용히 죽어 있던 기간이 실제로 2~3주였다(docs/14).
+     */
+    private static final int PAST_CYCLES = 4;
+    private static final int FUTURE_CYCLES = 1;
+
+    /** 수확 집계 기간. 한 달이면 주기가 일곱 번 넘게 돌아 한두 번의 실패에 숫자가 흔들리지 않는다. */
+    private static final int HARVEST_DAYS = 30;
+
     private final ImportedDraftFileRepository importedDraftFileRepository;
+    private final GeneratedProblemDraftRepository generatedProblemDraftRepository;
+    private final GeneratedDocumentDraftRepository generatedDocumentDraftRepository;
     private final ObjectMapper objectMapper;
 
     @Value("${llm.generation.batch-enabled:true}")
@@ -100,9 +121,130 @@ public class AdminBatchService {
         return new AdminBatchStatus(
                 batchEnabled, batchType, count, today,
                 plan,
+                calendar(dir, today),
+                harvest(today),
+                generatedProblemDraftRepository.countByStatus(DraftStatus.PENDING),
+                generatedDocumentDraftRepository.countByStatus(DraftStatus.PENDING),
                 recentImports(),
                 waitingFiles(dir),
                 blockedDates(dir, today));
+    }
+
+    /**
+     * 하루 한 칸의 달력 — 지난 네 주기부터 다음 주기까지, <b>주기 경계에 맞춰</b> 24일.
+     *
+     * <p><b>왜 이게 필요했나.</b> 같은 사실이 세 표에 흩어져 있었다. 파일이 있는데 안 들어온 것은
+     * "안 들어온 파일", 앞으로 건너뛸 날은 "막힌 주기", 들어온 것은 "최근 들여오기". 정작 가장
+     * 자주 묻는 <b>"며칠부터 안 나왔지"</b>는 어느 표도 답하지 않았다 — 그건 <b>없는 날짜</b>에
+     * 대한 질문이라 어느 목록에도 줄이 생기지 않기 때문이다. 날짜를 축으로 깔면 빈 날이 곧 답이다.
+     *
+     * <p>시작을 오늘 주기의 문서일에서 역산해 잡는다. 그래야 4칸이 정확히 문서·초급·중급·고급이
+     * 되어, 줄 하나가 주기 하나로 읽힌다(칸 순서가 어긋나면 달력이 아니라 숫자 나열이 된다).
+     *
+     * <p>파일 존재 여부를 하루씩 {@link Files#exists}로 묻는다 — 24번이면 폴더를 훑는 것보다 싸고,
+     * 무엇보다 <b>파일 이름 규칙을 배치와 똑같이 적는</b> 코드가 된다(접미사 파일은 세지 않는다는
+     * 규칙이 자연히 지켜진다 — 이름이 정확히 {@code <날짜>.json}인 것만 묻기 때문).
+     */
+    private List<AdminBatchStatus.DayCell> calendar(Path dir, LocalDate today) {
+        LocalDate start = GenerationSchedule.planFor(today, batchDomains, cycleAnchor)
+                .documentDate()
+                .minusDays((long) GenerationSchedule.CYCLE_DAYS * PAST_CYCLES);
+        int totalDays = GenerationSchedule.CYCLE_DAYS * (PAST_CYCLES + FUTURE_CYCLES + 1);
+
+        // 1) 하루씩 계획과 파일명을 정한다.
+        List<LocalDate> dates = new ArrayList<>();
+        List<GenerationSchedule.Plan> plans = new ArrayList<>();
+        List<String> filenames = new ArrayList<>();
+        for (int i = 0; i < totalDays; i++) {
+            LocalDate date = start.plusDays(i);
+            GenerationSchedule.Plan plan = GenerationSchedule.planFor(date, batchDomains, cycleAnchor);
+            dates.add(date);
+            plans.add(plan);
+            filenames.add(plan.documentDay() ? DOCUMENT_SUBDIR + "/" + date + ".json" : date + ".json");
+        }
+
+        // 2) 들여오기 이력은 한 번에 읽는다. 하루마다 existsById를 부르면 24번 왕복하는데,
+        //    이 화면은 진단용이라 느려도 되지만 <b>이유 없이</b> 느릴 필요는 없다.
+        Map<String, Integer> imported = new HashMap<>();
+        importedDraftFileRepository.findAllById(filenames)
+                .forEach(f -> imported.put(f.getFilename(), f.getDraftCount()));
+
+        // 3) 근거 문서가 있는지는 주기마다 한 번만 본다(같은 주기의 사흘이 같은 파일을 가리킨다).
+        Map<LocalDate, Boolean> sourceExists = new HashMap<>();
+
+        List<AdminBatchStatus.DayCell> cells = new ArrayList<>();
+        for (int i = 0; i < totalDays; i++) {
+            LocalDate date = dates.get(i);
+            GenerationSchedule.Plan plan = plans.get(i);
+            String filename = filenames.get(i);
+
+            boolean fileExists = Files.exists(dir.resolve(filename));
+            Integer draftCount = imported.get(filename);
+            AdminBatchStatus.DayState state = stateOf(fileExists, draftCount != null, date, today);
+
+            // 폴백 여부는 문제일에만 뜻이 있다. 문서일은 스스로가 근거를 만드는 날이다.
+            //
+            // <b>근거 문서일이 아직 안 온 날은 표시하지 않는다</b>(실물에서 걸렸다 — 2026-09-08).
+            // 다음다음 주기의 문제일 셋이 전부 "근거없음"으로 떴는데, 그 주기의 문서일 자체가
+            // 나흘 뒤였다. 아직 만들 차례가 아닌 것을 결함처럼 칠하면 경고가 값을 잃는다.
+            // 반대로 <b>내일</b> 문제일의 근거 문서가 어제 안 나온 것은 진짜 경고다 — 그건 남는다.
+            boolean fallback = !plan.documentDay()
+                    && !plan.documentDate().isAfter(today)
+                    && !sourceExists.computeIfAbsent(
+                    plan.documentDate(),
+                    d -> Files.exists(dir.resolve(DOCUMENT_SUBDIR).resolve(d + ".json")));
+
+            cells.add(new AdminBatchStatus.DayCell(
+                    date,
+                    (int) (date.toEpochDay() - plan.documentDate().toEpochDay()),
+                    plan.documentDay(), plan.domain(), plan.difficulty(),
+                    state, filename,
+                    state == AdminBatchStatus.DayState.IMPORTED ? draftCount : null,
+                    fallback));
+        }
+        return cells;
+    }
+
+    /**
+     * 칸 하나의 상태 판정 — 파일이 있나 / 들어왔나 / 지난 날인가 세 가지로 갈린다.
+     *
+     * <p>오늘은 <b>지난 날 쪽</b>으로 센다. 배치는 06:17에 도는데 이 화면을 여는 시각은 대개
+     * 그 뒤라, 오늘 칸이 비어 있으면 그건 "예정"이 아니라 "안 나왔다"는 뜻일 때가 많다.
+     * 새벽에 열어 잘못 놀라는 쪽이, 며칠씩 빠진 것을 "예정"으로 읽고 지나치는 쪽보다 싸다.
+     */
+    private AdminBatchStatus.DayState stateOf(boolean fileExists, boolean isImported,
+                                              LocalDate date, LocalDate today) {
+        if (fileExists) {
+            if (isImported) {
+                return AdminBatchStatus.DayState.IMPORTED;
+            }
+            return date.isAfter(today)
+                    ? AdminBatchStatus.DayState.PRESET   // 앞으로의 날 = 미리 만들어 둔 몫
+                    : AdminBatchStatus.DayState.WAITING; // 지난 날 = 앱을 켜면 들어온다
+        }
+        return date.isAfter(today)
+                ? AdminBatchStatus.DayState.PLANNED
+                : AdminBatchStatus.DayState.MISSING;
+    }
+
+    /**
+     * 최근 30일 수확 — 만든 초안이 승인까지 갔는지.
+     *
+     * <p>기준 시각을 한국 날짜의 자정으로 잡는다. {@code now().minusDays(30)}으로 하면 화면을
+     * 여는 시각에 따라 경계에 걸친 하루가 들어왔다 나갔다 해서, 새로고침만 했는데 숫자가
+     * 달라진다. 날짜로 자르면 하루 종일 같은 답이 나온다.
+     */
+    private AdminBatchStatus.Harvest harvest(LocalDate today) {
+        LocalDateTime since = today.minusDays(HARVEST_DAYS - 1L).atStartOfDay();
+        Map<DraftStatus, Long> counts = new EnumMap<>(DraftStatus.class);
+        generatedProblemDraftRepository.countByStatusSince(since)
+                .forEach(row -> counts.put(row.getStatus(), row.getCnt()));
+
+        long approved = counts.getOrDefault(DraftStatus.APPROVED, 0L);
+        long rejected = counts.getOrDefault(DraftStatus.REJECTED, 0L);
+        long pending = counts.getOrDefault(DraftStatus.PENDING, 0L);
+        return new AdminBatchStatus.Harvest(
+                HARVEST_DAYS, approved + rejected + pending, approved, rejected, pending);
     }
 
     /**

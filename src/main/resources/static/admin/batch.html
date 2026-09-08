@@ -30,43 +30,63 @@ try {
 
   <div id="adminUi" hidden>
 
-    <!-- 이 화면은 <읽기만> 한다. 배치는 GitHub Actions에서 돌고 스위치는 application.yml에 있어
-         앱에는 켜거나 즉시 실행할 수단이 없다. 버튼을 두면 눌러 놓고 안 돌아간 이유를 다시
-         찾게 되므로, 무엇을 못 하는지를 맨 위에 적어 둔다. -->
-    <div class="alert info" style="margin-bottom:16px">
-      배치는 <b>GitHub Actions에서 돕니다</b> — 이 화면에서 켜거나 즉시 실행할 수 없습니다.
-      켜고 끄는 것은 <code>application.yml</code>의 <code>batch-enabled</code>를 고쳐 커밋합니다.
-      손으로 한 번 돌리려면 저장소의 <b>Actions → llm-daily → Run workflow</b>를 쓰세요.
-    </div>
-
     <div id="bMessage"></div>
 
+    <!-- 화면을 열자마자 답해야 하는 넷. 예전에는 이 답들이 아래 표 다섯 개에 흩어져 있어
+         "지금 정상인가"를 알려면 표를 읽고 날짜를 세어 봐야 했다. -->
+    <div class="batch-summary" id="bSummary"></div>
+
+    <!-- 이 화면의 중심. 날짜를 축으로 깔면 <빈 날>이 곧 답이 된다 —
+         "며칠부터 안 나왔지"는 어느 목록에도 줄이 생기지 않는 질문이라 표로는 못 답했다. -->
     <div class="card">
-      <h3>지금 상태</h3>
-      <div id="bState" class="meta">불러오는 중…</div>
+      <h3>주기 달력 <span class="meta">(한 줄 = 4일 주기 · 문서 1편 → 그 문서로 초·중·고급 문제)</span></h3>
+      <div id="bCal" class="meta">불러오는 중…</div>
     </div>
 
     <div class="card">
-      <h3>오늘의 주기 <span class="meta">(4일에 한 바퀴 · 0일차 문서 → 1·2·3일차 초·중·고급 문제)</span></h3>
-      <div id="bPlan" class="meta">불러오는 중…</div>
+      <h3>최근 30일 수확 <span class="meta">(만든 문제 초안이 승인까지 갔는지)</span></h3>
+      <div id="bHarvest" class="meta">불러오는 중…</div>
     </div>
 
-    <!-- 이 화면에서 가장 자주 찾게 되는 답. 앱을 며칠 안 켜면 파일이 그대로 쌓인다. -->
-    <div class="card">
-      <h3>아직 안 들어온 파일 <span class="meta">(만들어졌지만 이 PC의 DB에는 없는 것 · 앱을 켜면 들어옵니다)</span></h3>
-      <div id="bWaiting" class="meta">불러오는 중…</div>
-    </div>
+    <!-- 아래 넷은 <자세히 보기>다. 달력이 요약해 주므로 평소에는 접어 둔다.
+         "안 들어온 파일"만은 할 일이 있을 때(1건 이상) 스스로 펼친다 — 접힌 채로 두면
+         앱을 켜기만 하면 되는 일을 며칠씩 모른다. -->
+    <details class="card fold-panel" id="bWaitingPanel">
+      <summary>아직 안 들어온 파일 <span class="meta" id="bWaitingCount"></span></summary>
+      <p class="meta">만들어졌지만 이 PC의 DB에는 없는 것 — 앱을 다시 켜면 들어옵니다.</p>
+      <div id="bWaiting" class="meta"></div>
+    </details>
 
     <!-- "고쳐라"가 아니라 "그날은 안 나온다는 것을 알고 있으라"는 목록이다(DTO 주석). -->
-    <div class="card">
-      <h3>막힌 주기 <span class="meta">(결과 파일이 이미 있어 그날 예약 실행이 건너뜁니다)</span></h3>
-      <div id="bBlocked" class="meta">불러오는 중…</div>
-    </div>
+    <details class="card fold-panel">
+      <summary>막힌 주기 <span class="meta">(결과 파일이 이미 있어 그날 예약 실행이 건너뜁니다)</span></summary>
+      <div id="bBlocked" class="meta"></div>
+    </details>
 
-    <div class="card">
-      <h3>최근 들여오기 <span class="meta">(최신 15건)</span></h3>
-      <div id="bImports" class="meta">불러오는 중…</div>
-    </div>
+    <details class="card fold-panel">
+      <summary>오늘의 주기와 설정 <span class="meta">(달력이 요약한 것의 원본 값)</span></summary>
+      <div id="bState" class="meta"></div>
+      <div id="bPlan" class="meta" style="margin-top:14px"></div>
+    </details>
+
+    <details class="card fold-panel">
+      <summary>최근 들여오기 <span class="meta">(최신 15건)</span></summary>
+      <div id="bImports" class="meta"></div>
+    </details>
+
+    <!-- 이 화면은 <읽기만> 한다. 배치는 GitHub Actions에서 돌고 스위치는 application.yml에 있어
+         앱에는 켜거나 즉시 실행할 수단이 없다. 버튼을 두면 눌러 놓고 안 돌아간 이유를 다시
+         찾게 되므로, 대신 "어디서 하면 되는지"를 적어 둔다. 맨 위에 있던 것을 아래로 내렸다 —
+         한 번 읽으면 되는 안내가 매번 첫 화면을 차지할 이유가 없다. -->
+    <details class="card fold-panel">
+      <summary>켜고 끄는 법 · 손으로 돌리는 법</summary>
+      <p class="meta">
+        배치는 <b>GitHub Actions에서 돕니다</b> — 이 화면에서 켜거나 즉시 실행할 수 없습니다.<br>
+        켜고 끄기: <code>application.yml</code>의 <code>batch-enabled</code>를 고쳐 커밋합니다.<br>
+        한 번 돌리기: 저장소의 <b>Actions → llm-daily → Run workflow</b>.<br>
+        지나간 날짜를 손으로 채울 때는 <code>--suffix</code>를 붙입니다 — 안 붙이면 그날 예약 실행이 죽습니다.
+      </p>
+    </details>
   </div>
 </main>
 
@@ -83,6 +103,9 @@ if (initAdminPage("batch")) {
 async function loadBatchStatus() {
   try {
     const s = await api("/api/admin/batch-status");
+    renderSummary(s);
+    renderCalendar(s);
+    renderHarvest(s);
     renderState(s);
     renderPlan(s);
     renderWaiting(s.waitingFiles);
@@ -91,6 +114,196 @@ async function loadBatchStatus() {
   } catch (e) {
     showError(document.getElementById("bMessage"), e);
   }
+}
+
+/* ── 요약 칩 ──────────────────────────────────────────────────────────
+ *
+ * 이 화면을 여는 이유는 늘 같은 질문이었다: "왜 요즘 문제가 안 들어오지?"
+ * 그런데 답을 얻으려면 아래 표 다섯 개를 읽고 날짜를 세어 봐야 했다. 결론을 맨 위로 올린다.
+ *
+ * 칩은 넷이다 — 배치가 켜졌나 / 오늘 뭐가 나오나 / 마지막으로 언제 들어왔나 / 내 할 일.
+ * 다섯 번째를 넣고 싶은 유혹이 있었지만(이번 달 호출 수 등) 넣지 않았다:
+ * 요약이 길어지면 요약이 아니게 되고, 무엇보다 그 숫자로는 아무 결정도 하지 않는다. */
+function renderSummary(s) {
+  const chips = [];
+
+  chips.push(chip({
+    cls: s.enabled ? "" : "bad",
+    label: "일일 배치",
+    value: s.enabled ? "켜짐" : "꺼짐",
+    sub: s.enabled ? "매일 06:17 (KST)" : "예약 실행이 아무것도 만들지 않습니다",
+  }));
+
+  const p = s.plan;
+  chips.push(chip({
+    // 근거 문서가 없으면 그날은 폴백이다 — 문제는 나오지만 문서 링크가 안 붙는다.
+    // 이것이 조용히 지나가면 2단계(문서→문제) 구조가 헛도는 것을 몇 주 뒤에야 안다.
+    cls: (!p.documentDay && !p.documentSlug) ? "warn" : "",
+    label: `오늘 (${p.dayInCycle}일차)`,
+    value: p.documentDay ? "개념 문서 1편" : `${difficultyLabel(p.difficulty)} 문제 ${s.count}건`,
+    sub: (!p.documentDay && !p.documentSlug)
+      ? `${domainLabel(p.domain)} · 근거 문서 없음(폴백)`
+      : domainLabel(p.domain),
+  }));
+
+  // 마지막 수확 = 마지막으로 DB에 들어온 파일. 파일이 만들어졌는지가 아니라
+  // <이 PC의 문제로 실제 쓸 수 있게 됐는지>가 이 화면이 답할 질문이다.
+  const last = s.recentImports[0];
+  const ago = last ? daysAgo(last.importedAt, s.today) : null;
+  chips.push(chip({
+    // 사흘을 넘기면 경고. 주기가 4일이라 이틀까지는 정상 범위 안에서도 생긴다
+    // (문서일 하루 + 앱을 안 켠 하루). 사흘째부터는 뭔가 멈춘 것이다.
+    cls: (ago === null || ago >= 3) ? "warn" : "",
+    label: "마지막 수확",
+    value: last ? agoLabel(ago) : "없음",
+    sub: last
+      ? `${escapeHtml(last.filename)} · 초안 ${last.draftCount}건`
+      : "들여온 파일이 하나도 없습니다",
+  }));
+
+  chips.push(chip({
+    label: "검수 대기",
+    value: `문제 ${s.pendingProblems}건`,
+    sub: `문서 ${s.pendingDocuments}편 · 눌러서 검수 화면으로`,
+    href: "/admin/llm.html",
+  }));
+
+  document.getElementById("bSummary").innerHTML = chips.join("");
+}
+
+/** 칩 하나. 링크가 있으면 <a>가 된다 — 누를 수 있는 것과 아닌 것은 태그로 갈라야 한다. */
+function chip({ cls = "", label, value, sub, href }) {
+  const inner = `<div class="label">${escapeHtml(label)}</div>
+      <div class="value">${value}</div>
+      <div class="sub">${sub}</div>`;
+  return href
+    ? `<a class="batch-chip ${cls}" href="${href}">${inner}</a>`
+    : `<div class="batch-chip ${cls}">${inner}</div>`;
+}
+
+/** 며칠 전인지. 서버가 준 오늘(한국 날짜)을 기준으로 세어 브라우저 시간대에 흔들리지 않게 한다. */
+function daysAgo(isoDateTime, today) {
+  const then = Date.parse(String(isoDateTime).slice(0, 10) + "T00:00:00Z");
+  const now = Date.parse(today + "T00:00:00Z");
+  return Math.round((now - then) / 86400000);
+}
+
+function agoLabel(n) {
+  if (n <= 0) return "오늘";
+  if (n === 1) return "어제";
+  return `${n}일 전`;
+}
+
+/* ── 주기 달력 ────────────────────────────────────────────────────────
+ *
+ * 한 줄이 한 주기(문서 → 초급 → 중급 → 고급)다. 요일 달력을 쓰지 않은 이유는
+ * 서버 쪽 DayCell 주석에 있다 — 이 배치에 요일은 아무 뜻이 없다.
+ *
+ * 칸을 <button>으로 두는 이유: 눌러서 그날의 자세한 내용을 아래에 펼친다. 처음에는
+ * title 속성만 달았는데, 툴팁은 폰에서 아예 안 뜨고 마우스로도 1초를 기다려야 한다.
+ * 그래서 title은 남기되(빠르게 훑을 때 쓸모가 있다) 누르면 확실히 보이게 했다. */
+const CAL_MARK = { IMPORTED: "✓", WAITING: "↓", MISSING: "✕", PRESET: "⏭", PLANNED: "·" };
+const CAL_TEXT = { IMPORTED: "들어옴", WAITING: "대기", MISSING: "안 나옴", PRESET: "미리", PLANNED: "예정" };
+const CAL_WHY = {
+  IMPORTED: "결과 파일이 DB까지 들어왔습니다 — 정상적으로 끝난 날입니다.",
+  WAITING: "결과 파일은 있는데 아직 안 들어왔습니다. 앱을 다시 켜면 들어옵니다.",
+  MISSING: "그날 몫이 나오지 않았습니다. 필요하면 --suffix를 붙여 손으로 돌리세요.",
+  PRESET: "결과 파일이 이미 있어 그날 예약 실행은 건너뜁니다 — 미리 만들어 둔 몫입니다.",
+  PLANNED: "아직 오지 않은 날입니다.",
+};
+const CAL_HEADS = ["문서", "초급", "중급", "고급"];
+
+function renderCalendar(s) {
+  const cells = s.calendar;
+  const el = document.getElementById("bCal");
+
+  // 빠진 날을 세어 한 줄로 먼저 말한다. 칸을 다 훑지 않아도 결론이 보이게 —
+  // 달력의 값은 "어디가 비었나"를 찾는 데 있고, 개수는 그것을 찾을 이유를 준다.
+  const past = cells.filter(c => c.date <= s.today);
+  const missing = past.filter(c => c.state === "MISSING").length;
+  const head = missing === 0
+    ? `<p>지난 ${past.length}일 동안 빠진 날이 없습니다.</p>`
+    : `<p>지난 ${past.length}일 중 <b>${missing}일</b>이 비어 있습니다 — 그날 몫은 나오지 않았습니다.</p>`;
+
+  let grid = `<div class="batch-cal">`
+    + `<div class="cal-h cal-corner"></div>`
+    + CAL_HEADS.map(h => `<div class="cal-h">${h}</div>`).join("");
+
+  for (let i = 0; i < cells.length; i += 4) {
+    const row = cells.slice(i, i + 4);
+    // 한 주기의 나흘은 같은 분야다(GenerationSchedule) — 그래서 줄 이름이 곧 분야 이름이다.
+    grid += `<div class="cal-side">${escapeHtml(domainLabel(row[0].domain))}</div>`;
+    grid += row.map((c, j) => cellHtml(c, i + j, s.today)).join("");
+  }
+  grid += `</div>`;
+
+  const legend = `<div class="cal-legend">`
+    + Object.keys(CAL_MARK).map(k =>
+      `<span><i data-state="${k}" class="cal-cell" style="padding:0;min-height:0"></i>${CAL_MARK[k]} ${CAL_TEXT[k]}</span>`).join("")
+    + `<span>· 근거없음 = 그날은 문서 없이(폴백) 만듭니다</span></div>`;
+
+  el.innerHTML = head + grid + legend + `<div class="cal-detail" id="calDetail">칸을 누르면 그날의 자세한 내용이 여기 나옵니다.</div>`;
+
+  el.querySelectorAll(".cal-cell[data-i]").forEach(btn => {
+    btn.addEventListener("click", () => showDay(cells[Number(btn.dataset.i)]));
+  });
+}
+
+function cellHtml(c, index, today) {
+  const md = c.date.slice(5).replace("-", "/");
+  const title = `${c.date} · ${CAL_TEXT[c.state]} — ${CAL_WHY[c.state]}`;
+  return `<button class="cal-cell${c.date === today ? " today" : ""}" data-state="${c.state}"
+      data-i="${index}" title="${escapeHtml(title)}">
+      <span class="d">${md}</span>
+      <span class="m">${CAL_MARK[c.state]}</span>
+      <span class="n">${c.draftCount != null ? c.draftCount + "건" : CAL_TEXT[c.state]}</span>
+      ${c.fallback ? `<span class="fb">근거없음</span>` : ""}
+    </button>`;
+}
+
+/** 누른 칸의 자세한 내용. 파일 이름을 함께 보여 준다 — 손으로 돌릴 때 그게 열쇠다. */
+function showDay(c) {
+  const what = c.documentDay ? "개념 문서" : `${difficultyLabel(c.difficulty)} 문제`;
+  document.getElementById("calDetail").innerHTML = `
+    <b>${escapeHtml(c.date)}</b> · ${c.dayInCycle}일차 · ${escapeHtml(domainLabel(c.domain))} ${escapeHtml(what)}<br>
+    <span class="meta">파일 <code>${escapeHtml(c.filename)}</code>${c.draftCount != null ? ` · 초안 ${c.draftCount}건` : ""}</span><br>
+    ${escapeHtml(CAL_WHY[c.state])}
+    ${c.fallback ? `<br><span class="meta">근거 문서가 없어 폴백으로 만듭니다 — 이 날 문제에는 "개념 문서 읽기" 링크가 안 붙습니다.</span>` : ""}`;
+}
+
+/* ── 수확 ─────────────────────────────────────────────────────────────
+ *
+ * 들여오기 이력은 "몇 건 들어왔나"까지만 답한다. 열 건이 들어와도 아홉이 거절되면
+ * 배치는 돈만 쓰고 아무것도 못 늘린 것인데, 그 구분이 화면 어디에도 없었다. */
+function renderHarvest(s) {
+  const h = s.harvest;
+  const el = document.getElementById("bHarvest");
+  if (h.generated === 0) {
+    el.innerHTML = `최근 ${h.days}일 동안 만들어진 문제 초안이 없습니다.`
+      + (s.enabled ? "" : ` 배치가 꺼져 있으니 당연한 결과입니다.`);
+    return;
+  }
+  const pct = n => (n / h.generated * 100).toFixed(1);
+  // 승인율은 <검수를 마친 것> 중의 비율이다. 대기까지 분모에 넣으면 검수를 미루기만 해도
+  // 승인율이 떨어져, 모델 품질을 보려던 숫자가 내 검수 속도를 재는 숫자가 된다.
+  const reviewed = h.approved + h.rejected;
+  const rate = reviewed === 0
+    ? `<span class="meta">아직 검수한 것이 없습니다</span>`
+    : `승인율 <b>${Math.round(h.approved / reviewed * 100)}%</b> <span class="meta">(검수한 ${reviewed}건 기준)</span>`;
+
+  el.innerHTML = `
+    <div class="harvest-bar">
+      <i class="ap" style="width:${pct(h.approved)}%"></i>
+      <i class="rj" style="width:${pct(h.rejected)}%"></i>
+      <i class="pd" style="width:${pct(h.pending)}%"></i>
+    </div>
+    <div class="harvest-nums">
+      <span>생성 <b>${h.generated}</b>건</span>
+      <span>승인 <b>${h.approved}</b></span>
+      <span>거절 <b>${h.rejected}</b></span>
+      <span>대기 <b>${h.pending}</b></span>
+      <span>${rate}</span>
+    </div>`;
 }
 
 function renderState(s) {
@@ -141,14 +354,24 @@ function renderPlan(s) {
     </table>`;
 }
 
+/**
+ * 안 들어온 파일 — 있을 때만 스스로 펼친다(2026-09-08).
+ *
+ * 이것 하나만 접힌 채로 두지 않는 이유: 여기 있는 파일은 <앱을 켜기만 하면 끝나는>
+ * 할 일이다. 접혀 있으면 그 사실을 며칠씩 모르고, 그동안 문제는 안 늘어난다.
+ * 반대로 0건일 때 펼쳐 두면 "없습니다" 한 줄이 화면을 차지한다.
+ */
 function renderWaiting(files) {
   const el = document.getElementById("bWaiting");
+  document.getElementById("bWaitingCount").textContent =
+    files.length === 0 ? "(없음)" : `(${files.length}개 — 앱을 켜면 들어옵니다)`;
+  document.getElementById("bWaitingPanel").open = files.length > 0;
+
   if (files.length === 0) {
-    el.innerHTML = `없습니다 — 만들어진 파일이 모두 들어와 있습니다.`;
+    el.innerHTML = `만들어진 파일이 모두 들어와 있습니다.`;
     return;
   }
-  el.innerHTML = `<p>${files.length}개. 앱을 다시 켜면 검수 대기함으로 들어옵니다.</p>`
-    + `<ul>${files.map(f => `<li><code>${escapeHtml(f)}</code></li>`).join("")}</ul>`;
+  el.innerHTML = `<ul>${files.map(f => `<li><code>${escapeHtml(f)}</code></li>`).join("")}</ul>`;
 }
 
 /**

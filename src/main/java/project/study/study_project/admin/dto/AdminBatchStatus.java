@@ -25,14 +25,26 @@ import java.util.List;
  * 다시 찾게 되므로 <b>읽기 전용</b>으로 못 박는다. 배치를 켜고 끄는 것이 커밋으로 남아야 하는
  * 결정이라는 판단은 {@code AdminStatsService} 주석에 이미 있다 — 그 판단을 화면이 뒤집지 않는다.
  *
- * @param enabled       배치 스위치. 꺼져 있으면 아래 주기가 계산돼도 실제로는 아무것도 안 만든다
- * @param batchType     auto | problem | document — 문서일에도 문제를 만들지 등을 정한다
- * @param count         한 번에 만드는 문제 수
- * @param today         이 응답을 계산한 기준 날짜(한국 날짜)
- * @param plan          오늘의 주기 — 며칠차이고 무엇이 나올 차례인가
- * @param recentImports 최근 들여오기 이력(최신 순)
- * @param waitingFiles  {@code generated/}에 있는데 아직 안 읽힌 파일 — 앱을 안 켠 동안 쌓인 것
- * @param blockedDates  결과 파일이 이미 있어 <b>예약 실행이 건너뛸</b> 앞으로의 날짜
+ * <h2>2026-09-08 — 설정만 답하고 결과는 못 답했다</h2>
+ *
+ * <p>처음 판은 <b>"오늘 무엇이 나올 차례인가"</b>는 잘 답했는데 <b>"그래서 잘 돌고 있나"</b>는
+ * 답하지 못했다. 며칠부터 빠졌는지 알려면 "안 들어온 파일"·"막힌 주기"·"최근 들여오기"
+ * 세 표를 사람이 머릿속에서 날짜로 맞춰 봐야 했다 — 이 화면이 없애려던 바로 그 수고다.
+ * 그래서 셋을 하루 한 칸의 {@link DayCell 달력}으로 합치고, 만든 것이 쓸 만했는지를
+ * {@link Harvest 수확 집계}로 따로 답한다.
+ *
+ * @param enabled        배치 스위치. 꺼져 있으면 아래 주기가 계산돼도 실제로는 아무것도 안 만든다
+ * @param batchType      auto | problem | document — 문서일에도 문제를 만들지 등을 정한다
+ * @param count          한 번에 만드는 문제 수
+ * @param today          이 응답을 계산한 기준 날짜(한국 날짜)
+ * @param plan           오늘의 주기 — 며칠차이고 무엇이 나올 차례인가
+ * @param calendar       지난 4주기 + 앞으로 1주기의 하루하루(과거→미래 순, 주기 경계에 정렬)
+ * @param harvest        최근 30일 수확 — 만든 초안이 승인까지 갔는지
+ * @param pendingProblems 지금 검수를 기다리는 문제 초안 수(기간 무관 = 실제 할 일의 양)
+ * @param pendingDocuments 지금 검수를 기다리는 문서 초안 수
+ * @param recentImports  최근 들여오기 이력(최신 순)
+ * @param waitingFiles   {@code generated/}에 있는데 아직 안 읽힌 파일 — 앱을 안 켠 동안 쌓인 것
+ * @param blockedDates   결과 파일이 이미 있어 <b>예약 실행이 건너뛸</b> 앞으로의 날짜
  */
 public record AdminBatchStatus(
         boolean enabled,
@@ -40,6 +52,10 @@ public record AdminBatchStatus(
         int count,
         LocalDate today,
         TodayPlan plan,
+        List<DayCell> calendar,
+        Harvest harvest,
+        long pendingProblems,
+        long pendingDocuments,
         List<ImportRecord> recentImports,
         List<String> waitingFiles,
         List<BlockedDate> blockedDates
@@ -75,6 +91,71 @@ public record AdminBatchStatus(
         // (DraftGeneratorCli.alignDomainWithDocument) 실제로는 네트워크 문제가 나온다.
         // 화면이 주기 분야만 보여 주면 <화면이 말하는 것과 실제로 나오는 것이 다른>,
         // 이 화면이 없애려던 바로 그 종류의 어긋남이 된다.
+    }
+
+    /**
+     * 달력 한 칸의 상태 — <b>그날 몫이 어디까지 왔나</b>.
+     *
+     * <p>다섯으로 나눈 기준은 "사람이 할 일이 다른가"다. {@code WAITING}은 앱을 켜면 끝나고,
+     * {@code MISSING}은 손으로 돌릴지 판단해야 하며, 나머지 셋은 할 일이 없다.
+     * 색이나 아이콘은 화면이 정한다 — 여기서 정하면 뜻과 표현이 한 덩이가 되어
+     * 화면을 바꿀 때마다 서버를 고쳐야 한다.
+     */
+    public enum DayState {
+        /** 결과 파일이 있고 DB에도 들어왔다 — 정상적으로 끝난 날. */
+        IMPORTED,
+        /** 파일은 있는데 아직 안 들어왔다 — 앱을 켜면 들어온다. */
+        WAITING,
+        /** 지나간 날인데 파일이 없다 — 그날 몫이 나오지 않았다. */
+        MISSING,
+        /** 앞으로의 날인데 파일이 이미 있다 — 미리 만들어 둔 몫이라 그날 실행은 건너뛴다. */
+        PRESET,
+        /** 앞으로의 날이고 파일도 없다 — 예정대로다. */
+        PLANNED
+    }
+
+    /**
+     * 달력 한 칸 = 하루.
+     *
+     * <p><b>왜 주기 경계에 맞춰 4칸씩 끊는가.</b> 흔한 달력처럼 7칸으로 끊으면 요일이 보이는데,
+     * 이 배치에 요일은 아무 뜻이 없다 — 매일 같은 시각에 돌고 주말도 쉬지 않는다. 뜻이 있는
+     * 것은 <b>4일 주기</b>다. 한 줄이 곧 한 주기(문서 → 초급 → 중급 → 고급)면 "문서는 나왔는데
+     * 문제가 한 건도 안 붙은 주기"가 줄 하나로 눈에 들어온다. 그게 이 배치의 최악의 상태다.
+     *
+     * @param filename   그날 예약 실행이 쓸(썼을) 결과 파일 이름. 문서일에는 {@code documents/} 접두가 붙는다
+     * @param draftCount 들어온 초안 수. {@code IMPORTED}가 아니면 {@code null}
+     * @param fallback   문제일인데 근거 문서 파일이 없다 = 그날은 근거 없이(폴백) 만든다.
+     *                   문서일에는 항상 {@code false}
+     */
+    public record DayCell(
+            LocalDate date,
+            int dayInCycle,
+            boolean documentDay,
+            Domain domain,
+            Difficulty difficulty,
+            DayState state,
+            String filename,
+            Integer draftCount,
+            boolean fallback
+    ) {
+    }
+
+    /**
+     * 최근 N일의 수확 — <b>만든 것이 쓸 만했나</b>.
+     *
+     * <p>들여오기 이력은 "몇 건 들어왔나"까지만 답한다. 그런데 열 건이 들어와도 아홉이 거절되면
+     * 배치는 돈만 쓰고 아무것도 못 늘린 것이다. 그 구분이 화면 어디에도 없었다.
+     *
+     * <p>비율을 서버에서 계산하지 않는 이유는 {@code countGroupByModelAndStatus}의 판단과 같다 —
+     * 검수한 게 0건일 때 "0%"와 "아직 안 봄"이 구분되지 않는다. 개수만 주고 화면이 판단한다.
+     *
+     * <p>문서 초안은 세지 않는다. 4일에 한 편이라 30일에 7~8건이고, 문제(하루 3~7건)와 합치면
+     * 문서 쪽 변화가 숫자에 묻힌다(문서·문제 승인율을 나눠 둔 것과 같은 이유).
+     *
+     * @param days      집계 기간(일)
+     * @param generated 그 기간에 만들어진 문제 초안 수 = 승인 + 거절 + 대기
+     */
+    public record Harvest(int days, long generated, long approved, long rejected, long pending) {
     }
 
     /**

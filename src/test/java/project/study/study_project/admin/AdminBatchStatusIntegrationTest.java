@@ -9,10 +9,14 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminBatchStatus;
 import project.study.study_project.admin.service.AdminBatchService;
+import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
+import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
+import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 
 import java.nio.file.Files;
@@ -54,6 +58,9 @@ class AdminBatchStatusIntegrationTest {
 
     @Autowired
     private ImportedDraftFileRepository importedDraftFileRepository;
+
+    @Autowired
+    private GeneratedProblemDraftRepository generatedProblemDraftRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -178,6 +185,108 @@ class AdminBatchStatusIntegrationTest {
         // 주기가 고른 분야는 그대로 남아 있어야 한다 — 화면이 "무엇에서 무엇으로 바뀌었는지"를
         // 말해 주려면 둘 다 필요하다. 덮어써 버리면 어긋남이 있었다는 사실 자체가 사라진다.
         assertThat(plan.cycleDomain()).isNotNull();
+    }
+
+    /* ── 달력(2026-09-08) ──────────────────────────────────────────────
+     *
+     * 달력이 답하는 것은 <없는 날짜>다. "안 들어온 파일"·"막힌 주기" 표는 줄이 있는 것만
+     * 보여 주므로, 그날 몫이 아예 안 나온 것은 어느 표에도 안 나타났다. 그래서 여기서
+     * 지켜야 할 것은 개수가 아니라 <b>상태 판정 네 갈래</b>다. */
+
+    @Test
+    @DisplayName("지난 날인데 파일이 없으면 '안 나옴' — 표에는 줄이 안 생기던 바로 그 날이다")
+    void calendarMarksMissingPastDays() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+
+        AdminBatchStatus.DayCell cell = cellOf(adminBatchService.getStatus(), today.minusDays(2));
+
+        assertThat(cell.state()).isEqualTo(AdminBatchStatus.DayState.MISSING);
+        assertThat(cell.draftCount()).isNull();
+    }
+
+    @Test
+    @DisplayName("파일이 있으면 들여왔는지에 따라 '들어옴'과 '대기'가 갈린다")
+    void calendarSplitsImportedAndWaiting() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate target = today.minusDays(2);
+        // 파일 이름 규칙(문서일이면 documents/ 접두)은 서버가 이미 계산해 두었으므로
+        // 테스트가 다시 짐작하지 않는다 — 짐작하면 규칙이 갈라져도 테스트가 통과한다.
+        String filename = cellOf(adminBatchService.getStatus(), target).filename();
+        // 이 테스트는 <오늘 기준> 날짜를 쓰므로 개발 PC의 실제 이력과 같은 이름을 만질 수 있다.
+        // 그 이력이 남아 있으면 파일을 놓자마자 '들어옴'이 되어 첫 단언이 깨진다.
+        // (@Transactional이 이 삭제도 되돌리므로 실제 DB는 그대로다.)
+        importedDraftFileRepository.deleteById(filename);
+
+        writeByName(filename);
+        assertThat(cellOf(adminBatchService.getStatus(), target).state())
+                .isEqualTo(AdminBatchStatus.DayState.WAITING);
+
+        importedDraftFileRepository.save(ImportedDraftFile.of(filename, 4));
+        AdminBatchStatus.DayCell imported = cellOf(adminBatchService.getStatus(), target);
+        assertThat(imported.state()).isEqualTo(AdminBatchStatus.DayState.IMPORTED);
+        assertThat(imported.draftCount()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("앞으로의 날에 파일이 있으면 '미리 만들어 둠'이다 — 지난 날의 '대기'와 뜻이 정반대다")
+    void calendarMarksFutureFilesAsPreset() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate target = today.plusDays(1);
+        String filename = cellOf(adminBatchService.getStatus(), target).filename();
+
+        writeByName(filename);
+
+        assertThat(cellOf(adminBatchService.getStatus(), target).state())
+                .isEqualTo(AdminBatchStatus.DayState.PRESET);
+    }
+
+    @Test
+    @DisplayName("달력은 주기 경계에서 시작해 4칸씩 맞아떨어진다 — 한 줄이 곧 한 주기여야 읽힌다")
+    void calendarIsAlignedToCycles() {
+        List<AdminBatchStatus.DayCell> calendar = adminBatchService.getStatus().calendar();
+
+        assertThat(calendar.size() % 4).isZero();
+        // 4칸마다 문서일(0일차)로 시작해야 화면의 "문서·초급·중급·고급" 머리줄과 맞는다.
+        for (int i = 0; i < calendar.size(); i += 4) {
+            assertThat(calendar.get(i).dayInCycle()).isZero();
+            assertThat(calendar.get(i).documentDay()).isTrue();
+            // 한 주기의 나흘은 같은 분야다 — 화면이 줄 이름으로 분야를 한 번만 적는 근거.
+            assertThat(calendar.subList(i, i + 4))
+                    .extracting(AdminBatchStatus.DayCell::domain)
+                    .containsOnly(calendar.get(i).domain());
+        }
+    }
+
+    @Test
+    @DisplayName("수확 집계는 만든 초안을 승인·거절·대기로 가른다 — '몇 건 들어왔나'로는 알 수 없던 것")
+    void harvestCountsDraftsByStatus() {
+        AdminBatchStatus.Harvest before = adminBatchService.getStatus().harvest();
+
+        generatedProblemDraftRepository.save(GeneratedProblemDraft.pending(
+                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
+                "제목", "질문?", "1", "해설", "[]", "test-model", null, null, null));
+
+        AdminBatchStatus.Harvest after = adminBatchService.getStatus().harvest();
+
+        assertThat(after.generated()).isEqualTo(before.generated() + 1);
+        assertThat(after.pending()).isEqualTo(before.pending() + 1);
+        // 합이 맞아야 한다 — 화면이 이 셋으로 막대를 그리므로 어긋나면 막대가 100%를 넘는다.
+        assertThat(after.generated()).isEqualTo(after.approved() + after.rejected() + after.pending());
+    }
+
+    /** 달력에서 그 날짜의 칸을 꺼낸다. 없으면 창(24일)이 잘못 잡힌 것이므로 단언으로 알린다. */
+    private AdminBatchStatus.DayCell cellOf(AdminBatchStatus status, LocalDate date) {
+        return status.calendar().stream()
+                .filter(c -> c.date().equals(date))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("달력에 " + date + " 칸이 없다 — 창이 잘못 잡혔다"));
+    }
+
+    /** {@code documents/2026-01-01.json}처럼 접두가 붙은 이름도 그대로 받아 만든다. */
+    private void writeByName(String filename) throws Exception {
+        Path file = DIR.resolve(filename);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, "{}");
     }
 
     private void writeDocumentAt(LocalDate date, String slug) throws Exception {

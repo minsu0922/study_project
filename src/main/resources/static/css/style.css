@@ -1960,12 +1960,18 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 
 /* 접어 두는 입력 폼(관리 콘솔의 "새 문제 등록") — 2026-09-08.
    손잡이는 h3이 있던 자리라 그만한 무게로 둔다. 카드 안쪽 여백은 .card가 이미 주므로
-   여기서는 글자와 커서만 손본다. 펼친 뒤 아래 여백은 손잡이와 첫 칸이 붙어 보이지 않게. */
-.form-panel > summary {
+   여기서는 글자와 커서만 손본다. 펼친 뒤 아래 여백은 손잡이와 첫 칸이 붙어 보이지 않게.
+
+   .fold-panel도 같은 모양을 쓴다(2026-09-08) — 입력 폼이 아니라 <읽는 표>를 접는 자리다.
+   같은 선언을 두 벌 두는 대신 선택자만 나란히 적는다: 손잡이 생김새가 화면마다 다르면
+   "접혀 있다"는 사실을 매번 다시 배워야 한다. */
+.form-panel > summary,
+.fold-panel > summary {
   cursor: pointer; font-weight: 700; font-size: var(--fs-3);
   letter-spacing: -.01em;
 }
-.form-panel[open] > summary { margin-bottom: var(--sp-3); }
+.form-panel[open] > summary,
+.fold-panel[open] > summary { margin-bottom: var(--sp-3); }
 /* 폼이 길어지면(문서 본문은 수천 픽셀이 된다) 저장 버튼이 화면 밖으로 밀린다.
    버튼 줄을 아래에 붙여 두면 어디를 고치고 있든 저장이 손 닿는 곳에 있다.
    배경을 칠하는 이유: 붙어 있는 동안 아래 글자가 버튼 뒤로 비쳐 보이면 둘 다 안 읽힌다. */
@@ -2411,4 +2417,112 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
    메타가 두 번 뜨거나 아예 사라진다. */
 @media (min-width: 976px) {
   .pl-meta-line { display: none; }
+}
+
+/* =====================================================================
+ * 배치 현황 — 요약 칩 · 주기 달력 · 수확 막대 (2026-09-08)
+ * ---------------------------------------------------------------------
+ * 이 화면은 표 다섯 개였다. 값은 다 있었는데 <같은 사실이 표마다 흩어져> 있어서,
+ * "며칠부터 안 나왔지"를 알려면 사람이 날짜로 맞춰 봐야 했다. 그래서 날짜를 축으로
+ * 깔고(달력), 결론을 맨 위로 올리고(칩), 나머지 표는 접었다.
+ * ===================================================================== */
+
+/* ── 요약 칩 ── 화면을 열자마자 답해야 하는 넷: 켜졌나 · 오늘 뭐가 나오나 ·
+ * 마지막으로 언제 들어왔나 · 내가 할 일이 얼마나 쌓였나. */
+.batch-summary {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px; margin-bottom: 18px;
+}
+.batch-chip {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  text-decoration: none; color: inherit; display: block;
+}
+a.batch-chip:hover { border-color: var(--primary); background: var(--primary-soft); }
+.batch-chip .label { font-size: 11px; color: var(--muted); }
+.batch-chip .value { font-size: 15px; font-weight: 600; margin-top: 3px; line-height: 1.35; }
+.batch-chip .sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+/* 나쁜 소식은 색을 바꾼다. 다만 글자로도 반드시 말한다 — 색만으로 알리면
+   색을 구분하기 어려운 사람에게는 아무 신호도 아니다(난이도 배지와 같은 규칙). */
+.batch-chip.warn { border-color: var(--lv2-solid); background: var(--lv2-bg); }
+.batch-chip.warn .value, .batch-chip.warn .label { color: var(--lv2-fg); }
+.batch-chip.bad { border-color: var(--wrong); background: color-mix(in srgb, var(--wrong) 10%, var(--card)); }
+.batch-chip.bad .value { color: var(--wrong); }
+
+/* ── 주기 달력 ──
+ * 한 줄 = 한 주기(문서 → 초급 → 중급 → 고급). 흔한 7칸 달력을 쓰지 않은 이유는
+ * DayCell 주석에 있다: 이 배치에 요일은 아무 뜻이 없고 4일 주기가 전부다.
+ * 왼쪽 96px은 그 주기의 분야 이름 자리다. */
+.batch-cal { display: grid; grid-template-columns: 96px repeat(4, 1fr); gap: 6px; }
+.cal-h { font-size: 11px; color: var(--muted); padding: 0 2px 2px; text-align: center; }
+.cal-side {
+  font-size: 12px; color: var(--text-2);
+  display: flex; align-items: center; padding-right: 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cal-cell {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--card); color: inherit; font: inherit;
+  padding: 7px 4px; min-height: 58px; cursor: pointer; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+}
+.cal-cell:hover { border-color: var(--primary); }
+.cal-cell .d { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cal-cell .m { font-size: 15px; line-height: 1.2; }
+.cal-cell .n { font-size: 11px; color: var(--text-2); }
+
+/* 상태 색. 아이콘(✓ ↓ ✕ ·)이 이미 뜻을 말하므로 색은 <훑을 때 덩어리로 보이게>
+   하는 보조다 — 그래서 옅게 깐다. 특히 안 나온 날은 몇 주씩 이어질 수 있어
+   진하게 칠하면 화면 절반이 빨개져 오히려 아무것도 안 읽힌다. */
+.cal-cell[data-state="IMPORTED"] {
+  background: color-mix(in srgb, var(--correct) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--correct) 35%, var(--border));
+}
+.cal-cell[data-state="WAITING"] { background: var(--lv2-bg); border-color: var(--lv2-solid); }
+.cal-cell[data-state="MISSING"] {
+  background: color-mix(in srgb, var(--wrong) 7%, var(--card));
+  border-style: dashed; border-color: color-mix(in srgb, var(--wrong) 40%, var(--border));
+}
+.cal-cell[data-state="PLANNED"] { background: var(--fill); border-style: dashed; color: var(--muted); }
+.cal-cell[data-state="PRESET"] { background: var(--fill); }
+/* 오늘은 위치가 곧 정보다 — 색이 아니라 테두리로 표시해 상태 색과 겹치지 않게 한다. */
+.cal-cell.today { outline: 2px solid var(--primary); outline-offset: -2px; }
+/* 근거 문서 없이 도는 날. 문제는 나오지만 문서 링크가 안 붙는다 — 조용히 지나가면
+   2단계 구조가 헛돌고 있다는 것을 몇 주 뒤에야 안다(renderPlan의 판단과 같다). */
+.cal-cell .fb { font-size: 10px; color: var(--lv2-fg); }
+
+.cal-legend {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  font-size: 11px; color: var(--muted); margin-top: 10px;
+}
+.cal-legend i {
+  display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+  margin-right: 4px; vertical-align: -1px; border: 1px solid var(--border);
+}
+.cal-detail {
+  margin-top: 10px; padding: 10px 12px; font-size: 13px;
+  background: var(--fill); border-radius: var(--radius);
+}
+
+/* ── 수확 막대 ── 승인·거절·대기의 비율을 숫자보다 먼저 보여 준다.
+   막대만 두지 않고 숫자를 함께 적는 이유: 30일에 3건뿐일 때도 막대는 꽉 차 보인다. */
+.harvest-bar {
+  display: flex; height: 10px; border-radius: 999px; overflow: hidden;
+  background: var(--fill); margin: 10px 0 10px;
+}
+.harvest-bar i { display: block; height: 100%; }
+.harvest-bar .ap { background: var(--correct); }
+.harvest-bar .rj { background: var(--wrong); }
+.harvest-bar .pd { background: var(--border-strong); }
+.harvest-nums { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; }
+.harvest-nums b { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  /* 좁은 화면에서는 분야 이름을 칸 위 줄로 내리고 4칸을 넓게 쓴다 —
+     96px 기둥을 유지하면 칸 하나가 40px 남아 날짜가 두 줄로 깨진다. */
+  .batch-cal { grid-template-columns: repeat(4, 1fr); }
+  .cal-corner { display: none; }          /* 머리줄 왼쪽의 빈 칸 — 기둥이 없어졌으니 자리도 없앤다 */
+  .cal-side { grid-column: 1 / -1; padding: 6px 0 0; font-size: 11px; }
+  .cal-cell { min-height: 52px; padding: 6px 2px; }
+  .cal-cell .m { font-size: 14px; }
 }
