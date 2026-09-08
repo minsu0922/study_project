@@ -173,21 +173,34 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     long countAttemptedProblems(@Param("userId") Long userId);
 
     /**
-     * 기간 안에 맞힌 문제 수 — "이번 주" 카드.
+     * 기간 안에 <b>푼</b> 문제 수 — "이번 주" 카드.
      *
      * <p><b>스트릭 대신 쓰는 값이다.</b> 연속 일수는 하루만 쉬어도 0으로 떨어져, 주 3회 페이스를
      * 지키는 사람에게 매주 실패를 알린다. "이번 주 몇 개"는 같은 "요즘 하고 있나"를 말하면서
      * 그런 벌을 주지 않는다(docs/12의 스트릭 제거 절 참고).
      *
-     * <p>지난주에 맞힌 문제를 이번 주에 다시 맞히면 이번 주에도 <b>한 번 더 센다</b>.
-     * "처음 맞힌 주"만 세려면 문제별 최초 정답 시각을 구해야 하는데, 이 카드가 묻는 것은
+     * <p>지난주에 푼 문제를 이번 주에 다시 풀면 이번 주에도 <b>한 번 더 센다</b>.
+     * "처음 푼 주"만 세려면 문제별 최초 제출 시각을 구해야 하는데, 이 카드가 묻는 것은
      * "이번 주에 뭘 했나"이지 "새 문제를 몇 개 뚫었나"가 아니다.
+     *
+     * <h2>정답만 세다가 <b>제출을 세는 것으로 바꿨다</b>(2026-09-08)</h2>
+     *
+     * <p>전에는 {@code correct = true}가 붙어 있었다. 화면을 실제로 띄워 보니 첫날 4문제를
+     * 풀고 다 틀린 사람에게 <b>"푼 문제 4 · 이번 주 0"</b>이 나란히 떴다 — 같은 줄의 두 칸이
+     * 서로 반대되는 말을 하는 셈이다.
+     *
+     * <p>더 큰 문제는 이 값이 <b>스트릭을 대신하려고</b> 만들어졌다는 것이다. 스트릭을 뺀 이유가
+     * "잘하고 있는데 실패한 것처럼 보이는 숫자"였는데(docs/12), 정답만 세면 초보자에게 정확히
+     * 그 숫자가 된다 — 처음 배우는 사람일수록 많이 틀리고, 틀린 것도 <b>한 일</b>이다.
+     *
+     * <p>정확도는 옆 칸(정답률)이 이미 말한다. 이 칸은 활동량을 맡는다 — 넷이 각자 다른 질문에
+     * 답하게 되고, 단위도 옆의 "푼 문제"와 같아져 두 값이 서로를 설명한다.
      */
     @Query("""
             select count(distinct s.problem.id) from Submission s
-            where s.userId = :userId and s.correct = true and s.submittedAt >= :from
+            where s.userId = :userId and s.submittedAt >= :from
             """)
-    long countSolvedProblemsSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
+    long countAttemptedProblemsSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
 
     /** 내 전체 제출 수와 그중 정답 수 — 목록 화면의 "정답률" 카드. 나눗셈은 서비스가 한다. */
     @Query("""

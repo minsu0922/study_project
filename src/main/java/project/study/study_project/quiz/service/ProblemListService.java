@@ -121,7 +121,7 @@ public class ProblemListService {
                 submissionRepository.countAttemptedProblems(userId),
                 submissionRepository.countSolvedProblems(userId),
                 correctRate,
-                submissionRepository.countSolvedProblemsSince(userId, weekStart),
+                submissionRepository.countAttemptedProblemsSince(userId, weekStart),
                 reviewItemRepository.countDue(userId, now));
 
         return new StudySummaryResponse(stats, domainProgress(userId));

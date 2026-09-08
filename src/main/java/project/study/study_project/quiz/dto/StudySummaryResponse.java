@@ -52,7 +52,9 @@ public record StudySummaryResponse(
      *                       분야별 진도가 쓰는 값이다
      * @param correctRate    전체 제출 중 정답 비율(0~100). <b>제출이 없으면 null</b> —
      *                       0%(다 틀렸다)와 "아직 안 풀었다"는 정반대 신호다
-     * @param solvedThisWeek 이번 주(월요일 0시부터) 맞힌 문제 수. 스트릭을 대신하는 값이다
+     * @param solvedThisWeek 이번 주(월요일 0시부터) <b>푼</b> 문제 수(맞힌 수가 아니다 — 2026-09-08에
+     *                       바꿨다, {@code SubmissionRepository.countAttemptedProblemsSince} 주석).
+     *                       스트릭을 대신하는 값이라 "요즘 하고 있나"에 답한다
      * @param reviewDue      지금 복습할 차례인 문제 수
      */
     public record Stats(

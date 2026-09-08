@@ -479,9 +479,14 @@ async function loadRecentDocs() {
   const today = new Date().toISOString().substring(0, 10);
   document.getElementById("docList").innerHTML = docs.map(d => {
     const day = (d.updatedAt || "").substring(0, 10);
+    // 편(입문/심화)을 함께 찍는다 — 2026-09-08. 한 주제는 두 편으로 만들어지고 제목이
+    // <글자까지 같다>. 편을 안 그리면 이 세 줄짜리 새 소식 자리에 같은 제목이 연달아
+    // 두 번 뜬다(실제로 그렇게 나왔다). 그러면 새 소식이 셋이 아니라 둘이고, 읽는 사람은
+    // 목록이 고장 났다고 본다. 서버는 <짝이 실제로 있을 때만> edition을 채우므로
+    // 짝이 없는 문서에는 아무것도 안 붙는다(DocumentListItem).
     return `<a class="doc-line ${day === today ? "fresh" : ""}" href="/document.html?slug=${encodeURIComponent(d.slug)}">
       <span class="dm">${escapeHtml(d.domainLabel)}</span>
-      <span class="ti">${escapeHtml(d.title)}</span>
+      <span class="ti">${escapeHtml(d.title)}${d.edition ? " " + editionBadge(d.edition) : ""}</span>
       <span class="dt">${day === today ? "오늘" : escapeHtml(shortDay(day))}</span>
     </a>`;
   }).join("");

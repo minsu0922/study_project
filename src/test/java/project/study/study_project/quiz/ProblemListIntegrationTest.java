@@ -171,7 +171,10 @@ class ProblemListIntegrationTest {
         assertThat(summary.stats().solvedTotal()).isEqualTo(2);
         // 제출 3건 중 2건 정답 → 67%(반올림)
         assertThat(summary.stats().correctRate()).isEqualTo(67);
-        assertThat(summary.stats().solvedThisWeek()).isEqualTo(2);
+        // "이번 주"는 <푼> 문제 수다(2026-09-08에 정답 기준에서 바꿨다 —
+        // SubmissionRepository.countAttemptedProblemsSince 주석). 제출 3건이 서로 다른
+        // 문제라 3이고, 위의 solvedTotal(2)과 <다른 값>인 것이 이 검사의 요점이다.
+        assertThat(summary.stats().solvedThisWeek()).isEqualTo(3);
     }
 
     /**
