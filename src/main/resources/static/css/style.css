@@ -977,6 +977,54 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 .result.correct .verdict { color: var(--correct); }
 .result.wrong .verdict { color: var(--wrong); }
 
+/* ── 보기 편집기(관리자 문제 폼의 한 줄) ── 2026-09-08 ────────────────
+ *
+ * 고치기 전에는 <같은 생김새의 입력 칸 여덟 개>가 세로로 늘어서 있었다. 보기 넷과
+ * 오답 설명 넷인데, 테두리·크기·글자가 전부 같아서 어느 칸이 보기고 어느 칸이 그 설명인지
+ * 읽어 봐야 알 수 있었다. 게다가 <보기와 제 설명 사이>가 4px, <다음 보기와의 사이>가 6px라
+ * 묶음이 눈에 안 잡혔다 — 가까운 것이 한 덩이로 보인다는 것이 사람 눈의 기본 동작인데,
+ * 두 간격이 사실상 같으면 여덟 칸이 그냥 여덟 칸으로 보인다.
+ *
+ * 그래서 <셋>을 바꿨다.
+ *   1. 보기 하나를 테두리 있는 판으로 묶는다 — 묶음을 여백이 아니라 선으로 말한다.
+ *   2. 설명 줄은 안으로 들여쓰고 글자를 줄이고 앞에 "↳" 꼬리표를 붙인다 — 딸린 것으로 읽힌다.
+ *   3. 정답으로 고른 보기는 판 자체가 초록으로 바뀐다 — 라디오 점 하나보다 훨씬 멀리서 보인다.
+ *
+ * 색은 전부 토큰이라 다크에서도 같은 뜻으로 보인다. 새 값을 만들지 않은 것이 요점이다 —
+ * 정답의 초록은 채점 결과 상자가 쓰는 것과 같은 --correct다. */
+.choice-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  /* 카드(--card)와 다른 면색이라야 판이 판으로 보인다. 안쪽 입력 칸이 --card라
+     여기서 --fill을 쓰면 <입력 칸이 판 위에 떠 있는> 모양이 된다. */
+  background: var(--fill);
+  padding: 8px 10px;
+  margin-bottom: 10px;   /* 판 사이는 8px 안쪽 여백보다 넓어야 한 덩이가 갈린다 */
+}
+/* 정답 보기 — 라디오를 누르는 순간 판 전체가 바뀐다(problems.html syncRowFields). */
+.choice-row.is-correct { border-color: var(--correct); background: var(--correct-bg); }
+
+/* 보기 본문 줄: 라디오 · 내용 · 삭제. align-items를 center로 두는 것이 이 줄의 핵심이다.
+ *
+ * 예전에는 flex-start에 삭제 버튼만 margin-top:6px였다. 버튼은 min-height:44px이고
+ * 입력 칸은 42px이라, 위쪽을 맞춰 놓고 6px을 더 내리면 ✕가 <보기와 그 설명 사이>에
+ * 걸쳐 앉는다 — 어느 보기를 지우는 버튼인지 눈으로 짚이지 않는다.
+ * 가운데 맞춤이면 높이가 달라도 늘 보기 칸의 한가운데를 가리킨다. */
+.choice-main { display: flex; gap: 8px; align-items: center; }
+.choice-main .choice-text { flex: 1; }
+/* 정사각형에 가깝게 — 글자 한 자짜리 버튼이 가로로 길면 "삭제"라는 말보다 크게 보인다.
+   min-height 44는 건드리지 않는다. 손가락 표적의 하한이라 여기서 깎을 값이 아니다. */
+.choice-main .choice-remove { flex: none; width: 44px; padding: 0; font-size: 1rem; }
+
+/* 딸린 줄(오답 설명·짝지을 오른쪽). 들여쓰기 26px은 위 줄의 라디오 자리 너비다 —
+   보기 내용의 왼쪽 끝과 나란히 서서 "이 보기에 붙은 것"으로 읽힌다. */
+.choice-sub { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-left: 26px; }
+.choice-sub .choice-tag { flex: none; color: var(--muted); font-size: var(--fs-1); }
+.choice-sub input { flex: 1; font-size: var(--fs-2); padding: 7px 10px; }
+/* 딸린 줄은 display:flex라 브라우저 기본 [hidden] 규칙(display:none)을 이긴다.
+   유형에 따라 줄을 접는 쪽이 JS인데(syncRowFields), 이 한 줄이 없으면 감춘 칸이 그대로 보인다. */
+.choice-row [hidden] { display: none !important; }
+
 /* (구)라디오형 보기 — admin 미리보기 등 호환용으로 유지 */
 .choice { display: block; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
 .choice:hover { border-color: var(--primary); }

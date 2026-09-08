@@ -234,12 +234,19 @@ function renderTypeFields() {
   }
 }
 
-/** 한 줄 안에서 유형별로 보일 칸을 정한다 — 객관식만 라디오, 짝짓기만 오른쪽 칸. */
+/** 한 줄 안에서 유형별로 보일 칸을 정한다 — 객관식만 라디오, 짝짓기만 오른쪽 칸.
+ *
+ * 감추는 대상이 입력 칸이 아니라 <줄 전체>인 것에 유의. 설명 칸 앞에 "↳ 오답 설명"
+ * 꼬리표가 붙으면서, 칸만 감추면 꼬리표가 홀로 남는다. */
 function syncRowFields(row, type) {
-  row.querySelector("input[type=radio]").hidden = type !== "MULTIPLE_CHOICE";
-  row.querySelector(".choice-match").hidden = type !== "MATCHING";
-  row.querySelector(".choice-rationale").hidden =
-    type !== "MULTIPLE_CHOICE" || row.querySelector("input[type=radio]").checked;
+  const radio = row.querySelector("input[type=radio]");
+  radio.hidden = type !== "MULTIPLE_CHOICE";
+  row.querySelector(".choice-match-line").hidden = type !== "MATCHING";
+  row.querySelector(".choice-rationale-line").hidden =
+    type !== "MULTIPLE_CHOICE" || radio.checked;
+  // 정답 보기는 판 전체를 초록으로 바꾼다. 라디오 점 하나로도 뜻은 통하지만, 보기가 넷이면
+  // 어느 것이 정답인지 확인할 때마다 작은 점 넷을 훑게 된다 — 면색은 한눈에 들어온다.
+  row.classList.toggle("is-correct", type === "MULTIPLE_CHOICE" && radio.checked);
 }
 
 /* 보기 한 줄 = 내용 + 오답 설명(V15).
@@ -250,25 +257,38 @@ function syncRowFields(row, type) {
  * 정답 보기의 설명 칸은 라디오를 누르는 순간 접는다. 정답의 근거는 해설이 통째로 맡기로 한
  * 설계라(Choice.rationale) 여기 적어도 저장 직전에 버려지는데, 칸이 열려 있으면 적어 놓고
  * 사라진 줄 모른다. 값 자체는 지우지 않는다 — 정답을 잘못 눌렀다가 되돌릴 때 쓴 글이
- * 사라지면 그게 더 나쁘다. */
+ * 사라지면 그게 더 나쁘다.
+ *
+ * <2026-09-08 — 아래로 붙이기만 해서는 부족했다.> 칸 셋이 생김새가 같아 여덟 칸이 그냥
+ * 여덟 칸으로 보였다. 자리를 붙여 놓는 것과 <한 덩이로 보이는 것>은 다른 일이다.
+ * 지금은 판으로 묶고(.choice-row), 딸린 줄은 들여쓰고 꼬리표를 붙인다(.choice-sub).
+ * 생김새 규칙은 style.css의 "보기 편집기" 절에 이유와 함께 모아 뒀다 — 인라인 style로
+ * 흩어 두면 왜 이 값인지 적을 자리가 없다. */
 function addChoiceRow(text = "", correct = false, rationale = "", matchText = "") {
   const row = document.createElement("div");
   row.className = "choice-row";
-  row.style.cssText = "display:flex; gap:8px; align-items:flex-start; margin-bottom:6px";
   row.innerHTML = `
-    <input type="radio" name="pCorrect" title="정답으로 선택" style="margin-top:9px" ${correct ? "checked" : ""}>
-    <div style="flex:1">
-      <input type="text" class="choice-text" placeholder="보기 내용" style="width:100%">
-      <input type="text" class="choice-match" maxlength="500" style="width:100%; margin-top:4px"
-             placeholder="짝지을 오른쪽 설명 (짝짓기 전용)">
-      <input type="text" class="choice-rationale" maxlength="1000" style="width:100%; margin-top:4px"
-             placeholder="이 오답이 왜 틀렸는지 한 줄 (정답 보기는 비워 둡니다)">
+    <div class="choice-main">
+      <input type="radio" name="pCorrect" title="정답으로 선택" ${correct ? "checked" : ""}>
+      <input type="text" class="choice-text" placeholder="보기 내용">
+      <button type="button" class="btn-outline choice-remove" title="이 보기를 지웁니다">✕</button>
     </div>
-    <button type="button" class="btn-outline" style="padding:4px 10px; margin-top:6px">✕</button>`;
+    <label class="choice-sub choice-match-line">
+      <span class="choice-tag">↳ 짝</span>
+      <input type="text" class="choice-match" maxlength="500"
+             placeholder="짝지을 오른쪽 설명 (짝짓기 전용)">
+    </label>
+    <label class="choice-sub choice-rationale-line">
+      <span class="choice-tag">↳ 오답 설명</span>
+      <input type="text" class="choice-rationale" maxlength="1000"
+             placeholder="이 오답이 왜 틀렸는지 한 줄">
+    </label>`;
   row.querySelector(".choice-text").value = text;
   row.querySelector(".choice-rationale").value = rationale;
   row.querySelector(".choice-match").value = matchText;
-  row.querySelector("button").addEventListener("click", () => row.remove());
+  // 클래스로 집는다 — 줄 안에 버튼이 하나뿐이라는 가정에 기대면, 다음에 버튼이 하나
+  // 늘어난 날 <엉뚱한 버튼이 보기를 지운다>. 화면에서 가장 되돌리기 어려운 동작이다.
+  row.querySelector(".choice-remove").addEventListener("click", () => row.remove());
   document.getElementById("pChoices").appendChild(row);
   syncRowFields(row, document.getElementById("pType").value);
   return row;
