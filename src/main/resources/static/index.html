@@ -493,11 +493,8 @@ async function loadRecentDocs() {
   document.getElementById("docLabel").hidden = false;
 }
 
-/** "2026-08-25" → "8월 25일". 첫 화면에서는 연도가 정보가 아니라 소음이다. */
-function shortDay(day) {
-  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(day);
-  return m ? `${Number(m[1])}월 ${Number(m[2])}일` : day;
-}
+/* shortDay는 api.js로 옮겼다(2026-09-08) — 문서 목록도 같은 형식을 쓰게 되면서
+   두 화면이 각자 한 벌씩 갖고 있을 이유가 없어졌다. */
 </script>
 </body>
 </html>

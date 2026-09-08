@@ -147,7 +147,10 @@ async function loadDocs() {
           ${editionSubtitle(d.edition)}
           <span class="badge">${escapeHtml(d.domainLabel)}</span>
           ${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}
-          <div class="meta">수정: ${formatDate(d.updatedAt)}</div>
+          <!-- 분까지 찍던 것을 날짜만 남겼다(2026-09-08). 목록에서 "18:44"는 읽는 사람의
+               판단을 바꾸지 않고, 첫 화면이 같은 값을 "9월 7일"로 적고 있어 두 화면이
+               같은 날짜를 다르게 말하고 있었다(api.js shortDay). -->
+          <div class="meta">수정: ${shortDay(d.updatedAt)}</div>
         </a>`).join("");
     }
 
