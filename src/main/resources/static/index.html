@@ -27,10 +27,18 @@ try {
     <div class="hero">
       <h1>CS 면접, <span class="accent">매일 조금씩</span></h1>
       <p class="lead">매일 나에게 맞춘 10문제 — 틀린 건 잊어버릴 때쯤 다시 만나요.</p>
+      <!-- 두 버튼이 가르는 것은 <가입하느냐 마느냐> 하나다(2026-09-08).
+           예전 문구는 "무료로 시작하기 / 가입 없이 풀어보기"였는데, 둘 다 "공짜"라고 말하는
+           바람에 무엇이 다른지가 안 보였다 — 첫 버튼이 가입 화면으로 간다는 사실이 어디에도
+           없었다. 지금은 한쪽만 "가입"을 말하고 다른 쪽은 "가입 없이"를 말한다.
+           "무료"를 뺀 이유: 유료 상품이 없으니 그건 정보가 아니라 광고 문구다. -->
       <div class="cta">
-        <a href="/signup.html" class="btn btn-lg">무료로 시작하기</a>
+        <a href="/signup.html" class="btn btn-lg">가입하고 시작하기</a>
         <a href="/quiz.html" class="btn btn-outline btn-lg">가입 없이 풀어보기</a>
       </div>
+      <!-- 가입을 권하면서 그 대가를 안 적으면 "왜 가입해야 하지"가 남는다.
+           이 앱에서 로그인이 실제로 여는 것은 채점·복습 사다리·기록 셋이다. -->
+      <p class="note">가입하면 채점과 해설을 보고, 틀린 문제가 복습으로 돌아옵니다.</p>
     </div>
 
     <div class="landing-points">
@@ -131,7 +139,21 @@ if (!isLoggedIn()) {
  */
 async function loadLanding() {
   try {
-    const p = (await api("/api/quiz?size=1")).problems[0];
+    // 초급을 먼저 청한다(2026-09-08). 예전에는 난이도를 안 걸어 무작위였는데, 고급이 걸리면
+    // 상황 지문 네 줄짜리가 첫 인상이 된다 — 바로 위에서 "10분이면 끝나요"라고 해 놓고
+    // 그 아래에 <읽는 데만 1분 걸리는 문제>를 세우는 셈이다. 견본의 일은 자랑이 아니라
+    // "들어와도 되겠다"를 보여 주는 것이다. 난이도 배지가 초급이라고 적으므로 속이지도 않는다.
+    // 초급이 하나도 없으면(새 DB) 조건을 풀어 다시 청한다 — 견본 칸이 비는 것보다는 낫다.
+    //
+    // 유형도 객관식으로 못 박는다. sampleChoices가 짝짓기·순서·OX의 보기를 일부러 안 그리는데
+    // (조작해야 뜻이 보이는 유형이라) 그런 문제가 걸리면 견본 카드가 <지문 한 줄과 빈자리>가
+    // 된다. 실제로 짝짓기가 뽑혀 "각 구역과 설명을 연결하시오"만 덩그러니 뜬 화면을 봤다 —
+    // "이런 문제가 나옵니다"라고 해 놓고 문제를 안 보여 준 셈이다. 뽑을 때 걸러야 할 조건을
+    // 그리는 쪽에서만 알고 있었던 것이 원인이다.
+    const pick = async q => (await api(`/api/quiz?size=1${q}`)).problems[0];
+    const p = (await pick("&level=BEGINNER&type=MULTIPLE_CHOICE"))
+      ?? (await pick("&type=MULTIPLE_CHOICE"))
+      ?? (await pick(""));
     if (p) {
       const box = document.getElementById("sampleProblem");
       box.innerHTML = `

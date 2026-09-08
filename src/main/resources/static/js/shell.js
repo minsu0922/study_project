@@ -157,6 +157,19 @@ function renderShell({ active = "", title = "" } = {}) {
   // 나중에 tab을 단 항목이 여섯 번째로 늘어도 탭바가 무너지지 않는다.
   const tabs = visible.filter(m => m.tab).slice(0, 5);
 
+  /* 계정 영역의 <자리>가 로그인 여부로 갈린다 — 2026-09-08.
+   *
+   * 기둥 맨 아래는 "가장 덜 중요한 자리"라, 로그인한 사람의 아이디 표시에는 맞다.
+   * 그런데 비로그인에게 그 자리에 놓인 것은 표시가 아니라 <이 화면에서 할 수 있는
+   * 거의 유일한 행동> 둘이다(로그인·회원가입). 소개 화면에서 가장 중요한 것을 화면
+   * 왼쪽 맨 아래 끝에 두고 있었던 셈이다.
+   *
+   * 성격이 다른 둘을 한 자리에 넣어 둔 것이 원인이라, 자리를 갈랐다.
+   * 비로그인은 브랜드 바로 아래 — 눈이 처음 닿는 곳이고, 어느 화면에서나 같은 높이다
+   * (맨 아래는 spacer 뒤라 화면 높이에 따라 위치가 달라진다. 관리 콘솔 링크를
+   * 맨 아래에서 맨 위로 옮긴 것과 같은 이유다 — MENUS의 admin 항목 주석). */
+  const anon = !isLoggedIn();
+
   el.innerHTML = `
     <!-- 반복 영역 건너뛰기 — 평소에는 화면 밖에 있다가 탭으로 초점을 받으면 나타난다.
          (KWCAG 5.1.2 · WCAG 2.4.1)
@@ -184,12 +197,12 @@ function renderShell({ active = "", title = "" } = {}) {
 
     <nav class="shell-side" aria-label="주 메뉴">
       <a class="brand" href="/">csquiz</a>
+      ${anon ? `<div class="shell-side-auth top">${authAreaHtml()}</div><div class="shell-rule"></div>` : ""}
       ${console_.length ? `${sideLinks(console_, active)}<div class="shell-rule"></div>` : ""}
       ${sideLinks(study, active)}
       ${personal.length ? `<div class="shell-rule"></div>${sideLinks(personal, active)}` : ""}
       <span class="spacer"></span>
-      <div class="shell-rule"></div>
-      <div class="shell-side-auth">${authAreaHtml()}</div>
+      ${anon ? "" : `<div class="shell-rule"></div><div class="shell-side-auth">${authAreaHtml()}</div>`}
     </nav>
 
     <nav class="shell-tabs" aria-label="주 메뉴">

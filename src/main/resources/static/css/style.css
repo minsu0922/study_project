@@ -668,6 +668,11 @@ body {
      비로그인 상태에서 <이 자리의 주인공은 회원가입>이라 꽉 채운 버튼을 쓴다. */
   .shell-side-auth .btn { width: 100%; text-align: center; padding: 6px 10px !important; }
 
+  /* 비로그인일 때는 이 묶음이 브랜드 바로 아래로 올라온다(shell.js renderShell).
+     순서를 뒤집는다 — 위쪽 자리에서는 <누를 것>이 먼저고 "이미 계정이 있다면"이 뒤다.
+     맨 아래에 있을 때는 반대였다: 아이디 한 줄이 주인공이고 버튼은 딸린 것이었다. */
+  .shell-side-auth.top { flex-direction: column-reverse; gap: 6px; padding: 8px; }
+
   /* 본문은 <남은 자리의 가운데>에 둔다. 여백만 넓히고 정렬은 건드리지 않는다.
    *
    * [한 번 왼쪽에 붙였다가 되돌렸다 — 2026-09-07]
