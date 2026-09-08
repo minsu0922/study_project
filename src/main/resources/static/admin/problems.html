@@ -30,8 +30,16 @@ try {
 
   <div id="adminUi" hidden>
 
-    <div class="card">
-      <h3 id="pFormTitle">새 문제 등록</h3>
+    <!-- 폼을 <접어 둔다> — 2026-09-08.
+         이 화면에서 실제로 자주 하는 일은 <목록에서 찾아 고치기>다(제보의 "문제 고치기",
+         검수의 승인 뒤 손질, 대시보드의 정답률 낮은 행). 문제는 배치가 만들므로 손으로
+         등록하는 일은 드물다. 그런데 등록 폼이 늘 펼쳐져 화면 첫 판을 통째로 차지하고 있어,
+         목록을 보려면 매번 그만큼을 스크롤해야 했다.
+
+         수정으로 들어오면 자동으로 펼친다(editProblem) — 접혀 있다는 사실이 그 흐름을
+         막지 않는다. 반대로 등록은 한 번 더 누르면 되는데, 드물게 하는 일에 그 한 번은 싸다. -->
+    <details class="card form-panel" id="pFormPanel">
+      <summary id="pFormTitle">새 문제 등록</summary>
       <div id="pMessage"></div>
       <div class="filters">
         <div class="field"><label>도메인</label><select id="pDomain"></select></div>
@@ -62,7 +70,7 @@ try {
       <div class="field" style="margin-top:14px"><label>해설 (선택)</label><textarea id="pExplanation" rows="2" style="width:100%"></textarea></div>
       <button id="pSubmitBtn">등록</button>
       <button id="pCancelBtn" class="btn-outline" hidden>수정 취소</button>
-    </div>
+    </details>
 
     <!-- 제목 백필(V13) — 제목 없는 문제가 있을 때만 나타난다.
          평소에 안 보이는 것이 중요하다: 늘 떠 있으면 "누르면 뭔가 좋아지나" 싶어 누르게 되고,
@@ -368,6 +376,8 @@ async function submitProblem() {
 
 function resetProblemForm() {
   editingProblemId = null;
+  // 수정을 취소하면 폼도 접는다 — 열어 둔 이유(고칠 것이 있다)가 사라졌기 때문이다.
+  document.getElementById("pFormPanel").open = false;
   document.getElementById("pFormTitle").textContent = "새 문제 등록";
   document.getElementById("pSubmitBtn").textContent = "등록";
   document.getElementById("pCancelBtn").hidden = true;
@@ -572,6 +582,8 @@ function displayAnswer(p) {
 async function editProblem(id) {
   const p = await api("/api/admin/problems/" + id);
   editingProblemId = id;
+  // 접혀 있을 수 있다 — 고치러 들어온 사람에게 "폼을 펼치라"는 한 걸음을 시키지 않는다.
+  document.getElementById("pFormPanel").open = true;
   document.getElementById("pFormTitle").textContent = `문제 수정 (ID ${id})`;
   document.getElementById("pSubmitBtn").textContent = "수정 저장";
   document.getElementById("pCancelBtn").hidden = false;

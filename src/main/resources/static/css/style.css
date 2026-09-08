@@ -1897,6 +1897,15 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 /* 펼친 뒤에는 손잡이와 내용이 붙어 보이게 아래 여백을 준다. */
 .gen-panel[open] > summary { margin-bottom: 12px; }
 
+/* 접어 두는 입력 폼(관리 콘솔의 "새 문제 등록") — 2026-09-08.
+   손잡이는 h3이 있던 자리라 그만한 무게로 둔다. 카드 안쪽 여백은 .card가 이미 주므로
+   여기서는 글자와 커서만 손본다. 펼친 뒤 아래 여백은 손잡이와 첫 칸이 붙어 보이지 않게. */
+.form-panel > summary {
+  cursor: pointer; font-weight: 700; font-size: var(--fs-3);
+  letter-spacing: -.01em;
+}
+.form-panel[open] > summary { margin-bottom: var(--sp-3); }
+
 /* ── 대시보드: 오늘 할 일 줄 ── 2026-08-29
  *
  * 예전에는 여기에 누적 수 넷(회원·문서·문제·제출)이 있었다. 매일 봐도 다음 행동을 정해
