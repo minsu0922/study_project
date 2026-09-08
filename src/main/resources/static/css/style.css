@@ -1950,6 +1950,16 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
   letter-spacing: -.01em;
 }
 .form-panel[open] > summary { margin-bottom: var(--sp-3); }
+/* 폼이 길어지면(문서 본문은 수천 픽셀이 된다) 저장 버튼이 화면 밖으로 밀린다.
+   버튼 줄을 아래에 붙여 두면 어디를 고치고 있든 저장이 손 닿는 곳에 있다.
+   배경을 칠하는 이유: 붙어 있는 동안 아래 글자가 버튼 뒤로 비쳐 보이면 둘 다 안 읽힌다. */
+.form-panel .form-actions {
+  position: sticky; bottom: 0; z-index: 1;
+  display: flex; gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+}
 
 /* ── 대시보드: 오늘 할 일 줄 ── 2026-08-29
  *
