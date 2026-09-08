@@ -34,6 +34,23 @@
  * "눌렀더니 401"이 반복돼 화면이 고장 난 것처럼 보인다. */
 const ROLE_RANK = { public: 0, user: 1, admin: 2 };
 
+/**
+ * 비로그인일 때만 다르게 부르는 메뉴 이름 — 2026-09-08.
+ *
+ * <p>"오늘"은 로그인한 사람의 화면 이름이다. 그 자리에 뜨는 것이 <b>오늘 할 일</b>이라서
+ * 그렇게 지었는데, 비로그인에게 같은 주소가 보여 주는 것은 소개 화면이다. 메뉴는 "오늘"이라
+ * 적힌 채 굵게 켜져 있고 본문은 서비스 소개인, <b>이름과 내용이 어긋난</b> 상태였다.
+ *
+ * <p>메뉴를 하나 더 만들지 않고 이름만 가는 이유: 주소도 화면도 하나다. 항목을 나누면
+ * MENUS에 같은 href가 둘이 되고, 활성 표시가 어느 쪽에 붙는지를 또 정해야 한다.
+ */
+const ANON_LABELS = { today: "소개" };
+
+/** 기둥·탭바에 적을 이름. 비로그인이면 위 표가 먼저다. */
+function menuLabel(m, forTab = false) {
+  return (!isLoggedIn() && ANON_LABELS[m.key]) || (forTab && m.tabLabel) || m.label;
+}
+
 /** 지금 이 브라우저의 등급. */
 function currentRole() {
   if (isAdmin()) return "admin";
@@ -170,6 +187,12 @@ function renderShell({ active = "", title = "" } = {}) {
    * 맨 아래에서 맨 위로 옮긴 것과 같은 이유다 — MENUS의 admin 항목 주석). */
   const anon = !isLoggedIn();
 
+  /* 비로그인 기둥은 <좁다> — 담기는 것이 브랜드·계정·메뉴 둘뿐이다(오늘·개념 문서).
+   * 208px은 여섯 항목과 아이디 한 줄을 담으려고 잰 폭이라, 그 절반도 안 쓰는 상태에서는
+   * 본문에서 빼앗은 자리가 된다. 소개 화면은 읽으라고 있는 화면이라 그 40px이 아깝다.
+   * 클래스를 body에 거는 이유: 폭을 정하는 것이 grid라 그 값을 아는 곳도 body여야 한다. */
+  document.body.classList.toggle("shell-anon", anon);
+
   el.innerHTML = `
     <!-- 반복 영역 건너뛰기 — 평소에는 화면 밖에 있다가 탭으로 초점을 받으면 나타난다.
          (KWCAG 5.1.2 · WCAG 2.4.1)
@@ -209,7 +232,7 @@ function renderShell({ active = "", title = "" } = {}) {
       ${tabs.map(m => `
         <a class="shell-tab${m.key === active ? " active" : ""}" href="${m.href}"
            ${m.key === active ? 'aria-current="page"' : ""}>
-          <span class="ic" aria-hidden="true">${m.tab}</span>${escapeHtml(m.tabLabel || m.label)}
+          <span class="ic" aria-hidden="true">${m.tab}</span>${escapeHtml(menuLabel(m, true))}
           ${m.badge ? `<span id="${m.badge}-tab"></span>` : ""}
         </a>`).join("")}
     </nav>`;
@@ -245,7 +268,7 @@ function sideLinks(items, active) {
     `<a class="shell-link${m.key === active ? " active" : ""}" href="${m.href}"
         ${m.key === active ? 'aria-current="page"' : ""}>
        <span class="ic" aria-hidden="true">${m.tab || m.icon || ""}</span>
-       <span>${escapeHtml(m.label)}</span>
+       <span>${escapeHtml(menuLabel(m))}</span>
        ${m.badge ? `<span id="${m.badge}"></span>` : ""}
      </a>`).join("");
 }

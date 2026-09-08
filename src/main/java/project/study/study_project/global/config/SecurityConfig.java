@@ -84,6 +84,15 @@ public class SecurityConfig {
                         // 새는 것이 없는 이유: 문제의 내용이 아니라 개수뿐이고, 내용은 이미
                         // 위 줄에서 공개다("화면과 문제는 누구나, 채점만 로그인").
                         .requestMatchers(HttpMethod.GET, "/api/stats").permitAll()
+                        // 공개: 기록을 남기지 않는 채점(2026-09-08). 원칙이 "채점만 로그인"에서
+                        // <기록만 로그인>으로 좁아진 자리다 — 왜 좁혔는지는 QuizService.check에 적었다.
+                        // 한 줄로: 첫 화면이 "가입 없이 풀어보기"라고 약속해 놓고 서버가 그것을
+                        // 지키지 않고 있었다. 로그인이 실제로 여는 것은 이력·복습·오늘의 퀴즈다.
+                        //
+                        // <submit과 경로를 나눈 것이 이 규칙의 핵심>이다. 한 경로에 "저장할까요"
+                        // 플래그를 뒀다면 인증 여부를 바디로 갈라야 하는데, 여기 적힌 규칙은
+                        // 바디를 읽지 못한다. 경로가 다르면 그 사고가 있을 자리가 없다.
+                        .requestMatchers(HttpMethod.POST, "/api/quiz/*/check").permitAll()
                         // 공개: API 문서(Swagger)
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // 공개: 상태 점검. 오케스트레이터(도커 HEALTHCHECK 등)가 부르는 자리라

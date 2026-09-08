@@ -619,6 +619,10 @@ body {
     grid-template-columns: 208px minmax(0, 1fr);   /* 1fr의 함정은 위 주석 참고 */
     grid-template-rows: 1fr;
   }
+  /* 비로그인은 메뉴가 둘뿐이라 기둥을 좁힌다(shell.js가 body에 붙인다).
+     168px인 근거: "개념 문서"가 아이콘과 함께 한 줄에 들어가고, 회원가입 버튼도 통째로
+     들어가는 가장 좁은 폭이다. 로그인하면 208로 돌아온다 — 그때는 항목이 여섯이다. */
+  body.shell-anon { grid-template-columns: 168px minmax(0, 1fr); }
   .shell-top, .shell-tabs { display: none; }
 
   .shell-side {
@@ -1467,12 +1471,29 @@ body.admin-shell {
   display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin-top: var(--sp-3);
 }
 @media (min-width: 640px) { .sample-choices { grid-template-columns: 1fr 1fr; } }
+/* 2026-09-08에 div에서 button이 됐다(누르면 채점된다). 전역 button 규칙이 남색 판에
+   가운데 정렬이라, 여기서 <목록 한 줄>의 모양으로 되돌린다 — 색·정렬·굵기 셋 다.
+   min-height 44는 그대로 둔다(손가락 표적). */
 .sample-choice {
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: var(--sp-2) var(--sp-3); font-size: var(--fs-2); color: var(--text-2);
-  display: flex; gap: var(--sp-2);
+  display: flex; gap: var(--sp-2); align-items: flex-start;
+  background: var(--card); text-align: left; font-weight: 400; width: 100%;
+}
+@media (hover: hover) {
+  .sample-choice:not(:disabled):hover { background: var(--fill); border-color: var(--border-strong); }
 }
 .sample-choice span:first-child { color: var(--muted); font-weight: 700; flex: none; }
+/* 채점 뒤 — 고른 것과 정답을 함께 칠한다. 색은 채점 결과 상자와 같은 토큰이라
+   이 앱 안에서 초록·빨강의 뜻이 한 벌로 유지된다(.result.correct / .result.wrong). */
+.sample-choice.is-correct { background: var(--correct-bg); border-color: var(--correct); color: var(--text); }
+.sample-choice.is-wrong { background: var(--wrong-bg); border-color: var(--wrong); color: var(--text); }
+/* 눌러 본 뒤에는 전부 잠기는데, 잠겼다고 흐려지면 방금 읽은 정답이 안 보인다.
+   전역 button:disabled(회색 판)를 여기서만 되돌린다. */
+.sample-choice:disabled { cursor: default; opacity: 1; }
+.sample-choice:disabled:not(.is-correct):not(.is-wrong) { background: var(--card); color: var(--muted); }
+.sample-ok { color: var(--correct-fg); }
+.sample-no { color: var(--wrong-fg); }
 
 /* 빠른 시작 카드 그리드(.quick-grid/.quick-card)를 걷어냈다 — 2026-09-06.
    사이드바가 늘 떠 있으니 같은 링크(문제·자유 퀴즈·개념 문서)를 본문 아래에 한 번 더

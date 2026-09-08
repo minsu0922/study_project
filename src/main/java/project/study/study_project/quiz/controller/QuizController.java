@@ -14,6 +14,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.ApiResponse;
+import project.study.study_project.quiz.dto.QuizCheckRequest;
 import project.study.study_project.quiz.dto.QuizResponse;
 import project.study.study_project.quiz.dto.QuizSubmitRequest;
 import project.study.study_project.quiz.dto.QuizSubmitResponse;
@@ -74,5 +75,27 @@ public class QuizController {
             @Valid @RequestBody QuizSubmitRequest request
     ) {
         return ApiResponse.ok(quizService.submit(userId, request));
+    }
+
+    /**
+     * <b>기록 없이 정답만 확인</b> — 비로그인도 부를 수 있다. 예: {@code POST /api/quiz/12/check}
+     *
+     * <p>왜 열려 있는지와 무엇이 달라졌는지는 {@link QuizService#check}에 적어 뒀다.
+     * 한 줄로: 로그인이 여는 것은 정답 확인이 아니라 <b>이력·복습·오늘의 퀴즈</b>다.
+     *
+     * <p><b>왜 {@code /submit}에 플래그를 더하지 않았나.</b> 같은 경로에 "저장할까요" 스위치를
+     * 두면 <b>인증 규칙을 경로가 아니라 바디로</b> 가르게 된다 — SecurityConfig가 못 읽는 값이라
+     * 컨트롤러가 직접 판단해야 하고, 그 판단이 한 번 어긋나면 인증 없이 저장되는 길이 열린다.
+     * 경로를 나누면 그 사고가 있을 자리가 없다.
+     *
+     * <p>문제 id를 <b>경로</b>에서 받는 것은 {@code GET /api/quiz/{id}}와 짝을 맞춘 것이다 —
+     * 화면은 "이 문제를 가져와서 이 문제를 확인한다"를 같은 id로 잇는다.
+     */
+    @PostMapping("/{problemId}/check")
+    public ApiResponse<QuizSubmitResponse> check(
+            @PathVariable Long problemId,
+            @Valid @RequestBody QuizCheckRequest request
+    ) {
+        return ApiResponse.ok(quizService.check(problemId, request.userAnswer()));
     }
 }

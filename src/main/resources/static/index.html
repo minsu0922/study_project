@@ -37,8 +37,10 @@ try {
         <a href="/quiz.html" class="btn btn-outline btn-lg">가입 없이 풀어보기</a>
       </div>
       <!-- 가입을 권하면서 그 대가를 안 적으면 "왜 가입해야 하지"가 남는다.
-           이 앱에서 로그인이 실제로 여는 것은 채점·복습 사다리·기록 셋이다. -->
-      <p class="note">가입하면 채점과 해설을 보고, 틀린 문제가 복습으로 돌아옵니다.</p>
+           <채점>은 여기 적지 않는다 — 아래 견본은 가입 없이도 채점된다(QuizService.check).
+           로그인이 실제로 여는 것은 매일 오는 세트·복습 사다리·기록 셋이고, 그것만 적는다.
+           화면이 못 지킬 말을 하면 그 사실을 가입하기 전에 들킨다. -->
+      <p class="note">가입하면 매일 10문제가 준비되고, 틀린 문제는 복습으로 돌아옵니다.</p>
     </div>
 
     <div class="landing-points">
@@ -110,7 +112,9 @@ try {
  * [진도의 분모는 이번에 서버에 생겼다]
  * study-summary의 domains[].total. 뒤집은 판단이라 사연이 길다 — StudySummaryResponse
  * 주석 참고. 화면 쪽 결론만 적으면 <절대값이 주인공이고 퍼센트는 안 쓴다>. */
-renderShell({ active: "today", title: "오늘" });
+// 폰 상단 바의 화면 이름도 로그인 여부로 갈린다 — 기둥 메뉴가 "소개"로 뜨는데
+// 상단 바만 "오늘"이면 같은 화면을 두 이름으로 부르게 된다(shell.js ANON_LABELS).
+renderShell({ active: "today", title: isLoggedIn() ? "오늘" : "소개" });
 
 if (!isLoggedIn()) {
   document.getElementById("intro").hidden = false;
@@ -162,8 +166,9 @@ async function loadLanding() {
         <div class="q-text" style="font-size:var(--fs-3);margin:var(--sp-2) 0 0">
           ${escapeHtml(p.question)}</div>
         ${sampleChoices(p)}
-        <div class="meta" style="margin-top:var(--sp-3)">가입하면 채점과 해설을 볼 수 있어요.</div>`;
+        <div class="meta" id="sampleHint" style="margin-top:var(--sp-3)">하나 골라 보세요. 가입 없이 채점됩니다.</div>`;
       box.hidden = false;
+      wireSample(p);
     }
   } catch (e) { /* 문제를 못 가져오면 그 카드만 없다 */ }
 
@@ -183,8 +188,55 @@ async function loadLanding() {
  */
 function sampleChoices(p) {
   if (p.type !== "MULTIPLE_CHOICE" || !p.choices || p.choices.length === 0) return "";
+  // div가 아니라 button이다 — 누를 수 있게 됐으니(2026-09-08) 생김새가 아니라 <요소>가
+  // 그 사실을 말해야 한다. 키보드 탭 순서와 Enter, 스크린리더의 "버튼" 안내가 공짜로 따라온다.
   return `<div class="sample-choices">${p.choices.map(c => `
-    <div class="sample-choice"><span>${c.seq}</span><span>${escapeHtml(c.text)}</span></div>`).join("")}</div>`;
+    <button type="button" class="sample-choice" data-id="${c.id}">
+      <span>${c.seq}</span><span>${escapeHtml(c.text)}</span>
+    </button>`).join("")}</div>`;
+}
+
+/**
+ * 견본 문제를 <b>실제로 풀 수 있게</b> 만든다 — 2026-09-08.
+ *
+ * <p><b>왜 고쳤나.</b> 보기 넷이 버튼처럼 생겨 있는데 눌러도 아무 일이 없었다. 처음 온 사람은
+ * 그것을 "가입해야 하는구나"로 읽지 않는다 — <b>고장으로</b> 읽는다. 게다가 바로 위 버튼이
+ * "가입 없이 풀어보기"라고 말하고 있어서, 화면이 스스로 한 약속을 같은 화면에서 어긴 셈이었다.
+ *
+ * <p><b>정답을 공짜로 보여 주면 가입할 이유가 줄지 않나.</b> 반대라고 봤다. 여기서 파는 것은
+ * 정답 한 개가 아니라 <b>매일 오는 습관과 복습</b>이고, 그건 한 문제를 풀어 본 사람에게 훨씬
+ * 잘 팔린다. 그래서 채점 뒤 안내 문구도 "채점을 보려면"이 아니라 <b>"기록이 남으려면"</b>으로
+ * 바꿔 적는다 — 로그인이 실제로 여는 것이 그것이다({@code QuizService.check} 주석).
+ *
+ * <p>채점은 기록을 남기지 않는 공개 API를 쓴다. 실패하면 <b>조용히 원래대로</b> 둔다 —
+ * 첫 화면에서 빨간 오류 상자를 만나는 것보다 아무 일도 안 일어나는 편이 낫다.
+ */
+function wireSample(p) {
+  const buttons = [...document.querySelectorAll("#sampleProblem .sample-choice")];
+  const hint = document.getElementById("sampleHint");
+  if (buttons.length === 0) return;
+
+  buttons.forEach(btn => btn.addEventListener("click", async () => {
+    if (btn.disabled) return;
+    buttons.forEach(b => b.disabled = true);
+    try {
+      const r = await api(`/api/quiz/${p.id}/check`, {
+        method: "POST",
+        body: JSON.stringify({ userAnswer: btn.dataset.id }),
+      });
+      // 고른 것과 정답을 <함께> 칠한다. 틀렸을 때 "내가 뭘 골랐더라"를 다시 찾게 하지 않는다.
+      const correctId = String((r.choices || []).find(c => c.correct)?.id ?? "");
+      buttons.forEach(b => {
+        if (b.dataset.id === correctId) b.classList.add("is-correct");
+        else if (b === btn) b.classList.add("is-wrong");
+      });
+      hint.innerHTML = `<b class="${r.correct ? "sample-ok" : "sample-no"}">${r.correct ? "정답입니다" : "아쉽네요"}</b>
+        ${r.explanation ? `<div style="margin-top:var(--sp-2)">${escapeHtml(r.explanation)}</div>` : ""}
+        <div style="margin-top:var(--sp-2)">가입하면 이런 문제가 매일 10개 오고, 틀린 것은 복습으로 돌아옵니다.</div>`;
+    } catch (e) {
+      buttons.forEach(b => b.disabled = false);   // 다시 눌러 볼 수 있게 되돌린다
+    }
+  }));
 }
 
 /** 오늘 화면의 세 덩이를 그린다. 두 요청을 나란히 보내고 결과를 나눠 쓴다. */

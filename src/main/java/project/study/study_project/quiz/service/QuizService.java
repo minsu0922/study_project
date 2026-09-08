@@ -153,6 +153,54 @@ public class QuizService {
     }
 
     /**
+     * <b>기록을 남기지 않는 채점</b> — 비로그인 방문자가 견본 한 문제를 풀어 볼 때 쓴다(2026-09-08).
+     *
+     * <h2>왜 열었나</h2>
+     *
+     * <p>이 프로젝트의 원칙은 "화면과 문제는 누구나, <b>채점만 로그인</b>"이었다(SecurityConfig).
+     * 그런데 첫 화면은 <b>"가입 없이 풀어보기"</b>라고 적어 놓고 있었고, 실제로 눌러 들어가면
+     * 보기는 고를 수 있는데 제출은 "로그인이 필요합니다"로 막혔다. 화면이 한 약속을 서버가
+     * 지키지 않는 상태였고, 그 어긋남을 본 사람은 <b>가입하기 전에</b> 만난다.
+     *
+     * <p>더 실질적인 이유: 랜딩의 견본 문제가 <b>눌러도 아무 일이 없었다</b>. 보기 넷이 버튼처럼
+     * 생겼는데 반응이 없으면 좋은 인상이 아니라 고장으로 읽힌다.
+     *
+     * <h2>원칙을 어디까지 바꿨나</h2>
+     *
+     * <p>"채점만 로그인"에서 <b>기록만 로그인</b>으로 좁혔다. 로그인이 실제로 여는 것은
+     * 정답 확인이 아니라 <b>제출 이력 · 복습 사다리 · 오늘의 퀴즈</b>다({@link #submit} 참고).
+     * 이 메서드는 그 셋 중 아무것도 하지 않는다 — {@code Submission}도, {@code ReviewItem}도
+     * 만들지 않고, 트랜잭션도 읽기 전용이다.
+     *
+     * <p><b>정답이 새지 않나.</b> 무료 가입이 열려 있으므로 정답은 이미 누구에게나 열린 값이다.
+     * 여기서 막히는 것은 "긁어 가는 속도"뿐이고 그건 {@code RateLimitFilter}가 /api/** 전체에
+     * 분당 60건으로 이미 걸고 있다. 대신 응답에서 {@code submissionId}는 {@code null}이다 —
+     * 남긴 것이 없으니 가리킬 id도 없다.
+     */
+    @Transactional(readOnly = true)
+    public QuizSubmitResponse check(Long problemId, String userAnswer) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+        if (!problem.getType().isAutoScored()) {
+            throw new BusinessException(ErrorCode.QUIZ_002);
+        }
+
+        GradingResult result = grade(problem, userAnswer);
+
+        // 아래 조립은 submit과 같은 모양이다 — 화면이 두 응답을 같은 코드로 그리기 때문이다.
+        // 합치지 않은 이유: 합치면 "저장하는가"를 boolean 인자로 받게 되는데, 그 인자 하나가
+        // 이력·복습·데일리 셋의 실행 여부를 한꺼번에 쥐게 된다. 부르는 쪽에서 그 무게가 안 보인다.
+        List<QuizChoiceResult> choiceResults = problem.getType() == ProblemType.MULTIPLE_CHOICE
+                ? QuizChoiceResult.from(problem.getChoices())
+                : List.of();
+
+        return new QuizSubmitResponse(
+                problem.getId(), result.correct(), result.correctAnswer(),
+                problem.getExplanation(), null,
+                existingDocumentSlug(problem.getDocumentSlug()), choiceResults);
+    }
+
+    /**
      * 근거 문서 slug를 <b>실제로 존재할 때만</b> 돌려준다(docs/15 3단계).
      *
      * <p>문제의 {@code document_slug}는 FK가 아니라 이름표라 가리키는 문서가 없을 수 있다.
