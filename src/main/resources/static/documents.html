@@ -123,10 +123,33 @@ async function loadDocs() {
     } else {
       // 목록은 본문(contentMd) 없이 요약만 온다 — 본문은 클릭해서 상세에서 읽는다(docs/03)
       //
-      // edition("입문편"/"심화편")은 짝이 실제로 있을 때만 서버가 채워 준다(2026-09-03).
-      // 두 편은 제목이 <똑같으므로> 이 줄이 없으면 목록에 같은 이름이 두 번 서서 구별되지 않는다.
-      // 한 편짜리 옛 문서에는 null이 오고, 그때는 부제를 아예 그리지 않는다 —
-      // 짝이 없는데 "입문편"이라 적으면 읽는 사람이 없는 심화편을 찾아 나선다.
+      // [한 주제 = 한 카드 — 2026-09-08]
+      // 한 주제는 입문편·심화편 두 편으로 만들어지고 제목이 <글자까지 같다>. 그래서 목록에
+      // 같은 이름이 두 줄 연달아 서 있었다 — 지금 문서 10편 중 8편이 그런 짝이라 목록의
+      // 절반이 중복처럼 보였다. 편 배지로 구별은 됐지만, 목록이 답해야 하는 질문은
+      // "무슨 주제가 있나"이지 "몇 편이 있나"가 아니다.
+      //
+      // 짝은 slug로 안다: 심화편은 입문편 slug에 접미사가 붙은 꼴이다(api.js의
+      // ADVANCED_SLUG_SUFFIX — 서버의 DocumentEditions와 같은 규칙). edition 값으로 묶지
+      // 않는 이유는 그 값이 <짝이 실제로 있을 때만> 채워지기 때문이다. 그것으로는
+      // "이 둘이 같은 주제인가"를 못 판단한다.
+      //
+      // <한 쪽 안에서만 묶는다.> 짝이 다른 쪽에 있으면 각자 한 카드로 뜬다. 정렬이
+      // 수정일순이고 두 편은 같은 날 만들어지므로 대개 붙어 있지만, 보장은 아니다.
+      // 서버에서 주제 단위로 묶어 내려주는 방법도 있는데, 그러면 페이징·검색·태그 필터가
+      // 전부 "문서 수"가 아니라 "주제 수" 기준으로 바뀐다 — 목록 하나 때문에 API 계약을
+      // 바꾸는 셈이라 접었다.
+      const groups = [];
+      const byTopic = new Map();
+      for (const d of data.content) {
+        const topic = d.slug.endsWith(ADVANCED_SLUG_SUFFIX)
+          ? d.slug.slice(0, -ADVANCED_SLUG_SUFFIX.length)
+          : d.slug;
+        let g = byTopic.get(topic);
+        if (!g) { g = []; byTopic.set(topic, g); groups.push(g); }
+        g.push(d);
+      }
+
       // 카드 <전체>가 링크다. 예전에는 div에 onclick을 걸고 제목만 <a>였는데,
       // 그러면 마우스로는 카드 어디나 눌리지만 <키보드로는 제목 링크에만> 갈 수 있었다.
       // 겉모습(카드 전체가 눌린다)과 조작할 수 있는 것이 어긋난 상태다.
@@ -138,20 +161,47 @@ async function loadDocs() {
       //
       // 제목의 안쪽 <a>는 없앴다. 링크 안에 링크는 넣을 수 없다(HTML이 허용하지 않고,
       // 스크린리더는 하나의 링크를 두 번 읽는다).
-      list.innerHTML = data.content.map(d => `
-        <a class="card clickable" href="/document.html?slug=${encodeURIComponent(d.slug)}">
-          <!-- h2다. 화면 제목(h1) 바로 아래 단계라 h3이면 한 칸을 건너뛴다 —
-               스크린리더의 제목 목록에서 층위가 어긋나 "빠진 제목이 있나"로 읽힌다.
-               생김새는 .card h2가 .card h3과 같게 잡아 준다. -->
-          <h2>${escapeHtml(d.title)}</h2>
-          ${editionSubtitle(d.edition)}
-          <span class="badge">${escapeHtml(d.domainLabel)}</span>
-          ${d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}
+      //
+      // <짝이 있는 카드만 div다.> 그때는 카드 안에 편 링크가 둘이라 카드 전체를 링크로
+      // 만들 수 없다(링크 안의 링크). 대신 제목 자체를 입문편 링크로 두어, 카드에서
+      // 가장 크고 먼저 읽히는 것이 그대로 눌리는 자리가 되게 했다.
+      list.innerHTML = groups.map(docs => {
+        // 대표는 입문편(접미사 없는 쪽)이다. 처음 읽는 사람이 갈 곳이 기본값이어야 한다.
+        const 입문 = docs.find(d => !d.slug.endsWith(ADVANCED_SLUG_SUFFIX)) ?? docs[0];
+        const 심화 = docs.find(d => d.slug.endsWith(ADVANCED_SLUG_SUFFIX));
+        // 수정일은 <둘 중 최신>이다. 카드가 주제 하나를 뜻하므로 "이 주제가 마지막으로
+        // 손질된 날"이 맞는 값이다.
+        const 수정 = docs.map(d => d.updatedAt).sort().at(-1);
+        const 꼬리 = `
+          <span class="badge">${escapeHtml(입문.domainLabel)}</span>
+          ${입문.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}
           <!-- 분까지 찍던 것을 날짜만 남겼다(2026-09-08). 목록에서 "18:44"는 읽는 사람의
                판단을 바꾸지 않고, 첫 화면이 같은 값을 "9월 7일"로 적고 있어 두 화면이
                같은 날짜를 다르게 말하고 있었다(api.js shortDay). -->
-          <div class="meta">수정: ${shortDay(d.updatedAt)}</div>
-        </a>`).join("");
+          <div class="meta">수정: ${shortDay(수정)}</div>`;
+
+        const href = slug => `/document.html?slug=${encodeURIComponent(slug)}`;
+
+        // 짝이 없으면 지금까지와 같다 — 카드 한 장이 통째로 링크.
+        if (!심화) {
+          return `
+            <a class="card clickable" href="${href(입문.slug)}">
+              <!-- h2다. 화면 제목(h1) 바로 아래 단계라 h3이면 한 칸을 건너뛴다 —
+                   스크린리더의 제목 목록에서 층위가 어긋나 "빠진 제목이 있나"로 읽힌다. -->
+              <h2>${escapeHtml(입문.title)}</h2>
+              ${꼬리}
+            </a>`;
+        }
+        return `
+          <div class="card doc-group">
+            <h2><a href="${href(입문.slug)}">${escapeHtml(입문.title)}</a></h2>
+            <p class="doc-sub">
+              <a class="edition" href="${href(입문.slug)}">입문편</a>
+              <a class="edition advanced" href="${href(심화.slug)}">심화편</a>
+            </p>
+            ${꼬리}
+          </div>`;
+      }).join("");
     }
 
     // 페이지 버튼: 전체가 1페이지면 숨긴다(불필요한 UI 제거)

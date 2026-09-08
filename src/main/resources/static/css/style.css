@@ -948,6 +948,22 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
 }
 .doc-sub .edition { color: var(--lv1-fg); }
 .doc-sub .edition.advanced { color: var(--lv3-fg); }
+
+/* ── 한 주제 = 한 카드(문서 목록) ── 2026-09-08
+ *
+ * 짝이 있는 주제는 카드 안에 링크가 둘이라(입문편·심화편) 카드 전체를 링크로 만들 수 없다.
+ * 대신 제목이 곧 입문편 링크다 — 카드에서 가장 크고 먼저 읽히는 것이 눌리는 자리여야 한다.
+ * 카드 자체의 호버 효과(.card.clickable)는 주지 않는다: 카드 어디나 눌린다고 말해 놓고
+ * 실제로는 링크 위에서만 눌리면, 겉모습과 조작이 어긋난 그 상태로 되돌아간다. */
+.doc-group h2 a { color: inherit; text-decoration: none; }
+.doc-group h2 a:hover { color: var(--primary); }
+/* 편 링크는 <누를 수 있는 칩>으로 보이게 테두리를 준다. 부제(글자)로만 두면 상세 화면의
+   같은 자리와 생김새가 같아, 목록에서만 눌린다는 사실이 안 보인다. */
+.doc-group .doc-sub .edition {
+  border: 1px solid currentColor; border-radius: 999px;
+  padding: 1px 10px; font-size: var(--fs-1); text-decoration: none;
+}
+.doc-group .doc-sub .edition:hover { background: var(--fill); }
 .badge.edition { background: var(--lv1-bg); color: var(--lv1-fg); }
 .badge.edition.advanced { background: var(--lv3-bg); color: var(--lv3-fg); }
 
