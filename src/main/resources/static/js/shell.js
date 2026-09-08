@@ -242,7 +242,14 @@ function renderShell({ active = "", title = "" } = {}) {
       ${sideLinks(study, active)}
       ${personal.length ? `<div class="shell-rule"></div>${sideLinks(personal, active)}` : ""}
       <span class="spacer"></span>
-      ${anon ? "" : `<div class="shell-rule"></div><div class="shell-side-auth">${authAreaHtml()}</div>`}
+      ${anon ? "" : `<div class="shell-rule"></div>
+      <div class="shell-side-auth">
+        ${authAreaHtml()}
+        <!-- 로그아웃이 화면에 <보이는> 유일한 자리다(2026-09-08, authAreaHtml 주석).
+             data-action이라 wireLogout이 알아서 배선한다 — 마이페이지의 같은 버튼과
+             한 함수를 쓰므로 서버 토큰 폐기가 빠질 자리가 없다. -->
+        <a class="shell-logout" href="#" data-action="logout">로그아웃</a>
+      </div>`}
     </nav>
 
     <nav class="shell-tabs" aria-label="주 메뉴">
@@ -302,9 +309,24 @@ function sideLinks(items, active) {
  * 안 붙어 있었다</b> — 눌러도 조용히 아무 일이 없었다. 설정 화면에는 같은 id가 셋이었다.
  *
  * <p>고치는 방법이 둘이었다. id를 자리마다 다르게 주고 배선을 늘리거나, <b>로그아웃을
- * 한 자리에만 두거나</b>. 뒤를 골랐다 — 로그아웃은 드물게 쓰는 동작인데 늘 보이는 자리를
- * 둘이나 차지하고 있었고, 자리가 하나면 "어느 것이 동작하는가"를 물을 일 자체가 없다.
- * 지금 로그아웃은 <b>설정 화면</b>에 있다(관리 콘솔은 설정이 없어 띠에 남긴다).
+ * 한 자리에만 두거나</b>. 뒤를 골랐고, 로그아웃은 설정 화면 안으로 들어갔다.
+ *
+ * <h2>다시 기둥으로 꺼냈다 (2026-09-08)</h2>
+ *
+ * <p>사용자가 "로그아웃 버튼이 안 보여 불편하다"고 했다. 맞는 지적이다 — 그 사이 로그아웃은
+ * 설정에서 마이페이지로 한 번 더 옮겨 갔고, <b>어느 화면에서도 보이지 않는 동작</b>이 됐다.
+ * 드물게 쓰는 동작인 것과 <b>찾을 수 없는 것</b>은 다르다.
+ *
+ * <p>2026-09-07에 뺐던 이유(같은 id 둘)는 <b>이미 사라졌다</b>. 배선이 id가 아니라
+ * {@code data-action="logout"}을 <b>전부</b> 훑는 방식으로 바뀌어({@link #wireLogout}),
+ * 자리가 몇 곳이든 다 동작한다. 그때의 결정은 그때의 구조에 맞는 것이었고, 구조가 바뀌었으니
+ * 결정도 다시 본다.
+ *
+ * <p>지금 로그아웃은 <b>기둥 맨 아래</b>(아이디 바로 밑)와 마이페이지 두 곳에 있다.
+ * 관리 콘솔은 제 띠에 따로 둔다.
+ *
+ * <p>아이디는 <b>마이페이지로 가는 링크</b>가 됐다. 좁은 화면에는 기둥이 없어 로그아웃이
+ * 안 보이는데, 거기서는 "내 이름을 누르면 내 계정 화면"이 가장 익숙한 길이다.
  *
  * <p>비로그인 상태에서는 <b>회원가입이 주 버튼</b>이다. 처음 온 사람에게 이 자리에서
  * 가장 중요한 것이 그것인데, 예전에는 로그인과 나란한 테두리 버튼이라 무게가 같았다.
@@ -313,7 +335,7 @@ function authAreaHtml() {
   const name = escapeHtml(localStorage.getItem(USERNAME_KEY) || "");
   if (isLoggedIn()) {
     // title을 함께 준다 — 기둥이 208px이라 긴 아이디는 잘린다.
-    return `<span class="user-email" title="${name}">${name}</span>`;
+    return `<a class="user-email" href="/mypage.html" title="${name} — 마이페이지">${name}</a>`;
   }
   /* 지금 있는 화면으로 가는 링크는 빼고 그린다 — 2026-09-08.
    *
