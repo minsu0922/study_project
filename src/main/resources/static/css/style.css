@@ -570,6 +570,15 @@ body {
 .shell-top .shell-title { color: var(--muted); font-size: var(--fs-2); }
 .shell-top .spacer { flex: 1; }
 .shell-top .user-email { color: var(--muted); font-size: var(--fs-1); }
+/* 폰 상단 바의 개인 메뉴 아이콘(마이페이지·설정) — 탭바에 자리가 없는 둘의 유일한 입구다.
+   손가락 표적을 지키려고 44px을 채우되, 바가 48px이라 padding이 아니라 크기로 잡는다. */
+.shell-top .shell-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; min-height: 40px; flex: none;
+  font-size: 17px; text-decoration: none; border-radius: var(--radius);
+}
+.shell-top .shell-icon:hover { background: var(--fill); }
+
 /* 상단 바의 회원가입 버튼만 min-height 44를 면제한다 — 바가 48px이라 44px 버튼을 넣으면
    위아래 여백이 2px씩만 남아 버튼이 바를 꽉 채운 것처럼 보인다. 바 자체가 이미 표적이다. */
 .shell-top .btn { min-height: 32px; padding: 5px 14px !important; }
@@ -1482,9 +1491,14 @@ body.admin-shell {
   flex-wrap: wrap;
 }
 .setting-row > div:first-child { flex: 1; min-width: 160px; }
-/* 미리보기 문제의 보기 — 누를 수 없는 <견본>이라 버튼이 아니라 칸이다.
-   진짜 보기 버튼(.opt)과 생김새를 일부러 다르게 둔다: 눌러도 아무 일이 없는 것이
-   눌리게 생겼으면, 그 순간이 이 화면의 첫인상이 된다. */
+/* 폼을 품는 줄 — 좌우로 벌리지 않고 세로로 쌓는다(마이페이지의 비밀번호 변경·탈퇴).
+   기본 .setting-row는 "이름 왼쪽 / 조작 오른쪽" 배치라, 그 안에 입력 칸 셋을 넣으면
+   폼이 오른쪽 절반으로 밀려 라벨과 칸이 어긋난다. */
+.setting-row.stacked { display: block; }
+.setting-head { display: block; margin-bottom: var(--sp-2); }
+/* 미리보기 문제의 보기 — 2026-09-08부터 <실제로 눌러 채점된다>(index.html wireSample).
+   그전에는 "눌러도 아무 일이 없는 견본"이라 일부러 버튼처럼 안 보이게 뒀는데,
+   그 상태가 바로 고쳐야 했던 결함이었다. 지금은 눌리는 것이 눌리게 생긴 것이 맞다. */
 .sample-choices {
   display: grid; grid-template-columns: 1fr; gap: var(--sp-2); margin-top: var(--sp-3);
 }
