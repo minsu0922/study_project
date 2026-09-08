@@ -367,21 +367,30 @@ function startPlayer(mountEl, problems, opts = {}) {
     const p = problems[state.idx];
     const feedbackEl = mountEl.querySelector("#feedback");
 
-    if (!isLoggedIn()) {
-      feedbackEl.innerHTML =
-        `<div class="alert error">채점하려면 <a href="/login.html">로그인</a>이 필요합니다.</div>`;
-      return;
-    }
-
     state.submitting = true;
     const submitBtn = mountEl.querySelector("#submitBtn");
     submitBtn.disabled = true;
 
     try {
-      const r = await api("/api/quiz/submit", {
-        method: "POST",
-        body: JSON.stringify({ problemId: pidOf(p), userAnswer: state.selected }),
-      });
+      /* 로그인하지 않았으면 <기록을 남기지 않는> 채점 경로로 간다 — 2026-09-08.
+       *
+       * 전에는 여기서 "채점하려면 로그인이 필요합니다"로 막았다. 그런데 첫 화면 버튼이
+       * <가입 없이 풀어보기>라고 적혀 있어서, 눌러 들어온 사람이 문제를 다 읽고 답을 고른
+       * 다음에야 못 푼다는 것을 알게 됐다. 화면이 한 약속을 서버가 아니라 <같은 앱의 다른
+       * 화면>이 어기고 있던 셈이다.
+       *
+       * 두 응답은 모양이 같다(QuizSubmitResponse). 다른 것은 submissionId가 null이라는 것과
+       * 이력·복습 사다리·오늘의 퀴즈에 아무것도 안 남는다는 것뿐이라, 아래 코드는 갈리지 않는다.
+       * 그 차이는 화면이 <가입하면 무엇이 달라지는지>로 안내한다(showFeedback의 anonNote). */
+      const r = isLoggedIn()
+        ? await api("/api/quiz/submit", {
+            method: "POST",
+            body: JSON.stringify({ problemId: pidOf(p), userAnswer: state.selected }),
+          })
+        : await api(`/api/quiz/${pidOf(p)}/check`, {
+            method: "POST",
+            body: JSON.stringify({ userAnswer: state.selected }),
+          });
       state.answered = true;
       if (r.correct) state.score++;
       else state.misses.push({
@@ -431,6 +440,18 @@ function startPlayer(mountEl, problems, opts = {}) {
       }).join("\n");
     }
     return value;
+  }
+
+  /* 비로그인에게만 붙는 한 줄 — 방금 채점은 됐지만 <남지 않았다>는 사실을 말한다.
+   *
+   * 이 자리에서 "가입하세요"라고만 하면 광고지만, 방금 한 일이 사라진다는 것은 <정보>다.
+   * 문구가 랜딩과 같은 말을 하는 것도 일부러다 — 가입해서 얻는 것이 화면마다 다르게
+   * 적히면 그중 무엇이 진짜인지 알 수 없다(index.html의 히어로 note). */
+  function anonNote() {
+    if (isLoggedIn()) return "";
+    return `<div class="explain doc-link">`
+      + `가입하면 이 기록이 남고, 틀린 문제는 복습으로 돌아옵니다. `
+      + `<a href="/signup.html">가입하기</a></div>`;
   }
 
   /* 근거 개념 문서 링크 — 채점 결과 안에만 붙는다(docs/15 3단계).
@@ -537,6 +558,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         ${r.explanation ? `<div class="explain">${escapeHtml(r.explanation)}</div>` : ""}
         ${wrongAnalysis(p, r)}
         ${docLink(r)}
+        ${anonNote()}
         ${opts.reviewMode ? `<div class="explain" style="font-size:.82rem">${
           r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요 👋"
                     : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요 📅"}</div>` : ""}

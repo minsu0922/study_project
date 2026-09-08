@@ -199,11 +199,24 @@ function buildToc(bodyEl) {
  * <p><b>개수를 먼저 세어 보고</b> 그린다. 0개인 문서가 실제로 있는데(문서가 먼저 생기고
  * 문제는 나중에 배치가 만든다), 눌러서 빈 목록을 보는 것보다 링크가 아예 없는 편이 낫다.
  *
- * <p>로그인하지 않은 사람에게는 안 그린다. 문제 목록이 보호 경로라 눌러도 로그인
- * 화면으로 튕긴다 — 갈 수 없는 곳으로 가는 문을 보여 주지 않는다.
+ * <p><b>로그인하지 않은 사람에게는 다른 문을 준다</b>(2026-09-08). 문제 목록은 보호 경로라
+ * 이 링크를 그대로 주면 눌러도 로그인 화면으로 튕긴다. 그렇다고 아무것도 안 두면 문서를
+ * 다 읽은 사람에게 <다음 행동이 없다> — 이 앱에서 읽기 다음은 풀기다.
+ * 그래서 자유 퀴즈로 보낸다. 그쪽은 이제 로그인 없이도 채점된다(player.js submit).
+ *
+ * <p>이 문서로 <b>좁혀 주지는 못한다</b>. 문서로 좁힌 목록이 보호 경로이고, 공개 퀴즈 API에는
+ * 문서 조건이 없다. 못 하는 것을 하는 척하지 않고 문구로 그대로 적는다 —
+ * "이 문서로 만든 문제만 골라 풀려면 로그인".
  */
 async function renderPracticeLink(d) {
-  if (!isLoggedIn()) return;
+  if (!isLoggedIn()) {
+    document.getElementById("practice").innerHTML = `
+      <a class="btn btn-outline" href="/quiz.html">문제 풀어보기 →</a>
+      <div class="meta" style="margin-top:8px">가입 없이 풀 수 있어요.
+        로그인하면 이 문서로 만든 문제만 골라 풀 수 있습니다.</div>`;
+    document.getElementById("practice").hidden = false;
+    return;
+  }
   try {
     const r = await api(`/api/problems?documentSlug=${encodeURIComponent(d.slug)}&size=1`);
     if (!r.totalElements) return;
