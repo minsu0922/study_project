@@ -981,7 +981,9 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
   color: var(--text-2); font-size: var(--fs-2); margin-bottom: var(--sp-3); cursor: pointer;
 }
 .pw-reveal input { width: auto; margin: 0; }
-.signup-warn {
+/* 가입 화면과 로그인 화면이 함께 쓴다 — 둘 다 "비밀번호를 잃으면 끝"이라는 <같은 사실>을
+   말하는 자리라, 생김새가 같아야 두 번째로 봤을 때 이미 읽은 것으로 알아본다. */
+.warn-note {
   border-left: 3px solid var(--review);
   padding: 2px 0 2px 10px; margin: 0 0 var(--sp-4); line-height: 1.6;
 }

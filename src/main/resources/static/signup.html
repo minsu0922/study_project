@@ -25,8 +25,18 @@ try {
        셋만 있었다. 입력하다 손을 멈춘 사람에게 왜 하고 있었는지를 다시 말해 주는 한 줄이다.
        이메일을 안 받는다는 사실도 여기서 미리 말한다 — 아래 경고와 짝이 되는 정보이고,
        "이메일 없이 가입되네?"를 확인하려고 칸을 다시 훑지 않아도 된다. -->
-  <p class="meta">아이디와 비밀번호만 있으면 됩니다. 이메일은 받지 않습니다.
+  <p class="meta" id="signupIntro">아이디와 비밀번호만 있으면 됩니다. 이메일은 받지 않습니다.
     가입하면 매일 10문제가 준비되고, 틀린 문제는 복습으로 돌아옵니다.</p>
+  <!-- 로그인한 채로 이 주소에 들어온 경우 — 로그인 화면과 같은 처리다(그쪽 주석 참고).
+       가입 폼을 그대로 보여 주면 "지금 계정은 어떻게 되는 거지"가 된다. -->
+  <div class="card" id="already" hidden>
+    <b id="alreadyWho"></b>로 로그인되어 있습니다. 계정을 하나 더 만들려면 먼저 로그아웃하세요.
+    <div class="row-actions" style="margin-top:12px">
+      <a class="btn" href="/">오늘 화면으로</a>
+      <a class="btn btn-outline" href="#" data-action="logout">로그아웃</a>
+    </div>
+  </div>
+
   <!-- 실패가 여기 뜬다. aria-live="assertive"는 <읽던 것을 끊고 지금 이걸 읽으라>는 뜻이다.
        polite는 하던 말이 끝난 뒤에 읽는데, 그 사이 사용자는 이미 다음 칸으로 넘어가 있다.
        가입 실패는 <더 진행할 수 없다>는 뜻이라 끊어도 되는 몇 안 되는 알림이다. -->
@@ -79,7 +89,7 @@ try {
          주석을 읽지 않는다. 게다가 가입 직후 자동 로그인되므로 오타로 가입해도 그 자리에서는
          아무 이상이 없고, 다음 로그인에서야 막힌다. 그때는 무엇을 잘못 쳤는지 알 길이 없다.
          알려야 하는 시점은 <적어 두거나 기억할 수 있는> 지금뿐이다. -->
-    <p class="meta signup-warn">
+    <p class="meta warn-note">
       비밀번호를 잊으면 되찾을 수 없습니다. 이메일을 받지 않아 재설정 메일을 보낼 곳이 없습니다 —
       브라우저에 저장하거나 따로 적어 두세요.
     </p>
@@ -87,7 +97,7 @@ try {
     <button type="submit" id="submitBtn" style="width:100%">가입하기</button>
   </form>
 
-  <p class="meta">이미 계정이 있으신가요? <a href="/login.html">로그인</a></p>
+  <p class="meta" id="signupHelp">이미 계정이 있으신가요? <a href="/login.html">로그인</a></p>
 </main>
 
 <script src="/js/api.js"></script>
@@ -96,6 +106,15 @@ try {
 /* 회원가입 페이지 — 가입 성공 시 같은 계정으로 곧바로 로그인까지 해 준다.
  * (가입 → 로그인 화면 → 또 입력의 번거로움 제거. 실패해도 가입은 된 상태라 로그인 페이지로 안내) */
 renderShell({ title: "회원가입" });
+
+// 로그인한 채로 들어왔으면 폼 대신 상태를 보여 준다 — login.html과 같은 판단이다.
+if (isLoggedIn()) {
+  // 폼만 감추면 "이메일은 받지 않습니다"·"이미 계정이 있으신가요?"가 남는다 —
+  // 로그인한 사람에게는 둘 다 뜻이 없는 말이다.
+  ["signupForm", "signupIntro", "signupHelp"].forEach(id => document.getElementById(id).hidden = true);
+  document.getElementById("alreadyWho").textContent = localStorage.getItem(USERNAME_KEY) || "이미 계정";
+  document.getElementById("already").hidden = false;
+}
 
 /* 두 비밀번호가 같은지 본다.
  *

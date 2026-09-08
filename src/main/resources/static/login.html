@@ -25,6 +25,22 @@ try {
        로그인 실패는 더 진행할 수 없다는 뜻이라 읽던 것을 끊어도 되는 알림이다. -->
   <div id="message" role="alert" aria-live="assertive"></div>
 
+  <!-- [이미 로그인한 사람이 이 주소로 들어왔을 때]
+       전에는 로그인 폼이 그대로 떴다. 왼쪽 기둥에는 내 아이디와 메뉴 여섯이 있는데 본문은
+       "로그인"이라, 한 화면이 두 가지 사실을 동시에 말하는 상태였다.
+
+       홈으로 튕겨 보내는 방법도 있었지만 그러면 <다른 계정으로 바꾸려던 사람>이 갈 곳을
+       잃는다(로그아웃은 설정 화면에 있다). 지금 상태를 말해 주고 두 갈래를 다 열어 둔다. -->
+  <div class="card" id="already" hidden>
+    <b id="alreadyWho"></b>로 로그인되어 있습니다.
+    <div class="row-actions" style="margin-top:12px">
+      <a class="btn" href="/">오늘 화면으로</a>
+      <!-- data-action="logout"은 shell.js가 알아서 배선한다(wireLogout). 여기서 fetch를
+           따로 부르면 서버의 refresh 토큰 폐기가 빠진 사본이 생긴다. -->
+      <a class="btn btn-outline" href="#" data-action="logout">로그아웃하고 다른 계정으로</a>
+    </div>
+  </div>
+
   <form id="loginForm" class="card">
     <div class="field">
       <label for="username">아이디</label>
@@ -37,10 +53,27 @@ try {
       <label for="password">비밀번호</label>
       <input type="password" id="password" required autocomplete="current-password">
     </div>
+    <!-- 가입 화면과 같은 장치다. 여기서는 이유가 하나 더 있다 — 이 앱은 비밀번호를 못 찾아
+         주므로, 막힌 사람이 확인할 수 있는 것은 <내가 제대로 쳤는가>뿐이다.
+         게다가 로그인 시도는 분당 5회로 제한된다(RateLimitProperties). 오타 몇 번이면
+         429가 뜨는데, 그때는 맞는 비밀번호를 쳐도 잠시 막힌다. -->
+    <label class="pw-reveal">
+      <input type="checkbox" id="pwReveal"> 비밀번호 보기
+    </label>
     <button type="submit" id="submitBtn" style="width:100%">로그인</button>
   </form>
 
+  <!-- 아래 두 줄은 <로그인하려는 사람에게만> 할 말이라 폼과 운명을 같이한다.
+       이미 로그인한 사람에게 "계정이 없으신가요"와 "비밀번호를 잊으셨다면"은 둘 다 헛말이다. -->
+  <div id="loginHelp">
   <p class="meta">계정이 없으신가요? <a href="/signup.html">회원가입</a></p>
+  <!-- [잊어버린 사람에게 사실을 말한다]
+       "비밀번호 찾기"가 없는 것을 <링크가 없는 것>으로만 알리면, 사람은 자기가 못 찾는 줄
+       알고 계속 뒤진다. 그 사이 시도가 쌓여 요청 제한에 걸리고, 그때부터는 서비스가
+       고장 난 것처럼 보인다. 없다는 사실을 그 자리에서 말하는 편이 낫다. -->
+  <p class="meta warn-note">비밀번호를 잊으셨다면 되찾을 방법이 없습니다 — 이메일을 받지 않아
+    재설정 메일을 보낼 곳이 없습니다. 새 아이디로 가입해 주세요.</p>
+  </div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -49,6 +82,24 @@ try {
 /* 로그인 페이지 — POST /api/auth/login → accessToken을 localStorage에 저장.
  * 저장 방식의 트레이드오프는 js/api.js 상단 주석 참고. */
 renderShell({ title: "로그인" });
+
+/* 이미 로그인한 상태면 폼 대신 상태 안내를 보여 준다(마크업 쪽 주석 참고).
+ *
+ * isLoggedIn()은 <토큰이 있는가>만 본다. 만료된 토큰이 남아 있으면 여기서는 로그인한
+ * 것으로 보이는데, 그건 나쁘지 않다 — "오늘 화면으로"를 누른 순간 첫 API 호출이 401을 받고
+ * api.js가 자동으로 로그아웃시킨다. 만료를 여기서 또 판정하려 들면 토큰 해석 코드가
+ * 화면마다 한 벌씩 생긴다. */
+if (isLoggedIn()) {
+  document.getElementById("loginForm").hidden = true;
+  document.getElementById("loginHelp").hidden = true;
+  document.getElementById("alreadyWho").textContent = localStorage.getItem(USERNAME_KEY) || "이미 계정";
+  document.getElementById("already").hidden = false;
+}
+
+/* 비밀번호 보기 — 가입 화면과 같은 동작이다. 칸이 하나라 여닫을 대상도 하나뿐이다. */
+document.getElementById("pwReveal").addEventListener("change", e => {
+  document.getElementById("password").type = e.target.checked ? "text" : "password";
+});
 
 document.getElementById("loginForm").addEventListener("submit", async e => {
   e.preventDefault(); // 폼 기본 동작(페이지 새로고침 제출)을 막고 JS로 처리
