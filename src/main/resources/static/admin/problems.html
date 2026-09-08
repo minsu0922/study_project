@@ -605,7 +605,7 @@ async function editProblem(id) {
 }
 
 async function deleteProblem(btn, id) {
-  armedDelete(btn, async () => {
+  armedAction(btn, async () => {
     try {
       await api("/api/admin/problems/" + id, { method: "DELETE" });
       // 보던 쪽을 지킨다. 마지막 한 건을 지워 그 쪽이 비면 렌더러가 한 쪽 물러난다 —

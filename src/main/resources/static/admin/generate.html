@@ -439,6 +439,24 @@ async function generateProblems() {
     return;
   }
 
+  /* 여기서 <한 번 더 묻는다> — 2026-09-08.
+   *
+   * 화면 맨 위에 "누를 때마다 요금이 나갑니다"라고 적어 두었지만, 글은 손이 미끄러지는 것을
+   * 막지 못한다. 이 버튼 한 번이 수십 초짜리 Claude 호출이고 되돌릴 방법이 없다 —
+   * 이 저장소가 삭제와 일괄 승인에 쓰는 것과 같은 종류의 동작이라 같은 장치를 쓴다.
+   * (문서 생성에 아예 버튼을 두지 않은 이유도 "실수로 누르기 쉽다"였다 — llm.html 주석)
+   *
+   * 검사를 먼저 하고 그다음에 잠금을 건다. 순서가 반대면 <근거를 안 고른 채로도> 버튼이
+   * "한 번 더"로 바뀌어, 눌러 봐야 오류만 나는 상태를 두 번 겪게 된다. */
+  armedAction(btn, () => runGeneration(source, text, file), "한 번 더 누르면 호출 (요금 발생)");
+}
+
+/** 실제 호출 — 두 번째 누름에서만 여기 온다(generateProblems의 armedAction). */
+async function runGeneration(source, text, file) {
+  const msg = document.getElementById("gMessage");
+  const btn = document.getElementById("gSubmitBtn");
+  const loading = document.getElementById("gLoading");
+
   btn.disabled = true;      // Claude 호출은 수십 초 — 더블클릭으로 중복 요청(=중복 과금)되는 걸 막는다
   loading.hidden = false;
   try {
@@ -453,6 +471,11 @@ async function generateProblems() {
   } finally {
     btn.disabled = false;
     loading.hidden = true;
+    // 버튼 글자를 되돌린다. armedAction은 <확정>했을 때 문구를 복구하지 않는다 —
+    // 원래 쓰임(삭제)에서는 행이 통째로 사라져 복구할 대상이 없었기 때문이다.
+    // 여기 버튼은 화면에 남으므로, 안 되돌리면 "한 번 더 누르면 호출"이 굳어 버린다.
+    // 문구의 주인은 syncSourceFields다(근거에 따라 "생성 요청"/"문서로 생성").
+    syncSourceFields();
   }
 }
 
@@ -665,7 +688,7 @@ async function loadTopicQueue() {
     const id = Number(btn.closest("tr").dataset.id);
     if (btn.dataset.action === "delete") {
       // 2단계 확인 — 다시 적으면 그만이지만, 몇 편 썼는지의 기록은 되살릴 수 없다
-      armedDelete(btn, () => deleteTopic(id));
+      armedAction(btn, () => deleteTopic(id));
       return;
     }
     if (btn.dataset.action === "reset") {

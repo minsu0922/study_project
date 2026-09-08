@@ -88,7 +88,7 @@ try {
         <label for="byePw">확인을 위해 비밀번호를 입력하세요</label>
         <input type="password" id="byePw" required autocomplete="current-password">
       </div>
-      <!-- 두 번 눌러야 지워진다(armedDelete와 같은 생각). 첫 누름은 "정말?"이고
+      <!-- 두 번 눌러야 지워진다(armedAction과 같은 생각). 첫 누름은 "정말?"이고
            둘째 누름이 진짜다 — confirm 창을 띄우는 것보다 되돌리기 쉽다. -->
       <button type="submit" class="danger" id="byeSubmit">탈퇴하기</button>
     </form>
@@ -198,7 +198,7 @@ function wirePasswordChange() {
  *
  * <p>confirm 창을 안 쓰는 이유: 그 창은 습관적으로 엔터를 눌러 넘기게 된다. 버튼 글자가
  * "정말 지웁니다"로 바뀌는 방식은 <b>화면에 남아</b> 있어서, 손이 멈춘 자리에서 무엇을
- * 하려던 참인지 다시 읽게 된다. 관리 화면의 armedDelete가 같은 생각이다.
+ * 하려던 참인지 다시 읽게 된다. 관리 화면의 armedAction이 같은 생각이다.
  *
  * <p>되돌리는 것도 쉽다 — 다른 곳을 누르거나 5초를 두면 원래대로 돌아온다.
  */

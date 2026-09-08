@@ -85,10 +85,16 @@ function param(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
-/* ── 위험 동작(삭제) 2단계 확인 ──
+/* ── 되돌리기 어려운 동작의 2단계 확인 ──
  * confirm() 같은 브라우저 팝업 대신 "버튼을 한 번 더 누르면 실행" 방식.
- * 팝업은 흐름을 끊고, 자동화 도구·테스트도 막는다. 3초 지나면 원래대로 돌아간다. */
-function armedDelete(btn, onConfirm, label = "정말 삭제?") {
+ * 팝업은 흐름을 끊고, 자동화 도구·테스트도 막는다. 3초 지나면 원래대로 돌아간다.
+ *
+ * [이름을 armedDelete에서 바꿨다 — 2026-09-08]
+ * 이미 삭제 아닌 곳에서 쓰이고 있었다 — 검수함의 일괄 승인, 그리고 이번에 더한
+ * 문제 생성(누르면 Claude 요금이 나간다). 하는 일은 "되돌리기 어려운 것을 한 번 더 묻는 것"이지
+ * 삭제가 아니다. 이름이 실제와 어긋나면 다음 사람이 "삭제가 아닌데 이걸 써도 되나"를
+ * 매번 되묻게 된다. */
+function armedAction(btn, onConfirm, label = "정말 삭제?") {
   // 확정(두 번째 클릭)이면 되돌리기 타이머를 먼저 끈다.
   //
   // 끄지 않으면 3초 뒤 타이머가 깨어나 <b>확정 당시의 문구</b>를 다시 써 버린다.
@@ -122,7 +128,7 @@ function armedDelete(btn, onConfirm, label = "정말 삭제?") {
 /**
  * 텍스트를 클립보드에 넣고 <b>버튼 문구로</b> 결과를 알린다.
  *
- * <p><b>왜 alert이 아니라 버튼 문구인가.</b> 이 화면의 위험 동작 확인({@code armedDelete})이
+ * <p><b>왜 alert이 아니라 버튼 문구인가.</b> 이 화면의 위험 동작 확인({@code armedAction})이
  * 이미 같은 방식을 쓴다 — 브라우저 팝업은 흐름을 끊고 자동화 도구도 막는다.
  * 복사는 위험하지도 않은 동작이라 더더욱 팝업을 띄울 이유가 없다.
  *
@@ -137,7 +143,7 @@ function armedDelete(btn, onConfirm, label = "정말 삭제?") {
  * execCommand는 폐기 예정이지만 대체 수단이 없고, 실패해도 잃을 것이 없다.
  */
 async function copyToClipboard(btn, text, okLabel = "복사됨") {
-  // 연달아 누르면 "복사됨"을 원래 문구로 오해하고 굳어 버린다 — armedDelete가 겪은 사고와 같다.
+  // 연달아 누르면 "복사됨"을 원래 문구로 오해하고 굳어 버린다 — armedAction이 겪은 사고와 같다.
   const original = btn.dataset.copyOriginal ?? btn.textContent;
   btn.dataset.copyOriginal = original;
   clearTimeout(Number(btn.dataset.copyTimer));

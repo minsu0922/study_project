@@ -239,7 +239,7 @@ async function editDocument(slug, id) {
 }
 
 async function deleteDocument(btn, id) {
-  armedDelete(btn, async () => {
+  armedAction(btn, async () => {
     try {
       await api("/api/admin/documents/" + id, { method: "DELETE" });
       loadDocuments();
