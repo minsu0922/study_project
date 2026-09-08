@@ -204,18 +204,24 @@ function initReviewControls() {
  */
 function renderReviewSummary(c) {
   const cells = [
+    // 앞의 둘은 <이 화면 안>의 일이라 갈 곳이 없다(바로 아래 목록이 그것이다).
     { label: "문제 초안 대기", value: c.problems,  due: c.problems > 0 },
     { label: "문서 초안 대기", value: c.documents, due: c.documents > 0 },
-    { label: "제보 대기",      value: c.reports,   due: c.reports > 0 },
+    // 뒤의 둘은 다른 화면에서 처리한다 — 숫자를 보고 "그래서 어디로 가지"가 되지 않게
+    // 그 자리를 눌러 바로 가게 한다(2026-09-08). 주제 범위는 생성 화면 안의 한 절이라
+    // 앵커까지 붙인다(generate.html의 #topics).
+    { label: "제보 대기",      value: c.reports,   due: c.reports > 0,  href: "/admin/reports.html" },
     // 주제 대기열만 뜻이 반대다 — 0이 "할 일 없음"이 아니라 <생성이 멈춘다>는 경고다.
     // 그래서 0일 때 색을 켠다. 기둥의 "생성 실행" 배지가 0에서 주황이 되는 것과 같은 규칙.
-    { label: "주제 대기열",    value: c.topics,    due: c.topics === 0 },
+    { label: "주제 대기열",    value: c.topics,    due: c.topics === 0, href: "/admin/generate.html#topics" },
   ];
-  document.getElementById("reviewSummary").innerHTML = cells.map(x => `
-    <div class="stat">
-      <div class="label">${x.label}</div>
-      <div class="num ${x.due ? "due" : "none"}">${x.value}</div>
-    </div>`).join("");
+  document.getElementById("reviewSummary").innerHTML = cells.map(x => {
+    const inner = `<div class="label">${x.label}</div>
+      <div class="num ${x.due ? "due" : "none"}">${x.value}</div>`;
+    return x.href
+      ? `<a class="stat stat-link" href="${x.href}">${inner}</a>`
+      : `<div class="stat">${inner}</div>`;
+  }).join("");
 }
 
 /**
@@ -571,9 +577,14 @@ async function loadDrafts(jumpToLast = false) {
         </div>` : ""}
         <!-- 목록 제목(V13) — 검수자가 "이 제목으로 목록에 뜬다"를 지문과 나란히 보게 둔다.
              비었으면 그 사실을 적는다. 조용히 감추면 제목 없는 문제가 그대로 승인되고,
-             학습자 목록에는 상황 서술 조각이 뜬다. -->
+             학습자 목록에는 상황 서술 조각이 뜬다.
+
+             조언("승인 전에 붙이는 편이 낫다")은 <검수 대기>에서만 뜻이 있다 — 2026-09-08.
+             이미 승인·거절된 초안에 그 말을 붙이면 할 수 없는 일을 시키는 셈이고,
+             그런 문구가 쌓이면 나머지 안내까지 흘려 읽게 된다. -->
         <div class="meta" style="margin-top:8px">
-          목록 제목: ${d.title ? `<b>${escapeHtml(d.title)}</b>` : "<i>(없음 — 승인 전에 붙이는 편이 낫다)</i>"}
+          목록 제목: ${d.title ? `<b>${escapeHtml(d.title)}</b>`
+            : (d.status === "PENDING" ? "<i>(없음 — 승인 전에 붙이는 편이 낫다)</i>" : "<i>(없음)</i>")}
         </div>
         <p style="margin:6px 0 6px; white-space:pre-wrap"><b>${escapeHtml(d.question)}</b></p>
         ${choices ? `<ul class="draft-choices">${choices}</ul>` : ""}

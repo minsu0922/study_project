@@ -1759,6 +1759,11 @@ body.admin-shell {
   border-radius: var(--radius); padding: var(--sp-2) var(--sp-3);
 }
 .stat .label { color: var(--muted); font-size: var(--fs-1); }
+/* 눌러서 그 일을 하러 갈 수 있는 칸(관리 콘솔의 "제보 대기"·"주제 대기열").
+   같은 줄의 다른 칸과 생김새를 같게 두고, 눌린다는 사실은 <손가락 커서와 호버>로만
+   알린다 — 넷 중 둘만 테두리가 달라지면 숫자를 비교하는 눈이 그 차이에 먼저 걸린다. */
+a.stat.stat-link { display: block; text-decoration: none; color: inherit; }
+a.stat.stat-link:hover { border-color: var(--border-strong); background: var(--fill); }
 .stat .num {
   font-size: var(--fs-5); font-weight: 800; letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
