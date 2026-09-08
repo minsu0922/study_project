@@ -144,7 +144,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         <div class="player-actions">
           <button id="submitBtn" disabled>제출</button>
         </div>
-        ${keyHint(`<kbd>1</kbd>~<kbd>9</kbd> 보기 선택 · <kbd>Enter</kbd> 제출/다음`)}
+        ${keyHint(shortcutHint(p.type))}
       </div>`;
 
     // 보기 버튼/입력에 이벤트 연결 (innerHTML로 그린 뒤라 여기서 바인딩)
@@ -160,6 +160,22 @@ function startPlayer(mountEl, problems, opts = {}) {
       bindOptions(p);
     }
     mountEl.querySelector("#submitBtn").addEventListener("click", submit);
+  }
+
+  /**
+   * 유형마다 <실제로 되는 것>만 적는다 — 2026-09-08.
+   *
+   * <p>전에는 모든 유형에 "1~9 보기 선택 · Enter 제출/다음"이 그대로 붙었다. 그런데
+   * <b>짝짓기</b>는 두 열이라 숫자 하나로 무엇을 가리킬지 정할 수 없어 단축키를 안 두었고
+   * ({@link #renderInput} 주석), <b>단답형</b>에서는 숫자가 답 입력으로 들어간다.
+   * 두 유형에서 안내대로 눌러 보면 아무 일도 안 일어난다 — 화면이 <없는 기능>을 안내하는 셈이다.
+   *
+   * <p>객관식·OX·순서 배열에서는 숫자가 실제로 동작한다(OX는 1=O, 2=X).
+   */
+  function shortcutHint(type) {
+    const enter = `<kbd>Enter</kbd> 제출/다음`;
+    if (type === "MATCHING" || type === "SHORT_ANSWER") return enter;
+    return `<kbd>1</kbd>~<kbd>9</kbd> 보기 선택 · ${enter}`;
   }
 
   /**
@@ -614,8 +630,15 @@ function startPlayer(mountEl, problems, opts = {}) {
             ${m.doc ? `<div class="exp" style="font-size:.86rem">📖 <a href="/document.html?slug=${
               encodeURIComponent(m.doc)}" target="_blank" rel="noopener">이 문제의 개념 문서 읽기</a></div>` : ""}
           </div>`).join("")}
-        <p class="meta">틀린 문제는 <a href="/review.html">복습</a> 사다리에 자동으로 올라갔어요 —
-          내일 "오늘의 복습"에서 다시 만나요.</p>
+        <!-- 로그인한 사람에게만 참인 문장이다 — 2026-09-08.
+             비로그인 채점은 아무것도 남기지 않으므로(QuizService.check) 사다리에 올라간 것도,
+             내일 만날 것도 없다. 게다가 /review.html은 보호 경로라 눌러도 로그인으로 튕긴다.
+             방금 푼 사람에게 <할 수 없는 약속>을 하는 대신, 가입하면 그렇게 된다고 적는다. -->
+        ${isLoggedIn()
+          ? `<p class="meta">틀린 문제는 <a href="/review.html">복습</a> 사다리에 자동으로 올라갔어요 —
+               내일 "오늘의 복습"에서 다시 만나요.</p>`
+          : `<p class="meta">지금은 기록이 남지 않았어요. <a href="/signup.html">가입하면</a>
+               틀린 문제가 복습 사다리에 올라가 내일 다시 나옵니다.</p>`}
       </div>`;
 
     mountEl.innerHTML = `

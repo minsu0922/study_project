@@ -75,11 +75,19 @@ fillSelect(document.getElementById("fType"), TYPES, "전체");
 // "이번엔 5개만"이 다음부터의 기본값이 되면, 설정 화면에서 정한 값이 조용히 덮인다.
 document.getElementById("fSize").value = getPref("csquiz_quizsize");
 
-// 문제 조회는 공개 API지만 채점은 로그인 필수 — 풀기 전에 미리 알려주는 게 친절
+/* 비로그인 안내 — 2026-09-08에 <말이 뒤집혔다>.
+ *
+ * 전에는 "채점(제출)은 로그인해야 가능합니다"였다. 같은 날 비로그인 채점이 열리면서
+ * (player.js submit → /api/quiz/{id}/check) 그 문장이 거짓이 됐다. 화면이 자기 앱을
+ * 잘못 설명하면, 그 말을 믿고 로그인하러 갔다가 돌아오지 않는 사람이 생긴다.
+ *
+ * 지금 로그인이 여는 것은 채점이 아니라 <기록>이다 — 이력·복습 사다리·오늘의 퀴즈.
+ * 랜딩과 채점 결과 줄도 같은 말을 한다(같은 것을 화면마다 다르게 적으면 무엇이
+ * 진짜인지 알 수 없다). */
 if (!isLoggedIn()) {
   document.getElementById("loginNotice").innerHTML =
-    `<div class="alert info">문제는 누구나 볼 수 있지만, <b>채점(제출)은 로그인해야</b> 가능합니다.
-     <a href="/login.html">로그인하기</a></div>`;
+    `<div class="alert info">가입 없이 풀고 채점까지 볼 수 있어요.
+     <b>기록과 복습</b>은 로그인해야 남습니다. <a href="/signup.html">가입하기</a></div>`;
 }
 
 const setupEl = document.getElementById("setup");
