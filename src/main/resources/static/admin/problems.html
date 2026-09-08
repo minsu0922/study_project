@@ -242,11 +242,22 @@ function syncRowFields(row, type) {
   const radio = row.querySelector("input[type=radio]");
   radio.hidden = type !== "MULTIPLE_CHOICE";
   row.querySelector(".choice-match-line").hidden = type !== "MATCHING";
-  row.querySelector(".choice-rationale-line").hidden =
-    type !== "MULTIPLE_CHOICE" || radio.checked;
+  row.querySelector(".choice-rationale-line").hidden = type !== "MULTIPLE_CHOICE";
+
   // 정답 보기는 판 전체를 초록으로 바꾼다. 라디오 점 하나로도 뜻은 통하지만, 보기가 넷이면
   // 어느 것이 정답인지 확인할 때마다 작은 점 넷을 훑게 된다 — 면색은 한눈에 들어온다.
-  row.classList.toggle("is-correct", type === "MULTIPLE_CHOICE" && radio.checked);
+  const isCorrect = type === "MULTIPLE_CHOICE" && radio.checked;
+  row.classList.toggle("is-correct", isCorrect);
+
+  // 정답 보기의 설명 칸은 <감추지 않고 잠근다>. 감추면 줄이 사라지며 아래가 통째로 올라와
+  // 화면이 들썩이고, 그 칸에 이미 글이 있었다면 눈앞에서 없어진다("지워졌나?").
+  // 잠그면 자리는 그대로고 적을 수도 없어, 원래 막으려던 것("적어 놓고 사라진 줄 모른다")은
+  // 그대로 막힌다. 값은 여전히 지우지 않는다 — 정답을 잘못 눌렀다가 되돌릴 때 되살아난다.
+  const rationale = row.querySelector(".choice-rationale");
+  rationale.disabled = isCorrect;
+  rationale.placeholder = isCorrect
+    ? "정답 보기의 근거는 아래 '해설'에 씁니다 (여기 적은 것은 저장되지 않습니다)"
+    : "이 오답이 왜 틀렸는지 한 줄";
 }
 
 /* 보기 한 줄 = 내용 + 오답 설명(V15).
@@ -254,9 +265,11 @@ function syncRowFields(row, type) {
  * 설명 칸을 보기 <바로 아래>에 두는 이유: 따로 모아 두면 "이 설명이 어느 보기 것이지?"를
  * 눈으로 짝지어야 하는데, 그게 정확히 번호 지목을 막은 이유다(보기는 내보낼 때 섞인다).
  *
- * 정답 보기의 설명 칸은 라디오를 누르는 순간 접는다. 정답의 근거는 해설이 통째로 맡기로 한
- * 설계라(Choice.rationale) 여기 적어도 저장 직전에 버려지는데, 칸이 열려 있으면 적어 놓고
- * 사라진 줄 모른다. 값 자체는 지우지 않는다 — 정답을 잘못 눌렀다가 되돌릴 때 쓴 글이
+ * 정답 보기의 설명 칸은 라디오를 누르는 순간 <잠긴다>(2026-09-08 이전에는 접었다).
+ * 정답의 근거는 해설이 통째로 맡기로 한 설계라(Choice.rationale) 여기 적어도 저장 직전에
+ * 버려지는데, 칸이 열려 있으면 적어 놓고 사라진 줄 모른다. 그렇다고 접으면 줄이 없어지며
+ * 아래가 올라와 화면이 들썩이고, 이미 적혀 있던 글까지 눈앞에서 사라진다.
+ * 값 자체는 어느 쪽이든 지우지 않는다 — 정답을 잘못 눌렀다가 되돌릴 때 쓴 글이
  * 사라지면 그게 더 나쁘다.
  *
  * <2026-09-08 — 아래로 붙이기만 해서는 부족했다.> 칸 셋이 생김새가 같아 여덟 칸이 그냥

@@ -494,12 +494,21 @@ async function loadDrafts(jumpToLast = false) {
     // 모아 두면 "이 설명이 어느 용어 것이지?"를 다시 눈으로 짝지어야 하는데, 그건 이 화면이
     // 오답 설명을 보기 아래 붙인 이유와 똑같은 문제다.
     // 순서 배열은 여기서 번호(1..N)를 찍는다 — 아래 정답 줄의 "3|2|1|4"가 이 번호를 가리킨다.
+    // 2026-09-08 — 점 목록을 <판>으로 바꿨다. 문제 수정 폼과 같은 언어다(style.css의
+    // "보기 편집기"·"검수 화면의 보기 목록" 절). 전에는 보기·그 설명·바로 아래 해설 문단이
+    // 같은 간격으로 흘러서, 어디까지가 한 보기인지 눈으로 끊어 읽어야 했다. 두 화면은
+    // 같은 물건을 이어서 보는 자리라(여기서 읽고 → 폼에서 고친다) 생김새가 달라야 할 이유가 없다.
     const ordering = d.type === "ORDERING";
     const choices = (d.choices ?? []).map((c, i) =>
-      `<li>${ordering ? `<b>${i + 1}.</b> ` : ""}${c.correct ? "✅ " : ""}${escapeHtml(c.text)}${
-        c.matchText ? `<div class="meta" style="margin-top:2px">↔ ${escapeHtml(c.matchText)}</div>` : ""
+      `<li class="draft-choice${c.correct ? " is-correct" : ""}">
+        <div class="draft-choice-main">
+          ${ordering ? `<span class="draft-choice-no">${i + 1}.</span>` : ""}
+          ${c.correct ? `<span class="draft-choice-mark">정답</span>` : ""}
+          <span>${escapeHtml(c.text)}</span>
+        </div>${
+        c.matchText ? `<div class="draft-choice-sub"><span class="choice-tag">↔ 짝</span><span>${escapeHtml(c.matchText)}</span></div>` : ""
       }${
-        c.rationale ? `<div class="meta" style="margin-top:2px">↳ ${escapeHtml(c.rationale)}</div>` : ""
+        c.rationale ? `<div class="draft-choice-sub"><span class="choice-tag">↳ 오답 설명</span><span>${escapeHtml(c.rationale)}</span></div>` : ""
       }</li>`).join("");
     const actions = d.status === "PENDING" ? `
       <div class="row-actions" style="margin-top:10px">
@@ -567,7 +576,7 @@ async function loadDrafts(jumpToLast = false) {
           목록 제목: ${d.title ? `<b>${escapeHtml(d.title)}</b>` : "<i>(없음 — 승인 전에 붙이는 편이 낫다)</i>"}
         </div>
         <p style="margin:6px 0 6px; white-space:pre-wrap"><b>${escapeHtml(d.question)}</b></p>
-        ${choices ? `<ul style="margin:6px 0">${choices}</ul>` : ""}
+        ${choices ? `<ul class="draft-choices">${choices}</ul>` : ""}
         ${d.answer ? `<div>정답: <b>${escapeHtml(d.answer)}</b></div>` : ""}
         ${d.explanation ? `<div class="meta" style="white-space:pre-wrap; margin-top:6px">${escapeHtml(d.explanation)}</div>` : ""}
         ${actions}
