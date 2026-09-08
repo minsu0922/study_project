@@ -294,11 +294,22 @@ function sideLinks(items, active) {
  */
 function authAreaHtml() {
   const name = escapeHtml(localStorage.getItem(USERNAME_KEY) || "");
-  return isLoggedIn()
+  if (isLoggedIn()) {
     // title을 함께 준다 — 기둥이 208px이라 긴 아이디는 잘린다.
-    ? `<span class="user-email" title="${name}">${name}</span>`
-    : `<a href="/login.html">로그인</a>
-       <a href="/signup.html" class="btn">회원가입</a>`;
+    return `<span class="user-email" title="${name}">${name}</span>`;
+  }
+  /* 지금 있는 화면으로 가는 링크는 빼고 그린다 — 2026-09-08.
+   *
+   * 가입 화면 왼쪽에 "회원가입" 버튼이 그대로 떠 있었다. 눌러도 제자리인 버튼인데,
+   * 화면에서 가장 눈에 띄는 모양(꽉 찬 남색 판)을 하고 있어 <이 화면의 주 동작>처럼 보였다.
+   * 정작 주 동작은 폼 아래 "가입하기"다. 같은 무게의 버튼 둘이 서로 다른 일을 하는 셈이었다.
+   *
+   * 감추기만 하고 "여기 있습니다" 표시를 따로 두지 않는 이유: 화면 제목(h1)이 이미 그 말을
+   * 하고 있다. 두 자리에서 같은 말을 하면 다음에 제목을 고칠 때 한쪽만 고쳐진다. */
+  const here = location.pathname;
+  const login = here === "/login.html" ? "" : `<a href="/login.html">로그인</a>`;
+  const signup = here === "/signup.html" ? "" : `<a href="/signup.html" class="btn">회원가입</a>`;
+  return `${login}\n       ${signup}`;
 }
 
 /**

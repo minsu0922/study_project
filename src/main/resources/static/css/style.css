@@ -970,6 +970,22 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
    무엇인지 흐려진다 — .btn-lg의 반대쪽 눈금이다. */
 .btn-sm { padding: 6px 14px; font-size: .85rem; }
 
+/* ── 가입 폼의 두 줄 (signup.html) ── 2026-09-08 ──────────────────────
+ * "비밀번호 보기"는 체크박스지만 <칸이 아니라 스위치>라, 위 입력 칸들과 같은 무게로
+ * 보이면 안 된다. 작고 여린 한 줄로 둔다.
+ * 되찾을 수 없다는 경고는 <읽혀야> 하는 문장이라 왼쪽에 선을 세워 문단을 구분한다.
+ * 빨간 상자로 만들지 않은 이유: 그건 "지금 무언가 잘못됐다"는 뜻인데, 여기서 말하는 것은
+ * 아직 일어나지 않은 일이다. 매번 뜨는 빨강은 어차피 읽히지 않는다. */
+.pw-reveal {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--text-2); font-size: var(--fs-2); margin-bottom: var(--sp-3); cursor: pointer;
+}
+.pw-reveal input { width: auto; margin: 0; }
+.signup-warn {
+  border-left: 3px solid var(--review);
+  padding: 2px 0 2px 10px; margin: 0 0 var(--sp-4); line-height: 1.6;
+}
+
 /* ── 알림/결과 박스 ── */
 .alert { border-radius: var(--radius); padding: 11px 14px; margin: 12px 0; font-size: .9rem; }
 /* 글자는 --wrong이 아니라 --wrong-fg다. --wrong(#dc2626)을 --wrong-bg 위에 얹으면
