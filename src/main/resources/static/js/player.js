@@ -92,8 +92,18 @@ function startPlayer(mountEl, problems, opts = {}) {
 
   function render() {
     const p = problems[state.idx];
-    const total = problems.length;
-    const progressPct = (state.idx / total) * 100;
+    /* 진행 숫자는 <이번에 푸는 묶음>이 아니라 부르는 쪽이 정한 기준으로 센다 — 2026-09-08.
+     *
+     * 오늘의 퀴즈는 <안 푼 문제만> 플레이어에 넘긴다(daily.html). 그래서 열 문제 중 하나를
+     * 이미 푼 사람이 들어오면 "1 / 9"가 떴다. 홈은 바로 앞 화면에서 "9문제 남았어요"라고
+     * 하고, 오늘의 퀴즈 카드도 "1 / 10"이라고 하는데, 정작 푸는 화면만 분모가 달랐다.
+     * 세 화면이 같은 세트를 두고 서로 다른 숫자를 말하면 어느 것도 못 믿게 된다.
+     *
+     * opts.offset은 <이미 푼 개수>, opts.total은 <세트 전체>다. 안 주면 지금까지처럼
+     * 넘겨받은 배열 기준이다 — 자유 퀴즈와 복습은 그 배열이 곧 전부라 바꿀 것이 없다. */
+    const offset = opts.offset || 0;
+    const total = opts.total || problems.length;
+    const progressPct = ((state.idx + offset) / total) * 100;
 
     // 복습 모드면 지금 사다리 몇 번째 칸인지 보여준다 — "이 문제를 몇 번째 다시 보는지" 맥락 제공
     const reviewBadge = opts.reviewMode && p.stage !== undefined
@@ -116,14 +126,14 @@ function startPlayer(mountEl, problems, opts = {}) {
     mountEl.innerHTML = `
       <div class="play-sticky">
         <div class="play-rail" role="progressbar" aria-label="퀴즈 진행률"
-             aria-valuenow="${state.idx}" aria-valuemin="0" aria-valuemax="${total}"
+             aria-valuenow="${state.idx + offset}" aria-valuemin="0" aria-valuemax="${total}"
           ><i style="width:${progressPct}%"></i></div>
         <div class="play-head">
           <span class="badge">${escapeHtml(domainLabel(p.domain))}</span>
           ${difficultyBadge(p.difficulty)}
           <span class="badge gray">${escapeHtml(typeLabel(p.type))}</span>
           ${reviewBadge}${extraBadge}
-          <span class="count">${state.idx + 1} / ${total}</span>
+          <span class="count">${state.idx + 1 + offset} / ${total}</span>
         </div>
       </div>
 
@@ -432,12 +442,17 @@ function startPlayer(mountEl, problems, opts = {}) {
    *
    * 새 탭(target=_blank)으로 여는 이유: 퀴즈는 여러 문제를 이어서 푸는 흐름이라, 같은 탭에서
    * 문서로 이동하면 풀던 세트가 통째로 날아간다(점수·진행 상태가 화면 메모리에만 있다). */
+  /* 한 줄로 붙여 쓰는 것이 <중요하다>. 이 줄은 .explain 안에 있고 그 클래스에는
+   * white-space: pre-wrap이 걸려 있다(해설의 줄바꿈을 살리려고 넣은 규칙이다).
+   * 그래서 템플릿 문자열을 예쁘게 들여쓰면 그 <들여쓰기와 줄바꿈이 화면에 그대로> 나온다 —
+   * 실제로 📖만 위에 뜨고 글자가 다음 줄로 내려가 있었다(2026-09-08에 발견).
+   * 코드 모양을 위해 넣은 공백이 화면에 새어 나오는 자리라, 여기서는 줄을 접지 않는다. */
   function docLink(r) {
     if (!r.documentSlug) return "";
-    return `<div class="explain" style="font-size:.86rem">
-      📖 <a href="/document.html?slug=${encodeURIComponent(r.documentSlug)}" target="_blank" rel="noopener">
-        이 문제의 개념 문서 읽기</a>
-    </div>`;
+    const href = `/document.html?slug=${encodeURIComponent(r.documentSlug)}`;
+    return `<div class="explain doc-link">`
+      + `📖 <a href="${href}" target="_blank" rel="noopener">이 문제의 개념 문서 읽기</a>`
+      + `</div>`;
   }
 
   /* 오답 분석 — 오답 보기마다 왜 틀렸는지를 <이 화면의 번호>와 함께 늘어놓는다(V15).

@@ -1317,6 +1317,12 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
   white-space: pre-wrap;
   word-break: break-word;
 }
+/* 근거 문서 한 줄 — .wrong-analysis와 같은 처방이다(pre-wrap 되돌리기).
+   부모의 pre-wrap은 <통짜 해설>의 줄바꿈을 살리려고 건 것인데, 마크업을 보기 좋게
+   들여쓰면 그 공백이 화면에 그대로 새어 나온다. 실제로 📖만 윗줄에 남고 글자가
+   다음 줄로 내려가 있었다(2026-09-08). 클래스로 못 박아 두면 다음에 이 줄을
+   여러 줄로 다시 써도 화면이 안 깨진다. */
+.feedback .doc-link { white-space: normal; font-size: .86rem; }
 
 /* 오답 분석(V15) — 오답 보기마다 왜 틀렸는지를 이 화면의 번호와 함께 늘어놓는 목록.
  *

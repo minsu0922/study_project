@@ -100,7 +100,14 @@ function render(data) {
 
   statusBody.innerHTML = `
     <div class="card score-board fade-in">
-      <div class="big">${solved}<small> / ${total}</small></div>
+      <!-- 아직 시작 전이면 <0>이 아니라 <준비된 문제 수>를 크게 보여 준다 — 2026-09-08.
+           "0 / 10"은 숫자로는 맞지만, 화면에서 가장 큰 글자가 0인 것은 시작하려는 사람에게
+           "아무것도 없다"로 읽힌다. 홈이 첫날에 통계 넷(0 · 0 · 0 · 아직 기록 없음)을
+           감추는 것과 같은 판단이다(index.html loadHome).
+           한 문제라도 풀면 그때부터는 진행이 정보가 되므로 "3 / 10"으로 바뀐다. -->
+      <div class="big">${solved === 0
+        ? `${total}<small>문제</small>`
+        : `${solved}<small> / ${total}</small>`}</div>
       <div class="msg">${solved === 0 ? "오늘의 세트가 준비됐어요" : "이어서 풀어볼까요?"}</div>
       <div style="margin-top:14px">${compHtml}</div>
       <div class="actions">
@@ -116,6 +123,10 @@ function render(data) {
     statusEl.hidden = true;
     playerEl.hidden = false;
     startPlayer(playerEl, problems, {
+      // 진행 숫자는 <오늘 세트> 기준으로 센다. 안 푼 것만 넘기므로 이 둘을 안 주면
+      // 플레이어가 "1 / 9"처럼 세어, 바로 앞 화면의 "1 / 10"과 어긋난다(player.js render 주석).
+      offset: solved,
+      total,
       exitLabel: "오늘의 퀴즈로",
       onExit: () => {
         // 복귀 = 현황 재조회. 방금 제출들이 서버 세트에 반영됐으므로(submit이 한 트랜잭션으로
