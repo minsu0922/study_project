@@ -26,7 +26,9 @@ try {
        <목록에서 하나 고르기>가 기본이고, <아무거나 열 문제>는 그 옆의 다른 길이다. -->
   <div class="page-head">
     <h1>문제</h1>
-    <a class="btn btn-outline" href="/quiz.html">무작위로 10문제 →</a>
+    <!-- 라벨과 주소를 지금 걸린 필터에 맞춰 다시 쓴다(syncQuickStart) — 2026-09-09.
+         전에는 고정 링크라, 네트워크 초급으로 걸러 놓고 눌러도 조건 없는 설정 화면이 떴다. -->
+    <a class="btn btn-outline" id="quickStart" href="/quiz.html?start=1">무작위로 풀기 →</a>
   </div>
   <div id="message"></div>
 
@@ -332,7 +334,33 @@ function levelParam() {
   return selectedLevels.size === 1 ? [...selectedLevels][0] : null;
 }
 
+/**
+ * 오른쪽 위 버튼 — <b>지금 걸린 조건 그대로</b> 자유 퀴즈를 연다(2026-09-09).
+ *
+ * <p>예전 라벨은 "무작위로 10문제 →"였는데 두 군데가 사실과 달랐다. 하나는 <b>10</b> —
+ * 한 판 문제 수는 설정 화면에서 정하는 값이라 5나 20일 수 있다. 다른 하나는 <b>무작위</b> —
+ * 분야·난이도를 걸러 놓고 눌러도 그 조건이 넘어가지 않아, 고른 것이 사라진 설정 화면이 떴다.
+ *
+ * <p>난이도는 <b>하나만 골랐을 때</b>만 넘긴다. 자유 퀴즈의 난이도 칸은 하나만 받는데
+ * (목록은 여럿을 고를 수 있다), 셋 중 둘을 골라 놓고 그중 하나만 실려 가면 화면이
+ * 말하지 않은 조건으로 문제가 나온다 — 그럴 바에는 난이도 없이 보내는 편이 정직하다.
+ * 목록의 {@code levelParam}이 서버에 보낼 때 쓰는 규칙과 같다.
+ */
+function syncQuickStart() {
+  const btn = document.getElementById("quickStart");
+  const params = new URLSearchParams({ start: "1" });
+  if (selectedDomain) params.set("domain", selectedDomain);
+  const lv = levelParam();
+  if (lv) params.set("level", lv);
+
+  const n = getPref("csquiz_quizsize");     // 설정에서 정한 한 판 문제 수(기본 10)
+  const 조건있음 = Boolean(selectedDomain || lv);
+  btn.href = "/quiz.html?" + params.toString();
+  btn.textContent = 조건있음 ? `고른 조건으로 ${n}문제 →` : `무작위로 ${n}문제 →`;
+}
+
 async function loadList() {
+  syncQuickStart();
   const params = new URLSearchParams({ page: String(page), size: String(PAGE_SIZE) });
   if (selectedDomain) params.set("domain", selectedDomain);
   const lv = levelParam();
@@ -429,8 +457,15 @@ function emptyStateHtml() {
       <div class="act"><button class="btn-outline" id="resetBtn">검색·필터 지우기</button></div></div>`;
   }
   if (selectedState === "DUE") {
-    return `<div class="pl-empty">복습할 문제가 없습니다
-      <div class="act"><a class="btn" href="/quiz.html">새 문제 풀기</a></div></div>`;
+    /* 방금 틀린 사람에게 "복습할 문제가 없습니다"는 어긋난 말이다 — 2026-09-09.
+       복습 사다리의 첫 칸은 <하루 뒤>라, 오늘 여덟 문제를 틀려도 오늘의 복습 대기는 0이다.
+       채점 화면은 이미 "내일 다시 만나요"라고 말하는데(player.js) 이 화면만 아무 설명 없이
+       비어 있어서, 사다리가 고장 난 것처럼 보였다. 푼 적이 있으면 그 사정을 적는다. */
+    const 푼적있음 = (summary?.stats?.attemptedTotal || 0) > 0;
+    return `<div class="pl-empty">오늘 복습할 문제가 없습니다
+      ${푼적있음 ? `<div class="meta" style="margin-top:6px">틀린 문제는 <b>하루 뒤</b>부터 복습 차례가 됩니다 —
+        맞힐수록 다음 차례가 점점 멀어져요.</div>` : ""}
+      <div class="act"><a class="btn" href="/quiz.html?start=1">새 문제 풀기</a></div></div>`;
   }
   if (selectedDomain || selectedLevels.size > 0 || selectedState) {
     return `<div class="pl-empty">조건에 맞는 문제가 없습니다

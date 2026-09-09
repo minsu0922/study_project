@@ -132,6 +132,33 @@ document.getElementById("startBtn").addEventListener("click", start);
 const requestedId = new URLSearchParams(location.search).get("problemId");
 if (requestedId) {
   startSingle(requestedId);
+} else {
+  applyIncomingFilters();
+}
+
+/**
+ * 문제 목록에서 <b>고른 조건 그대로</b> 넘어온 경우 — 2026-09-09.
+ * 예: {@code /quiz.html?domain=NETWORK&level=BEGINNER&start=1}
+ *
+ * <p>목록 화면 오른쪽 위 버튼이 예전에는 그냥 {@code /quiz.html}로 보냈다. 그래서 네트워크
+ * 초급으로 걸러 놓고 그 버튼을 누르면 <b>방금 고른 조건이 사라진 빈 설정 화면</b>이 떴다 —
+ * 누른 것이 아무 일도 안 한 것처럼 보이고, 같은 선택을 여기서 다시 해야 했다.
+ * (홈에서 넘어오는 분야를 problems.html이 받아 두는 것과 같은 판단이다.)
+ *
+ * <p>{@code start=1}이면 설정 화면을 건너뛰고 바로 시작한다. 목록에서 그 버튼을 누른 사람은
+ * "고를 만큼 골랐으니 이제 풀겠다"는 뜻이라, 설정 화면을 한 번 더 보여 주는 것은 걸음만 는다.
+ *
+ * <p>모르는 값은 버린다. 서버는 400으로 막지만 그러면 화면에는 <b>이유 없는 빨간 줄</b>만
+ * 남는다 — 주소는 사람이 손으로 고칠 수 있는 곳이라 잘못된 값이 오는 것을 정상으로 친다.
+ */
+function applyIncomingFilters() {
+  const params = new URLSearchParams(location.search);
+  const set = (id, value, pairs) => {
+    if (value && pairs.some(([v]) => v === value)) document.getElementById(id).value = value;
+  };
+  set("fDomain", params.get("domain"), DOMAINS);
+  set("fLevel", params.get("level"), DIFFICULTIES);
+  if (params.get("start") === "1") start();
 }
 
 async function startSingle(problemId) {
