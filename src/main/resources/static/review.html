@@ -41,7 +41,9 @@ try {
     <div id="message"></div>
     <div id="todayBox"></div>
 
-    <div class="review-list">
+    <!-- 로그인해야 내용이 생기는 구역이라 비로그인에는 통째로 감춘다 — 2026-09-09.
+         전에는 제목·설명·상태 드롭다운이 빈 껍데기로 남아, 고를 것이 없는 필터만 덩그러니 있었다. -->
+    <div class="review-list" id="statusBlock" hidden>
       <h2>내 복습 현황</h2>
       <!-- "오답노트로 가라"는 안내를 뺐다(2026-08-29). 위 구역 탭이 같은 말을 하고 있어서,
            남겨 두면 같은 이동을 두 곳에서 권하는 셈이 된다. -->
@@ -57,10 +59,17 @@ try {
         </div>
       </div>
       <div id="list"></div>
+      <!-- id가 pager*인 이유 — 2026-09-09.
+           이 화면은 <같은 문서에> 복습 플레이어를 얹는다. 그런데 플레이어도 채점 뒤
+           [다음 문제] 버튼을 id="nextBtn"으로 만든다(player.js). 그래서 한 문서에 같은 id가
+           둘 생겼고, document.querySelector("#nextBtn")은 <먼저 나오는> 이 페이저 버튼을
+           잡았다 — 플레이어를 조작하려는 코드가 조용히 엉뚱한 버튼을 누른다.
+           플레이어 안쪽은 mountEl 범위로 찾아 무사했지만, 유효하지 않은 HTML이고
+           다음에 이 화면을 건드리는 사람이 같은 함정에 빠진다. 화면 쪽 이름을 비켜 준다. -->
       <div class="pager" id="pager" hidden>
-        <button id="prevBtn" class="btn-outline">이전</button>
+        <button id="pagerPrev" class="btn-outline">이전</button>
         <span class="info" id="pageInfo"></span>
-        <button id="nextBtn" class="btn-outline">다음</button>
+        <button id="pagerNext" class="btn-outline">다음</button>
       </div>
     </div>
   </section>
@@ -92,10 +101,15 @@ let page = 0;
 const SESSION_SIZE = 20;
 
 if (!isLoggedIn()) {
+  // 위 사다리 설명은 남긴다 — 이 화면에서 비로그인에게도 뜻이 있는 유일한 내용이고,
+  // "가입하면 무엇이 생기는지"를 말해 주는 자리이기도 하다.
   document.getElementById("message").innerHTML =
     `<div class="alert info">복습은 <b>내 계정의 기록</b>이라 로그인이 필요합니다.
-     <a href="/login.html">로그인하기</a></div>`;
+     <a href="/login.html">로그인하기</a></div>
+     <p class="meta">계정이 없어도 <a href="/quiz.html">자유 퀴즈</a>는 바로 풀 수 있어요 —
+       가입한 뒤부터 틀린 문제가 이 사다리에 올라갑니다.</p>`;
 } else {
+  document.getElementById("statusBlock").hidden = false;
   loadToday();
   loadStatus();
 }
@@ -111,13 +125,7 @@ async function loadToday() {
     // "제일 급한 것부터 한 판"이 된다.
     const data = await api(`/api/me/reviews/today?size=${SESSION_SIZE}`);
     if (data.totalElements === 0) {
-      box.innerHTML = `
-        <div class="card" style="text-align:center;padding:28px">
-          <div style="font-size:1.6rem">🎉</div>
-          <b>오늘 복습할 문제가 없어요!</b>
-          <div class="meta" style="margin-top:4px">새 문제에 도전해 볼까요?</div>
-          <a class="btn" style="margin-top:12px" href="/quiz.html">퀴즈 풀러 가기</a>
-        </div>`;
+      await renderNothingDue(box);
       return;
     }
     // 밀린 게 한 판을 넘으면 "전부"가 아니라 "이번 판 몫"을 앞세운다. 47개를 들이미는 대신
@@ -137,6 +145,12 @@ async function loadToday() {
       playerEl.hidden = false;
       startPlayer(playerEl, data.content, {
         reviewMode: true,                 // 문항에 "복습 N단계" 배지 + 승급/리셋 안내 문구
+        // 복습에서도 "같은 문제 다시 풀기"는 감춘다 — 2026-09-09(오늘의 퀴즈와 같은 판단).
+        // 여기서 다시 풀면 같은 문제가 <한 번 더 채점되어> 사다리가 또 움직인다.
+        // 방금 맞힌 문제를 그 자리에서 또 맞히면 간격이 두 칸 늘어나는 셈인데, 그건
+        // "시간을 두고 다시 만나서 기억을 재는" 이 기능의 전제를 스스로 무너뜨린다.
+        // 해설을 한 번 더 읽고 싶은 사람은 오답노트로 간다(사다리를 건드리지 않는다).
+        retry: false,
         exitLabel: "복습 현황으로",
         onExit: backToOverview,
       });
@@ -144,6 +158,52 @@ async function loadToday() {
   } catch (e) {
     box.innerHTML = `<div class="alert error">복습 목록을 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
   }
+}
+
+/**
+ * 오늘 할 복습이 없을 때 — <b>왜 없는지</b>를 가른다(2026-09-09).
+ *
+ * <p>전에는 무조건 "🎉 오늘 복습할 문제가 없어요!"였다. 그런데 방금 다섯 문제를 틀린
+ * 사람에게도 같은 축하가 떴다. 사다리의 첫 칸이 하루 뒤라 오늘 대기가 0인 것뿐인데,
+ * 화면 위쪽은 축하하고 바로 아래 목록에는 "다음 복습: 내일부터"가 다섯 줄 있었다.
+ * 🎉는 <b>다 해냈다</b>는 뜻이라, 아무것도 안 한 사람에게 붙으면 신호가 값을 잃는다.
+ *
+ * <p>기다리는 것이 있는지는 <b>학습 중(LEARNING)</b>만 세어서 판단한다. 졸업한 항목은
+ * 사다리를 끝낸 것이라 "기다리는 복습"이 아니고(재확인은 별개의 권유다), 전체를 세면
+ * 졸업만 남은 사람에게도 "N개가 기다립니다"라고 말하게 된다.
+ *
+ * <p>정렬이 nextReviewAt 오름차순으로 고정돼 있어(ReviewItemRepository) 한 건만 받으면
+ * 그것이 곧 <b>가장 가까운 예정일</b>이다 — 목록을 다 받아 최솟값을 찾을 이유가 없다.
+ */
+async function renderNothingDue(box) {
+  let waiting = null;
+  try {
+    waiting = await api("/api/me/reviews?status=LEARNING&size=1");
+  } catch (e) {
+    // 못 세면 예전 문구로 돌아간다 — 안내 한 줄 때문에 화면이 비면 안 된다.
+  }
+
+  const count = waiting?.totalElements || 0;
+  if (count === 0) {
+    box.innerHTML = `
+      <div class="card" style="text-align:center;padding:28px">
+        <div style="font-size:1.6rem">🎉</div>
+        <b>복습할 문제가 없어요!</b>
+        <div class="meta" style="margin-top:4px">문제를 틀리면 여기 사다리에 올라와요.</div>
+        <a class="btn" style="margin-top:12px" href="/quiz.html?start=1">퀴즈 풀러 가기</a>
+      </div>`;
+    return;
+  }
+
+  const on = formatDate(waiting.content[0].nextReviewAt).substring(0, 10);
+  box.innerHTML = `
+    <div class="card" style="text-align:center;padding:28px">
+      <div style="font-size:1.6rem">🌱</div>
+      <b>오늘 몫은 끝났어요</b>
+      <div class="meta" style="margin-top:4px">${count}개가 사다리에서 기다리는 중 —
+        가장 이른 복습은 <b>${escapeHtml(on)}</b>부터예요.</div>
+      <a class="btn" style="margin-top:12px" href="/quiz.html?start=1">새 문제 풀러 가기</a>
+    </div>`;
 }
 
 /** 플레이어 결과 화면에서 복귀 — 방금 푼 결과가 반영되게 요약·현황·배지를 다시 불러온다. */
@@ -216,8 +276,8 @@ async function loadStatus() {
     const pager = document.getElementById("pager");
     pager.hidden = data.totalPages <= 1;
     document.getElementById("pageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
-    document.getElementById("prevBtn").disabled = data.page === 0;
-    document.getElementById("nextBtn").disabled = !data.hasNext;
+    document.getElementById("pagerPrev").disabled = data.page === 0;
+    document.getElementById("pagerNext").disabled = !data.hasNext;
   } catch (e) {
     const text = e.status === 401
       ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인해 주세요.</a>`
@@ -227,8 +287,8 @@ async function loadStatus() {
 }
 
 document.getElementById("statusFilter").addEventListener("change", () => { page = 0; loadStatus(); });
-document.getElementById("prevBtn").addEventListener("click", () => { page--; loadStatus(); });
-document.getElementById("nextBtn").addEventListener("click", () => { page++; loadStatus(); });
+document.getElementById("pagerPrev").addEventListener("click", () => { page--; loadStatus(); });
+document.getElementById("pagerNext").addEventListener("click", () => { page++; loadStatus(); });
 </script>
 </body>
 </html>

@@ -15,6 +15,12 @@
  *
  * 채점은 항상 서버가 한다(정답이 브라우저에 없다 — docs/03). 그래서 문제당 1회
  * POST /api/quiz/submit을 보내고, 그 응답(correct/correctAnswer/explanation)으로 화면을 그린다.
+ *
+ * [id는 mountEl 안에서만 찾는다]
+ * 이 파일이 만드는 id(nextBtn·submitBtn·feedback·optArea·keyHint…)는 흔한 이름이라,
+ * 플레이어를 얹는 화면이 같은 이름을 쓰면 한 문서에 id가 둘 생긴다. 그래서 여기서는
+ * document가 아니라 <b>mountEl.querySelector</b>로만 찾는다 — 남의 버튼을 누르지 않기 위해서다.
+ * 실제로 복습 화면의 페이저가 nextBtn을 쓰고 있었다(2026-09-09에 그쪽 이름을 비켰다).
  * ===================================================================== */
 
 /**
