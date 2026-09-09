@@ -49,13 +49,17 @@ class QuizTypeFilterIntegrationTest {
     @Test
     @DisplayName("문제가 생긴 유형은 필터에 나타난다 — 배치가 OX를 뽑기 시작하면 저절로 돌아와야 한다")
     void listsTypesThatHaveProblems() throws Exception {
+        // 둘을 <직접> 만든다. 처음에는 객관식을 만들지 않고 "어느 DB에나 있다"고 기댔는데,
+        // CI는 Flyway가 스키마만 들고 오는 빈 DB에서 돈다(콘텐츠 시드를 두지 않기로 한 규칙).
+        // 그래서 로컬에서는 통과하고 CI에서만 깨졌다 — 테스트가 자기 데이터를 직접 만들어야 하는
+        // 이유가 바로 이것이다. 둘을 보는 목적은 그대로다: 하나만 보면 "방금 만든 것만 담는"
+        // 반대쪽 실수를 못 잡는다.
         create(ProblemType.OX, "O");
+        createMultipleChoice();
 
         mockMvc.perform(get("/api/quiz/types"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", org.hamcrest.Matchers.hasItem("OX")))
-                // 객관식은 개발·운영 DB 어디에나 있다. 함께 나오는지까지 봐야
-                // "방금 만든 것만 담는" 반대쪽 실수를 잡는다.
                 .andExpect(jsonPath("$.data", org.hamcrest.Matchers.hasItem("MULTIPLE_CHOICE")));
     }
 
@@ -71,6 +75,18 @@ class QuizTypeFilterIntegrationTest {
         // 헤더를 하나도 붙이지 않는다. 자유 퀴즈는 로그인 없이도 풀 수 있으므로
         // (AnonymousCheckIntegrationTest) 그 화면을 채우는 이 목록도 함께 열려 있어야 한다.
         mockMvc.perform(get("/api/quiz/types")).andExpect(status().isOk());
+    }
+
+    /** 객관식은 보기가 있어야 저장된다(정답 하나 + 오답 하나가 최소). */
+    private void createMultipleChoice() {
+        adminProblemService.create(new AdminProblemRequest(
+                Domain.SECURITY, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
+                "유형 필터 테스트",
+                "유형 필터 테스트용 객관식 지문 " + UUID.randomUUID(),
+                null, "이 유형이 목록에 어떻게 반영되는지 보려고 만든 문제다.",
+                List.of(new AdminProblemRequest.ChoiceItem("정답 보기", true, null),
+                        new AdminProblemRequest.ChoiceItem("오답 보기", false, "왜 아닌지를 적은 설명이다")),
+                null));
     }
 
     /** 유형만 다른 최소 문제 하나. 보기가 필요 없는 유형이라 answer로 채운다. */
