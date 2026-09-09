@@ -225,6 +225,8 @@ function buildToc(bodyEl) {
 function markCurrentSection(절) {
   const links = new Map([...document.querySelectorAll("#tocList a")]
     .map(a => [a.getAttribute("href").slice(1), a]));
+  const toc = document.getElementById("toc");
+  let 표시중 = null;   // 지금 칠해 둔 링크. 바뀔 때만 목차를 움직인다
 
   function pick() {
     const line = window.innerHeight * 0.3;
@@ -233,8 +235,43 @@ function markCurrentSection(절) {
       if (h.getBoundingClientRect().top <= line) 지금 = h;
       else break;   // 제목은 문서 순서대로라 하나가 아래에 있으면 나머지도 아래다
     }
+    const link = links.get(지금.id);
+    if (link === 표시중) return;   // 같은 절을 계속 읽는 동안에는 아무것도 하지 않는다
+
     links.forEach(a => a.classList.remove("current"));
-    links.get(지금.id)?.classList.add("current");
+    link?.classList.add("current");
+    표시중 = link;
+    if (link) keepInView(link);
+  }
+
+  /**
+   * 칠한 항목이 목차 안에서 보이도록 <b>목차만</b> 굴린다 — 2026-09-09.
+   *
+   * <p>목차는 화면 높이를 넘으면 스스로 스크롤한다(style.css의 max-height + overflow-y).
+   * 긴 문서에서는 열두 절 중 아래쪽을 읽는 동안 <b>칠한 줄이 목차 밖으로 밀려나</b>,
+   * 세워 둔 목차가 "지금 어디쯤"에 답하지 못했다 — 목차를 세운 이유가 바로 그 답인데.
+   *
+   * <p><b>scrollIntoView를 쓰지 않는다.</b> 그 함수는 스크롤이 생기는 조상을 <b>전부</b>
+   * 굴리므로 페이지 자체가 함께 움직인다. 읽던 자리가 튀는 것은 목차가 어긋난 것보다
+   * 훨씬 나쁘다 — 그래서 목차 상자의 scrollTop만 직접 손본다.
+   *
+   * <p>가장자리에 닿았을 때만 움직이고(24px 여유), 늘 가운데로 끌어오지 않는다.
+   * 매 절마다 목차가 재배치되면 시선이 그때마다 옆으로 끌려간다. 눈에 보이는 변화는
+   * <b>필요할 때만</b> 있어야 한다. 부드러운 스크롤도 쓰지 않았다 — 스크롤 도중에
+   * 다시 불릴 수 있어 애니메이션이 서로 겹치면 목차가 떨린다.
+   */
+  function keepInView(link) {
+    // 다 보이면 굴릴 것이 없다(좁은 화면의 접힌 목차, 절이 적은 문서).
+    if (!toc.open || toc.scrollHeight <= toc.clientHeight) return;
+
+    const 여유 = 24;
+    const 항목 = link.getBoundingClientRect();
+    const 상자 = toc.getBoundingClientRect();
+    if (항목.top < 상자.top + 여유) {
+      toc.scrollTop += 항목.top - 상자.top - 여유;
+    } else if (항목.bottom > 상자.bottom - 여유) {
+      toc.scrollTop += 항목.bottom - 상자.bottom + 여유;
+    }
   }
 
   // 프레임당 한 번으로 묶는다. 스크롤 이벤트는 한 프레임에 여러 번 오는데,
@@ -247,6 +284,9 @@ function markCurrentSection(절) {
   };
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll, { passive: true });  // 판정선이 화면 높이에 달렸다
+  // 폭이 바뀌면 목차가 접혔다 펴지거나(1,100px 경계) 높이가 달라져 칠한 줄이 밖으로 나간다.
+  // pick()은 절이 그대로면 일찍 돌아오므로, 자리 맞추기는 따로 한 번 더 부른다.
+  window.addEventListener("resize", () => { if (표시중) keepInView(표시중); }, { passive: true });
   pick();
 }
 
