@@ -26,7 +26,13 @@
  *   reviewMode: true면 문항에 복습 배지(stage)를 표시,
  *   onExit:     "새 퀴즈/목록으로" 버튼을 눌렀을 때 호출(설정 화면 복귀 등),
  *   exitLabel:  그 버튼의 라벨(기본 "새 퀴즈 만들기"),
- *   onFinish:   결과 화면에 도달했을 때 호출(복습 페이지가 현황 갱신에 사용)
+ *   onFinish:   결과 화면에 도달했을 때 호출(복습 페이지가 현황 갱신에 사용),
+ *
+ *   — 아래 넷은 <이미 일부를 푼 세트를 이어서 풀 때> 쓴다(오늘의 퀴즈). 안 주면 예전 그대로다.
+ *   offset:      앞서 푼 문제 수 — 진행 표시가 "3 / 10"처럼 세트 기준이 된다,
+ *   total:       세트 전체 문제 수(진행 표시와 <결과 점수>의 분모),
+ *   offsetScore: 앞서 맞힌 문제 수 — 결과 점수의 앞자리에 더한다,
+ *   retry:       false면 결과 화면에서 "같은 문제 다시 풀기"를 감춘다
  * }
  */
 function startPlayer(mountEl, problems, opts = {}) {
@@ -205,7 +211,22 @@ function startPlayer(mountEl, problems, opts = {}) {
    * 키보드를 안 써도 "3번 보기"라고 말할 수 있어야 한다.
    */
   function keyHint(html) {
-    return getPref("csquiz_keyhint") === "off" ? "" : `<div class="kbd-hint">${html}</div>`;
+    // id를 붙이는 이유: 순서 배열·짝짓기의 조작 안내도 같은 .kbd-hint 모양이라
+    // 클래스로 찾으면 <먼저 나오는 그 줄>이 잡힌다(shrinkKeyHint가 엉뚱한 줄을 지운다).
+    return getPref("csquiz_keyhint") === "off" ? "" : `<div class="kbd-hint" id="keyHint">${html}</div>`;
+  }
+
+  /**
+   * 채점이 끝나면 안내를 <남은 동작>만으로 줄인다 — 2026-09-09.
+   *
+   * <p>제출한 뒤에도 "1~9 보기 선택"이 그대로 남아 있었다. 그 시점에는 숫자키를 눌러도
+   * 아무 일도 안 일어난다({@code keyHandler}가 {@code state.answered}에서 막는다) —
+   * 화면이 <되지 않는 것>을 안내하고 있었던 셈이고, 이 파일이 유형별 안내를 나눈 이유
+   * ({@link #shortcutHint})와 같은 종류의 어긋남이다.
+   */
+  function shrinkKeyHint(isLast) {
+    const hint = mountEl.querySelector("#keyHint");
+    if (hint) hint.innerHTML = `<kbd>Enter</kbd> ${isLast ? "결과 보기" : "다음 문제"}`;
   }
 
   /**
@@ -623,6 +644,7 @@ function startPlayer(mountEl, problems, opts = {}) {
     actions.innerHTML = `<button id="nextBtn" class="btn-lg">${isLast ? "결과 보기 🏁" : "다음 문제 →"}</button>`;
     actions.querySelector("#nextBtn").addEventListener("click", next);
     actions.querySelector("#nextBtn").focus();   // Enter로 바로 넘어갈 수 있게 포커스 이동
+    shrinkKeyHint(isLast);
   }
 
   /* ── 진행/종료 ── */
@@ -645,8 +667,22 @@ function startPlayer(mountEl, problems, opts = {}) {
     state.finished = true;
     document.removeEventListener("keydown", keyHandler);
 
-    const total = problems.length;
-    const pct = Math.round((state.score / total) * 100);
+    // 점수는 <이번에 푼 것>이 아니라 <세트 전체> 기준으로 낸다 — 2026-09-09.
+    //
+    // 오늘의 퀴즈에서 실제로 이런 화면이 나왔다: 열 문제 중 아홉을 풀어 둔 사람이 남은
+    // 한 문제를 맞히자 "1 / 1 · 완벽해요! 정답률 100%"라고 축하했다. 그날 성적은 4/10이었다.
+    // 진행 표시는 이미 세트 기준으로 맞춰 뒀는데(offset·total) 점수만 회차 기준이라,
+    // 같은 흐름 안에서 두 숫자가 다른 것을 세고 있었다.
+    //
+    // opts.total이 없으면(자유 퀴즈·복습) 예전과 똑같다 — 그쪽은 한 회차가 곧 전부다.
+    const total = opts.total || problems.length;
+    const score = (opts.offsetScore || 0) + state.score;
+    const pct = Math.round((score / total) * 100);
+    // 이어서 푼 경우에만 이번 회차 몫을 따로 적는다. 늘 적으면 한 번에 다 푼 사람에게는
+    // 같은 말이 두 줄로 반복된다.
+    const 이어서 = (opts.offset || 0) > 0
+      ? ` <span class="meta">(이번에 푼 ${problems.length}문제 중 ${state.score}개 정답)</span>`
+      : "";
     // 점수대별 한 줄 코멘트 — 숫자만 던지는 것보다 "다음 행동"을 제안하는 쪽이 학습 사이트답다
     const msg = pct === 100 ? "완벽해요! 🏆"
       : pct >= 80 ? "훌륭해요! 조금만 더 다듬으면 완벽 👏"
@@ -677,13 +713,20 @@ function startPlayer(mountEl, problems, opts = {}) {
                틀린 문제가 복습 사다리에 올라가 내일 다시 나옵니다.</p>`}
       </div>`;
 
+    // 다시 풀기를 감출 수 있게 한다(opts.retry === false) — 2026-09-09.
+    // 오늘의 퀴즈에는 이 버튼이 어울리지 않는다: 그 세트는 이미 다 푼 것으로 서버에 기록됐고,
+    // 다시 풀면 같은 문제의 제출 이력과 복습 사다리만 한 번 더 흔든다. 오늘 몫을 끝낸 사람이
+    // 할 일은 다시 푸는 것이 아니라 <복습을 보거나 자유 퀴즈로 더 푸는 것>이다.
+    const retryHtml = opts.retry === false ? ""
+      : `<button id="retryBtn" class="btn-outline">같은 문제 다시 풀기</button>`;
+
     mountEl.innerHTML = `
       <div class="card score-board fade-in">
-        <div class="big">${state.score}<small> / ${total}</small></div>
+        <div class="big">${score}<small> / ${total}</small></div>
         <div class="msg">${msg}</div>
-        <div class="sub">정답률 ${pct}%</div>
+        <div class="sub">정답률 ${pct}%${이어서}</div>
         <div class="actions">
-          <button id="retryBtn" class="btn-outline">같은 문제 다시 풀기</button>
+          ${retryHtml}
           <button id="exitBtn">${escapeHtml(opts.exitLabel || "새 퀴즈 만들기")}</button>
         </div>
       </div>
@@ -691,13 +734,14 @@ function startPlayer(mountEl, problems, opts = {}) {
 
     // 다시 풀기 = 같은 문제로 플레이어 재시작(상태가 클로저라 통째로 초기화된다).
     // 단, 채점 이력(Submission)은 서버에 또 쌓인다 — 재도전도 학습 이력이므로 의도된 동작.
-    mountEl.querySelector("#retryBtn").addEventListener("click", () => startPlayer(mountEl, problems, opts));
+    mountEl.querySelector("#retryBtn")
+      ?.addEventListener("click", () => startPlayer(mountEl, problems, opts));
     mountEl.querySelector("#exitBtn").addEventListener("click", () => {
       if (opts.onExit) opts.onExit();
     });
 
     loadReviewBadge();             // 방금 틀린 문제로 복습 개수가 바뀌었을 수 있다 — 배지 갱신
-    if (opts.onFinish) opts.onFinish(state.score, total, state.misses);
+    if (opts.onFinish) opts.onFinish(score, total, state.misses);
     window.scrollTo({ top: 0 });
   }
 }

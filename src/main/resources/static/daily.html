@@ -58,9 +58,14 @@ load();
 
 async function load() {
   if (!isLoggedIn()) {
-    statusBody.innerHTML =
-      `<div class="alert info">오늘의 퀴즈는 <b>나에게 맞춘 문제 세트</b>라 로그인이 필요해요.
-       <a href="/login.html">로그인하기</a></div>`;
+    // 로그인 외길로 두지 않는다 — 2026-09-09. 이 화면에만 대안이 없었다(첫 화면·문서 끝은
+    // "가입 없이 풀어보기"를 안내한다). 오늘 세트는 <내 기록>이 있어야 만들 수 있는 것이라
+    // 로그인을 요구하는 것은 맞지만, 지금 당장 문제를 풀고 싶은 사람을 돌려보낼 이유는 없다.
+    statusBody.innerHTML = `
+      <div class="alert info">오늘의 퀴즈는 <b>어제까지의 내 기록</b>으로 고른 세트라 로그인이 필요해요.
+        <a href="/login.html">로그인하기</a></div>
+      <p class="meta">아직 계정이 없다면 <a href="/quiz.html">자유 퀴즈</a>로 먼저 풀어봐도 됩니다 —
+        가입은 나중에 해도 그때부터 기록이 쌓입니다.</p>`;
     return;
   }
   try {
@@ -72,13 +77,22 @@ async function load() {
   }
 }
 
+/**
+ * 지금까지 맞힌 개수 — 세트의 items에서 센다(별도 API 없이 correct 플래그로 충분).
+ *
+ * <p>완료 카드가 이미 같은 방식으로 세고 있었는데, 그 계산이 완료 분기 안에만 있어서
+ * 진행 중 화면과 플레이어는 쓸 수 없었다. 한 곳으로 꺼내 셋이 같은 숫자를 말하게 한다.
+ */
+function correctSoFar(data) {
+  return data.items.filter(i => i.correct === true).length;
+}
+
 /** 현황 카드 — 완료/진행 중/미시작 3상태를 한 함수가 그린다(상태가 data에 다 있으므로). */
 function render(data) {
   const { total, solved } = data.progress;
 
   if (data.completed) {
-    // 완료 — 오늘의 정답 수를 세트에서 집계해 보여준다(별도 API 없이 items의 correct로 충분)
-    const correct = data.items.filter(i => i.correct === true).length;
+    const correct = correctSoFar(data);
     statusBody.innerHTML = `
       <div class="card score-board fade-in">
         <div class="big">${correct}<small> / ${total}</small></div>
@@ -109,6 +123,11 @@ function render(data) {
         ? `${total}<small>문제</small>`
         : `${solved}<small> / ${total}</small>`}</div>
       <div class="msg">${solved === 0 ? "오늘의 세트가 준비됐어요" : "이어서 풀어볼까요?"}</div>
+      <!-- 이어서 푸는 사람에게는 지금까지의 성적을 함께 적는다 — 2026-09-09.
+           전에는 "3 / 10"만 있어서 <몇 개 맞았는지>는 세트를 끝내야만 알 수 있었다.
+           그런데 이어서 풀지 말지를 정하는 사람에게 그 숫자가 곧 이유다.
+           시작 전에는 적지 않는다 — 0개 정답은 성적이 아니라 아직 아무 일도 없다는 뜻이다. -->
+      ${solved === 0 ? "" : `<div class="sub">지금까지 ${correctSoFar(data)}개 정답</div>`}
       <div style="margin-top:14px">${compHtml}</div>
       <div class="actions">
         <button id="startBtn" class="btn-lg">${solved === 0 ? "시작하기 🚀" : `이어서 풀기 (${remaining.length}문제) →`}</button>
@@ -127,6 +146,12 @@ function render(data) {
       // 플레이어가 "1 / 9"처럼 세어, 바로 앞 화면의 "1 / 10"과 어긋난다(player.js render 주석).
       offset: solved,
       total,
+      // 결과 점수도 같은 기준이어야 한다 — 2026-09-09. 안 주면 아홉 문제를 풀어 둔 사람이
+      // 남은 하나를 맞혔을 때 "1 / 1 · 정답률 100%"가 뜬다(그날 성적은 4/10인데).
+      offsetScore: correctSoFar(data),
+      // 오늘 몫을 끝낸 사람에게 "같은 문제 다시 풀기"는 권할 일이 아니다. 세트는 이미 다 푼
+      // 것으로 기록됐고, 다시 풀면 같은 문제의 제출 이력과 복습 사다리만 한 번 더 흔든다.
+      retry: false,
       exitLabel: "오늘의 퀴즈로",
       onExit: () => {
         // 복귀 = 현황 재조회. 방금 제출들이 서버 세트에 반영됐으므로(submit이 한 트랜잭션으로
