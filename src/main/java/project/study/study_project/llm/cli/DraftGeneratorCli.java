@@ -52,6 +52,12 @@ import java.util.stream.Collectors;
  * 어긋난다. 이 프로그램은 <b>모델이 준 것을 있는 그대로</b> 파일에 남긴다 — 나중에
  * "왜 이 문제가 버려졌지?"를 원본과 대조해 볼 수 있다는 부수 이점도 있다(프롬프트 개선 재료).
  *
+ * <p><b>그 원칙의 유일한 예외: 지문이 빈 항목.</b> {@link #dropBlankQuestions}가 저장 직전에
+ * 배열에서 뺀다. 원본을 남기는 목적이 "나중에 읽어 볼 재료"인데, 물음이 없는 항목에는
+ * 읽을 것이 없다 — 해설과 보기만 남은 껍데기로는 무엇을 물으려 했는지 복원할 수 없으므로
+ * 프롬프트를 고칠 재료도 되지 못한다. 사유는 {@link #reportYield}가 이미 번호와 함께
+ * 요약 화면에 적어 두므로, 무슨 일이 있었는지는 파일이 아니라 로그에 남는다.
+ *
  * <p><b>실패하면 반드시 0이 아닌 종료 코드로 죽는다.</b> 그래야 Actions job이 실패로 표시되고
  * GitHub이 저장소 소유자에게 메일을 보낸다. 기존 {@code LlmGenerationScheduler}는 예외를 삼키고
  * 로그만 남겨서 "조용히 죽는" 것이 문제였는데(그래서 주간 감시 워크플로를 따로 뒀다),
@@ -286,19 +292,29 @@ public final class DraftGeneratorCli {
         // 검수함에 문제가 적게 들어온 것을 사람이 먼저 눈치챈 뒤에야 파일을 열어 보고 알았다.
         reportYield(checkYield(problems, count, type, difficulty, source), date);
 
+        // ── 7-2. 껍데기 걷어내기 ──────────────────────────────────
+        // 점검을 <끝낸 뒤에> 뺀다. 순서가 거꾸로면 경고가 "모델 응답 3개"라고 말하게 되어
+        // 모델이 실제로 몇 개를 돌려줬는지가 로그에서 사라지고, 결함 줄의 번호(4번·5번)도
+        // 원본과 어긋난다 — 프롬프트를 고칠 때 보는 것이 바로 그 두 가지다.
+        List<GeneratedProblemItem> kept = dropBlankQuestions(problems);
+
         // ── 8. 파일로 저장 ────────────────────────────────────────
         GeneratedBatchFile batch = new GeneratedBatchFile(
                 "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
                 date.toString(), Instant.now().toString(),
                 domain, difficulty, type, model,
-                source == null ? null : source.slug(), problems);
+                source == null ? null : source.slug(), kept);
 
         Files.createDirectories(outDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
         // 성공한 날도 요약에 남긴다. 건너뛴 날만 적으면 "요약이 비었다"가 두 가지 뜻을
         // 갖게 된다 — 잘 돌았거나, 요약 쓰기가 실패했거나. 둘을 구분할 수 있어야 한다.
+        //
+        // 여기 찍는 수는 <파일에 든 개수>다. 전에는 모델 응답 개수를 찍어서, 바로 위 경고가
+        // "3개만 쓸 수 있다"고 적은 날에도 이 줄은 "5건"이라고 했다(2026-09-13). 같은 화면에
+        // 두 수가 나란히 있으면 사람은 큰 쪽을 믿는다 — 검수함을 열어 보고서야 어긋남을 안다.
         announce("✅ **%s 문제 초안 %d건** — %s × %s, 근거 문서 %s → `%s`"
-                .formatted(date, problems.size(), domain, difficulty,
+                .formatted(date, kept.size(), domain, difficulty,
                         source == null ? "없음(폴백)" : source.slug(), outFile));
     }
 
@@ -1292,6 +1308,33 @@ public final class DraftGeneratorCli {
         warnings.addAll(ProblemItemRule.batchWarningsOf(problems, difficulty, type));
 
         return new YieldCheck(requested, problems.size(), usable, defects, warnings);
+    }
+
+    /**
+     * 지문이 빈 항목을 배열에서 뺀다 — 저장 직전에 한 번만 부른다.
+     *
+     * <p><b>왜 껍데기를 파일에 남기지 않는가.</b> 이 클래스의 원칙은 "모델이 준 것을 있는 그대로
+     * 남긴다"이고, 그 이유는 나중에 원본과 대조해 프롬프트를 고치기 위해서다. 그런데 물음이 없는
+     * 항목에는 대조할 것이 없다 — 해설과 보기만 보고 "무엇을 물으려 했는가"를 되짚을 수 없으므로
+     * 재료가 되지 못한다. 남겨 두면 <b>파일 개수만 부풀린다</b>.
+     *
+     * <p><b>실제로 겪은 일.</b> 2026-09-13 배치는 요약 화면에 두 줄을 나란히 찍었다 —
+     * "요청 5개 중 3개만 쓸 수 있습니다"와 "문제 초안 5건". 아래 줄이 모델 응답 개수를 세고
+     * 있었기 때문이다. 같은 화면에서 두 수가 다르면 사람은 큰 쪽을 믿고 넘어가고, 검수함을
+     * 열어 본 뒤에야 어긋남을 안다. 세는 대상을 <b>파일에 든 것</b>으로 맞춰 그 어긋남을 없앤다.
+     *
+     * <p><b>다른 결함은 건드리지 않는다.</b> 정답이 둘인 문제, 보기를 번호로 가리키는 해설 따위는
+     * 그대로 남겨 파일에 들어간다. 그런 항목은 읽을 수 있으니 대조할 재료가 되고, 거르는 일은
+     * 흡수 단계({@code LlmProblemService})의 몫이다 — 같은 규칙을 두 곳에 두지 않는다는
+     * 클래스 주석의 원칙 그대로다.
+     *
+     * <p>0건이 되는 경우는 여기까지 오지 않는다. 바로 앞의 {@link #reportYield}가
+     * {@code usable == 0}에서 이미 job을 실패시킨다.
+     */
+    static List<GeneratedProblemItem> dropBlankQuestions(List<GeneratedProblemItem> problems) {
+        return problems.stream()
+                .filter(item -> !ProblemItemRule.hasBlankQuestion(item))
+                .toList();
     }
 
     /**

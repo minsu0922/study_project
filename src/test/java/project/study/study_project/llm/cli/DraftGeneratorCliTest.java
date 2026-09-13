@@ -591,6 +591,71 @@ class DraftGeneratorCliTest {
                 .contains("지문이 비어 있음");
     }
 
+    /* ══ 껍데기 걷어내기 ═══════════════════════════════════════ */
+
+    /**
+     * <b>2026-09-13 배치를 그대로 재현한다.</b> 중급 5개를 요청해 5개를 받았는데 4·5번이
+     * 지문 없이 왔다. 요약 화면에는 "요청 5개 중 3개만 쓸 수 있습니다" 바로 아래에
+     * "문제 초안 5건"이 찍혔다 — 성공 줄이 <b>모델 응답 개수</b>를 세고 있었기 때문이다.
+     *
+     * <p>같은 화면의 두 수가 다르면 사람은 큰 쪽을 믿는다. 실제로 검수함에 3개만 들어온 것을
+     * 사람이 먼저 눈치챈 뒤에야 파일을 열어 보고 알았다. 세는 대상을 파일에 든 것으로 맞춘다.
+     */
+    @Test
+    @DisplayName("지문 없는 껍데기는 저장 목록에서 빠진다 — 2026-09-13 배치 재현(5개 응답, 2개가 지문 없음)")
+    void dropsBlankQuestionsBeforeSaving() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("순환 참조는 언제 드러나는가?", goodExplanation()),
+                multipleChoice("생성자 인자가 늘어 보이는 것이 의도된 이유는?", goodExplanation()),
+                multipleChoice("생성자 주입과 수정자 주입을 가르는 기준은?", goodExplanation()),
+                // 껍데기 둘: 해설·보기·제목은 충실한데 물음만 없다. 실제 파일이 이 모양이었다.
+                withTitle(new GeneratedProblemItem("", "", goodExplanation(), fourChoices())),
+                withTitle(new GeneratedProblemItem("", "", goodExplanation(), fourChoices())));
+
+        List<GeneratedProblemItem> kept = DraftGeneratorCli.dropBlankQuestions(problems);
+
+        assertThat(kept).as("파일에 남는 것은 물음이 있는 셋뿐이다").hasSize(3);
+        assertThat(kept).extracting(GeneratedProblemItem::question)
+                .as("남은 것의 순서는 모델이 준 그대로여야 한다")
+                .containsExactly("순환 참조는 언제 드러나는가?",
+                        "생성자 인자가 늘어 보이는 것이 의도된 이유는?",
+                        "생성자 주입과 수정자 주입을 가르는 기준은?");
+    }
+
+    /**
+     * 걷어내는 것은 <b>지문이 빈 것뿐</b>이다. 정답이 둘인 문제처럼 읽을 수 있는 결함은 파일에
+     * 남겨야 한다 — 원본과 대조해 프롬프트를 고치는 것이 이 파일을 남기는 이유이고
+     * ({@code DraftGeneratorCli} 클래스 주석), 거르는 일은 흡수 단계의 몫이다.
+     *
+     * <p>여기서 {@code defectOf != null}로 뭉뚱그려 거르면 그 재료가 통째로 사라진다.
+     * 이 테스트가 막으려는 것이 바로 그 한 줄짜리 '단순화'다.
+     */
+    @Test
+    @DisplayName("읽을 수 있는 결함은 파일에 남긴다 — 거르는 일은 흡수 단계의 몫이다")
+    void keepsReadableDefectsForComparison() {
+        GeneratedProblemItem twoCorrect = withTitle(new GeneratedProblemItem(
+                "정답이 둘인 문제", "", goodExplanation(),
+                List.of(new GeneratedProblemItem.GeneratedChoice("정답 보기", true),
+                        new GeneratedProblemItem.GeneratedChoice("또 정답", true),
+                        new GeneratedProblemItem.GeneratedChoice("오답 1", false),
+                        new GeneratedProblemItem.GeneratedChoice("오답 2", false))));
+
+        assertThat(DraftGeneratorCli.dropBlankQuestions(List.of(twoCorrect)))
+                .as("규약 위반이어도 읽을 수 있으면 대조할 재료가 된다")
+                .containsExactly(twoCorrect);
+    }
+
+    @Test
+    @DisplayName("멀쩡한 날에는 아무것도 빠지지 않는다 — 평소 경로가 달라지면 안 된다")
+    void keepsEverythingWhenNothingIsBlank() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("문제 1", goodExplanation()),
+                multipleChoice("문제 2", goodExplanation()));
+
+        assertThat(DraftGeneratorCli.dropBlankQuestions(problems))
+                .containsExactlyElementsOf(problems);
+    }
+
     @Test
     @DisplayName("요청한 만큼 다 오면 부족이 아니다 — 평소의 성공 경로")
     void fullYieldIsNotShort() {

@@ -79,6 +79,23 @@ public final class ProblemItemRule {
     }
 
     /**
+     * 물음이 없는 껍데기인가. 해설·보기가 아무리 충실해도 지문이 없으면 문제가 아니다.
+     *
+     * <p><b>왜 {@link #defectOf}와 따로 물어볼 수 있게 두는가.</b> 부르는 쪽이 둘인데 하는 일이
+     * 다르다 — {@code defectOf}는 "왜 버렸는지"를 사람에게 적어 주고, {@code DraftGeneratorCli}는
+     * 이 항목을 <b>저장 파일에서 뺀다</b>. 뒤쪽은 사유 문자열이 필요 없고, 그렇다고
+     * {@code defectOf != null}로 대신할 수도 없다: 그러면 정답이 둘인 문제나 번호를 가리키는
+     * 해설까지 함께 사라져 <b>원본과 대조할 재료</b>가 없어진다. 그건 흡수 쪽에서 걸러야 할 몫이다.
+     *
+     * <p>2026-08-25에 {@code hasBlankExplanation}을 지운 것과 혼동하지 말 것. 그건 <b>아무도
+     * 부르지 않는데</b> 같은 판단을 두 벌로 만든 메서드였다. 이쪽은 판정을 여기 한 벌만 두고
+     * {@code defectOf}도 이 메서드를 부른다 — 갈라질 자리가 없다.
+     */
+    public static boolean hasBlankQuestion(GeneratedProblemItem item) {
+        return isBlank(item.question());
+    }
+
+    /**
      * 항목이 규약을 어겼으면 <b>사람이 읽을 수 있는 사유</b>를, 멀쩡하면 {@code null}을 돌려준다.
      *
      * <p>불리언이 아니라 사유 문자열을 돌려주는 이유: 부르는 쪽 둘 다 결국 "왜 버렸는지"를
@@ -93,7 +110,7 @@ public final class ProblemItemRule {
      * @param type 문제 유형. 객관식이냐에 따라 규약이 통째로 달라진다
      */
     public static String defectOf(GeneratedProblemItem item, ProblemType type) {
-        if (isBlank(item.question())) {
+        if (hasBlankQuestion(item)) {
             return "지문이 비어 있음";
         }
 
