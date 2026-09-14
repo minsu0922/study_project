@@ -3,7 +3,7 @@
   "topics" : [ {
     "id" : 56,
     "domain" : "BACKEND_FRAMEWORK",
-    "topic" : "DI와 IoC — 생성자 주입을 쓰는 이유(순환 참조·불변·테스트)",
+    "topic" : "DI와 IoC — 객체를 직접 만들지 않고 받아 쓴다는 것이 무슨 뜻인가",
     "memo" : "스프링 1단계. 개념 소개가 되지 않게, 필드 주입으로는 못 하는 일 세 가지를 축으로 꿸 것.",
     "lastUsedAt" : "2026-09-11",
     "usedCount" : 1
@@ -87,10 +87,6 @@
     "domain" : "DATABASE",
     "topic" : "SELECT의 실행 순서 — WHERE와 HAVING이 갈리는 지점",
     "memo" : "DB 1단계. 문법 소개가 아니라 '집계 전이냐 후냐' 한 축으로 설명할 것."
-  }, {
-    "id" : 2,
-    "domain" : "BACKEND_FRAMEWORK",
-    "topic" : "JPA 영속성 컨텍스트의 1차 캐시와 변경 감지(dirty checking)"
   }, {
     "id" : 9,
     "domain" : "NETWORK",
