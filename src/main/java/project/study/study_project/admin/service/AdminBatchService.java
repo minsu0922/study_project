@@ -130,7 +130,21 @@ public class AdminBatchService {
                 generatedDocumentDraftRepository.countByStatus(DraftStatus.PENDING),
                 recentImports(),
                 waitingFiles(dir),
-                blockedDates(dir, today));
+                blockedDates(dir, today),
+                nextDocumentDate(plan, today));
+    }
+
+    /**
+     * 대기열의 "다음 차례" 범위가 실제로 쓰일 날 — 오늘이 문서일이면 오늘이다.
+     *
+     * <p>주기 길이를 여기서 다시 세지 않고 {@link GenerationSchedule#CYCLE_DAYS}를 쓴다.
+     * {@code planOf}가 {@code dayInCycle}을 문서 날짜와의 차이로 얻는 것과 같은 이유다 —
+     * 같은 계산이 두 벌이 되면 <b>화면만 조용히 틀린다</b>.
+     */
+    private LocalDate nextDocumentDate(AdminBatchStatus.TodayPlan plan, LocalDate today) {
+        return plan.documentDay()
+                ? today
+                : plan.documentDate().plusDays(GenerationSchedule.CYCLE_DAYS);
     }
 
     /**

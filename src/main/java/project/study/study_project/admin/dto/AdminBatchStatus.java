@@ -58,7 +58,23 @@ public record AdminBatchStatus(
         long pendingDocuments,
         List<ImportRecord> recentImports,
         List<String> waitingFiles,
-        List<BlockedDate> blockedDates
+        List<BlockedDate> blockedDates,
+
+        /*
+         * 다음 문서일 — 대기열의 "다음 차례" 범위가 실제로 쓰일 날(2026-09-14 신설).
+         *
+         * 대기열 화면은 어느 범위가 다음인지는 보여 주지만 <언제인지>는 말하지 않았다.
+         * 4일 주기라 "맨 위로 올렸는데 언제 나오지"가 매번 손계산이었다 — 달력을 열어
+         * 문서일 칸을 세야 했다.
+         *
+         * 이 값을 대기열 쪽 API가 아니라 여기에 둔 이유: 날짜 계산에 batchDomains와
+         * cycleAnchor가 필요한데, 그건 이 서비스가 이미 들고 있는 설정이다.
+         * TopicQueueService에 넘기면 대기열이 배치 주기를 알게 되고, 그때부터 같은
+         * 계산이 두 곳에서 돌 수 있다.
+         *
+         * 오늘이 문서일이면 오늘이다 — "다음 차례가 언제냐"에 대한 답으로 오늘이 맞다.
+         */
+        LocalDate nextDocumentDate
 ) {
 
     /**

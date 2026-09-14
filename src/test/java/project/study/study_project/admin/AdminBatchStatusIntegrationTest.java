@@ -189,6 +189,31 @@ class AdminBatchStatusIntegrationTest {
     }
 
     /**
+     * <b>다음 문서일이 주기와 맞는지</b>(2026-09-14 신설).
+     *
+     * <p>대기열의 "다음 차례" 배지에 붙는 날짜다. 4일 주기라 "맨 위로 올렸는데 언제 나오지"가
+     * 매번 손계산이었는데, 그 계산을 화면이 하게 됐으니 <b>틀리면 사람이 그대로 믿는다</b>.
+     *
+     * <p>여기서도 날짜를 글자로 박지 않는다. 오늘이 주기의 며칠차인지는 실행하는 날마다
+     * 달라서, 지켜야 할 것은 특정 날짜가 아니라 <b>주기와의 관계</b>다.
+     */
+    @Test
+    @DisplayName("다음 문서일은 이번 주기의 다음 0일차 — 오늘이 문서일이면 오늘이다")
+    void reportsNextDocumentDate() {
+        AdminBatchStatus status = adminBatchService.getStatus();
+        AdminBatchStatus.TodayPlan plan = status.plan();
+
+        LocalDate expected = plan.documentDay()
+                ? status.today()
+                : plan.documentDate().plusDays(4);
+
+        assertThat(status.nextDocumentDate()).isEqualTo(expected);
+        assertThat(status.nextDocumentDate())
+                .as("지나간 날이면 '언제 나오나'의 답이 될 수 없다")
+                .isAfterOrEqualTo(status.today());
+    }
+
+    /**
      * <b>화면이 배치와 같은 편을 가리키는지</b>(2026-09-14 신설).
      *
      * <p>이 화면이 존재하는 이유가 "설정과 실제가 어긋난 것을 한눈에 보는 것"인데, 정작 이 줄이

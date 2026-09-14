@@ -212,6 +212,17 @@ let topicQuery = "";
 let topicPage = 0;
 const TOPIC_PAGE_SIZE = 20;
 
+/**
+ * 다음 문서일. 배치 현황에서 한 번 받아 두고 "다음 차례" 배지에 붙인다(2026-09-14).
+ *
+ * <p>대기열은 어느 범위가 다음인지는 보여 줬지만 <b>언제인지</b>는 말하지 않았다.
+ * 4일 주기라 "맨 위로 올렸는데 언제 나오지"가 매번 손계산이었다.
+ *
+ * <p>못 받아도 화면은 그대로 돈다 — 날짜는 <b>덧붙이는 정보</b>이지 목록의 조건이 아니다.
+ * 배치 현황이 죽었다고 주제 관리까지 막을 이유가 없다.
+ */
+let nextDocumentDate = null;
+
 const QUESTION_KINDS = [
   ["SITUATION", "상황 적용"],
   ["COMPARISON", "비교·선택"],
@@ -696,6 +707,15 @@ function cancelEditTopic() {
 async function loadTopicQueue() {
   const query = topicQuery ? `&q=${encodeURIComponent(topicQuery)}` : "";
   const data = await api(`/api/admin/topic-queue?page=${topicPage}&size=${TOPIC_PAGE_SIZE}${query}`);
+  // 한 번만 받아 둔다. 목록을 다시 그릴 때마다 부르면 순서를 한 칸씩 옮기는 동안
+  // 같은 값을 몇 번이고 가져온다 — 날짜는 그 사이에 바뀌지 않는다.
+  if (nextDocumentDate === null) {
+    try {
+      nextDocumentDate = (await api("/api/admin/batch-status")).nextDocumentDate || "";
+    } catch (e) {
+      nextDocumentDate = "";   // 못 받으면 날짜만 빠지고 목록은 그대로 뜬다
+    }
+  }
   const items = data.content;
   const table = document.getElementById("topicTable");
 
@@ -738,7 +758,7 @@ async function loadTopicQueue() {
         <td>${escapeHtml(t.domainLabel)}</td>
         <td class="wrap">
           ${escapeHtml(t.topic)}
-          ${t.next ? ` <span class="badge orange">다음 차례</span>` : ""}
+          ${t.next ? ` <span class="badge orange">다음 차례${nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : ""}</span>` : ""}
           ${t.memo ? `<div class="meta">${escapeHtml(t.memo)}</div>` : ""}
         </td>
         <td>${t.usedCount === 0 ? `<span class="meta">—</span>` : `${t.usedCount}편`}</td>
@@ -751,6 +771,10 @@ async function loadTopicQueue() {
                걸러진 목록에서도 결과가 눈에 보인다. 오히려 고칠 줄을 찾는 가장 빠른
                길이 검색이라, 여기서 잠그면 기능이 반쪽이 된다. -->
           <button class="btn-outline" data-action="edit" title="분야·주제·메모를 고칩니다(사용 기록과 순서는 그대로)">수정</button>
+          <!-- 손으로 돌릴 때 쓸 값을 그대로 복사한다(2026-09-14). 이 화면에서 워크플로를
+               직접 부르지는 않는다 — 그러려면 GitHub 토큰을 앱이 들고 있어야 하고, 그건
+               이 기능이 없애려는 수고(세 칸 옮겨 적기)에 비해 값이 안 맞는다. -->
+          <button class="btn-outline" data-action="copy" title="Actions 수동 실행에 넣을 값을 복사합니다">복사</button>
           <!-- 이력 지우기는 <쓴 줄에만> 뜬다. 안 쓴 줄에 두면 눌러도 아무 일이 없는
                버튼이 63줄에 붙는데, 그런 버튼은 목록을 읽는 눈만 어지럽힌다. -->
           ${t.usedCount === 0 && !t.lastUsedAt
@@ -770,6 +794,11 @@ async function loadTopicQueue() {
       if (item) startEditTopic(item);
       return;
     }
+    if (btn.dataset.action === "copy") {
+      const item = items.find(t => t.id === id);
+      if (item) copyWorkflowInputs(item);
+      return;
+    }
     if (btn.dataset.action === "delete") {
       // 2단계 확인 — 다시 적으면 그만이지만, 몇 편 썼는지의 기록은 되살릴 수 없다
       armedAction(btn, () => deleteTopic(id));
@@ -783,6 +812,37 @@ async function loadTopicQueue() {
     }
     moveTopic(id, { top: "TOP", up: "UP", down: "DOWN" }[btn.dataset.action]);
   };
+}
+
+/**
+ * Actions 수동 실행에 넣을 값을 클립보드로 — 2026-09-14 신설.
+ *
+ * <p>이 화면에서 워크플로를 직접 부르지 않는 이유: 그러려면 앱이 GitHub 토큰을 들고 있어야
+ * 하고, 그 키를 어디에 두고 누가 누를 수 있게 할지가 따라온다. 없애려는 수고가
+ * <b>세 칸 옮겨 적기</b>인 것에 비하면 값이 안 맞는다.
+ *
+ * <p>붙여넣기 쉬운 형태가 아니라 <b>읽고 옮겨 적기 쉬운 형태</b>로 만든다. 워크플로 화면은
+ * 칸이 따로따로라 한 덩어리를 통째로 붙여 넣을 데가 없다 — 칸 이름과 값을 나란히 둔다.
+ *
+ * <p>type이 늘 document인 이유: 대기열은 <b>문서일에만</b> 쓰인다. 문제는 그 문서를 근거로
+ * 뒤따르는 사흘이 만들고, 거기엔 주제를 따로 주지 않는다.
+ */
+async function copyWorkflowInputs(item) {
+  const text = [
+    `type=document`,
+    `domain=${item.domain}`,
+    `topic=${item.topic}`,
+  ].join("\n");
+
+  const msg = document.getElementById("tMessage");
+  try {
+    await navigator.clipboard.writeText(text);
+    showOk(msg, "복사했습니다. Actions → llm-daily → Run workflow 에 넣으세요.");
+  } catch (e) {
+    // 클립보드는 권한·보안 컨텍스트에 따라 막힌다. 그때 아무 일도 안 일어나면
+    // "눌렀는데 왜 안 되지"가 되므로, 눈으로 읽고 옮겨 적을 수 있게 그대로 보여 준다.
+    showOk(msg, `복사가 막혀 있습니다. 아래 값을 옮겨 적으세요:\n${text}`);
+  }
 }
 
 /** 주제 목록 페이저. 검수 목록의 renderPager와 같은 모양이지만 파일이 달라 여기 한 벌 둔다. */
