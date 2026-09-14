@@ -20,7 +20,10 @@ import project.study.study_project.llm.support.TopicQueue;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 개념 문서 <b>주제 범위</b> 목록 — 관리자 화면의 입력을 받고, 배치가 남긴 사용 기록을 되돌려 받는다.
@@ -76,6 +79,29 @@ public class TopicQueueService {
         UP, DOWN, TOP
     }
 
+    /**
+     * 목록을 무슨 순서로 보여 줄지 — 2026-09-14 신설.
+     *
+     * <p><b>정렬은 보기 전용이다.</b> {@link #MANUAL}이 아닌 동안 화면은 ↑↓⤒와 일괄 이동을
+     * 잠근다. "한 칸 위로"는 화면 위의 줄이 아니라 <b>전체 순서의 이웃</b>과 자리를 바꾸는
+     * 동작이라, 다른 기준으로 정렬해 놓고 누르면 <b>눌러도 줄이 안 움직인다</b>.
+     * 검색 중에 이동을 잠그는 것과 같은 사정이고, 이 클래스가 {@link #getAll}을 늘
+     * 사람이 정한 순서로 돌려주는 이유이기도 하다.
+     */
+    public enum TopicSort {
+
+        /** 사람이 정한 순서({@code sortOrder}). 이동 버튼이 뜻을 갖는 유일한 모드다. */
+        MANUAL,
+
+        /**
+         * 다음 차례에 가까운 순 — <b>안 쓴 것 먼저 → 가장 오래 안 쓴 것 → 적어 둔 순서</b>.
+         *
+         * <p>{@link #pickNext}가 하나를 고르는 규칙을 목록 전체에 편 것이다. 그래서 이 모드의
+         * 첫 줄이 곧 "다음 차례"가 된다 — 배지와 맨 위가 어긋나면 규칙이 갈라진 것이다.
+         */
+        NEXT_UP
+    }
+
     /* ── 조회 ─────────────────────────────────────────────────── */
 
     /**
@@ -108,18 +134,45 @@ public class TopicQueueService {
      * @param q 주제·메모에서 찾을 말. 비어 있으면 거르지 않는다(대소문자 무시)
      */
     @Transactional(readOnly = true)
-    public PageResponse<TopicQueueItemResponse> search(String q, Pageable pageable) {
+    public PageResponse<TopicQueueItemResponse> search(String q, TopicSort sort, Pageable pageable) {
         List<TopicQueueItemResponse> all = getAll();
 
         String keyword = (q == null) ? "" : q.trim().toLowerCase();
         List<TopicQueueItemResponse> matched = keyword.isEmpty() ? all
                 : all.stream().filter(item -> matches(item, keyword)).toList();
 
+        // 거른 <뒤에> 정렬한다. 순서를 먼저 잡아도 결과는 같지만, 거르는 일이 늘 더 싸다.
+        // order 칸은 그대로 둔다 — 그 값은 <사람이 정한 순서에서 몇 번째>라는 뜻이고,
+        // 정렬 모드에서도 "원래 자리"를 알려 주는 것이 이 칸의 쓸모다.
+        matched = sortBy(matched, sort);
+
         int from = (int) Math.min(pageable.getOffset(), matched.size());
         int to = Math.min(from + pageable.getPageSize(), matched.size());
         // PageImpl을 거쳐 PageResponse.from을 탄다 — 변환 지점을 하나로 두면 응답 규격이
         // 바뀔 때 고칠 곳도 하나다(PageResponse 클래스 주석).
         return PageResponse.from(new PageImpl<>(matched.subList(from, to), pageable, matched.size()));
+    }
+
+    /**
+     * 정렬 — {@link TopicSort#NEXT_UP}일 때만 순서를 바꾼다.
+     *
+     * <p>{@code order}(사람이 정한 순서에서 몇 번째)를 마지막 기준으로 쓴다. 이러면
+     * <b>조건이 같을 때 사람이 정한 순서가 그대로 남는다</b> — {@link #pickNext}가
+     * "먼저 온 항목이 자리를 지킨다"로 같은 타이브레이커를 쓰므로, 이 모드의 첫 줄과
+     * "다음 차례" 배지가 늘 같은 줄을 가리킨다. 둘이 어긋나면 규칙이 갈라진 것이다.
+     */
+    private List<TopicQueueItemResponse> sortBy(List<TopicQueueItemResponse> items, TopicSort sort) {
+        if (sort != TopicSort.NEXT_UP) {
+            return items;
+        }
+        return items.stream()
+                // 안 쓴 것이 먼저다. LocalDate는 null을 비교할 수 없어 <안 썼는가>를 별도 축으로 뽑는다 —
+                // nullsFirst로 묶어도 되지만, 규칙 문장("안 쓴 것 먼저")이 코드에 그대로 보이는 편이 낫다.
+                .sorted(Comparator.comparing((TopicQueueItemResponse i) -> i.lastUsedAt() != null)
+                        .thenComparing(TopicQueueItemResponse::lastUsedAt,
+                                Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparingInt(TopicQueueItemResponse::order))
+                .toList();
     }
 
     /** 주제와 메모에서 찾는다. 분야는 목록에 배지로 보이고 눈으로 훑기 쉬워 검색어에 넣지 않는다. */
@@ -245,6 +298,52 @@ public class TopicQueueService {
         // add와 같은 이유로 next는 false다 — 판정에 목록 전체가 필요하고, 화면은 수정 직후
         // 목록을 다시 불러 정확한 값을 받는다.
         return TopicQueueItemResponse.from(item, false, (int) repository.count());
+    }
+
+    /**
+     * 고른 범위들을 <b>한꺼번에</b> 맨 위로 — 2026-09-14 신설.
+     *
+     * <p><b>왜 필요한가.</b> {@link Direction#TOP}은 한 줄씩이라 스무 개를 당기려면 스무 번
+     * 눌러야 하고, 더 나쁜 것은 <b>누른 순서의 역순으로 쌓인다</b>는 점이다(나중에 누른 것이
+     * 위로 간다). 셋만 올려도 순서가 뒤집혀, 올린 뒤 다시 ↑↓로 정렬해야 했다.
+     *
+     * <p><b>클릭 순서가 아니라 지금 목록 순서를 지킨다.</b> 고른 것들끼리의 상대 순서는
+     * 건드리지 않고 덩어리째 앞으로 옮긴다. 클릭 순서를 쓰면 스무 개를 고르는 동안 순서를
+     * 머리로 기억해야 하고, 체크를 한 번 풀었다 다시 누르면 그 줄만 맨 뒤로 간다 —
+     * <b>고르는 일과 순서를 정하는 일은 다른 일</b>이다. 세부 순서는 옮긴 뒤 ↑↓로 잡으면 된다.
+     *
+     * <p><b>전부 다시 번호를 매긴다.</b> {@link #move}가 두 행만 맞바꾸는 것과 다른데,
+     * 여기서는 어차피 고른 것 전부와 그 앞에 있던 것 전부가 자리를 옮긴다 — 최소 갱신을
+     * 계산해 봐야 거의 전부이고, 그 계산이 틀리면 순서값이 겹쳐 정렬이 흔들린다.
+     * 여든 줄 규모에서 한 번의 통째 번호 매기기가 제일 단순하고 안전하다.
+     *
+     * <p>없는 id는 조용히 지나간다. 여러 쪽에 걸쳐 고르는 동안 다른 곳에서 지워졌을 수 있는데,
+     * 그 하나 때문에 나머지 열아홉의 이동을 통째로 막을 이유가 없다.
+     */
+    @Transactional
+    public void moveToTop(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        Set<Long> wanted = new LinkedHashSet<>(ids);
+        List<TopicQueueItem> all = repository.findAllByOrderBySortOrderAsc();
+
+        List<TopicQueueItem> picked = all.stream().filter(i -> wanted.contains(i.getId())).toList();
+        if (picked.isEmpty()) {
+            return;   // 고른 것이 전부 사라졌다 — 파일을 괜히 다시 내보내지 않는다
+        }
+        List<TopicQueueItem> rest = all.stream().filter(i -> !wanted.contains(i.getId())).toList();
+
+        int order = 1;
+        for (TopicQueueItem item : picked) {
+            item.changeOrder(order++);
+        }
+        for (TopicQueueItem item : rest) {
+            item.changeOrder(order++);
+        }
+
+        log.info("주제 범위 {}건을 맨 위로 옮겼습니다 — 커밋해야 다음 배치부터 반영됩니다", picked.size());
+        events.publishEvent(new TopicQueueChanged());
     }
 
     /**

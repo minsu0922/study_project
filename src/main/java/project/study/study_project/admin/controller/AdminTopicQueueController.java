@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import project.study.study_project.admin.dto.AdminTopicQueueMoveRequest;
 import project.study.study_project.admin.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
@@ -67,9 +68,10 @@ public class AdminTopicQueueController {
     @GetMapping
     public ApiResponse<PageResponse<TopicQueueItemResponse>> list(
             @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "MANUAL") TopicQueueService.TopicSort sort,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(topicQueueService.search(q, pageable));
+        return ApiResponse.ok(topicQueueService.search(q, sort, pageable));
     }
 
     /** 등록된 범위 수 — 탭 배지용. 0이면 배치가 모델 자동 선택으로 돈다. */
@@ -120,6 +122,25 @@ public class AdminTopicQueueController {
      * {@code /move-to-top}을 따로 두면 화면이 두 주소를 알아야 하고, 다음에 "맨 아래로"가
      * 생기면 셋이 된다. 방향은 이미 인자로 받고 있으니 값 하나를 늘리는 편이 맞다.
      */
+    /**
+     * 고른 범위들을 한꺼번에 맨 위로 — 2026-09-14 신설.
+     *
+     * <p>{@code /{id}/move?direction=TOP}을 여러 번 부르는 것과 <b>결과가 다르다</b>.
+     * 그쪽은 한 번에 한 줄이라 나중에 부른 것이 위로 가서 순서가 뒤집힌다. 이 API는
+     * 고른 것들끼리의 상대 순서를 지킨 채 덩어리째 옮긴다.
+     *
+     * <p>id를 쿼리스트링이 아니라 몸통으로 받는 이유: 스무 개 넘게 고르는 것이 이 기능의
+     * 쓰임새인데, 그만큼이 주소에 들어가면 서버·프록시의 길이 제한에 걸릴 수 있다.
+     *
+     * <p>없는 id가 섞여 있어도 200이다 — 여러 쪽에 걸쳐 고르는 동안 다른 곳에서 지워졌을 수
+     * 있고, 그 하나 때문에 나머지의 이동을 막을 이유가 없다.
+     */
+    @PostMapping("/move-top")
+    public ApiResponse<Void> moveToTop(@Valid @RequestBody AdminTopicQueueMoveRequest request) {
+        topicQueueService.moveToTop(request.ids());
+        return ApiResponse.ok();
+    }
+
     @PostMapping("/{id}/move")
     public ApiResponse<Void> move(@PathVariable Long id,
                                   @RequestParam TopicQueueService.Direction direction) {

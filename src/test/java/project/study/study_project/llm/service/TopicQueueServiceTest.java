@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 import project.study.study_project.admin.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.common.Domain;
@@ -174,6 +175,93 @@ class TopicQueueServiceTest {
 
         assertThat(target.getDomain()).isEqualTo(Domain.DATABASE);
         assertThat(target.getUsedCount()).as("분야를 바꿔도 기록은 그대로다").isEqualTo(1);
+    }
+
+    /* ── 일괄 맨 위로 (2026-09-14) ────────────────────────────── */
+
+    /**
+     * <b>이 기능이 생긴 이유가 이 테스트다.</b> {@code TOP}을 여러 번 누르면 나중에 누른 것이
+     * 위로 가서 <b>고른 순서의 역순</b>으로 쌓인다. 셋만 올려도 뒤집히니, 올린 뒤 다시
+     * ↑↓로 정렬해야 했다.
+     */
+    @Test
+    @DisplayName("고른 것들이 상대 순서를 지킨 채 덩어리로 올라간다 — TOP을 여러 번 누르면 뒤집힌다")
+    void moveToTopKeepsRelativeOrder() {
+        TopicQueueItem a = item(1L, Domain.OS, "1번", 1);
+        TopicQueueItem b = item(2L, Domain.OS, "2번", 2);
+        TopicQueueItem c = item(3L, Domain.OS, "3번", 3);
+        TopicQueueItem d = item(4L, Domain.OS, "4번", 4);
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(a, b, c, d));
+
+        // 일부러 뒤죽박죽으로 보낸다 — 화면이 체크한 순서를 실어 보내도 결과가 같아야 한다
+        service.moveToTop(List.of(4L, 2L));
+
+        assertThat(b.getSortOrder()).as("2번이 4번보다 앞이었으므로 그대로 앞이다").isEqualTo(1);
+        assertThat(d.getSortOrder()).isEqualTo(2);
+        assertThat(a.getSortOrder()).as("나머지도 원래 순서를 지키며 뒤로 밀린다").isEqualTo(3);
+        assertThat(c.getSortOrder()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("없는 id가 섞여도 나머지는 옮긴다 — 여러 쪽에 걸쳐 고르는 동안 지워졌을 수 있다")
+    void moveToTopIgnoresMissingIds() {
+        TopicQueueItem a = item(1L, Domain.OS, "1번", 1);
+        TopicQueueItem b = item(2L, Domain.OS, "2번", 2);
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(a, b));
+
+        service.moveToTop(List.of(2L, 999L));
+
+        assertThat(b.getSortOrder()).isEqualTo(1);
+        assertThat(a.getSortOrder()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("고른 것이 하나도 없으면 파일을 다시 내보내지 않는다 — 헛 커밋거리를 만들지 않는다")
+    void moveToTopWithNothingDoesNotTouchFile() {
+        service.moveToTop(List.of());
+
+        verify(events, never()).publishEvent(any());
+    }
+
+    /* ── 정렬 (2026-09-14) ────────────────────────────────────── */
+
+    /**
+     * 정렬의 첫 줄과 "다음 차례" 배지가 <b>같은 줄</b>을 가리켜야 한다. 둘이 갈리면
+     * 화면이 두 가지 답을 내놓는 셈이고, 그때 사람은 어느 쪽을 믿을지 알 수 없다.
+     */
+    @Test
+    @DisplayName("다음 차례 순으로 정렬하면 첫 줄이 곧 '다음 차례'다 — 규칙이 갈라지면 어긋난다")
+    void nextUpSortAgreesWithTheBadge() {
+        List<TopicQueueItem> items = List.of(
+                used(1L, Domain.OS, "오래전에 씀", 1, LocalDate.of(2026, 1, 1)),
+                used(2L, Domain.OS, "최근에 씀", 2, LocalDate.of(2026, 9, 1)),
+                item(3L, Domain.OS, "아직 안 씀", 3));
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(items);
+
+        List<TopicQueueItemResponse> sorted = service
+                .search(null, TopicQueueService.TopicSort.NEXT_UP, PageRequest.of(0, 20))
+                .content();
+
+        assertThat(sorted).extracting(TopicQueueItemResponse::topic)
+                .containsExactly("아직 안 씀", "오래전에 씀", "최근에 씀");
+        assertThat(sorted.get(0).next())
+                .as("첫 줄에 배지가 없으면 정렬과 배지가 다른 규칙을 쓰고 있다는 뜻이다")
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("내가 정한 순서는 손대지 않는다 — 이동 버튼이 뜻을 갖는 유일한 모드다")
+    void manualSortKeepsHumanOrder() {
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+                used(1L, Domain.OS, "먼저 적은 것", 1, LocalDate.of(2026, 9, 1)),
+                item(2L, Domain.OS, "나중에 적은 것", 2)));
+
+        List<TopicQueueItemResponse> listed = service
+                .search(null, TopicQueueService.TopicSort.MANUAL, PageRequest.of(0, 20))
+                .content();
+
+        assertThat(listed).extracting(TopicQueueItemResponse::topic)
+                .containsExactly("먼저 적은 것", "나중에 적은 것");
     }
 
     /* ── 다음 차례 판정 ───────────────────────────────────────── */

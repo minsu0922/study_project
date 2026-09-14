@@ -172,7 +172,28 @@ try {
         <input type="text" id="tSearch" placeholder="예: 트랜잭션 / 인덱스 / 자바 2단계">
       </div>
       <div class="field"><label>&nbsp;</label><button id="tSearchClearBtn" class="btn-outline">지우기</button></div>
+      <!-- 정렬은 <보기 전용>이다. MANUAL이 아니면 아래 이동 버튼이 전부 잠긴다 —
+           "한 칸 위로"는 전체 순서의 이웃과 자리를 바꾸는 동작이라, 다른 기준으로
+           정렬해 놓고 누르면 눌러도 줄이 안 움직인다(검색 중 잠그는 것과 같은 사정). -->
+      <div class="field">
+        <label>정렬</label>
+        <select id="tSort">
+          <option value="MANUAL">내가 정한 순서</option>
+          <option value="NEXT_UP">다음 차례에 가까운 순</option>
+        </select>
+      </div>
     </div>
+
+    <!-- 여러 줄을 한꺼번에 맨 위로(2026-09-14). ⤒는 한 줄씩이라 스무 개를 당기려면
+         스무 번 눌러야 했고, 더 나쁜 것은 <누른 순서의 역순으로 쌓인다>는 점이었다.
+         고른 것은 쪽을 넘겨도 유지된다 — 스무 개는 대개 여러 쪽에 흩어져 있다. -->
+    <div class="filters" id="tBulkBar" hidden style="margin-bottom:10px;align-items:center;gap:10px">
+      <b id="tSelectedCount"></b>
+      <button id="tMoveTopBtn">선택한 것 맨 위로</button>
+      <button id="tSelectClearBtn" class="btn-outline">선택 해제</button>
+      <span class="meta">고른 것들끼리의 순서는 지금 그대로 유지됩니다.</span>
+    </div>
+
     <div class="meta" id="tTotal" style="margin-bottom:6px"></div>
     <div class="table-wrap"><table class="grid" id="topicTable"></table></div>
     <div class="pager" id="tPager" hidden>
@@ -233,6 +254,20 @@ const TOPIC_PAGE_SIZE = 20;
  * 배치 현황이 죽었다고 주제 관리까지 막을 이유가 없다.
  */
 let nextDocumentDate = null;
+
+/** 목록 정렬 기준. MANUAL이 아니면 순서 이동을 잠근다(tSort 주석 참고). */
+let topicSort = "MANUAL";
+
+/**
+ * 일괄 이동으로 고른 줄들 — <b>쪽을 넘겨도 유지된다</b>.
+ *
+ * <p>이 기능의 쓰임새가 "스무 개를 앞으로 당기기"인데 스무 개는 대개 여러 쪽에 흩어져 있다.
+ * 쪽을 넘길 때 비우면 한 쪽 안에서만 고를 수 있어 기능이 반쪽이 된다.
+ *
+ * <p>대신 <b>화면에 안 보이는 것도 골라져 있다</b>는 점이 위험해서, 고른 개수를 늘 띄우고
+ * "선택 해제"를 옆에 둔다.
+ */
+const selectedTopicIds = new Set();
 
 const QUESTION_KINDS = [
   ["SITUATION", "상황 적용"],
@@ -591,6 +626,16 @@ function initTopicForm() {
   fillSelect(document.getElementById("tDomain"), DOMAINS);
   document.getElementById("tSubmitBtn").addEventListener("click", submitTopic);
   document.getElementById("tCancelBtn").addEventListener("click", cancelEditTopic);
+  document.getElementById("tMoveTopBtn").addEventListener("click", moveSelectedToTop);
+  document.getElementById("tSelectClearBtn").addEventListener("click", () => {
+    selectedTopicIds.clear();
+    loadTopicQueue();   // 체크 표시를 지우려면 다시 그려야 한다
+  });
+  document.getElementById("tSort").addEventListener("change", e => {
+    topicSort = e.target.value;
+    topicPage = 0;      // 정렬이 바뀌면 몇 쪽이었는지는 뜻을 잃는다
+    loadTopicQueue();
+  });
 
   // 엔터로 추가 — 범위를 여러 개 몰아서 적는 화면이라 매번 버튼까지 가면 손이 많이 간다.
   document.getElementById("tTopic").addEventListener("keydown", e => {
@@ -717,7 +762,8 @@ function cancelEditTopic() {
  */
 async function loadTopicQueue() {
   const query = topicQuery ? `&q=${encodeURIComponent(topicQuery)}` : "";
-  const data = await api(`/api/admin/topic-queue?page=${topicPage}&size=${TOPIC_PAGE_SIZE}${query}`);
+  const data = await api(
+    `/api/admin/topic-queue?page=${topicPage}&size=${TOPIC_PAGE_SIZE}&sort=${topicSort}${query}`);
   // 한 번만 받아 둔다. 목록을 다시 그릴 때마다 부르면 순서를 한 칸씩 옮기는 동안
   // 같은 값을 몇 번이고 가져온다 — 날짜는 그 사이에 바뀌지 않는다.
   if (nextDocumentDate === null) {
@@ -741,6 +787,7 @@ async function loadTopicQueue() {
        <b>검색 중에는 순서를 바꿀 수 없습니다</b>(↑↓는 전체 순서에서 움직이는데 이웃이 화면에 없습니다)`
     : `전체 ${data.totalElements}건`;
   renderTopicPager(data);
+  renderBulkBar();
 
   if (items.length === 0) {
     table.innerHTML = topicQuery
@@ -750,21 +797,33 @@ async function loadTopicQueue() {
     return;
   }
 
-  const locked = topicQuery !== "";
-  const lockHint = locked ? ' title="검색 중에는 순서를 바꿀 수 없습니다 — 검색어를 지우세요" disabled' : ' title="한 칸 위로"';
-  const lockHintDown = locked ? ' title="검색 중에는 순서를 바꿀 수 없습니다 — 검색어를 지우세요" disabled' : ' title="한 칸 아래로"';
+  // 순서 이동을 잠그는 이유가 둘로 늘었다(2026-09-14에 정렬이 붙으면서).
+  // 검색: 이웃이 화면에 없다. 정렬: 화면 순서와 전체 순서가 다르다.
+  // 증상이 같으므로("눌러도 안 움직인다") 한 자리에서 함께 막고, 이유만 갈라 적는다.
+  const sorted = topicSort !== "MANUAL";
+  const locked = topicQuery !== "" || sorted;
+  const lockWhy = topicQuery !== ""
+    ? "검색 중에는 순서를 바꿀 수 없습니다 — 검색어를 지우세요"
+    : "정렬 중에는 순서를 바꿀 수 없습니다 — 정렬을 '내가 정한 순서'로 되돌리세요";
+  const lockHint = locked ? ` title="${lockWhy}" disabled` : ' title="한 칸 위로"';
+  const lockHintDown = locked ? ` title="${lockWhy}" disabled` : ' title="한 칸 아래로"';
   // 맨 위로(2026-09-05). ↑만 있던 동안은 40번째 줄을 올리려면 39번을 눌러야 했고,
   // 20줄씩 쪽이 갈려 실제로는 불가능에 가까웠다. 검색 중 잠그는 이유는 ↑↓와 같다 —
   // "맨 위"는 화면이 아니라 <전체 순서의> 맨 위라, 걸러진 목록에서 누르면 결과가 안 보인다.
-  const lockHintTop = locked ? ' title="검색 중에는 순서를 바꿀 수 없습니다 — 검색어를 지우세요" disabled' : ' title="맨 위로"';
+  const lockHintTop = locked ? ` title="${lockWhy}" disabled` : ' title="맨 위로"';
 
   // 다음 차례 판정(next)은 서버가 계산해 보낸다. 화면에서 다시 계산하면 규칙이 두 곳이 되고,
   // 배치가 실제로 고르는 것과 화면 표시가 언젠가 어긋난다.
   // 순서 번호(order)도 서버가 준다 — 행 번호로 대신하면 3쪽 첫 줄이 "1번"으로 보인다.
   table.innerHTML =
-    `<tr><th>순서</th><th>분야</th><th>주제 범위</th><th>편수</th><th>마지막</th><th></th></tr>` +
+    `<tr><th></th><th>순서</th><th>분야</th><th>주제 범위</th><th>편수</th><th>마지막</th><th></th></tr>` +
     items.map(t => `
       <tr data-id="${t.id}">
+        <!-- 고르기는 잠그지 않는다. 정렬·검색은 <어느 줄을 찾느냐>를 돕는 일이고,
+             일괄 이동은 고른 것들의 상대 순서를 지금 대기열 순서로 잡으므로 화면이
+             무슨 순서든 결과가 같다. 오히려 고를 줄을 찾는 가장 빠른 길이 검색이다. -->
+        <td><input type="checkbox" data-pick="${t.id}"${selectedTopicIds.has(t.id) ? " checked" : ""}
+                   aria-label="맨 위로 옮길 범위 고르기"></td>
         <td>${t.order}</td>
         <td>${escapeHtml(t.domainLabel)}</td>
         <td class="wrap">
@@ -794,6 +853,15 @@ async function loadTopicQueue() {
           <button class="danger" data-action="delete">삭제</button>
         </td>
       </tr>`).join("");
+
+  // 체크박스는 click이 아니라 change로 받는다 — 키보드(스페이스)로도 켜지기 때문이다.
+  table.onchange = e => {
+    const box = e.target.closest("input[data-pick]");
+    if (!box) return;
+    const id = Number(box.dataset.pick);
+    if (box.checked) selectedTopicIds.add(id); else selectedTopicIds.delete(id);
+    renderBulkBar();
+  };
 
   table.onclick = e => {
     const btn = e.target.closest("button[data-action]");
@@ -853,6 +921,41 @@ async function copyWorkflowInputs(item) {
     // 클립보드는 권한·보안 컨텍스트에 따라 막힌다. 그때 아무 일도 안 일어나면
     // "눌렀는데 왜 안 되지"가 되므로, 눈으로 읽고 옮겨 적을 수 있게 그대로 보여 준다.
     showOk(msg, `복사가 막혀 있습니다. 아래 값을 옮겨 적으세요:\n${text}`);
+  }
+}
+
+/**
+ * 일괄 이동 막대 — 고른 것이 있을 때만 보인다.
+ *
+ * <p>개수를 늘 띄우는 이유: 고른 줄이 <b>다른 쪽에 있을 수 있다</b>. 화면에 체크가 하나도
+ * 안 보이는데 "3개 선택됨"이 떠 있어야, 눌렀을 때 셋이 옮겨지는 것이 놀랍지 않다.
+ */
+function renderBulkBar() {
+  const n = selectedTopicIds.size;
+  document.getElementById("tBulkBar").hidden = n === 0;
+  document.getElementById("tSelectedCount").textContent = `${n}개 선택됨`;
+}
+
+/**
+ * 고른 것들을 한꺼번에 맨 위로.
+ *
+ * <p>이동 뒤 선택을 비우고 1쪽으로 간다. 옮긴 줄이 전부 맨 위에 모여 있으므로 <b>결과가
+ * 보이는 자리</b>가 1쪽이고, 선택을 남겨 두면 다음에 다른 줄을 고를 때 섞인다.
+ */
+async function moveSelectedToTop() {
+  const msg = document.getElementById("tMessage");
+  const ids = [...selectedTopicIds];
+  try {
+    await api("/api/admin/topic-queue/move-top", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
+    selectedTopicIds.clear();
+    topicPage = 0;
+    showOk(msg, `${ids.length}개를 맨 위로 옮겼습니다. generated/_topics.json을 커밋하세요.`);
+    loadTopicQueue();
+  } catch (e) {
+    showError(msg, e);
   }
 }
 
