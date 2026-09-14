@@ -239,7 +239,8 @@ class TopicQueueServiceTest {
         when(repository.findAllByOrderBySortOrderAsc()).thenReturn(items);
 
         List<TopicQueueItemResponse> sorted = service
-                .search(null, TopicQueueService.TopicSort.NEXT_UP, PageRequest.of(0, 20))
+                .search(null, null, TopicQueueService.TopicUsage.ALL,
+                        TopicQueueService.TopicSort.NEXT_UP, PageRequest.of(0, 20))
                 .content();
 
         assertThat(sorted).extracting(TopicQueueItemResponse::topic)
@@ -257,11 +258,67 @@ class TopicQueueServiceTest {
                 item(2L, Domain.OS, "나중에 적은 것", 2)));
 
         List<TopicQueueItemResponse> listed = service
-                .search(null, TopicQueueService.TopicSort.MANUAL, PageRequest.of(0, 20))
+                .search(null, null, TopicQueueService.TopicUsage.ALL,
+                        TopicQueueService.TopicSort.MANUAL, PageRequest.of(0, 20))
                 .content();
 
         assertThat(listed).extracting(TopicQueueItemResponse::topic)
                 .containsExactly("먼저 적은 것", "나중에 적은 것");
+    }
+
+    /* ── 거르기 (2026-09-14) ──────────────────────────────────── */
+
+    /**
+     * 대기열이 여든 줄까지 늘면서 <b>"안 쓴 것만 보고 싶다"</b>가 가장 잦은 요구가 됐다.
+     * 안 쓴 범위가 다음 차례를 먼저 가져가므로, 순서를 손볼 때 실제로 다투는 것이 그 무리다.
+     */
+    @Test
+    @DisplayName("사용 이력으로 거른다 — 안 쓴 것끼리가 다음 차례를 두고 다투는 무리다")
+    void filtersByUsage() {
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+                item(1L, Domain.OS, "안 쓴 것", 1),
+                used(2L, Domain.OS, "쓴 것", 2, LocalDate.of(2026, 9, 1))));
+
+        assertThat(listed(null, TopicQueueService.TopicUsage.NEVER_USED))
+                .containsExactly("안 쓴 것");
+        assertThat(listed(null, TopicQueueService.TopicUsage.USED))
+                .containsExactly("쓴 것");
+        assertThat(listed(null, TopicQueueService.TopicUsage.ALL)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("분야로 거른다 — 자바만 손보려는데 여든 줄을 훑을 이유가 없다")
+    void filtersByDomain() {
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+                item(1L, Domain.OS, "운영체제 것", 1),
+                item(2L, Domain.DATABASE, "디비 것", 2)));
+
+        assertThat(listed(Domain.DATABASE, TopicQueueService.TopicUsage.ALL))
+                .containsExactly("디비 것");
+    }
+
+    /**
+     * 거르는 기준이 {@code usedCount}가 아니라 {@code lastUsedAt}인지.
+     *
+     * <p>둘이 어긋난 줄이 실제로 있었다 — 배치가 날짜를 찍은 뒤 문서가 거절된 경우다.
+     * 다음 차례를 정할 때 보는 것도 날짜이므로, 거르는 기준이 다르면 <b>"안 쓴 것"으로
+     * 걸러 놓고 그중에 다음 차례가 없는</b> 상태가 된다.
+     */
+    @Test
+    @DisplayName("이력 지우기로 되돌린 줄은 '안 쓴 것'에 잡힌다 — 판정 기준이 날짜 하나여야 한다")
+    void usageFilterFollowsTheDateNotTheCount() {
+        TopicQueueItem restored = used(1L, Domain.OS, "되돌린 것", 1, LocalDate.of(2026, 9, 1));
+        restored.clearUsage();
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(restored));
+
+        assertThat(listed(null, TopicQueueService.TopicUsage.NEVER_USED))
+                .containsExactly("되돌린 것");
+    }
+
+    private List<String> listed(Domain domain, TopicQueueService.TopicUsage usage) {
+        return service.search(null, domain, usage, TopicQueueService.TopicSort.MANUAL,
+                        PageRequest.of(0, 20))
+                .content().stream().map(TopicQueueItemResponse::topic).toList();
     }
 
     /* ── 다음 차례 판정 ───────────────────────────────────────── */

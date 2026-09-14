@@ -176,13 +176,37 @@ try {
            "한 칸 위로"는 전체 순서의 이웃과 자리를 바꾸는 동작이라, 다른 기준으로
            정렬해 놓고 누르면 눌러도 줄이 안 움직인다(검색 중 잠그는 것과 같은 사정). -->
       <div class="field">
+        <label>분야</label>
+        <select id="tDomainFilter"></select>
+      </div>
+      <div class="field">
+        <label>사용 이력</label>
+        <select id="tUsage">
+          <option value="ALL">전체</option>
+          <option value="NEVER_USED">아직 안 쓴 것</option>
+          <option value="USED">쓴 적 있는 것</option>
+        </select>
+      </div>
+      <div class="field">
         <label>정렬</label>
         <select id="tSort">
-          <option value="MANUAL">내가 정한 순서</option>
-          <option value="NEXT_UP">다음 차례에 가까운 순</option>
+          <option value="MANUAL">내가 놓은 순서</option>
+          <option value="NEXT_UP">먼저 나올 순서</option>
         </select>
       </div>
     </div>
+
+    <!--
+      두 정렬의 차이가 이름만으로는 안 읽힌다(2026-09-14 사용자 지적). 사람이 헷갈리는 것은
+      <정렬 방식>이 아니라 "내가 맨 위로 올렸는데 왜 그게 안 나오지"다.
+      그 답은 배치가 줄 선 순서대로 꺼내지 않는다는 것이므로, 규칙 자체를 여기 적는다.
+    -->
+    <p class="meta" style="margin:-4px 0 10px">
+      배치는 <b>줄 선 순서대로 꺼내지 않습니다</b> — ① 아직 안 쓴 것부터 → ② 가장 오래전에 쓴 것부터
+      → ③ 그것도 같으면 내가 놓은 순서. 그래서 <b>이미 쓴 주제는 맨 위로 올려도 안 쓴 것들에 밀립니다.</b><br>
+      <b>내가 놓은 순서</b>는 내가 배치한 대로(↑↓가 움직이는 순서), <b>먼저 나올 순서</b>는 배치가
+      실제로 꺼낼 순서(맨 위가 다음에 나올 것)입니다.
+    </p>
 
     <!-- 여러 줄을 한꺼번에 맨 위로(2026-09-14). ⤒는 한 줄씩이라 스무 개를 당기려면
          스무 번 눌러야 했고, 더 나쁜 것은 <누른 순서의 역순으로 쌓인다>는 점이었다.
@@ -257,6 +281,12 @@ let nextDocumentDate = null;
 
 /** 목록 정렬 기준. MANUAL이 아니면 순서 이동을 잠근다(tSort 주석 참고). */
 let topicSort = "MANUAL";
+
+/** 분야 필터. 빈 문자열이면 전체. */
+let topicDomain = "";
+
+/** 사용 이력 필터 — ALL · NEVER_USED · USED. */
+let topicUsage = "ALL";
 
 /**
  * 일괄 이동으로 고른 줄들 — <b>쪽을 넘겨도 유지된다</b>.
@@ -624,6 +654,9 @@ function showGenerated(el, count) {
 
 function initTopicForm() {
   fillSelect(document.getElementById("tDomain"), DOMAINS);
+  // 거르는 쪽에는 "전체"가 맨 앞에 붙는다(fillSelect의 세 번째 인자) — 추가 폼의 분야는
+  // 반드시 하나를 골라야 하므로 그 칸에는 붙이지 않는다.
+  fillSelect(document.getElementById("tDomainFilter"), DOMAINS, "전체");
   document.getElementById("tSubmitBtn").addEventListener("click", submitTopic);
   document.getElementById("tCancelBtn").addEventListener("click", cancelEditTopic);
   document.getElementById("tMoveTopBtn").addEventListener("click", moveSelectedToTop);
@@ -634,6 +667,16 @@ function initTopicForm() {
   document.getElementById("tSort").addEventListener("change", e => {
     topicSort = e.target.value;
     topicPage = 0;      // 정렬이 바뀌면 몇 쪽이었는지는 뜻을 잃는다
+    loadTopicQueue();
+  });
+  document.getElementById("tDomainFilter").addEventListener("change", e => {
+    topicDomain = e.target.value;
+    topicPage = 0;      // 거르면 줄 수가 줄어 3쪽이 빈 쪽이 될 수 있다
+    loadTopicQueue();
+  });
+  document.getElementById("tUsage").addEventListener("change", e => {
+    topicUsage = e.target.value;
+    topicPage = 0;
     loadTopicQueue();
   });
 
@@ -762,8 +805,9 @@ function cancelEditTopic() {
  */
 async function loadTopicQueue() {
   const query = topicQuery ? `&q=${encodeURIComponent(topicQuery)}` : "";
+  const filters = (topicDomain ? `&domain=${topicDomain}` : "") + `&usage=${topicUsage}`;
   const data = await api(
-    `/api/admin/topic-queue?page=${topicPage}&size=${TOPIC_PAGE_SIZE}&sort=${topicSort}${query}`);
+    `/api/admin/topic-queue?page=${topicPage}&size=${TOPIC_PAGE_SIZE}&sort=${topicSort}${filters}${query}`);
   // 한 번만 받아 둔다. 목록을 다시 그릴 때마다 부르면 순서를 한 칸씩 옮기는 동안
   // 같은 값을 몇 번이고 가져온다 — 날짜는 그 사이에 바뀌지 않는다.
   if (nextDocumentDate === null) {
@@ -782,9 +826,17 @@ async function loadTopicQueue() {
     return loadTopicQueue();
   }
 
-  document.getElementById("tTotal").innerHTML = topicQuery
-    ? `"${escapeHtml(topicQuery)}" 검색 결과 ${data.totalElements}건 —
-       <b>검색 중에는 순서를 바꿀 수 없습니다</b>(↑↓는 전체 순서에서 움직이는데 이웃이 화면에 없습니다)`
+  // 무엇으로 걸렀는지를 그대로 되읽어 준다. "12건"만 보이면 왜 여든 줄이 열둘이 됐는지
+  // 알 수 없고, 특히 분야·사용 이력은 드롭다운이 화면 위쪽에 있어 눈에 잘 안 들어온다.
+  const on = [];
+  if (topicQuery) on.push(`"${escapeHtml(topicQuery)}" 검색`);
+  if (topicDomain) on.push(domainLabel(topicDomain));
+  if (topicUsage === "NEVER_USED") on.push("아직 안 쓴 것");
+  if (topicUsage === "USED") on.push("쓴 적 있는 것");
+
+  document.getElementById("tTotal").innerHTML = on.length
+    ? `${on.join(" · ")} — ${data.totalElements}건
+       <b>(거르는 중에는 순서를 바꿀 수 없습니다</b> — ↑↓는 전체 순서에서 움직이는데 이웃이 화면에 없습니다)`
     : `전체 ${data.totalElements}건`;
   renderTopicPager(data);
   renderBulkBar();
@@ -800,11 +852,14 @@ async function loadTopicQueue() {
   // 순서 이동을 잠그는 이유가 둘로 늘었다(2026-09-14에 정렬이 붙으면서).
   // 검색: 이웃이 화면에 없다. 정렬: 화면 순서와 전체 순서가 다르다.
   // 증상이 같으므로("눌러도 안 움직인다") 한 자리에서 함께 막고, 이유만 갈라 적는다.
-  const sorted = topicSort !== "MANUAL";
-  const locked = topicQuery !== "" || sorted;
-  const lockWhy = topicQuery !== ""
-    ? "검색 중에는 순서를 바꿀 수 없습니다 — 검색어를 지우세요"
-    : "정렬 중에는 순서를 바꿀 수 없습니다 — 정렬을 '내가 정한 순서'로 되돌리세요";
+  // 거르기(검색·분야·사용 이력)는 이웃이 화면에 없게 만들고, 정렬은 화면 순서와 전체
+  // 순서를 다르게 만든다. 증상은 하나다 — "눌러도 줄이 안 움직인다". 그래서 함께 막고
+  // 이유만 갈라 적는다. 어느 쪽을 풀어야 하는지가 사람이 알고 싶은 전부이기 때문이다.
+  const filtered = topicQuery !== "" || topicDomain !== "" || topicUsage !== "ALL";
+  const locked = filtered || topicSort !== "MANUAL";
+  const lockWhy = filtered
+    ? "목록을 거르는 중에는 순서를 바꿀 수 없습니다 — 검색어·분야·사용 이력을 '전체'로 되돌리세요"
+    : "정렬 중에는 순서를 바꿀 수 없습니다 — 정렬을 '내가 놓은 순서'로 되돌리세요";
   const lockHint = locked ? ` title="${lockWhy}" disabled` : ' title="한 칸 위로"';
   const lockHintDown = locked ? ` title="${lockWhy}" disabled` : ' title="한 칸 아래로"';
   // 맨 위로(2026-09-05). ↑만 있던 동안은 40번째 줄을 올리려면 39번을 눌러야 했고,

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.admin.dto.AdminTopicQueueMoveRequest;
+import project.study.study_project.global.common.Domain;
 import project.study.study_project.admin.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
@@ -68,10 +69,12 @@ public class AdminTopicQueueController {
     @GetMapping
     public ApiResponse<PageResponse<TopicQueueItemResponse>> list(
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) Domain domain,
+            @RequestParam(defaultValue = "ALL") TopicQueueService.TopicUsage usage,
             @RequestParam(defaultValue = "MANUAL") TopicQueueService.TopicSort sort,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(topicQueueService.search(q, sort, pageable));
+        return ApiResponse.ok(topicQueueService.search(q, domain, usage, sort, pageable));
     }
 
     /** 등록된 범위 수 — 탭 배지용. 0이면 배치가 모델 자동 선택으로 돈다. */

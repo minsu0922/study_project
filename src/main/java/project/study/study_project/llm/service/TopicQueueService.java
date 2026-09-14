@@ -90,7 +90,7 @@ public class TopicQueueService {
      */
     public enum TopicSort {
 
-        /** 사람이 정한 순서({@code sortOrder}). 이동 버튼이 뜻을 갖는 유일한 모드다. */
+        /** 내가 놓은 순서({@code sortOrder}). 이동 버튼이 뜻을 갖는 유일한 모드다. */
         MANUAL,
 
         /**
@@ -100,6 +100,17 @@ public class TopicQueueService {
          * 첫 줄이 곧 "다음 차례"가 된다 — 배지와 맨 위가 어긋나면 규칙이 갈라진 것이다.
          */
         NEXT_UP
+    }
+
+    /**
+     * 사용 이력으로 거르기 — 2026-09-14 신설.
+     *
+     * <p>대기열이 여든 줄까지 늘면서 <b>"안 쓴 것만 보고 싶다"</b>가 가장 잦은 요구가 됐다.
+     * 안 쓴 범위가 다음 차례를 먼저 가져가므로, 순서를 손볼 때 실제로 다투는 것이 그 무리다.
+     * 반대로 "쓴 적 있는 것"은 우물이 마르는지 살필 때 본다(편수가 쌓인 줄을 갈아 끼운다).
+     */
+    public enum TopicUsage {
+        ALL, NEVER_USED, USED
     }
 
     /* ── 조회 ─────────────────────────────────────────────────── */
@@ -134,12 +145,16 @@ public class TopicQueueService {
      * @param q 주제·메모에서 찾을 말. 비어 있으면 거르지 않는다(대소문자 무시)
      */
     @Transactional(readOnly = true)
-    public PageResponse<TopicQueueItemResponse> search(String q, TopicSort sort, Pageable pageable) {
+    public PageResponse<TopicQueueItemResponse> search(String q, Domain domain, TopicUsage usage,
+                                                       TopicSort sort, Pageable pageable) {
         List<TopicQueueItemResponse> all = getAll();
 
         String keyword = (q == null) ? "" : q.trim().toLowerCase();
-        List<TopicQueueItemResponse> matched = keyword.isEmpty() ? all
-                : all.stream().filter(item -> matches(item, keyword)).toList();
+        List<TopicQueueItemResponse> matched = all.stream()
+                .filter(item -> keyword.isEmpty() || matches(item, keyword))
+                .filter(item -> domain == null || item.domain() == domain)
+                .filter(item -> matchesUsage(item, usage))
+                .toList();
 
         // 거른 <뒤에> 정렬한다. 순서를 먼저 잡아도 결과는 같지만, 거르는 일이 늘 더 싸다.
         // order 칸은 그대로 둔다 — 그 값은 <사람이 정한 순서에서 몇 번째>라는 뜻이고,
@@ -175,7 +190,22 @@ public class TopicQueueService {
                 .toList();
     }
 
-    /** 주제와 메모에서 찾는다. 분야는 목록에 배지로 보이고 눈으로 훑기 쉬워 검색어에 넣지 않는다. */
+    /**
+     * 사용 이력 거르기 — 판정 기준은 {@code lastUsedAt}이다.
+     *
+     * <p>{@code usedCount}로 재지 않는 이유: 둘이 어긋난 줄이 실제로 있었다(배치가 날짜를
+     * 찍은 뒤 문서가 거절된 경우). 다음 차례를 정할 때 보는 것도 날짜이므로
+     * ({@link TopicQueueItem#isNeverUsed}), 거르는 기준도 같은 값이어야 화면과 실제가 맞는다.
+     */
+    private boolean matchesUsage(TopicQueueItemResponse item, TopicUsage usage) {
+        return switch (usage == null ? TopicUsage.ALL : usage) {
+            case ALL -> true;
+            case NEVER_USED -> item.lastUsedAt() == null;
+            case USED -> item.lastUsedAt() != null;
+        };
+    }
+
+    /** 주제와 메모에서 찾는다. 분야는 이제 드롭다운으로 거르므로(2026-09-14) 검색어에 넣지 않는다. */
     private boolean matches(TopicQueueItemResponse item, String keyword) {
         return item.topic().toLowerCase().contains(keyword)
                 || (item.memo() != null && item.memo().toLowerCase().contains(keyword));
