@@ -29,6 +29,15 @@ public interface TopicQueueItemRepository extends JpaRepository<TopicQueueItem, 
     boolean existsByDomainAndTopic(Domain domain, String topic);
 
     /**
+     * 위와 같되 <b>자기 자신은 뺀다</b> — 수정(2026-09-14)이 쓴다.
+     *
+     * <p>수정에서 위 메서드를 그대로 쓰면 <b>메모만 고치려 해도 막힌다</b>. 분야와 주제를
+     * 그대로 둔 채 저장하면 자기 자신이 중복으로 잡히기 때문이다. 대놓고 막히는 종류라
+     * 금방 드러나겠지만, 드러내는 쪽이 사람이면 기능을 안 만드느니만 못하다.
+     */
+    boolean existsByDomainAndTopicAndIdNot(Domain domain, String topic, Long id);
+
+    /**
      * 지금까지 쓴 가장 큰 순서값. 새 범위는 이 뒤에 붙는다.
      *
      * <p>{@code count()}로 대신하지 않는 이유: 중간을 삭제하면 개수와 순서값이 어긋나

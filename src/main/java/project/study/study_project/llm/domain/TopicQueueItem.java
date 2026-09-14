@@ -162,4 +162,28 @@ public class TopicQueueItem {
     public void changeOrder(int sortOrder) {
         this.sortOrder = sortOrder;
     }
+
+    /**
+     * 분야·주제·메모를 고친다 — 2026-09-14 신설. <b>사용 기록과 순서는 건드리지 않는다.</b>
+     *
+     * <p><b>이 메서드가 없어서 생기던 일.</b> 지금까지 제목을 고치는 길은 삭제 후 재등록뿐이었다.
+     * 그러면 {@code lastUsedAt}과 {@code usedCount}가 날아가 <b>아직 안 쓴 범위</b>로 되살아나는데,
+     * 다음 차례 규칙이 "안 쓴 것 먼저"라 그 줄이 곧바로 차례를 가져간다. 제목만 다듬으려다
+     * 순환 순서가 통째로 흔들리는 것이다 — {@link #clearUsage}가 <b>일부러</b> 하는 일을
+     * 실수로 하게 되는 셈이다. 고치는 문을 따로 열어야 하는 이유가 이것이다.
+     *
+     * <p><b>왜 분야까지 여는가.</b> 분야를 바꾸면 이 범위로 만들 문서의 분야가 바뀌고, 그 문서를
+     * 근거로 삼는 사흘치 문제의 분야까지 따라 바뀐다({@code AdminTopicQueueRequest} 주석의
+     * "어긋나면 나흘이 통째로 엉킨다"). 위험한 값인 것은 맞다. 그래도 막지 않는 이유는,
+     * 막으면 분야를 잘못 고른 줄을 고칠 방법이 <b>다시 삭제 후 재등록</b>밖에 없어서다.
+     * 이 메서드가 없애려던 바로 그 길로 되돌아간다. 경고는 화면이 맡는다.
+     *
+     * <p>{@code sortOrder}를 인자로 받지 않는 것도 같은 원칙이다 — 순서는 {@link #changeOrder}의
+     * 몫이고, 한 메서드가 두 가지 일을 하면 부르는 쪽이 의도를 못 드러낸다.
+     */
+    public void edit(Domain domain, String topic, String memo) {
+        this.domain = domain;
+        this.topic = topic;
+        this.memo = memo;
+    }
 }

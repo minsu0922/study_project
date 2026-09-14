@@ -130,7 +130,7 @@ try {
     <!-- 추가 폼만 접는다. 아래 <등록된 범위> 목록은 이 화면의 본체라 늘 펼쳐 둔다 —
          여기서 실제로 하는 일은 새 범위를 적는 것보다 있는 범위의 순서를 손보는 것이다. -->
     <details class="card form-panel" id="topicFormPanel">
-      <summary>새 범위 추가</summary>
+      <summary id="topicFormSummary">새 범위 추가</summary>
       <p class="meta">배치가 <b>문서일마다 범위 하나</b>를 골라 그 안에서 세부 주제를 정해 문서를 씁니다.
         범위는 <b>쓴다고 없어지지 않고</b> 계속 돌아옵니다(다음 차례 = 아직 안 쓴 범위 먼저, 그다음은 가장 오래 안 쓴 범위).
         분야보다는 좁고 한 편보다는 넓게 적으세요. (예: "스프링·백엔드"(분야) ✗ → "Spring 트랜잭션" ✓ → "@Transactional 전파 속성"(한 편) ✗)</p>
@@ -141,6 +141,9 @@ try {
       </div>
       <div class="field"><label>메모 (선택 · 왜 이 범위인지. 배치는 읽지 않습니다)</label><input type="text" id="tMemo" style="width:100%"></div>
       <button id="tSubmitBtn">범위 추가</button>
+      <!-- 수정 모드에서만 보인다. 나가는 문이 없으면 폼에 값이 채워진 채로 남아, 다음에
+           "추가"를 누른 사람이 고치려던 줄을 한 벌 더 만든다. -->
+      <button id="tCancelBtn" class="btn-outline" hidden>취소</button>
     </details>
 
     <!-- 이 안내가 화면에서 가장 중요한 줄이다: 커밋하지 않으면 배치는 옛 파일을 읽는다.
@@ -564,7 +567,8 @@ function showGenerated(el, count) {
 
 function initTopicForm() {
   fillSelect(document.getElementById("tDomain"), DOMAINS);
-  document.getElementById("tSubmitBtn").addEventListener("click", addTopic);
+  document.getElementById("tSubmitBtn").addEventListener("click", submitTopic);
+  document.getElementById("tCancelBtn").addEventListener("click", cancelEditTopic);
 
   // 엔터로 추가 — 범위를 여러 개 몰아서 적는 화면이라 매번 버튼까지 가면 손이 많이 간다.
   document.getElementById("tTopic").addEventListener("keydown", e => {
@@ -594,28 +598,88 @@ function initTopicForm() {
   document.getElementById("tNextBtn").addEventListener("click", () => { topicPage++; loadTopicQueue(); });
 }
 
-async function addTopic() {
+/**
+ * 수정 중인 줄의 id. {@code null}이면 추가 모드다 — 폼 하나를 두 일에 쓰는 유일한 상태값.
+ *
+ * <p>폼을 새로 만들지 않고 추가 폼을 재사용하는 이유: 필드가 분야·주제·메모로 똑같다.
+ * 한 벌 더 만들면 검증 문구와 자리 배치가 두 곳이 되고, 다음에 한쪽만 고쳐서 어긋난다.
+ */
+let editingTopicId = null;
+
+/** 수정 중인 줄의 원래 분야. 분야를 바꿨을 때만 경고하려고 들고 있는다. */
+let editingTopicDomain = null;
+
+async function submitTopic() {
   const msg = document.getElementById("tMessage");
   const topic = document.getElementById("tTopic").value.trim();
   if (!topic) { showError(msg, new Error("주제 범위를 입력해 주세요.")); return; }
 
+  const editing = editingTopicId !== null;
+  const domain = document.getElementById("tDomain").value;
+
+  // 분야는 이 범위로 만들 문서뿐 아니라 <그 문서를 근거로 삼는 사흘치 문제>의 분야까지
+  // 정한다. 이미 쓴 줄에서 바꾸면 과거와 앞으로가 갈리므로 한 번 묻는다. 서버는 막지
+  // 않는다 — 막으면 잘못 고른 분야를 고칠 길이 삭제 후 재등록뿐이고, 그러면 사용 기록이
+  // 날아가 그 줄이 곧바로 다음 차례가 된다(이 기능이 없애려던 바로 그 길).
+  if (editing && editingTopicDomain && domain !== editingTopicDomain
+      && !confirm("분야를 바꾸면 이 범위로 만들 문서와 사흘치 문제의 분야가 함께 바뀝니다. 계속할까요?")) {
+    return;
+  }
+
   try {
-    await api("/api/admin/topic-queue", {
-      method: "POST",
+    await api(editing ? `/api/admin/topic-queue/${editingTopicId}` : "/api/admin/topic-queue", {
+      method: editing ? "PATCH" : "POST",
       body: JSON.stringify({
-        domain: document.getElementById("tDomain").value,
+        domain,
         topic,
         memo: document.getElementById("tMemo").value.trim() || null,
       }),
     });
-    showOk(msg, "범위를 추가했습니다. generated/_topics.json을 커밋하세요.");
-    document.getElementById("tTopic").value = "";
-    document.getElementById("tMemo").value = "";
+    showOk(msg, editing
+      ? "범위를 수정했습니다. 사용 기록과 순서는 그대로입니다. generated/_topics.json을 커밋하세요."
+      : "범위를 추가했습니다. generated/_topics.json을 커밋하세요.");
+    cancelEditTopic();
     loadTopicQueue();
     refreshAdminBadges();
   } catch (e) {
     showError(msg, e);   // 같은 범위가 이미 있으면 409(TOPIC_002)가 그대로 보인다
   }
+}
+
+/**
+ * 수정 시작 — 그 줄의 값을 폼에 채우고 모드를 바꾼다.
+ *
+ * <p>값을 서버에서 다시 받지 않고 <b>방금 그린 목록에서</b> 꺼낸다. 한 번 더 부르면
+ * 그 사이 바뀐 값을 가져올 수 있는데, 사람이 보고 누른 줄과 폼에 들어가는 값이 달라지면
+ * 그게 더 나쁘다. 저장할 때 서버가 최신 상태로 검사하므로 안전하다.
+ */
+function startEditTopic(item) {
+  editingTopicId = item.id;
+  editingTopicDomain = item.domain;
+
+  document.getElementById("tDomain").value = item.domain;
+  document.getElementById("tTopic").value = item.topic;
+  document.getElementById("tMemo").value = item.memo || "";
+  document.getElementById("tSubmitBtn").textContent = "수정 저장";
+  document.getElementById("tCancelBtn").hidden = false;
+  document.getElementById("topicFormSummary").textContent = `범위 수정 — #${item.id}`;
+
+  // 폼이 <details>라 접혀 있을 수 있다. 열어 주지 않으면 "눌렀는데 아무 일도 안 일어난다".
+  const panel = document.getElementById("topicFormPanel");
+  panel.open = true;
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  document.getElementById("tTopic").focus();
+}
+
+/** 추가 모드로 되돌린다. 저장에 성공했을 때와 취소를 눌렀을 때 둘 다 지난다. */
+function cancelEditTopic() {
+  editingTopicId = null;
+  editingTopicDomain = null;
+  document.getElementById("tTopic").value = "";
+  document.getElementById("tMemo").value = "";
+  document.getElementById("tSubmitBtn").textContent = "범위 추가";
+  document.getElementById("tCancelBtn").hidden = true;
+  document.getElementById("topicFormSummary").textContent = "새 범위 추가";
 }
 
 /**
@@ -683,6 +747,10 @@ async function loadTopicQueue() {
           <button class="btn-outline" data-action="top"${lockHintTop}>⤒</button>
           <button class="btn-outline" data-action="up"${lockHint}>↑</button>
           <button class="btn-outline" data-action="down"${lockHintDown}>↓</button>
+          <!-- 수정은 검색 중에도 열어 둔다. 순서 이동과 달리 이 줄 하나만 건드리므로
+               걸러진 목록에서도 결과가 눈에 보인다. 오히려 고칠 줄을 찾는 가장 빠른
+               길이 검색이라, 여기서 잠그면 기능이 반쪽이 된다. -->
+          <button class="btn-outline" data-action="edit" title="분야·주제·메모를 고칩니다(사용 기록과 순서는 그대로)">수정</button>
           <!-- 이력 지우기는 <쓴 줄에만> 뜬다. 안 쓴 줄에 두면 눌러도 아무 일이 없는
                버튼이 63줄에 붙는데, 그런 버튼은 목록을 읽는 눈만 어지럽힌다. -->
           ${t.usedCount === 0 && !t.lastUsedAt
@@ -696,6 +764,12 @@ async function loadTopicQueue() {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
     const id = Number(btn.closest("tr").dataset.id);
+    if (btn.dataset.action === "edit") {
+      // 방금 그린 목록에서 값을 꺼낸다(startEditTopic 주석 참고)
+      const item = items.find(t => t.id === id);
+      if (item) startEditTopic(item);
+      return;
+    }
     if (btn.dataset.action === "delete") {
       // 2단계 확인 — 다시 적으면 그만이지만, 몇 편 썼는지의 기록은 되살릴 수 없다
       armedAction(btn, () => deleteTopic(id));
@@ -764,6 +838,9 @@ async function deleteTopic(id) {
   try {
     await api("/api/admin/topic-queue/" + id, { method: "DELETE" });
     showOk(msg, "삭제했습니다. generated/_topics.json을 커밋하세요.");
+    // 고치던 줄을 지웠으면 폼도 함께 빠져나온다. 안 그러면 사라진 줄의 값이 폼에 남아,
+    // "수정 저장"을 누른 사람이 404를 받는다 — 원인이 화면에 안 보이는 종류다.
+    if (editingTopicId === id) cancelEditTopic();
     loadTopicQueue();
     refreshAdminBadges();
   } catch (e) {

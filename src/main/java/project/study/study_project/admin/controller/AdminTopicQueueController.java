@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -82,6 +83,23 @@ public class AdminTopicQueueController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<TopicQueueItemResponse> add(@Valid @RequestBody AdminTopicQueueRequest request) {
         return ApiResponse.ok(topicQueueService.add(request));
+    }
+
+    /**
+     * 범위 수정 — 분야·주제·메모만 바꾼다. 사용 기록과 순서는 그대로다.
+     *
+     * <p><b>PUT이 아니라 PATCH인 이유</b>: 이 요청은 행 전체를 보내지 않는다.
+     * {@code lastUsedAt}·{@code usedCount}·{@code sortOrder}는 몸통에 없고 서버가 지킨다.
+     * PUT으로 두면 "보낸 것이 곧 그 행"으로 읽혀, 다음에 이 API를 쓰는 사람이
+     * 빠진 필드가 지워질까 봐 사용 기록까지 실어 보내게 된다.
+     *
+     * <p>없는 id면 404(TOPIC_001), 같은 분야에 같은 이름이 이미 있으면 409(TOPIC_002).
+     * 자기 자신과 같은 이름으로 저장하는 것은 막지 않는다(메모만 고치는 경우).
+     */
+    @PatchMapping("/{id}")
+    public ApiResponse<TopicQueueItemResponse> update(@PathVariable Long id,
+                                                     @Valid @RequestBody AdminTopicQueueRequest request) {
+        return ApiResponse.ok(topicQueueService.update(id, request));
     }
 
     /** 삭제 — 되돌릴 수 없다. 없는 id면 404(TOPIC_001). */

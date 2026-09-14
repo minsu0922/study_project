@@ -208,6 +208,46 @@ public class TopicQueueService {
     }
 
     /**
+     * 주제 범위 수정 — 2026-09-14 신설. <b>사용 기록과 순서는 그대로 둔다.</b>
+     *
+     * <p><b>왜 이제야 생겼나.</b> 지금까지 제목을 고치는 길이 없어서 삭제 후 재등록으로
+     * 우회해야 했는데, 그러면 그 줄이 <b>아직 안 쓴 범위</b>로 되살아나 곧바로 차례를 가져간다
+     * ({@code TopicQueueItem.edit} 주석). 파일을 손으로 고치는 길도 막혀 있다 —
+     * {@link #syncFrom}은 id가 붙은 줄에서 사용 기록만 읽고, 그 뒤 내보내기가 DB 내용으로
+     * 파일을 덮는다. 결국 <b>DB에 직접 UPDATE를 날리는 것 말고는 방법이 없었다.</b>
+     *
+     * <p><b>중복 검사가 add와 다르다.</b> 자기 자신을 빼고 본다
+     * ({@code existsByDomainAndTopicAndIdNot}) — 안 그러면 메모만 고쳐도 막힌다.
+     *
+     * <p>바뀐 뒤 {@link TopicQueueChanged}를 알려 파일을 다시 내보낸다. 그래서 <b>고칠 때마다
+     * 커밋이 필요</b>하고, 여러 줄을 손볼 거면 몰아서 고친 뒤 한 번 커밋하는 편이 낫다.
+     */
+    @Transactional
+    public TopicQueueItemResponse update(Long id, AdminTopicQueueRequest request) {
+        TopicQueueItem item = find(id);
+        String topic = request.topic().trim();
+        if (repository.existsByDomainAndTopicAndIdNot(request.domain(), topic, id)) {
+            throw new BusinessException(ErrorCode.TOPIC_002);
+        }
+
+        Domain before = item.getDomain();
+        item.edit(request.domain(), topic, trimToNull(request.memo()));
+
+        // 분야가 바뀐 것은 따로 남긴다. 이 값이 사흘치 문제의 분야까지 정하므로, 나중에
+        // "왜 이날 문제가 딴 분야지"를 되짚을 때 이 줄 하나가 실마리가 된다.
+        if (before != request.domain()) {
+            log.info("주제 범위 분야 변경: #{} {} → {} — 이 범위로 만들 문서와 사흘치 문제의 분야가 함께 바뀝니다",
+                    id, before, request.domain());
+        }
+        log.info("주제 범위 수정: [{}] {} — 커밋해야 다음 배치부터 반영됩니다", request.domain(), topic);
+        events.publishEvent(new TopicQueueChanged());
+
+        // add와 같은 이유로 next는 false다 — 판정에 목록 전체가 필요하고, 화면은 수정 직후
+        // 목록을 다시 불러 정확한 값을 받는다.
+        return TopicQueueItemResponse.from(item, false, (int) repository.count());
+    }
+
+    /**
      * 삭제 — 되돌릴 수 없다. 그 범위로 만든 문서는 남고, <b>몇 편 썼는지의 기록만</b> 사라진다.
      *
      * <p>범위가 말랐을 때 갈아 끼우는 것이 정상 사용법이라 삭제는 자주 쓰인다. 그래서 확인

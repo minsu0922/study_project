@@ -101,6 +101,81 @@ class TopicQueueServiceTest {
         verify(repository, never()).save(any());
     }
 
+    /* ── 수정 (2026-09-14) ────────────────────────────────────── */
+
+    /**
+     * <b>이 기능이 존재하는 이유가 이 한 줄이다.</b> 수정이 없던 동안 제목을 고치려면 삭제 후
+     * 재등록밖에 없었는데, 그러면 {@code lastUsedAt}·{@code usedCount}가 날아가 그 줄이
+     * <b>아직 안 쓴 범위</b>로 되살아난다. 다음 차례 규칙이 "안 쓴 것 먼저"라, 제목만
+     * 다듬으려던 사람이 순환 순서를 통째로 흔들게 된다.
+     *
+     * <p>그 실패는 조용하다 — 목록은 멀쩡해 보이고, 며칠 뒤 엉뚱한 범위로 문서가 나와야 안다.
+     * 그래서 "사용 기록이 그대로인가"를 기능의 본체로 보고 여기서 못 박는다.
+     */
+    @Test
+    @DisplayName("수정해도 사용 기록과 순서는 그대로다 — 이게 삭제 후 재등록과 갈리는 지점")
+    void editKeepsUsageAndOrder() {
+        TopicQueueItem target = used(3L, Domain.OS, "옛 제목", 5, LocalDate.of(2026, 9, 1));
+        when(repository.findById(3L)).thenReturn(Optional.of(target));
+        when(repository.existsByDomainAndTopicAndIdNot(Domain.OS, "새 제목", 3L)).thenReturn(false);
+
+        service.update(3L, new AdminTopicQueueRequest(Domain.OS, "새 제목", "왜 고쳤는지"));
+
+        assertThat(target.getTopic()).isEqualTo("새 제목");
+        assertThat(target.getMemo()).isEqualTo("왜 고쳤는지");
+        assertThat(target.getLastUsedAt())
+                .as("기록이 지워지면 그 줄이 곧바로 다음 차례가 된다")
+                .isEqualTo(LocalDate.of(2026, 9, 1));
+        assertThat(target.getUsedCount()).isEqualTo(1);
+        assertThat(target.getSortOrder()).as("순서는 ↑↓의 몫이다").isEqualTo(5);
+    }
+
+    /**
+     * 중복 검사에서 <b>자기 자신을 빼는지</b>. 추가와 같은 검사를 그대로 쓰면 분야와 주제를
+     * 그대로 둔 채 메모만 고쳐도 막힌다 — 기능을 안 만드느니만 못한 상태가 된다.
+     */
+    @Test
+    @DisplayName("이름을 그대로 두고 메모만 고칠 수 있다 — 자기 자신은 중복이 아니다")
+    void editAllowsKeepingItsOwnName() {
+        TopicQueueItem target = item(3L, Domain.OS, "메모리 관리", 5);
+        when(repository.findById(3L)).thenReturn(Optional.of(target));
+        when(repository.existsByDomainAndTopicAndIdNot(Domain.OS, "메모리 관리", 3L)).thenReturn(false);
+
+        service.update(3L, new AdminTopicQueueRequest(Domain.OS, "메모리 관리", "메모만 붙였다"));
+
+        assertThat(target.getMemo()).isEqualTo("메모만 붙였다");
+    }
+
+    @Test
+    @DisplayName("다른 줄과 이름이 겹치면 막는다 — 두 벌이면 순환이 그쪽으로 쏠리는 건 추가와 같다")
+    void editRejectsAnotherRowsName() {
+        when(repository.findById(3L)).thenReturn(Optional.of(item(3L, Domain.OS, "옛 제목", 5)));
+        when(repository.existsByDomainAndTopicAndIdNot(Domain.OS, "남의 제목", 3L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.update(3L,
+                new AdminTopicQueueRequest(Domain.OS, "남의 제목", null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("이미 있습니다");
+    }
+
+    /**
+     * 분야 변경은 <b>막지 않는다</b>. 위험한 값인 것은 맞지만(이 범위로 만들 문서와 사흘치
+     * 문제의 분야가 함께 바뀐다), 막으면 잘못 고른 분야를 되돌릴 길이 삭제 후 재등록뿐이라
+     * 위 {@code editKeepsUsageAndOrder}가 막으려는 사고로 되돌아간다. 경고는 화면이 맡는다.
+     */
+    @Test
+    @DisplayName("분야도 고칠 수 있다 — 막으면 잘못 고른 분야를 되돌릴 길이 재등록뿐이다")
+    void editCanChangeDomain() {
+        TopicQueueItem target = used(3L, Domain.OS, "메모리 관리", 5, LocalDate.of(2026, 9, 1));
+        when(repository.findById(3L)).thenReturn(Optional.of(target));
+        when(repository.existsByDomainAndTopicAndIdNot(Domain.DATABASE, "메모리 관리", 3L)).thenReturn(false);
+
+        service.update(3L, new AdminTopicQueueRequest(Domain.DATABASE, "메모리 관리", null));
+
+        assertThat(target.getDomain()).isEqualTo(Domain.DATABASE);
+        assertThat(target.getUsedCount()).as("분야를 바꿔도 기록은 그대로다").isEqualTo(1);
+    }
+
     /* ── 다음 차례 판정 ───────────────────────────────────────── */
 
     @Test
