@@ -330,10 +330,14 @@ function renderPlan(s) {
     : `${difficultyLabel(p.difficulty)} 문제 ${s.count}건`;
   // 근거 문서가 없다는 것은 "그날은 폴백으로 돈다"는 뜻이다 — 문제는 나오지만 문서 링크가
   // 붙지 않는다. 조용히 넘어가면 2단계 구조가 헛도는 것을 몇 주 뒤에야 안다.
-  // 편을 함께 적는다(2026-09-05). 배치는 난이도에 따라 편을 알아서 고르는데
-  // (DraftGeneratorCli.editionFor: 고급은 심화편, 초급·중급은 입문편) slug만 찍으면
-  // 그 선택이 맞게 됐는지를 줄 끝의 -advanced로 확인해야 한다. 이 화면의 일이 바로
-  // "설정과 실제가 어긋난 것을 한눈에 보는 것"이라, 확인해야 할 것을 감출 이유가 없다.
+  // 편을 함께 적는다(2026-09-05). 배치는 난이도에 따라 편을 갈라 읽는다 —
+  // 초급은 입문편, 중급·고급은 심화편(DocumentEditionRule.editionFor).
+  // 이 화면의 일이 바로 "설정과 실제가 어긋난 것을 한눈에 보는 것"이라, 확인해야 할 것을 감출 이유가 없다.
+  //
+  // [2026-09-14] 이 표시는 붙인 날부터 <한 번도 뜬 적이 없었다>. 서버가 난이도를 안 보고
+  // 늘 입문편 slug를 보냈기 때문이다. 표시가 안 뜨는 것은 "오늘은 입문편이구나"로 읽히므로
+  // 없느니만 못한 상태였다 — 그날 배치는 -advanced로 돌고 있었다.
+  // 고친 곳은 화면이 아니라 서버다(AdminBatchService.sourceOf).
   const source = p.documentSlug
     ? `<code>${escapeHtml(p.documentSlug)}</code>${editionOfSlug(p.documentSlug) ? ` <span class="meta">(심화편)</span>` : ""}`
     : `<b>없음</b> — 근거 없이(폴백) 만듭니다. 그날 문제에는 "개념 문서 읽기" 링크가 안 붙습니다`;

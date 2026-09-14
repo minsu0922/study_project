@@ -16,6 +16,7 @@ import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
+import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 
@@ -187,6 +188,33 @@ class AdminBatchStatusIntegrationTest {
         assertThat(plan.cycleDomain()).isNotNull();
     }
 
+    /**
+     * <b>화면이 배치와 같은 편을 가리키는지</b>(2026-09-14 신설).
+     *
+     * <p>이 화면이 존재하는 이유가 "설정과 실제가 어긋난 것을 한눈에 보는 것"인데, 정작 이 줄이
+     * 어긋나 있었다. 서버가 난이도를 안 보고 늘 {@code parsed.document()}, 즉 입문편 slug만
+     * 찍었기 때문이다. 그날 실행 로그에는 {@code ...-advanced}가 남아 있었다.
+     *
+     * <p><b>기대값을 글자로 적지 않는다.</b> 오늘이 주기의 며칠차인지는 날짜마다 달라서
+     * "심화편이어야 한다"고 박으면 나흘 중 사흘만 맞는 테스트가 된다. 대신 <b>규칙에게 물어</b>
+     * 같은 답이 나오는지 본다 — 지켜야 할 것이 "정답"이 아니라 <b>두 곳의 일치</b>이기 때문이다.
+     * 누군가 {@code sourceOf}에 조건문을 다시 복사해 넣으면 그 순간 갈라지고 여기서 걸린다.
+     */
+    @Test
+    @DisplayName("화면이 가리키는 편이 배치가 읽을 편과 같다 — 규칙이 갈라지면 여기서 걸린다")
+    void planPointsAtTheSameEditionAsTheBatch() throws Exception {
+        Files.createDirectories(DIR.resolve("documents"));
+        LocalDate documentDate = adminBatchService.getStatus().plan().documentDate();
+        GeneratedDocumentFile written = writeBothEditionsAt(documentDate, "edition-probe");
+
+        AdminBatchStatus.TodayPlan plan = adminBatchService.getStatus().plan();
+        String expected = DocumentEditionRule.pick(written, plan.difficulty()).slug();
+
+        assertThat(plan.documentSlug())
+                .as("오늘 난이도(%s)가 읽을 편의 slug여야 한다", plan.difficulty())
+                .isEqualTo(expected);
+    }
+
     /* ── 달력(2026-09-08) ──────────────────────────────────────────────
      *
      * 달력이 답하는 것은 <없는 날짜>다. "안 들어온 파일"·"막힌 주기" 표는 줄이 있는 것만
@@ -293,6 +321,16 @@ class AdminBatchStatusIntegrationTest {
         var file = new GeneratedDocumentFile("테스트", date.toString(), date + "T00:00:00Z",
                 Domain.NETWORK, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
         objectMapper.writeValue(DIR.resolve("documents").resolve(date + ".json").toFile(), file);
+    }
+
+    /** 두 편이 다 있는 문서. 편을 고르는 규칙을 확인하려면 고를 것이 둘이어야 한다. */
+    private GeneratedDocumentFile writeBothEditionsAt(LocalDate date, String slug) throws Exception {
+        var file = new GeneratedDocumentFile("테스트", date.toString(), date + "T00:00:00Z",
+                Domain.NETWORK, "test",
+                new GeneratedDocumentItem("제목", slug, "# 입문편", List.of("net")),
+                new GeneratedDocumentItem("제목", slug + "-advanced", "# 심화편", List.of("net")));
+        objectMapper.writeValue(DIR.resolve("documents").resolve(date + ".json").toFile(), file);
+        return file;
     }
 
     private void write(String name, String body) throws Exception {

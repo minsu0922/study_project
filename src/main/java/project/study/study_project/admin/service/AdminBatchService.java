@@ -7,13 +7,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminBatchStatus;
+import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 import project.study.study_project.llm.support.BatchCountRule;
+import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.GenerationSchedule;
 
 import java.io.IOException;
@@ -260,7 +263,9 @@ public class AdminBatchService {
         // 나눠 세면 GenerationSchedule의 계산과 갈라질 수 있고, 그때 화면만 조용히 틀린다.
         int dayInCycle = (int) (today.toEpochDay() - plan.documentDate().toEpochDay());
 
-        SourceInfo source = sourceOf(dir, plan.documentDate());
+        // 난이도를 함께 넘긴다(2026-09-14). 배치는 난이도에 따라 편을 갈라 읽는데
+        // 여기서 안 넘기면 화면이 늘 입문편 slug를 찍는다 — 실제로 그랬다.
+        SourceInfo source = sourceOf(dir, plan.documentDate(), plan.difficulty());
         Domain actual = source.domain() != null ? source.domain() : plan.domain();
 
         return new AdminBatchStatus.TodayPlan(
@@ -279,18 +284,25 @@ public class AdminBatchService {
      * <p>여기서 검수 상태(거절됐는지)까지 보지는 않는다. 그건 배치가 스냅샷 파일로 판단하는
      * 일이고, 이 화면이 답하려는 것은 <b>"근거로 삼을 파일이 있기는 한가"</b>다.
      * 없으면 그날은 폴백으로 돌고, 그 사실이 slug의 빈 값으로 드러난다.
+     *
+     * @param difficulty 오늘의 난이도. 문서일이면 {@code null}이고, 그때는 입문편 slug가 나온다 —
+     *                   그날은 문서를 읽는 날이 아니라 만드는 날이라 고를 편이 없다
      */
-    private SourceInfo sourceOf(Path dir, LocalDate documentDate) {
+    private SourceInfo sourceOf(Path dir, LocalDate documentDate, Difficulty difficulty) {
         Path file = dir.resolve(DOCUMENT_SUBDIR).resolve(documentDate + ".json");
         if (!Files.exists(file)) {
             return SourceInfo.NONE;
         }
         try {
             GeneratedDocumentFile parsed = objectMapper.readValue(file.toFile(), GeneratedDocumentFile.class);
-            if (parsed.document() == null) {
+            // 배치가 쓰는 것과 <같은 규칙으로> 편을 고른다. 여기에 조건을 직접 적으면
+            // 2026-09-14까지의 상태로 돌아간다 — 화면은 입문편 slug를 찍는데 배치는
+            // 심화편으로 돌고, 정작 이 화면이 그 어긋남을 잡으라고 있는 화면이었다.
+            GeneratedDocumentItem edition = DocumentEditionRule.pick(parsed, difficulty);
+            if (edition == null) {
                 return SourceInfo.NONE;
             }
-            return new SourceInfo(parsed.document().slug(), parsed.domain());
+            return new SourceInfo(edition.slug(), parsed.domain());
         } catch (IOException e) {
             // 못 읽는 것도 "근거가 없다"와 같은 결과다 — 화면을 죽이지 않고 로그만 남긴다.
             log.warn("근거 문서를 읽지 못했습니다: {} — {}", file, e.getMessage());

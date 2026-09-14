@@ -16,6 +16,7 @@ import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
 import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.DifficultyMaterialRule;
+import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.GenerationLimits;
@@ -509,13 +510,11 @@ public final class DraftGeneratorCli {
      * 기준이라, 한 편만 주면 그대로 맞아떨어진다.
      */
     static GeneratedDocumentItem editionFor(GeneratedDocumentFile parsed, Difficulty difficulty) {
-        boolean fromAdvanced = difficulty == Difficulty.ADVANCED || difficulty == Difficulty.INTERMEDIATE;
-        if (fromAdvanced && parsed.advancedDocument() != null
-                && parsed.advancedDocument().contentMd() != null
-                && !parsed.advancedDocument().contentMd().isBlank()) {
-            return parsed.advancedDocument();
-        }
-        return parsed.document();
+        // 판정은 DocumentEditionRule 한 곳에만 둔다(2026-09-14). 여기에 조건을 직접 적으면
+        // 관리 화면의 배치 현황과 갈라지는데, 그 어긋남이 실제로 있었다 —
+        // 화면은 입문편 slug를 찍고 배치는 심화편으로 돌았다. hasMaterialFor를
+        // DifficultyMaterialRule에 맡긴 것과 같은 처방이다.
+        return DocumentEditionRule.pick(parsed, difficulty);
     }
 
     /**
