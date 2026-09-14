@@ -79,28 +79,19 @@ public class TopicQueueService {
         UP, DOWN, TOP
     }
 
-    /**
-     * 목록을 무슨 순서로 보여 줄지 — 2026-09-14 신설.
+    /*
+     * TopicSort(MANUAL / NEXT_UP)가 여기 있었다 — 2026-09-14에 만들고 같은 날 지웠다.
      *
-     * <p><b>정렬은 보기 전용이다.</b> {@link #MANUAL}이 아닌 동안 화면은 ↑↓⤒와 일괄 이동을
-     * 잠근다. "한 칸 위로"는 화면 위의 줄이 아니라 <b>전체 순서의 이웃</b>과 자리를 바꾸는
-     * 동작이라, 다른 기준으로 정렬해 놓고 누르면 <b>눌러도 줄이 안 움직인다</b>.
-     * 검색 중에 이동을 잠그는 것과 같은 사정이고, 이 클래스가 {@link #getAll}을 늘
-     * 사람이 정한 순서로 돌려주는 이유이기도 하다.
+     * 고르게 한 것 자체가 잘못이었다. 여든 줄 중 일흔넷이 아직 안 쓴 것이라 규칙 ①②가
+     * 전부 동점이고, 그러면 ③(내가 놓은 순서)이 순서를 통째로 정한다 — 두 정렬이 사실상
+     * <같은 목록>이었다. 같은 것을 두 이름으로 내놓고 고르라고 한 셈이다.
+     *
+     * 목록은 이제 늘 "먼저 나올 순서"다(아래 search). 화면의 ↑↓⤒는 그대로 쓴다 — 안 쓴 줄
+     * 사이에서는 그 순서가 곧 내가 놓은 순서라 눌러 보면 실제로 움직인다.
+     *
+     * getAll()은 여전히 sortOrder 순으로 돌려준다. 내보내기와 pickNext가 그 순서를 전제하고,
+     * 무엇보다 sortOrder는 규칙 ③ 그 자체라 사라진 개념이 아니다 — 사라진 것은 <보기 선택>뿐이다.
      */
-    public enum TopicSort {
-
-        /** 내가 놓은 순서({@code sortOrder}). 이동 버튼이 뜻을 갖는 유일한 모드다. */
-        MANUAL,
-
-        /**
-         * 다음 차례에 가까운 순 — <b>안 쓴 것 먼저 → 가장 오래 안 쓴 것 → 적어 둔 순서</b>.
-         *
-         * <p>{@link #pickNext}가 하나를 고르는 규칙을 목록 전체에 편 것이다. 그래서 이 모드의
-         * 첫 줄이 곧 "다음 차례"가 된다 — 배지와 맨 위가 어긋나면 규칙이 갈라진 것이다.
-         */
-        NEXT_UP
-    }
 
     /**
      * 사용 이력으로 거르기 — 2026-09-14 신설.
@@ -146,7 +137,7 @@ public class TopicQueueService {
      */
     @Transactional(readOnly = true)
     public PageResponse<TopicQueueItemResponse> search(String q, Domain domain, TopicUsage usage,
-                                                       TopicSort sort, Pageable pageable) {
+                                                       Pageable pageable) {
         List<TopicQueueItemResponse> all = getAll();
 
         String keyword = (q == null) ? "" : q.trim().toLowerCase();
@@ -156,10 +147,10 @@ public class TopicQueueService {
                 .filter(item -> matchesUsage(item, usage))
                 .toList();
 
-        // 거른 <뒤에> 정렬한다. 순서를 먼저 잡아도 결과는 같지만, 거르는 일이 늘 더 싸다.
-        // order 칸은 그대로 둔다 — 그 값은 <사람이 정한 순서에서 몇 번째>라는 뜻이고,
-        // 정렬 모드에서도 "원래 자리"를 알려 주는 것이 이 칸의 쓸모다.
-        matched = sortBy(matched, sort);
+        // 거른 <뒤에> 줄 세운다. 순서를 먼저 잡아도 결과는 같지만, 거르는 일이 늘 더 싸다.
+        // order 칸은 그대로 둔다 — 그 값은 <내가 놓은 순서에서 몇 번째>라는 뜻이고,
+        // 여기서 줄이 다시 서도 "원래 자리"를 알려 주는 것이 이 칸의 쓸모다.
+        matched = byNextUp(matched);
 
         int from = (int) Math.min(pageable.getOffset(), matched.size());
         int to = Math.min(from + pageable.getPageSize(), matched.size());
@@ -169,17 +160,18 @@ public class TopicQueueService {
     }
 
     /**
-     * 정렬 — {@link TopicSort#NEXT_UP}일 때만 순서를 바꾼다.
+     * <b>배치가 꺼낼 순서</b>로 줄 세운다 — 안 쓴 것 먼저 → 가장 오래전에 쓴 것 → 내가 놓은 순서.
      *
-     * <p>{@code order}(사람이 정한 순서에서 몇 번째)를 마지막 기준으로 쓴다. 이러면
-     * <b>조건이 같을 때 사람이 정한 순서가 그대로 남는다</b> — {@link #pickNext}가
-     * "먼저 온 항목이 자리를 지킨다"로 같은 타이브레이커를 쓰므로, 이 모드의 첫 줄과
-     * "다음 차례" 배지가 늘 같은 줄을 가리킨다. 둘이 어긋나면 규칙이 갈라진 것이다.
+     * <p>{@link #pickNext}가 하나를 고르는 규칙을 목록 전체에 편 것이다. 그래서 <b>첫 줄이 곧
+     * "다음 차례"</b>가 된다 — 맨 위와 배지가 어긋나면 두 규칙이 갈라진 것이고, 그것이
+     * 이 화면에서 가장 먼저 눈에 띄어야 할 고장이다.
+     *
+     * <p>{@code order}(내가 놓은 순서에서 몇 번째)를 마지막 기준으로 쓴다. {@code pickNext}가
+     * "먼저 온 항목이 자리를 지킨다"로 같은 타이브레이커를 쓰므로 둘의 답이 맞아떨어진다.
+     * 지금은 여든 줄 중 일흔넷이 안 쓴 것이라 <b>사실상 이 마지막 기준이 전부를 정한다</b> —
+     * 화면의 ↑↓가 여전히 뜻을 갖는 이유다.
      */
-    private List<TopicQueueItemResponse> sortBy(List<TopicQueueItemResponse> items, TopicSort sort) {
-        if (sort != TopicSort.NEXT_UP) {
-            return items;
-        }
+    private List<TopicQueueItemResponse> byNextUp(List<TopicQueueItemResponse> items) {
         return items.stream()
                 // 안 쓴 것이 먼저다. LocalDate는 null을 비교할 수 없어 <안 썼는가>를 별도 축으로 뽑는다 —
                 // nullsFirst로 묶어도 되지만, 규칙 문장("안 쓴 것 먼저")이 코드에 그대로 보이는 편이 낫다.

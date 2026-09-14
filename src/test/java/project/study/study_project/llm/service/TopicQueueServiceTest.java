@@ -239,8 +239,7 @@ class TopicQueueServiceTest {
         when(repository.findAllByOrderBySortOrderAsc()).thenReturn(items);
 
         List<TopicQueueItemResponse> sorted = service
-                .search(null, null, TopicQueueService.TopicUsage.ALL,
-                        TopicQueueService.TopicSort.NEXT_UP, PageRequest.of(0, 20))
+                .search(null, null, TopicQueueService.TopicUsage.ALL, PageRequest.of(0, 20))
                 .content();
 
         assertThat(sorted).extracting(TopicQueueItemResponse::topic)
@@ -250,20 +249,46 @@ class TopicQueueServiceTest {
                 .isTrue();
     }
 
+    /**
+     * <b>안 쓴 것끼리는 내가 놓은 순서가 전부를 정한다.</b> 2026-09-14에 정렬 선택지를 없앨 수
+     * 있었던 근거이고, 화면의 ↑↓가 여전히 뜻을 갖는 이유다.
+     *
+     * <p>지금 대기열은 여든 줄 중 일흔넷이 안 쓴 것이다. 그 무리에서는 규칙 ①②가 전부
+     * 동점이라 ③(내가 놓은 순서)만 남는다 — 그래서 "먼저 나올 순서"와 "내가 놓은 순서"가
+     * 사실상 같은 목록이었고, 둘 중 하나를 고르라고 물을 이유가 없었다.
+     *
+     * <p>이 성질이 깨지면 ↑↓가 <b>눌러도 안 움직이는 버튼</b>이 된다. 그때는 잠그거나
+     * 다른 조작을 줘야 하므로, 조용히 바뀌지 않게 여기서 못 박는다.
+     */
     @Test
-    @DisplayName("내가 정한 순서는 손대지 않는다 — 이동 버튼이 뜻을 갖는 유일한 모드다")
-    void manualSortKeepsHumanOrder() {
+    @DisplayName("안 쓴 것끼리는 내가 놓은 순서가 그대로 남는다 — ↑↓가 뜻을 갖는 근거")
+    void neverUsedRangesKeepHumanOrder() {
         when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
-                used(1L, Domain.OS, "먼저 적은 것", 1, LocalDate.of(2026, 9, 1)),
+                item(1L, Domain.OS, "먼저 적은 것", 1),
                 item(2L, Domain.OS, "나중에 적은 것", 2)));
 
         List<TopicQueueItemResponse> listed = service
-                .search(null, null, TopicQueueService.TopicUsage.ALL,
-                        TopicQueueService.TopicSort.MANUAL, PageRequest.of(0, 20))
+                .search(null, null, TopicQueueService.TopicUsage.ALL, PageRequest.of(0, 20))
                 .content();
 
         assertThat(listed).extracting(TopicQueueItemResponse::topic)
                 .containsExactly("먼저 적은 것", "나중에 적은 것");
+    }
+
+    @Test
+    @DisplayName("쓴 적 있는 줄은 내가 놓은 순서와 무관하게 뒤로 간다 — 맨 위로 올려도 밀린다")
+    void usedRangesFallBehindRegardlessOfHumanOrder() {
+        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+                used(1L, Domain.OS, "맨 위에 놓았지만 쓴 것", 1, LocalDate.of(2026, 9, 1)),
+                item(2L, Domain.OS, "뒤에 놓았지만 안 쓴 것", 2)));
+
+        List<TopicQueueItemResponse> listed = service
+                .search(null, null, TopicQueueService.TopicUsage.ALL, PageRequest.of(0, 20))
+                .content();
+
+        assertThat(listed).extracting(TopicQueueItemResponse::topic)
+                .as("이 성질을 화면이 문단으로 설명한다 — 어긋나면 그 설명이 거짓말이 된다")
+                .containsExactly("뒤에 놓았지만 안 쓴 것", "맨 위에 놓았지만 쓴 것");
     }
 
     /* ── 거르기 (2026-09-14) ──────────────────────────────────── */
@@ -316,8 +341,7 @@ class TopicQueueServiceTest {
     }
 
     private List<String> listed(Domain domain, TopicQueueService.TopicUsage usage) {
-        return service.search(null, domain, usage, TopicQueueService.TopicSort.MANUAL,
-                        PageRequest.of(0, 20))
+        return service.search(null, domain, usage, PageRequest.of(0, 20))
                 .content().stream().map(TopicQueueItemResponse::topic).toList();
     }
 
@@ -627,3 +651,4 @@ class TopicQueueServiceTest {
         return item;
     }
 }
+
