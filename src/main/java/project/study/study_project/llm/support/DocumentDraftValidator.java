@@ -81,11 +81,16 @@ public final class DocumentDraftValidator {
     /**
      * 심화편의 권장 분량 상한 — 프롬프트가 요구하는 "7,000~11,000자"의 위쪽 끝(2026-09-03).
      *
-     * <p>입문편보다 2,000자 적다. 배경 설명을 하지 않는 대신 지면을 전부 {@code ## 언제 깨지는가}에
-     * 쓰기 때문인데, 그 절은 항목 7개짜리라 물리적 한도가 있다. 입문편과 같은 값을 주면
+     * <p>입문편보다 1,500자 적다. 배경 설명을 하지 않기 때문인데, 입문편과 같은 값을 주면
      * 남는 지면이 <b>입문편 되풀이</b>로 찬다 — 이 편에서 가장 경계하는 실패다.
+     *
+     * <p><b>2026-09-14에 11,000 → 12,500으로 올렸다.</b> 이 편이 고급 3문제만 떠받치다
+     * 중급 5문제까지 맡게 되면서 {@code ## 실제로는 어디에서 만나는가} 절이 필수로 들어왔다
+     * ({@code ClaudeDocumentGenerator.ADVANCED_REQUIRED_SECTIONS} 주석). 절을 늘리고 상한을
+     * 그대로 두면 <b>지시를 잘 따른 문서일수록 경고를 달고 나온다</b> — 이 짝을 놓치는 사고가
+     * 입문편에서 이미 두 번 있었다. 올린 1,500자에는 갈 곳이 정해져 있다(새 절의 4~6항목).
      */
-    public static final int ADVANCED_WARN_LENGTH = 11_000;
+    public static final int ADVANCED_WARN_LENGTH = 12_500;
 
     /**
      * 하드 상한(차단). 권장치의 약 1.3배.
@@ -103,8 +108,8 @@ public final class DocumentDraftValidator {
      */
     static final int MAX_LENGTH = 18_200;
 
-    /** 심화편의 하드 상한 — {@link #ADVANCED_WARN_LENGTH}의 같은 1.3배. */
-    static final int ADVANCED_MAX_LENGTH = 14_300;
+    /** 심화편의 하드 상한 — {@link #ADVANCED_WARN_LENGTH}의 같은 1.3배(2026-09-14에 14,300에서 옮김). */
+    static final int ADVANCED_MAX_LENGTH = 16_250;
 
     /** 편에 해당하는 권장 분량 상한. */
     public static int warnLengthOf(DocumentEdition edition) {

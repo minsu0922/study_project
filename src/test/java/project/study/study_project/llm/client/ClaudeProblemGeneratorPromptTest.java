@@ -96,7 +96,9 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("## 언제 깨지는가")
                 .contains("## 면접에서 이렇게 물어본다");
         assertThat(prompt(Difficulty.INTERMEDIATE, DOC))
-                .as("중급 재료는 설계 판단 — 소제목 1개로 줄었으므로 본문 문장까지 함께 지목해야 한다")
+                .as("중급 재료는 2026-09-14부터 심화편의 적용 절이다. 뒤의 둘은 심화편이 없는 "
+                        + "옛 문서로 떨어질 때 쓰는 입문편 절이라 함께 지목한다")
+                .contains("## 실제로는 어디에서 만나는가")
                 .contains("### 왜 이렇게 설계됐는가")
                 .contains("## 실무에서는 이렇게 쓴다");
     }
@@ -126,16 +128,26 @@ class ClaudeProblemGeneratorPromptTest {
                 .containsOnlyKeys(Difficulty.BEGINNER, Difficulty.INTERMEDIATE, Difficulty.ADVANCED);
 
         ClaudeProblemGenerator.SOURCE_SECTIONS.forEach((difficulty, sections) -> {
-            // 고급은 심화편에서, 나머지는 입문편에서 캔다(DraftGeneratorCli.editionFor와 같은 매핑)
-            String prompt = difficulty == Difficulty.ADVANCED
-                    ? ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT
-                    : ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT;
             assertThat(sections).as("%s가 캘 절이 하나도 없다", difficulty).isNotEmpty();
+
+            // 어느 편에서든 시키기만 하면 그 절은 문서에 생긴다. 중급은 두 편에 걸쳐 있어
+            // (평소엔 심화편, 심화편 없는 옛 문서면 입문편) 한 편에만 대조하면 거짓 실패가 난다.
             assertThat(sections).allSatisfy(section ->
-                    assertThat(prompt)
-                            .as("%s가 지목한 '%s'를 그 편의 프롬프트가 시키지 않는다 — 문서에 그 절이 안 생긴다",
+                    assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT
+                            + ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                            .as("%s가 지목한 '%s'를 어느 편의 프롬프트도 시키지 않는다 — 문서에 그 절이 안 생긴다",
                                     difficulty, section)
                             .contains(section));
+
+            // 위 검사만으로는 <반대편 절을 지목하는> 원래 사고를 못 잡는다. 그래서 목록의
+            // 첫 절이 editionFor가 고르는 편에 실제로 있는지를 따로 못 박는다 — 평소 경로다.
+            String primaryEdition = difficulty == Difficulty.BEGINNER
+                    ? ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT
+                    : ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
+            assertThat(primaryEdition)
+                    .as("%s가 평소 근거로 삼는 편(editionFor)의 프롬프트가 첫 절 '%s'를 시키지 않는다",
+                            difficulty, sections.get(0))
+                    .contains(sections.get(0));
         });
     }
 
@@ -725,6 +737,35 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("넷이 전부 그럴듯하면 그건 고급이다")
                 .as("b~e에 길이 하한을 걸면 짧아도 되는 문제에 군더더기를 붙인다")
                 .contains("b~e에는 길이 규칙이 없다");
+    }
+
+    /**
+     * <b>고급에도 형태 배분 상한이 있는지</b>(2026-09-14 신설).
+     *
+     * <p>중급에는 08-25부터 "SITUATION 최대 2개"가 있었는데 <b>고급에는 상한이 없었다</b>.
+     * 결과는 위 중급 사고와 똑같았다 — 09-14 실물 두 문항이 둘 다 상황형이었고,
+     * 09-10·09-13을 되짚어 봐도 같은 쏠림이다.
+     *
+     * <p><b>왜 고급에서 더 잘 무너지는가.</b> 세 형태 중 a(SITUATION)에만 재료가 적혀 있다 —
+     * "## 언제 깨지는가 절의 실패 사례가 주 재료다". b·c에는 예시 문장만 있어서, 모델이 보기에
+     * <b>재료가 있는 형태는 하나뿐</b>이다. 그래서 상한만 걸면 부족하고 "b·c도 같은 절에서
+     * 캔다"를 함께 적어야 한다. 규칙과 함께 규칙이 지켜질 방법을 주는 것이 이 프롬프트의 원칙이다.
+     *
+     * <p>쏠리면 손해가 분명하다. 상황형은 지문이 150자를 넘으므로, 셋 다 상황형이면
+     * <b>지문만 길어지고 묻는 것은 하나</b>가 된다.
+     */
+    @Test
+    @DisplayName("고급도 형태를 섞는다 — 상한만 걸고 재료를 안 알려 주면 상황형으로 쏠린다")
+    void capsSituationShareForAdvanced() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .as("상한이 없으면 셋 다 상황형으로 내도 아무도 말리지 않는다")
+                .contains("[고급도 형태를 섞어라] — SITUATION은 최대 1개")
+                .as("숫자로 배분을 박지 않으면 상한을 목표로 읽는다 — 중급에서 겪은 것")
+                .contains("SITUATION 1개 + b·c에서 2개")
+                .as("b·c에 재료가 없다고 읽히면 상한을 걸어도 a로 돌아온다")
+                .contains("b와 c도 같은 절에서 캔다")
+                .as("쏠릴 때의 손해를 적어 둬야 규칙이 지켜진다")
+                .contains("지문만 길어지고 묻는 것은 하나가 된다");
     }
 
     /**

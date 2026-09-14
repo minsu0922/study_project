@@ -160,9 +160,11 @@ class PromptEvalCliTest {
                 """;
 
         assertThat(PromptEvalCli.missingSections(withoutIntermediate))
-                .containsExactlyInAnyOrder("### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다");
+                .containsExactlyInAnyOrder("## 실제로는 어디에서 만나는가",
+                        "### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다");
 
         String complete = withoutIntermediate
+                + "\n## 실제로는 어디에서 만나는가\n- 자리.\n"
                 + "\n### 왜 이렇게 설계됐는가\n- 근거.\n\n## 실무에서는 이렇게 쓴다\n- 이렇게.\n";
         assertThat(PromptEvalCli.missingSections(complete)).isEmpty();
     }

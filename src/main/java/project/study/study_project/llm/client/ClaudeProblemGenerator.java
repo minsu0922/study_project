@@ -72,7 +72,13 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      */
     public static final Map<Difficulty, List<String>> SOURCE_SECTIONS = Map.of(
             Difficulty.BEGINNER, List.of("## 바탕이 되는 개념", "## 무엇인가"),
-            Difficulty.INTERMEDIATE, List.of("### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다"),
+            // 중급은 2026-09-14부터 심화편을 근거로 삼는다(DraftGeneratorCli.editionFor).
+            // 그래서 심화편 절이 맨 앞에 온다. 뒤의 두 입문편 절을 지우지 않은 이유:
+            // 심화편이 없는 옛 문서(09-03 이전 단일 문서)와 심화편 생성만 실패한 날에는
+            // editionFor가 입문편을 돌려주는데, 그때 캘 곳이 이 둘이다. 지우면 그런 날의
+            // 중급이 통째로 폴백(근거 없는 생성)으로 떨어진다.
+            Difficulty.INTERMEDIATE, List.of("## 실제로는 어디에서 만나는가",
+                    "### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다"),
             Difficulty.ADVANCED, List.of("## 언제 깨지는가", "## 면접에서 이렇게 물어본다")
     );
 
@@ -371,6 +377,15 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                           (예) TIME_WAIT와 CLOSE_WAIT가 동시에 늘 때 각각 다르게 대응해야 하는 이유는?
             c. CAUSE      인과·트레이드오프 — 그 설계가 <무엇을 포기하고 무엇을 얻었는지>를 묻는다.
                           (예) TIME_WAIT를 줄이는 커널 옵션이 있는데 왜 함부로 쓰지 않는가?
+
+            [고급도 형태를 섞어라] — SITUATION은 최대 1개
+            셋을 낸다면 SITUATION 1개 + b·c에서 2개다. 상황형이 둘을 넘으면 안 된다.
+            중급에 같은 상한을 둔 것과 같은 이유인데, 고급에서는 더 잘 무너진다 —
+            a에만 "## 언제 깨지는가 절이 주 재료"라고 적혀 있어 재료가 그쪽으로 쏠려 보이기 때문이다.
+            b와 c도 같은 절에서 캔다. 같은 실패 사례를 놓고
+            <두 대응 중 이 조건에서 어느 쪽인가>(b)를 묻거나
+            <그 대응이 무엇을 포기하고 얻은 것인가>(c)를 물으면 된다.
+            셋 다 상황형으로 내면 지문만 길어지고 묻는 것은 하나가 된다.
 
             JUDGMENT(진술 판정)와 SEQUENCE(순서·절차)는 고급에 쓰지 마라.
             - 판정형은 중급 판정형과 겉모습이 같아(진술 넷 중 고르기) 오답 설계로만 갈리는데,
@@ -775,10 +790,16 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                     + "'%s' 절(정의·용어 설명), 그리고 본론의 기본 동작 부분을 쓴다. "
                     .formatted(sections.get(1))
                     + "문서를 읽은 사람이라면 풀 수 있어야 한다.";
-            case INTERMEDIATE -> "[이번 난이도에서 쓸 부분] 문서가 <왜 그렇게 했는지>를 밝힌 곳을 쓴다 — "
-                    + "'%s' 소제목뿐 아니라, 본문 문장 안에서 다른 선택지를 두고 "
-                    .formatted(sections.get(0))
-                    + "판단한 대목과 '%s' 절의 선택 이유가 모두 여기 해당한다. ".formatted(sections.get(1))
+            // 2026-09-14: 중급이 심화편으로 옮겨 가면서 주 재료가 바뀌었다. 세 절을 모두
+            // 부르는 이유는 SOURCE_SECTIONS 주석에 적은 폴백 때문이다 — 심화편이 없는 옛
+            // 문서로 떨어지면 뒤의 두 입문편 절이 그 자리를 대신한다. 어느 문서가 오든
+            // 지목한 이름 중 하나는 실제로 있게 해 둔다(없는 이름을 지목하면 모델은 오류를
+            // 내지 않고 조용히 아무 데나 캔다 — 8/15에 겪은 사고).
+            case INTERMEDIATE -> "[이번 난이도에서 쓸 부분] 문서가 <이 개념을 실제로 어디에 쓰는지> "
+                    + "밝힌 곳을 쓴다 — '%s' 절이 주 재료다. ".formatted(sections.get(0))
+                    + "그 절이 없는 문서라면 '%s' 소제목과 '%s' 절, 그리고 본문 문장 안에서 "
+                    .formatted(sections.get(1), sections.get(2))
+                    + "다른 선택지를 두고 판단한 대목이 같은 자리다. "
                     + "문서가 설명한 원리를 문서에 없는 새로운 상황에 적용해 판단하게 만들어라.";
             case ADVANCED -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(깨지는 조건과 흔한 오해)과 "
                     .formatted(sections.get(0))

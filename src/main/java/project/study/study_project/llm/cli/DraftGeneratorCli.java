@@ -481,13 +481,21 @@ public final class DraftGeneratorCli {
     }
 
     /**
-     * 오늘 난이도가 <b>어느 편을 근거로 삼는지</b> — 고급은 심화편, 초급·중급은 입문편(2026-09-03).
+     * 오늘 난이도가 <b>어느 편을 근거로 삼는지</b> — 초급은 입문편, 중급·고급은 심화편.
      *
      * <p><b>왜 이 매핑인가.</b> {@code ClaudeProblemGenerator.SOURCE_SECTIONS}가 난이도별로
      * 지목하는 절이 두 편의 분할선과 그대로 일치한다 — 초급({@code ## 바탕이 되는 개념},
-     * {@code ## 무엇인가})과 중급({@code ### 왜 이렇게 설계됐는가},
-     * {@code ## 실무에서는 이렇게 쓴다})은 입문편에만 있고, 고급({@code ## 언제 깨지는가},
-     * {@code ## 면접에서 이렇게 물어본다})은 심화편에만 있다. 그래서 그 상수를 고치지 않았다.
+     * {@code ## 무엇인가})은 입문편에, 중급({@code ## 실제로는 어디에서 만나는가})과
+     * 고급({@code ## 언제 깨지는가}, {@code ## 면접에서 이렇게 물어본다})은 심화편에 있다.
+     *
+     * <p><b>2026-09-14에 중급을 심화편으로 옮겼다.</b> 전에는 심화편이 고급 3문제만 떠받쳐
+     * 문제당 재료가 3,465자였다(입문편은 955자로 12문제). 남는 지면을 모델이 이론으로 채우면서
+     * 글이 계속 어려워졌고, 중급을 붙여 <b>바닥</b>을 만들었다 — 같은 문서로 중급도 내야 하면
+     * 너무 어려워지는 순간 중급을 만들 수 없다. 사정은
+     * {@code ClaudeDocumentGenerator.ADVANCED_REQUIRED_SECTIONS} 주석에 적어 뒀다.
+     *
+     * <p>덤으로 중급 프롬프트의 <b>형태 배분 규칙</b>(다섯 형태, SITUATION 최대 2개)이 심화편
+     * 재료를 캐게 된다. 고급에만 맡겨 두면 상황형으로 쏠리던 자리다.
      *
      * <p><b>심화편이 없으면 입문편으로 돌아간다.</b> 2026-09-03 이전에 만든 파일 15개에는
      * 심화편 칸이 아예 없고, 심화편 생성만 실패한 날도 있을 수 있다. 여기서 {@code null}을
@@ -501,7 +509,8 @@ public final class DraftGeneratorCli {
      * 기준이라, 한 편만 주면 그대로 맞아떨어진다.
      */
     static GeneratedDocumentItem editionFor(GeneratedDocumentFile parsed, Difficulty difficulty) {
-        if (difficulty == Difficulty.ADVANCED && parsed.advancedDocument() != null
+        boolean fromAdvanced = difficulty == Difficulty.ADVANCED || difficulty == Difficulty.INTERMEDIATE;
+        if (fromAdvanced && parsed.advancedDocument() != null
                 && parsed.advancedDocument().contentMd() != null
                 && !parsed.advancedDocument().contentMd().isBlank()) {
             return parsed.advancedDocument();
