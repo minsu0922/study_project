@@ -1331,6 +1331,23 @@ class DraftGeneratorCliTest {
             assertThat(DraftGeneratorCli.resolveProblemType("   ")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
         }
 
+        /**
+         * 드롭다운의 기본 선택지가 {@code AUTO}다 — 2026-09-15.
+         *
+         * <p>전에는 첫 선택지가 빈 문자열이라 드롭다운에 글자 없는 칸이 떴다. 이름을 붙이면서
+         * 그 값이 CLI까지 그대로 흘러오게 됐는데, {@code ProblemType.valueOf("AUTO")}는
+         * 없는 상수라 <b>아무것도 안 고른 평범한 실행이 죽는다</b>. 빈 값과 같은 뜻으로 받는지
+         * 여기서 못 박는다. 워크플로에서 빈 값으로 바꿔 넘기는 방법은 쓸 수 없다 —
+         * GitHub 식에서 빈 문자열이 거짓값이라 {@code && '' ||} 관용구가 제 역할을 못 한다.
+         */
+        @Test
+        @DisplayName("AUTO도 '지정 안 함'으로 본다 — 수동 실행의 기본 선택지가 그대로 넘어온다")
+        void treatsAutoAsUnspecified() {
+            assertThat(DraftGeneratorCli.resolveProblemType("AUTO")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(DraftGeneratorCli.resolveProblemType("auto")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(DraftGeneratorCli.resolveProblemType(" Auto ")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+        }
+
         @Test
         @DisplayName("새 유형을 이름으로 고를 수 있다 — 소문자와 앞뒤 공백도 받는다")
         void acceptsNewTypes() {

@@ -949,16 +949,24 @@ public final class DraftGeneratorCli {
      * 새 유형은 실물을 몇 번 보고 나서 주기에 넣어도 늦지 않다 — 먼저 <b>고를 수 있게</b>만 한다.
      * 예약 실행은 이 옵션을 비워 두므로 지금까지와 똑같이 동작한다.
      *
-     * <p><b>워크플로가 빈 문자열을 넘긴다.</b> 수동 실행에서 아무것도 고르지 않으면
-     * {@code --problem-type=}가 그대로 온다. 그걸 {@code valueOf("")}에 넣으면
-     * {@code IllegalArgumentException}이 나면서 배치가 죽으므로, 공백을 "지정 안 함"으로 본다.
+     * <p><b>"지정 안 함"이 두 모습으로 온다.</b> 예약 실행은 이 옵션을 아예 안 써서
+     * {@code --problem-type=}가 빈 값으로 오고, 수동 실행은 드롭다운 기본 선택지인
+     * {@code AUTO}가 온다. 둘 다 뜻은 같으므로 여기서 함께 받아 준다 — 빈 값을
+     * {@code valueOf("")}에 넣으면 <b>아무것도 안 고른 평범한 실행</b>에서 배치가 죽는다.
+     *
+     * <p><b>왜 워크플로가 아니라 여기서 AUTO를 푸나.</b> 워크플로에서
+     * {@code ${{ inputs.problem_type == 'AUTO' && '' || inputs.problem_type }}}로 바꿔 넘기는
+     * 방법이 있어 보이지만, 그 관용구는 <b>동작하지 않는다</b> — GitHub 식에서 빈 문자열은
+     * 거짓값이라 {@code && ''}의 결과가 {@code ||}를 타고 원래 값으로 되돌아온다.
+     * {@code --type}의 {@code auto}를 {@link #decideAction}이 직접 받아 주는 것과 같은 이유다.
      *
      * <p>서술형은 여기서 막는다. {@code ClaudeProblemGenerator.typeRule}도 막지만, 그건
      * <b>API를 부르기 직전</b>이라 그 전에 근거 문서를 읽고 중복 목록을 만드는 일을 다 한 뒤다.
      * 값이 잘못된 것은 값을 읽는 자리에서 걸러야 한다.
      */
     static ProblemType resolveProblemType(String raw) {
-        if (raw == null || raw.isBlank()) {
+        // 빈 값(예약 실행)과 AUTO(수동 실행의 기본 선택지)는 같은 뜻이다 — 위 주석 참고.
+        if (raw == null || raw.isBlank() || "auto".equalsIgnoreCase(raw.trim())) {
             return ProblemType.MULTIPLE_CHOICE;
         }
         ProblemType type;
