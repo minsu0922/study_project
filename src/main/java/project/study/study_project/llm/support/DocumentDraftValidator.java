@@ -328,6 +328,7 @@ public final class DocumentDraftValidator {
         checkCodeExamples(body, edition, checks);
         checkHtmlTags(body, checks);
         checkLength(body, edition, checks);
+        checkSectionOpeners(structure, checks);
 
         if (edition == DocumentEdition.BEGINNER) {
             // 아래 넷은 입문편에만 있는 절·규칙을 본다. 심화편에서 돌리면 전부 헛울린다 —
@@ -862,6 +863,27 @@ public final class DocumentDraftValidator {
      * 속으면 안 되니 {@code masked}를 보고, 분량을 재는 검사는 독자가 실제로 읽는 양이
      * 기준이니 {@code raw}를 본다.
      */
+    /**
+     * 절의 첫 줄이 <b>목록·표·코드·소제목</b>인지 — 그러면 다리 문장이 없는 것이다.
+     *
+     * <p>{@code FAILURE_MODE_ITEM}과 거의 같은데 표({@code |})와 펜스({@code ```})를 더했다.
+     * 따로 두는 이유는 두 패턴이 재는 것이 다르기 때문이다 — 저쪽은 "항목이 몇 개인가",
+     * 이쪽은 "첫 줄이 문장인가"다. 한 패턴을 공유하면 한쪽을 고칠 때 다른 쪽이 조용히 바뀐다.
+     */
+    private static final Pattern NOT_A_SENTENCE_OPENER =
+            Pattern.compile("^(\\*\\*|#{3,}\\s|-\\s|\\*\\s|\\||```|\\d+\\.\\s|>\\s)");
+
+    /**
+     * 다리 문장을 요구하지 <b>않는</b> 절 — 원래 목록이거나 표인 자리다.
+     *
+     * <p>「핵심 요약」과 각 편의 그다음 절은 글의 첫머리라 받을 앞 절이 없고,
+     * 「용어 한눈에」는 표 자체가 내용이다. 여기에까지 문장을 요구하면 <b>프롬프트대로 잘 쓴
+     * 문서에 매번 경고가 셋 붙는다</b>. 늘 떠 있는 경고는 진짜 차단이 왔을 때도 그러려니
+     * 하게 만든다 — 이 검증기가 오탐을 미탐보다 비싸게 치는 이유다.
+     */
+    private static final Set<String> BRIDGE_EXEMPT_SECTIONS = Set.of(
+            "핵심 요약", "바탕이 되는 개념", "이 글을 읽기 전에", "용어 한눈에");
+
     private record Section(String raw, String masked) {
     }
 
@@ -895,6 +917,62 @@ public final class DocumentDraftValidator {
             n++;
         }
         return n;
+    }
+
+    /**
+     * 각 {@code ## } 절이 <b>문장 하나로 시작하는지</b> — 2026-09-16.
+     *
+     * <h2>왜 이걸 세는가</h2>
+     *
+     * <p>사용자 지적은 "절과 절 사이가 툭툭 끊긴다. 절 여섯 개가 한 글이 아니라 여섯 개의
+     * 글처럼 읽힌다"였다. 원인은 문체가 아니라 <b>자리</b>다 — 심화편의 주력 절 둘과
+     * 「면접에서 이렇게 물어본다」가 모두 굵은 항목으로 곧장 시작한다. 앞 절이 끝나자마자
+     * 새 목록이 시작되니 두 절을 잇는 문장이 들어설 칸이 아예 없다.
+     *
+     * <p>더 고약한 것은 이 프롬프트가 흐름을 <b>일부러</b> 깎아 놨다는 점이다.
+     * {@code [덜어낼 것]}이 연결어("정리하면", "즉")를 이름으로 금지한다 — 2026-08-15에
+     * 분량 상한을 올리면서 넣은 규칙으로, 늘어난 지면이 부연으로 차는 것을 막으려고
+     * "담백함"을 얻고 "이어짐"을 판 것이다. 그래서 "매끄럽게 써라"를 한 줄 더하는 것으로는
+     * 안 된다. 두 지시가 정면으로 부딪쳐 모델이 한쪽을 조용히 무시한다.
+     *
+     * <h2>왜 "매끄러움"이 아니라 "첫 줄"을 보는가</h2>
+     *
+     * <p>매끄러움은 못 센다. 첫 줄이 문장인지는 원문에서 그대로 판정된다. 규칙을 셀 수 있는
+     * 모양으로 바꿔 검증기에 넘기는 것이 이 저장소가 프롬프트 품질에 써 온 방법이다
+     * (docs/17). 물론 칸이 있다고 다리가 놓인 것은 아니다 — 문장이 실제로 앞 절을 받는지는
+     * 사람이 읽어야 한다. 여기서 막는 것은 <b>칸조차 없는 상태</b>다.
+     *
+     * <h2>경고이지 차단이 아니다</h2>
+     *
+     * <p>흐름은 재료와 달라서, 어긋나도 다음 날 문제 생성이 망가지지 않는다. 읽기가 나빠질
+     * 뿐이다. 차단으로 두면 승인 버튼이 막혀 <b>멀쩡한 하루치를 버리게</b> 된다.
+     *
+     * <p>개수 검사와 달리 {@code structure}(코드블록을 지운 사본)만 본다. 원문을 보면
+     * 코드블록 안의 {@code ## } 주석이 절로 잡힌다.
+     */
+    private static void checkSectionOpeners(String structure, List<DraftCheck> checks) {
+        Matcher m = H2_PATTERN.matcher(structure);
+        while (m.find()) {
+            String heading = m.group(1).trim();
+            if (BRIDGE_EXEMPT_SECTIONS.contains(heading)) {
+                continue;
+            }
+            // 제목 줄 다음의 첫 <내용 있는> 줄. 빈 줄은 건너뛴다 — 마크다운에서 제목과 본문
+            // 사이의 빈 줄은 관례라, 그걸 "첫 줄"로 보면 모든 절이 통과한다.
+            String rest = structure.substring(m.end());
+            String firstLine = rest.lines()
+                    .map(String::strip)
+                    .filter(line -> !line.isEmpty())
+                    .findFirst()
+                    .orElse("");
+            if (firstLine.isEmpty() || !NOT_A_SENTENCE_OPENER.matcher(firstLine).find()) {
+                continue;
+            }
+            checks.add(DraftCheck.warning(
+                    "'## %s'가 목록·표로 곧장 시작합니다. 문장으로 시작해 앞 절과 이어 주세요 — "
+                            .formatted(heading)
+                            + "앞에서 밝혀진 것 때문에 지금 무엇이 문제가 되는지를 한 문장으로."));
+        }
     }
 
     /**

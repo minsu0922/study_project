@@ -304,6 +304,58 @@ class DocumentDraftValidatorTest {
     }
 
     /**
+     * <b>절이 문장으로 시작하는가</b>(2026-09-16).
+     *
+     * <p>사용자 지적: "절과 절 사이가 툭툭 끊긴다. 절 여섯 개가 한 글이 아니라 여섯 개의
+     * 글처럼 읽힌다." 원인은 문체가 아니라 <b>자리</b>였다 — 심화편의 주력 절 둘과
+     * 「면접에서 이렇게 물어본다」가 모두 굵은 항목으로 곧장 시작한다. 앞 절이 끝나자마자
+     * 새 목록이 시작되니 두 절을 잇는 문장이 들어설 자리가 아예 없다.
+     *
+     * <p>"매끄럽게 써라"는 셀 수 없어서 검증기에 넘길 수 없다. 대신 <b>절의 첫 줄이
+     * 문장인가</b>는 원문에서 그대로 판정된다. 규칙을 셀 수 있는 모양으로 바꿔 검증기에
+     * 넘기는 것이 이 저장소가 프롬프트 품질에 써 온 방법이다(docs/17).
+     *
+     * <p>예외 넷은 <b>원래 목록·표인 절</b>이다. 「핵심 요약」과 그다음 절은 글의 첫머리라
+     * 받을 앞 절이 없고, 「용어 한눈에」는 표 자체가 내용이다. 여기에 문장을 요구하면
+     * 잘 쓴 문서에 경고가 뜬다 — 오탐이 미탐보다 비싸다는 이 검증기의 오랜 방향이다.
+     */
+    @Test
+    @DisplayName("절이 목록으로 곧장 시작하면 알린다 — 앞 절과 잇는 문장이 들어설 자리가 없다")
+    void warnsWhenSectionStartsWithAList() {
+        String abrupt = advancedBody(TITLE)
+                .replace("지금까지는 조건이 맞을 때의 이야기다. 조건이 어긋나는 자리가 이만큼 있다.\n\n", "");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", abrupt))
+                .extracting(DraftCheck::message)
+                .as("다리 문장을 걷어내면 절이 **1. 첫째 조건**으로 곧장 시작한다")
+                .anyMatch(m -> m.contains("## 어떤 때 통하지 않는가") && m.contains("문장으로 시작"));
+    }
+
+    @Test
+    @DisplayName("절이 문장으로 시작하면 조용하다")
+    void silentWhenSectionStartsWithASentence() {
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", advancedBody(TITLE)))
+                .extracting(DraftCheck::message)
+                .as("fixture의 실패 조건 절은 다리 문장으로 시작한다")
+                .noneMatch(m -> m.contains("## 어떤 때 통하지 않는가") && m.contains("문장으로 시작"));
+    }
+
+    /**
+     * 예외 절에까지 문장을 요구하면 <b>모든 문서에 경고가 뜬다</b>. 늘 떠 있는 경고는
+     * 진짜 차단이 왔을 때도 그러려니 하게 만든다 — 경고의 값어치가 0이 되는 길이다.
+     */
+    @Test
+    @DisplayName("원래 목록·표인 절은 예외다 — 요약·머리말·용어표에 문장을 요구하면 모든 문서가 걸린다")
+    void listBySectionDesignIsExempt() {
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", advancedBody(TITLE)))
+                .extracting(DraftCheck::message)
+                .as("이 셋은 fixture에서 하이픈 목록·표로 시작하는데, 그게 프롬프트가 시킨 형식이다")
+                .noneMatch(m -> m.contains("## 핵심 요약") && m.contains("문장으로 시작"))
+                .noneMatch(m -> m.contains("## 이 글을 읽기 전에") && m.contains("문장으로 시작"))
+                .noneMatch(m -> m.contains("용어 한눈에") && m.contains("문장으로 시작"));
+    }
+
+    /**
      * <b>옛 이름으로 쓰인 초안도 개수를 센다</b>(2026-09-16).
      *
      * <p>절 이름을 바꾼 날 검수 대기함에 남아 있던 초안은 옛 이름을 쓴다. 새 이름으로만 찾으면
@@ -788,6 +840,8 @@ class DocumentDraftValidatorTest {
                 %s
 
                 ## 무엇인가
+                이것은 이러이러한 것이다.
+
                 - **첫째 용어(first)** — 한 문장 정의.
                 - **둘째 용어(second)** — 한 문장 정의.
 
@@ -839,9 +893,13 @@ class DocumentDraftValidatorTest {
                 | 일곱째 용어 | 한 줄 뜻. | 이럴 때. |
 
                 ## 실무에서는 이렇게 쓴다
+                여기까지가 원리다. 원리를 알아도 언제 꺼내 쓸지는 따로 익혀야 한다.
+
                 - 이런 상황에서 이렇게 쓴다.
 
                 ## 자주 하는 오해
+                쓰는 자리를 알고 나면 그 다음에 걸리는 것은 잘못 외운 사실이다.
+
                 **"믿기 쉬운 문장이다"**
                 그렇지 않다. 맞는 사실은 이것이다.
 
@@ -870,8 +928,10 @@ class DocumentDraftValidatorTest {
                 - 그리고 저것도 다뤘다.
 
                 ## 실무에서 어디에 나타나는가
+                입문편이 세운 개념은 실제 코드에서 몇 군데로만 드러난다.
+
                 **첫째 자리**
-                어느 자리에서 만나는가.
+                어느 자리에 나타나는가.
                 거기서 이 개념이 무엇을 정하는가.
 
                 ## 깊은 동작
@@ -900,6 +960,8 @@ class DocumentDraftValidatorTest {
                 | 일곱째 용어 | 한 줄 뜻. | 이럴 때. |
 
                 ## 어떤 때 통하지 않는가
+                지금까지는 조건이 맞을 때의 이야기다. 조건이 어긋나는 자리가 이만큼 있다.
+
                 **1. 첫째 조건**
                 **2. 둘째 조건**
                 **3. 셋째 조건**
@@ -909,6 +971,8 @@ class DocumentDraftValidatorTest {
                 **7. 일곱째 조건**
 
                 ## 면접에서 이렇게 물어본다
+                위의 조건들은 면접에서 이런 형태의 질문으로 나온다.
+
                 **Q. 무엇인가?**
                 답변 요점.
 
