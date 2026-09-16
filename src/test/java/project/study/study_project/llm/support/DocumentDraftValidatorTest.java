@@ -184,7 +184,7 @@ class DocumentDraftValidatorTest {
         List<DraftCheck> checks = DocumentDraftValidator.validate(
                 "다른 제목", "Bad_Slug", "# 본문 제목\n\n## 왜 필요한가\n내용");
 
-        // 이 본문에는 '## 언제 깨지는가'가 없으므로 <입문편>으로 판정된다(editionOf).
+        // 이 본문에는 '## 어떤 때 통하지 않는가'가 없으므로 <입문편>으로 판정된다(editionOf).
         //
         // slug 형식 1 + 제목 불일치 1
         // + 빠진 입문편 필수 절 6(핵심 요약·바탕이 되는 개념·무엇인가·실무에서는 이렇게 쓴다·
@@ -290,7 +290,7 @@ class DocumentDraftValidatorTest {
      * 갈 곳을 지정해야 부연으로 차지 않는다는 것이 이 프롬프트의 오랜 결론이다.
      */
     @Test
-    @DisplayName("'언제 깨지는가' 항목이 모자라면 알린다 — 고급 날 재료가 마른다")
+    @DisplayName("'어떤 때 통하지 않는가' 항목이 모자라면 알린다 — 고급 날 재료가 마른다")
     void warnsWhenFailureModesAreTooFew() {
         String few = advancedBody(TITLE)
                 .replace("**4. 넷째 조건**\n", "")
@@ -300,7 +300,30 @@ class DocumentDraftValidatorTest {
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", few))
                 .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("'## 언제 깨지는가'의 항목이 3개"));
+                .anyMatch(m -> m.contains("'## 어떤 때 통하지 않는가'의 항목이 3개"));
+    }
+
+    /**
+     * <b>옛 이름으로 쓰인 초안도 개수를 센다</b>(2026-09-16).
+     *
+     * <p>절 이름을 바꾼 날 검수 대기함에 남아 있던 초안은 옛 이름을 쓴다. 새 이름으로만 찾으면
+     * 그 초안은 "절이 아예 없다"로 읽혀 개수 검사가 <b>통째로 건너뛰어진다</b>. 그러면 재료가
+     * 세 개뿐인 초안에 경고가 하나도 안 붙은 채 승인 버튼이 열린다 — 검사가 없는 것보다
+     * 나쁘다. 있는 줄 알고 안 보게 되기 때문이다.
+     */
+    @Test
+    @DisplayName("옛 이름 초안도 항목 개수를 센다 — 새 이름으로만 찾으면 검사가 조용히 꺼진다")
+    void countsFailureModesInLegacyNamedDraft() {
+        String legacy = advancedBody(TITLE)
+                .replace("## 어떤 때 통하지 않는가", "## 언제 깨지는가")
+                .replace("**4. 넷째 조건**\n", "")
+                .replace("**5. 다섯째 조건**\n", "")
+                .replace("**6. 여섯째 조건**\n", "")
+                .replace("**7. 일곱째 조건**\n", "");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", legacy))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("항목이 3개"));
     }
 
     /**
@@ -339,7 +362,7 @@ class DocumentDraftValidatorTest {
                     base.replace(written, form)))
                     .as("이 형식을 못 세면 멀쩡한 문서에 경고가 뜬다:%n%s", form)
                     .extracting(DraftCheck::message)
-                    .noneMatch(m -> m.contains("언제 깨지는가"));
+                    .noneMatch(m -> m.contains("어떤 때 통하지 않는가"));
         }
     }
 
@@ -615,7 +638,7 @@ class DocumentDraftValidatorTest {
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", withComment))
                 .extracting(DraftCheck::message)
                 .as("주석에서 끊기면 항목이 0개로 세어져 헛경고가 뜬다")
-                .noneMatch(m -> m.contains("언제 깨지는가"))
+                .noneMatch(m -> m.contains("어떤 때 통하지 않는가"))
                 .as("본론 섹션 수도 주석 때문에 부풀면 안 된다")
                 .noneMatch(m -> m.contains("본론 섹션이"));
     }
@@ -749,7 +772,7 @@ class DocumentDraftValidatorTest {
      * <b>모든 검사를 통과하는</b> 최소 문서. 검사하려는 항목만 골라 망가뜨려 쓴다.
      *
      * <p>2026-08-17에 형식 규칙 넷을 추가하면서 이 문서도 함께 채웠다 — 전에는 본론이 0개이고
-     * '언제 깨지는가' 항목이 1개인, <b>새 기준으로는 경고가 셋 붙는</b> 문서였다.
+     * '어떤 때 통하지 않는가' 항목이 1개인, <b>새 기준으로는 경고가 셋 붙는</b> 문서였다.
      * 그대로 두면 "이 항목만 검사한다"던 테스트들이 딴 경고까지 세게 되고,
      * 그러면 무엇을 재고 있었는지 알 수 없어진다.
      */
@@ -830,7 +853,7 @@ class DocumentDraftValidatorTest {
     /**
      * <b>모든 검사를 통과하는 심화편</b>(2026-09-03). 편에 따라 도는 검사가 갈리므로 짝이 필요하다.
      *
-     * <p>{@code ## 언제 깨지는가}가 곧 편의 표지다({@code ClaudeDocumentGenerator.editionOf}).
+     * <p>{@code ## 어떤 때 통하지 않는가}가 곧 편의 표지다({@code ClaudeDocumentGenerator.editionOf}).
      * 이 절을 입문편 fixture에 남겨 두면 <b>입문편 검사가 하나도 안 도는</b> 상태로 스무 개
      * 넘는 테스트가 통과해 버린다 — 초록불인데 아무것도 안 재는, 가장 나쁜 종류의 통과다.
      */
@@ -846,7 +869,7 @@ class DocumentDraftValidatorTest {
                 - 입문편에서 이것을 다뤘다.
                 - 그리고 저것도 다뤘다.
 
-                ## 실제로는 어디에서 만나는가
+                ## 실무에서 어디에 나타나는가
                 **첫째 자리**
                 어느 자리에서 만나는가.
                 거기서 이 개념이 무엇을 정하는가.
@@ -876,7 +899,7 @@ class DocumentDraftValidatorTest {
                 | 여섯째 용어 | 한 줄 뜻. | 이럴 때. |
                 | 일곱째 용어 | 한 줄 뜻. | 이럴 때. |
 
-                ## 언제 깨지는가
+                ## 어떤 때 통하지 않는가
                 **1. 첫째 조건**
                 **2. 둘째 조건**
                 **3. 셋째 조건**

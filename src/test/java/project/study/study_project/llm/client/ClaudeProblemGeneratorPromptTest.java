@@ -92,15 +92,19 @@ class ClaudeProblemGeneratorPromptTest {
                 .as("초급 재료는 정의·용어 절이다")
                 .contains("## 무엇인가");
         assertThat(prompt(Difficulty.ADVANCED, DOC))
-                .as("고급 재료는 '언제 깨지는가'다 — 여기가 어긋나 고급 날 재료가 마를 뻔했다")
-                .contains("## 언제 깨지는가")
-                .contains("## 면접에서 이렇게 물어본다");
+                .as("고급 재료는 실패 조건 절이다 — 여기가 어긋나 고급 날 재료가 마를 뻔했다")
+                .contains("## 어떤 때 통하지 않는가")
+                .contains("## 면접에서 이렇게 물어본다")
+                .as("옛 이름도 함께 지목해야 2026-09-16 이전 문서에서 <지목한 절이 없는> 상태가 안 된다")
+                .contains(ClaudeDocumentGenerator.LEGACY_FAILURE_MODE_SECTION);
         assertThat(prompt(Difficulty.INTERMEDIATE, DOC))
                 .as("중급 재료는 2026-09-14부터 심화편의 적용 절이다. 뒤의 둘은 심화편이 없는 "
                         + "옛 문서로 떨어질 때 쓰는 입문편 절이라 함께 지목한다")
-                .contains("## 실제로는 어디에서 만나는가")
+                .contains("## 실무에서 어디에 나타나는가")
                 .contains("### 왜 이렇게 설계됐는가")
-                .contains("## 실무에서는 이렇게 쓴다");
+                .contains("## 실무에서는 이렇게 쓴다")
+                .as("옛 이름도 함께 지목한다 — 고급과 같은 이유다")
+                .contains(ClaudeDocumentGenerator.LEGACY_REAL_WORLD_SECTION);
     }
 
     /**
@@ -120,6 +124,12 @@ class ClaudeProblemGeneratorPromptTest {
      * 전제이자 <b>가장 조용히 깨질 수 있는 부분</b>이다 — 절 하나를 반대편으로 옮기면
      * 그 난이도가 매 주기 폴백으로 떨어지는데, 로그를 보지 않으면 며칠 뒤 문제를 읽고서야 안다.
      */
+    /**
+     * 2026-09-16 이전 문서가 쓰던 절 이름 — 새 프롬프트는 이 이름을 시키지 않는다.
+     * 그래도 {@code SOURCE_SECTIONS}에는 남아 있어야 이미 나간 문서 14편으로 계속 출제할 수 있다.
+     */
+    private static final List<String> LEGACY_SECTIONS = ClaudeDocumentGenerator.LEGACY_SECTIONS;
+
     @Test
     @DisplayName("지목한 절 이름을 그 난이도가 쓰는 편의 프롬프트가 실제로 시킨다")
     void sourceSectionsExistInDocumentPrompt() {
@@ -132,12 +142,24 @@ class ClaudeProblemGeneratorPromptTest {
 
             // 어느 편에서든 시키기만 하면 그 절은 문서에 생긴다. 중급은 두 편에 걸쳐 있어
             // (평소엔 심화편, 심화편 없는 옛 문서면 입문편) 한 편에만 대조하면 거짓 실패가 난다.
-            assertThat(sections).allSatisfy(section ->
-                    assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT
-                            + ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
-                            .as("%s가 지목한 '%s'를 어느 편의 프롬프트도 시키지 않는다 — 문서에 그 절이 안 생긴다",
-                                    difficulty, section)
-                            .contains(section));
+            //
+            // 옛 이름 둘은 일부러 뺀다. 2026-09-16에 이름을 바꾸면서 <새 문서에는 안 나오지만
+            // 이미 나간 문서에는 있는> 이름이 생겼다. 프롬프트가 그걸 다시 시키면 두 이름이
+            // 한 문서에 섞여 편 판정이 흔들리므로, "프롬프트가 시키지 않는 것"이 옳은 상태다.
+            assertThat(sections).filteredOn(section -> !LEGACY_SECTIONS.contains(section))
+                    .allSatisfy(section ->
+                            assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT
+                                    + ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                                    .as("%s가 지목한 '%s'를 어느 편의 프롬프트도 시키지 않는다 — 문서에 그 절이 안 생긴다",
+                                            difficulty, section)
+                                    .contains(section));
+
+            // 옛 이름은 <맨 뒤>에만 올 수 있다. sourceFocus가 get(0)·get(1)·get(2)로 자리를
+            // 꺼내 쓰므로, 앞에 끼어들면 "주 재료"라고 소개하는 자리에 옛 이름이 들어간다.
+            assertThat(sections.stream().filter(LEGACY_SECTIONS::contains).toList())
+                    .as("%s의 옛 이름이 목록 맨 뒤에 있지 않다 — sourceFocus의 자리 뜻이 어긋난다", difficulty)
+                    .allSatisfy(legacy ->
+                            assertThat(sections.indexOf(legacy)).isEqualTo(sections.size() - 1));
 
             // 위 검사만으로는 <반대편 절을 지목하는> 원래 사고를 못 잡는다. 그래서 목록의
             // 첫 절이 editionFor가 고르는 편에 실제로 있는지를 따로 못 박는다 — 평소 경로다.

@@ -152,7 +152,7 @@ class PromptEvalCliTest {
                 ## 무엇인가
                 - **트랜잭션(transaction)** — 작업 묶음이다.
 
-                ## 언제 깨지는가
+                ## 어떤 때 통하지 않는가
                 - 조건 하나.
 
                 ## 면접에서 이렇게 물어본다
@@ -160,13 +160,54 @@ class PromptEvalCliTest {
                 """;
 
         assertThat(PromptEvalCli.missingSections(withoutIntermediate))
-                .containsExactlyInAnyOrder("## 실제로는 어디에서 만나는가",
+                .containsExactlyInAnyOrder("## 실무에서 어디에 나타나는가",
                         "### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다");
 
         String complete = withoutIntermediate
-                + "\n## 실제로는 어디에서 만나는가\n- 자리.\n"
+                + "\n## 실무에서 어디에 나타나는가\n- 자리.\n"
                 + "\n### 왜 이렇게 설계됐는가\n- 근거.\n\n## 실무에서는 이렇게 쓴다\n- 이렇게.\n";
         assertThat(PromptEvalCli.missingSections(complete)).isEmpty();
+    }
+
+    /**
+     * <b>옛 이름은 "없다"고 보고하지 않는다</b>(2026-09-16).
+     *
+     * <p>{@code SOURCE_SECTIONS}는 2026-09-16 이전 문서를 계속 쓰려고 옛 절 이름을 함께 들고
+     * 있다. 그걸 그대로 훑으면 <b>새 프롬프트로 갓 뽑은 멀쩡한 문서</b>에 "## 언제 깨지는가
+     * 없음"이 뜬다. 이 줄은 낮은 점수의 원인을 짚으라고 보고서 머리에 두는 것인데,
+     * 늘 떠 있는 경고는 원인을 짚어 주기는커녕 나머지 줄까지 안 읽게 만든다.
+     */
+    @Test
+    @DisplayName("옛 절 이름은 없어도 보고하지 않는다 — 새 문서마다 헛경고가 뜬다")
+    void doesNotReportLegacySectionNamesAsMissing() {
+        String current = """
+                # 격리 수준
+
+                ## 바탕이 되는 개념
+                상위 개념.
+
+                ## 무엇인가
+                - **트랜잭션(transaction)** — 작업 묶음이다.
+
+                ## 실무에서 어디에 나타나는가
+                - 자리.
+
+                ### 왜 이렇게 설계됐는가
+                - 근거.
+
+                ## 실무에서는 이렇게 쓴다
+                - 이렇게.
+
+                ## 어떤 때 통하지 않는가
+                - 조건 하나.
+
+                ## 면접에서 이렇게 물어본다
+                **Q. 무엇인가?**
+                """;
+
+        assertThat(PromptEvalCli.missingSections(current))
+                .as("새 이름을 다 갖춘 문서에는 빠진 절이 없다")
+                .isEmpty();
     }
 
     /**

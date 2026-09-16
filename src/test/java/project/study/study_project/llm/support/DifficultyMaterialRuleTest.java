@@ -116,6 +116,72 @@ class DifficultyMaterialRuleTest {
     }
 
     /**
+     * <b>절 이름을 바꿔도 이미 나간 문서가 죽지 않는다</b>(2026-09-16).
+     *
+     * <p>{@code ## 언제 깨지는가}를 {@code ## 어떤 때 통하지 않는가}로, {@code ## 실제로는
+     * 어디에서 만나는가}를 {@code ## 실무에서 어디에 나타나는가}로 바꿨다. 옛 이름은 제목만
+     * 보고는 안에 무엇이 있는지 짐작할 수 없었다 — "무엇이 깨지나"(코드? 개념? 서버?)가
+     * 제목에 없고, 정작 내용은 시점이 아니라 <b>조건</b>이었다.
+     *
+     * <p>문제는 그 이름이 <b>이미 나간 문서 14편과 문제 초안 15개</b>에 박혀 있다는 것이다.
+     * 새 이름만 인정하면 그 문서들이 하루아침에 "고급 재료 없음"이 되고 고급 날이 통째로
+     * 근거 없는 폴백으로 떨어진다. 실패가 아니라 조용한 품질 저하라, 요금을 다 낸 뒤
+     * 사람이 읽어야 알아차린다 — 이 클래스가 막으려는 사고와 정확히 같은 종류다.
+     *
+     * <p>그래서 <b>판정하는 자리는 두 이름을 다 받는다</b>. 새 이름만 쓰는 곳은 새로 나가는
+     * 프롬프트뿐이다. 옛 이름을 언제 지울지는 정하지 않았다 — 문서 14편이 살아 있는 한
+     * 지워도 되는 날이 오지 않는다.
+     */
+    @Nested
+    @DisplayName("절 이름을 바꾼 뒤 — 두 이름을 다 받는다")
+    class RenamedSections {
+
+        @Test
+        @DisplayName("새 이름 '어떤 때 통하지 않는가'로 고급을 캔다")
+        void newAdvancedNameFeedsAdvanced() {
+            String doc = "# 제목\n## 어떤 때 통하지 않는가\n";
+
+            assertThat(DifficultyMaterialRule.hasMaterialFor(doc, Difficulty.ADVANCED)).isTrue();
+        }
+
+        @Test
+        @DisplayName("옛 이름 '언제 깨지는가'도 그대로 통한다 — 이미 나간 문서 14편이 이 이름이다")
+        void legacyAdvancedNameStillFeedsAdvanced() {
+            String doc = "# 제목\n## 언제 깨지는가\n";
+
+            assertThat(DifficultyMaterialRule.hasMaterialFor(doc, Difficulty.ADVANCED)).isTrue();
+        }
+
+        @Test
+        @DisplayName("새 이름 '실무에서 어디에 나타나는가'로 중급을 캔다")
+        void newIntermediateNameFeedsIntermediate() {
+            String doc = "# 제목\n## 실무에서 어디에 나타나는가\n";
+
+            assertThat(DifficultyMaterialRule.hasMaterialFor(doc, Difficulty.INTERMEDIATE)).isTrue();
+        }
+
+        @Test
+        @DisplayName("옛 이름 '실제로는 어디에서 만나는가'도 그대로 통한다")
+        void legacyIntermediateNameStillFeedsIntermediate() {
+            String doc = "# 제목\n## 실제로는 어디에서 만나는가\n";
+
+            assertThat(DifficultyMaterialRule.hasMaterialFor(doc, Difficulty.INTERMEDIATE)).isTrue();
+        }
+
+        /**
+         * 이름을 바꾼 것이 <b>편 경계를 흐리지 않는지</b>. 새 이름이 초급 재료로도 인정되면
+         * 입문편에 고급을 거는 사고({@link Mismatched})를 막던 문턱이 같이 사라진다.
+         */
+        @Test
+        @DisplayName("새 이름도 초급 재료는 아니다 — 편 경계는 그대로다")
+        void newNamesDoNotFeedBeginner() {
+            String doc = "# 제목\n## 실무에서 어디에 나타나는가\n## 어떤 때 통하지 않는가\n";
+
+            assertThat(DifficultyMaterialRule.hasMaterialFor(doc, Difficulty.BEGINNER)).isFalse();
+        }
+    }
+
+    /**
      * 판단 근거가 없으면 막지 않는다 — 확신 없이 버리는 쪽이 더 나쁘다. 여기서 {@code false}를
      * 돌려주면 배치는 멀쩡한 문서를 폴백으로 보내고, 관리자 화면은 이유 없이 거절한다.
      */

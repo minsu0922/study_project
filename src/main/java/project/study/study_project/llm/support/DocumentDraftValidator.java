@@ -514,7 +514,7 @@ public final class DocumentDraftValidator {
         if (!GLOSSARY_HEADING.matcher(structure).find()) {
             checks.add(DraftCheck.warning(
                     "'## 용어 한눈에' 표가 없습니다. "
-                            + "본론이 끝난 자리, '## 언제 깨지는가' 바로 앞에 두는 절입니다."));
+                            + "본론이 끝난 자리, '## 어떤 때 통하지 않는가' 바로 앞에 두는 절입니다."));
         }
     }
 
@@ -656,7 +656,13 @@ public final class DocumentDraftValidator {
      * 인정하면 멀쩡한 문서에 경고가 뜨고, 오탐은 경고를 무력하게 만든다.
      */
     private static void checkFailureModeCount(String body, String structure, List<DraftCheck> checks) {
-        Section section = sectionOf(body, structure, "## 언제 깨지는가");
+        // 2026-09-16에 이름이 바뀌었다. 새 이름으로 먼저 찾고, 없으면 옛 이름으로 찾는다 —
+        // 검수 대기함에 남아 있던 옛 초안을 열었을 때 "절이 아예 없다"로 읽혀 개수 검사가
+        // 통째로 건너뛰어지면, 재료가 모자란 초안이 경고 없이 승인된다.
+        Section section = sectionOf(body, structure, "## 어떤 때 통하지 않는가");
+        if (section == null) {
+            section = sectionOf(body, structure, ClaudeDocumentGenerator.LEGACY_FAILURE_MODE_SECTION);
+        }
         if (section == null) {
             return; // 절 자체가 없으면 checkRequiredSections가 차단으로 잡는다
         }
@@ -664,7 +670,7 @@ public final class DocumentDraftValidator {
         int items = count(FAILURE_MODE_ITEM, section.masked());
         if (items < MIN_FAILURE_MODES) {
             checks.add(DraftCheck.warning(
-                    "'## 언제 깨지는가'의 항목이 %d개입니다(기준 %d개 이상). 고급 문제가 여기를 재료로 씁니다."
+                    "'## 어떤 때 통하지 않는가'의 항목이 %d개입니다(기준 %d개 이상). 고급 문제가 여기를 재료로 씁니다."
                             .formatted(items, MIN_FAILURE_MODES)));
         }
     }

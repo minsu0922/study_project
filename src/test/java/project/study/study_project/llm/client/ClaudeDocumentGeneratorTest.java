@@ -263,7 +263,7 @@ class ClaudeDocumentGeneratorTest {
      * <p>증상이 조용한 종류다. 표는 있고 검증도 통과하는데, 문서를 읽는 사람만 뒤쪽 절에서 막힌다.
      */
     @Test
-    @DisplayName("심화편 용어 표가 최상위 절로 '언제 깨지는가' 앞에 있다 — 소제목이면 마지막 섹션 표로 읽힌다")
+    @DisplayName("심화편 용어 표가 최상위 절로 실패 조건 절 앞에 있다 — 소제목이면 마지막 섹션 표로 읽힌다")
     void advancedGlossaryIsTopLevelBeforeFailureModes() {
         String prompt = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
 
@@ -271,11 +271,11 @@ class ClaudeDocumentGeneratorTest {
                 .as("### 로 두면 그 섹션의 용어만 올라온다")
                 .contains("## 용어 한눈에")
                 .as("자리를 못 박지 않으면 표가 글 끝으로 밀려 정의가 용어보다 늦게 나온다")
-                .contains("\"## 언제 깨지는가\" 바로 앞에 독립된 절로 둔다");
+                .contains("\"## 어떤 때 통하지 않는가\" 바로 앞에 독립된 절로 둔다");
 
         assertThat(prompt.indexOf("## 용어 한눈에"))
                 .as("프롬프트의 절 순서가 곧 문서 순서다")
-                .isLessThan(prompt.indexOf("## 언제 깨지는가"));
+                .isLessThan(prompt.indexOf("## 어떤 때 통하지 않는가"));
     }
 
     /**
@@ -439,7 +439,7 @@ class ClaudeDocumentGeneratorTest {
     void pinsAdvancedMaterialQuota() {
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("고급 전용 절이 모델 재량이면 아예 없는 문서가 나온다")
-                .contains("## 언제 깨지는가")
+                .contains("## 어떤 때 통하지 않는가")
                 .as("개수를 박은 지시만 실제로 지켜졌다는 것이 실측 결과다")
                 .contains("서로 다른 것으로 7가지 이상")
                 .contains("6개 이하면 실패다")
@@ -700,5 +700,65 @@ class ClaudeDocumentGeneratorTest {
                 .contains("확신 없는 API 이름·시그니처는 쓰지 마라")
                 .as("백틱을 안 감싸면 꺾쇠가 HTML 태그로 잡혀 승인이 차단된다")
                 .contains("감싸지 않으면 꺾쇠가 HTML 태그로 보여 문서 승인이 막힌다");
+    }
+
+    /* ── 2026-09-16: 심화편 두 절의 이름을 바꿨다 ────────────────── */
+
+    /**
+     * <b>왜 바꿨나.</b> 제목만 보고 안에 무엇이 있는지 짐작할 수 없다는 지적이었다.
+     * {@code ## 언제 깨지는가}는 무엇이 깨지는지(코드? 개념? 서버?)를 말하지 않는 데다
+     * 내용은 시점이 아니라 <b>조건</b>이고, {@code ## 실제로는 어디에서 만나는가}는
+     * "만난다"가 무엇을 뜻하는지 읽는 사람이 짐작해야 했다.
+     *
+     * <p><b>왜 이런 이름이 됐었나</b>가 원인 쪽에 더 가깝다. 뜻으로 가장 맞는 이름
+     * ({@code ## 실무에서는 이렇게 쓴다})은 <b>입문편이 이미 쓰고 있었다</b>. 두 편의 절
+     * 이름이 하나라도 겹치면 {@link ClaudeDocumentGenerator#editionOf}가 편을 가리지 못한다.
+     * 그래서 뜻이 아니라 "안 겹치는 말"을 찾다가 어색한 이름이 됐다. 새 이름도 같은 제약을
+     * 지킨다 — 아래 {@code editionOf} 테스트가 그것까지 함께 지킨다.
+     */
+    @Test
+    @DisplayName("심화편 프롬프트가 새 절 이름을 쓴다 — 옛 이름은 새 문서에 나가지 않는다")
+    void advancedPromptUsesRenamedSections() {
+        String prompt = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
+
+        assertThat(prompt)
+                .as("중급 재료 절")
+                .contains("## 실무에서 어디에 나타나는가")
+                .as("고급 재료 절")
+                .contains("## 어떤 때 통하지 않는가");
+
+        assertThat(prompt)
+                .as("새로 나가는 문서에는 옛 이름이 한 번도 나오면 안 된다 — 두 이름이 섞이면 "
+                        + "같은 자리를 두 이름으로 부르는 문서가 생기고 편 판정이 흔들린다")
+                .doesNotContain("## 언제 깨지는가")
+                .doesNotContain("## 실제로는 어디에서 만나는가");
+
+        assertThat(ClaudeDocumentGenerator.ADVANCED_REQUIRED_SECTIONS)
+                .as("검증기가 요구하는 절 이름도 프롬프트와 같아야 한다 — 갈라지면 매번 경고가 뜬다")
+                .contains("## 실무에서 어디에 나타나는가", "## 어떤 때 통하지 않는가");
+    }
+
+    /**
+     * <b>편 판정은 두 이름을 다 받는다.</b> 이름을 바꾼 날 이미 나가 있던 심화편이 14편이다.
+     * 새 이름만 보면 그 14편이 전부 입문편으로 판정되고, 고급·중급이 근거 없는 폴백으로
+     * 떨어진다. 실패가 아니라 조용한 품질 저하라 사람이 읽어야만 알아차린다.
+     *
+     * <p>옛 이름을 언제 지울지는 정하지 않았다 — 문서 14편이 살아 있는 한 그날이 오지 않는다.
+     */
+    @Test
+    @DisplayName("옛 이름 문서도 심화편으로 판정된다 — 이미 나간 14편이 이 이름이다")
+    void editionOfAcceptsBothSectionNames() {
+        assertThat(ClaudeDocumentGenerator.editionOf("# 제목\n## 어떤 때 통하지 않는가\n"))
+                .as("새 이름")
+                .isEqualTo(DocumentEdition.ADVANCED);
+
+        assertThat(ClaudeDocumentGenerator.editionOf("# 제목\n## 언제 깨지는가\n"))
+                .as("옛 이름 — 이걸 놓치면 나가 있는 문서 14편이 전부 입문편이 된다")
+                .isEqualTo(DocumentEdition.ADVANCED);
+
+        assertThat(ClaudeDocumentGenerator.editionOf(
+                "# 제목\n## 무엇인가\n## 실무에서는 이렇게 쓴다\n"))
+                .as("입문편 절만 있으면 입문편이다 — 새 이름이 편 경계를 흐리면 안 된다")
+                .isEqualTo(DocumentEdition.BEGINNER);
     }
 }

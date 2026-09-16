@@ -77,9 +77,15 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             // 심화편이 없는 옛 문서(09-03 이전 단일 문서)와 심화편 생성만 실패한 날에는
             // editionFor가 입문편을 돌려주는데, 그때 캘 곳이 이 둘이다. 지우면 그런 날의
             // 중급이 통째로 폴백(근거 없는 생성)으로 떨어진다.
-            Difficulty.INTERMEDIATE, List.of("## 실제로는 어디에서 만나는가",
-                    "### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다"),
-            Difficulty.ADVANCED, List.of("## 언제 깨지는가", "## 면접에서 이렇게 물어본다")
+            // 2026-09-16: 심화편 두 절의 이름이 바뀌었다. <옛 이름을 목록 맨 뒤에> 덧붙인다 —
+            // 앞자리를 그대로 둬야 sourceFocus가 꺼내 쓰는 자리(get(0)·get(1)·get(2))의 뜻이
+            // 안 바뀐다. 옛 이름을 지우지 않는 이유는 ClaudeDocumentGenerator의
+            // LEGACY_FAILURE_MODE_SECTION 주석에 있다(이미 나간 문서 14편).
+            Difficulty.INTERMEDIATE, List.of("## 실무에서 어디에 나타나는가",
+                    "### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다",
+                    ClaudeDocumentGenerator.LEGACY_REAL_WORLD_SECTION),
+            Difficulty.ADVANCED, List.of("## 어떤 때 통하지 않는가", "## 면접에서 이렇게 물어본다",
+                    ClaudeDocumentGenerator.LEGACY_FAILURE_MODE_SECTION)
     );
 
     private final String model;
@@ -372,7 +378,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             중급의 다섯 중 <셋만> 쓴다. questionKind에 어느 형태인지 적어라.
 
             a. SITUATION  상황 적용 — 실무 장면과 <이미 시도한 것>을 주고 다음 대응을 묻는다.
-                          ## 언제 깨지는가 절의 실패 사례가 주 재료다.
+                          위에서 지목한 <실패 조건 절>의 사례가 주 재료다.
             b. COMPARISON 비교·선택 — 두 대응을 놓고 <이 조건에서> 어느 쪽인지 묻는다.
                           (예) TIME_WAIT와 CLOSE_WAIT가 동시에 늘 때 각각 다르게 대응해야 하는 이유는?
             c. CAUSE      인과·트레이드오프 — 그 설계가 <무엇을 포기하고 무엇을 얻었는지>를 묻는다.
@@ -381,7 +387,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             [고급도 형태를 섞어라] — SITUATION은 최대 1개
             셋을 낸다면 SITUATION 1개 + b·c에서 2개다. 상황형이 둘을 넘으면 안 된다.
             중급에 같은 상한을 둔 것과 같은 이유인데, 고급에서는 더 잘 무너진다 —
-            a에만 "## 언제 깨지는가 절이 주 재료"라고 적혀 있어 재료가 그쪽으로 쏠려 보이기 때문이다.
+            a에만 "실패 조건 절이 주 재료"라고 적혀 있어 재료가 그쪽으로 쏠려 보이기 때문이다.
             b와 c도 같은 절에서 캔다. 같은 실패 사례를 놓고
             <두 대응 중 이 조건에서 어느 쪽인가>(b)를 묻거나
             <그 대응이 무엇을 포기하고 얻은 것인가>(c)를 물으면 된다.
@@ -548,7 +554,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             - 여기에는 <왜 정답인지>의 근거만 쓴다. 오답이 왜 틀렸는지는 각 보기의 rationale에
               적으므로 해설에서 되풀이하지 마라. 두 곳에 같은 말이 있으면 화면에 두 번 나온다.
             - 근거 문서가 주어졌다면 마지막에 다시 읽을 절을 한 줄로 가리킨다.
-              예: (문서의 '언제 깨지는가' 절을 다시 읽어 보라)
+              예: (문서의 '어떤 때 통하지 않는가' 절을 다시 읽어 보라)
+              절 이름은 <그 문서에 실제로 적힌 대로> 쓴다. 옛 문서는 이름이 다를 수 있다.
             - 분량을 채우려고 같은 말을 되풀이하지 마라. 짧고 빈 해설만큼이나 나쁘다.
 
             [오답 설명] — 각 보기의 rationale
@@ -795,15 +802,23 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             // 문서로 떨어지면 뒤의 두 입문편 절이 그 자리를 대신한다. 어느 문서가 오든
             // 지목한 이름 중 하나는 실제로 있게 해 둔다(없는 이름을 지목하면 모델은 오류를
             // 내지 않고 조용히 아무 데나 캔다 — 8/15에 겪은 사고).
+            // 맨 뒤 항목은 2026-09-16 이전 문서가 쓰던 옛 이름이다. 함께 지목하는 이유는 아래
+            // 고급과 같다 — 옛 이름 문서가 와도 지목한 이름 중 하나는 실제로 있게 해 둔다.
             case INTERMEDIATE -> "[이번 난이도에서 쓸 부분] 문서가 <이 개념을 실제로 어디에 쓰는지> "
-                    + "밝힌 곳을 쓴다 — '%s' 절이 주 재료다. ".formatted(sections.get(0))
+                    + "밝힌 곳을 쓴다 — '%s' 절(옛 문서에서는 '%s')이 주 재료다. "
+                    .formatted(sections.get(0), sections.get(3))
                     + "그 절이 없는 문서라면 '%s' 소제목과 '%s' 절, 그리고 본문 문장 안에서 "
                     .formatted(sections.get(1), sections.get(2))
                     + "다른 선택지를 두고 판단한 대목이 같은 자리다. "
                     + "문서가 설명한 원리를 문서에 없는 새로운 상황에 적용해 판단하게 만들어라.";
-            case ADVANCED -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(깨지는 조건과 흔한 오해)과 "
-                    .formatted(sections.get(0))
-                    + "'%s' 절을 쓴다. 그 질문들이 다루는 트레이드오프와 ".formatted(sections.get(1))
+            // 2026-09-16: 절 이름이 바뀌어 옛 이름을 괄호로 함께 준다. 이름 하나만 지목하면
+            // 옛 문서에서 <지목한 절이 없는> 상태가 되고, 그때 모델은 오류를 내지 않고 조용히
+            // 아무 데나 캔다 — 8/15에 겪은 사고 그대로다(SOURCE_SECTIONS 주석).
+            case ADVANCED -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(옛 문서에서는 '%s')과 "
+                    .formatted(sections.get(0), sections.get(2))
+                    + "'%s' 절을 쓴다. 앞 절은 통하지 않게 되는 조건과 흔한 오해를 담고 있다. "
+                    .formatted(sections.get(1))
+                    + "그 질문들이 다루는 트레이드오프와 "
                     + "엣지 케이스를 문제로 바꿔라. 다만 질문을 그대로 옮기지 말고 객관식으로 재구성한다.";
         };
     }

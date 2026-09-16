@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
@@ -333,11 +334,18 @@ public final class PromptEvalCli {
         return sb.toString();
     }
 
-    /** 세 난이도가 캘 절 중 이 문서에 <b>없는</b> 것. 숫자를 잘못 읽지 않게 보고서 머리에 적는다. */
+    /**
+     * 세 난이도가 캘 절 중 이 문서에 <b>없는</b> 것. 숫자를 잘못 읽지 않게 보고서 머리에 적는다.
+     *
+     * <p>옛 절 이름은 뺀다. {@code SOURCE_SECTIONS}는 2026-09-16 이전 문서를 계속 쓰려고 옛
+     * 이름을 함께 들고 있는데, 그대로 훑으면 <b>새로 뽑은 멀쩡한 문서</b>마다 "옛 이름 없음"이
+     * 뜬다. 늘 떠 있는 경고는 원인을 짚어 주지 못하고 나머지 줄까지 안 읽게 만든다.
+     */
     static List<String> missingSections(String contentMd) {
         return ClaudeProblemGenerator.SOURCE_SECTIONS.values().stream()
                 .flatMap(List::stream)
                 .distinct()
+                .filter(section -> !ClaudeDocumentGenerator.LEGACY_SECTIONS.contains(section))
                 .filter(section -> !contentMd.contains(section))
                 .toList();
     }
