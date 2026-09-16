@@ -240,10 +240,18 @@ public final class DocumentDraftValidator {
     private static final int MAX_LISTED_TERMS = 6;
 
     /** 본론 섹션 최소 개수 — 프롬프트는 2~3개를 요구한다. */
-    private static final int MIN_BODY_SECTIONS = 2;
+    public static final int MIN_BODY_SECTIONS = 2;
 
-    /** {@code ## 언제 깨지는가} 항목 최소 개수 — 프롬프트의 "7가지 이상"과 같아야 한다. */
-    private static final int MIN_FAILURE_MODES = 7;
+    /**
+     * {@code ## 어떤 때 통하지 않는가} 항목 최소 개수 — 프롬프트의 "7가지 이상"과 같아야 한다.
+     *
+     * <p><b>주석이 아니라 테스트가 지킨다</b>(2026-09-16). 이 값과 프롬프트 문구가 갈라지면
+     * 두 방향으로 다 나쁘다. 검사가 느슨하면 지시를 어겨도 조용하고, 검사가 빡빡하면
+     * <b>지시대로 쓴 문서가 매번 경고를 달고 나온다</b>. 커밋 169개를 훑어 보니 이 검증기
+     * 변경의 64%가 문서 프롬프트와 같은 커밋에 있었다 — 두 곳이 사실상 한 덩어리인데
+     * 잇는 것이 주석 한 줄뿐이었다. {@code DocumentDraftValidatorTest}가 대조한다.
+     */
+    public static final int MIN_FAILURE_MODES = 7;
 
     /**
      * 펜스 코드블록 최소 개수 — 프롬프트 {@code [코드 예제]}의 "2~4개"와 짝이다.
@@ -257,7 +265,7 @@ public final class DocumentDraftValidator {
      * <p>상한(4개)은 세지 않는다. 넘쳐서 생기는 문제는 분량 경고가 이미 잡고,
      * 여기서 두 방향을 다 막으면 "코드가 잘 어울리는 주제"에서 헛경고가 난다.
      */
-    private static final int MIN_CODE_BLOCKS = 2;
+    public static final int MIN_CODE_BLOCKS = 2;
 
     /**
      * 입문편의 코드 예제 최소 개수 — 프롬프트 {@code [코드 예제]}의 "3~5개"와 짝이다(2026-09-03).
@@ -266,7 +274,7 @@ public final class DocumentDraftValidator {
      * 09-03 실물의 코드 2개가 둘 다 같은 주제였고, 정작 제목이 약속한 대비
      * ("A는 따로, B는 공유")를 보여 주는 예제가 없었다.
      */
-    private static final int BEGINNER_MIN_CODE_BLOCKS = 3;
+    public static final int BEGINNER_MIN_CODE_BLOCKS = 3;
 
     /**
      * {@code ### 용어 한눈에}에 본문에서 안 푼 용어가 몇 개부터 경고인가.

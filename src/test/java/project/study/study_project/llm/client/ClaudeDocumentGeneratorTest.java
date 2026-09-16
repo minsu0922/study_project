@@ -792,6 +792,56 @@ class ClaudeDocumentGeneratorTest {
     }
 
     /**
+     * 검증기의 문턱과 <b>프롬프트가 요구하는 숫자</b>가 같은지(2026-09-16 신설).
+     *
+     * <h2>왜 이 묶음이 필요한가</h2>
+     *
+     * <p>같은 규칙이 두 곳에 따로 적혀 있다. 프롬프트 본문에는 "7가지 이상"이 <b>글자로</b>
+     * 있고, 검증기에는 {@code DocumentDraftValidator.MIN_FAILURE_MODES}가 있다. 둘을 잇는
+     * 것은 주석 한 줄뿐이었다("프롬프트의 숫자와 같아야 한다").
+     *
+     * <p>커밋 169개를 훑어 같이 바뀐 짝을 세어 보고 정했다. {@link ClaudeDocumentGenerator}와
+     * {@code DocumentDraftValidator}가 <b>14번 같이 바뀌었고, 그것이 검증기 변경의 64%</b>다.
+     * 두 파일이 사실상 한 덩어리인데 연결이 사람의 기억에 맡겨져 있었다.
+     *
+     * <p><b>갈라지면 두 방향으로 다 나쁘다.</b> 검사가 느슨하면 지시를 어겨도 조용하고,
+     * 검사가 빡빡하면 지시대로 쓴 문서가 매번 경고를 단다. 뒤쪽이 더 고약하다 — 경고가
+     * 일상이 되면 사람이 경고를 안 보게 되고, 그때부터 검증기는 없는 것과 같다.
+     *
+     * <h2>왜 상수를 프롬프트에 끼워 넣지 않았나</h2>
+     *
+     * <p>{@code .formatted(MIN_FAILURE_MODES)}로 조립하면 어긋남이 구조적으로 불가능해진다.
+     * 그래도 이 방법을 고른 것은 <b>프롬프트가 이 프로젝트에서 사람이 가장 자주 손으로 고치는
+     * 글</b>이기 때문이다. 본문에 {@code %d}가 섞이면 읽기가 나빠지고, 읽기 나쁜 프롬프트는
+     * 고쳐지지 않는다. 대신 어긋남을 빌드에서 잡는다.
+     *
+     * <p>문제 쪽은 이미 이렇게 하고 있다({@code ClaudeProblemGeneratorPromptTest}가 상수
+     * 여덟 개를 대조한다). 문서 쪽만 분량 둘을 빼고 비어 있었다.
+     */
+    @Test
+    @DisplayName("검증기 문턱이 프롬프트가 요구하는 숫자와 같다 — 갈라지면 잘 쓴 문서에 경고가 뜬다")
+    void thresholdsMatchTheValidator() {
+        String beginner = ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT;
+        String advanced = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
+
+        assertThat(advanced)
+                .as("실패 조건 개수 — 고급 문제가 여기를 재료로 쓴다")
+                .contains("%d가지 이상".formatted(DocumentDraftValidator.MIN_FAILURE_MODES));
+
+        assertThat(advanced)
+                .as("심화편 코드 예제 최소 개수")
+                .contains("예제를 %d~4개 넣는다".formatted(DocumentDraftValidator.MIN_CODE_BLOCKS));
+
+        assertThat(beginner)
+                .as("입문편은 하나 더 요구한다 — 주장을 코드로 보여 줘야 하는 편이다")
+                .contains("예제를 %d~5개 넣는다".formatted(DocumentDraftValidator.BEGINNER_MIN_CODE_BLOCKS));
+
+        assertThat(beginner)
+                .as("입문편 본론 섹션 개수의 아래쪽 끝")
+                .contains("본론 %d~3개 섹션".formatted(DocumentDraftValidator.MIN_BODY_SECTIONS));
+    }
+
+    /**
      * <b>답변용 문체 규칙을 문서 프롬프트에도 건다</b>(2026-09-16).
      *
      * <p>규칙이 두 곳에 따로 있었다. 사용자의 CLAUDE.md는 <b>대화 답변</b>의 문체를 정하고,
