@@ -263,19 +263,38 @@ class ClaudeDocumentGeneratorTest {
      * <p>증상이 조용한 종류다. 표는 있고 검증도 통과하는데, 문서를 읽는 사람만 뒤쪽 절에서 막힌다.
      */
     @Test
-    @DisplayName("심화편 용어 표가 최상위 절로 실패 조건 절 앞에 있다 — 소제목이면 마지막 섹션 표로 읽힌다")
-    void advancedGlossaryIsTopLevelBeforeFailureModes() {
+    @DisplayName("심화편 용어 표가 글 앞머리에 있다 — 낯선 말을 먼저 풀어 두고 막히면 돌아오는 자리다")
+    void advancedGlossarySitsNearTheTop() {
         String prompt = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
 
         assertThat(prompt)
-                .as("### 로 두면 그 섹션의 용어만 올라온다")
+                .as("### 로 두면 그 섹션에 딸린 표로 읽혀 그 섹션 용어만 올라온다")
                 .contains("## 용어 한눈에")
-                .as("자리를 못 박지 않으면 표가 글 끝으로 밀려 정의가 용어보다 늦게 나온다")
-                .contains("\"## 어떤 때 통하지 않는가\" 바로 앞에 독립된 절로 둔다");
+                .as("자리를 못 박지 않으면 표가 옛 자리(본론 뒤)로 돌아간다")
+                .contains("\"## 이 글을 읽기 전에\" 바로 뒤에 독립된 절로 둔다")
+                .as("자리가 바뀌면 성격도 바뀐다 — 본론이 정의한 것을 걷어 오는 표가 아니라 먼저 푸는 표다")
+                .contains("아래 절에서 막히면 여기로 돌아온다");
 
         assertThat(prompt.indexOf("## 용어 한눈에"))
-                .as("프롬프트의 절 순서가 곧 문서 순서다")
-                .isLessThan(prompt.indexOf("## 어떤 때 통하지 않는가"));
+                .as("프롬프트의 절 순서가 곧 문서 순서다 — 머리말 뒤, 중급 재료 절 앞")
+                .isGreaterThan(prompt.indexOf("## 이 글을 읽기 전에"))
+                .isLessThan(prompt.indexOf("## 실무에서 어디에 나타나는가"));
+    }
+
+    /**
+     * <b>표가 설명을 대신하지 못하게 막는다.</b> 입문편에는 이 걱정을 검증기가 맡고 있다
+     * ({@code checkGlossaryIsReview}: 표의 용어가 본문에 먼저 나왔는지 센다). 심화편은 표가
+     * 글 앞머리로 왔으니 그 검사를 쓸 수 없다 — 여기서는 표가 먼저 나오는 것이 정상이다.
+     *
+     * <p>그래서 같은 걱정을 프롬프트로 막는다. 막지 않으면 표가 <b>못 다 한 설명을 몰아넣는
+     * 자리</b>가 된다. 한 줄 뜻만 표에 적고 본문에서는 이름만 쓰는 글이 되는데, 그러면
+     * 독자는 열두 줄을 외우고 와야 본문이 읽히는 셈이다.
+     */
+    @Test
+    @DisplayName("표는 설명을 대신하지 못한다고 못 박는다 — 앞머리로 옮기면 여기가 설명 창고가 된다")
+    void advancedGlossaryDoesNotReplaceProse() {
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .contains("표는 설명을 대신하지 못한다");
     }
 
     /**

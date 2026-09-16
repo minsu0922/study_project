@@ -515,7 +515,8 @@ public final class DocumentDraftValidator {
         if (!GLOSSARY_HEADING.matcher(structure).find()) {
             checks.add(DraftCheck.warning(
                     "'## 용어 한눈에' 표가 없습니다. "
-                            + "본론이 끝난 자리, '## 어떤 때 통하지 않는가' 바로 앞에 두는 절입니다."));
+                            + "'## 이 글을 읽기 전에' 바로 뒤에 두는 절입니다 — 낯선 말을 먼저 풀어 두고, "
+                            + "독자가 아래 절에서 막혔을 때 돌아오는 자리입니다."));
         }
     }
 
