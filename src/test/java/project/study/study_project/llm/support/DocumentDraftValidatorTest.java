@@ -17,7 +17,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class DocumentDraftValidatorTest {
 
-    private static final String TITLE = "캐시 전략 — 읽기는 빠르게, 쓰기는 정확하게";
+    /**
+     * 도우미 제목 — <b>제목 형식 검사를 통과하는 값</b>이어야 한다(2026-09-17).
+     *
+     * <p>전에는 "캐시 전략 — 읽기는 빠르게, 쓰기는 정확하게"였다. 줄표 부연이 붙은 제목이
+     * 경고 대상이 되면서, 이 값을 그대로 뒀다면 <b>이 파일의 테스트 대부분이 한꺼번에 빨간불</b>이
+     * 된다 — 걸린 원인은 각자가 검사하려던 항목이 아니라 도우미 제목이다({@link #FOUNDATION}이
+     * 분량 기준을 따라가야 하는 것과 같은 이유).
+     */
+    private static final String TITLE = "캐시 쓰기 전략의 무효화 처리 방식";
 
     /**
      * {@code ## 바탕이 되는 개념} 절을 채우는 더미 본문.
@@ -52,9 +60,12 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("제목 필드와 본문 H1이 다르면 경고 — 실물 2편에서 실제로 어긋났다")
     void warnsWhenTitleDiffersFromHeading() {
+        // 실물의 제목은 줄표 부제가 붙어 있었는데(「XSS와 CSRF — 브라우저를 믿으면 생기는 일」)
+        // 여기서는 걷어냈다. 그대로 두면 제목 형식 경고가 함께 떠서, 이 테스트가 보려는
+        // <필드와 본문의 어긋남>이 경고 둘 중 하나로 묻힌다.
         List<DraftCheck> checks = DocumentDraftValidator.validate(
-                "XSS와 CSRF — 브라우저를 믿으면 생기는 일", "xss-and-csrf",
-                body("CSRF와 XSS — 브라우저를 믿으면 생기는 일", "본문"));
+                "XSS와 CSRF의 방어 지점", "xss-and-csrf",
+                body("CSRF와 XSS의 방어 지점", "본문"));
 
         assertThat(checks).singleElement().satisfies(c -> {
             assertThat(c.severity()).as("어느 쪽이 맞는지는 사람만 정한다 — 막지 않고 알리기만").
@@ -67,9 +78,66 @@ class DocumentDraftValidatorTest {
     @DisplayName("공백·줄바꿈만 다른 제목은 경고하지 않는다 — 사람 눈에 같은데 울리면 경고를 무시하게 된다")
     void ignoresWhitespaceOnlyTitleDifference() {
         List<DraftCheck> checks = DocumentDraftValidator.validate(
-                "캐시  전략 — 읽기는 빠르게,  쓰기는 정확하게", "cache-strategy", body(TITLE, "본문"));
+                "캐시  쓰기 전략의  무효화 처리 방식", "cache-strategy", body(TITLE, "본문"));
 
         assertThat(checks).isEmpty();
+    }
+
+    /**
+     * <b>제목 형식 검사</b>(2026-09-17). 사용자가 Flyway 문서 제목을 손으로 고친 것이 계기다 —
+     * 「데이터베이스가 지금 어느 단계까지 바뀌어 있는지를 무엇으로 아는가」에서
+     * 「데이터베이스 마이그레이션 도구의 버전 관리 기법 (Flyway)」로.
+     *
+     * <p>옛 제목은 규칙을 어긴 것이 아니라 <b>규칙대로 나온 것</b>이었다(프롬프트의 (O) 예시가
+     * 의문문이었다). 그래서 프롬프트를 뒤집었고, 프롬프트만 고친 규칙이 조용히 돌아가는 것을
+     * 막으려고 검증기에도 걸었다.
+     */
+    @Test
+    @DisplayName("의문문 제목은 경고 — 목록에서 제목만 훑는 독자는 끝까지 읽어야 주제를 안다")
+    void warnsWhenTitleIsAQuestion() {
+        String question = "데이터베이스가 지금 어느 단계까지 바뀌어 있는지를 무엇으로 아는가";
+
+        assertThat(DocumentDraftValidator.validate(question, "flyway-versioning", body(question, "본문")))
+                .singleElement()
+                .satisfies(c -> {
+                    assertThat(c.severity()).as("제목은 승인 뒤 한 줄 고치면 된다 — 다시 뽑게 할 값이 아니다")
+                            .isEqualTo(DraftCheck.Severity.WARNING);
+                    assertThat(c.message()).as("무엇으로 바꾸라는 것인지가 메시지에 있어야 고친다")
+                            .contains("명사구");
+                });
+    }
+
+    @Test
+    @DisplayName("줄표 부제가 붙은 제목은 경고 — 줄표가 필요하다는 건 제목이 둘을 담았다는 뜻이다")
+    void warnsWhenTitleHasDashSubtitle() {
+        String dashed = "캐시 쓰기 전략 — TTL은 시간으로, 무효화는 사건으로";
+
+        assertThat(DocumentDraftValidator.validate(dashed, "cache-strategy", body(dashed, "본문")))
+                .singleElement()
+                .satisfies(c -> assertThat(c.message()).contains("줄표"));
+    }
+
+    /**
+     * <b>걸리면 안 되는 것.</b> 한국어 의문형 어미를 넓게 잡으면 멀쩡한 명사구가 걸린다 —
+     * "…하나"를 잡으려다 "선택지 하나"가, "…는가"를 잡으려다 "평가"가 걸리는 식이다.
+     * 오탐이 섞인 경고는 사람이 경고 전체를 무시하게 만들어 검사 자체를 무력하게 만든다.
+     *
+     * <p>낱말 안의 붙임표를 통과시키는 것도 같은 이유다. "3-way 핸드셰이크"는 부제가 아니다.
+     */
+    @Test
+    @DisplayName("명사구 제목은 통과한다 — 어미를 넓게 잡으면 멀쩡한 제목이 걸려 경고 전체가 무력해진다")
+    void acceptsNounPhraseTitles() {
+        List<String> fine = List.of(
+                "데이터베이스 마이그레이션 도구의 버전 관리 기법 (Flyway)",
+                "TCP 3-way 핸드셰이크의 연결 수립 절차",
+                "정렬 알고리즘의 안정성 평가",
+                "장애 대응 절차에서 가장 먼저 보는 것 하나");
+
+        for (String title : fine) {
+            assertThat(DocumentDraftValidator.validate(title, "cache-strategy", body(title, "본문")))
+                    .as("명사구 제목 \"%s\"이 걸리면 안 된다", title)
+                    .isEmpty();
+        }
     }
 
     /**

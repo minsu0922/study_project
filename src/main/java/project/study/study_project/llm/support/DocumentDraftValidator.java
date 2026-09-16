@@ -125,6 +125,26 @@ public final class DocumentDraftValidator {
      */
     private static final Pattern H1_PATTERN = Pattern.compile("(?m)^#\\s+(.+?)\\s*$");
 
+    /**
+     * 의문문으로 끝나는 제목 — {@code ClaudeDocumentGenerator}의 {@code [제목]} 절이 금지한 형태.
+     *
+     * <p><b>일부러 좁게 잡았다.</b> 한국어 의문형 어미를 넓게 잡으면 명사구 제목이 줄줄이 걸린다 —
+     * "…맞추나"를 잡으려고 {@code 나$}를 넣으면 "…선택지 하나"가 함께 걸리고, {@code 가$}를 넣으면
+     * "…의 평가"가 걸린다. 오탐이 섞인 경고는 <b>경고 전체를 무력하게 만든다</b>(사람이 매번
+     * 무시하는 습관이 생긴다). 그래서 명사로는 거의 끝나지 않는 어미만 남겼다.
+     */
+    private static final Pattern TITLE_QUESTION_ENDING =
+            Pattern.compile("(는가|은가|인가|한가|던가|을까|ㄹ까|일까|나요|가요|니까|\\?)$");
+
+    /**
+     * 제목에 붙은 줄표 부연. 같은 절의 "줄표로 부연을 달지 마라"와 짝이다.
+     *
+     * <p>줄표를 <b>제목 안 어디에서든</b> 잡는 이유: 줄표가 붙는 자리는 언제나 부연이 시작되는
+     * 자리라서, 앞뒤 어느 쪽이 본체인지와 무관하게 제목이 둘을 담고 있다는 신호다.
+     * 붙임표({@code -})는 제외했다 — "3-way 핸드셰이크"처럼 낱말 안에서 쓰인다.
+     */
+    private static final Pattern TITLE_DASH_SUBTITLE = Pattern.compile("[—–]|\\s-\\s");
+
     /** 펜스 코드블록. {@code (?s)}로 줄바꿈까지 포함하고, 최소 일치({@code *?})로 블록을 하나씩 끊는다. */
     private static final Pattern FENCED_CODE = Pattern.compile("(?s)```.*?```");
 
@@ -329,6 +349,7 @@ public final class DocumentDraftValidator {
 
         checkSlug(slug, checks);
         checkTitleMatchesHeading(title, body, structure, checks);
+        checkTitleStyle(title, checks);
         checkRequiredSections(structure, edition, checks);
         checkMatchingMaterial(body, checks);
         checkUndefinedTerms(body, checks);
@@ -399,6 +420,38 @@ public final class DocumentDraftValidator {
         if (title == null || !squash(title).equals(squash(heading))) {
             checks.add(DraftCheck.warning(
                     "제목 필드와 본문 제목이 다릅니다. 필드=\"" + title + "\" / 본문=\"" + heading + "\""));
+        }
+    }
+
+    /**
+     * 제목이 기술 문서 형식인지 — 명사구인가, 의문문이나 줄표 부연이 붙지 않았는가(2026-09-17).
+     *
+     * <p><b>왜 프롬프트로 끝내지 않는가.</b> 2026-09-17에 제목 규칙을 의문문에서 명사구로
+     * 뒤집었는데, 프롬프트 문구만 고치고 끝낸 규칙이 조용히 옛 형식으로 돌아가는 것을 이 저장소가
+     * 이미 겪었다(8/15 하이픈 사고 — 규칙이 두 번 적혀 있었는데도 예시를 따라갔다).
+     * 제목은 문서당 한 줄뿐이라 <b>검수자가 본문을 읽느라 가장 잘 지나치는</b> 자리이기도 하다.
+     *
+     * <p><b>경고인 이유</b>는 {@link #checkTitleMatchesHeading}과 같다. 제목은 승인 뒤 수정
+     * 화면에서 한 줄 고치면 되는 것이라, 차단으로 두면 멀쩡한 문서 한 편을 다시 뽑게 만든다.
+     * 게다가 이 검사는 <b>형식만</b> 보고 좋은 제목인지는 사람만 안다.
+     *
+     * <p>고쳐 쓴 예를 메시지에 함께 넣는 이유: "형식에 맞지 않습니다"만 보여 주면 검수자가
+     * 프롬프트를 열어 규칙을 찾아 읽어야 한다. 무엇으로 바꾸라는 것인지가 메시지에 있어야 고친다.
+     */
+    private static void checkTitleStyle(String title, List<DraftCheck> checks) {
+        if (title == null || title.isBlank()) {
+            return; // 비어 있는 제목은 checkTitleMatchesHeading이 이미 잡는다. 여기서 또 울리면 메시지가 둘이다.
+        }
+        String trimmed = title.trim();
+        if (TITLE_QUESTION_ENDING.matcher(trimmed).find()) {
+            checks.add(DraftCheck.warning(
+                    "제목이 의문문입니다. 개념을 가리키는 명사구로 바꾸세요"
+                            + "(예: \"…를 무엇으로 아는가\" → \"…의 버전 관리 기법 (Flyway)\"): " + trimmed));
+        }
+        if (TITLE_DASH_SUBTITLE.matcher(trimmed).find()) {
+            checks.add(DraftCheck.warning(
+                    "제목에 줄표 부연이 붙어 있습니다. 줄표가 필요하다는 것은 제목이 두 가지를 담고 있다는 뜻입니다: "
+                            + trimmed));
         }
     }
 

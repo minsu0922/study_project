@@ -123,8 +123,10 @@ class ClaudeDocumentGeneratorTest {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("예시에 쓴 주제는 '가져다 쓰지 마라'가 붙어 그 주제를 지정할 수 없게 된다")
                 .doesNotContain("주제(스레드)는 가져다 쓰지 마라")
+                // 2026-09-17에 [제목] 예시가 의문문에서 명사구로 뒤집혔다(아래 pinsNounPhraseTitleRule).
+                // 여기서 지키는 것은 문구가 아니라 <예시 주제가 여전히 캐시 하나로 몰려 있다>는 사실이다.
                 .as("[제목] 예시도 나머지 두 블록과 같은 중립 주제를 쓴다")
-                .contains("(O) 캐시에 담아 둔 값이 낡았다는 것을 어떻게 아는가");
+                .contains("(O) 캐시에 담긴 값이 낡았는지 판별하는 방식");
     }
 
     @Test
@@ -491,6 +493,95 @@ class ClaudeDocumentGeneratorTest {
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("심화편 [분량]의 상한이 검증기 경고선(%s)과 같아야 한다", advancedLine)
                 .contains(advancedLine);
+    }
+
+    /**
+     * <b>제목 규칙이 명사구로 뒤집힌 것을 못 박는다</b>(2026-09-17).
+     *
+     * <p>사용자가 Flyway 문서 제목을 「…무엇으로 아는가」에서 「데이터베이스 마이그레이션 도구의
+     * 버전 관리 기법 (Flyway)」로 고친 것이 계기다. 옛 제목은 규칙 위반이 아니라 <b>규칙대로
+     * 나온 것</b>이었다 — 프롬프트가 "이 글이 답하는 질문 하나에 대응해야 한다"고 시켰고
+     * (O) 예시까지 의문문이었다.
+     *
+     * <p>지키는 것은 셋이다. ① 의문문 금지가 규칙 문장으로 있는가, ② <b>(O) 예시가 명사구인가</b>
+     * (이 저장소는 예시가 규칙을 이긴다는 것을 세 번 확인했다 — 예시가 옛 형식으로 돌아가면
+     * 규칙 문장은 힘을 잃는다), ③ 주제 문장의 말투를 제목으로 옮기지 말라는 한 줄이 있는가.
+     * ③이 없으면 모델은 대기열의 말하듯 적힌 주제 문장을 <b>제목의 초안</b>으로 읽는다.
+     */
+    @Test
+    @DisplayName("제목은 명사구로 시킨다 — 옛 규칙이 의문문을 시켰고 실물 제목이 전부 그렇게 나왔다")
+    void pinsNounPhraseTitleRule() {
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .as("규칙 문장이 있어야 예시의 근거가 선다")
+                .contains("제목은 이 글이 다루는 개념을 가리키는 <명사구>로 쓴다")
+                .as("금지는 어미를 실물로 보여 줘야 지켜진다")
+                .contains("의문문으로 쓰지 마라")
+                .as("제품 이름을 뒤로 빼야 목록이 개념 순으로 읽힌다")
+                .contains("일반 개념을 앞에 쓰고 제품 이름을 괄호에 넣는다")
+                .as("괄호 규칙이 의무가 되면 제품 없는 주제에 억지 괄호가 붙는다")
+                .contains("가리킬 제품이 없으면 괄호를 쓰지 마라")
+                .as("이게 없으면 말하듯 적힌 주제 문장이 그대로 제목이 된다")
+                .contains("그 말투를 제목으로 옮기지 마라");
+    }
+
+    /**
+     * <b>프롬프트의 제목 예시가 검증기를 통과하는지</b>(2026-09-17).
+     *
+     * <p>{@link #lengthInstructionMatchesValidatorWarnLine}과 같은 종류의 짝이다. 프롬프트가
+     * 모범이라고 보여 준 제목이 검증기에 걸리면 <b>지시를 잘 따른 문서일수록 경고를 달고</b>
+     * 나오고, 상시로 뜨는 경고는 사람이 경고 전체를 안 보게 만든다. 반대로 금지 예시가
+     * 검증기를 그냥 통과하면, 그 검사는 막으려던 것을 못 막는 검사다.
+     *
+     * <p>예시를 테스트에 다시 적지 않고 <b>프롬프트에서 뽑아 쓰는</b> 이유: 여기 적어 두면
+     * 다음에 예시를 손볼 때 두 곳이 또 갈라진다. 갈라져도 예외가 나지 않는 종류다.
+     */
+    @Test
+    @DisplayName("프롬프트의 (O) 제목은 검증기를 통과하고 (X)는 걸린다 — 어긋나면 잘 따른 문서가 경고를 단다")
+    void titleExamplesAgreeWithValidator() {
+        String block = titleRuleBlock(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT);
+
+        assertThat(exampleTitles(block, "(O) "))
+                .as("[제목] 절에 모범 예시가 있어야 한다")
+                .isNotEmpty()
+                .allSatisfy(title -> assertThat(titleStyleWarnings(title))
+                        .as("모범으로 보여 준 제목 \"%s\"이 검증기에 걸리면 안 된다", title)
+                        .isEmpty());
+
+        assertThat(exampleTitles(block, "(X) "))
+                .as("[제목] 절에 금지 예시가 있어야 한다")
+                .isNotEmpty()
+                .allSatisfy(title -> assertThat(titleStyleWarnings(title))
+                        .as("금지로 보여 준 제목 \"%s\"을 검증기가 잡아야 한다", title)
+                        .isNotEmpty());
+    }
+
+    /** 시스템 프롬프트에서 {@code [제목]} 절만 잘라 낸다 — (X)/(O) 예시는 다른 절에도 있다. */
+    private static String titleRuleBlock(String prompt) {
+        int start = prompt.indexOf("[제목]");
+        int end = prompt.indexOf("[문서 구조]", start);
+        assertThat(start).as("[제목] 절이 프롬프트에 있어야 한다").isNotNegative();
+        assertThat(end).as("[제목] 절 다음에 [문서 구조]가 와야 한다").isGreaterThan(start);
+        return prompt.substring(start, end);
+    }
+
+    private static List<String> exampleTitles(String block, String marker) {
+        return block.lines()
+                .map(String::strip)
+                .filter(line -> line.startsWith(marker))
+                .map(line -> line.substring(marker.length()).strip())
+                .toList();
+    }
+
+    /**
+     * 제목 형식 경고만 골라 낸다. 본문은 제목 한 줄짜리 껍데기라 절 누락·분량 같은 다른 지적이
+     * 잔뜩 따라오는데, 이 테스트가 보려는 것은 <b>제목</b>에 대한 판정뿐이다.
+     */
+    private static List<String> titleStyleWarnings(String title) {
+        return DocumentDraftValidator.validate(title, "example-slug", "# " + title + "\n\n본문.")
+                .stream()
+                .map(check -> check.message())
+                .filter(message -> message.startsWith("제목이") || message.startsWith("제목에"))
+                .toList();
     }
 
     /**
