@@ -549,11 +549,33 @@ public final class ProblemItemRule {
      * <p>초급과 같은 이유로 <b>경고이지 차단이 아니다</b>. 조건을 한 줄 더 붙여야 하는
      * 상황도 있고, 그 판단은 검수자의 몫이다. 길이는 결함의 <b>신호</b>일 뿐 결함 자체가 아니다 —
      * 진짜 결함("개념을 보여주려고 지어낸 장치")은 사람만 알아볼 수 있다.
+     *
+     * <h2>2026-09-17에 350 → 220으로 내렸다</h2>
+     *
+     * <p>위 문단이 "상황 자체는 중급의 정의라 없앨 수 없다"고 적어 둔 그 전제가 바뀌었다 —
+     * 사용자가 중급에서 상황형을 뺐다({@link #INTERMEDIATE_KINDS}). 장면이 없어졌으니
+     * 350자는 다시 <b>아무 일도 하지 않는 상한</b>이 된다. 08-25에 겪은 것과 같은 상태다.
+     *
+     * <p><b>220은 실측이다.</b> 중급 초안 47건을 형태별로 쟀다.
+     *
+     * <table border="1">
+     *   <caption>중급 초안의 형태별 지문 길이(2026-09-17 측정)</caption>
+     *   <tr><th>형태</th><th>건수</th><th>평균</th><th>최장</th></tr>
+     *   <tr><td>SITUATION</td><td>24</td><td>218자</td><td>285자</td></tr>
+     *   <tr><td>JUDGMENT</td><td>3</td><td>142자</td><td>174자</td></tr>
+     *   <tr><td>SEQUENCE</td><td>4</td><td>137자</td><td>206자</td></tr>
+     *   <tr><td>CAUSE</td><td>9</td><td>105자</td><td>171자</td></tr>
+     *   <tr><td>COMPARISON</td><td>7</td><td>91자</td><td>144자</td></tr>
+     * </table>
+     *
+     * <p>남기기로 한 네 형태의 최장이 206자다. 220이면 <b>지시를 잘 따른 문제는 하나도 걸리지
+     * 않고</b>, 장면을 늘어놓기 시작하면 걸린다. 200으로 잡으면 멀쩡한 순서형 하나가 걸리고,
+     * 250으로 잡으면 상황형 평균(218)이 그대로 통과해 검사가 다시 헐거워진다.
      */
-    public static final int INTERMEDIATE_QUESTION_MAX = 350;
+    public static final int INTERMEDIATE_QUESTION_MAX = 220;
 
     /**
-     * 중급 <b>상황 적용형</b> 지문의 길이 하한 — 2026-08-25 신설.
+     * <b>상황 적용형</b> 지문의 길이 하한 — 2026-08-25 신설, 2026-09-17에 고급 전용이 됐다.
      *
      * <p><b>상한만 있고 하한이 없던 것이 문제였다.</b> 사용자가 파일럿 5문제를 풀고
      * "지문을 더 구체화해야겠다"고 했다. 세어 보니 118·134·152·154·173자로,
@@ -575,6 +597,11 @@ public final class ProblemItemRule {
      *
      * <p>초급·제목과 같은 이유로 <b>경고이지 차단이 아니다</b>. 149자짜리 멀쩡한 지문을
      * 버리면 요금까지 낸 문제를 통째로 잃는다.
+     *
+     * <p><b>2026-09-17부터 고급에만 적용한다.</b> 같은 날 중급에서 상황 적용형을 뺐다
+     * ({@link #INTERMEDIATE_KINDS}). 중급에 상황형이 없으니 그 하한을 중급에 대면
+     * <b>형태를 잘못 적은 문제에만</b> 울리는데, 그건 이미 다른 경고가 잡는다 — 한 결함에
+     * 메시지가 둘 뜨면 검수자가 둘 다 흘려 읽는다.
      */
     public static final int SITUATION_QUESTION_MIN = 150;
 
@@ -602,8 +629,39 @@ public final class ProblemItemRule {
      *
      * <p>배치 단위라 항목 하나만 보는 {@link #qualityWarningsOf}에서는 잴 수 없다.
      * {@link #batchWarningsOf}가 따로 있는 이유다.
+     *
+     * <h2>2026-09-17 — 중급용에서 고급용으로 옮기고 1로 내렸다</h2>
+     *
+     * <p>사용자가 <b>중급에서 상황형을 아예 빼기로</b> 정했다({@link #INTERMEDIATE_KINDS}).
+     * 위 문단이 "상황형을 없애는 것은 증상을 지우고 원인을 남기는 선택"이라며 접어 둔 안인데,
+     * 그때 근거는 <b>문형 반복</b>이었다. 이번 결정의 근거는 다르다 — <b>난이도의 자리</b>다.
+     * 중급이 묻는 것은 "원리를 쓸 줄 아는가" 하나인데, 장면이 있으면 장면 파악이라는 두 번째
+     * 과제가 얹혀 초급 바로 위 한 칸이 되지 못한다. 문형 반복은 형태 배분이 따로 막는다.
+     *
+     * <p>그래서 이 상한은 갈 곳을 잃었다 — 중급에는 상황형이 0개여야 하고, 그건 개수 상한이
+     * 아니라 <b>형태 목록</b>이 말하는 것이다. 대신 고급으로 옮겼다. 고급 프롬프트에는
+     * "셋을 낸다면 SITUATION 1개"가 적혀 있었는데 <b>아무도 재지 않고 있었다</b>.
+     * 프롬프트에만 있고 검사가 없는 규칙은 조용히 무너진다는 것을 이 저장소가 여러 번 겪었다.
      */
-    public static final int SITUATION_MAX_PER_BATCH = 2;
+    public static final int ADVANCED_SITUATION_MAX = 1;
+
+    /**
+     * 중급에 <b>열어 둔</b> 형태 — 2026-09-17 신설. {@link #ADVANCED_KINDS}와 짝이다.
+     *
+     * <p><b>{@link QuestionKind#SITUATION}이 빠진 것이 이 목록의 전부다.</b> 중급은 초급 바로 위
+     * 한 칸이어야 하는데, 실무 장면이 들어가는 순간 <b>장면을 읽어 내는 과제</b>가 하나 더
+     * 생긴다. 09-17 실물이 그 상태였다 — 지문이 SaaS 테넌트 520개와 오케스트레이터 재시작
+     * 루프로 시작해서, 정작 묻는 원리(마이그레이션 실행 위치)에 닿기 전에 배경을 이해해야 했다.
+     *
+     * <p><b>실측도 같은 말을 한다.</b> 중급 초안 47건의 형태별 지문 길이가 이렇다 —
+     * 상황형 24건이 평균 218자·최장 285자인데, 나머지 넷은 평균 91~142자·최장 206자다.
+     * 길이는 난이도의 증상이다. 같은 원리를 묻는데 상황형만 지문이 두 배다.
+     *
+     * <p>고급은 그대로 상황형을 쓴다. 거기서는 <b>장면 파악 자체가 묻는 것의 일부</b>다 —
+     * "이미 시도한 것"을 읽어 내야 다음 대응을 고를 수 있다({@link #ADVANCED_KINDS} 주석).
+     */
+    public static final java.util.Set<QuestionKind> INTERMEDIATE_KINDS = java.util.Set.of(
+            QuestionKind.COMPARISON, QuestionKind.CAUSE, QuestionKind.JUDGMENT, QuestionKind.SEQUENCE);
 
     /**
      * 고급에 <b>열어 둔</b> 형태 — 2026-08-25 신설. 중급의 다섯 중 셋만이다.
@@ -951,17 +1009,27 @@ public final class ProblemItemRule {
                         .formatted(item.questionKind().getLabel()));
             }
 
-            if (difficulty == Difficulty.INTERMEDIATE) {
-                int qlen = question.trim().length();
-                if (qlen > INTERMEDIATE_QUESTION_MAX) {
-                    warnings.add("중급 지문이 김 (%d자, 기준 %d자 — 길면 무엇을 묻는지가 흐려진다)"
-                            .formatted(qlen, INTERMEDIATE_QUESTION_MAX));
-                } else if (item.questionKind() == QuestionKind.SITUATION && qlen < SITUATION_QUESTION_MIN) {
-                    // 유형이 null이면(옛 초안, 테스트) 조용히 넘어간다 — 유형을 도입하기 전에
-                    // 만들어진 초안이 갑자기 경고를 달고 나오면 검수자가 경고를 안 보게 된다.
-                    warnings.add("상황형 지문이 짧음 (%d자, 기준 %d자 — 기능 이름과 어긋난 증상을 숫자로 적었는지 보라)"
-                            .formatted(qlen, SITUATION_QUESTION_MIN));
-                }
+            // 중급에 열지 않은 형태를 골랐는가 — 2026-09-17. 바로 위 고급 검사와 같은 모양이다.
+            // 중급에서 상황형을 뺀 결정이 프롬프트 문구로만 남지 않게 여기서 잰다.
+            // 경고인 이유: 좋은 상황형 문제가 나왔다면 난이도를 고급으로 바꿔 살릴 수 있다.
+            // 그 판단은 사람만 한다("사람이 판단할 수 있는 것은 경고", DraftCheck.Severity).
+            if (difficulty == Difficulty.INTERMEDIATE && item.questionKind() != null
+                    && !INTERMEDIATE_KINDS.contains(item.questionKind())) {
+                warnings.add("중급에 열지 않은 형태 (%s — 중급은 초급 바로 위 한 칸이라 장면을 읽는 부담을 얹지 않는다)"
+                        .formatted(item.questionKind().getLabel()));
+            }
+
+            if (difficulty == Difficulty.INTERMEDIATE && question.trim().length() > INTERMEDIATE_QUESTION_MAX) {
+                warnings.add("중급 지문이 김 (%d자, 기준 %d자 — 길면 무엇을 묻는지가 흐려진다)"
+                        .formatted(question.trim().length(), INTERMEDIATE_QUESTION_MAX));
+            }
+            // 상황형 지문 하한은 고급에만 건다(2026-09-17). 유형이 null이면(옛 초안, 테스트)
+            // 조용히 넘어간다 — 유형을 도입하기 전에 만들어진 초안이 갑자기 경고를 달고 나오면
+            // 검수자가 경고를 안 보게 된다.
+            if (difficulty == Difficulty.ADVANCED && item.questionKind() == QuestionKind.SITUATION
+                    && question.trim().length() < SITUATION_QUESTION_MIN) {
+                warnings.add("상황형 지문이 짧음 (%d자, 기준 %d자 — 기능 이름과 어긋난 증상을 숫자로 적었는지 보라)"
+                        .formatted(question.trim().length(), SITUATION_QUESTION_MIN));
             }
         }
 
@@ -1055,14 +1123,18 @@ public final class ProblemItemRule {
             }
         }
 
-        // 유형 쏠림 — 중급에만 해당한다. 초급은 정의를 묻는 자리라 형태를 나눌 것이 없고,
-        // 고급은 정의상 언제나 상황형이라 상한을 걸면 매번 울린다.
-        if (difficulty == Difficulty.INTERMEDIATE
+        // 유형 쏠림 — 2026-09-17에 중급에서 고급으로 옮겼다. 중급에는 이제 상황형이 아예 없어서
+        // (INTERMEDIATE_KINDS) 개수 상한이 아니라 형태 목록이 그 일을 하고, 그 판정은 항목
+        // 하나만 봐도 되므로 qualityWarningsOf에 있다.
+        //
+        // 고급 프롬프트에는 "셋을 낸다면 SITUATION 1개"가 전부터 적혀 있었는데 아무도 재지
+        // 않았다. 프롬프트에만 있고 검사가 없는 규칙은 조용히 무너진다.
+        if (difficulty == Difficulty.ADVANCED
                 && items.stream().anyMatch(i -> i.questionKind() != null)) {
             long situations = items.stream().filter(i -> i.questionKind() == QuestionKind.SITUATION).count();
-            if (situations > SITUATION_MAX_PER_BATCH) {
-                warnings.add("상황 적용형이 %d개 (상한 %d개 — 나머지는 비교·인과·판정·순서로 채운다)"
-                        .formatted(situations, SITUATION_MAX_PER_BATCH));
+            if (situations > ADVANCED_SITUATION_MAX) {
+                warnings.add("상황 적용형이 %d개 (고급 상한 %d개 — 나머지는 비교·인과로 채운다)"
+                        .formatted(situations, ADVANCED_SITUATION_MAX));
             }
         }
 

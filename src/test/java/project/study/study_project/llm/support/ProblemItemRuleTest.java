@@ -97,18 +97,40 @@ class ProblemItemRuleTest {
                     item(question, goodExplanation(), kind), Difficulty.INTERMEDIATE, true);
         }
 
+        /** 상황형은 2026-09-17부터 고급 전용이라, 하한도 고급에서 잰다. */
+        private List<String> advancedWarnings(String question, QuestionKind kind) {
+            return ProblemItemRule.qualityWarningsOf(
+                    item(question, goodExplanation(), kind), Difficulty.ADVANCED, true);
+        }
+
         /**
          * <b>이 기능이 생긴 이유</b>다. 상한(250)만 있던 동안 실측 다섯이 118~173자로 상한
          * 근처에도 안 갔다 — 상한은 아무 일도 하지 않고 있었고, 정작 문제는 짧아서 흐린 것이었다.
+         *
+         * <p>2026-09-17에 <b>재는 자리가 중급에서 고급으로 옮겨 갔다.</b> 중급에서 상황형을
+         * 뺐으니 중급에 이 하한을 대면 형태를 잘못 적은 문제에만 울리는데, 그건 다른 경고가
+         * 이미 잡는다 — 한 결함에 메시지가 둘 뜨면 검수자가 둘 다 흘려 읽는다.
          */
         @Test
-        @DisplayName("상황형 지문이 하한에 못 미치면 경고한다")
+        @DisplayName("고급 상황형 지문이 하한에 못 미치면 경고한다")
         void warnsWhenSituationQuestionIsTooShort() {
-            assertThat(warnings(repeat(ProblemItemRule.SITUATION_QUESTION_MIN - 1), QuestionKind.SITUATION))
+            assertThat(advancedWarnings(repeat(ProblemItemRule.SITUATION_QUESTION_MIN - 1), QuestionKind.SITUATION))
                     .anySatisfy(w -> assertThat(w).contains("상황형 지문이 짧음"));
 
-            assertThat(warnings(repeat(ProblemItemRule.SITUATION_QUESTION_MIN), QuestionKind.SITUATION))
+            assertThat(advancedWarnings(repeat(ProblemItemRule.SITUATION_QUESTION_MIN), QuestionKind.SITUATION))
                     .noneSatisfy(w -> assertThat(w).contains("상황형 지문이 짧음"));
+        }
+
+        /**
+         * <b>중급에 상황형이 오면 길이가 아니라 형태를 지적한다</b>(2026-09-17).
+         * 지문을 늘리라는 말은 이제 틀린 처방이다 — 장면 자체를 지워야 한다.
+         */
+        @Test
+        @DisplayName("중급 상황형은 길이가 아니라 형태로 지적한다 — 늘리라는 말은 틀린 처방이다")
+        void warnsAboutKindNotLengthForIntermediateSituation() {
+            assertThat(warnings(repeat(80), QuestionKind.SITUATION))
+                    .anySatisfy(w -> assertThat(w).contains("중급에 열지 않은 형태"))
+                    .noneSatisfy(w -> assertThat(w).contains("지문이 짧음"));
         }
 
         /**
@@ -291,18 +313,24 @@ class ProblemItemRuleTest {
         }
 
         /**
-         * <b>이 검사가 뒤집힌 이유</b>다. 처음에는 하한("최소 2개")이었는데 실물은 정반대였다 —
-         * 5문제 중 5개가 상황형이었고, 이어서 1건씩 세 번 더 뽑았는데 세 번 다 상황형이었다.
-         * 상황형은 재료가 가장 풍부해서 내버려 두면 전부를 차지한다.
+         * <b>이 검사가 두 번 옮겨 다닌 이유</b>다. 처음에는 하한("최소 2개")이었는데 실물은
+         * 정반대였다 — 5문제 중 5개가 상황형이었고, 이어 1건씩 세 번 더 뽑아도 세 번 다
+         * 상황형이었다. 그래서 상한으로 뒤집었다(2026-08-25).
+         *
+         * <p><b>2026-09-17에 중급에서 고급으로 옮겼다.</b> 중급에서 상황형을 아예 뺐으니
+         * 중급의 상한은 0인데, 0은 개수 상한이 아니라 <b>형태 목록</b>이 말하는 것이다
+         * ({@code INTERMEDIATE_KINDS}). 한편 고급 프롬프트의 "셋을 낸다면 SITUATION 1개"는
+         * 그동안 <b>아무도 재지 않고</b> 있었다.
          */
         @Test
-        @DisplayName("상황형이 상한을 넘으면 경고한다 — 내버려 두면 전부를 차지한다")
+        @DisplayName("고급 상황형이 상한을 넘으면 경고한다 — 프롬프트에만 있고 검사가 없던 규칙이다")
         void warnsWhenSituationsExceedTheCap() {
             assertThat(ProblemItemRule.batchWarningsOf(
                     batch(QuestionKind.SITUATION, QuestionKind.SITUATION, QuestionKind.SITUATION,
                             QuestionKind.COMPARISON, QuestionKind.CAUSE),
-                    Difficulty.INTERMEDIATE))
-                    .anySatisfy(w -> assertThat(w).contains("상황 적용형이 3개").contains("상한 2개"));
+                    Difficulty.ADVANCED))
+                    .anySatisfy(w -> assertThat(w).contains("상황 적용형이 3개")
+                            .contains("고급 상한 %d개".formatted(ProblemItemRule.ADVANCED_SITUATION_MAX)));
         }
 
         /** 상한이지 목표가 아니다 — 상황형이 하나뿐이어도 조용해야 한다. */
@@ -310,29 +338,49 @@ class ProblemItemRuleTest {
         @DisplayName("상한 안이면 아무 말도 하지 않는다 — 상한이지 목표가 아니다")
         void staysQuietWithinTheCap() {
             assertThat(ProblemItemRule.batchWarningsOf(
-                    batch(QuestionKind.SITUATION, QuestionKind.COMPARISON, QuestionKind.JUDGMENT),
-                    Difficulty.INTERMEDIATE))
+                    batch(QuestionKind.SITUATION, QuestionKind.COMPARISON, QuestionKind.CAUSE),
+                    Difficulty.ADVANCED))
                     .isEmpty();
             assertThat(ProblemItemRule.batchWarningsOf(
-                    batch(QuestionKind.COMPARISON, QuestionKind.CAUSE), Difficulty.INTERMEDIATE))
+                    batch(QuestionKind.COMPARISON, QuestionKind.CAUSE), Difficulty.ADVANCED))
                     .as("상황형이 0개여도 이제는 경고하지 않는다")
                     .isEmpty();
         }
 
-        /** 초급은 정의를 묻는 자리라 형태를 나눌 것이 없고, 고급은 정의상 언제나 상황형이다. */
+        /**
+         * 중급 배치는 이 검사에서 <b>빠져 있어야</b> 한다. 중급에 상황형이 섞여 오면
+         * 항목별 경고(중급에 열지 않은 형태)가 각각 잡는다 — 배치 경고까지 함께 뜨면
+         * 한 결함에 메시지가 여럿이 되고, 그러면 목록 전체를 흘려 읽게 된다.
+         */
         @Test
-        @DisplayName("유형 쏠림은 중급에만 잰다 — 고급은 정의상 전부 상황형이라 매번 울린다")
-        void kindBalanceAppliesOnlyToIntermediate() {
+        @DisplayName("중급 배치에는 상황형 개수 경고를 달지 않는다 — 항목별 형태 경고가 이미 잡는다")
+        void leavesIntermediateBatchesToThePerItemCheck() {
+            assertThat(ProblemItemRule.batchWarningsOf(
+                    batch(QuestionKind.SITUATION, QuestionKind.SITUATION, QuestionKind.SITUATION,
+                            QuestionKind.COMPARISON, QuestionKind.CAUSE),
+                    Difficulty.INTERMEDIATE))
+                    .noneSatisfy(w -> assertThat(w).contains("상황 적용형이"));
+        }
+
+        /**
+         * 초급은 정의를 묻는 자리라 형태를 나눌 것이 없다. 2026-09-17까지 이 자리에는 "고급은
+         * 정의상 전부 상황형이라 매번 울린다"는 이유로 <b>고급을 빼는</b> 테스트가 있었는데,
+         * 같은 날 고급에도 형태 셋이 열려 있다는 사실에 맞춰 뒤집혔다(위 두 테스트).
+         * 남은 것은 초급이다 — 초급 배치에는 이 경고가 붙을 이유가 없다.
+         */
+        @Test
+        @DisplayName("초급 배치에는 유형 쏠림을 재지 않는다 — 정의를 묻는 자리라 나눌 형태가 없다")
+        void kindBalanceSkipsBeginner() {
             assertThat(ProblemItemRule.batchWarningsOf(
                     batch(QuestionKind.SITUATION, QuestionKind.SITUATION, QuestionKind.SITUATION),
-                    Difficulty.ADVANCED))
+                    Difficulty.BEGINNER))
                     .noneSatisfy(w -> assertThat(w).contains("상황 적용형"));
         }
 
         @Test
         @DisplayName("아무도 유형을 선언하지 않은 옛 배치는 유형 쏠림을 재지 않는다")
         void skipsKindBalanceWithoutDeclaredKinds() {
-            assertThat(ProblemItemRule.batchWarningsOf(batch(null, null, null), Difficulty.INTERMEDIATE))
+            assertThat(ProblemItemRule.batchWarningsOf(batch(null, null, null), Difficulty.ADVANCED))
                     .noneSatisfy(w -> assertThat(w).contains("상황 적용형"));
         }
 

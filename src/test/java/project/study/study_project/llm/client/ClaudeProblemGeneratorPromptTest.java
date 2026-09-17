@@ -535,9 +535,12 @@ class ClaudeProblemGeneratorPromptTest {
     void pinsBeginnerQuestionLength() {
         assertThat(prompt(Difficulty.BEGINNER, DOC))
                 .contains("%d자 이내".formatted(ProblemItemRule.BEGINNER_QUESTION_MAX));
+        // 2026-09-17: 중급도 초급처럼 "이내"로 돌아왔다. 상황형이 빠지면서 지문에 하한을 걸
+        // 이유가 사라졌다 — 비교·인과·판정·순서는 짧은 것이 정상이고, 하한을 걸면 짧아도 되는
+        // 문제에 군더더기를 붙이게 된다(SITUATION_QUESTION_MIN 주석과 같은 판단).
         assertThat(prompt(Difficulty.INTERMEDIATE, DOC))
-                .as("중급은 '이내'가 아니라 상·하한 범위로 건다 — 짧은 쪽이 실제 문제였다")
-                .doesNotContain("자 이내");
+                .as("중급 상한도 검증기 상수와 같은 숫자여야 한다 — 갈라지면 잘 쓴 지문이 매번 경고를 단다")
+                .contains("%d자 이내".formatted(ProblemItemRule.INTERMEDIATE_QUESTION_MAX));
     }
 
     @Test
@@ -711,10 +714,11 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("무엇이 어긋났는가")
                 .as("실험 상황은 이 표현들로 시작한다")
                 .contains("~를 점검했다")
-                .as("상·하한을 둘 다 박는다 — 상한만 있던 동안 실측 다섯이 118~173자로 근처에도 안 갔다")
-                .contains("중급 상황 지문은 %d~%d자로 쓴다"
-                        .formatted(ProblemItemRule.SITUATION_QUESTION_MIN,
-                                ProblemItemRule.INTERMEDIATE_QUESTION_MAX))
+                // 2026-09-17: 상황 지문은 고급 전용이 됐다. 하한만 남는다 — 상한은 고급 지문에
+                // 걸어 둔 적이 없고(조건을 적다 보면 길어지는 것이 정상), 짧은 쪽이 결함이다.
+                .as("하한을 박는다 — 없던 동안 실측 다섯이 118~173자로 상한 근처에도 안 갔다")
+                .contains("고급 상황 지문은 %d자 이상으로 쓴다"
+                        .formatted(ProblemItemRule.SITUATION_QUESTION_MIN))
                 .as("추상적 금지보다 실물 대비가 훨씬 잘 지켜진다")
                 .contains("두 메모리 영역을 대조하려고 발명한 장치다")
                 .as("자기 점검 항목이 있어야 모델이 만든 뒤 스스로 걸러낸다")
@@ -737,30 +741,30 @@ class ClaudeProblemGeneratorPromptTest {
      * {@code [제목]} 절에서 이미 두 번 배운 것이다.
      */
     @Test
-    @DisplayName("중급은 다섯 형태로 낸다 — 경계선과 배분 바닥을 함께 적지 않으면 초급·고급으로 샌다")
+    @DisplayName("중급은 네 형태로 낸다 — 경계선을 함께 적지 않으면 초급·고급으로 샌다")
     void opensFiveQuestionKindsForIntermediateWithBoundaries() {
         assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
-                .contains("[중급이 묻는 다섯 형태]")
+                .contains("[중급이 묻는 네 형태]")
                 .as("questionKind에 적을 값이라 이름이 스키마와 정확히 같아야 한다")
-                .contains("SITUATION").contains("COMPARISON").contains("CAUSE")
+                .contains("COMPARISON").contains("CAUSE")
                 .contains("JUDGMENT").contains("SEQUENCE")
-                .as("중급의 정의 자체가 바뀌었다 — 상황 적용은 다섯 중 하나일 뿐이다")
+                .as("중급의 정의 자체가 바뀌었다 — 초급 바로 위 한 칸이다")
                 .contains("중급은 <원리를 쓸 줄 아는가>를 묻는다")
-                // 2026-08-25에 하한에서 상한으로 뒤집었다. 실물 5문제가 전부 상황형이었고
-                // 이어 1건씩 세 번 더 뽑아도 세 번 다 상황형이었다 — 막을 쪽은 반대였다.
-                .as("상한을 숫자로 박지 않으면 재료가 풍부한 상황형이 전부를 차지한다")
-                .contains("SITUATION은 어떤 경우에도 <최대 %d개>다"
-                        .formatted(ProblemItemRule.SITUATION_MAX_PER_BATCH))
-                .as("상한을 목표로 읽으면 이번엔 정확히 2개씩 나온다")
-                .contains("상한이지 목표가 아니다")
+                .contains("초급 바로 위 <한 칸>이다")
+                // 2026-09-17: 사용자가 중급에서 상황형을 뺐다. 장면을 읽어 내는 과제가 얹히면
+                // 중급이 초급 바로 위 한 칸이 되지 못한다. 금지를 문장으로 적어 두지 않으면
+                // 모델은 기억하는 형식(상황형)으로 돌아간다.
+                .as("상황형은 중급에서 아예 닫혔다 — 개수 상한이 아니라 형태 목록이 막는다")
+                .contains("SITUATION(상황 적용)은 <중급에 쓰지 마라>")
+                .contains("지문에 실무 장면을 넣지 마라")
                 .as("판정형은 초급으로, 비교형은 고급으로 새기 쉽다 — 경계를 실물로 대비시킨다")
                 .contains("[중급이 초급·고급으로 새지 않게 하는 법]")
                 .contains("진술이 <정의>면 초급이고")
                 .contains("고급은 <주어진 상황에서의 선택>을 묻는다")
                 .as("형태가 늘어도 중급의 오답 성격은 그대로다 — 이게 풀리면 전부 고급이 된다")
                 .contains("넷이 전부 그럴듯하면 그건 고급이다")
-                .as("b~e에 길이 하한을 걸면 짧아도 되는 문제에 군더더기를 붙인다")
-                .contains("b~e에는 길이 규칙이 없다");
+                .as("길이 하한을 걸면 짧아도 되는 문제에 군더더기를 붙인다")
+                .contains("네 형태 모두 지문 길이 하한이 없다");
     }
 
     /**
@@ -933,9 +937,9 @@ class ClaudeProblemGeneratorPromptTest {
                 .as("바꿔 쓸 물음을 나열해 줘야 실제로 바뀐다 — 금지만으로는 안 바뀐다")
                 .contains("원인 / 조치 / 먼저 할 확인 / 예상되는 결과 / 판단 / 설명")
                 .as("실제로 이렇게 나왔다는 것을 (X) 예시가 보여 준다")
-                .contains("업종만 다르고 뼈대가 같다")
-                .as("(O)는 서비스 이름을 앞세우지 않아도 상황이 성립함을 보인다")
-                .contains("서비스 이름을 앞세우지 않아도 상황은 성립한다");
+                .contains("설정 이름만 갈아 끼웠다")
+                .as("(O)는 장면 없이도 중급이 성립함을 보인다 — 2026-09-17에 예시를 갈았다")
+                .contains("다섯 줄 어디에도 실무 장면이 없다");
     }
 
     /**
@@ -947,32 +951,33 @@ class ClaudeProblemGeneratorPromptTest {
      * 이 저장소가 반복해 확인한 것이 "추상적 금지는 무시되고 실물 예시는 지켜진다"이므로,
      * 예시가 전부 상황형인 한 상한은 한 줄짜리 부탁으로 남는다.
      *
-     * <p>그래서 (O)를 <b>형태 이름이 붙은 다섯 줄 배치</b>로 바꿨다. 여기서 지키는 것은
-     * 그 배분이 상한과 같은 모양인가다 — 상황 둘, 나머지 셋. 이 테스트가 없으면 다음에
-     * 예시를 손볼 때 상황형 줄을 하나 더 늘려도 아무도 모른다. 그때는 프롬프트가 다시
-     * <b>말과 그림이 어긋난 상태</b>로 돌아가고, 그 어긋남이 이 사고의 원인이었다.
+     * <p>그래서 (O)를 <b>형태 이름이 붙은 다섯 줄 배치</b>로 바꿨다.
+     *
+     * <p><b>2026-09-17에 그 다섯 줄을 다시 갈았다.</b> 중급에서 상황형이 빠졌는데 본보기의
+     * 앞 두 줄이 장면이면, 09-05와 같은 일이 방향만 바꿔 되풀이된다 — 규칙은 "장면을 쓰지
+     * 마라"인데 본보기는 장면으로 시작한다. 이제 다섯 줄 <b>어디에도 SITUATION이 없어야</b> 한다.
+     * 여기서 세는 것이 그것이다. 문자열 단언만으로는 "SITUATION 줄이 하나 늘었다"를 못 잡는다.
      */
     @Test
-    @DisplayName("(O) 예시는 형태를 섞은 한 배치다 — 예시가 전부 상황형이면 상한은 한 줄짜리 부탁이 된다")
+    @DisplayName("(O) 예시에 상황형이 하나도 없다 — 본보기가 장면으로 시작하면 금지는 한 줄짜리 부탁이 된다")
     void showsAMixedKindBatchInTheGoodExample() {
         String good = ClaudeProblemGenerator.SYSTEM_PROMPT
-                .substring(ClaudeProblemGenerator.SYSTEM_PROMPT.indexOf("(O) SITUATION"));
+                .substring(ClaudeProblemGenerator.SYSTEM_PROMPT.indexOf("(O) COMPARISON"));
 
         assertThat(good)
                 .as("형태 이름을 붙여야 '이게 무슨 형태인지'가 예시에서 읽힌다")
-                .contains("(O) SITUATION")
-                .contains("COMPARISON").contains("CAUSE").contains("JUDGMENT")
+                .contains("(O) COMPARISON")
+                .contains("CAUSE").contains("JUDGMENT").contains("SEQUENCE")
                 .as("배분을 눈으로 보고도 놓칠까 봐 말로도 한 번 더 짚는다")
-                .contains("장면으로 쓴 것은 앞의 둘뿐이고");
+                .contains("묻는 행위가 다섯 줄 모두 다르다");
 
-        // 예시 안의 상황형 줄 수가 상한과 같은지 <센다>. 문자열 단언만으로는
-        // "SITUATION 줄이 하나 더 늘었다"를 못 잡는다 — 늘어난 줄도 contains는 통과한다.
         long situations = good.lines()
-                .filter(line -> line.strip().startsWith("(O) SITUATION") || line.strip().startsWith("SITUATION"))
+                .takeWhile(line -> !line.strip().startsWith("[고급"))
+                .filter(line -> line.strip().startsWith("SITUATION") || line.strip().startsWith("(O) SITUATION"))
                 .count();
         assertThat(situations)
-                .as("본보기의 상황형 개수가 상한과 달라지면 프롬프트의 말과 그림이 다시 어긋난다")
-                .isEqualTo(ProblemItemRule.SITUATION_MAX_PER_BATCH);
+                .as("중급 본보기에 상황형이 한 줄이라도 있으면 금지와 그림이 어긋난다")
+                .isZero();
     }
 
     /**
@@ -1019,7 +1024,7 @@ class ClaudeProblemGeneratorPromptTest {
 
         assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
                 .as("재료가 없다는 도피로를 닫는다 — 판정형 재료는 어느 문서에나 있다")
-                .contains("d는 언제나 낼 수 있다는 뜻이다");
+                .contains("c는 언제나 낼 수 있다는 뜻이다");
     }
 
     /**
@@ -1036,12 +1041,14 @@ class ClaudeProblemGeneratorPromptTest {
         assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
                 .contains("<형태 배분>")
                 .as("다섯 자리를 무엇으로 채우는지가 적혀 있어야 한다")
-                .contains("상황 2 · 비교 1 · 인과 1 · 판정 1")
-                .as("개수가 줄어드는 날(고급 3개)에도 따를 배분이 있어야 한다")
-                .contains("셋이면 상황 1")
-                .as("상한은 그대로 남는다 — 배분이 상한을 대신하는 것이 아니다")
-                .contains("SITUATION은 어떤 경우에도 <최대 %d개>다"
-                        .formatted(ProblemItemRule.SITUATION_MAX_PER_BATCH));
+                .contains("비교 2 · 인과 1 · 판정 1 · 순서 1")
+                .as("개수가 줄어드는 날에도 따를 배분이 있어야 한다")
+                .contains("셋이면 비교 1 · 인과 1 · 판정 1")
+                .as("순서형만은 재료가 있는 주제에만 있다 — 없으면 억지로 만든다")
+                .contains("순서가 결과를 가르는 주제에만 그 재료가 있다")
+                .as("고급 상한은 검증기 상수와 같은 숫자여야 한다")
+                .contains("[고급도 형태를 섞어라] — SITUATION은 최대 %d개"
+                        .formatted(ProblemItemRule.ADVANCED_SITUATION_MAX));
     }
 
     /**
@@ -1070,7 +1077,7 @@ class ClaudeProblemGeneratorPromptTest {
                 .as("'이것도 낼 수 있다'가 아니라 '이것만 낸다'여야 한다")
                 .contains("로만 낸다")
                 .as("배분 규칙을 끄지 않으면 두 지시가 부딪힌다")
-                .contains("배분 규칙(SITUATION 최대 2개)은 이번에는 적용하지 마라")
+                .contains("이번에는 적용하지 마라 — 사람이 형태를 직접 골랐다")
                 .as("배분은 껐어도 문형 반복 금지는 살아 있어야 한다 — 형태가 같을수록 더 겹친다")
                 .contains("[같은 문제를 다섯 번 내지 마라]는 그대로 지켜라");
 

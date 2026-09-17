@@ -50,11 +50,12 @@ public record GeneratedProblemItem(
                 + "물음표로 끝내지 않으며, 줄표(—)로 부연을 달지 않는다. 40자 이내")
         String title,
 
-        @JsonPropertyDescription("이 문제가 묻는 형태. SITUATION=실무 장면을 주고 원인·판단을 묻는다, "
+        @JsonPropertyDescription("이 문제가 묻는 형태. SITUATION=실무 장면을 주고 원인·판단을 묻는다"
+                + "(고급 전용 — 중급에는 쓰지 않는다), "
                 + "COMPARISON=두 방식을 나란히 놓고 무엇이 가르는지 묻는다, "
                 + "CAUSE=왜 그렇게 하는가를 직접 묻는다, "
-                + "JUDGMENT=진술 넷 중 옳거나 틀린 것을 고른다, "
-                + "SEQUENCE=단계가 있는 동작의 순서를 묻는다")
+                + "JUDGMENT=진술 넷 중 옳거나 틀린 것을 고른다(중급 전용), "
+                + "SEQUENCE=단계가 있는 동작의 순서를 묻는다(중급 전용)")
         QuestionKind questionKind
 ) {
     /**
