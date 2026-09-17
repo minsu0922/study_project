@@ -789,6 +789,77 @@ class ProblemItemRuleTest {
      * <b>문제 경고 목록까지 실제로 흘러오는가</b>다 — 규칙만 만들고 부르는 곳을 빠뜨리면
      * 아무 오류 없이 조용하다.
      */
+    /**
+     * 해설이 <b>어느 편의 절인지</b> 밝히는지 — 2026-09-17 신설.
+     *
+     * <p>중급이 두 편에서 캐게 되면서({@code DocumentEditionRule.bodyFor}) 절 이름만으로는
+     * 어느 글을 열지 정할 수 없게 됐다. {@code ## 용어 한눈에}는 두 편에 다 있고, 근거 문서
+     * 링크는 한 편으로만 간다. 09-17 실물에서 입문편 절을 가리킨 문제의 링크가 심화편으로
+     * 가 있었다 — 눌러도 그 절이 없다.
+     */
+    @Nested
+    @DisplayName("중급 해설은 어느 편의 절인지 밝힌다")
+    class ExplanationEdition {
+
+        private List<String> warningsFor(String explanation, Difficulty difficulty) {
+            GeneratedProblemItem withExplanation = new GeneratedProblemItem(
+                    "가".repeat(120), "", explanation,
+                    List.of(new GeneratedProblemItem.GeneratedChoice("정답 보기 내용입니다", true),
+                            new GeneratedProblemItem.GeneratedChoice("오답 보기 하나입니다", false),
+                            new GeneratedProblemItem.GeneratedChoice("오답 보기 둘입니다", false),
+                            new GeneratedProblemItem.GeneratedChoice("오답 보기 셋입니다", false)),
+                    "", "제목", QuestionKind.COMPARISON);
+            return ProblemItemRule.qualityWarningsOf(withExplanation, difficulty, true);
+        }
+
+        /** 편 없이 절만 가리킨 해설 — 09-17 실물이 다섯 건 모두 이 꼴이었다. */
+        private static final String NO_EDITION = "정답인 이유는 인스턴스 수와 실행 시간이 갈림길이기 때문이다. "
+                + "둘 중 하나라도 커지면 기동 시 실행은 재시작 루프를 만든다. "
+                + "(문서의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)";
+
+        @Test
+        @DisplayName("편을 안 밝히면 알린다 — 같은 이름의 절이 두 편에 다 있다")
+        void warnsWhenEditionIsMissing() {
+            assertThat(warningsFor(NO_EDITION, Difficulty.INTERMEDIATE))
+                    .anySatisfy(w -> assertThat(w).contains("편을 밝히지 않음"));
+        }
+
+        @Test
+        @DisplayName("편을 밝히면 조용하다 — 입문편이든 심화편이든")
+        void staysQuietWhenEditionIsNamed() {
+            assertThat(warningsFor(NO_EDITION.replace("문서의", "심화편의"), Difficulty.INTERMEDIATE))
+                    .noneSatisfy(w -> assertThat(w).contains("편을 밝히지 않음"));
+            assertThat(warningsFor(NO_EDITION.replace("문서의", "입문편의"), Difficulty.INTERMEDIATE))
+                    .noneSatisfy(w -> assertThat(w).contains("편을 밝히지 않음"));
+        }
+
+        /**
+         * 초급·고급은 한 편만 읽는다. 거기에 이 경고를 달면 <b>고칠 것이 없는데 뜨는 경고</b>가
+         * 되고, 그런 경고는 목록 전체를 안 보게 만든다.
+         */
+        @Test
+        @DisplayName("초급·고급에는 달지 않는다 — 한 편만 읽으므로 밝힐 것이 없다")
+        void appliesOnlyToIntermediate() {
+            assertThat(warningsFor(NO_EDITION, Difficulty.BEGINNER))
+                    .noneSatisfy(w -> assertThat(w).contains("편을 밝히지 않음"));
+            assertThat(warningsFor(NO_EDITION, Difficulty.ADVANCED))
+                    .noneSatisfy(w -> assertThat(w).contains("편을 밝히지 않음"));
+        }
+
+        /** 절을 아예 안 가리킨 해설에는 <b>기존 경고 하나만</b> 떠야 한다 — 한 결함에 메시지 둘은 나쁘다. */
+        @Test
+        @DisplayName("절을 안 가리킨 해설에는 경고가 하나만 뜬다")
+        void doesNotStackWithTheMissingPointerWarning() {
+            List<String> warnings = warningsFor(
+                    "정답인 이유는 인스턴스 수와 실행 시간이 갈림길이기 때문이다. "
+                            + "둘 중 하나라도 커지면 기동 시 실행은 재시작 루프를 만든다.",
+                    Difficulty.INTERMEDIATE);
+
+            assertThat(warnings).anySatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"))
+                    .noneSatisfy(w -> assertThat(w).contains("편을 밝히지 않음"));
+        }
+    }
+
     @Nested
     @DisplayName("제목이 물음 꼴이거나 줄표 부연이면 알린다")
     class TitleStyle {

@@ -978,6 +978,13 @@ public final class ProblemItemRule {
             // 학습자가 틀린 뒤 돌아갈 유일한 입구라, 빠지면 해설이 그 자리에서 끝나 버린다.
             if (hasSourceDocument && contextOf(DOCUMENT_SECTION_HINT, explanation) == null) {
                 warnings.add("해설에 다시 읽을 문서 절이 없음 (틀린 학습자가 돌아갈 곳이 사라진다)");
+            } else if (hasSourceDocument && difficulty == Difficulty.INTERMEDIATE
+                    && !explanation.contains("입문편") && !explanation.contains("심화편")) {
+                // 2026-09-17: 중급은 두 편에서 캔다(DocumentEditionRule.bodyFor). 절 이름만 적으면
+                // 어느 글을 열지 정할 수 없다 — '## 용어 한눈에'는 두 편에 다 있고, 근거 문서
+                // 링크는 한 편으로만 간다. 09-17 실물에서 입문편 절을 가리킨 문제의 링크가
+                // 심화편으로 가 있었다. 편만 적혀 있으면 그 자리에서 알아볼 수 있다.
+                warnings.add("해설이 편을 밝히지 않음 (중급은 두 편에서 캔다 — \"입문편의 ○○ 절\"처럼 적는다)");
             }
         }
 

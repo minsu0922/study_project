@@ -148,7 +148,7 @@ public final class SourceQuoteRule {
      * <p>여기까지만 하고 조사·어미까지 맞춰 주지는 않는다. 그건 이미 "그대로 옮겼는가"가
      * 아니라 "비슷한가"를 재는 것이고, 비슷함의 기준을 정하는 순간 이 검사는 판정을 못 한다.
      */
-    private static String normalize(String text) {
+    static String normalize(String text) {
         return WHITESPACE.matcher(text).replaceAll(" ").trim();
     }
 

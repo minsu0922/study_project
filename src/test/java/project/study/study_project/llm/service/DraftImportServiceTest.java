@@ -10,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.study.study_project.admin.service.AdminProblemService;
+import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
@@ -59,6 +60,16 @@ class DraftImportServiceTest {
     private ProblemRepository problemRepository;
     @Mock
     private AdminProblemService adminProblemService;
+    /**
+     * 2026-09-17에 <b>필요해졌다.</b> 그전에는 여기 null을 넘기며 "파일 흡수는 등록 문서를
+     * 조회하지 않는다"고 적어 두었는데, 중급이 두 편에서 캐게 되면서 저장 경로가 근거 편을
+     * 가린다({@code SourceEditionRule}) — 그러려면 두 편의 본문을 읽어야 한다.
+     *
+     * <p>가짜는 기본값(빈 Optional)을 돌려주므로 아래 테스트들은 예전 그대로 동작한다.
+     * 판정 재료가 없으면 기준 slug를 그대로 쓰는 것이 규칙이기 때문이다.
+     */
+    @Mock
+    private DocumentRepository documentRepository;
 
     @TempDir
     Path tempDir;
@@ -68,14 +79,15 @@ class DraftImportServiceTest {
 
     @BeforeEach
     void setUp() {
-        // documentRepository는 null이다 — 이 테스트가 검증하는 파일 흡수 경로는 등록 문서를
-        // 조회하지 않는다(그 입구는 관리 화면 전용). 가짜를 하나 더 만들면 "이 경로도 문서를
-        // 읽는다"는 오해만 남는다.
-        // reportService도 null이다 — documentRepository와 같은 이유다. 파일 흡수는 되먹임 목록을
-        // 읽지 않는다(그것을 읽는 것은 생성 경로다). 서비스가 null을 견디게 만들어 둔 자리다.
+        // documentRepository는 2026-09-17부터 진짜(가짜 객체)가 필요하다 — 저장 경로가 근거 편을
+        // 가리려고 두 편의 본문을 읽는다(SourceEditionRule). 그전 주석은 "이 경로는 문서를
+        // 조회하지 않는다"였는데, 그 전제가 그날 바뀌었다.
+        // reportService는 여전히 null이다. 파일 흡수는 되먹임 목록을 읽지 않는다(그것을 읽는 것은
+        // 생성 경로다). 서비스가 null을 견디게 만들어 둔 자리다.
         LlmProblemService llmProblemService = new LlmProblemService(
                 problemGenerator, draftRepository, problemRepository, adminProblemService,
-                null, null, objectMapper, event -> { }, "claude-opus-5", List.of(Domain.NETWORK));
+                documentRepository, null, objectMapper, event -> { }, "claude-opus-5",
+                List.of(Domain.NETWORK));
         service = new DraftImportService(llmProblemService, importedFileRepository, objectMapper);
 
         // saveAll은 받은 목록을 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내

@@ -14,6 +14,7 @@ import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.repository.DocumentRepository;
+import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
@@ -33,6 +34,7 @@ import project.study.study_project.llm.repository.GeneratedProblemDraftRepositor
 import project.study.study_project.llm.support.DifficultyMaterialRule;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.SourceEditionRule;
 import project.study.study_project.llm.support.SourceQuoteRule;
 import project.study.study_project.llm.support.TypeMaterialRule;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -42,6 +44,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -332,11 +335,48 @@ public class LlmProblemService {
     public List<GeneratedProblemDraft> saveDrafts(Domain domain, Difficulty difficulty, ProblemType type,
                                                   List<GeneratedProblemItem> items, String model,
                                                   String documentSlug, SourceDocument source) {
+        // 근거 편 판정에 쓸 두 본문을 <한 번만> 읽는다. 문제마다 읽으면 다섯 문제에 조회가
+        // 열 번이고, 그 값은 배치 하나 안에서 바뀌지 않는다.
+        EditionBodies bodies = loadEditionBodies(documentSlug);
+
         List<GeneratedProblemDraft> drafts = new ArrayList<>();
         for (GeneratedProblemItem item : items) {
-            toDraft(item, domain, difficulty, type, model, documentSlug, source).ifPresent(drafts::add);
+            // 2026-09-17: 중급이 두 편에서 캐게 되면서 근거 slug가 문제마다 갈린다.
+            // 인용이 짝 편에서만 발견되면 그 편을 적는다(SourceEditionRule).
+            String slug = SourceEditionRule.slugFor(documentSlug, bodies.counterpartSlug(),
+                    item.sourceQuote(), bodies.baseBody(), bodies.counterpartBody());
+            toDraft(item, domain, difficulty, type, model, slug, source).ifPresent(drafts::add);
         }
         return draftRepository.saveAll(drafts);
+    }
+
+    /** 근거 편 판정에 필요한 두 본문. 짝이 없거나 못 찾으면 전부 {@code null}이라 판정은 건너뛴다. */
+    private record EditionBodies(String counterpartSlug, String baseBody, String counterpartBody) {
+        static final EditionBodies NONE = new EditionBodies(null, null, null);
+    }
+
+    /**
+     * 기준 편과 짝 편의 본문을 읽는다 — 둘 다 있을 때만 판정이 성립한다.
+     *
+     * <p><b>없어도 조용히 넘어간다.</b> 근거 없이 만든 문제(slug가 null), 짝이 없는 옛 문서,
+     * 아직 승인되지 않아 DB에 없는 편이 전부 여기로 들어온다. 그때 예외를 던지면 <b>요금을 낸
+     * 초안이 저장되지 못하고</b> 통째로 사라진다 — 근거 링크 한 칸을 정확히 하려다 문제를
+     * 잃는 셈이라, 이 판정은 "되면 좋고 아니면 기준 그대로"여야 한다.
+     */
+    private EditionBodies loadEditionBodies(String documentSlug) {
+        if (documentSlug == null || documentSlug.isBlank()) {
+            return EditionBodies.NONE;
+        }
+        String counterpartSlug = DocumentEditions.counterpartSlugOf(documentSlug);
+        if (counterpartSlug == null) {
+            return EditionBodies.NONE;
+        }
+        Optional<Document> base = documentRepository.findBySlug(documentSlug);
+        Optional<Document> counterpart = documentRepository.findBySlug(counterpartSlug);
+        if (base.isEmpty() || counterpart.isEmpty()) {
+            return EditionBodies.NONE;
+        }
+        return new EditionBodies(counterpartSlug, base.get().getContentMd(), counterpart.get().getContentMd());
     }
 
     /**

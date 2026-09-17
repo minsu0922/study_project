@@ -97,8 +97,14 @@ public final class DocumentEditionRule {
     public static final List<String> BEGINNER_SECTIONS_FOR_INTERMEDIATE =
             List.of("### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다");
 
-    /** 오려 붙인 자리에 다는 표시 — 모델이 <b>같은 주제의 입문편</b>이라는 것을 알아야 한다. */
-    static final String BEGINNER_EXCERPT_HEADER = "\n\n--- 같은 주제 입문편에서 가져온 부분 ---\n\n";
+    /**
+     * 오려 붙인 자리에 다는 표시 — 모델이 <b>같은 주제의 입문편</b>이라는 것을 알아야 한다.
+     *
+     * <p>{@code public}인 이유: 문제 생성 프롬프트가 이 문구를 그대로 인용한다("이 표시 아래는
+     * 입문편이다"). 해설이 절을 가리킬 때 편을 밝히게 하려면 <b>어디까지가 어느 편인지</b>를
+     * 모델이 가릴 수 있어야 하고, 그 기준이 이 한 줄이다. 두 곳에 따로 적으면 갈라진다.
+     */
+    public static final String BEGINNER_EXCERPT_HEADER = "\n\n--- 같은 주제 입문편에서 가져온 부분 ---\n\n";
 
     /**
      * 그 난이도가 읽을 <b>본문</b> — 중급이면 심화편에 입문편의 중급 절 둘을 붙여 돌려준다(2026-09-17).
