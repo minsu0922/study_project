@@ -1238,9 +1238,13 @@ class DraftGeneratorCliTest {
      * <p>물음표 하나로 재는 것은 조잡해 보이지만, 이 저장소가 여러 번 확인한 것이 그것이다 —
      * <b>세어 볼 수 있는 기준만 실제로 지켜진다</b>. "명사구인가"는 기계가 판정할 수 없고,
      * 물음표는 판정할 수 있다. 명사구인데 물음표를 붙이는 경우는 없으므로 헛울리지도 않는다.
+     *
+     * <p><b>2026-09-17에 물음표에서 의문형 어미까지로 넓혔다</b>({@code TitleStyleRule}).
+     * 문서 제목 규칙을 명사구로 뒤집으면서 같은 잣대를 문제에도 댄 것이고, 그래서 경고 문구도
+     * "물음표로 끝남"에서 "물음 꼴임"이 됐다. 이 테스트가 배치 관점에서 그 문구를 받는 자리다.
      */
     @Test
-    @DisplayName("제목이 물음표로 끝나면 알린다 — 물음을 늘어놓은 목록에서는 고를 수가 없다")
+    @DisplayName("제목이 물음 꼴이면 알린다 — 물음을 늘어놓은 목록에서는 고를 수가 없다")
     void warnsWhenTitleIsAQuestion() {
         GeneratedProblemItem questionTitle = new GeneratedProblemItem("무엇인가?", "", goodExplanation(),
                 fourChoices(), "", "이 상황의 원인으로 가장 적절한 것은?");
@@ -1249,7 +1253,7 @@ class DraftGeneratorCliTest {
                 .warnings())
                 .filteredOn(w -> w.contains("제목"))
                 .singleElement().asString()
-                .contains("물음표로 끝남")
+                .contains("물음 꼴임")
                 .as("어느 제목이 걸렸는지 보여야 고칠지 말지가 한눈에 정해진다")
                 .contains("이 상황의 원인으로 가장 적절한 것은?");
     }

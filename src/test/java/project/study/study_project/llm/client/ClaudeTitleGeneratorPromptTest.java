@@ -4,7 +4,9 @@ import com.anthropic.models.messages.MessageCreateParams;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.TitleStyleRule;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,12 +30,18 @@ class ClaudeTitleGeneratorPromptTest {
     private final ClaudeTitleGenerator generator = new ClaudeTitleGenerator("claude-opus-5");
 
     @Test
-    @DisplayName("제목 규칙 세 줄이 문제 생성 프롬프트와 같다 — 갈라지면 목록에 두 세대가 다르게 뜬다")
+    @DisplayName("제목 규칙이 문제 생성 프롬프트와 같다 — 갈라지면 목록에 두 세대가 다르게 뜬다")
     void keepsTheSameTitleRulesAsTheProblemPrompt() {
+        // 2026-09-17에 셋이 늘었다(의문형 어미·줄표·제품 괄호). 문서 제목 규칙을 명사구로
+        // 뒤집으면서 문제 제목에도 같은 잣대를 댄 것이라, 세 줄 다 양쪽에 있어야 한다.
         List<String> shared = List.of(
                 "물음이 아니라 이름이다",
                 "지문의 첫 문장을 옮겨 오지 마라",
-                "정답을 제목에 쓰지 마라");
+                "정답을 제목에 쓰지 마라",
+                "의문형 어미로 끝내지 마라",
+                "줄표(—)로 부연을 달지 마라",
+                "일반 개념을 앞에 쓰고 이름을 괄호에 넣는다",
+                "그 이름 자체가 정답이면 괄호에 넣지 마라");
 
         assertThat(shared).allSatisfy(rule -> {
             assertThat(ClaudeTitleGenerator.SYSTEM_PROMPT)
@@ -41,6 +49,74 @@ class ClaudeTitleGeneratorPromptTest {
             assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
                     .as("생성 프롬프트에서 '%s'가 빠졌다 — 두 쪽이 갈라졌다", rule).contains(rule);
         });
+    }
+
+    /**
+     * <b>문서 제목과 잣대가 같은지</b>(2026-09-17).
+     *
+     * <p>문서 목록과 문제 목록은 같은 화면 흐름에서 읽힌다. 제목 형식만 다르면 두 세대처럼
+     * 보이는데, 이건 셋 중 하나만 고쳐도 조용히 생기는 차이다 — 프롬프트가 셋이기 때문이다
+     * (문서 생성·문제 생성·제목 백필).
+     *
+     * <p>문구를 <b>글자까지 같게</b> 맞춰 둔 것은 이 테스트를 쓸 수 있게 하려는 것이다.
+     * 뜻만 같고 표현이 다르면 대조할 방법이 없고, 그러면 다시 주석으로 잇는 수밖에 없다.
+     */
+    @Test
+    @DisplayName("문서·문제 프롬프트가 같은 제목 금지를 쓴다 — 갈라지면 두 목록이 다르게 읽힌다")
+    void sharesTitleBansWithTheDocumentPrompt() {
+        List<String> bans = List.of("의문형 어미로 끝내지 마라", "줄표(—)로 부연을 달지 마라");
+        List<String> prompts = List.of(
+                ClaudeTitleGenerator.SYSTEM_PROMPT,
+                ClaudeProblemGenerator.SYSTEM_PROMPT,
+                ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT);
+
+        assertThat(bans).allSatisfy(ban -> assertThat(prompts)
+                .as("'%s'가 세 프롬프트에 모두 있어야 한다", ban)
+                .allSatisfy(prompt -> assertThat(prompt).contains(ban)));
+    }
+
+    /**
+     * <b>모범으로 보여 준 제목이 검사기에 걸리지 않는지</b>(2026-09-17).
+     *
+     * <p>문서 쪽에서 먼저 겪어 본 짝이다({@code ClaudeDocumentGeneratorTest.titleExamplesAgreeWithValidator}).
+     * 프롬프트가 (O)라고 보여 준 제목을 {@code ProblemItemRule}이 경고로 잡으면, <b>지시를 잘
+     * 따른 제목일수록 경고를 달고</b> 나온다. 상시로 뜨는 경고는 사람이 경고 전체를 안 보게 만든다.
+     *
+     * <p>(X) 예시를 같은 방식으로 대조하지 않는 이유: 셋 중 하나는 "지문 요약"인데, 그건 형식이
+     * 아니라 <b>내용</b> 문제라 검사기가 판정할 수 없다. 형식으로 잡을 수 있는 둘(물음·줄표)은
+     * {@code TitleStyleRuleTest}가 직접 잰다.
+     */
+    @Test
+    @DisplayName("(O) 제목 예시가 검사기를 통과한다 — 모범이 걸리면 잘 따른 제목이 경고를 단다")
+    void goodTitleExamplesPassTheChecker() {
+        List<String> examples = new ArrayList<>();
+        examples.addAll(goodExamplesIn(ClaudeTitleGenerator.SYSTEM_PROMPT));
+        examples.addAll(goodExamplesIn(titleSectionOf(ClaudeProblemGenerator.SYSTEM_PROMPT)));
+
+        assertThat(examples).as("두 프롬프트 모두 모범 예시를 보여 줘야 한다").isNotEmpty();
+        assertThat(examples).allSatisfy(title -> {
+            assertThat(TitleStyleRule.isQuestionForm(title))
+                    .as("모범 예시 \"%s\"이 물음 꼴로 판정되면 안 된다", title).isFalse();
+            assertThat(TitleStyleRule.hasDashSubtitle(title))
+                    .as("모범 예시 \"%s\"이 줄표 부연으로 판정되면 안 된다", title).isFalse();
+        });
+    }
+
+    /** 문제 생성 프롬프트에서 {@code [제목]} 절만 잘라 낸다 — (O)/(X) 예시는 다른 절에도 많다. */
+    private static String titleSectionOf(String prompt) {
+        int start = prompt.indexOf("[제목] —");
+        int end = prompt.indexOf("[용어] —", start);
+        assertThat(start).as("[제목] 절이 있어야 한다").isNotNegative();
+        assertThat(end).as("[제목] 절 다음에 [용어] 절이 와야 한다").isGreaterThan(start);
+        return prompt.substring(start, end);
+    }
+
+    private static List<String> goodExamplesIn(String block) {
+        return block.lines()
+                .map(String::strip)
+                .filter(line -> line.startsWith("(O) "))
+                .map(line -> line.substring("(O) ".length()).strip())
+                .toList();
     }
 
     /**

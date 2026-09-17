@@ -888,8 +888,18 @@ public final class ProblemItemRule {
             }
             // 제목이 질문문이면 지문을 한 번 더 쓴 것이라 목록에서 아무것도 더 알려 주지 않는다.
             // "무엇이 원인인가?"가 열 줄 늘어선 목록을 상상하면 된다 — 이름이 아니라 물음이다.
-            if (trimmed.endsWith("?")) {
-                warnings.add("제목이 물음표로 끝남 (\"%s\" — 제목은 물음이 아니라 이름이다)".formatted(trimmed));
+            //
+            // 2026-09-17: 물음표만 보던 것을 한국어 의문형 어미까지 넓혔다. 물음표 없는 의문문
+            // ("…무엇으로 아는가")이 그대로 새어 나가고 있었는데, 문서 제목 규칙을 명사구로
+            // 뒤집으면서 같은 잣대를 여기에도 대기로 했다. 판정은 TitleStyleRule이 한다 —
+            // 문서 검증기와 여기가 각자 적으면 한쪽에서만 걸리는 제목이 생긴다.
+            if (TitleStyleRule.isQuestionForm(trimmed)) {
+                warnings.add("제목이 물음 꼴임 (\"%s\" — 제목은 물음이 아니라 이름이다)".formatted(trimmed));
+            }
+            // 줄표 부연은 40자 상한과도 부딪힌다 — 부제를 붙이는 순간 목록에서 잘리는 길이가 된다.
+            if (TitleStyleRule.hasDashSubtitle(trimmed)) {
+                warnings.add("제목에 줄표 부연이 붙음 (\"%s\" — 줄표가 필요하면 두 가지를 담은 것이다)"
+                        .formatted(trimmed));
             }
         }
 

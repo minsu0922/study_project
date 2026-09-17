@@ -46,8 +46,8 @@ public record GeneratedProblemItem(
         String sourceQuote,
 
         @JsonPropertyDescription("문제 목록에 뜰 한 줄 제목. 무엇에 관한 문제인지를 명사구로 적는다"
-                + "(예: TIME_WAIT가 쌓여 포트가 마르는 이유). 상황 서술이나 물음표로 끝나는 문장이 아니다. "
-                + "40자 이내")
+                + "(예: TIME_WAIT가 쌓여 포트가 마르는 이유). 상황 서술이 아니고, 의문형 어미나 "
+                + "물음표로 끝내지 않으며, 줄표(—)로 부연을 달지 않는다. 40자 이내")
         String title,
 
         @JsonPropertyDescription("이 문제가 묻는 형태. SITUATION=실무 장면을 주고 원인·판단을 묻는다, "

@@ -729,4 +729,59 @@ class ProblemItemRuleTest {
                     .noneSatisfy(w -> assertThat(w).contains("같은 문장을 되풀이"));
         }
     }
+
+    /**
+     * 제목 형식 — 2026-09-17에 물음표만 보던 검사를 <b>문서 제목과 같은 잣대</b>로 넓혔다.
+     *
+     * <p>문서 제목 규칙을 명사구로 뒤집으면서, 문제 제목에도 같은 둘(의문형 어미·줄표 부연)을
+     * 대기로 했다. 목록 화면에서 문서와 문제가 같은 흐름으로 읽히는데 제목 형식만 다르면
+     * <b>두 세대처럼 보인다</b>.
+     *
+     * <p>판정 자체는 {@code TitleStyleRuleTest}가 잰다. 여기서 보는 것은 그 판정이
+     * <b>문제 경고 목록까지 실제로 흘러오는가</b>다 — 규칙만 만들고 부르는 곳을 빠뜨리면
+     * 아무 오류 없이 조용하다.
+     */
+    @Nested
+    @DisplayName("제목이 물음 꼴이거나 줄표 부연이면 알린다")
+    class TitleStyle {
+
+        private List<String> warningsForTitle(String title) {
+            GeneratedProblemItem withTitle = new GeneratedProblemItem(
+                    "가".repeat(200), "", goodExplanation(),
+                    List.of(new GeneratedProblemItem.GeneratedChoice("정답 보기 내용입니다", true),
+                            new GeneratedProblemItem.GeneratedChoice("오답 보기 하나입니다", false),
+                            new GeneratedProblemItem.GeneratedChoice("오답 보기 둘입니다", false),
+                            new GeneratedProblemItem.GeneratedChoice("오답 보기 셋입니다", false)),
+                    "", title, QuestionKind.SITUATION);
+            return ProblemItemRule.qualityWarningsOf(withTitle, Difficulty.INTERMEDIATE, true);
+        }
+
+        @Test
+        @DisplayName("물음표 없는 의문문도 잡는다 — 이게 그동안 새어 나가던 꼴이다")
+        void warnsOnQuestionEndingWithoutQuestionMark() {
+            assertThat(warningsForTitle("스레드를 하나 더 만들면 무엇이 생기는가"))
+                    .anySatisfy(w -> assertThat(w).contains("물음 꼴"));
+        }
+
+        @Test
+        @DisplayName("물음표로 끝나는 제목은 그대로 잡는다 — 옛 검사를 넓혔지 지우지 않았다")
+        void stillWarnsOnQuestionMark() {
+            assertThat(warningsForTitle("이 상황의 원인으로 가장 적절한 것은?"))
+                    .anySatisfy(w -> assertThat(w).contains("물음 꼴"));
+        }
+
+        @Test
+        @DisplayName("줄표 부연이 붙으면 알린다 — 40자 안에서 부제까지 붙이면 목록에서 잘린다")
+        void warnsOnDashSubtitle() {
+            assertThat(warningsForTitle("커넥션 풀 고갈 — 대기하다 타임아웃으로 끝나는 자리"))
+                    .anySatisfy(w -> assertThat(w).contains("줄표 부연"));
+        }
+
+        @Test
+        @DisplayName("명사구 제목은 조용하다 — 프롬프트가 모범으로 보여 준 형태다")
+        void staysQuietOnNounPhrase() {
+            assertThat(warningsForTitle("커넥션 풀이 고갈될 때의 대기 동작 (HikariCP)"))
+                    .noneSatisfy(w -> assertThat(w).contains("제목"));
+        }
+    }
 }

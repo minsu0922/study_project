@@ -26,7 +26,8 @@ public record GeneratedTitle(
         long problemId,
 
         @JsonPropertyDescription("목록에 뜰 한 줄 제목. 무엇에 관한 문제인지를 명사구로 적는다"
-                + "(예: TIME_WAIT가 쌓여 포트가 마르는 이유). 물음표로 끝나는 문장이 아니다. 40자 이내")
+                + "(예: TIME_WAIT가 쌓여 포트가 마르는 이유). 의문형 어미나 물음표로 끝내지 않고, "
+                + "줄표(—)로 부연을 달지 않는다. 40자 이내")
         String title
 ) {
     /** 구조화 출력의 최상위 스키마 — 목록을 감싸는 봉투(최상위는 객체여야 해서 필요). */
