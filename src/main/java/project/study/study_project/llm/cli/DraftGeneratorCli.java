@@ -452,11 +452,15 @@ public final class DraftGeneratorCli {
                 System.out.println("근거 문서 본문이 비어 폴백으로 생성합니다: " + file);
                 return null;
             }
+            // 중급은 심화편에 입문편의 중급 절 둘이 붙은 본문을 읽는다(2026-09-17,
+            // DocumentEditionRule.bodyFor). 아래 검사들이 전부 <이 본문>을 봐야 한다 —
+            // 편의 본문만 보고 통과·탈락을 정하면, 정작 모델이 받는 글과 다른 것을 잰 셈이 된다.
+            String body = DocumentEditionRule.bodyFor(parsed, difficulty);
             if (readExistingDocuments(outDir).rejectedSlugs().contains(doc.slug())) {
                 System.out.println("근거 문서가 검수에서 거절돼 폴백으로 생성합니다: " + doc.slug());
                 return null;
             }
-            if (!hasMaterialFor(doc.contentMd(), difficulty)) {
+            if (!hasMaterialFor(body, difficulty)) {
                 System.out.printf("근거 문서에 %s 재료가 없어 폴백으로 생성합니다: %s (찾은 절: %s 중 하나도 없음)%n",
                         difficulty, doc.slug(), ClaudeProblemGenerator.SOURCE_SECTIONS.get(difficulty));
                 return null;
@@ -466,14 +470,16 @@ public final class DraftGeneratorCli {
             //
             // 여기서 null을 돌려주면 지목 실행은 위쪽 documentPinned 검사에 걸려 <요금 0으로 실패>하고,
             // 예약 실행은 폴백으로 간다. 새 실패 경로를 만들지 않고 기존 갈래에 얹은 이유가 이것이다.
-            String missing = TypeMaterialRule.missingMaterialOf(doc.contentMd(), type);
+            String missing = TypeMaterialRule.missingMaterialOf(body, type);
             if (missing != null) {
                 System.out.printf("근거 문서로 %s를 만들 수 없어 폴백으로 생성합니다: %s (%s)%n",
                         type, doc.slug(), missing);
                 return null;
             }
+            // slug·제목은 심화편 것을 그대로 쓴다. 붙인 부분은 <같은 주제 같은 제목>의 입문편이고,
+            // 초안이 "어느 문서로 만들었나"를 가리킬 때 답은 여전히 그 문서 한 편이다.
             return new ResolvedSource(parsed.domain(),
-                    new SourceDocument(doc.slug(), doc.title(), doc.contentMd()));
+                    new SourceDocument(doc.slug(), doc.title(), body));
         } catch (Exception e) {
             // 문서를 못 읽는 것이 그날 문제 생성을 막을 이유는 없다 — 근거 없이라도 만든다
             System.out.println("근거 문서를 읽지 못해 폴백으로 생성합니다: " + e.getMessage());

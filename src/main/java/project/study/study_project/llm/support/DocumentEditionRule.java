@@ -5,6 +5,10 @@ import project.study.study_project.llm.client.DocumentEdition;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * 어느 난이도가 <b>어느 편을 근거로 삼는지</b> — 2026-09-14에 뽑아냈다.
  *
@@ -81,6 +85,104 @@ public final class DocumentEditionRule {
         }
         return file.document();
     }
+
+    /**
+     * 중급이 <b>입문편에서 함께 가져갈 절</b> — 2026-09-17 신설.
+     *
+     * <p>{@code ClaudeProblemGenerator.SOURCE_SECTIONS}의 중급 목록 2·3번과 같은 이름이다.
+     * 그 목록은 "지목해도 되는 이름"이고 여기는 "실제로 오려 붙일 이름"이라 쓰임이 다르지만,
+     * <b>갈라지면 안 된다</b> — 프롬프트가 지목한 절이 본문에 없으면 모델은 오류를 내지 않고
+     * 조용히 아무 데나 캔다(2026-08-15 사고). 둘이 같은지는 테스트가 대조한다.
+     */
+    public static final List<String> BEGINNER_SECTIONS_FOR_INTERMEDIATE =
+            List.of("### 왜 이렇게 설계됐는가", "## 실무에서는 이렇게 쓴다");
+
+    /** 오려 붙인 자리에 다는 표시 — 모델이 <b>같은 주제의 입문편</b>이라는 것을 알아야 한다. */
+    static final String BEGINNER_EXCERPT_HEADER = "\n\n--- 같은 주제 입문편에서 가져온 부분 ---\n\n";
+
+    /**
+     * 그 난이도가 읽을 <b>본문</b> — 중급이면 심화편에 입문편의 중급 절 둘을 붙여 돌려준다(2026-09-17).
+     *
+     * <h2>왜 붙이나</h2>
+     *
+     * <p><b>중급만 재료가 말랐다.</b> 2026-09-17 실물(Flyway)을 재 보니 난이도별로 캘 수 있는
+     * 분량이 이렇게 갈렸다 — 초급 3,185자(7문제 요청), 중급 <b>908자</b>(5문제), 고급 4,623자(3문제).
+     * 문제당 재료가 초급 455자, 고급 1,541자인데 중급만 182자다.
+     *
+     * <p>그 결과가 두 갈래로 나왔다. ① 5개를 못 채워 <b>뒤쪽 항목이 빈 지문으로</b> 돌아온다
+     * (09-17에 3개, 09-13에 2개, 09-14에 1개 — 늘 뒤쪽 번호다). ② 모자란 만큼 모델이 이웃 절로
+     * 넘어간다. 09-17 실물 1번 문제의 해설이 {@code ### 애플리케이션 프로세스 밖에서만 만나는 것}을
+     * 가리키는데, 그건 <b>고급 절</b>({@code ## 어떤 때 통하지 않는가}) 아래 소제목이다.
+     * 고급 재료로 만든 중급 문제라 지문이 오케스트레이터·테넌트 배치로 시작한다.
+     *
+     * <p><b>입문편에 그 재료가 놀고 있었다.</b> 2026-09-14에 중급을 심화편으로 옮기면서
+     * {@code ### 왜 이렇게 설계됐는가}(608자)와 {@code ## 실무에서는 이렇게 쓴다}(867자)가
+     * 아무도 읽지 않는 절이 됐다. 둘을 붙이면 908 → 2,383자로 2.6배가 되고, <b>쉬운 재료가
+     * 섞여 난이도도 함께 내려간다</b> — 입문편 문장은 처음 보는 사람 눈높이로 쓰인 것이다.
+     *
+     * <h2>왜 편을 되돌리지 않았나</h2>
+     *
+     * <p>중급을 입문편으로 되돌리는 안이 가장 간단하다(한 줄). 버린 이유는 2026-09-14에 중급을
+     * 심화편에 붙인 목적이 <b>심화편의 바닥</b>이었기 때문이다 — 심화편이 고급 3문제만 떠받치면
+     * 재료가 3.6배 남고, 남는 지면을 모델이 이론으로 채워 글이 계속 어려워진다. 되돌리면
+     * 그 문제가 그대로 돌아온다. 붙이는 쪽은 바닥을 유지하면서 재료만 늘린다.
+     *
+     * <h2>왜 본문을 합치나 — 문서를 둘로 넘기지 않고</h2>
+     *
+     * <p>{@code SourceDocument}를 두 편으로 늘리는 안은 버렸다. 그 타입은 배치·관리 화면·업로드
+     * 세 경로가 함께 쓰고, {@code SourceQuoteRule}(근거 한 줄이 본문에 실제로 있는지)과
+     * {@code TypeMaterialRule}이 전부 <b>본문 문자열 하나</b>를 전제로 판정한다. 한 자리를 위해
+     * 그 전제를 흔들면 세 경로의 검증이 같이 흔들린다. 문자열을 합치면 그 모든 검사가
+     * <b>그대로</b> 통한다 — 오려 붙인 문장도 근거로 인용할 수 있어야 하므로 그게 맞기도 하다.
+     *
+     * @return 합친 본문. 중급이 아니거나 붙일 것이 없으면 {@code pick}이 고른 편의 본문 그대로
+     */
+    public static String bodyFor(GeneratedDocumentFile file, Difficulty difficulty) {
+        GeneratedDocumentItem picked = pick(file, difficulty);
+        if (!hasBody(picked)) {
+            return null;
+        }
+        String body = picked.contentMd();
+        if (difficulty != Difficulty.INTERMEDIATE || file == null) {
+            return body;
+        }
+        GeneratedDocumentItem beginner = file.document();
+        // 심화편으로 못 가서 입문편을 읽는 날(옛 문서·심화편 실패)에는 붙일 것이 없다 —
+        // 이미 그 절들이 본문 안에 있다. 여기서 또 붙이면 같은 글이 두 번 실린다.
+        if (!hasBody(beginner) || beginner.contentMd().equals(body)) {
+            return body;
+        }
+        String excerpt = excerptOf(beginner.contentMd());
+        return excerpt.isEmpty() ? body : body + BEGINNER_EXCERPT_HEADER + excerpt;
+    }
+
+    /**
+     * 입문편에서 중급 절만 오려 낸다. 없는 절은 조용히 건너뛴다 — 옛 문서에는 이름이 다르거나
+     * 아예 없는데, 그렇다고 오늘 배치를 멈출 이유는 없다(있는 것만 붙이면 그만이다).
+     *
+     * <p>자르는 끝은 <b>다음 제목 줄</b>이다. {@code ### 왜 이렇게 설계됐는가}는 본론 절 안의
+     * 소제목이라 {@code ##}까지 기다리면 그 뒤 본문을 통째로 끌고 온다.
+     */
+    private static String excerptOf(String beginnerBody) {
+        StringBuilder sb = new StringBuilder();
+        for (String heading : BEGINNER_SECTIONS_FOR_INTERMEDIATE) {
+            int start = beginnerBody.indexOf("\n" + heading);
+            if (start < 0) {
+                continue;
+            }
+            start++; // 앞의 개행은 빼고 제목 줄부터
+            Matcher next = NEXT_HEADING.matcher(beginnerBody);
+            int end = next.find(start + heading.length()) ? next.start() : beginnerBody.length();
+            if (!sb.isEmpty()) {
+                sb.append("\n\n");
+            }
+            sb.append(beginnerBody, start, end).append("\n");
+        }
+        return sb.toString().strip();
+    }
+
+    /** 다음 제목 줄({@code #}~{@code ###}) — 오려 낼 끝을 여기서 끊는다. */
+    private static final Pattern NEXT_HEADING = Pattern.compile("(?m)^#{1,3} ");
 
     /** 칸은 있는데 본문이 빈 경우가 있다(심화편 생성만 실패한 날) — 그때도 없는 것으로 본다. */
     private static boolean hasBody(GeneratedDocumentItem item) {

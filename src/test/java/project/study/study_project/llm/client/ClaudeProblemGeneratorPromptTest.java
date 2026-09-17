@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.ProblemItemRule;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -747,7 +749,7 @@ class ClaudeProblemGeneratorPromptTest {
                 // 2026-08-25에 하한에서 상한으로 뒤집었다. 실물 5문제가 전부 상황형이었고
                 // 이어 1건씩 세 번 더 뽑아도 세 번 다 상황형이었다 — 막을 쪽은 반대였다.
                 .as("상한을 숫자로 박지 않으면 재료가 풍부한 상황형이 전부를 차지한다")
-                .contains("SITUATION은 한 번에 만드는 문제 중 <최대 %d개>다"
+                .contains("SITUATION은 어떤 경우에도 <최대 %d개>다"
                         .formatted(ProblemItemRule.SITUATION_MAX_PER_BATCH))
                 .as("상한을 목표로 읽으면 이번엔 정확히 2개씩 나온다")
                 .contains("상한이지 목표가 아니다")
@@ -982,30 +984,64 @@ class ClaudeProblemGeneratorPromptTest {
      *
      * <p><b>이 테스트가 진짜로 지키는 것은 지목한 절이 실재하는가다.</b> 없는 절을 가리키면
      * 그 줄은 도움이 아니라 방해가 된다 — 모델이 찾다 실패하고 결국 원래 하던 대로 장면을
-     * 짓는다. 그래서 문자열을 견주지 않고 {@code BEGINNER_REQUIRED_SECTIONS}와 <b>대조</b>한다.
-     * 같은 정보가 두 곳에 적혀 갈라지는 것이 이 저장소의 단골 사고이고
-     * ({@code ProblemItemRule} 클래스 주석), 필수 절 목록이 바뀌는 날 여기가 함께 울어야 한다.
+     * 짓는다. 그래서 문자열을 견주지 않고 <b>필수 절 목록과 대조</b>한다. 같은 정보가 두 곳에
+     * 적혀 갈라지는 것이 이 저장소의 단골 사고이고({@code ProblemItemRule} 클래스 주석),
+     * 필수 절 목록이 바뀌는 날 여기가 함께 울어야 한다.
+     *
+     * <p><b>2026-09-17에 대조 대상이 바뀌었다.</b> 전에는 입문편 필수 절만 봤는데,
+     * 2026-09-14에 중급이 심화편으로 옮겨 가면서 <b>그 대조가 거짓을 통과시키고 있었다</b> —
+     * {@code ## 왜 필요한가}·{@code ## 자주 하는 오해}는 입문편 필수 절이라 이 테스트는 통과했지만,
+     * 중급이 실제로 받는 심화편에는 <b>없는 이름</b>이었다. 09-17 배치가 5개 중 2개만 냈고
+     * 그 둘이 다 상황형이었던 원인이 여기다. 이제 중급이 실제로 읽는 본문
+     * (심화편 + 입문편에서 오려 붙인 중급 절, {@code DocumentEditionRule.bodyFor})을 기준으로 본다.
      */
     @Test
-    @DisplayName("형태마다 캘 절을 지목한다 — 지목한 절은 모든 입문편에 반드시 있는 것이어야 한다")
+    @DisplayName("형태마다 캘 절을 지목한다 — 지목한 절은 중급이 실제로 받는 본문에 있어야 한다")
     void pointsEachKindAtSectionsThatEveryDocumentHas() {
         List<String> cited = ClaudeProblemGenerator.SYSTEM_PROMPT.lines()
                 .map(String::strip)
                 .filter(line -> line.startsWith("재료:"))
-                .flatMap(line -> java.util.regex.Pattern.compile("##[^·—\n]+").matcher(line).results())
+                .flatMap(line -> java.util.regex.Pattern.compile("#{2,3}[^·—\n]+").matcher(line).results())
                 .map(match -> match.group().strip())
                 .toList();
+
+        // 중급이 받는 본문에 실제로 들어 있는 절 이름. 심화편 필수 절 + 오려 붙이는 입문편 절이고,
+        // 「용어 한눈에」는 두 편의 프롬프트가 모두 요구하는 절이라 여기에 함께 넣는다.
+        List<String> available = new ArrayList<>(ClaudeDocumentGenerator.ADVANCED_REQUIRED_SECTIONS);
+        available.addAll(DocumentEditionRule.BEGINNER_SECTIONS_FOR_INTERMEDIATE);
+        available.add("## 용어 한눈에");
 
         assertThat(cited)
                 .as("네 형태(b~e)가 각각 캘 곳을 갖는다 — 하나라도 비면 그 형태는 안 나온다")
                 .hasSizeGreaterThanOrEqualTo(4)
                 .as("없는 절을 가리키면 모델이 찾다 실패하고 결국 장면을 짓는다")
-                .allSatisfy(section -> assertThat(ClaudeDocumentGenerator.BEGINNER_REQUIRED_SECTIONS)
-                        .contains(section));
+                .allSatisfy(section -> assertThat(available).contains(section));
 
         assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
-                .as("재료가 없다는 도피로를 닫는다 — 오해 절과 왜 필요한가 절은 늘 있다")
-                .contains("c와 d는 언제나 낼 수 있다는 뜻이다");
+                .as("재료가 없다는 도피로를 닫는다 — 판정형 재료는 어느 문서에나 있다")
+                .contains("d는 언제나 낼 수 있다는 뜻이다");
+    }
+
+    /**
+     * <b>형태 배분을 숫자로 못 박았는지</b>(2026-09-17).
+     *
+     * <p>상한 한 줄("최대 2개")은 09-05부터 있었는데 09-17 실물이 상황형 3개로 나왔다.
+     * 상한은 <b>넘지 말라</b>고만 말할 뿐 나머지 셋을 무엇으로 채울지는 말하지 않는다.
+     * 이 프롬프트에서 실제로 지켜진 지시는 늘 <b>숫자가 박힌 쪽</b>이었다(고급 재료 개수,
+     * 해설 분량, 새 용어 예산). 그래서 배분도 숫자로 적었다.
+     */
+    @Test
+    @DisplayName("형태 배분을 숫자로 적는다 — 상한만으로는 09-17에 상황형 3개가 나왔다")
+    void pinsTheKindBalanceWithNumbers() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("<형태 배분>")
+                .as("다섯 자리를 무엇으로 채우는지가 적혀 있어야 한다")
+                .contains("상황 2 · 비교 1 · 인과 1 · 판정 1")
+                .as("개수가 줄어드는 날(고급 3개)에도 따를 배분이 있어야 한다")
+                .contains("셋이면 상황 1")
+                .as("상한은 그대로 남는다 — 배분이 상한을 대신하는 것이 아니다")
+                .contains("SITUATION은 어떤 경우에도 <최대 %d개>다"
+                        .formatted(ProblemItemRule.SITUATION_MAX_PER_BATCH));
     }
 
     /**

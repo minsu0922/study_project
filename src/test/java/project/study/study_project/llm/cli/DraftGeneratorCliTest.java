@@ -1438,6 +1438,50 @@ class DraftGeneratorCliTest {
             assertThat(DraftGeneratorCli.findSourceDocument(
                     outDir, DATE, Difficulty.BEGINNER, ProblemType.MATCHING)).isNotNull();
         }
+
+        /**
+         * <b>중급에 넘기는 본문이 합친 본문인지</b>(2026-09-17).
+         *
+         * <p>합치는 규칙 자체는 {@code DocumentEditionRuleTest}가 지킨다. 여기서 보는 것은
+         * 바로 위 문단과 같다 — <b>이 자리에서 그 규칙을 실제로 부르는가</b>. 안 불러도
+         * 컴파일되고 배치도 초록불로 끝나며, 몇 주 뒤 수확량이 다시 2개가 될 뿐이다.
+         *
+         * <p>문서에 붙는 검사들({@code hasMaterialFor}·{@code TypeMaterialRule})이 <b>합친 본문</b>을
+         * 보는지도 함께 걸린다. 편의 본문만 보고 통과·탈락을 정하면 모델이 받는 글과 다른
+         * 것을 잰 셈이 된다.
+         */
+        @Test
+        @DisplayName("중급에 넘기는 본문에 입문편 중급 절이 붙는다 — 심화편 한 절로는 5문제를 못 낸다")
+        void intermediateSourceCarriesBeginnerSections(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tmp)
+                throws Exception {
+            java.nio.file.Path docDir = tmp.resolve("documents");
+            java.nio.file.Files.createDirectories(docDir);
+            var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
+                    "테스트", DATE.toString(), DATE + "T00:00:00Z", Domain.NETWORK, "test-model",
+                    new project.study.study_project.llm.client.GeneratedDocumentItem(
+                            "제목", "test-slug",
+                            "# 입문편\n\n## 무엇인가\n정의.\n\n### 왜 이렇게 설계됐는가\n버린 대안이 있다.\n",
+                            List.of("net")),
+                    new project.study.study_project.llm.client.GeneratedDocumentItem(
+                            "제목", "test-slug-advanced",
+                            "# 심화편\n\n## 실무에서 어디에 나타나는가\n항목들.\n", List.of("net")));
+            new com.fasterxml.jackson.databind.ObjectMapper()
+                    .writeValue(docDir.resolve(DATE + ".json").toFile(), file);
+
+            var resolved = DraftGeneratorCli.findSourceDocument(
+                    tmp, DATE, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE);
+
+            assertThat(resolved).isNotNull();
+            assertThat(resolved.document().contentMd())
+                    .as("주 재료는 심화편이다")
+                    .contains("## 실무에서 어디에 나타나는가")
+                    .as("입문편의 중급 절이 함께 실려야 재료가 2.6배가 된다")
+                    .contains("### 왜 이렇게 설계됐는가")
+                    .contains("버린 대안이 있다.");
+            assertThat(resolved.document().slug())
+                    .as("초안이 가리키는 근거 문서는 여전히 심화편 한 편이다")
+                    .isEqualTo("test-slug-advanced");
+        }
     }
 
     /* ══ 설정 배선 — 규칙이 아니라 <그것을 쓰는 쪽>을 본다 ══════ */
