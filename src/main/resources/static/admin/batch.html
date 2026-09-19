@@ -339,10 +339,22 @@ function showDay(c) {
 function yieldLine(c) {
   if (!hasFraction(c)) return "";
   const lines = [];
-  lines.push(isShort(c)
-    ? `<br><b class="cal-short-key">요청 ${c.requested}개 중 ${c.produced}개만 나왔습니다</b>
-       <span class="meta">— 모델이 나머지를 비워 보냈거나 규약 위반으로 버려졌습니다. 사유는 그날 Actions 요약에 있습니다.</span>`
-    : `<br>요청 ${c.requested}개 중 ${c.produced}개가 나왔습니다.`);
+  const reasons = c.shortfallReasons || [];
+  if (!isShort(c)) {
+    lines.push(`<br>요청 ${c.requested}개 중 ${c.produced}개가 나왔습니다.`);
+  } else if (reasons.length) {
+    // 모델이 빈 자리에 남긴 이유(2026-09-19). "N번:" 접두는 Actions 요약의 결함 줄 번호와 같아서
+    // 그날 로그와 나란히 대조할 수 있다 — 그래서 떼지 않고 그대로 보여 준다.
+    lines.push(`<br><b class="cal-short-key">요청 ${c.requested}개 중 ${c.produced}개만 나왔습니다</b>
+       <span class="meta">— 모델이 남긴 이유:</span>
+       <ul class="cal-reasons">${reasons.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`);
+  } else {
+    // 이유 필드가 생기기 전(09-19 이전) 파일이거나, 모델이 개수만 줄이고 빈 자리를 안 남긴 날이다.
+    // 둘 다 여기서 더 알 방법이 없으니 어디를 보면 되는지만 말한다.
+    lines.push(`<br><b class="cal-short-key">요청 ${c.requested}개 중 ${c.produced}개만 나왔습니다</b>
+       <span class="meta">— 이 파일에는 이유가 남아 있지 않습니다(09-19 이전 파일이거나 모델이 빈 자리를 안 남김).
+       그날 Actions 요약을 보세요.</span>`);
+  }
   if (c.draftCount != null && c.draftCount < c.produced) {
     lines.push(`<br><span class="meta">파일의 ${c.produced}개 중 ${c.draftCount}개만 들어왔습니다 — 나머지는 들여오기 검증에서 버려졌습니다.</span>`);
   }

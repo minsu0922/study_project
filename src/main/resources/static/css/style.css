@@ -2558,6 +2558,9 @@ a.batch-chip:hover { border-color: var(--primary); background: var(--primary-sof
 .cal-cell.short { border: 2px solid var(--lv2-solid); }
 .cal-cell.short .n { color: var(--lv2-fg); font-weight: 700; }
 .cal-short-key { color: var(--lv2-fg); }
+/* 모델이 남긴 이유 목록 — 한 줄이 길 수 있어(절 이름·논점까지 적게 했다) 줄 간격을 벌려 한 항목씩 읽히게 한다. */
+.cal-reasons { margin: 6px 0 2px; padding-left: 18px; }
+.cal-reasons li { margin: 3px 0; line-height: 1.5; }
 
 @media (max-width: 640px) {
   /* 좁은 화면에서는 분야 이름을 칸 위 줄로 내리고 4칸을 넓게 쓴다 —

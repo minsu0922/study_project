@@ -155,6 +155,9 @@ public record AdminBatchStatus(
      *                   DB의 {@code draftCount}와 따로 두는 이유: 앱을 안 켜 아직 안 들어온 날(WAITING)도
      *                   부족한지 보여야 하고, 들여오기 검증에서 한 번 더 버려진 것과 모델이 애초에 못 낸 것은
      *                   고칠 곳이 다르다(앞은 규약, 뒤는 프롬프트·재료)
+     * @param shortfallReasons 모델이 못 채운 자리에 남긴 이유(2026-09-19 신설). 없으면 {@code null} —
+     *                   다 채운 날, 그리고 이 필드가 생기기 전의 파일이다. 전에는 칸 상세가 "사유는 Actions
+     *                   요약에 있습니다"로 끝나 GitHub까지 가야 했는데, 그 요약은 90일 뒤 지워진다
      */
     public record DayCell(
             LocalDate date,
@@ -167,7 +170,8 @@ public record AdminBatchStatus(
             Integer draftCount,
             boolean fallback,
             Integer requested,
-            Integer produced
+            Integer produced,
+            List<String> shortfallReasons
     ) {
     }
 

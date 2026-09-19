@@ -394,6 +394,27 @@ class AdminBatchStatusIntegrationTest {
 
         assertThat(cell.requested()).isEqualTo(3);
         assertThat(cell.produced()).isEqualTo(1);
+        // 이유 필드가 없는 파일(09-19 이전 모양)은 null — 화면이 "이유가 남아 있지 않다"로 갈라 말한다
+        assertThat(cell.shortfallReasons()).isNull();
+    }
+
+    @Test
+    @DisplayName("결과 파일에 남은 이유가 칸에 실린다 — Actions 요약까지 가지 않아도 되게")
+    void calendarCarriesShortfallReasons() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        AdminBatchStatus.DayCell target = adminBatchService.getStatus().calendar().stream()
+                .filter(c -> !c.documentDay() && !c.date().isAfter(today))
+                .findFirst()
+                .orElseThrow();
+        Files.createDirectories(DIR);
+        write(target.filename(), """
+                {"domain":"DATABASE","difficulty":"ADVANCED","problems":[{"question":"지문"}],
+                 "shortfallReasons":["2번: 한계 조건을 1번에서 다 썼음","3번: (이유를 남기지 않음)"]}""");
+
+        AdminBatchStatus.DayCell cell = cellOf(adminBatchService.getStatus(), target.date());
+
+        assertThat(cell.shortfallReasons())
+                .containsExactly("2번: 한계 조건을 1번에서 다 썼음", "3번: (이유를 남기지 않음)");
     }
 
     @Test

@@ -230,6 +230,7 @@ public class AdminBatchService {
             Domain domain = documentDomain.orElse(plan.domain());
             Difficulty difficulty = plan.difficulty();
             Integer produced = null;
+            List<String> shortfallReasons = null;
             if (!plan.documentDay() && fileExists) {
                 GeneratedBatchFile file = readBatchFile(dir.resolve(filename));
                 if (file != null && file.domain() != null) {
@@ -239,6 +240,8 @@ public class AdminBatchService {
                     difficulty = file.difficulty();
                 }
                 produced = file == null ? null : producedCount(file);
+                // 이미 읽은 파일에서 꺼내기만 한다 — 이유를 보려고 파일을 한 번 더 열 까닭이 없다.
+                shortfallReasons = file == null ? null : file.shortfallReasons();
             }
             // 요청 수는 <파일의 난이도>로 정한다. 손으로 채운 파일은 계획과 난이도가 다를 수 있어서,
             // 계획 난이도로 세면 초급 파일(5건)에 "고급 요청 3건"을 대 5/3이 찍힌다.
@@ -250,7 +253,7 @@ public class AdminBatchService {
                     plan.documentDay(), domain, difficulty,
                     state, filename,
                     state == AdminBatchStatus.DayState.IMPORTED ? draftCount : null,
-                    fallback, requested, produced));
+                    fallback, requested, produced, shortfallReasons));
         }
         return cells;
     }
