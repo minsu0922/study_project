@@ -310,6 +310,62 @@ class AdminBatchStatusIntegrationTest {
         }
     }
 
+    /**
+     * <b>달력도 근거 문서의 분야를 따른다</b>(2026-09-19 신설).
+     *
+     * <p>실물에서 지난 네 주기 16칸이 전부 틀린 분야를 달고 있었다. 달력은 날짜로 계산한 분야를
+     * 찍었는데, 배치는 대기열에서 꺼낸 문서의 분야로 문제를 만든다. 오늘 카드는 이미 문서 쪽을
+     * 따르고 있어서({@link #documentDomainWinsOverCycleDomain}) 한 화면에서 두 답이 나왔다.
+     *
+     * <p>기대 분야를 글자로 박지 않고 <b>지금 칸이 찍는 것과 다른 분야</b>를 골라 문서에 넣는다.
+     * 우연히 계획과 같은 분야를 넣으면 고치기 전 코드로도 통과해 버린다.
+     */
+    @Test
+    @DisplayName("달력의 분야는 근거 문서 쪽이 이긴다 — 오늘 카드와 같은 규칙이어야 한다")
+    void calendarUsesDocumentDomain() throws Exception {
+        Files.createDirectories(DIR.resolve("documents"));
+        LocalDate documentDate = adminBatchService.getStatus().plan().documentDate();
+        Domain planned = cellOf(adminBatchService.getStatus(), documentDate).domain();
+        Domain other = otherThan(planned);
+        writeDocumentAt(documentDate, "calendar-probe", other);
+
+        List<AdminBatchStatus.DayCell> cycle = adminBatchService.getStatus().calendar().stream()
+                .filter(c -> !c.date().isBefore(documentDate) && c.date().isBefore(documentDate.plusDays(4)))
+                .toList();
+
+        // 결과 파일이 없는 칸들이므로 나흘 모두 문서의 분야를 따라야 한다.
+        assertThat(cycle).hasSize(4).extracting(AdminBatchStatus.DayCell::domain).containsOnly(other);
+    }
+
+    /**
+     * <b>결과 파일이 있으면 파일 내용이 이긴다</b>(2026-09-19 신설).
+     *
+     * <p>08-29에 손으로 채운 파일들은 옛 위상으로 만들어져 분야도 난이도도 계획과 다르다
+     * (예: 09-21 계획은 중급인데 파일은 초급). 그날 배치는 파일이 있어 건너뛰므로 실제로 들어오는
+     * 것은 파일 내용이다 — 화면이 계획을 찍으면 들어오지도 않을 것을 말하게 된다.
+     */
+    @Test
+    @DisplayName("결과 파일이 있는 칸은 파일의 분야·난이도를 찍는다 — 들어오는 것은 계획이 아니라 파일이다")
+    void calendarUsesProducedFile() throws Exception {
+        // 문제일을 하나 고른다. 오늘 주기 안에서 찾으면 날짜에 따라 없을 수 있어 달력 전체에서 찾는다.
+        AdminBatchStatus.DayCell target = adminBatchService.getStatus().calendar().stream()
+                .filter(c -> !c.documentDay())
+                .findFirst()
+                .orElseThrow();
+        Domain domain = otherThan(target.domain());
+        Difficulty difficulty = target.difficulty() == Difficulty.BEGINNER
+                ? Difficulty.ADVANCED : Difficulty.BEGINNER;
+        importedDraftFileRepository.deleteById(target.filename());
+        Files.createDirectories(DIR);
+        write(target.filename(), """
+                {"domain":"%s","difficulty":"%s","problems":[]}""".formatted(domain, difficulty));
+
+        AdminBatchStatus.DayCell cell = cellOf(adminBatchService.getStatus(), target.date());
+
+        assertThat(cell.domain()).isEqualTo(domain);
+        assertThat(cell.difficulty()).isEqualTo(difficulty);
+    }
+
     @Test
     @DisplayName("수확 집계는 만든 초안을 승인·거절·대기로 가른다 — '몇 건 들어왔나'로는 알 수 없던 것")
     void harvestCountsDraftsByStatus() {
@@ -343,9 +399,18 @@ class AdminBatchStatusIntegrationTest {
     }
 
     private void writeDocumentAt(LocalDate date, String slug) throws Exception {
+        writeDocumentAt(date, slug, Domain.NETWORK);
+    }
+
+    private void writeDocumentAt(LocalDate date, String slug, Domain domain) throws Exception {
         var file = new GeneratedDocumentFile("테스트", date.toString(), date + "T00:00:00Z",
-                Domain.NETWORK, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
+                domain, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
         objectMapper.writeValue(DIR.resolve("documents").resolve(date + ".json").toFile(), file);
+    }
+
+    /** 주어진 것과 다른 분야 하나. 계획과 우연히 같은 값을 넣어 테스트가 헛돌지 않게 한다. */
+    private Domain otherThan(Domain domain) {
+        return domain == Domain.NETWORK ? Domain.OS : Domain.NETWORK;
     }
 
     /** 두 편이 다 있는 문서. 편을 고르는 규칙을 확인하려면 고를 것이 둘이어야 한다. */

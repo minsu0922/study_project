@@ -11,6 +11,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
@@ -186,8 +187,10 @@ public class AdminBatchService {
         importedDraftFileRepository.findAllById(filenames)
                 .forEach(f -> imported.put(f.getFilename(), f.getDraftCount()));
 
-        // 3) 근거 문서가 있는지는 주기마다 한 번만 본다(같은 주기의 사흘이 같은 파일을 가리킨다).
-        Map<LocalDate, Boolean> sourceExists = new HashMap<>();
+        // 3) 근거 문서는 주기마다 한 번만 읽는다(같은 주기의 나흘이 같은 파일을 가리킨다).
+        //    읽는 것은 분야 하나다 — 파일이 없으면 null이고, 그것이 곧 "폴백"이라는 뜻이기도 하다.
+        //    Optional로 감싸는 이유: HashMap.computeIfAbsent는 null을 "아직 안 셈"으로 보고 매번 다시 읽는다.
+        Map<LocalDate, java.util.Optional<Domain>> documentDomains = new HashMap<>();
 
         List<AdminBatchStatus.DayCell> cells = new ArrayList<>();
         for (int i = 0; i < totalDays; i++) {
@@ -205,21 +208,79 @@ public class AdminBatchService {
             // 다음다음 주기의 문제일 셋이 전부 "근거없음"으로 떴는데, 그 주기의 문서일 자체가
             // 나흘 뒤였다. 아직 만들 차례가 아닌 것을 결함처럼 칠하면 경고가 값을 잃는다.
             // 반대로 <b>내일</b> 문제일의 근거 문서가 어제 안 나온 것은 진짜 경고다 — 그건 남는다.
+            java.util.Optional<Domain> documentDomain = documentDomains.computeIfAbsent(
+                    plan.documentDate(), d -> java.util.Optional.ofNullable(documentDomainAt(dir, d)));
             boolean fallback = !plan.documentDay()
                     && !plan.documentDate().isAfter(today)
-                    && !sourceExists.computeIfAbsent(
-                    plan.documentDate(),
-                    d -> Files.exists(dir.resolve(DOCUMENT_SUBDIR).resolve(d + ".json")));
+                    && documentDomain.isEmpty();
+
+            // 칸에 찍을 분야·난이도 — 2026-09-19에 "계획"에서 "실제"로 바꿨다.
+            //
+            // 전에는 plan 값을 그대로 찍었다. 그런데 plan.domain()은 날짜로 계산한 분야일 뿐이고,
+            // 배치는 문서를 주제 대기열에서 꺼내 <문서의 분야>로 문제를 만든다(alignDomainWithDocument).
+            // 그래서 지난 네 주기 16칸이 전부 실제와 다른 분야를 달고 있었다 — 오늘 카드(planOf)는
+            // 이미 문서 쪽을 따르는데 달력만 계획을 따라, 한 화면 안에서 두 답이 나왔다.
+            //
+            // 우선순위: 결과 파일(그날 실제로 나온 것) > 근거 문서의 분야(곧 나올 것) > 계획.
+            // 파일을 맨 앞에 두는 이유는 08-29에 손으로 채운 파일들 때문이다. 옛 위상으로 만들어져
+            // 계획과 난이도까지 다른데(예: 09-21 계획 중급, 파일은 초급), 그날 배치는 파일이
+            // 있어 건너뛰므로 <들어오는 것은 파일 내용>이다. 화면은 들어올 것을 말해야 한다.
+            Domain domain = documentDomain.orElse(plan.domain());
+            Difficulty difficulty = plan.difficulty();
+            if (!plan.documentDay() && fileExists) {
+                GeneratedBatchFile produced = readBatchFile(dir.resolve(filename));
+                if (produced != null && produced.domain() != null) {
+                    domain = produced.domain();
+                }
+                if (produced != null && produced.difficulty() != null) {
+                    difficulty = produced.difficulty();
+                }
+            }
 
             cells.add(new AdminBatchStatus.DayCell(
                     date,
                     (int) (date.toEpochDay() - plan.documentDate().toEpochDay()),
-                    plan.documentDay(), plan.domain(), plan.difficulty(),
+                    plan.documentDay(), domain, difficulty,
                     state, filename,
                     state == AdminBatchStatus.DayState.IMPORTED ? draftCount : null,
                     fallback));
         }
         return cells;
+    }
+
+    /**
+     * 그 날짜 문서 파일의 분야. 파일이 없거나 못 읽으면 {@code null}.
+     *
+     * <p>{@link #sourceOf}와 달리 편(입문·심화)을 고르지 않는다. 분야는 파일 머리에 한 번만
+     * 적혀 있어 두 편이 같은 값을 공유하기 때문이다.
+     */
+    private Domain documentDomainAt(Path dir, LocalDate documentDate) {
+        Path file = dir.resolve(DOCUMENT_SUBDIR).resolve(documentDate + ".json");
+        if (!Files.exists(file)) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(file.toFile(), GeneratedDocumentFile.class).domain();
+        } catch (IOException e) {
+            // 못 읽는 문서는 "없는 문서"와 같게 다룬다 — sourceOf와 같은 판단이다.
+            log.warn("근거 문서를 읽지 못했습니다: {} — {}", file, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 문제 결과 파일을 읽는다. 못 읽으면 {@code null} — 달력 한 칸 때문에 화면 전체를 죽이지 않는다.
+     *
+     * <p>본문(문제 배열)까지 통째로 읽는다. 머리의 분야·난이도만 필요하지만, 24칸 중 파일이 있는
+     * 날은 많아야 스무 개이고 한 파일이 수십 KB라 부분 파싱을 따로 짜는 값을 못 한다.
+     */
+    private GeneratedBatchFile readBatchFile(Path file) {
+        try {
+            return objectMapper.readValue(file.toFile(), GeneratedBatchFile.class);
+        } catch (IOException e) {
+            log.warn("생성 결과 파일을 읽지 못했습니다: {} — {}", file, e.getMessage());
+            return null;
+        }
     }
 
     /**
