@@ -43,8 +43,14 @@ try {
       <div id="bCal" class="meta">불러오는 중…</div>
     </div>
 
+    <!-- 수확을 두 단계로 나눠 본다(2026-09-19). "요청한 만큼 나왔나"와 "나온 것이 승인됐나"는
+         고칠 곳이 다르다 — 앞은 재료·제약(프롬프트), 뒤는 문제의 질(검수). 한 숫자로 합치면
+         고급이 네 주기 연속 1~2개만 나온 것이 승인율 뒤에 숨는다. 순서도 파이프라인 순서대로. -->
     <div class="card">
-      <h3>최근 30일 수확 <span class="meta">(만든 문제 초안이 승인까지 갔는지)</span></h3>
+      <h3>최근 30일 수확</h3>
+      <h4 class="harvest-step">① 요청한 만큼 나왔나 <span class="meta">(난이도별 · 예약 실행 결과 파일 기준)</span></h4>
+      <div id="bYield" class="meta">불러오는 중…</div>
+      <h4 class="harvest-step">② 나온 것이 승인됐나 <span class="meta">(들어온 문제 초안 기준)</span></h4>
       <div id="bHarvest" class="meta">불러오는 중…</div>
     </div>
 
@@ -117,6 +123,7 @@ async function loadBatchStatus() {
     const s = await api("/api/admin/batch-status");
     renderSummary(s);
     renderCalendar(s);
+    renderYield(s.yieldByDifficulty);
     renderHarvest(s);
     renderState(s);
     renderPlan(s);
@@ -228,14 +235,21 @@ const CAL_HEADS = ["문서", "초급", "중급", "고급"];
 function renderCalendar(s) {
   const cells = s.calendar;
   const el = document.getElementById("bCal");
+  calToday = s.today;
 
   // 빠진 날을 세어 한 줄로 먼저 말한다. 칸을 다 훑지 않아도 결론이 보이게 —
   // 달력의 값은 "어디가 비었나"를 찾는 데 있고, 개수는 그것을 찾을 이유를 준다.
   const past = cells.filter(c => c.date <= s.today);
   const missing = past.filter(c => c.state === "MISSING").length;
-  const head = missing === 0
-    ? `<p>지난 ${past.length}일 동안 빠진 날이 없습니다.</p>`
-    : `<p>지난 ${past.length}일 중 <b>${missing}일</b>이 비어 있습니다 — 그날 몫은 나오지 않았습니다.</p>`;
+  // "안 나온 날"과 "덜 나온 날"을 따로 센다(2026-09-19). 앞은 손으로 돌릴지 판단할 일이고,
+  // 뒤는 프롬프트·재료를 볼 신호다 — 한 숫자로 합치면 무엇을 해야 할지가 안 갈린다.
+  const short = past.filter(isShort).length;
+  const parts = [];
+  if (missing) parts.push(`<b>${missing}일</b>은 아예 안 나왔습니다`);
+  if (short) parts.push(`<b>${short}일</b>은 요청보다 적게 나왔습니다`);
+  const head = parts.length === 0
+    ? `<p>지난 ${past.length}일 동안 빠지거나 모자란 날이 없습니다.</p>`
+    : `<p>지난 ${past.length}일 중 ${parts.join(", ")}.</p>`;
 
   let grid = `<div class="batch-cal">`
     + `<div class="cal-h cal-corner"></div>`
@@ -252,6 +266,7 @@ function renderCalendar(s) {
   const legend = `<div class="cal-legend">`
     + Object.keys(CAL_MARK).map(k =>
       `<span><i data-state="${k}" class="cal-cell" style="padding:0;min-height:0"></i>${CAL_MARK[k]} ${CAL_TEXT[k]}</span>`).join("")
+    + `<span>· <b class="cal-short-key">1/3</b> = 요청 3개 중 1개만 나옴</span>`
     + `<span>· 근거없음 = 그날은 문서 없이(폴백) 만듭니다</span></div>`;
 
   el.innerHTML = head + grid + legend + `<div class="cal-detail" id="calDetail">칸을 누르면 그날의 자세한 내용이 여기 나옵니다.</div>`;
@@ -261,14 +276,46 @@ function renderCalendar(s) {
   });
 }
 
+/**
+ * 요청 수를 믿을 수 있는 칸인가. <앞날>에 이미 있는 파일은 사람이 --count를 정해 손으로 돌린 것이라
+ * (2026-08-29 몫), 설정의 요청 수를 대면 5/7처럼 <있지도 않은 부족>이 칠해진다 — 실물에서 걸렸다.
+ * 상태(PRESET)로 가르지 않고 날짜로 가르는 이유: 그 파일들은 이미 DB에 들어와 상태가 IMPORTED다.
+ */
+let calToday = "";
+function hasFraction(c) {
+  return c.produced != null && c.requested != null && c.date <= calToday;
+}
+
+/** 요청보다 적게 나온 칸인가. 파일이 없거나 요청 수를 모르면 판단하지 않는다(안 나온 날은 MISSING이 말한다). */
+function isShort(c) {
+  return hasFraction(c) && c.produced < c.requested;
+}
+
+/**
+ * 칸 아래 줄에 쓸 말 — 파일이 있으면 "나옴/요청", 없으면 상태 이름.
+ *
+ * 전에는 들어온 초안 수만 "1건"으로 적었다. 그 1이 7개 중 1개인지 1개 중 1개인지 몰라,
+ * 고급이 네 주기 연속 모자랐는데 달력은 전부 초록 ✓였다(2026-09-19).
+ * 분모를 붙이는 것만으로 그 칸이 눈에 걸린다.
+ */
+function cellCount(c) {
+  if (hasFraction(c)) return `${c.produced}/${c.requested}`;
+  if (c.draftCount != null) return `${c.draftCount}건`;
+  if (c.produced != null) return `${c.produced}건`;
+  return CAL_TEXT[c.state];
+}
+
 function cellHtml(c, index, today) {
   const md = c.date.slice(5).replace("-", "/");
-  const title = `${c.date} · ${CAL_TEXT[c.state]} — ${CAL_WHY[c.state]}`;
-  return `<button class="cal-cell${c.date === today ? " today" : ""}" data-state="${c.state}"
+  const short = isShort(c);
+  const title = `${c.date} · ${CAL_TEXT[c.state]}${short ? ` · 요청 ${c.requested}개 중 ${c.produced}개` : ""} — ${CAL_WHY[c.state]}`;
+  // 모자란 칸은 상태 색(들어옴=초록)을 그대로 두고 <테두리와 숫자>만 바꾼다. 상태와 수확은
+  // 서로 다른 축이라, 배경까지 바꾸면 "들어왔는가"가 안 보이게 된다.
+  return `<button class="cal-cell${c.date === today ? " today" : ""}${short ? " short" : ""}" data-state="${c.state}"
       data-i="${index}" title="${escapeHtml(title)}">
       <span class="d">${md}</span>
       <span class="m">${CAL_MARK[c.state]}</span>
-      <span class="n">${c.draftCount != null ? c.draftCount + "건" : CAL_TEXT[c.state]}</span>
+      <span class="n">${cellCount(c)}</span>
       ${c.fallback ? `<span class="fb">근거없음</span>` : ""}
     </button>`;
 }
@@ -280,7 +327,57 @@ function showDay(c) {
     <b>${escapeHtml(c.date)}</b> · ${c.dayInCycle}일차 · ${escapeHtml(domainLabel(c.domain))} ${escapeHtml(what)}<br>
     <span class="meta">파일 <code>${escapeHtml(c.filename)}</code>${c.draftCount != null ? ` · 초안 ${c.draftCount}건` : ""}</span><br>
     ${escapeHtml(CAL_WHY[c.state])}
+    ${yieldLine(c)}
     ${c.fallback ? `<br><span class="meta">근거 문서가 없어 폴백으로 만듭니다 — 이 날 문제에는 "개념 문서 읽기" 링크가 안 붙습니다.</span>` : ""}`;
+}
+
+/**
+ * 칸 상세의 수확 한 줄. 나온 수와 들어온 수가 다르면 그것도 말한다 —
+ * 파일에는 있는데 DB에 덜 들어왔다면 들여오기 규약 검증에서 한 번 더 버려진 것이라
+ * 고칠 곳이 프롬프트가 아니라 규약 쪽이다.
+ */
+function yieldLine(c) {
+  if (!hasFraction(c)) return "";
+  const lines = [];
+  lines.push(isShort(c)
+    ? `<br><b class="cal-short-key">요청 ${c.requested}개 중 ${c.produced}개만 나왔습니다</b>
+       <span class="meta">— 모델이 나머지를 비워 보냈거나 규약 위반으로 버려졌습니다. 사유는 그날 Actions 요약에 있습니다.</span>`
+    : `<br>요청 ${c.requested}개 중 ${c.produced}개가 나왔습니다.`);
+  if (c.draftCount != null && c.draftCount < c.produced) {
+    lines.push(`<br><span class="meta">파일의 ${c.produced}개 중 ${c.draftCount}개만 들어왔습니다 — 나머지는 들여오기 검증에서 버려졌습니다.</span>`);
+  }
+  return lines.join("");
+}
+
+/* ── 난이도별 수확률 ───────────────────────────────────────────────────
+ *
+ * 한 줄 = 한 난이도. 막대는 "요청 대비 나온 비율"이고, 옆에 몇 번 중 몇 번 모자랐는지를 적는다.
+ * 합계 비율만 두면 "한 번 크게 모자람"과 "매번 조금씩 모자람"이 같은 숫자로 보이는데,
+ * 뒤쪽이 프롬프트를 고쳐야 한다는 신호다. */
+function renderYield(rows) {
+  const el = document.getElementById("bYield");
+  if (!rows || rows.every(r => r.runs === 0)) {
+    el.innerHTML = `최근 30일 동안 예약 실행이 만든 문제 파일이 없습니다.`;
+    return;
+  }
+  el.innerHTML = `<div class="yield-rows">` + rows.map(r => {
+    if (r.runs === 0) {
+      return `<div class="yield-row"><span class="yield-lv">${escapeHtml(difficultyLabel(r.difficulty))}</span>
+        <span class="yield-bar"></span><span class="yield-num meta">실행 없음</span><span></span></div>`;
+    }
+    // 100%를 넘을 수 있다(손으로 늘려 돌린 날). 막대는 100%에서 자르고 숫자는 그대로 둔다.
+    const pct = Math.round(r.produced / r.requested * 100);
+    const level = pct >= 90 ? "ok" : pct >= 60 ? "mid" : "low";
+    const shortText = r.shortRuns === 0
+      ? `<span class="meta">${r.runs}번 모두 채움</span>`
+      : `<b>${r.runs}번 중 ${r.shortRuns}번</b> 모자람`;
+    return `<div class="yield-row" data-level="${level}">
+        <span class="yield-lv">${escapeHtml(difficultyLabel(r.difficulty))}</span>
+        <span class="yield-bar"><i style="width:${Math.min(pct, 100)}%"></i></span>
+        <span class="yield-num"><b>${pct}%</b> <span class="meta">(${r.produced}/${r.requested})</span></span>
+        <span class="yield-short">${shortText}</span>
+      </div>`;
+  }).join("") + `</div>`;
 }
 
 /* ── 수확 ─────────────────────────────────────────────────────────────

@@ -49,7 +49,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @Transactional
-@TestPropertySource(properties = "llm.import.dir=build/test-batch-status")
+// 난이도별 개수를 여기서 못 박는다(2026-09-19). 수확률 테스트가 "요청 3"을 기대하는데,
+// application.yml 값을 따라가게 두면 설정을 바꾸는 순간 무관한 이 테스트가 깨진다.
+@TestPropertySource(properties = {
+        "llm.import.dir=build/test-batch-status",
+        "llm.generation.batch-count-by-difficulty=BEGINNER=7,INTERMEDIATE=5,ADVANCED=3"})
 class AdminBatchStatusIntegrationTest {
 
     private static final Path DIR = Path.of("build/test-batch-status");
@@ -366,6 +370,67 @@ class AdminBatchStatusIntegrationTest {
         assertThat(cell.difficulty()).isEqualTo(difficulty);
     }
 
+    /* ── 요청 대비 수확(2026-09-19) ──────────────────────────────────────
+     *
+     * 고급이 네 주기 연속 3개 중 1~2개만 나왔는데 달력은 전부 ✓였다. 들어온 수만 적고
+     * 요청 수를 안 적었기 때문이다. 여기서 지킬 것은 세 가지다 — 빈 지문은 세지 않는다,
+     * 요청 수는 파일의 난이도를 따른다, 손 실행·앞날 파일은 수확률에 섞이지 않는다. */
+
+    @Test
+    @DisplayName("달력 칸은 요청 수와 나온 수를 함께 싣는다 — 빈 지문은 나온 것으로 세지 않는다")
+    void calendarCarriesRequestedAndProduced() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        AdminBatchStatus.DayCell target = adminBatchService.getStatus().calendar().stream()
+                // 09-05 이전은 난이도와 무관하게 5를 요청하던 시절이라(COUNT_SPLIT_SINCE) 피한다
+                .filter(c -> !c.documentDay() && !c.date().isAfter(today)
+                        && !c.date().isBefore(LocalDate.of(2026, 9, 5)))
+                .findFirst()
+                .orElseThrow();
+        Files.createDirectories(DIR);
+        // 09-18 실물과 같은 모양 — 셋 중 둘이 빈 지문
+        writeProblems(target.filename(), Difficulty.ADVANCED, "지문", "", "  ");
+
+        AdminBatchStatus.DayCell cell = cellOf(adminBatchService.getStatus(), target.date());
+
+        assertThat(cell.requested()).isEqualTo(3);
+        assertThat(cell.produced()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("문서일과 파일 없는 날은 분수를 싣지 않는다 — 없는 부족을 그리지 않게")
+    void calendarLeavesFractionEmptyWithoutFile() {
+        List<AdminBatchStatus.DayCell> calendar = adminBatchService.getStatus().calendar();
+
+        assertThat(calendar).filteredOn(AdminBatchStatus.DayCell::documentDay)
+                .allSatisfy(c -> assertThat(c.requested()).isNull());
+        // 폴더를 비웠으므로 모든 칸에 파일이 없다
+        assertThat(calendar).allSatisfy(c -> assertThat(c.produced()).isNull());
+    }
+
+    @Test
+    @DisplayName("난이도별 수확률은 지난 30일 예약 실행만 센다 — 손 실행(접미사)·앞날 파일은 뺀다")
+    void yieldCountsOnlyScheduledPastRuns() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        Files.createDirectories(DIR);
+        writeProblems(today.minusDays(1) + ".json", Difficulty.ADVANCED, "a", "", "");    // 1/3
+        writeProblems(today.minusDays(2) + ".json", Difficulty.ADVANCED, "a", "b", "c");  // 3/3
+        writeProblems(today.minusDays(3) + "-hand.json", Difficulty.ADVANCED, "", "", "a"); // 손 실행 — 제외
+        writeProblems(today.plusDays(3) + ".json", Difficulty.ADVANCED, "", "", "a");      // 앞날 — 제외
+        writeProblems(today.minusDays(40) + ".json", Difficulty.ADVANCED, "", "", "a");    // 기간 밖 — 제외
+
+        List<AdminBatchStatus.DifficultyYield> yields = adminBatchService.getStatus().yieldByDifficulty();
+
+        // 실행이 없는 난이도도 줄이 있어야 한다 — 빠지면 화면이 "문제없음"으로 읽는다
+        assertThat(yields).extracting(AdminBatchStatus.DifficultyYield::difficulty)
+                .containsExactly(Difficulty.BEGINNER, Difficulty.INTERMEDIATE, Difficulty.ADVANCED);
+        AdminBatchStatus.DifficultyYield advanced = yields.get(2);
+        assertThat(advanced.runs()).isEqualTo(2);
+        assertThat(advanced.requested()).isEqualTo(6);
+        assertThat(advanced.produced()).isEqualTo(4);
+        assertThat(advanced.shortRuns()).isEqualTo(1);
+        assertThat(yields.get(0).runs()).isZero();
+    }
+
     @Test
     @DisplayName("수확 집계는 만든 초안을 승인·거절·대기로 가른다 — '몇 건 들어왔나'로는 알 수 없던 것")
     void harvestCountsDraftsByStatus() {
@@ -406,6 +471,18 @@ class AdminBatchStatusIntegrationTest {
         var file = new GeneratedDocumentFile("테스트", date.toString(), date + "T00:00:00Z",
                 domain, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
         objectMapper.writeValue(DIR.resolve("documents").resolve(date + ".json").toFile(), file);
+    }
+
+    /**
+     * 문제 결과 파일. 지문만 채운 최소 모양이다 — 이 서비스가 읽는 것은 머리(분야·난이도)와
+     * 지문의 빈칸 여부뿐이라, 보기·해설까지 채우면 무엇을 검사하는 테스트인지가 흐려진다.
+     */
+    private void writeProblems(String filename, Difficulty difficulty, String... questions) throws Exception {
+        String items = java.util.Arrays.stream(questions)
+                .map(q -> "{\"question\":\"%s\"}".formatted(q))
+                .collect(java.util.stream.Collectors.joining(","));
+        write(filename, """
+                {"domain":"NETWORK","difficulty":"%s","problems":[%s]}""".formatted(difficulty, items));
     }
 
     /** 주어진 것과 다른 분야 하나. 계획과 우연히 같은 값을 넣어 테스트가 헛돌지 않게 한다. */

@@ -2532,6 +2532,33 @@ a.batch-chip:hover { border-color: var(--primary); background: var(--primary-sof
 .harvest-nums { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; }
 .harvest-nums b { font-variant-numeric: tabular-nums; }
 
+/* ── 수확 두 단계(2026-09-19) ── ① 요청한 만큼 나왔나 → ② 나온 것이 승인됐나.
+ * 소제목을 작게 둔 이유: 카드 제목(h3)과 같은 무게면 카드가 둘로 쪼개져 보여,
+ * "한 파이프라인의 앞뒤"라는 관계가 안 읽힌다. */
+.harvest-step { font-size: 13px; font-weight: 600; margin: 14px 0 6px; color: var(--text); }
+.harvest-step:first-of-type { margin-top: 4px; }
+
+/* 난이도별 수확률 — 한 줄 = 한 난이도. 네 칸(이름 · 막대 · 비율 · 몇 번 모자랐나)을 격자로 맞춰
+   세 줄의 막대가 같은 시작점에서 출발하게 한다. 시작점이 어긋나면 길이를 눈으로 비교할 수 없다. */
+.yield-rows { display: grid; grid-template-columns: 36px 1fr auto auto; gap: 8px 12px; align-items: center; font-size: 13px; }
+.yield-row { display: contents; }
+.yield-lv { color: var(--text); font-weight: 600; }
+.yield-bar { height: 10px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+.yield-bar i { display: block; height: 100%; border-radius: 999px; background: var(--border-strong); }
+/* 색은 보조다 — 비율과 "몇 번 중 몇 번"을 글자로 함께 적으므로 색을 못 봐도 뜻이 남는다. */
+.yield-row[data-level="ok"] .yield-bar i { background: var(--correct); }
+.yield-row[data-level="mid"] .yield-bar i { background: var(--lv2-solid); }
+.yield-row[data-level="low"] .yield-bar i { background: var(--wrong); }
+.yield-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.yield-short { white-space: nowrap; color: var(--text-2); }
+.yield-row[data-level="low"] .yield-short b, .yield-row[data-level="mid"] .yield-short b { color: var(--lv2-fg); }
+
+/* 달력의 "덜 나온 날". 배경은 상태 색(들어옴=초록)을 그대로 두고 테두리와 숫자만 바꾼다 —
+   상태(들어왔나)와 수확(다 나왔나)은 다른 축이라, 한쪽이 다른 쪽을 덮으면 안 된다. */
+.cal-cell.short { border: 2px solid var(--lv2-solid); }
+.cal-cell.short .n { color: var(--lv2-fg); font-weight: 700; }
+.cal-short-key { color: var(--lv2-fg); }
+
 @media (max-width: 640px) {
   /* 좁은 화면에서는 분야 이름을 칸 위 줄로 내리고 4칸을 넓게 쓴다 —
      96px 기둥을 유지하면 칸 하나가 40px 남아 날짜가 두 줄로 깨진다. */
@@ -2540,4 +2567,7 @@ a.batch-chip:hover { border-color: var(--primary); background: var(--primary-sof
   .cal-side { grid-column: 1 / -1; padding: 6px 0 0; font-size: 11px; }
   .cal-cell { min-height: 52px; padding: 6px 2px; }
   .cal-cell .m { font-size: 14px; }
+  /* "4번 중 4번 모자람"을 막대 아래 줄로 내린다 — 네 칸을 한 줄에 두면 막대가 20px로 줄어 비교가 안 된다. */
+  .yield-rows { grid-template-columns: 36px 1fr auto; }
+  .yield-short { grid-column: 2 / -1; margin-top: -4px; font-size: 12px; }
 }

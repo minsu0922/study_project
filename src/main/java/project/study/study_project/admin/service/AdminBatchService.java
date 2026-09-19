@@ -19,6 +19,7 @@ import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.GenerationSchedule;
+import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -132,7 +133,8 @@ public class AdminBatchService {
                 recentImports(),
                 waitingFiles(dir),
                 blockedDates(dir, today),
-                nextDocumentDate(plan, today));
+                nextDocumentDate(plan, today),
+                yieldByDifficulty(dir, today));
     }
 
     /**
@@ -227,15 +229,20 @@ public class AdminBatchService {
             // 있어 건너뛰므로 <들어오는 것은 파일 내용>이다. 화면은 들어올 것을 말해야 한다.
             Domain domain = documentDomain.orElse(plan.domain());
             Difficulty difficulty = plan.difficulty();
+            Integer produced = null;
             if (!plan.documentDay() && fileExists) {
-                GeneratedBatchFile produced = readBatchFile(dir.resolve(filename));
-                if (produced != null && produced.domain() != null) {
-                    domain = produced.domain();
+                GeneratedBatchFile file = readBatchFile(dir.resolve(filename));
+                if (file != null && file.domain() != null) {
+                    domain = file.domain();
                 }
-                if (produced != null && produced.difficulty() != null) {
-                    difficulty = produced.difficulty();
+                if (file != null && file.difficulty() != null) {
+                    difficulty = file.difficulty();
                 }
+                produced = file == null ? null : producedCount(file);
             }
+            // 요청 수는 <파일의 난이도>로 정한다. 손으로 채운 파일은 계획과 난이도가 다를 수 있어서,
+            // 계획 난이도로 세면 초급 파일(5건)에 "고급 요청 3건"을 대 5/3이 찍힌다.
+            Integer requested = plan.documentDay() ? null : requestedFor(date, difficulty);
 
             cells.add(new AdminBatchStatus.DayCell(
                     date,
@@ -243,9 +250,86 @@ public class AdminBatchService {
                     plan.documentDay(), domain, difficulty,
                     state, filename,
                     state == AdminBatchStatus.DayState.IMPORTED ? draftCount : null,
-                    fallback));
+                    fallback, requested, produced));
         }
         return cells;
+    }
+
+    /**
+     * 난이도별 배분이 생긴 날(2026-09-05). 그 전의 파일은 난이도와 무관하게 {@code batch-count}(5)로 요청했다.
+     *
+     * <p>이 경계가 없으면 09-04 초급 파일(5건)이 "7건 중 5건"으로 찍혀 <b>있지도 않은 부족</b>이
+     * 달력과 수확률에 섞인다. 파일에 요청 수를 적어 두지 않았으므로 그때의 설정을 여기서 되살린다.
+     * 이 설정을 또 바꾸면 경계를 하나 더 둬야 한다 — 그 수고가 싫으면 결과 파일에
+     * 요청 수를 싣는 쪽이 근본 해결이다(지금은 CLI까지 건드릴 값이 없어 미뤘다).
+     */
+    private static final LocalDate COUNT_SPLIT_SINCE = LocalDate.of(2026, 9, 5);
+
+    /** 그날 요청한 문제 수. 난이도를 모르면(폴백 파일 등) {@code null}로 두어 화면이 분수를 안 그리게 한다. */
+    private Integer requestedFor(LocalDate date, Difficulty difficulty) {
+        if (difficulty == null) {
+            return null;
+        }
+        if (date.isBefore(COUNT_SPLIT_SINCE)) {
+            return batchCount;
+        }
+        return BatchCountRule.countFor(batchCountByDifficulty, difficulty, batchCount);
+    }
+
+    /**
+     * 지문이 있는 문항 수. CLI가 저장 직전에 빈 항목을 빼지만({@code dropBlankQuestions}), 그 전에 만든
+     * 파일과 사람이 고친 파일에는 껍데기가 남아 있을 수 있어 여기서도 거른다.
+     * 판정은 CLI와 <b>같은 규칙</b>을 부른다 — 따로 적으면 CLI 로그의 "3개 중 1개"와 화면의 분수가 갈라진다.
+     */
+    private static int producedCount(GeneratedBatchFile file) {
+        if (file.problems() == null) {
+            return 0;
+        }
+        return (int) file.problems().stream()
+                .filter(p -> p != null && !ProblemItemRule.hasBlankQuestion(p))
+                .count();
+    }
+
+    /**
+     * 최근 {@link #HARVEST_DAYS}일 예약 실행의 난이도별 수확률.
+     *
+     * <p>기간을 승인율({@link #harvest})과 같은 30일로 맞춘다. 두 숫자가 화면에 나란히 놓이는데
+     * 기간이 다르면 "나온 것 중 몇이 승인됐나"로 이어 읽을 수 없다.
+     * 앞날 파일은 뺀다 — 손으로 미리 채운 것이라 예약 실행의 성적이 아니다.
+     */
+    private List<AdminBatchStatus.DifficultyYield> yieldByDifficulty(Path dir, LocalDate today) {
+        LocalDate since = today.minusDays(HARVEST_DAYS - 1L);
+        Map<Difficulty, int[]> sums = new EnumMap<>(Difficulty.class);   // [runs, requested, produced, shortRuns]
+        for (Difficulty d : Difficulty.values()) {
+            sums.put(d, new int[4]);
+        }
+        for (String name : collectJson(dir)) {
+            var matcher = SCHEDULED_FILE.matcher(name);
+            if (!matcher.matches()) {
+                continue;   // 접미사 파일 = 손 실행
+            }
+            LocalDate date = LocalDate.parse(matcher.group(1));
+            if (date.isBefore(since) || date.isAfter(today)) {
+                continue;
+            }
+            GeneratedBatchFile file = readBatchFile(dir.resolve(name));
+            if (file == null || file.difficulty() == null) {
+                continue;
+            }
+            int requested = requestedFor(date, file.difficulty());
+            int produced = producedCount(file);
+            int[] s = sums.get(file.difficulty());
+            s[0]++;
+            s[1] += requested;
+            s[2] += produced;
+            if (produced < requested) {
+                s[3]++;
+            }
+        }
+        return sums.entrySet().stream()
+                .map(e -> new AdminBatchStatus.DifficultyYield(
+                        e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2], e.getValue()[3]))
+                .toList();
     }
 
     /**

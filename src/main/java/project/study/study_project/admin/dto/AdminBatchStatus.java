@@ -74,7 +74,13 @@ public record AdminBatchStatus(
          *
          * 오늘이 문서일이면 오늘이다 — "다음 차례가 언제냐"에 대한 답으로 오늘이 맞다.
          */
-        LocalDate nextDocumentDate
+        LocalDate nextDocumentDate,
+
+        /*
+         * 난이도별 수확률(2026-09-19 신설) — 초·중·고급 순서로 늘 세 줄. 실행이 없는 난이도도
+         * runs=0으로 싣는다: 줄이 빠지면 화면이 "그 난이도는 문제없다"로 읽힌다.
+         */
+        List<DifficultyYield> yieldByDifficulty
 ) {
 
     /**
@@ -142,6 +148,13 @@ public record AdminBatchStatus(
      * @param draftCount 들어온 초안 수. {@code IMPORTED}가 아니면 {@code null}
      * @param fallback   문제일인데 근거 문서 파일이 없다 = 그날은 근거 없이(폴백) 만든다.
      *                   문서일에는 항상 {@code false}
+     * @param requested  그날 요청한 문제 수(2026-09-19 신설). 문서일이면 {@code null}.
+     *                   {@code draftCount}만으로는 "1건"이 정상인지 부족한지 알 수 없었다 —
+     *                   고급이 네 주기 연속 3개 중 1~2개만 나왔는데 달력은 조용했다
+     * @param produced   결과 파일에서 센 <b>지문이 있는</b> 문항 수(2026-09-19 신설). 파일이 없으면 {@code null}.
+     *                   DB의 {@code draftCount}와 따로 두는 이유: 앱을 안 켜 아직 안 들어온 날(WAITING)도
+     *                   부족한지 보여야 하고, 들여오기 검증에서 한 번 더 버려진 것과 모델이 애초에 못 낸 것은
+     *                   고칠 곳이 다르다(앞은 규약, 뒤는 프롬프트·재료)
      */
     public record DayCell(
             LocalDate date,
@@ -152,8 +165,33 @@ public record AdminBatchStatus(
             DayState state,
             String filename,
             Integer draftCount,
-            boolean fallback
+            boolean fallback,
+            Integer requested,
+            Integer produced
     ) {
+    }
+
+    /**
+     * 난이도별 수확률 — 최근 N일 동안 <b>요청한 만큼 나왔나</b>(2026-09-19 신설).
+     *
+     * <p>{@link Harvest}는 "나온 것이 쓸 만했나"(승인율)를 답한다. 그 앞 단계인 "요청한 만큼
+     * 나오기는 했나"는 어디에도 없었다. 둘은 고칠 곳이 다르다 — 승인율이 낮으면 문제의 질을,
+     * 수확률이 낮으면 재료(근거 문서의 절 분량)나 제약(형태 제한·중복 회피)을 봐야 한다.
+     *
+     * <p><b>난이도로 나누는 이유</b>: 합치면 초급(늘 7/7)이 고급(1/3, 2/3…)의 부족을 가린다.
+     * 2026-09 실측에서 전체 수확률은 80%대로 멀쩡해 보였는데 고급만 떼면 50%였다.
+     *
+     * <p><b>파일에서 센다</b>(DB가 아니라). 앱을 며칠 안 켜도 숫자가 흔들리지 않게 하고,
+     * 들여오기 단계의 추가 탈락과 섞이지 않게 하기 위해서다({@link DayCell#produced} 주석).
+     * 접미사가 붙은 손 실행 파일은 뺀다 — 이 숫자는 <b>예약 실행의 건강</b>을 재는 것이다.
+     *
+     * @param runs      기간 안의 예약 실행 결과 파일 수
+     * @param requested 요청 합계
+     * @param produced  지문이 있는 문항 합계
+     * @param shortRuns 요청보다 적게 나온 실행 수 — 합계만 보면 "한 번 크게 모자람"과
+     *                  "매번 조금씩 모자람"이 구분되지 않는다
+     */
+    public record DifficultyYield(Difficulty difficulty, int runs, int requested, int produced, int shortRuns) {
     }
 
     /**
