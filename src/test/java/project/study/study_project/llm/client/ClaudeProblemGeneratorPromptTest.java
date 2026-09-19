@@ -242,17 +242,25 @@ class ClaudeProblemGeneratorPromptTest {
      * 모델 입장에서는 재료가 마르면 껍데기로 개수를 맞추는 것이 지시를 지키는 길이다.
      *
      * <p>우리 파이프라인에서는 정반대가 낫다. 적게 오는 것은 수확량 점검이 자동으로 잡고,
-     * 껍데기는 사람이 읽어야 걸러진다. 그래서 <b>탐지 가능한 실패</b> 쪽으로 유도한다.
+     * 억지 문제는 사람이 읽어야 걸러진다. 그래서 <b>탐지 가능한 실패</b> 쪽으로 유도한다.
+     *
+     * <p><b>2026-09-19 — 빈 자리를 <이유와 함께> 두라고 바꿨다.</b> 지문이 빈 자리는 09-13부터
+     * 자동으로 걷어내므로(DraftGeneratorCli.dropBlankQuestions) 더 이상 사람이 읽을 몫이 아니다.
+     * 그런데 걷어내고 나면 "왜 모자랐는가"가 남지 않아, 고급이 네 주기 연속 모자란 원인을
+     * 가를 수 없었다. 이제 빈 자리는 탐지 가능한 실패이자 <b>이유를 싣는 자리</b>다.
+     * 여기서 지키는 것은 셋 — 억지로 만들지 말 것, 빈 자리에 이유를 적을 것, 그 이유가 뭉뚱그려지지 않을 것.
      */
     @Test
-    @DisplayName("재료가 모자라면 적게 내라고 말한다 — 껍데기로 개수를 채우면 사람이 읽어야 걸러진다")
-    void tellsModelToReturnFewerRatherThanFillers() {
+    @DisplayName("재료가 모자라면 억지로 만들지 말고 빈 자리에 이유를 적으라고 말한다")
+    void tellsModelToLeaveReasonedGapsRatherThanFillers() {
         assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
                 .contains("[개수를 채우지 못할 때]")
-                .as("개수를 강요하면 빈 껍데기가 나온다 — 실제로 그렇게 났다")
+                .as("개수를 강요하면 억지 문제가 나온다 — 실제로 그렇게 났다")
                 .contains("만들 수 있는 만큼만 내라")
-                .as("왜 그게 나은지를 알려 줘야 모델이 규칙을 따른다")
-                .contains("사람이 하나씩 읽어야 걸러진다");
+                .as("빈 자리마다 이유를 남겨야 무엇을 고칠지 고를 수 있다")
+                .contains("skipReason에 왜 못 만들었는지")
+                .as("'재료 부족' 한마디로는 절을 넓힐지 요청 수를 낮출지 가를 수 없다")
+                .contains("뭉뚱그리지 말고");
     }
 
     /**

@@ -56,8 +56,32 @@ public record GeneratedProblemItem(
                 + "CAUSE=왜 그렇게 하는가를 직접 묻는다, "
                 + "JUDGMENT=진술 넷 중 옳거나 틀린 것을 고른다(중급 전용), "
                 + "SEQUENCE=단계가 있는 동작의 순서를 묻는다(중급 전용)")
-        QuestionKind questionKind
+        QuestionKind questionKind,
+
+        // 2026-09-19 신설. 고급이 네 주기 연속 3개 중 1~2개만 나왔는데, 버려진 자리는 전부
+        // <지문이 빈 껍데기>였고 이유가 어디에도 없었다. 재료가 마른 것인지, 형태 제한에 막힌
+        // 것인지, 중복 회피에 걸린 것인지 가를 수 없으니 고칠 곳도 정할 수 없었다.
+        //
+        // 맨 뒤에 둔 이유는 위 필드들과 같다 — 순서가 곧 생성 순서라, 지문을 쓰려다 멈춘 <뒤에>
+        // 왜 멈췄는지를 적게 한다. 앞에 두면 "못 만든다"를 먼저 정해 버리는 길이 열린다.
+        // 별도 봉투(Batch) 필드가 아니라 항목 필드로 둔 이유: 빈 자리 하나하나의 이유가 다를 수
+        // 있고, 봉투를 바꾸면 ProblemGenerator의 반환 타입과 호출부 전부가 바뀐다.
+        @JsonPropertyDescription("문제를 만들었으면 빈 문자열. 요청 개수를 채우지 못해 이 자리의 question을 "
+                + "비워 둘 때만 채운다: 왜 못 만들었는지 한 문장 — 어느 절의 재료가 모자랐는지, "
+                + "허용된 형태로는 만들 수 없었는지, 이미 낸 문제와 겹쳐서인지를 구체적으로 적는다")
+        String skipReason
 ) {
+    /**
+     * 사유 없이 만드는 편의 생성자 — 2026-09-19에 {@code skipReason}을 붙이기 전의 전체 생성자다.
+     * 문제를 <b>만든</b> 쪽(테스트, DB 초안을 되살리는 {@code LlmProblemService})은 사유가 늘 빈 값이라
+     * 이 생성자를 그대로 쓰게 둔다 — 위의 짧은 생성자들과 같은 처방이다.
+     */
+    public GeneratedProblemItem(String question, String answer, String explanation,
+                                List<GeneratedChoice> choices, String sourceQuote, String title,
+                                QuestionKind questionKind) {
+        this(question, answer, explanation, choices, sourceQuote, title, questionKind, "");
+    }
+
     /**
      * 인용 없이 만드는 편의 생성자 — 인용을 도입하기 전 코드와 테스트가 그대로 컴파일되게 한다.
      *

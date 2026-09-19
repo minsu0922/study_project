@@ -656,6 +656,64 @@ class DraftGeneratorCliTest {
                 .containsExactlyElementsOf(problems);
     }
 
+    /* ══ 못 채운 이유(2026-09-19) ═══════════════════════════════
+     *
+     * 고급이 네 주기 연속 3개 중 1~2개만 나왔는데, 버려진 자리는 전부 빈 껍데기였고 요약에는
+     * "지문이 비어 있음: (지문 없음)"만 찍혔다. 무엇이 모자랐는지 모르니 고칠 곳을 고를 수 없었다. */
+
+    @Test
+    @DisplayName("빈 자리의 이유가 결함 줄에 실린다 — '(지문 없음)'은 아무것도 말해 주지 않는다")
+    void defectLineCarriesSkipReason() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("온라인 DDL로 바꿔도 잠금이 남는 이유는?", goodExplanation()),
+                husk("'어떤 때 통하지 않는가'의 한계 조건을 1번에서 다 썼음"));
+
+        DraftGeneratorCli.YieldCheck yield =
+                DraftGeneratorCli.checkYield(problems, 3, ProblemType.MULTIPLE_CHOICE, Difficulty.ADVANCED);
+
+        assertThat(yield.defects()).singleElement().asString()
+                .contains("2번")
+                .contains("지문이 비어 있음")
+                .contains("한계 조건을 1번에서 다 썼음");
+    }
+
+    @Test
+    @DisplayName("걷어낼 껍데기의 이유를 따로 모은다 — 이유를 안 남긴 자리도 빠뜨리지 않는다")
+    void collectsShortfallReasonsBeforeDropping() {
+        List<GeneratedProblemItem> problems = List.of(
+                multipleChoice("문제 1", goodExplanation()),
+                husk("면접 절의 질문은 정의를 묻는 것뿐이라 고급 형태로 못 만듦"),
+                husk(""));
+
+        assertThat(DraftGeneratorCli.shortfallReasons(problems)).containsExactly(
+                "2번: 면접 절의 질문은 정의를 묻는 것뿐이라 고급 형태로 못 만듦",
+                // 빠뜨리면 "나옴 1, 요청 3인데 이유는 1개"가 되어 나머지 하나를 또 모르게 된다
+                "3번: (이유를 남기지 않음)");
+    }
+
+    @Test
+    @DisplayName("다 채운 날은 이유 목록이 없다 — 파일에 빈 배열 대신 필드가 안 보이게")
+    void noShortfallReasonsWhenFull() {
+        List<GeneratedProblemItem> problems = List.of(multipleChoice("문제 1", goodExplanation()));
+
+        assertThat(DraftGeneratorCli.shortfallReasons(problems)).isNull();
+    }
+
+    @Test
+    @DisplayName("문제를 낸 항목의 이유는 무시한다 — 만들었으면 못 만든 이유가 성립하지 않는다")
+    void ignoresReasonOnRealProblem() {
+        GeneratedProblemItem made = multipleChoice("문제 1", goodExplanation());
+        GeneratedProblemItem withStrayReason = new GeneratedProblemItem(made.question(), made.answer(),
+                made.explanation(), made.choices(), made.sourceQuote(), made.title(), null, "습관처럼 채운 값");
+
+        assertThat(DraftGeneratorCli.skipReasonOf(withStrayReason)).isNull();
+    }
+
+    /** 지문을 비우고 이유만 적은 빈 자리 — 프롬프트가 요구하는 모양 그대로. */
+    private static GeneratedProblemItem husk(String reason) {
+        return new GeneratedProblemItem("", "", "", List.of(), "", "", null, reason);
+    }
+
     @Test
     @DisplayName("요청한 만큼 다 오면 부족이 아니다 — 평소의 성공 경로")
     void fullYieldIsNotShort() {

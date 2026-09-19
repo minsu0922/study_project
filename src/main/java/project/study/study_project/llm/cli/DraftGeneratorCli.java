@@ -304,7 +304,9 @@ public final class DraftGeneratorCli {
                 "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
                 date.toString(), Instant.now().toString(),
                 domain, difficulty, type, model,
-                source == null ? null : source.slug(), kept);
+                source == null ? null : source.slug(), kept,
+                // 걷어내기 <전> 목록에서 뽑는다 — kept에는 이미 껍데기가 없다.
+                shortfallReasons(problems));
 
         Files.createDirectories(outDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
@@ -1305,7 +1307,11 @@ public final class DraftGeneratorCli {
             GeneratedProblemItem item = problems.get(i);
             String defect = ProblemItemRule.defectOf(item, type);
             if (defect != null) {
-                defects.add("%d번 — %s: %s".formatted(i + 1, defect, ProblemItemRule.snippet(item)));
+                // 빈 껍데기면 지문 조각 대신 모델이 남긴 이유를 싣는다(2026-09-19). 지문이 없으니
+                // snippet은 늘 "(지문 없음)"이라 아무것도 말해 주지 않았다 — 네 주기 동안 그랬다.
+                String reason = skipReasonOf(item);
+                defects.add("%d번 — %s: %s".formatted(i + 1, defect,
+                        reason != null ? "모델이 남긴 이유 — " + reason : ProblemItemRule.snippet(item)));
                 continue;
             }
             usable++;
@@ -1357,6 +1363,41 @@ public final class DraftGeneratorCli {
         return problems.stream()
                 .filter(item -> !ProblemItemRule.hasBlankQuestion(item))
                 .toList();
+    }
+
+    /**
+     * 빈 껍데기가 남긴 이유 — 없으면 {@code null}. 지문이 있는 항목은 이유가 있어도 무시한다
+     * (문제를 냈으면 못 만든 이유가 성립하지 않는다 — 모델이 습관처럼 채운 값일 뿐이다).
+     */
+    static String skipReasonOf(GeneratedProblemItem item) {
+        if (!ProblemItemRule.hasBlankQuestion(item)) {
+            return null;
+        }
+        String reason = item.skipReason();
+        return (reason == null || reason.isBlank()) ? null : reason.trim();
+    }
+
+    /**
+     * 걷어낼 껍데기들의 이유를 결과 파일에 옮겨 둘 모양으로 — {@code dropBlankQuestions}와 짝이다(2026-09-19).
+     *
+     * <p><b>왜 걷어내기 전에 따로 빼 두나.</b> 껍데기를 파일에 남기지 않는 판단({@link #dropBlankQuestions} 주석)은 옳지만,
+     * 그러면 이유도 함께 사라진다. 이유는 "물음이 없어 대조할 것이 없는" 껍데기에서 <b>유일하게
+     * 대조할 수 있는 것</b>이라 따로 살린다. 이유를 안 남긴 껍데기는 그 사실 자체를 적는다 —
+     * 빠뜨리면 "요청 3, 나옴 1인데 이유는 1개"가 되어 나머지 하나가 왜 없는지 또 모르게 된다.
+     *
+     * @return 빈 자리가 없으면 {@code null} — 파일에 빈 배열 대신 필드 자체가 안 보이게
+     */
+    static List<String> shortfallReasons(List<GeneratedProblemItem> problems) {
+        List<String> reasons = new ArrayList<>();
+        for (int i = 0; i < problems.size(); i++) {
+            GeneratedProblemItem item = problems.get(i);
+            if (!ProblemItemRule.hasBlankQuestion(item)) {
+                continue;
+            }
+            String reason = skipReasonOf(item);
+            reasons.add("%d번: %s".formatted(i + 1, reason != null ? reason : "(이유를 남기지 않음)"));
+        }
+        return reasons.isEmpty() ? null : reasons;
     }
 
     /**

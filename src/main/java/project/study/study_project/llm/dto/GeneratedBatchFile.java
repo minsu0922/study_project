@@ -35,6 +35,11 @@ import java.util.List;
  *                     <b>맨 뒤에 추가한 필드</b>라 이 값이 없는 옛 파일도 그대로 읽힌다 —
  *                     Jackson은 없는 필드를 null로 채우므로 2026-08-12 이전 파일도 흡수된다
  * @param problems     모델이 반환한 문제 목록(검증 전 원본)
+ * @param shortfallReasons 요청 개수를 못 채운 이유 — 모델이 빈 자리에 적은 {@code skipReason}들
+ *                     (2026-09-19 신설). 빈 항목은 저장 직전에 {@code problems}에서 빠지므로
+ *                     (DraftGeneratorCli.dropBlankQuestions) 이유를 따로 옮겨 두지 않으면 함께 사라진다.
+ *                     Actions 요약에만 두지 않는 이유: 그 화면은 90일 뒤 지워지고, 이유가 쌓여야
+ *                     "재료 절을 넓힐지, 요청 수를 낮출지"를 정할 수 있다. 옛 파일은 {@code null}로 읽힌다
  */
 public record GeneratedBatchFile(
         String note,
@@ -45,6 +50,13 @@ public record GeneratedBatchFile(
         ProblemType type,
         String model,
         String documentSlug,
-        List<GeneratedProblemItem> problems
+        List<GeneratedProblemItem> problems,
+        List<String> shortfallReasons
 ) {
+    /** 사유 없이 만드는 편의 생성자 — 필드를 붙이기 전 호출부(테스트)가 그대로 컴파일되게 한다. */
+    public GeneratedBatchFile(String note, String date, String generatedAt, Domain domain,
+                              Difficulty difficulty, ProblemType type, String model,
+                              String documentSlug, List<GeneratedProblemItem> problems) {
+        this(note, date, generatedAt, domain, difficulty, type, model, documentSlug, problems, null);
+    }
 }
