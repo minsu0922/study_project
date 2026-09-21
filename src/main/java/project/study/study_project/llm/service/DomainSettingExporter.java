@@ -10,6 +10,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.dto.DomainSettingsFile;
 import project.study.study_project.llm.repository.DomainSettingRepository;
+import project.study.study_project.llm.support.DomainSettings;
 
 import java.util.List;
 
@@ -36,11 +37,11 @@ import java.util.List;
 public class DomainSettingExporter extends SnapshotExporter {
 
     /**
-     * 배치와 같은 파일을 가리킨다. Task 6이 {@code DomainSettings.FILE_NAME}을 만들면 그 값을
-     * 빌려 쓰도록 바꾼다({@code TopicQueueExporter}가 {@code TopicQueue.FILE_NAME}을 빌려 쓰는
-     * 것과 같은 꼴) — 지금은 그 클래스가 아직 없어 여기 직접 상수를 둔다.
+     * 배치와 같은 파일을 가리킨다. {@link DomainSettings#FILE_NAME}을 그대로 빌려 쓴다
+     * ({@code TopicQueueExporter}가 {@code TopicQueue.FILE_NAME}을 빌려 쓰는 것과 같은 꼴) —
+     * 이름이 두 곳에 따로 있으면 한쪽만 고쳤을 때 배치가 엉뚱한 파일을 찾는다.
      */
-    static final String FILE_NAME = "_domain-settings.json";
+    static final String FILE_NAME = DomainSettings.FILE_NAME;
 
     private static final String NOTE =
             "관리 화면의 '분야 설정'에서 내보낸 파일입니다. 배치는 enabled=true인 분야만 sortOrder "

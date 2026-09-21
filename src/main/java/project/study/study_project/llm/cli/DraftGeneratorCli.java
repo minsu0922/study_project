@@ -19,6 +19,8 @@ import project.study.study_project.llm.support.DifficultyMaterialRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
+import project.study.study_project.llm.support.DomainHints;
+import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationLimits;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
@@ -158,7 +160,22 @@ public final class DraftGeneratorCli {
         // 난이도별 배분. 없으면 null로 두고 resolveCount가 위 폴백을 쓰게 한다 —
         // 여기서 기본 문자열을 끼워 넣으면 설정을 지운 사람이 <지운 대로> 못 돌게 된다.
         String countSpec = (String) generation.get("batch-count-by-difficulty");
-        List<Domain> batchDomains = parseDomains((String) generation.get("batch-domains"));
+
+        // outDir을 여기서 먼저 정한다 — 원래는 218번째 줄(문제 흐름)에서야 계산됐지만,
+        // 분야 설정 파일(_domain-settings.json)이 그 디렉터리 안에 있고 아래에서 만들
+        // 후보 분야 목록이 그 파일을 봐야 한다. resolveOutDir 한 곳으로 모아 두어 세 자리
+        // (여기·문제 흐름·문서 흐름)가 각자 "generated"를 따로 하드코딩하지 않게 한다.
+        Path outDir = resolveOutDir(opts);
+
+        // 분야 설정 파일 → 관리 화면이 켜 둔 분야를 sortOrder 순으로 후보로 삼는다.
+        // 파일이 없거나 비어 있으면(관리 화면을 아직 한 번도 안 썼거나, 전부 꺼 둔 경우)
+        // 지금까지처럼 application.yml의 batch-domains로 폴백한다 — 그것도 비면
+        // GenerationSchedule이 전체 분야로 보정한다. DomainSettings.read는 파일이 깨져도
+        // 절대 예외를 던지지 않으므로(클래스 Javadoc) 여기서 try-catch가 필요 없다.
+        DomainSettings settings = DomainSettings.read(outDir);
+        List<Domain> batchDomains = settings.batchDomains().isEmpty()
+                ? parseDomains((String) generation.get("batch-domains"))
+                : settings.batchDomains();
         // 주기의 0일차로 삼을 날. 값이 없으면 에포크 = 앵커가 없던 시절과 같은 위상이다.
         LocalDate cycleAnchor = parseAnchor((String) generation.get("cycle-anchor"));
 
@@ -186,14 +203,14 @@ public final class DraftGeneratorCli {
         // 잊은 지 얼마나 됐나"이고, 그건 벽시계로만 잴 수 있다. date를 쓰면 손으로 미래 날짜를
         // 넘겨 한 칸 채울 때 <어제 갱신한 파일도 14일 넘었다>고 잘못 경고한다(실제로 겪음).
         // 예약 실행은 date가 곧 오늘이라 동작이 달라지지 않는다.
-        warnIfSnapshotsAreStale(Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR)), LocalDate.now(KST));
+        warnIfSnapshotsAreStale(outDir, LocalDate.now(KST));
 
         // 개념 문서는 대상 선정 방식도, 출력 위치(generated/documents/)도 다르다.
         // 한 흐름 안에서 if로 갈라면 두 관심사가 뒤엉키므로 아예 따로 뗀다.
         BatchAction action = decideAction(
                 opts.get("type"), (String) generation.get("batch-type"), plan.documentDay());
         if (action == BatchAction.DOCUMENT) {
-            generateDocument(opts, model, batchDomains, cycleAnchor);
+            generateDocument(opts, model, settings.hints(), batchDomains, cycleAnchor);
             return;
         }
         if (action == BatchAction.SKIP) {
@@ -213,7 +230,7 @@ public final class DraftGeneratorCli {
         // 늘 폴백(5)이 나온다. 컴파일로는 안 걸리는 종류의 실수라 테스트가 따로 지킨다.
         int count = resolveCount(opts, countSpec, difficulty, defaultCount);
 
-        Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
+        // outDir은 앞서(설정 읽기 단계) 이미 정했다 — 여기서 다시 계산하지 않는다.
         Path outFile = outDir.resolve(outFileName(date, opts.get(SUFFIX_OPT)));
 
         // ── 4. 멱등성 — 같은 날짜 파일이 이미 있으면 아무것도 하지 않는다 ──
@@ -278,7 +295,10 @@ public final class DraftGeneratorCli {
                 source == null ? "없음(폴백)" : source.slug(), avoid.size(), rejectionNotes.size());
 
         // ── 7. 실제 호출 ──────────────────────────────────────────
-        List<GeneratedProblemItem> problems = new ClaudeProblemGenerator(model)
+        // hints()는 settings가 비어 있으면 DomainHints.BUILT_IN으로 떨어진다(DomainSettings
+        // Javadoc) — 관리 화면을 아직 안 썼거나 파일이 깨졌을 때도 2026-09-21 이전과 같은
+        // 프롬프트가 나가야 하므로, 여기서 따로 null 방어를 하지 않는다.
+        List<GeneratedProblemItem> problems = new ClaudeProblemGenerator(model, settings.hints())
                 .generate(domain, difficulty, type, count, avoid, rejectionNotes, source);
 
         // 빈 응답은 성공이 아니다 — 조용히 빈 파일을 커밋하면 "돌긴 돌았는데 왜 문제가 없지"가 된다.
@@ -634,10 +654,12 @@ public final class DraftGeneratorCli {
      *       기존 흡수 코드가 파싱에 실패한다({@code GeneratedDocumentFile} 주석 참고).
      * </ul>
      */
-    private static void generateDocument(Map<String, String> opts, String model,
+    private static void generateDocument(Map<String, String> opts, String model, DomainHints hints,
                                          List<Domain> batchDomains, LocalDate cycleAnchor) throws Exception {
         LocalDate date = resolveDate(opts);
-        Path outDir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
+        // main()이 이미 같은 opts로 outDir을 정해 뒀지만, 이 메서드는 main()의 지역 변수를
+        // 볼 수 없어 resolveOutDir로 다시 구한다 — opts가 같으므로 값은 항상 같다.
+        Path outDir = resolveOutDir(opts);
         Path docDir = outDir.resolve(DOCUMENT_SUBDIR);
         // 문서에는 --suffix를 적용하지 않는다(2026-08-29). 근거 문서를 가리키는 유일한 통로가
         // --document-date, 즉 <날짜>인데 접미사가 붙은 문서는 그 이름으로 가리킬 수 없다 —
@@ -681,7 +703,7 @@ public final class DraftGeneratorCli {
         System.out.printf("문서 생성 시작: %s / 주제 %s (모델 %s, 기존 문서 %d편, 태그 %d개)%n",
                 domain, topic == null ? "자동 선택" : topic, model, avoidTitles.size(), tags.size());
 
-        ClaudeDocumentGenerator generator = new ClaudeDocumentGenerator(model);
+        ClaudeDocumentGenerator generator = new ClaudeDocumentGenerator(model, hints);
         GeneratedDocumentItem document = generator.generate(domain, topic, avoidTitles, tags);
 
         // 빈 응답은 성공이 아니다 — job을 실패시켜 메일을 받는 쪽이 낫다(문제 생성과 같은 판단)
@@ -1539,6 +1561,19 @@ public final class DraftGeneratorCli {
             Map<String, Object> llm = (Map<String, Object>) root.get("llm");
             return (Map<String, Object>) llm.get("generation");
         }
+    }
+
+    /**
+     * 결과 디렉터리 — {@code --out} 아니면 {@link #DEFAULT_OUT_DIR}.
+     *
+     * <p>원래는 이 계산이 216번째 줄(문제 흐름)과 640번째 줄(문서 흐름) 두 곳에 따로 있었다.
+     * Task 6에서 분야 설정 파일({@code DomainSettings.read})을 <b>후보 분야를 정하는 자리</b>
+     * (기존 216번째 줄보다 앞선 지점)에서 읽어야 하면서 세 번째 계산 자리가 필요해졌는데,
+     * 문자열 기본값 {@code "generated"}를 또 하드코딩하는 대신 이 헬퍼 하나로 모았다 —
+     * 나중에 기본 출력 경로가 바뀔 때 고칠 자리가 하나뿐이어야 한다.
+     */
+    private static Path resolveOutDir(Map<String, String> opts) {
+        return Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
     }
 
     /** "NETWORK,OS,..." → enum 목록. 비어 있으면 빈 목록(스케줄이 전체 도메인으로 보정한다). */
