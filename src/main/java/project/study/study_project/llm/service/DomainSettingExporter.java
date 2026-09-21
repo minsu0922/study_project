@@ -92,18 +92,6 @@ public class DomainSettingExporter extends SnapshotExporter {
     }
 
     /**
-     * 테스트 전용 통로. {@code build}가 {@code protected}라 테스트 클래스(같은 패키지)에서만
-     * 부를 수 있고, 그마저도 {@link Snapshot}이 아니라 실제로 파일에 실릴 {@link DomainSettingsFile}
-     * 하나만 넘긴다 — 테스트가 {@code Snapshot.detail()} 같은 부수 정보까지 알 필요는 없다.
-     * {@code fileExists}에 항상 {@code true}를 넘기는 것도 의도다: 테스트는 "지금 DB 상태가
-     * 파일에 어떻게 반영되는가"만 보면 되고, 빈 테이블일 때 파일을 만들지 말지 같은 판단은
-     * {@link #build(boolean)} 자체의 단위 관심사가 아니라 이 메서드가 대신 확정해 준다.
-     */
-    DomainSettingsFile snapshotForTest() {
-        return (DomainSettingsFile) build(true).payload();
-    }
-
-    /**
      * 분야 설정이 바뀌면 <b>커밋된 뒤</b> 다시 내보낸다.
      *
      * <p>{@code AFTER_COMMIT}인 이유는 {@code TopicQueueExporter}의 같은 주석 그대로다 — 커밋
