@@ -1,5 +1,6 @@
 package project.study.study_project.quiz;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,7 +9,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.llm.domain.DomainSetting;
+import project.study.study_project.llm.repository.DomainSettingRepository;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -45,6 +51,8 @@ class DomainListIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private DomainSettingRepository domainSettingRepository;
 
     @Test
     @DisplayName("분야 목록을 순환 순서대로 준다 — 화면의 하드코딩을 대신한다")
@@ -61,5 +69,35 @@ class DomainListIntegrationTest {
     @DisplayName("로그인 없이 볼 수 있다 — 문제 목록 화면이 로그인 전에도 필터를 그린다")
     void isPublic() throws Exception {
         mockMvc.perform(get("/api/domains")).andExpect(status().isOk());
+    }
+
+    /**
+     * 꺼진 분야도 목록에서 빠지면 안 된다는 요구사항(클래스 상단 "왜 꺼진 분야도" 참고)을
+     * 실제로 지킨다. 지금 구현({@code DomainSettingService.findAll()})은 {@code enabled}로
+     * 거르지 않아서 통과하지만, 바로 옆 {@code batchDomains()}는 거른다 — 그 한 줄을
+     * {@code findAll()}에 복붙하는 실수 한 번이면 이 테스트 없이는 초록불이 그대로 유지된다.
+     *
+     * <p>여기서 <b>직접</b> 한 분야를 끈다(동기화가 기본으로 꺼 두는 CLOUD_INFRA·INTEGRATED에
+     * 기대지 않는다) — 그 기본값은 {@code application.yml}의 {@code llm.generation.batch-domains}에
+     * 달려 있어서, 그 설정이 늘어나 두 분야가 모두 켜진 채로 태어나게 바뀌면 이 테스트가
+     * 아무것도 검증하지 않는 채로 계속 통과한다. 무엇을 끄는지 이 메서드 안에서 결정해야
+     * "지금 이 테스트가 실제로 꺼진 행을 상대하고 있다"를 읽는 사람이 코드만 보고 확신할 수 있다.
+     * (클래스 롤백 {@code @Transactional}이라 이 변경은 테스트 밖으로 새지 않는다.)
+     */
+    @Test
+    @DisplayName("꺼진 분야도 목록에 남는다 — 이미 그 분야 문제가 있을 수 있어 필터가 이름을 잃으면 안 된다")
+    void includesDisabledDomain() throws Exception {
+        DomainSetting target = domainSettingRepository.findByDomain(Domain.DS_ALGORITHM)
+                .orElseThrow(() -> new AssertionError("동기화가 DS_ALGORITHM 행을 만들어 뒀어야 한다"));
+        target.edit(false, target.getDisplayName(), target.getHint()); // enabled만 끈다
+
+        String body = mockMvc.perform(get("/api/domains"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        List<String> codes = JsonPath.parse(body).read("$.data[*].code");
+
+        // 배치 후보에서 빠졌을 뿐 문제까지 사라진 건 아니다 — 학습자 필터가 여전히
+        // 이 분야 이름을 낼 수 있어야, 그 분야 문제를 풀던 사람이 필터에서 못 찾는 일이 없다.
+        assertThat(codes).contains("DS_ALGORITHM");
     }
 }
