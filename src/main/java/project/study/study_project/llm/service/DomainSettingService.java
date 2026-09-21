@@ -2,13 +2,22 @@ package project.study.study_project.llm.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.repository.DomainSettingRepository;
 import project.study.study_project.llm.support.DomainHints;
+import project.study.study_project.llm.support.GenerationSchedule;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,7 +51,13 @@ import java.util.Set;
 @Service
 public class DomainSettingService {
 
+    /** 미리보기의 "오늘" 기준 — 워크플로가 KST로 변환해 배치에 넘기는 것과 맞춘다. */
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     private final DomainSettingRepository repository;
+
+    /** 설정이 바뀌면 파일 내보내기를 깨운다 — 듣는 쪽은 {@link DomainSettingExporter}. */
+    private final ApplicationEventPublisher events;
 
     /**
      * 새 행의 초기 {@code enabled}·{@code sortOrder}를 정하는 기준 목록.
@@ -54,16 +69,59 @@ public class DomainSettingService {
      */
     private final List<Domain> fallbackBatchDomains;
 
+    /**
+     * 주기의 0일차로 삼을 날 — {@link #preview}가 배치와 같은 위상으로 계산하기 위한 값.
+     *
+     * <p><b>왜 문자열로 받나.</b> {@code DraftGeneratorCli}도 {@code String}으로 받아 손수
+     * {@link LocalDate#parse}한다({@link #parseAnchor} — 그 메서드를 그대로 옮겨 왔다, private
+     * static이라 직접 재사용은 못 한다). {@code List<Domain>}처럼 컨버터가 있는 타입이 아니라
+     * 빈 값 처리에서 Spring이 애매하게 구는 일이 없다 — {@code fallbackBatchDomains}가 빈
+     * 문자열 기본값을 못 쓰는 것과 같은 함정을 여기서는 아예 피해 간다.
+     *
+     * <p><b>거짓 미리보기를 만들면 안 된다.</b> 이 화면이 있는 이유가 "저장하기 전에 실제로
+     * 무엇이 나올지 믿고 보는 것"인데, 다른 앵커로 계산하면 배치가 실제로 도는 위상과 달라져
+     * 화면이 거짓말을 하게 된다(task-9-brief 룰링 2).
+     */
+    private final LocalDate cycleAnchor;
+
     public DomainSettingService(DomainSettingRepository repository,
+                                 ApplicationEventPublisher events,
                                  @Value("${llm.generation.batch-domains:"
                                          + "NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,"
                                          + "LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
-                                 List<Domain> fallbackBatchDomains) {
+                                 List<Domain> fallbackBatchDomains,
+                                 @Value("${llm.generation.cycle-anchor:}") String rawCycleAnchor) {
         this.repository = repository;
+        this.events = events;
         // null 방어만 한다 — LlmProblemService처럼 비었을 때 전체 목록으로 되돌리지 않는다.
         // 여기서 되돌리면 "설정을 지웠는데 모든 분야가 켜진 채로 태어난다"는, 의도와 정반대인
         // 결과가 조용히 생긴다. 빈 목록은 "전부 꺼진 채로 태어남"으로 그대로 흘러가야 안전하다.
         this.fallbackBatchDomains = fallbackBatchDomains == null ? List.of() : List.copyOf(fallbackBatchDomains);
+        this.cycleAnchor = parseAnchor(rawCycleAnchor);
+    }
+
+    /**
+     * 순서 이동 방향. {@code TopicQueueService.Direction}을 빌려 쓰지 않는다 — 그쪽에는
+     * {@code TOP}이 있는데(대기열이 60줄을 넘어가며 생긴 값), 이 목록은 열한 줄뿐이라 "찾아서
+     * 맨 위로"가 필요할 규모가 아니다. 남의 enum을 빌리면 그쪽에 값이 늘 때마다 여기까지
+     * 흔들린다(task-9-brief 룰링 1).
+     */
+    public enum Direction {
+        UP, DOWN
+    }
+
+    /**
+     * 미리보기 한 칸 — 날짜순으로 늘어놓아 "순서를 이렇게 바꾸면 앞으로 며칠이 이렇게 된다"를
+     * 저장 전에 보여 준다({@link #preview}).
+     *
+     * @param date        그 날짜
+     * @param documentDay 문서일인지. {@code true}면 {@code difficulty}는 없다
+     * @param domain      그날 나올 분야 이름({@link Domain#name()})
+     * @param difficulty  문제일의 난이도 이름. 문서일에는 {@code null} —
+     *                    {@link GenerationSchedule.Plan#difficulty()}가 문서일에 null을 주는
+     *                    그대로를 옮긴다(NPE를 피하려 여기서 값을 지어내지 않는다)
+     */
+    public record PreviewCell(LocalDate date, boolean documentDay, String domain, String difficulty) {
     }
 
     /**
@@ -171,5 +229,128 @@ public class DomainSettingService {
     @Transactional(readOnly = true)
     public List<DomainSetting> findAll() {
         return repository.findAllByOrderBySortOrderAsc();
+    }
+
+    /* ── 관리 화면 변경(Task 9) ───────────────────────────────── */
+
+    /**
+     * 분야 하나의 켜짐 여부·이름·힌트를 고친다. 순서는 건드리지 않는다({@link #move}의 몫).
+     *
+     * <p>바뀐 뒤 {@link DomainSettingChanged}를 알려 파일을 다시 내보낸다
+     * ({@link DomainSettingExporter}가 {@code AFTER_COMMIT}에 듣는다) — 그래서 <b>고칠 때마다
+     * 커밋이 필요</b>하고, 커밋하지 않으면 클라우드 배치는 여전히 옛 값으로 돈다.
+     *
+     * @throws BusinessException DOMAIN_001 — enum에는 있는데 행이 없을 때. {@code syncWithEnum}이
+     *                            기동마다 전체 분야에 행을 맞춰 두므로 정상 경로에서는 나지 않는다
+     */
+    @Transactional
+    public void edit(Domain domain, AdminDomainSettingRequest request) {
+        DomainSetting setting = find(domain);
+        setting.edit(request.enabled(), request.displayName(), request.hint());
+        log.info("분야 설정 수정: [{}] enabled={}, displayName={} — 커밋해야 다음 배치부터 반영됩니다",
+                domain, request.enabled(), request.displayName());
+        events.publishEvent(new DomainSettingChanged());
+    }
+
+    /**
+     * 순서 이동 — 이웃과 {@code sortOrder}를 맞바꾼다({@code TopicQueueService.move}와 같은 방식,
+     * 같은 이유는 그 메서드 Javadoc 참고).
+     *
+     * <p><b>맨 위에서 더 올리거나 맨 아래에서 더 내리면 아무 일도 하지 않는다.</b> 오류로
+     * 만들면 화면에서 버튼을 눌러 보는 것 자체가 무서워진다(task-9-brief) — 조용히 무시하는
+     * 편이 "끝에 닿았다"는 사실을 자연스럽게 전달한다.
+     */
+    @Transactional
+    public void move(Domain domain, Direction direction) {
+        List<DomainSetting> all = repository.findAllByOrderBySortOrderAsc();
+        int index = indexOf(all, domain);
+        int target = direction == Direction.UP ? index - 1 : index + 1;
+        if (index < 0 || target < 0 || target >= all.size()) {
+            return; // 없는 분야이거나 이미 끝이다 — 할 일이 없다
+        }
+
+        DomainSetting item = all.get(index);
+        DomainSetting neighbor = all.get(target);
+        // 두 값을 <바꾸기 전에> 붙잡아 둔다 — TopicQueueService.move가 겪은 함정과 같다.
+        // 맞바꾼 뒤에 비교하면 neighbor는 이미 내 값이라 아래 보정 조건이 항상 참이 된다.
+        int mine = item.getSortOrder();
+        int theirs = neighbor.getSortOrder();
+        item.changeOrder(theirs);
+        neighbor.changeOrder(mine);
+        if (mine == theirs) {
+            // 옛 데이터나 동기화 과정에서 순서값이 겹칠 수 있다 — 맞바꿔도 목록이 그대로면
+            // "눌렀는데 안 움직인다"가 되므로 이웃을 한 칸 더 밀어 확실히 가른다.
+            neighbor.changeOrder(mine + (direction == Direction.UP ? 1 : -1));
+        }
+        log.info("분야 설정 순서 이동: [{}] {} — 커밋해야 다음 배치부터 반영됩니다", domain, direction);
+        events.publishEvent(new DomainSettingChanged());
+    }
+
+    /**
+     * 주어진 순서로 앞으로 {@code days}일의 생성 계획을 미리 계산한다 — <b>저장하지 않는다.</b>
+     *
+     * <p>화면이 체크·순서를 바꾼 <b>그 자리에서</b>, 아직 저장 버튼을 누르기 전의 화면 상태를
+     * 그대로 넘겨 부른다. 그래야 "저장하면 무슨 일이 벌어지는지"를 커밋하기 전에 눈으로 볼 수
+     * 있다 — 순환이 분야 두 개에 갇혀 나머지가 개념 문서를 영영 못 받던 사고
+     * ({@code DraftGeneratorCli} 주석 참고)가 저장 <b>후에야</b> 드러나던 것을 막으려는 화면이다.
+     *
+     * <p>앵커는 {@code application.yml}의 {@code llm.generation.cycle-anchor}를 그대로 쓴다
+     * ({@link #cycleAnchor}) — 다른 위상으로 계산하면 배치가 실제로 도는 것과 다른, 거짓
+     * 미리보기가 된다.
+     *
+     * @param domains 후보 분야 — <b>화면이 지금 들고 있는(아직 저장 안 한) 순서</b> 그대로
+     * @param days    미리 볼 일수
+     */
+    @Transactional(readOnly = true)
+    public List<PreviewCell> preview(List<Domain> domains, int days) {
+        LocalDate today = LocalDate.now(KST);
+        List<PreviewCell> cells = new ArrayList<>(days);
+        for (int i = 0; i < days; i++) {
+            LocalDate date = today.plusDays(i);
+            GenerationSchedule.Plan plan = GenerationSchedule.planFor(date, domains, cycleAnchor);
+            // 문서일에는 plan.difficulty()가 null이다(GenerationSchedule.Plan Javadoc) —
+            // 여기서 값을 지어내지 않고 그 null을 그대로 옮긴다. name()을 무조건 부르면
+            // 문서일마다 NPE로 죽는다.
+            String difficulty = plan.documentDay() ? null : plan.difficulty().name();
+            cells.add(new PreviewCell(date, plan.documentDay(), plan.domain().name(), difficulty));
+        }
+        return cells;
+    }
+
+    /* ── 도우미 ───────────────────────────────────────────────── */
+
+    private DomainSetting find(Domain domain) {
+        return repository.findByDomain(domain)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DOMAIN_001));
+    }
+
+    private int indexOf(List<DomainSetting> settings, Domain domain) {
+        for (int i = 0; i < settings.size(); i++) {
+            if (settings.get(i).getDomain() == domain) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * {@code cycle-anchor}를 날짜로 읽는다 — {@code DraftGeneratorCli.parseAnchor}와 <b>같은
+     * 규칙</b>이다(task-9-brief 룰링 2). 그쪽 메서드는 {@code private static}이라 직접 재사용할
+     * 수 없어 그대로 옮겨 왔다 — 두 곳이 갈라지면 배치가 도는 위상과 이 화면의 미리보기가
+     * 서로 다른 답을 낸다.
+     *
+     * <p>값이 비어 있으면(설정을 아직 안 넣은 경우) {@link GenerationSchedule#DEFAULT_ANCHOR}로
+     * 떨어진다 — 앵커가 없던 시절과 같은 위상이라 안전한 기본값이다.
+     */
+    private static LocalDate parseAnchor(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return GenerationSchedule.DEFAULT_ANCHOR;
+        }
+        try {
+            return LocalDate.parse(raw.trim());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "llm.generation.cycle-anchor를 날짜로 읽지 못했습니다(yyyy-MM-dd, 따옴표로 감쌀 것): " + raw, e);
+        }
     }
 }
