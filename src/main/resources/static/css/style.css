@@ -2574,3 +2574,44 @@ a.batch-chip:hover { border-color: var(--primary); background: var(--primary-sof
   .yield-rows { grid-template-columns: 36px 1fr auto; }
   .yield-short { grid-column: 2 / -1; margin-top: -4px; font-size: 12px; }
 }
+
+/* ── 분야 설정 화면(admin/settings.html, Task 10) ──────────────────────
+ *
+ * <table>로 가두지 않은 이유: 한 분야가 체크·순서·이름 한 줄에 이어 힌트 입력칸(여러 줄)과
+ * 프롬프트 미리보기 문장까지 딸려 온다. 표의 칸은 값 하나를 담는 자리라 이런 여러 단짜리
+ * 내용을 넣으면 칸마다 줄바꿈이 다르게 깨진다. 카드 안에 쌓는 줄(.domain-row)로 두면
+ * 줄마다 필요한 만큼 늘어난다 — 다음 7일 미리보기 쪽은 값이 한 줄짜리라 그대로 table.grid를
+ * 쓴다(settings.html의 previewTableHtml). */
+.domain-row { border-bottom: 1px solid var(--border); padding: var(--sp-3) 0; }
+.domain-row:first-child { padding-top: 0; }
+.domain-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+.domain-row-head {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+.domain-row-head label { display: flex; align-items: center; gap: 8px; }
+/* 18px — 텍스트 크기의 체크박스를 그대로 두면 손가락으로는 겨우 맞히는 크기다.
+   버튼(min-height 44px)만큼 키우지 않은 것은 체크박스가 줄 전체가 아니라
+   이름과 나란히 놓이는 인라인 요소라, 너무 크면 줄이 위아래로 들쭉날쭉해진다. */
+.domain-row-head input[type=checkbox] { width: 18px; height: 18px; flex: none; }
+
+/* 이름·힌트 입력칸 — 카드 폭 전부를 쓰지 않고 560px로 접는다. 힌트는 문장 하나짜리
+   경계 설명이라(validation-thresholds 메모) 넓게 펴 봐야 줄만 짧아지고 안 읽기 편해진다. */
+.domain-row-fields { display: grid; gap: var(--sp-2); max-width: 560px; }
+.domain-row-fields .field { margin-bottom: 0; }
+
+/* 남은 글자 수 — 500자를 넘으면(서버가 막기 전에) 색으로 먼저 알린다. */
+.hint-remain { font-size: var(--fs-1); color: var(--muted); font-weight: 400; }
+.hint-remain.over { color: var(--wrong-fg); font-weight: 600; }
+
+/* 프롬프트 미리보기 문장 — 입력칸과 다른 면(옅은 회색 바탕)을 줘서 "여기는 내가 고치는
+   칸이 아니라 결과를 보여주는 자리"라는 것을 구분한다(batch-chip과 같은 카드-안-카드 패턴). */
+.domain-row-preview {
+  font-size: var(--fs-1); color: var(--text-2);
+  background: var(--fill); border-radius: var(--radius);
+  padding: 8px 10px; margin-top: var(--sp-2);
+  max-width: 720px;
+}
+.domain-row-preview code { white-space: pre-wrap; word-break: break-word; color: var(--text); }

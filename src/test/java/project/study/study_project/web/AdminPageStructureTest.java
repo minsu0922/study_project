@@ -45,7 +45,8 @@ class AdminPageStructureTest {
             "generate.html",
             "llm.html",
             "problems.html",
-            "reports.html");
+            "reports.html",
+            "settings.html");
 
     @Test
     @DisplayName("모든 콘솔 화면이 한국어·모바일 대응·제목·공용 스타일을 갖춘다")
