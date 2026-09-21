@@ -290,6 +290,12 @@ class AdminBatchStatusIntegrationTest {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         LocalDate target = today.plusDays(1);
         String filename = cellOf(adminBatchService.getStatus(), target).filename();
+        // 바로 위 테스트와 같은 이유로 들여온 이력을 먼저 지운다. 이 테스트는 <내일>을 보는데,
+        // 개발 PC에는 앞날 파일을 미리 만들어 들여놓은 이력이 남아 있다(2026-09-21에 실제로
+        // 2026-09-22.json이 그랬다). 그러면 칸이 '미리 만들어 둠'이 아니라 '들어옴'으로 잡혀
+        // 날짜가 바뀔 때마다 테스트가 붙었다 떨어졌다 한다 — 코드가 아니라 달력이 결과를 정한다.
+        // (@Transactional이 이 삭제도 되돌리므로 실제 DB는 그대로다.)
+        importedDraftFileRepository.deleteById(filename);
 
         writeByName(filename);
 
