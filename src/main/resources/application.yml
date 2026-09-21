@@ -207,9 +207,10 @@ llm:
     # 앱(@Value)이 둘 다 읽는데, 중첩 맵이면 꺼내는 코드가 두 벌이 된다. batch-domains와 같은 모양.
     batch-count-by-difficulty: BEGINNER=7,INTERMEDIATE=5,ADVANCED=3
     # 배치가 "알아서 고를" 때의 후보 도메인. 이 프로젝트의 목적은 백엔드 면접 대비인데
-    # (Domain.java 주석: "사용자(백엔드 개발자)의 주력 스택") 전체 11개를 균등하게 채우면
+    # (Domain.java 주석: "사용자(백엔드 개발자)의 주력 스택") 전체를 균등하게 채우면
     # 매일 나오는 문제의 상당수가 관심 밖 영역이 된다 — 8개로 좁혀 24칸을 24일에 한 바퀴 돈다.
-    # 제외: CLOUD_INFRA, FRONTEND_CS, INTEGRATED.
+    # 제외: SOFTWARE_ENGINEERING, CLOUD_INFRA, INTEGRATED.
+    # (FRONTEND_CS는 2026-09-21에 enum에서 아예 삭제했다 — 이유는 Domain.java 주석)
     # 여기서 빠진 도메인도 관리자 화면에서 "직접 지정"하면 그대로 생성된다(제한은 자동 선택에만 적용).
     # 이 목록의 순서가 곧 날짜 순환 순서다(GenerationSchedule) — 순서를 바꾸면 그날 나올 칸이 바뀐다.
     batch-domains: NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK

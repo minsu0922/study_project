@@ -15,7 +15,7 @@ enum(이넘)은 **"정해진 보기 중에서만 고르게 하는 값"**이다. 
 
 ---
 
-## Domain (12개)
+## Domain (11개)
 
 | enum 상수 | displayName | 비고 |
 |---|---|---|
@@ -29,8 +29,10 @@ enum(이넘)은 **"정해진 보기 중에서만 고르게 하는 값"**이다. 
 | `LANGUAGE_RUNTIME` | 언어·런타임 | 순수 Java/JVM — GC·메모리·동시성 |
 | `BACKEND_FRAMEWORK` | 스프링·백엔드 | Spring DI/AOP/트랜잭션, JPA, 커넥션 풀 등 (LLM 문제 생성 도입 시 신설 — docs/13) |
 | `CLOUD_INFRA` | 클라우드·인프라 | |
-| `FRONTEND_CS` | 프론트엔드CS | 브라우저·렌더링 등 |
 | `INTEGRATED` | 통합시나리오 | 여러 도메인 결합 문제 |
+
+> `FRONTEND_CS`(프론트엔드CS)는 2026-09-21에 삭제했다. 백엔드 면접 대비라는 목적과 맞지 않아
+> 배치 후보에서도 빠져 있었고, 저장된 행이 6개 테이블 전부 0건이라 지워도 깨지는 조회가 없었다.
 
 ```java
 public enum Domain {
@@ -44,7 +46,6 @@ public enum Domain {
     LANGUAGE_RUNTIME("언어·런타임"),
     BACKEND_FRAMEWORK("스프링·백엔드"),
     CLOUD_INFRA("클라우드·인프라"),
-    FRONTEND_CS("프론트엔드CS"),
     INTEGRATED("통합시나리오");
 
     private final String displayName;

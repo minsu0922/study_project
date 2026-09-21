@@ -489,7 +489,7 @@ class LlmProblemServiceTest {
         @DisplayName("도메인을 지정하지 않으면 batch-domains 후보 안에서만 고른다 — 후보 밖이 더 비어 있어도 뽑지 않는다")
         void autoPickStaysWithinBatchDomains() {
             service = newService(List.of(Domain.NETWORK, Domain.OS));
-            // 후보인 NETWORK·OS는 문제가 꽉 차 있고, 후보가 아닌 FRONTEND_CS는 집계에 없다(=0건)
+            // 후보인 NETWORK·OS는 문제가 꽉 차 있고, 후보가 아닌 INTEGRATED는 집계에 없다(=0건)
             when(problemRepository.countGroupByDomainAndDifficulty()).thenReturn(List.of(
                     new CountRow(Domain.NETWORK, Difficulty.BEGINNER, 10),
                     new CountRow(Domain.NETWORK, Difficulty.INTERMEDIATE, 10),
@@ -501,7 +501,7 @@ class LlmProblemServiceTest {
 
             service.generate(new LlmGenerateRequest(null, null, null, 1));
 
-            // 가장 비어 있는 칸은 FRONTEND_CS(0건)지만 후보가 아니므로, 후보 중 최소인 OS×초급이 뽑힌다
+            // 가장 비어 있는 칸은 INTEGRATED(0건)지만 후보가 아니므로, 후보 중 최소인 OS×초급이 뽑힌다
             assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.OS);
             assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.BEGINNER);
         }
@@ -509,12 +509,12 @@ class LlmProblemServiceTest {
         @Test
         @DisplayName("도메인을 직접 지정하면 batch-domains 후보 밖이어도 생성한다 — 제한은 자동 선택에만 적용")
         void explicitDomainIgnoresBatchDomainFilter() {
-            service = newService(List.of(Domain.NETWORK, Domain.OS)); // FRONTEND_CS는 후보가 아님
-            fakeGenerator.toReturn = List.of(mcItem("브라우저 렌더링 문제", 0));
+            service = newService(List.of(Domain.NETWORK, Domain.OS)); // INTEGRATED는 후보가 아님
+            fakeGenerator.toReturn = List.of(mcItem("여러 분야를 엮은 문제", 0));
 
-            service.generate(new LlmGenerateRequest(Domain.FRONTEND_CS, Difficulty.BEGINNER, null, 1));
+            service.generate(new LlmGenerateRequest(Domain.INTEGRATED, Difficulty.BEGINNER, null, 1));
 
-            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.FRONTEND_CS);
+            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.INTEGRATED);
         }
 
         @Test

@@ -33,7 +33,14 @@ public enum Domain {
     // STRING 저장이라 상수 추가는 기존 데이터에 영향 없음(마이그레이션 불필요).
     BACKEND_FRAMEWORK("스프링·백엔드"),
     CLOUD_INFRA("클라우드·인프라"),
-    FRONTEND_CS("프론트엔드CS"),
+    // 프론트엔드CS(브라우저·렌더링)는 2026-09-21에 뺐다. 이 프로젝트의 목적은 백엔드 면접
+    // 대비인데 그 칸은 배치 후보에서도 빠져 있어(application.yml batch-domains) 자동 생성이
+    // 한 번도 안 돌았고, 실제로 6개 테이블 전부 해당 행이 0건이었다 — 그래서 지워도
+    // 깨지는 조회가 없었다. 칸을 남겨 두면 관리자 화면의 필터·통계 목록에 계속 끼어들어
+    // "채울 계획이 없는 빈 칸"을 만든다(AdminStatsService 주석의 그 문제).
+    //
+    // 되살릴 일이 생기면 상수만 다시 추가하면 된다. 컬럼이 VARCHAR(30)이라
+    // 마이그레이션이 필요 없다(ORDINAL이 아니라 STRING으로 저장하기 때문).
     INTEGRATED("통합시나리오");
 
     private final String displayName;

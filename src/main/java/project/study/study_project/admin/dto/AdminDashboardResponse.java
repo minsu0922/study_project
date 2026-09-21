@@ -50,7 +50,7 @@ public record AdminDashboardResponse(
      * @param emptyCells            출제가 하나도 없는 (분야 × 난이도) 칸 수
      * @param plannedCells          채울 계획이 있는 칸 수 = {@code batch-domains} × 난이도 3.
      *                              <b>화면의 분야 목록으로 세면 안 된다</b> — 거기에는 배치가
-     *                              건드리지 않는 분야(클라우드·프론트엔드CS 등)까지 들어 있어,
+     *                              건드리지 않는 분야(클라우드·통합시나리오 등)까지 들어 있어,
      *                              채울 계획도 없는 칸이 "빈 칸"으로 잡힌다. 늘 커다란 숫자가
      *                              떠 있으면 사람은 그 타일을 아예 안 보게 된다
      */

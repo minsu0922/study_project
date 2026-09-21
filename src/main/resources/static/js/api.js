@@ -166,7 +166,7 @@ const DOMAINS = [
   ["DS_ALGORITHM", "자료구조·알고리즘"], ["SYSTEM_DESIGN", "시스템설계"],
   ["SOFTWARE_ENGINEERING", "소프트웨어공학"], ["SECURITY", "보안"],
   ["LANGUAGE_RUNTIME", "언어·런타임"], ["BACKEND_FRAMEWORK", "스프링·백엔드"], ["CLOUD_INFRA", "클라우드·인프라"],
-  ["FRONTEND_CS", "프론트엔드CS"], ["INTEGRATED", "통합시나리오"],
+  ["INTEGRATED", "통합시나리오"],
 ];
 const DIFFICULTIES = [["BEGINNER", "초급"], ["INTERMEDIATE", "중급"], ["ADVANCED", "고급"]];
 // ESSAY는 자동채점 미지원이라 화면에서도 제외한다(ProblemType.isAutoScored와 같은 기준).
