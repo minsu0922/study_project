@@ -12,6 +12,7 @@ import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.llm.support.DomainHints;
 
 import java.util.List;
 
@@ -576,8 +577,30 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
 
     private final String model;
 
+    /**
+     * 분야 경계 설명. 예전에는 {@code switch}로 코드에 박혀 있었는데, 그 한 줄이 생성 품질을
+     * 직접 흔드는 값인데도 고치려면 재배포가 필요했다. 이제 관리자 화면에서 고치고
+     * {@code generated/_domain-settings.json}으로 배치까지 나른다(docs/21).
+     *
+     * <p>문제 생성기와 같은 값을 쓴다 — 한쪽만 바뀌면 "문서는 절차를 썼는데 문제는 부하를
+     * 묻는" 어긋남이 생긴다(위 클래스 주석의 09-03 개정과 같은 이유).
+     */
+    private final DomainHints domainHints;
+
+    /** 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다. */
     public ClaudeDocumentGenerator(@Value("${llm.generation.model:claude-opus-5}") String model) {
+        this(model, DomainHints.BUILT_IN);
+    }
+
+    /**
+     * 관리자 화면에서 고친 힌트를 주입받는 생성자 — Task 6에서 스프링 빈 등록에 쓴다.
+     *
+     * <p>{@code @Value}를 여기 붙이지 않는 이유는 {@link ClaudeProblemGenerator}의 같은
+     * 생성자와 같다 — 두 생성자 모두 붙으면 스프링이 어느 것을 쓸지 판단하지 못한다.
+     */
+    public ClaudeDocumentGenerator(String model, DomainHints domainHints) {
         this.model = model;
+        this.domainHints = domainHints;
     }
 
     @Override
@@ -1238,7 +1261,7 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     String buildPrompt(Domain domain, String topic,
                        List<String> avoidTitles, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
-        sb.append("분야: ").append(domain.getDisplayName()).append(domainHint(domain)).append('\n');
+        sb.append("분야: ").append(domain.getDisplayName()).append(domainHints.hintFor(domain)).append('\n');
 
         if (topic != null && !topic.isBlank()) {
             // 이 값은 대개 "Spring", "JVM 메모리" 같은 <범위>다(주제 범위 목록에서 온다).
@@ -1343,7 +1366,7 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      */
     String buildAdvancedPrompt(Domain domain, GeneratedDocumentItem beginner, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
-        sb.append("분야: ").append(domain.getDisplayName()).append(domainHint(domain)).append("\n\n");
+        sb.append("분야: ").append(domain.getDisplayName()).append(domainHints.hintFor(domain)).append("\n\n");
         // 값을 채우는 자리에 규칙을 붙인다 — 시스템 프롬프트에도 같은 지시가 있지만,
         // 붙일 대상(입문편 제목·slug)이 요청마다 바뀌는 값이라 거기에는 실물을 적을 수 없다.
         // 규칙과 재료가 떨어져 있으면 지켜지지 않는다는 것을 이 파이프라인에서 여러 번 겪었다.
@@ -1373,25 +1396,7 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
         return sb.toString();
     }
 
-    /**
-     * 분야 범위 힌트 — 문제 생성기와 같은 이유로 스프링·백엔드와 언어·런타임의 경계를 명시한다
-     * (둘 다 "Java 관련"이라 모델이 헷갈린다, docs/02의 구분 기준).
-     */
-    private String domainHint(Domain domain) {
-        return switch (domain) {
-            case BACKEND_FRAMEWORK ->
-                    " (Spring DI/IoC·Bean 생명주기·AOP·@Transactional 전파·MVC 흐름, JPA 영속성 컨텍스트·지연 로딩·N+1, 커넥션 풀·서블릿 컨테이너. 순수 JVM/GC 주제는 제외)";
-            case LANGUAGE_RUNTIME ->
-                    " (Java 언어·JVM 내부: 메모리 구조·GC·클래스로딩·동시성. Spring/JPA 등 프레임워크 주제는 제외)";
-            // 문서 쪽에도 같은 경계를 준다. 한쪽만 알면 "문서는 절차를 썼는데 문제는 부하를 묻는"
-            // 어긋남이 생기고, 그건 근거 문서를 준 목적을 통째로 무너뜨린다.
-            case SOFTWARE_ENGINEERING ->
-                    " (요구사항 분석·UML·디자인 패턴·테스트 기법·형상관리·개발방법론. "
-                            + "즉 사람이 코드를 만들고 관리하는 절차. 부하·확장·장애처럼 돌아가는 시스템을 다루는 주제는 제외)";
-            case SYSTEM_DESIGN ->
-                    " (돌아가는 시스템의 구조: 부하 분산·캐시 계층·확장·장애 대응·데이터 흐름. "
-                            + "요구사항·UML·테스트 기법 같은 개발 절차 주제는 제외)";
-            default -> "";
-        };
-    }
+    // domainHint(Domain)는 Task 2에서 지웠다 — DomainHints.hintFor(Domain)로 대체됐다.
+    // 문구 자체는 DomainHints.BUILT_IN에 그대로 옮겨 뒀다(문자 단위 대조 완료, docs/21).
+    // 문제 생성기와 같은 값을 쓰는 이유는 위 domainHints 필드 주석 참고.
 }

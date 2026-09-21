@@ -6,10 +6,12 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.support.DocumentEditionRule;
+import project.study.study_project.llm.support.DomainHints;
 import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -1154,5 +1156,38 @@ class ClaudeProblemGeneratorPromptTest {
     private String prompt(Difficulty difficulty, SourceDocument source) {
         return generator.buildPrompt(Domain.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
                 5, List.of(), List.of(), source, null);
+    }
+
+    /**
+     * Task 2 — 생성기가 {@link DomainHints}를 주입받는다(docs/21).
+     *
+     * <p>여기서 지키는 것은 "설정에서 온 힌트가 내장값을 <b>덮어쓰는가</b>"다. 이전에는
+     * {@code domainHint(Domain)}가 switch로 코드에 박혀 있어, 힌트 문구를 고치려면 재배포가
+     * 필요했다. 관리자 화면에서 고친 값이 재배포 없이 프롬프트에 실려야 그 화면이 의미가 있다.
+     */
+    @Test
+    @DisplayName("주입한 힌트가 프롬프트에 실린다 — 재배포 없이 경계를 고칠 수 있어야 한다")
+    void injectedHintAppearsInPrompt() {
+        ClaudeProblemGenerator custom = new ClaudeProblemGenerator(
+                "claude-opus-5", DomainHints.of(Map.of(Domain.NETWORK, "TCP 혼잡 제어 위주")));
+
+        String prompt = custom.buildPrompt(Domain.NETWORK, Difficulty.BEGINNER,
+                ProblemType.MULTIPLE_CHOICE, 1, List.of(), List.of(), null, null);
+
+        assertThat(prompt).contains("(TCP 혼잡 제어 위주)");
+    }
+
+    /**
+     * <b>설정이 없는 환경(테스트·평가 CLI)이 지금과 똑같이 동작해야 한다.</b> 한 인자 생성자가
+     * {@link DomainHints#BUILT_IN}으로 위임하는 동작을 검증한다 — 이게 깨지면 여섯 호출부가
+     * 전부 조용히 힌트를 잃는다.
+     */
+    @Test
+    @DisplayName("힌트를 안 주면 내장값으로 돈다 — 설정이 없는 환경에서도 지금과 같아야 한다")
+    void fallsBackToBuiltInHints() {
+        String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, Difficulty.BEGINNER,
+                ProblemType.MULTIPLE_CHOICE, 1, List.of(), List.of(), null, null);
+
+        assertThat(prompt).contains("Spring DI/IoC");
     }
 }
