@@ -177,7 +177,7 @@ public final class DraftGeneratorCli {
                 ? parseDomains((String) generation.get("batch-domains"))
                 : settings.batchDomains();
         // 주기의 0일차로 삼을 날. 값이 없으면 에포크 = 앵커가 없던 시절과 같은 위상이다.
-        LocalDate cycleAnchor = parseAnchor((String) generation.get("cycle-anchor"));
+        LocalDate cycleAnchor = GenerationSchedule.parseAnchor((String) generation.get("cycle-anchor"));
 
         // ── 2. 중단 스위치 ────────────────────────────────────────
         // 값이 없으면 켜진 것으로 본다 — 설정 키가 사라졌다고 배치가 멈추면
@@ -1585,29 +1585,14 @@ public final class DraftGeneratorCli {
                 .map(Domain::valueOf).toList();
     }
 
-    /**
-     * {@code cycle-anchor} 설정값 → 날짜. 비어 있으면 {@link GenerationSchedule#DEFAULT_ANCHOR}.
-     *
-     * <p><b>오타는 조용히 넘기지 않는다.</b> 다른 설정(예: {@code batch-type})은 모르는 값이 오면
-     * 기본값으로 돌아가는데, 여기서는 그러면 안 된다 — 앵커가 조용히 에포크로 되돌아가면
-     * <b>주기 전체가 어제와 다른 날에 떨어지고</b>, 그 사실이 며칠 뒤 "왜 오늘 문서가 안 나오지"로만
-     * 드러난다. 배치가 그날 안 도는 편이 위상이 몰래 바뀌는 것보다 낫다.
-     *
-     * <p>{@code yyyy-MM-dd}로 적어야 한다. YAML이 따옴표 없는 날짜를 {@code java.util.Date}로
-     * 바꿔 버리는 경우가 있어 <b>문자열로 받아 직접 파싱한다</b> — 타입이 오락가락하면
-     * {@code ClassCastException}이 나고, 그건 오타보다 원인을 찾기 어렵다.
-     */
-    private static LocalDate parseAnchor(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return GenerationSchedule.DEFAULT_ANCHOR;
-        }
-        try {
-            return LocalDate.parse(raw.trim());
-        } catch (java.time.format.DateTimeParseException e) {
-            throw new IllegalArgumentException(
-                    "llm.generation.cycle-anchor를 날짜로 읽지 못했습니다(yyyy-MM-dd, 따옴표로 감쌀 것): " + raw, e);
-        }
-    }
+    // cycle-anchor 파싱은 2026-09-21에 GenerationSchedule.parseAnchor로 옮겼다. Task 9의
+    // DomainSettingService(관리 화면 미리보기)가 같은 로직을 그대로 복사해 두 벌이 됐던 것을
+    // 코드 리뷰에서 지적받았다 — 한쪽만 규칙이 바뀌면 미리보기 화면과 실제 배치가 서로 다른
+    // 위상으로 계산하게 되는데, 그 어긋남이야말로 그 화면이 없애려던 실패 그 자체다.
+    // GenerationSchedule이 이미 DEFAULT_ANCHOR와 주기 계산을 들고 있고 Spring 의존이 없어
+    // 자연스러운 자리라 그쪽으로 합쳤다. 호출부(main()의 "설정 읽기" 단계, cycle-anchor를
+    // 읽는 자리)는 GenerationSchedule.parseAnchor를 직접 부른다 — 규칙과 그 이유(오타를
+    // 조용히 넘기지 않는 이유 포함)는 그 메서드 Javadoc에 있다.
 
     /** {@code --key=value} 형태만 받는다. 빈 값(--domain=)은 "지정 안 함"으로 본다 — 워크플로 입력이 비면 그렇게 온다. */
     static Map<String, String> parseArgs(String[] args) {

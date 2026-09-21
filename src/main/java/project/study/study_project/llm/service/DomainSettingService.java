@@ -16,7 +16,6 @@ import project.study.study_project.llm.support.GenerationSchedule;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -72,11 +71,16 @@ public class DomainSettingService {
     /**
      * 주기의 0일차로 삼을 날 — {@link #preview}가 배치와 같은 위상으로 계산하기 위한 값.
      *
-     * <p><b>왜 문자열로 받나.</b> {@code DraftGeneratorCli}도 {@code String}으로 받아 손수
-     * {@link LocalDate#parse}한다({@link #parseAnchor} — 그 메서드를 그대로 옮겨 왔다, private
-     * static이라 직접 재사용은 못 한다). {@code List<Domain>}처럼 컨버터가 있는 타입이 아니라
-     * 빈 값 처리에서 Spring이 애매하게 구는 일이 없다 — {@code fallbackBatchDomains}가 빈
-     * 문자열 기본값을 못 쓰는 것과 같은 함정을 여기서는 아예 피해 간다.
+     * <p><b>왜 문자열로 받나.</b> {@code DraftGeneratorCli}도 {@code String}으로 받아
+     * {@link GenerationSchedule#parseAnchor}로 파싱한다. {@code List<Domain>}처럼 컨버터가
+     * 있는 타입이 아니라 빈 값 처리에서 Spring이 애매하게 구는 일이 없다 —
+     * {@code fallbackBatchDomains}가 빈 문자열 기본값을 못 쓰는 것과 같은 함정을 여기서는
+     * 아예 피해 간다.
+     *
+     * <p><b>파싱 로직은 {@link GenerationSchedule#parseAnchor}로 합쳐져 있다</b>(2026-09-21).
+     * 처음에는 {@code DraftGeneratorCli}의 같은 메서드를 그대로 복사해 두 벌로 뒀는데, 코드
+     * 리뷰에서 그 중복이 지적받았다 — 한쪽만 규칙이 바뀌면 이 화면의 미리보기와 실제 배치가
+     * <b>서로 다른 위상</b>을 계산하게 되고, 그것이 바로 이 화면이 없애려던 실패다.
      *
      * <p><b>거짓 미리보기를 만들면 안 된다.</b> 이 화면이 있는 이유가 "저장하기 전에 실제로
      * 무엇이 나올지 믿고 보는 것"인데, 다른 앵커로 계산하면 배치가 실제로 도는 위상과 달라져
@@ -97,7 +101,7 @@ public class DomainSettingService {
         // 여기서 되돌리면 "설정을 지웠는데 모든 분야가 켜진 채로 태어난다"는, 의도와 정반대인
         // 결과가 조용히 생긴다. 빈 목록은 "전부 꺼진 채로 태어남"으로 그대로 흘러가야 안전하다.
         this.fallbackBatchDomains = fallbackBatchDomains == null ? List.of() : List.copyOf(fallbackBatchDomains);
-        this.cycleAnchor = parseAnchor(rawCycleAnchor);
+        this.cycleAnchor = GenerationSchedule.parseAnchor(rawCycleAnchor);
     }
 
     /**
@@ -333,24 +337,7 @@ public class DomainSettingService {
         return -1;
     }
 
-    /**
-     * {@code cycle-anchor}를 날짜로 읽는다 — {@code DraftGeneratorCli.parseAnchor}와 <b>같은
-     * 규칙</b>이다(task-9-brief 룰링 2). 그쪽 메서드는 {@code private static}이라 직접 재사용할
-     * 수 없어 그대로 옮겨 왔다 — 두 곳이 갈라지면 배치가 도는 위상과 이 화면의 미리보기가
-     * 서로 다른 답을 낸다.
-     *
-     * <p>값이 비어 있으면(설정을 아직 안 넣은 경우) {@link GenerationSchedule#DEFAULT_ANCHOR}로
-     * 떨어진다 — 앵커가 없던 시절과 같은 위상이라 안전한 기본값이다.
-     */
-    private static LocalDate parseAnchor(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return GenerationSchedule.DEFAULT_ANCHOR;
-        }
-        try {
-            return LocalDate.parse(raw.trim());
-        } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException(
-                    "llm.generation.cycle-anchor를 날짜로 읽지 못했습니다(yyyy-MM-dd, 따옴표로 감쌀 것): " + raw, e);
-        }
-    }
+    // cycle-anchor 파싱은 2026-09-21에 GenerationSchedule.parseAnchor로 합쳤다(위 cycleAnchor
+    // 필드 Javadoc 참고) — DraftGeneratorCli와 이 서비스가 각자 같은 로직을 복사해 두 벌로
+    // 두면, 한쪽만 바뀌었을 때 미리보기 화면과 배치가 서로 다른 위상을 계산하게 된다.
 }

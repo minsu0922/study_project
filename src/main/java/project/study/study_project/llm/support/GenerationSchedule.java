@@ -4,6 +4,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
@@ -156,5 +157,40 @@ public final class GenerationSchedule {
 
     private static List<Domain> candidates(List<Domain> domains) {
         return (domains == null || domains.isEmpty()) ? List.of(Domain.values()) : domains;
+    }
+
+    /**
+     * {@code cycle-anchor} 설정값 → 날짜. 비어 있으면 {@link #DEFAULT_ANCHOR}.
+     *
+     * <p><b>2026-09-21에 {@code DraftGeneratorCli.parseAnchor}에서 이리로 옮겼다.</b> 관리
+     * 화면의 "다음 7일 미리보기"(Task 9, {@code DomainSettingService})가 배치와 같은 위상으로
+     * 계산하려면 <b>같은 파싱 규칙</b>을 써야 하는데, 처음에는 그 규칙을 그대로 복사해 두
+     * 벌로 두었다. 코드 리뷰에서 그 중복을 지적받았다 — 둘 중 하나만(예: 기본값 처리,
+     * 오류 처리) 바뀌면 미리보기 화면이 실제 배치와 <b>다른 위상</b>으로 계산하게 되고,
+     * 그 어긋남은 이 화면이 애초에 없애려던 실패(순환이 뒤틀려도 배치가 오류 없이 도는 것)와
+     * 정확히 같은 모양이다. 이 클래스는 이미 {@link #DEFAULT_ANCHOR}와 주기 계산을 들고
+     * 있고 Spring 의존이 없어 두 호출자(배치 CLI, 관리 서비스) 모두가 기댈 수 있는 자리다.
+     *
+     * <p><b>오타는 조용히 넘기지 않는다.</b> 다른 설정(예: {@code batch-type})은 모르는 값이 오면
+     * 기본값으로 돌아가는데, 여기서는 그러면 안 된다 — 앵커가 조용히 에포크로 되돌아가면
+     * <b>주기 전체가 어제와 다른 날에 떨어지고</b>, 그 사실이 며칠 뒤 "왜 오늘 문서가 안 나오지"로만
+     * 드러난다. 배치가 그날 안 도는 편이 위상이 몰래 바뀌는 것보다 낫다.
+     *
+     * <p>{@code yyyy-MM-dd}로 적어야 한다. YAML이 따옴표 없는 날짜를 {@code java.util.Date}로
+     * 바꿔 버리는 경우가 있어 <b>문자열로 받아 직접 파싱한다</b> — 타입이 오락가락하면
+     * {@code ClassCastException}이 나고, 그건 오타보다 원인을 찾기 어렵다.
+     *
+     * @throws IllegalArgumentException raw가 {@code yyyy-MM-dd} 형식이 아닐 때
+     */
+    public static LocalDate parseAnchor(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return DEFAULT_ANCHOR;
+        }
+        try {
+            return LocalDate.parse(raw.trim());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "llm.generation.cycle-anchor를 날짜로 읽지 못했습니다(yyyy-MM-dd, 따옴표로 감쌀 것): " + raw, e);
+        }
     }
 }

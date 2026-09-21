@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 날짜 순환 규칙 테스트 — docs/14(칸 순환), docs/15(4일 주기).
@@ -285,6 +286,45 @@ class GenerationScheduleTest {
                 .isEqualTo(DOMAINS.get(0));
         assertThat(GenerationSchedule.planFor(anchor.plusDays(GenerationSchedule.CYCLE_DAYS), DOMAINS, anchor).domain())
                 .isEqualTo(DOMAINS.get(1));
+    }
+
+    /* ══ 2026-09-21: cycle-anchor 파싱 — DraftGeneratorCli에서 이리로 옮겨 왔다 ══════
+     *
+     * DraftGeneratorCli(배치 CLI)와 DomainSettingService(관리 화면 미리보기)가 같은 파싱
+     * 로직을 각자 복사해 두 벌로 뒀던 것을 GenerationSchedule.parseAnchor 한 곳으로 합쳤다.
+     * 두 호출자 모두 이 메서드 하나에 기대므로, 규칙이 지켜지는지는 여기서만 못 박으면
+     * 충분하다 — 특히 아래 "오타는 예외로 죽는다" 케이스가 가장 중요하다. 여기서 조용히
+     * 기본값으로 넘어가면 앵커가 몰래 에포크로 돌아가고, 그 결과 순환 전체가 다른 날짜에
+     * 떨어지는데도 배치는 오류 없이 계속 돈다 — 며칠 뒤 "왜 오늘 문서가 안 나오지"로만
+     * 드러나는, 이 프로젝트가 가장 경계하는 실패 모양이다. */
+
+    @Test
+    @DisplayName("cycle-anchor가 비어 있거나 null이면 DEFAULT_ANCHOR로 떨어진다")
+    void parseAnchorFallsBackToDefaultWhenBlank() {
+        assertThat(GenerationSchedule.parseAnchor(null)).isEqualTo(GenerationSchedule.DEFAULT_ANCHOR);
+        assertThat(GenerationSchedule.parseAnchor("")).isEqualTo(GenerationSchedule.DEFAULT_ANCHOR);
+        assertThat(GenerationSchedule.parseAnchor("   ")).isEqualTo(GenerationSchedule.DEFAULT_ANCHOR);
+    }
+
+    @Test
+    @DisplayName("yyyy-MM-dd 형식이면 그 날짜로 파싱한다 — 앞뒤 공백은 잘라낸다")
+    void parseAnchorParsesValidDate() {
+        assertThat(GenerationSchedule.parseAnchor("2026-09-03")).isEqualTo(LocalDate.of(2026, 9, 3));
+        assertThat(GenerationSchedule.parseAnchor("  2026-09-03  ")).isEqualTo(LocalDate.of(2026, 9, 3));
+    }
+
+    /**
+     * <b>가장 중요한 케이스.</b> 다른 설정(예: {@code batch-type})은 오타가 나면 조용히 기본값으로
+     * 돌아가지만, 앵커는 그러면 안 된다 — 조용한 기본값 복귀가 순환의 위상을 몰래 옮긴다.
+     * 배치가 그날 예외로 죽는 편이, 위상이 아무도 모르게 바뀌는 것보다 낫다.
+     */
+    @Test
+    @DisplayName("형식이 틀린 값은 조용히 넘기지 않고 예외로 죽는다 — 오타로 위상이 몰래 바뀌면 안 된다")
+    void parseAnchorRejectsMalformedValue() {
+        assertThatThrownBy(() -> GenerationSchedule.parseAnchor("2026/09/03"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("llm.generation.cycle-anchor")
+                .hasMessageContaining("2026/09/03");
     }
 
     /** 주어진 날짜가 속한 주기의 0일차. 테스트가 특정 요일에만 통과하는 일을 막는다. */
