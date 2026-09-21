@@ -1,6 +1,9 @@
 package project.study.study_project.llm.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.domain.DomainSetting;
 
@@ -22,4 +25,26 @@ public interface DomainSettingRepository extends JpaRepository<DomainSetting, Do
     List<DomainSetting> findAllByOrderBySortOrderAsc();
 
     Optional<DomainSetting> findByDomain(Domain domain);
+
+    /**
+     * enum 변환을 거치지 않고 {@code domain} 컬럼 문자열을 그대로 읽는다(4번 작업의 동기화 전용).
+     *
+     * <p>{@link #findAll()}·{@link #findAllByOrderBySortOrderAsc()}는 행마다 {@link Domain}으로
+     * 변환하며 읽는다({@code @Enumerated(EnumType.STRING)}이 내부적으로 {@code Enum.valueOf}를
+     * 쓴다). 그런데 동기화가 지워야 할 대상이 바로 "enum에 없는 이름을 가진 행"이다 —
+     * 그 행 하나 때문에 변환이 {@code IllegalArgumentException}을 던지면, 고아 행을
+     * <b>찾으려는 조회 자체가</b> 먼저 죽는다. 그래서 이 조회만은 변환을 타지 않는 네이티브
+     * SQL로 우회한다.
+     */
+    @Query(value = "SELECT domain FROM domain_setting", nativeQuery = true)
+    List<String> findAllDomainNamesNative();
+
+    /**
+     * 위와 같은 이유로 지우기도 네이티브로 한다. enum으로 바꿀 수 없는 값이라
+     * {@code deleteByDomain(Domain)} 같은 파생 쿼리를 쓸 수 없고, 파라미터도 문자열로 그대로
+     * 바인딩한다.
+     */
+    @Modifying
+    @Query(value = "DELETE FROM domain_setting WHERE domain = :domainName", nativeQuery = true)
+    void deleteByDomainNameNative(@Param("domainName") String domainName);
 }
