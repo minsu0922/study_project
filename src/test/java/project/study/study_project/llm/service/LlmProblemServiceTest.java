@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -114,14 +115,25 @@ class LlmProblemServiceTest {
         lenient().when(draftRepository.findRecentRejectionNotes(any())).thenReturn(List.of());
     }
 
-    /** 후보 도메인만 바꿔 서비스를 다시 만드는 헬퍼 — batch-domains 동작 검증용. */
+    /**
+     * 후보 도메인만 바꿔 서비스를 다시 만드는 헬퍼 — batch-domains 동작 검증용.
+     *
+     * <p>Task 7(2026-09-21) 전에는 이 목록을 생성자 인자로 그대로 넘겼다. 지금은 서비스가
+     * {@link DomainSettingService}를 참조로 들고 있다가 호출 때마다 {@code batchDomains()}를
+     * 다시 읽으므로, 테스트도 같은 모양으로 맞춘다 — 목록을 넘기는 자리만 바뀌었을 뿐 그
+     * 목록이 하는 일(부족 칸 자동 선택의 후보 제한)은 그대로다.
+     */
     private LlmProblemService newService(List<Domain> batchDomains) {
+        DomainSettingService domainSettingService = mock(DomainSettingService.class);
+        // lenient: 도메인을 직접 지정하는 테스트(explicitDomainIgnoresBatchDomainFilter 등)는
+        // 이 값을 아예 읽지 않아 stubbing이 "쓰이지 않음"으로 잡힐 수 있다.
+        lenient().when(domainSettingService.batchDomains()).thenReturn(batchDomains);
         // ObjectMapper는 실물 사용 — JSON 직렬화가 이 서비스의 실제 책임이라 가짜로 대체하면 검증이 빈다
         // reportService는 null — 이 테스트가 보는 것은 거절 사례 쪽 되먹임이다. 제보가 섞이는
         // 경로는 ProblemReportFeedbackTest가 진짜 DB로 따로 본다(합류 지점이 여기라는 것까지).
         return new LlmProblemService(fakeGenerator, draftRepository, problemRepository,
                 adminProblemService, documentRepository, null, new ObjectMapper(), event -> { },
-                "test-model", batchDomains);
+                "test-model", domainSettingService);
     }
 
     /** 거절 사례 조회 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */

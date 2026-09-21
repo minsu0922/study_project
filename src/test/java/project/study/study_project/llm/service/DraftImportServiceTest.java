@@ -84,10 +84,13 @@ class DraftImportServiceTest {
         // 조회하지 않는다"였는데, 그 전제가 그날 바뀌었다.
         // reportService는 여전히 null이다. 파일 흡수는 되먹임 목록을 읽지 않는다(그것을 읽는 것은
         // 생성 경로다). 서비스가 null을 견디게 만들어 둔 자리다.
+        // 이 테스트는 도메인을 항상 파일에서 명시해 넣으므로(부족 칸 자동 선택을 타지 않는다)
+        // DomainSettingService.batchDomains()가 실제로 불릴 일이 없다 — 스텁 없이 가짜만 넘긴다
+        // (Task 7, 2026-09-21: 후보 목록이 생성자 인자에서 서비스 참조로 바뀌었다).
         LlmProblemService llmProblemService = new LlmProblemService(
                 problemGenerator, draftRepository, problemRepository, adminProblemService,
                 documentRepository, null, objectMapper, event -> { }, "claude-opus-5",
-                List.of(Domain.NETWORK));
+                org.mockito.Mockito.mock(DomainSettingService.class));
         service = new DraftImportService(llmProblemService, importedFileRepository, objectMapper);
 
         // saveAll은 받은 목록을 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내

@@ -12,6 +12,7 @@ import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
+import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.repository.UserRepository;
@@ -76,13 +77,15 @@ public class AdminStatsService {
      * (클라우드·인프라, 통합시나리오 등). 그걸 함께 세면 채울 계획도 없는 칸이 "빈 칸"으로
      * 잡혀 숫자가 늘 크게 떠 있고, 그러면 사람은 그 타일을 아예 안 보게 된다.
      *
-     * <p>기본값 문자열이 {@code LlmProblemService}와 같다. 한 곳에 모으는 편이 낫지만,
-     * 그러려면 설정 클래스를 새로 만들어 두 서비스가 의존하게 해야 한다 — 값이 갈라지면
-     * 화면의 "빈 칸"과 배치가 실제로 채우는 칸이 어긋나므로 <b>눈에 보이는</b> 종류의
-     * 어긋남이라, 지금은 기본값을 맞춰 두는 선에서 멈춘다.
+     * <p><b>2026-09-21 — 기본값 문자열 중복이 여기서 풀렸다.</b> 전에는 이 값을
+     * {@code @Value}로 이 클래스가 따로 읽었고, {@code LlmProblemService}도 같은 기본값
+     * 문자열을 자기 생성자에 복사해 두고 있었다 — 둘이 갈리면 화면의 "빈 칸"과 배치가 실제로
+     * 채우는 칸이 어긋나는, 눈에 보이는 버그였다. 지금은 두 서비스 다 {@link DomainSettingService}
+     * 하나를 참조해 같은 값을 읽는다 — 값이 갈라질 자리 자체가 없어졌다. 대신 이 서비스는
+     * "빈 칸"을 <b>대시보드를 조회할 때마다</b> 다시 계산해야 한다({@code getDashboard} 참고) —
+     * 필드로 굳혀 두면 관리자가 설정 화면에서 분야를 켜고 꺼도 재기동 전까지 반영되지 않는다.
      */
-    @Value("${llm.generation.batch-domains:NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
-    private List<Domain> batchDomains;
+    private final DomainSettingService domainSettingService;
 
     @Transactional(readOnly = true)
     public AdminDashboardResponse getDashboard() {
@@ -128,7 +131,9 @@ public class AdminStatsService {
                 toModelStats(problemDraftRepository.countGroupByModelAndStatus()),
                 toModelStats(documentDraftRepository.countGroupByModelAndStatus()));
 
-        // 빈 칸 — 배치가 채우는 분야 안에서만 센다(batchDomains 주석).
+        // 빈 칸 — 배치가 채우는 분야 안에서만 센다(batchDomains 주석). 조회할 때마다 다시 읽는다 —
+        // 필드로 굳히면 관리자가 화면에서 분야를 켜고 꺼도 재기동 전까지 이 숫자가 안 바뀐다.
+        List<Domain> batchDomains = domainSettingService.batchDomains();
         Set<String> filled = matrix.stream()
                 .filter(cell -> cell.count() > 0)
                 .map(cell -> cell.domain() + "|" + cell.difficulty())

@@ -110,8 +110,16 @@ public class LlmProblemService {
     /** 검수가 끝났음을 알린다 — 스냅샷 내보내기가 커밋 뒤에 듣는다({@link ReviewCompleted}). */
     private final ApplicationEventPublisher events;
     private final String model;
-    /** 배치가 도메인을 "알아서 고를" 때의 후보 — 비어 있으면 전체를 후보로 본다(설정 누락 시 기능 정지 방지). */
-    private final List<Domain> batchDomains;
+    /**
+     * 배치가 도메인을 "알아서 고를" 때의 후보 목록 출처(Task 7, 2026-09-21).
+     *
+     * <p>전에는 이 값을 생성자에서 {@code @Value}로 한 번 읽어 필드에 굳혀 뒀다. 그러면 관리자가
+     * 설정 화면에서 분야를 켜고 꺼도 <b>앱을 재기동하기 전까지</b> 배치는 옛 목록을 본다 — 화면을
+     * 만든 의미가 없어진다. 그래서 서비스 참조만 들고 있다가 {@link #pickScarcestCell}이 호출될
+     * 때마다 {@link DomainSettingService#batchDomains()}를 다시 불러, 화면에서 고친 값이 바로
+     * 다음 생성부터 반영되게 한다.
+     */
+    private final DomainSettingService domainSettingService;
 
     public LlmProblemService(ProblemGenerator problemGenerator,
                              GeneratedProblemDraftRepository draftRepository,
@@ -122,11 +130,7 @@ public class LlmProblemService {
                              ObjectMapper objectMapper,
                              ApplicationEventPublisher events,
                              @org.springframework.beans.factory.annotation.Value("${llm.generation.model:claude-opus-5}") String model,
-                             // 기본값에 8개를 그대로 적어 둔다: 빈 문자열을 기본값으로 두면 Spring이 이를
-                             // "빈 문자열 원소 1개"로 변환하려다 enum 변환에 실패할 수 있어서다.
-                             @org.springframework.beans.factory.annotation.Value(
-                                     "${llm.generation.batch-domains:NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
-                             List<Domain> batchDomains) {
+                             DomainSettingService domainSettingService) {
         this.problemGenerator = problemGenerator;
         this.draftRepository = draftRepository;
         this.problemRepository = problemRepository;
@@ -136,8 +140,7 @@ public class LlmProblemService {
         this.objectMapper = objectMapper;
         this.events = events;
         this.model = model;
-        this.batchDomains = batchDomains == null || batchDomains.isEmpty()
-                ? List.of(Domain.values()) : List.copyOf(batchDomains);
+        this.domainSettingService = domainSettingService;
     }
 
     /* ── 생성 ─────────────────────────────────────────────── */
@@ -389,9 +392,10 @@ public class LlmProblemService {
      * 초안은 "아직 문제가 아니지만 이미 그 칸을 채우려고 만들어 둔 재고"라, 재고까지 세야
      * 다음 칸으로 넘어간다.
      *
-     * <p>도메인 축을 지정하지 않은 경우 후보는 {@code llm.generation.batch-domains}로 제한된다
-     * — 배치가 관심 밖 도메인을 채우는 데 예산을 쓰지 않게 하려는 것. 반대로 도메인을 명시하면
-     * (관리자 화면에서 직접 고른 경우) 목록 밖이어도 그대로 생성한다.
+     * <p>도메인 축을 지정하지 않은 경우 후보는 분야 설정 화면이 관리하는 배치 후보 목록으로
+     * 제한된다({@link DomainSettingService#batchDomains()}) — 배치가 관심 밖 도메인을 채우는 데
+     * 예산을 쓰지 않게 하려는 것. 반대로 도메인을 명시하면(관리자 화면에서 직접 고른 경우)
+     * 목록 밖이어도 그대로 생성한다.
      */
     private ScarceCell pickScarcestCell(Domain fixedDomain, Difficulty fixedDifficulty) {
         // 집계 결과를 맵으로 — 문제가 0개인 칸은 GROUP BY 결과에 아예 없으므로 getOrDefault(0)로 보정
@@ -399,8 +403,13 @@ public class LlmProblemService {
         accumulate(counts, problemRepository.countGroupByDomainAndDifficulty());
         accumulate(counts, draftRepository.countPendingGroupByDomainAndDifficulty());
 
-        // 도메인을 명시했으면 그 하나만, 아니면 설정된 후보 목록에서 고른다
-        List<Domain> domainCandidates = fixedDomain != null ? List.of(fixedDomain) : batchDomains;
+        // 도메인을 명시했으면 그 하나만, 아니면 설정에서 지금 켜져 있는 후보 목록을 <매번 다시> 읽는다.
+        // 생성자에서 한 번만 읽어 굳히면 관리자가 화면에서 고쳐도 재기동 전까지 반영되지 않는다
+        // (위 domainSettingService 필드 주석). 빈 목록은 "아직 설정 행이 없는 첫 기동"으로 보고
+        // 전체 분야를 후보로 되돌린다 — 설정 누락이 배치를 완전히 멈추게 하지 않기 위한 방어다.
+        List<Domain> batchDomains = domainSettingService.batchDomains();
+        List<Domain> domainCandidates = fixedDomain != null ? List.of(fixedDomain)
+                : (batchDomains == null || batchDomains.isEmpty() ? List.of(Domain.values()) : batchDomains);
 
         Domain bestDomain = null;
         Difficulty bestDifficulty = null;
