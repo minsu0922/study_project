@@ -6,6 +6,7 @@ import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.anthropic.models.messages.ThinkingConfigAdaptive;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import project.study.study_project.global.common.Difficulty;
@@ -98,7 +99,16 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      */
     private final DomainHints domainHints;
 
-    /** 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다. */
+    /**
+     * 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다.
+     *
+     * <p>{@code @Autowired}가 필요한 이유: 생성자가 둘이면 스프링은 어느 것을 빈 생성에 쓸지
+     * 스스로 고르지 못한다(생성자가 하나뿐일 때만 자동 선택한다). {@code @Value}는 "이 인자에
+     * 무엇을 넣을지"만 정할 뿐 "이 생성자를 써라"는 뜻이 아니라서, 표시가 없으면 컨테이너
+     * 기동 자체가 실패한다 — 실제로 이 표시를 빠뜨렸다가 {@code @SpringBootTest} 전체가
+     * 깨지는 사고를 겪었다(Task 2 fix round 1).
+     */
+    @Autowired
     public ClaudeProblemGenerator(@Value("${llm.generation.model:claude-opus-4-8}") String model) {
         this(model, DomainHints.BUILT_IN);
     }

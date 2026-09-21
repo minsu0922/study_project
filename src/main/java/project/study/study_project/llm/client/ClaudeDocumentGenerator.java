@@ -6,6 +6,7 @@ import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.anthropic.models.messages.ThinkingConfigAdaptive;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import project.study.study_project.document.support.DocumentEditions;
@@ -587,7 +588,15 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      */
     private final DomainHints domainHints;
 
-    /** 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다. */
+    /**
+     * 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다.
+     *
+     * <p>{@code @Autowired}가 필요한 이유는 {@link ClaudeProblemGenerator}의 같은 생성자와
+     * 같다 — 생성자가 둘이면 스프링이 자동으로 하나를 고르지 못한다(자동 선택은 생성자가
+     * 하나뿐일 때만 된다). {@code @Value}는 인자 값을 정할 뿐 "이 생성자를 쓰라"는 표시가
+     * 아니라서, 이 표시가 빠지면 컨테이너 기동이 막힌다(Task 2 fix round 1에서 실제로 겪음).
+     */
+    @Autowired
     public ClaudeDocumentGenerator(@Value("${llm.generation.model:claude-opus-5}") String model) {
         this(model, DomainHints.BUILT_IN);
     }
