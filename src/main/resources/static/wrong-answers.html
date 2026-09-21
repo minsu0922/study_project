@@ -70,8 +70,11 @@ if (!isLoggedIn()) {
   init();
 }
 
-function init() {
+async function init() {
   const domainFilter = document.getElementById("domainFilter");
+  // domainsReady를 기다린 뒤 채운다 — 이유는 api.js의 domainsReady 주석 참고.
+  // init()은 페이지당 한 번만 불리므로 async로 바꿔도 부르는 쪽(else 분기)은 그대로다.
+  await domainsReady;
   fillSelect(domainFilter, DOMAINS, "전체 도메인");
   let page = 0;
 

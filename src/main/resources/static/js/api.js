@@ -160,7 +160,25 @@ async function doRefresh() {
   }
 }
 
-/* ── enum 표시용 상수 (백엔드 global/common enum과 1:1, 서버가 진실의 원천) ── */
+/* ── enum 표시용 상수 (백엔드 global/common enum과 1:1) ──
+ *
+ * [분야(DOMAINS)만 서버에서 다시 채운다 — 8번 작업]
+ * 예전에는 이 배열이 자바 enum과 완전히 따로 있어서, 분야 이름 하나를 고치려면
+ * api.js와 Domain.java 두 곳을 같이 고쳐야 했다. 이제는 GET /api/domains가
+ * DomainSetting 테이블(관리자가 9번 작업 화면에서 고치는 값)을 그대로 내려 준다.
+ *
+ * 그런데도 아래 11개 쌍을 <지우지 않고> 그대로 남겨 뒀다. 이유는 하나다 —
+ * 이 배열을 쓰는 자리가 이 파일 하나가 아니라 admin/documents.html·admin/generate.html·
+ * admin/problems.html·documents.html·quiz.html·wrong-answers.html 등 정적 페이지
+ * 여러 곳에 fillSelect(el, DOMAINS, ...) 꼴로 흩어져 있다. 그 호출을 전부 비동기로
+ * 바꾸면(await fillSelect 같은 식) 페이지마다 스크립트 흐름을 다시 짜야 하고, 한 곳만
+ * 빠뜨리면 그 화면은 domainLabel이 원본 상수명(BACKEND_FRAMEWORK 같은)을 그대로
+ * 돌려줘 학습자에게 날것 그대로 보인다. 그래서 DOMAINS는 <언제나 즉시 쓸 수 있는
+ * 동기 배열>로 남기고, 실제 값은 아래 fetchDomains()가 배열의 <내용만> 서버 응답으로
+ * 갈아 끼운다(재대입이 아니라 splice — 재대입하면 이 상수를 미리 들고 있던 다른 클로저는
+ * 옛 배열을 계속 보게 된다). 요청이 실패하거나 늦어도 이 폴백 11개가 그대로 남아 있어
+ * 화면은 항상 오늘과 똑같이 동작한다 — 이 배열은 "나중에 지울 중복"이 아니라
+ * <요청이 실패했을 때 화면을 지켜 주는 안전망>이다. */
 const DOMAINS = [
   ["NETWORK", "네트워크"], ["OS", "운영체제"], ["DATABASE", "데이터베이스"],
   ["DS_ALGORITHM", "자료구조·알고리즘"], ["SYSTEM_DESIGN", "시스템설계"],
@@ -168,6 +186,43 @@ const DOMAINS = [
   ["LANGUAGE_RUNTIME", "언어·런타임"], ["BACKEND_FRAMEWORK", "스프링·백엔드"], ["CLOUD_INFRA", "클라우드·인프라"],
   ["INTEGRATED", "통합시나리오"],
 ];
+
+/**
+ * DOMAINS를 GET /api/domains 응답으로 <제자리에서> 바꿔 채운다.
+ *
+ * splice(0, 길이, ...새값)를 쓰는 이유는 위 DOMAINS 주석과 같다 — `DOMAINS = [...]`처럼
+ * 재대입하면 이 시점 이전에 `const arr = DOMAINS`로 참조를 들고 있던 코드는 새 값을
+ * 못 본다. 배열 하나를 모두가 공유하는 그릇으로 계속 써야, 부르는 순서를 안 가려도 된다.
+ *
+ * 실패를 조용히 삼킨다 — 이 함수가 던지면 각 페이지가 전부 try/catch를 달아야 하는데,
+ * 그렇게까지 해서 지킬 값이 아니다(실패하면 폴백 11개가 이미 화면과 정확히 같다).
+ */
+async function fetchDomains() {
+  try {
+    const res = await api("/api/domains");
+    DOMAINS.splice(0, DOMAINS.length, ...res.map(d => [d.code, d.displayName]));
+  } catch (e) {
+    // 네트워크 오류·서버 오류 모두 여기로 온다. DOMAINS는 폴백 값 그대로 남으므로
+    // 화면은 오늘까지의 동작과 다르지 않다 — 그래서 로그조차 남기지 않는다.
+  }
+}
+
+/**
+ * "DOMAINS가 서버 값으로 채워졌다"를 기다릴 자리를 위한 약속(Promise).
+ *
+ * 대부분의 화면은 이것을 <기다리지 않는다> — 위 DOMAINS 주석대로 이미 옳은 폴백을
+ * 들고 있어 기다릴 이유가 없고, 기다리면 그만큼 첫 화면이 늦게 뜬다. 다만 분야 필터가
+ * <그 화면이 열리자마자 보여 줄 유일한 것>인 학습자 화면(documents.html·quiz.html·
+ * wrong-answers.html)은 다르다 — 관리자가 이름을 고친 지 얼마 안 된 시점에 그 화면을
+ * 열면, 기다리지 않을 경우 새로고침 없이는 옛 이름이 계속 보인다(아래 이유: fillSelect가
+ * <option>을 그 순간의 배열 내용으로 한 번만 굽기 때문에, 나중에 splice로 배열을 고쳐도
+ * 이미 그려진 <select>는 저절로 다시 그려지지 않는다). 관리자 화면(admin/**)은 그대로
+ * 기다리지 않는다 — 같은 사람이 분야 설정 화면(9번 작업)에서 직접 최신 값을 보고 있으니
+ * 여기서 한 박자 늦는 것이 학습자 화면만큼 아프지 않고, 관리 화면은 손댈 곳이 이미 많아
+ * 필요 이상으로 흐름을 바꾸면 그만큼 회귀 위험만 커진다.
+ */
+const domainsReady = fetchDomains();
+
 const DIFFICULTIES = [["BEGINNER", "초급"], ["INTERMEDIATE", "중급"], ["ADVANCED", "고급"]];
 // ESSAY는 자동채점 미지원이라 화면에서도 제외한다(ProblemType.isAutoScored와 같은 기준).
 const TYPES = [

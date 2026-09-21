@@ -65,8 +65,9 @@ try {
  * 상태는 "현재 페이지 번호 + 선택한 도메인" 두 개뿐이라 전역 변수로 충분하다. */
 renderShell({ active: "docs", title: "개념 문서" });
 
+// domainFilter는 여기서 element만 잡아 두고, 실제 채우기(fillSelect)는 맨 아래
+// domainsReady를 기다린 뒤로 미룬다 — 이유는 api.js의 domainsReady 주석 참고.
 const domainFilter = document.getElementById("domainFilter");
-fillSelect(domainFilter, DOMAINS, "전체 도메인");
 
 let page = 0; // 0부터 시작 (백엔드 Pageable 규칙과 동일)
 
@@ -228,7 +229,14 @@ document.getElementById("searchForm").addEventListener("submit", e => {
 document.getElementById("prevBtn").addEventListener("click", () => { page--; loadDocs(); });
 document.getElementById("nextBtn").addEventListener("click", () => { page++; loadDocs(); });
 
-loadDocs();
+// 분야 필터는 서버 값을 기다렸다가 채운다(domainsReady) — 이 화면을 여는 순간
+// 보여 줄 것이 그 필터뿐이라, 옛 이름으로 한 번 그렸다가 나중에 바뀌는 것보다
+// 잠깐 늦게 뜨더라도 처음부터 맞는 이름으로 뜨는 쪽을 택했다(api.js 주석 참고).
+(async () => {
+  await domainsReady;
+  fillSelect(domainFilter, DOMAINS, "전체 도메인");
+  loadDocs();
+})();
 </script>
 </body>
 </html>
