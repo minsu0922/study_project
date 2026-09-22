@@ -132,14 +132,21 @@ enum에 상수를 더하거나 뺄 때마다 새 마이그레이션을 써야 �
 
 | 읽는 쪽 | 무엇을 | 경로 |
 |---|---|---|
-| `LlmProblemService`·`AdminStatsService` | 배치 후보 분야, "빈 칸" 세는 기준 | `DomainSettingService` 조회(DB) |
-| `DraftGeneratorCli`(클라우드 배치) | 후보 분야 + 힌트 | `_domain-settings.json`, 없으면 `application.yml` 폴백, 그마저 없으면 enum 전체 |
-| `Claude*Generator` | 분야 경계 설명(힌트) | 주입받은 `DomainHints` 맵 조회 |
+| `LlmProblemService`·`AdminStatsService`·`AdminBatchService` | 배치 후보 분야, "빈 칸" 세는 기준, 배치 현황의 오늘 분야·달력 | `DomainSettingService` 조회(DB), 호출마다 다시 읽음 |
+| `DraftGeneratorCli`(클라우드 배치) | 후보 분야 + 힌트 | `_domain-settings.json`. 파일이 없거나 깨졌거나 빈 배열일 때만 `application.yml` 폴백 |
+| `Claude*Generator`(앱 안) | 분야 경계 설명(힌트) | 주입받은 `DomainHintsProvider`(= `DomainSettingService`)를 프롬프트 짤 때마다 호출 |
+| `Claude*Generator`(CLI·테스트) | 분야 경계 설명(힌트) | 파일에서 읽은 `DomainHints`, 또는 내장값 `BUILT_IN`을 감싼 공급자 |
 | `static/js/api.js`, 관리 화면 | 분야 이름 목록 | `GET /api/domains` |
 
 로컬 앱과 클라우드 배치가 서로 다른 경로로 같은 값을 보게 되는 구조라, **둘이 다른
 설정을 보는 유일한 순간은 "화면에서 고치고 아직 커밋 안 한 동안"**이다. 그래서 위
 운영 규칙이 이 문서에서 가장 먼저 나온다.
+
+이 문장이 참이려면 앱 쪽이 값을 **기동 때 한 번 읽어 굳히면 안 된다.** 2026-09-22 최종
+리뷰 전까지는 두 곳이 어겼다. 배치 현황 화면은 yml 순서로 달력을 그렸다. 생성기 빈은
+늘 내장 힌트로 만들어져, 관리자 화면의 "생성 실행"·문서 업로드가 고친 힌트를 무시했다.
+지금은 둘 다 쓰는 순간 DB를 읽는다. 생성기의 빈 경로는 `ClaudeProblemGeneratorBeanHintTest`가
+지킨다 — 다른 프롬프트 테스트는 전부 `new`로 만든 생성기만 써서 이 경로를 밟지 않았다.
 
 ## 화면
 
@@ -181,9 +188,16 @@ llm:
 
 1. **동기화 러너가 새 설정 행을 만들 때의 초기값.** enum에 새 상수가 생기면 이 목록에
    있는지 여부로 그 행의 첫 `enabled`·`sortOrder`가 정해진다.
-2. **`_domain-settings.json` 파일이 없을 때 클라우드 배치가 쓰는 폴백.** 관리 화면에서
-   한 번도 저장(=내보내기)하지 않았거나, 파일이 깨졌을 때 이 값으로 대신 돈다. 그마저
-   비어 있으면 `GenerationSchedule`이 enum 전체를 후보로 쓴다.
+2. **`_domain-settings.json` 파일이 없을 때 클라우드 배치가 쓰는 폴백.** 폴백 조건은
+   `DomainSettings.isEmpty()` 하나다 — 파일이 없거나, 깨졌거나, 분야 배열이 비었을 때만
+   이 값으로 대신 돈다. 파일은 있는데 켜진 분야가 0개면 yml로 가지 **않고** 빈 목록을
+   넘겨 `GenerationSchedule`이 enum 전체로 넓힌다 — 앱(`LlmProblemService`)과 같은 결과다.
+   yml마저 비어 있을 때도 마찬가지로 enum 전체다.
+
+**분야를 전부 꺼서 배치를 멈출 수는 없다.** 설정 화면과 API가 마지막으로 켜진 분야를
+끄는 요청을 거절한다(400, `DOMAIN_002`). 배치를 멈추는 스위치는 `llm.generation.batch-enabled`
+하나다(워크플로의 `force`와 짝). 정지 수단이 둘이면 둘의 뜻이 어긋난다 — 실제로 전에는
+전부 끄면 CLI는 yml 8개로, 앱은 enum 전체로 돌아 배치가 조용히 계속 돌았다.
 
 **더는 "설정 원본"이 아니다.** DB(`domain_setting`)가 원본이고, 이미 있는 설정 행은
 이 값이 바뀌어도 절대 따라 바뀌지 않는다. 지우지 않고 남겨 둔 이유는 파일도 DB 행도
