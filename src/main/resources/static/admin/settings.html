@@ -269,8 +269,9 @@ async function recomputePreview() {
   }
 
   try {
-    // Domain 타입 List<Domain> 파라미터라 domains=A&domains=B 꼴로 여러 번 싣는다
-    // (AdminDomainSettingController.preview Javadoc의 예시와 같은 모양).
+    // List<Domain> 파라미터라 Spring이 domains=A&domains=B(반복)와 domains=A,B(쉼표) 둘 다
+    // 같은 목록으로 바인딩한다. AdminDomainSettingController.preview의 Javadoc 예시는 쉼표
+    // 꼴을 보여 주지만, 여기서는 반복 꼴을 쓴다 — 둘이 같은 모양이라서가 아니라 둘 다 동작해서다.
     const qs = domains.map(d => `domains=${encodeURIComponent(d)}`).join("&");
     const cells = await api(`/api/admin/domain-settings/preview?days=${PREVIEW_DAYS}&${qs}`);
     el.innerHTML = previewTableHtml(cells);

@@ -120,7 +120,7 @@ llm:
     batch-type: auto          # ② 무엇을 만들지 (auto | problem | document)
     batch-count: 5            # 폴백 — 아래 값이 없을 때만 쓴다
     batch-count-by-difficulty: BEGINNER=7,INTERMEDIATE=5,ADVANCED=3   # ③ 난이도별 생성 개수
-    batch-domains: NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK
+    batch-domains: NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK   # 원본 아님 — 새 설정 행 초기값·파일 없을 때 폴백([21](21-domain-settings.md))
   import:
     enabled: true             # ④ 기동 시 들여오기 여부
     dir: generated            # Actions가 커밋하는 위치와 반드시 같아야 한다

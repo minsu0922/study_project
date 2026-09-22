@@ -281,7 +281,7 @@ llm:
     batch-type: auto       # 무엇을 만들지 — auto | problem | document (아래 참고)
     batch-count: 5         # 폴백 — 아래 난이도별 값이 없을 때만
     batch-count-by-difficulty: BEGINNER=7,INTERMEDIATE=5,ADVANCED=3   # 난이도별 개수
-    batch-domains: NETWORK,OS,DATABASE,...   # 이 순서가 곧 날짜 순환 순서
+    batch-domains: NETWORK,OS,DATABASE,...   # 새 설정 행의 초기값·파일 없을 때 폴백(원본은 DB, docs/21)
   import:
     enabled: true          # 들여오기만 따로 끌 수 있다
     dir: generated         # Actions가 커밋하는 위치와 반드시 같아야 한다

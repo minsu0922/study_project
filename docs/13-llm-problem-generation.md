@@ -120,7 +120,7 @@ llm:
     batch-type: auto           # auto | problem | document — 한쪽만 돌리고 싶을 때
     batch-count: 5             # 폴백 — 아래 난이도별 값이 없을 때만
     batch-count-by-difficulty: BEGINNER=7,INTERMEDIATE=5,ADVANCED=3   # 난이도별 생성 개수
-    batch-domains: NETWORK,OS,DATABASE,...   # 배치 후보 도메인(= 날짜 순환 순서)
+    batch-domains: NETWORK,OS,DATABASE,...   # 새 설정 행의 초기값·파일 없을 때 폴백(원본은 DB, docs/21)
   import:
     enabled: true              # 기동 시 generated/*.json 들여오기
     dir: generated

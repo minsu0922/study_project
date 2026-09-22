@@ -121,6 +121,12 @@ public final class DomainSettings {
      * 모델에게 줄 분야 경계 힌트 — 설정이 완전히 비어 있을 때만 {@link DomainHints#BUILT_IN}으로
      * 떨어진다. 파일을 읽긴 했는데 힌트 칸이 비어 있는 경우는 그 빈 상태를 그대로 지킨다
      * (클래스 상단 "힌트가 비면 내장값으로" 참고).
+     *
+     * <p><b>{@link #batchDomains()}와 달리 꺼진(enabled=false) 분야의 힌트도 담는다.</b>
+     * 의도적인 비대칭이다 — {@code --domain=}으로 사람이 분야를 콕 집어 실행하면 그 분야가
+     * 순환 후보에서 꺼져 있어도 생성은 진행되는데({@code DraftGeneratorCli}), 그때도 힌트가
+     * 나가야 프롬프트의 분야 경계 설명이 빠지지 않는다. 꺼진 분야를 여기서 걸러 버리면
+     * "순환에서는 안 나오지만 지정하면 만들어지는" 분야만 힌트 없이 생성되는 조용한 결함이 된다.
      */
     public DomainHints hints() {
         if (isEmpty()) {

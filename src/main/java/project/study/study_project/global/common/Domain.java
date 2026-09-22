@@ -20,7 +20,8 @@ public enum Domain {
     // SYSTEM_DESIGN과의 경계가 이 칸의 유일한 위험이다(둘 다 "설계"라는 말을 쓴다).
     // 기준은 <무엇이 돌아가는가>다 — 부하·확장·장애처럼 실행 중인 시스템을 다루면
     // SYSTEM_DESIGN, 사람이 코드를 만들고 관리하는 절차를 다루면 여기다.
-    // 그 경계는 모델에게도 말해 줘야 한다(ClaudeProblemGenerator.domainHint) —
+    // 그 경계는 모델에게도 말해 줘야 한다(DomainHints.hintFor — 2026-09-21부터 관리자 화면
+    // "분야 설정"에서 고치고 domain_setting 테이블에 저장된다, docs/21) —
     // BACKEND_FRAMEWORK↔LANGUAGE_RUNTIME에서 이미 치른 비용이고, 칸이 늘수록 늘어난다.
     //
     // STRING 저장이라 상수 추가는 기존 데이터에 영향 없음(마이그레이션 불필요).
