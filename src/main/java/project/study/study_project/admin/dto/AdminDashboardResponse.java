@@ -48,7 +48,9 @@ public record AdminDashboardResponse(
      * @param batchEnabled          일일 배치가 켜져 있는지. 꺼져 있으면 <b>초안이 안 들어오는
      *                              이유</b>가 이것인데, 지금까지 화면 어디에도 안 보였다
      * @param emptyCells            출제가 하나도 없는 (분야 × 난이도) 칸 수
-     * @param plannedCells          채울 계획이 있는 칸 수 = {@code batch-domains} × 난이도 3.
+     * @param plannedCells          채울 계획이 있는 칸 수 = 분야 설정에서 켜진 분야 수
+     *                              ({@code DomainSettingService.batchDomains()}, 조회마다 DB에서) × 난이도 3.
+     *                              yml {@code batch-domains}는 이제 새 설정 행의 초기값일 뿐이다(docs/21).
      *                              <b>화면의 분야 목록으로 세면 안 된다</b> — 거기에는 배치가
      *                              건드리지 않는 분야(클라우드·통합시나리오 등)까지 들어 있어,
      *                              채울 계획도 없는 칸이 "빈 칸"으로 잡힌다. 늘 커다란 숫자가

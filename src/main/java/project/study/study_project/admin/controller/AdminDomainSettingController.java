@@ -14,6 +14,8 @@ import project.study.study_project.admin.dto.AdminDomainSettingMoveRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingResponse;
 import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.llm.support.DomainHints;
@@ -40,6 +42,12 @@ public class AdminDomainSettingController {
 
     /** 미리보기 기본 일수 — 저장 버튼 옆에 "다음 7일"을 그리는 화면(Task 10)에 맞춘다. */
     private static final int DEFAULT_PREVIEW_DAYS = 7;
+
+    /**
+     * 미리보기 상한 — 60일이면 4일 주기가 열다섯 번 돈다. 분야 열한 개가 한 바퀴 이상 도는 것을
+     * 보기에 넉넉하고, 그 이상은 화면이 쓰지 않는다(화면은 7일만 부른다).
+     */
+    private static final int MAX_PREVIEW_DAYS = 60;
 
     /**
      * 목록 — {@code sortOrder} 순 전체(꺼진 분야도 포함, 화면에서 다시 켤 수 있어야 하므로).
@@ -100,11 +108,25 @@ public class AdminDomainSettingController {
      * 생략하면(화면을 처음 열었을 때 등) 지금 저장된 순서({@code batchDomains()})로 대신한다.
      *
      * <p>예: {@code GET /api/admin/domain-settings/preview?days=7&domains=NETWORK,OS,DATABASE}
+     *
+     * <p><b>{@code days}는 1~{@value #MAX_PREVIEW_DAYS}일, 벗어나면 400</b>(최종 리뷰 Minor 4).
+     * 범위가 없으면 {@code days=-1}은 {@code ArrayList(-1)}에서 500이 나고, 아주 큰 값은
+     * 칸을 그 수만큼 만들어 메모리를 다 쓴다.
+     *
+     * <p>{@code @Min}·{@code @Max}를 달지 않고 손으로 검사하는 이유: 요청 파라미터의 제약 위반은
+     * 스프링 6.1+에서 {@code HandlerMethodValidationException}으로 나오는데,
+     * {@code GlobalExceptionHandler}가 그 예외를 따로 받지 않아 {@code Exception} 처리기로 떨어져
+     * <b>500</b>이 된다. 전역 처리기를 이 한 곳 때문에 넓히기보다, 다른 400과 같은 모양
+     * ({@code VALIDATION_ERROR})을 여기서 직접 만든다.
      */
     @GetMapping("/preview")
     public ApiResponse<List<DomainSettingService.PreviewCell>> preview(
             @RequestParam(required = false) List<Domain> domains,
             @RequestParam(defaultValue = "" + DEFAULT_PREVIEW_DAYS) int days) {
+        if (days < 1 || days > MAX_PREVIEW_DAYS) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                    "days는 1~" + MAX_PREVIEW_DAYS + " 사이여야 합니다: " + days);
+        }
         List<Domain> target = (domains == null || domains.isEmpty())
                 ? domainSettingService.batchDomains() : domains;
         return ApiResponse.ok(domainSettingService.preview(target, days));

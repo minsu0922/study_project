@@ -97,8 +97,9 @@ public class DomainSettingExporter extends SnapshotExporter {
      *
      * <p>{@code AFTER_COMMIT}인 이유는 {@code TopicQueueExporter}의 같은 주석 그대로다 — 커밋
      * 전에 쓰면 아직 DB에 없는 상태가 파일에 남고, 롤백되면 <b>일어나지 않은 변경이 파일에
-     * 남는다</b>. Task 9가 이 이벤트를 실제로 publish하기 전까지는 이 리스너를 통째로 돌려 볼
-     * 수 없다 — 지금은 형태만 갖춰 둔다.
+     * 남는다</b>. 이 이벤트는 {@code DomainSettingService}의 {@code edit}·{@code move}가
+     * 알린다 — 관리 화면에서 저장하거나 순서를 옮길 때마다 커밋 직후 파일이 다시 써진다.
+     * 거꾸로, 테스트처럼 트랜잭션이 롤백되면 이 리스너는 불리지 않아 파일이 그대로 남는다.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onDomainSettingChanged(DomainSettingChanged event) {

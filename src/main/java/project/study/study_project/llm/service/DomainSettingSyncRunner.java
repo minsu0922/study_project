@@ -25,8 +25,8 @@ import org.springframework.stereotype.Component;
 @Component
 /*
  * @Order(4) — 주제 대기열 동기화(TopicQueueSyncRunner, @Order(5))보다 한 칸 앞이다. 그 자체로는
- * 순서상 의미가 없다(둘은 서로 다른 테이블을 다뤄 겹치지 않는다). 진짜 이유는 아직 없는
- * DomainSettingExporter(Task 5, @Order(60))에 있다 — 내보내기가 이 동기화보다 먼저 돌면
+ * 순서상 의미가 없다(둘은 서로 다른 테이블을 다뤄 겹치지 않는다). 진짜 이유는
+ * DomainSettingExporter(@Order(60), 기동 때 한 번 파일을 내보낸다)에 있다 — 내보내기가 이 동기화보다 먼저 돌면
  * 행을 만들기도 전에 <b>빈 테이블</b>을 파일로 써 버리고, 그 파일이 그대로 커밋되면 클라우드
  * 배치는 다음 실행까지 분야 설정이 하나도 없는 채로 하루를 돈다. 앞자리 숫자(4)를 골라 둔
  * 것은 "테이블을 채우는 동기화 러너들은 앞쪽에 모아 둔다"는 읽기 편의를 위해서다

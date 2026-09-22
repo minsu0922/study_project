@@ -160,9 +160,11 @@ function renderSummary(s) {
     cls: (!p.documentDay && !p.documentSlug) ? "warn" : "",
     label: `오늘 (${p.dayInCycle}일차)`,
     value: p.documentDay ? "개념 문서 1편" : `${difficultyLabel(p.difficulty)} 문제 ${s.count}건`,
+    // domainLabel은 관리자가 분야 설정 화면에서 고치는 이름이라 escapeHtml로 감싼다 —
+    // chip()은 sub를 그대로 innerHTML에 넣는다(학습자 화면·settings.html과 같은 규칙).
     sub: (!p.documentDay && !p.documentSlug)
-      ? `${domainLabel(p.domain)} · 근거 문서 없음(폴백)`
-      : domainLabel(p.domain),
+      ? `${escapeHtml(domainLabel(p.domain))} · 근거 문서 없음(폴백)`
+      : escapeHtml(domainLabel(p.domain)),
   }));
 
   // 마지막 수확 = 마지막으로 DB에 들어온 파일. 파일이 만들어졌는지가 아니라
@@ -466,9 +468,10 @@ function renderPlan(s) {
   // 주기가 고른 분야와 실제로 나올 분야가 다를 수 있다. 근거 문서가 있으면 문서 쪽이 이기는데
   // (배치의 alignDomainWithDocument), 주기 분야만 적으면 화면과 실제가 어긋난다.
   // 다를 때만 둘 다 보여 준다 — 늘 두 개를 적으면 같은 날에도 무언가 어긋난 것처럼 읽힌다.
+  // 분야 이름은 관리자가 고치는 값이라 innerHTML에 넣기 전에 escapeHtml로 감싼다.
   const domain = p.domain !== p.cycleDomain
-    ? `${domainLabel(p.domain)} <span class="meta">(주기는 ${domainLabel(p.cycleDomain)}였지만 근거 문서 쪽으로 맞춥니다)</span>`
-    : domainLabel(p.domain);
+    ? `${escapeHtml(domainLabel(p.domain))} <span class="meta">(주기는 ${escapeHtml(domainLabel(p.cycleDomain))}였지만 근거 문서 쪽으로 맞춥니다)</span>`
+    : escapeHtml(domainLabel(p.domain));
 
   document.getElementById("bPlan").innerHTML = `
     <table>

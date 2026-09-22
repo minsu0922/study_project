@@ -165,14 +165,67 @@ class AdminDomainSettingIntegrationTest {
     void requiresAdmin() throws Exception {
         mockMvc.perform(get("/api/admin/domain-settings"))
                 .andExpect(status().isUnauthorized());
+        // 401만 보면 "로그인만 하면 누구나 된다"는 구멍을 못 잡는다 — 비로그인은 인증 단계에서
+        // 걸러질 뿐, hasRole(ADMIN)까지 가지 않는다. 일반 사용자 토큰으로 403을 따로 본다(Minor 6).
+        mockMvc.perform(get("/api/admin/domain-settings")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(Role.USER)))
+                .andExpect(status().isForbidden());
+    }
+
+    /* ── 최종 리뷰 수정(2026-09-22) ─────────────────────────────────── */
+
+    @Test
+    @DisplayName("화면 이름이 40자를 넘으면 400 — 전에는 DB 오류(500)로 떨어졌다")
+    void displayNameHasMaxLength() throws Exception {
+        mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
+                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"enabled\":true,\"displayName\":\"" + "가".repeat(41) + "\",\"hint\":null}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("화면 이름의 앞뒤 공백은 서버가 자른다 — 힌트와 같은 취급")
+    void displayNameIsTrimmed() throws Exception {
+        mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
+                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"enabled":true,"displayName":"  네트워크  ","hint":null}"""))
+                .andExpect(status().isOk());
+
+        assertThat(domainSettingService.findAll())
+                .filteredOn(s -> s.getDomain() == Domain.NETWORK)
+                .singleElement()
+                .extracting(s -> s.getDisplayName())
+                .isEqualTo("네트워크");
+    }
+
+    @Test
+    @DisplayName("미리보기 days는 1~60 — 벗어나면 500이 아니라 400")
+    void previewDaysIsBounded() throws Exception {
+        for (String days : List.of("0", "-1", "61")) {
+            mockMvc.perform(get("/api/admin/domain-settings/preview")
+                            .header(HttpHeaders.AUTHORIZATION, bearer())
+                            .param("days", days))
+                    .andExpect(status().isBadRequest());
+        }
+        mockMvc.perform(get("/api/admin/domain-settings/preview")
+                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .param("days", "60"))
+                .andExpect(status().isOk());
     }
 
     private String bearer() {
-        User admin = userRepository.save(User.builder()
+        return bearer(Role.ADMIN);
+    }
+
+    private String bearer(Role role) {
+        User user = userRepository.save(User.builder()
                 .username("domainsetting" + UUID.randomUUID().toString().substring(0, 8))
                 .passwordHash(passwordEncoder.encode("admin-pw1"))
-                .role(Role.ADMIN)
+                .role(role)
                 .build());
-        return "Bearer " + jwtTokenProvider.createToken(admin.getId(), Role.ADMIN);
+        return "Bearer " + jwtTokenProvider.createToken(user.getId(), role);
     }
 }

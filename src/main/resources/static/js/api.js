@@ -200,6 +200,12 @@ const DOMAINS = [
 async function fetchDomains() {
   try {
     const res = await api("/api/domains");
+    // 빈 응답이면 갈아 끼우지 않는다(최종 리뷰 Minor 1). 첫 배포 때처럼 설정 행이 아직 없는
+    // 순간 — Tomcat이 요청을 받기 시작한 뒤 동기화 러너(@Order 4)가 행을 만들기 전 — 에는
+    // 서버가 성공(200)으로 빈 배열을 준다. 그대로 splice하면 폴백 11개가 지워져 학습자 화면의
+    // 분야 필터가 텅 빈다. 분야가 0개인 상태는 정상적으로 존재하지 않으므로(enum 전체에 행이
+    // 맞춰진다) 빈 배열은 "아직 모른다"로 읽고, 실패했을 때와 똑같이 폴백을 남긴다.
+    if (!Array.isArray(res) || res.length === 0) return;
     DOMAINS.splice(0, DOMAINS.length, ...res.map(d => [d.code, d.displayName]));
   } catch (e) {
     // 네트워크 오류·서버 오류 모두 여기로 온다. DOMAINS는 폴백 값 그대로 남으므로
