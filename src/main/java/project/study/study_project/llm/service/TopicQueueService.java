@@ -269,6 +269,7 @@ public class TopicQueueService {
      */
     @Transactional
     public TopicQueueItemResponse add(AdminTopicQueueRequest request) {
+        requireRegisteredDomain(request.domain());
         String topic = request.topic().trim();
         if (repository.existsByDomainAndTopic(request.domain(), topic)) {
             throw new BusinessException(ErrorCode.TOPIC_002);
@@ -306,6 +307,7 @@ public class TopicQueueService {
      */
     @Transactional
     public TopicQueueItemResponse update(Long id, AdminTopicQueueRequest request) {
+        requireRegisteredDomain(request.domain());
         TopicQueueItem item = find(id);
         String topic = request.topic().trim();
         if (repository.existsByDomainAndTopicAndIdNot(request.domain(), topic, id)) {
@@ -583,6 +585,17 @@ public class TopicQueueService {
 
     private TopicQueueItem find(Long id) {
         return repository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.TOPIC_001));
+    }
+
+    /**
+     * 저장 "전에" 분야가 실제로 등록돼 있는지 본다(5번 작업). DB 외래키(V20)가 최후의 방어선이지만
+     * 그건 500(DataIntegrityViolationException)으로 나온다. 여기서 먼저 걸러야 사용자가 고칠 수
+     * 있는 400이 나간다.
+     */
+    private void requireRegisteredDomain(DomainCode domain) {
+        if (!domainCatalog.exists(domain)) {
+            throw new BusinessException(ErrorCode.DOMAIN_003, "등록되지 않은 분야입니다: " + domain);
+        }
     }
 
     private int indexOf(List<TopicQueueItem> items, Long id) {

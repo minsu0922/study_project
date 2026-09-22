@@ -11,6 +11,7 @@ import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.document.repository.DocumentRepository;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.config.CacheConfig;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -37,6 +38,7 @@ public class AdminDocumentService {
     /** 문서 등록. slug는 URL 식별자라 중복이면 409(DOC_002). 태그는 find-or-create. */
     @Transactional
     public DocumentDetailResponse create(AdminDocumentRequest request) {
+        requireRegisteredDomain(request.domain());
         if (documentRepository.existsBySlug(request.slug())) {
             throw new BusinessException(ErrorCode.DOC_002);
         }
@@ -62,6 +64,7 @@ public class AdminDocumentService {
      */
     @Transactional
     public DocumentDetailResponse update(Long id, AdminDocumentRequest request) {
+        requireRegisteredDomain(request.domain());
         Document document = findDocument(id);
         String oldSlug = document.getSlug();
         if (!oldSlug.equals(request.slug()) && documentRepository.existsBySlug(request.slug())) {
@@ -116,6 +119,17 @@ public class AdminDocumentService {
     private Document findDocument(Long id) {
         return documentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DOC_001));
+    }
+
+    /**
+     * 저장 "전에" 분야가 실제로 등록돼 있는지 본다(5번 작업). DB 외래키(V20)가 최후의 방어선이지만
+     * 그건 500(DataIntegrityViolationException)으로 나온다. 여기서 먼저 걸러야 사용자가 고칠 수
+     * 있는 400이 나간다.
+     */
+    private void requireRegisteredDomain(DomainCode domain) {
+        if (!domainCatalog.exists(domain)) {
+            throw new BusinessException(ErrorCode.DOMAIN_003, "등록되지 않은 분야입니다: " + domain);
+        }
     }
 
     private String trimOrNull(String s) {

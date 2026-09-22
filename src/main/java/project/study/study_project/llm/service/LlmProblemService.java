@@ -169,6 +169,14 @@ public class LlmProblemService {
             domain = cell.domain();
             difficulty = cell.difficulty();
         }
+        // 5번 작업: 관리자가 직접 분야를 지정한 경우에만 뜻이 있는 검사다 — 자동 선택은
+        // domainSettingService.batchDomains()(DB 행)에서만 고르므로 항상 등록된 분야다.
+        // 그래도 매번 검사해 둔다: 조건 분기 없이 한 곳에서만 지키면 나중에 자동 선택 경로가
+        // 바뀌어도(예: 빈 목록 폴백) 이 안전망이 그대로 남는다. Claude 호출(요금 발생) 전에
+        // 걸러야 잘못된 분야로 돈을 쓰지 않는다.
+        if (!domainSettingService.exists(domain)) {
+            throw new BusinessException(ErrorCode.DOMAIN_003, "등록되지 않은 분야입니다: " + domain);
+        }
 
         List<String> avoid = buildAvoidList(domain);
         // 관리자 수동 생성은 DB를 직접 볼 수 있으므로 거절 사례를 실시간으로 읽는다 —
@@ -245,6 +253,12 @@ public class LlmProblemService {
         ProblemType type = request.type() != null ? request.type() : ProblemType.MULTIPLE_CHOICE;
         if (type == ProblemType.ESSAY) {
             throw new BusinessException(ErrorCode.QUIZ_002, "서술형(ESSAY)은 자동채점 미지원이라 생성할 수 없습니다.");
+        }
+        // 5번 작업: 이 경로는 분야를 사람이 직접 고른다(@NotNull, 자동 선택 없음 — 클래스
+        // 주석 참고). 형식은 맞지만 등록되지 않은 분야(오타·지운 분야)가 그대로 넘어올 수 있어
+        // 여기서 먼저 막는다. Claude를 부르기(요금 발생) 전에 걸러야 한다.
+        if (!domainSettingService.exists(request.domain())) {
+            throw new BusinessException(ErrorCode.DOMAIN_003, "등록되지 않은 분야입니다: " + request.domain());
         }
 
         // 문서에 이 유형을 낼 재료가 있는지 <호출 전에> 본다(2026-09-01). 배치(DraftGeneratorCli)와

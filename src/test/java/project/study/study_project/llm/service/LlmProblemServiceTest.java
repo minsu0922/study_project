@@ -129,6 +129,12 @@ class LlmProblemServiceTest {
         // lenient: 도메인을 직접 지정하는 테스트(explicitDomainIgnoresBatchDomainFilter 등)는
         // 이 값을 아예 읽지 않아 stubbing이 "쓰이지 않음"으로 잡힐 수 있다.
         lenient().when(domainSettingService.batchDomains()).thenReturn(batchDomains);
+        // 5번 작업: generate/generateFromDocument가 저장 전에 exists()로 분야 등록 여부를 본다.
+        // Mockito mock의 기본 boolean 반환값은 false라, stub 없이 두면 이 파일의 모든 생성
+        // 테스트가 원래 검증하려던 것과 무관하게 DOMAIN_003으로 실패한다. 이 클래스는 "등록된
+        // 분야로 생성했을 때의 동작"을 보는 자리이고, "등록 안 된 분야는 400"은 컨트롤러를 거치는
+        // DomainRegistryWritePathIntegrationTest가 따로 본다 — 그래서 여기서는 늘 true로 둔다.
+        lenient().when(domainSettingService.exists(any())).thenReturn(true);
         // ObjectMapper는 실물 사용 — JSON 직렬화가 이 서비스의 실제 책임이라 가짜로 대체하면 검증이 빈다
         // reportService는 null — 이 테스트가 보는 것은 거절 사례 쪽 되먹임이다. 제보가 섞이는
         // 경로는 ProblemReportFeedbackTest가 진짜 DB로 따로 본다(합류 지점이 여기라는 것까지).

@@ -11,6 +11,7 @@ import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
+import project.study.study_project.llm.support.DomainCatalog;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -47,6 +48,8 @@ public class DocumentImportService {
     private final LlmDocumentService llmDocumentService;
     private final ImportedDraftFileRepository importedFileRepository;
     private final ObjectMapper objectMapper;
+    /** 분야 존재 확인용(5번 작업) — 아래 {@link #importFile} 주석의 "등록되지 않은 분야" 문단 참고. */
+    private final DomainCatalog domainCatalog;
 
     /**
      * 흡수 이력의 열쇠 — <b>폴더 이름을 반드시 포함한다</b>.
@@ -84,6 +87,17 @@ public class DocumentImportService {
         GeneratedDocumentItem document = parsed.document();
         if (parsed.domain() == null) {
             throw new IllegalArgumentException("domain이 없습니다: " + file.getFileName());
+        }
+        // 5번 작업: DraftImportService.importFile과 같은 이유·같은 모양이다 — 배치는 스냅샷
+        // 파일(generated/_domain-settings.json)로 분야 목록을 보므로, 배치를 돌린 뒤 관리자가
+        // 화면에서 그 분야를 지우면 이 파일은 "한때는 맞았지만 지금은 아닌" 채로 도착한다.
+        // 여기서 안 막으면 흡수는 성공하고 외래키(V20)가 뒤늦게 막아 원인이 안 보이는 예외로
+        // 죽는다. IllegalArgumentException으로 던져 흡수 이력을 남기지 않는다 — DraftImportRunner가
+        // 파일 단위로 잡아 이 파일만 건너뛰고 "들여온 것"으로 표시하지 않으므로, 분야를 다시
+        // 등록하면 다음 부팅에 자동으로 재시도된다.
+        if (!domainCatalog.exists(parsed.domain())) {
+            throw new IllegalArgumentException(
+                    "등록되지 않은 분야입니다: " + parsed.domain() + " (" + file.getFileName() + ")");
         }
         if (document == null || document.contentMd() == null || document.contentMd().isBlank()) {
             throw new IllegalArgumentException("문서 본문이 비어 있습니다: " + file.getFileName());

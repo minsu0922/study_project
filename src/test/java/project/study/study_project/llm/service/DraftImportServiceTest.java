@@ -22,6 +22,7 @@ import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
 import java.nio.file.Files;
@@ -92,7 +93,11 @@ class DraftImportServiceTest {
                 problemGenerator, draftRepository, problemRepository, adminProblemService,
                 documentRepository, null, objectMapper, event -> { }, "claude-opus-5",
                 org.mockito.Mockito.mock(DomainSettingService.class));
-        service = new DraftImportService(llmProblemService, importedFileRepository, objectMapper);
+        // domainCatalog는 실물(DefaultDomains.catalog())을 쓴다 — 11개 기본 분야만 "등록됨"으로
+        // 본다. 이 파일들이 쓰는 TestDomains.NETWORK는 그 안에 있으므로 기존 테스트는 그대로
+        // 통과하고, 아래 rejectsUnregisteredDomain은 그 밖의 코드로 거부를 확인한다.
+        service = new DraftImportService(llmProblemService, importedFileRepository, objectMapper,
+                DefaultDomains.catalog());
 
         // saveAll은 받은 목록을 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내
         lenient().when(draftRepository.saveAll(any()))
@@ -213,6 +218,35 @@ class DraftImportServiceTest {
 
         // 이력이 남으면 파일을 고쳐도 영영 다시 읽지 않는다 — 남기지 않는 것이 핵심
         verify(importedFileRepository, never()).save(any());
+    }
+
+    /**
+     * 5번 작업: 형식은 맞지만(DomainCode 값 타입) 지금은 등록되지 않은 분야 — 배치가 도는
+     * 클라우드는 스냅샷 파일로 분야 목록을 보므로, 그 뒤 관리자가 화면에서 분야를 지우면
+     * 이런 파일이 생길 수 있다(위 domain 필드 검사 주석 참고). 이력을 남기지 않아야
+     * 분야를 다시 등록했을 때 다음 부팅에 자동으로 재시도된다.
+     */
+    @Test
+    @DisplayName("등록되지 않은 분야의 파일은 흡수하지 않고 이력도 남기지 않는다 — 분야를 되살리면 다음 부팅에 재시도된다")
+    void rejectsFileWithUnregisteredDomain() throws Exception {
+        Path file = tempDir.resolve("2026-08-17.json");
+        Files.writeString(file, """
+                {
+                  "date": "2026-08-17",
+                  "domain": "NOPE_X",
+                  "difficulty": "BEGINNER",
+                  "type": "MULTIPLE_CHOICE",
+                  "model": "claude-opus-5",
+                  "problems": []
+                }
+                """);
+
+        assertThatThrownBy(() -> service.importFile(file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("NOPE_X");
+
+        verify(importedFileRepository, never()).save(any());
+        verify(draftRepository, never()).saveAll(any());
     }
 
     @Test

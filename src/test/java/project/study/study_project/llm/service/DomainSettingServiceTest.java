@@ -31,19 +31,33 @@ class DomainSettingServiceTest {
     @Autowired DomainSettingRepository repository;
     @PersistenceContext EntityManager em;
 
+    /**
+     * <b>5번 작업(외래키)으로 {@code repository.deleteAll()}을 버렸다.</b> 표 전체를 비우면
+     * 로컬 DB의 문제 147건이 domain_setting을 외래키로 가리키고 있어(V20) 삭제 자체가
+     * DataIntegrityViolationException으로 거부된다.
+     *
+     * <p>대신 기본 분야 중 <b>내용 표 다섯 곳 어디에도 행이 없는 하나</b>만 지워 "행이 없다"를
+     * 재현한다. {@code INTEGRATED}("통합시나리오")가 그 자리다 — 2026-09-22 로컬 DB 실측으로
+     * problem·document·generated_problem_draft·generated_document_draft·topic_queue 전부
+     * 0건이라 안전하게 지울 수 있고, 폴백 배치 목록(NETWORK~BACKEND_FRAMEWORK 8개)에도 없어
+     * "폴백 밖 분야는 꺼진 채로 태어난다"는 원래 검증(옛 CLOUD_INFRA 자리)도 그대로 잇는다.
+     *
+     * <p>만약 이 분야에 나중에 실제 콘텐츠가 생기면 이 테스트는 <b>FK 위반으로 실패</b>한다 —
+     * 조용히 깨지는 대신 원인이 분명한 실패로 알려 주므로, 그때는 지금도 비어 있는 다른
+     * 기본 분야로 바꾸면 된다.
+     */
     @Test
-    @DisplayName("enum에 있는데 행이 없으면 만든다 — 폴백 목록에 든 분야는 켠 채로")
+    @DisplayName("기본 분야에 있는데 행이 없으면 만든다 — 폴백 목록 밖 분야는 꺼진 채로")
     void createsMissingRows() {
-        repository.deleteAll();
+        repository.deleteById(TestDomains.INTEGRATED);
 
         service.syncWithDefaults();
 
-        assertThat(repository.count()).isEqualTo(DefaultDomains.codes().size());
-        assertThat(repository.findByDomain(TestDomains.NETWORK)).get()
-                .extracting(DomainSetting::isEnabled).isEqualTo(true);
-        // CLOUD_INFRA는 폴백 목록에 없다 → 꺼진 채로 태어난다
-        assertThat(repository.findByDomain(TestDomains.CLOUD_INFRA)).get()
+        assertThat(repository.findByDomain(TestDomains.INTEGRATED)).get()
                 .extracting(DomainSetting::isEnabled).isEqualTo(false);
+        // 건드리지 않은 행도 여전히 11개 그대로다 — 지운 것 하나만 되살아났을 뿐 나머지는
+        // syncWithDefaults의 "있는 행은 손대지 않는다" 규칙대로 무사하다.
+        assertThat(repository.count()).isEqualTo(DefaultDomains.codes().size());
     }
 
     @Test

@@ -68,7 +68,11 @@ class DocumentImportServiceTest {
                 new LlmDocumentService(
                         draftRepository, documentRepository, adminDocumentService,
                         objectMapper, event -> { }, DefaultDomains.catalog());
-        service = new DocumentImportService(llmDocumentService, importedFileRepository, objectMapper);
+        // domainCatalog는 실물(DefaultDomains.catalog())을 쓴다 — 11개 기본 분야만 "등록됨"으로
+        // 본다. 이 파일들이 쓰는 TestDomains.SYSTEM_DESIGN은 그 안에 있으므로 기존 테스트는
+        // 그대로 통과하고, 아래 rejectsUnregisteredDomain은 그 밖의 코드로 거부를 확인한다.
+        service = new DocumentImportService(llmDocumentService, importedFileRepository, objectMapper,
+                DefaultDomains.catalog());
 
         // save는 받은 엔티티를 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내
         lenient().when(draftRepository.save(any()))
@@ -178,6 +182,33 @@ class DocumentImportServiceTest {
 
         // 이력이 남으면 파일을 고쳐도 영영 다시 읽지 않는다 — 남기지 않는 것이 핵심
         verify(importedFileRepository, never()).save(any());
+    }
+
+    /**
+     * 5번 작업: 형식은 맞지만(DomainCode 값 타입) 지금은 등록되지 않은 분야 — 배치가 도는
+     * 클라우드는 스냅샷 파일로 분야 목록을 보므로, 그 뒤 관리자가 화면에서 분야를 지우면
+     * 이런 파일이 생길 수 있다(DocumentImportService.importFile의 domain 검사 주석 참고).
+     * 이력을 남기지 않아야 분야를 다시 등록했을 때 다음 부팅에 자동으로 재시도된다.
+     */
+    @Test
+    @DisplayName("등록되지 않은 분야의 파일은 흡수하지 않고 이력도 남기지 않는다 — 분야를 되살리면 다음 부팅에 재시도된다")
+    void rejectsFileWithUnregisteredDomain() throws Exception {
+        Path file = tempDir.resolve("2026-08-17.json");
+        Files.writeString(file, """
+                {
+                  "date": "2026-08-17",
+                  "domain": "NOPE_X",
+                  "model": "claude-opus-5",
+                  "document": { "title": "제목", "slug": "slug", "contentMd": "본문", "tags": [] }
+                }
+                """);
+
+        assertThatThrownBy(() -> service.importFile(file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("NOPE_X");
+
+        verify(importedFileRepository, never()).save(any());
+        verify(draftRepository, never()).save(any());
     }
 
     @Test

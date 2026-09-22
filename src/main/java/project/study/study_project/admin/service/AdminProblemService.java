@@ -13,6 +13,7 @@ import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.quiz.domain.Choice;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -49,6 +50,14 @@ public class AdminProblemService {
 
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
+    /**
+     * 분야 존재 확인용(5번 작업). enum이 있던 시절에는 등록 안 된 분야를 요청 파라미터로
+     * 보내는 것 자체가 컴파일에서 막혔다. {@link DomainCode}는 형식만 보므로(값 타입 주석),
+     * "FRONTEND_CS"처럼 형식은 맞지만 지워진 분야가 여기까지 조용히 들어올 수 있다 —
+     * DB 외래키(V20)가 최후의 방어선이지만 그건 500으로 나온다. 저장 전에 미리 확인해
+     * 400(DOMAIN_003)으로 바꾼다.
+     */
+    private final DomainCatalog domainCatalog;
 
     /** 관리 화면 목록 — 최신순, 필터(선택), 정답·해설 포함(ADMIN 전용 경로라 노출 가능). */
     @Transactional(readOnly = true)
@@ -76,6 +85,7 @@ public class AdminProblemService {
     /** 문제 등록. 검증 통과 → Problem 저장(객관식이면 보기는 cascade로 함께 INSERT). */
     @Transactional
     public AdminProblemDetail create(AdminProblemRequest request) {
+        requireRegisteredDomain(request.domain());
         validateByType(request);
         Problem problem = Problem.create(
                 request.domain(), request.difficulty(), request.type(), trimOrNull(request.title()),
@@ -95,6 +105,7 @@ public class AdminProblemService {
      */
     @Transactional
     public AdminProblemDetail update(Long id, AdminProblemRequest request) {
+        requireRegisteredDomain(request.domain());
         validateByType(request);
         Problem problem = findProblem(id);
         problem.update(request.domain(), request.difficulty(), request.type(), trimOrNull(request.title()),
@@ -124,6 +135,17 @@ public class AdminProblemService {
     private Problem findProblem(Long id) {
         return problemRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+    }
+
+    /**
+     * 저장 "전에" 분야가 실제로 등록돼 있는지 본다(5번 작업). DB 외래키(V20)도 결국 막아 주지만
+     * 그건 DataIntegrityViolationException → 500으로 나온다. 여기서 먼저 걸러야 사용자가
+     * "오타·지운 분야"임을 알아채고 고칠 수 있는 400이 나간다.
+     */
+    private void requireRegisteredDomain(DomainCode domain) {
+        if (!domainCatalog.exists(domain)) {
+            throw new BusinessException(ErrorCode.DOMAIN_003, "등록되지 않은 분야입니다: " + domain);
+        }
     }
 
     /**
