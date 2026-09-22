@@ -3,7 +3,7 @@ package project.study.study_project.admin.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 /**
  * 주제 대기열에 한 줄 추가하는 요청.
@@ -20,7 +20,7 @@ import project.study.study_project.global.common.Domain;
 public record AdminTopicQueueRequest(
 
         @NotNull(message = "분야를 선택해 주세요.")
-        Domain domain,
+        DomainCode domain,
 
         @NotBlank(message = "주제를 입력해 주세요.")
         @Size(max = 200, message = "주제는 200자를 넘을 수 없습니다.")

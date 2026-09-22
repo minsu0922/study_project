@@ -7,11 +7,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.service.DocumentService;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.config.CacheConfig;
 import project.study.study_project.global.exception.BusinessException;
 
@@ -150,7 +151,7 @@ class DocumentReadIntegrationTest {
     }
 
     private AdminDocumentRequest request(String slug, String contentMd, String tag) {
-        return new AdminDocumentRequest(Domain.DATABASE, "읽기 경로 테스트 문서", slug,
+        return new AdminDocumentRequest(TestDomains.DATABASE, "읽기 경로 테스트 문서", slug,
                 contentMd, null, List.of(tag));
     }
 }

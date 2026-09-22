@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.QuestionKind;
 import project.study.study_project.llm.support.GenerationLimits;
@@ -49,7 +49,7 @@ import project.study.study_project.llm.support.GenerationLimits;
 public record LlmDocumentGenerateRequest(
 
         @NotNull(message = "분야를 선택해 주세요. 업로드 생성은 분야를 자동으로 고르지 않습니다.")
-        Domain domain,
+        DomainCode domain,
 
         @NotNull(message = "난이도를 선택해 주세요.")
         Difficulty difficulty,

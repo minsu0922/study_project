@@ -9,7 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.TestDomains;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.dto.DomainSettingsFile;
 import project.study.study_project.llm.repository.DomainSettingRepository;
@@ -51,7 +52,7 @@ class DomainSettingExporterTest {
     @Test
     @DisplayName("켜짐·순서·이름·힌트를 그대로 싣는다 — 배치가 이 파일만 보고 돌 수 있어야 한다")
     void exportsEveryFieldTheBatchNeeds() throws Exception {
-        given(setting(Domain.NETWORK, true, 0, "네트워크", "경계 설명"));
+        given(setting(TestDomains.NETWORK, true, 0, "네트워크", "경계 설명"));
 
         assertThat(exporter.export(tempDir)).isTrue();
 
@@ -66,7 +67,7 @@ class DomainSettingExporterTest {
     @Test
     @DisplayName("꺼진 분야도 내보낸다 — 화면에서 다시 켤 때 이름·힌트가 남아 있어야 한다")
     void disabledDomainsAreExportedToo() throws Exception {
-        given(setting(Domain.CLOUD_INFRA, false, 9, "클라우드·인프라", null));
+        given(setting(TestDomains.CLOUD_INFRA, false, 9, "클라우드·인프라", null));
 
         exporter.export(tempDir);
 
@@ -82,7 +83,7 @@ class DomainSettingExporterTest {
     @Test
     @DisplayName("힌트가 없으면 \"hint\" 칸 자체를 뺀다 — null이 줄줄이 찍히면 사람이 읽고 고치기 나쁘다")
     void omitsMissingHint() throws Exception {
-        given(setting(Domain.NETWORK, true, 0, "네트워크", null));
+        given(setting(TestDomains.NETWORK, true, 0, "네트워크", null));
 
         exporter.export(tempDir);
 
@@ -108,7 +109,7 @@ class DomainSettingExporterTest {
     @Test
     @DisplayName("내용이 같으면 다시 쓰지 않는다 — 켤 때마다 파일이 바뀌면 진짜 변경을 못 알아본다")
     void doesNotRewriteWhenUnchanged() throws Exception {
-        given(setting(Domain.NETWORK, true, 0, "네트워크", null));
+        given(setting(TestDomains.NETWORK, true, 0, "네트워크", null));
 
         assertThat(exporter.export(tempDir)).isTrue();
         assertThat(exporter.export(tempDir)).as("두 번째 호출은 아무것도 하지 않아야 한다").isFalse();
@@ -125,7 +126,7 @@ class DomainSettingExporterTest {
                 tempDir.resolve(DomainSettingExporter.FILE_NAME).toFile(), DomainSettingsFile.class);
     }
 
-    private DomainSetting setting(Domain domain, boolean enabled, int sortOrder, String displayName, String hint) {
+    private DomainSetting setting(DomainCode domain, boolean enabled, int sortOrder, String displayName, String hint) {
         return DomainSetting.initial(domain, enabled, sortOrder, displayName, hint);
     }
 }

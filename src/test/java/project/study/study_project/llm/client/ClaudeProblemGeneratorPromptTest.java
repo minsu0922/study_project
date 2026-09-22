@@ -2,8 +2,9 @@ package project.study.study_project.llm.client;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.DomainHints;
@@ -1133,7 +1134,7 @@ class ClaudeProblemGeneratorPromptTest {
     @Test
     @DisplayName("형태를 지목하면 조건 줄에 실리고 배분 규칙은 함께 꺼진다 — 두 지시가 부딪히면 하나가 조용히 버려진다")
     void pinsRequestedQuestionKindAndDisablesTheBalanceRule() {
-        String pinned = generator.buildPrompt(Domain.SECURITY, Difficulty.INTERMEDIATE,
+        String pinned = generator.buildPrompt(TestDomains.SECURITY, Difficulty.INTERMEDIATE,
                 ProblemType.MULTIPLE_CHOICE, 1, List.of(), List.of(), DOC, QuestionKind.JUDGMENT);
 
         assertThat(pinned)
@@ -1154,7 +1155,7 @@ class ClaudeProblemGeneratorPromptTest {
     }
 
     private String prompt(Difficulty difficulty, SourceDocument source) {
-        return generator.buildPrompt(Domain.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
+        return generator.buildPrompt(TestDomains.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
                 5, List.of(), List.of(), source, null);
     }
 
@@ -1169,9 +1170,9 @@ class ClaudeProblemGeneratorPromptTest {
     @DisplayName("주입한 힌트가 프롬프트에 실린다 — 재배포 없이 경계를 고칠 수 있어야 한다")
     void injectedHintAppearsInPrompt() {
         ClaudeProblemGenerator custom = new ClaudeProblemGenerator(
-                "claude-opus-5", DomainHints.of(Map.of(Domain.NETWORK, "TCP 혼잡 제어 위주")));
+                "claude-opus-5", DomainHints.of(Map.of(TestDomains.NETWORK, "TCP 혼잡 제어 위주")));
 
-        String prompt = custom.buildPrompt(Domain.NETWORK, Difficulty.BEGINNER,
+        String prompt = custom.buildPrompt(TestDomains.NETWORK, Difficulty.BEGINNER,
                 ProblemType.MULTIPLE_CHOICE, 1, List.of(), List.of(), null, null);
 
         assertThat(prompt).contains("(TCP 혼잡 제어 위주)");
@@ -1185,7 +1186,7 @@ class ClaudeProblemGeneratorPromptTest {
     @Test
     @DisplayName("힌트를 안 주면 내장값으로 돈다 — 설정이 없는 환경에서도 지금과 같아야 한다")
     void fallsBackToBuiltInHints() {
-        String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, Difficulty.BEGINNER,
+        String prompt = generator.buildPrompt(TestDomains.BACKEND_FRAMEWORK, Difficulty.BEGINNER,
                 ProblemType.MULTIPLE_CHOICE, 1, List.of(), List.of(), null, null);
 
         assertThat(prompt).contains("Spring DI/IoC");

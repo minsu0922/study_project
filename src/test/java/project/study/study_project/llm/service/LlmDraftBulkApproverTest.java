@@ -6,9 +6,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -43,7 +44,7 @@ class LlmDraftBulkApproverTest {
 
     /** 승인 결과 상세 — 이 테스트가 보는 것은 id뿐이라 나머지는 최소로 채운다. */
     private AdminProblemDetail detail(long problemId) {
-        return new AdminProblemDetail(problemId, Domain.NETWORK, Difficulty.BEGINNER,
+        return new AdminProblemDetail(problemId, TestDomains.NETWORK, Difficulty.BEGINNER,
                 ProblemType.MULTIPLE_CHOICE, "제목", "지문", null, "해설", null, List.of());
     }
 

@@ -55,7 +55,7 @@ public enum ErrorCode {
     // 409인 이유는 DOC_002와 같다 — 요청 자체는 멀쩡하고 지금 상태와 부딪힐 뿐이다.
     TOPIC_002("TOPIC_002", HttpStatus.CONFLICT, "같은 분야에 같은 주제 범위가 이미 있습니다."),
 
-    // 분야 설정(V19). syncWithEnum이 기동마다 Domain enum 전체에 행을 맞춰 두므로 정상 경로에서는
+    // 분야 설정(V19). syncWithDefaults가 기동마다 기본 분야(DefaultDomains) 전체에 행을 맞춰 두므로 정상 경로에서는
     // 나지 않는다 — 그래도 404로 막아 두는 이유는, 동기화 전(부팅 도중)이나 enum 변환 자체가
     // 막힌 상태에서 관리 화면이 이 API를 부르면 NPE 대신 뜻이 분명한 응답을 받게 하기 위해서다.
     DOMAIN_001("DOMAIN_001", HttpStatus.NOT_FOUND, "분야 설정을 찾을 수 없습니다."),

@@ -1,8 +1,8 @@
 package project.study.study_project.llm.support;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -24,17 +24,28 @@ import java.util.Map;
  */
 public final class DomainHints {
 
-    /** 2026-09-21까지 코드에 박혀 있던 값. 설정 행의 초기값으로 쓰인다. */
-    public static final DomainHints BUILT_IN = of(builtInMap());
+    /**
+     * 2026-09-21까지 코드에 박혀 있던 값. 설정 행의 초기값으로 쓰인다.
+     *
+     * <p><b>문자열 원본은 {@link DefaultDomains}에 있고, 이 클래스는 읽기만 한다.</b> 의존은
+     * {@code DomainHints → DefaultDomains} 한 방향뿐이어야 한다. 예전처럼 {@code DefaultDomains}가
+     * 이 필드를 읽어 자기 힌트를 채우면서 이 필드도 {@code DefaultDomains}를 읽으면, 두 클래스의
+     * static 필드가 서로를 부르는 순환이 된다. 자바는 이것을 컴파일 오류로 막지 않는다 — 먼저
+     * 초기화되는 쪽이 상대 필드를 {@code null}로 읽어, 힌트 맵이 조용히 비거나 NPE가 난다.
+     * 어느 쪽이 먼저 로드되는지는 호출 순서에 달려 있어 테스트마다 결과가 달라질 수도 있다.
+     */
+    public static final DomainHints BUILT_IN = of(DefaultDomains.hints());
 
-    private final Map<Domain, String> hints;
+    private final Map<DomainCode, String> hints;
 
-    private DomainHints(Map<Domain, String> hints) {
+    private DomainHints(Map<DomainCode, String> hints) {
         this.hints = hints;
     }
 
-    public static DomainHints of(Map<Domain, String> hints) {
-        EnumMap<Domain, String> copy = new EnumMap<>(Domain.class);
+    public static DomainHints of(Map<DomainCode, String> hints) {
+        // 예전엔 EnumMap이었다. 이 맵은 hintFor/rawHintFor의 조회에만 쓰이고 밖으로 순회되지
+        // 않으므로(돌려주는 접근자가 없다) 순서가 드러날 자리가 없다 — HashMap이면 충분하다.
+        Map<DomainCode, String> copy = new HashMap<>();
         hints.forEach((domain, hint) -> {
             if (hint != null && !hint.isBlank()) {
                 copy.put(domain, hint.trim());
@@ -44,32 +55,13 @@ public final class DomainHints {
     }
 
     /** 프롬프트에 그대로 이어 붙일 꼴 — 앞 공백과 괄호까지 붙여서 준다. 없으면 빈 문자열. */
-    public String hintFor(Domain domain) {
+    public String hintFor(DomainCode domain) {
         String raw = rawHintFor(domain);
         return raw.isEmpty() ? "" : " (" + raw + ")";
     }
 
     /** 괄호 없는 원문 — 화면 입력칸과 내보내기 파일이 쓴다. */
-    public String rawHintFor(Domain domain) {
+    public String rawHintFor(DomainCode domain) {
         return hints.getOrDefault(domain, "");
-    }
-
-    private static Map<Domain, String> builtInMap() {
-        EnumMap<Domain, String> map = new EnumMap<>(Domain.class);
-        map.put(Domain.BACKEND_FRAMEWORK,
-                "Spring DI/IoC·Bean 생명주기·AOP·@Transactional 전파·MVC 흐름, "
-                        + "JPA 영속성 컨텍스트·지연 로딩·N+1, 커넥션 풀·서블릿 컨테이너. "
-                        + "순수 JVM/GC 주제는 제외");
-        map.put(Domain.LANGUAGE_RUNTIME,
-                "Java 언어·JVM 내부: 메모리 구조·GC·클래스로딩·동시성. "
-                        + "Spring/JPA 등 프레임워크 주제는 제외");
-        map.put(Domain.SOFTWARE_ENGINEERING,
-                "요구사항 분석·UML·디자인 패턴·테스트 기법·형상관리·개발방법론. "
-                        + "즉 사람이 코드를 만들고 관리하는 절차. "
-                        + "부하·확장·장애처럼 돌아가는 시스템을 다루는 주제는 제외");
-        map.put(Domain.SYSTEM_DESIGN,
-                "돌아가는 시스템의 구조: 부하 분산·캐시 계층·확장·장애 대응·데이터 흐름. "
-                        + "요구사항·UML·테스트 기법 같은 개발 절차 주제는 제외");
-        return map;
     }
 }

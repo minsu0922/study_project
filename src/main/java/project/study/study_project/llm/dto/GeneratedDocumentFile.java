@@ -1,6 +1,6 @@
 package project.study.study_project.llm.dto;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 
 /**
@@ -42,7 +42,7 @@ public record GeneratedDocumentFile(
         String note,
         String date,
         String generatedAt,
-        Domain domain,
+        DomainCode domain,
         String model,
         GeneratedDocumentItem document,
         GeneratedDocumentItem advancedDocument

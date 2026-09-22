@@ -12,9 +12,10 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
@@ -188,7 +189,7 @@ class AdminLlmBulkApproveIntegrationTest {
 
     private GeneratedProblemDraft savePendingDraft(String choicesJson) {
         GeneratedProblemDraft draft = draftRepository.save(GeneratedProblemDraft.pending(
-                Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 "일괄 승인 테스트용 제목",
                 "일괄 승인 테스트용 지문 " + UUID.randomUUID(),
                 null, "해설입니다.", choicesJson, "test-model", null, null, null));

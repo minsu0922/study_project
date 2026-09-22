@@ -19,7 +19,7 @@ import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
@@ -53,7 +53,7 @@ public class AdminProblemController {
     /** 목록(관리 화면용, 정답 포함). 예: {@code GET /api/admin/problems?domain=NETWORK&page=0} */
     @GetMapping
     public ApiResponse<PageResponse<AdminProblemDetail>> list(
-            @RequestParam(required = false) Domain domain,
+            @RequestParam(required = false) DomainCode domain,
             @RequestParam(required = false) Difficulty difficulty,
             @RequestParam(required = false) ProblemType type,
             @RequestParam(required = false) String documentSlug,

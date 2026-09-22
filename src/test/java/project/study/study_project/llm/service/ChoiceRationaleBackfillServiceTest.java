@@ -4,8 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedRationale;
 import project.study.study_project.llm.client.RationaleGenerator;
@@ -316,7 +317,7 @@ class ChoiceRationaleBackfillServiceTest {
      * setter를 뚫는 것보다 낫다 — 그 setter는 실제 코드에서도 부를 수 있게 된다.
      */
     private static Problem problem(long id, String explanation, Choice... choices) {
-        Problem p = Problem.create(Domain.SECURITY, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+        Problem p = Problem.create(TestDomains.SECURITY, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 null, "지문", null, explanation, null);
         inject(Problem.class, p, "id", id);
         p.replaceChoices(List.of(choices));

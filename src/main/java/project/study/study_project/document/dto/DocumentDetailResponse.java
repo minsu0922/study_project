@@ -2,7 +2,8 @@ package project.study.study_project.document.dto;
 
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.support.DocumentEditions;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.tag.domain.Tag;
 
 import java.time.LocalDateTime;
@@ -18,7 +19,7 @@ import java.util.List;
  */
 public record DocumentDetailResponse(
         Long id,
-        Domain domain,
+        DomainCode domain,
         String domainLabel,
         String title,
         String slug,
@@ -49,7 +50,7 @@ public record DocumentDetailResponse(
         return new DocumentDetailResponse(
                 d.getId(),
                 d.getDomain(),
-                d.getDomain().getDisplayName(),
+                DefaultDomains.displayName(d.getDomain()),
                 d.getTitle(),
                 d.getSlug(),
                 d.getContentMd(),

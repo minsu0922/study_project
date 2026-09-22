@@ -2,8 +2,9 @@ package project.study.study_project.llm.support;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -27,9 +28,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GenerationScheduleTest {
 
     /** 실제 설정(application.yml의 batch-domains)과 같은 8개 — 순서까지 동일해야 의미가 있다. */
-    private static final List<Domain> DOMAINS = List.of(
-            Domain.NETWORK, Domain.OS, Domain.DATABASE, Domain.DS_ALGORITHM,
-            Domain.SYSTEM_DESIGN, Domain.SECURITY, Domain.LANGUAGE_RUNTIME, Domain.BACKEND_FRAMEWORK);
+    private static final List<DomainCode> DOMAINS = List.of(
+            TestDomains.NETWORK, TestDomains.OS, TestDomains.DATABASE, TestDomains.DS_ALGORITHM,
+            TestDomains.SYSTEM_DESIGN, TestDomains.SECURITY, TestDomains.LANGUAGE_RUNTIME, TestDomains.BACKEND_FRAMEWORK);
 
     /**
      * 아래 대부분의 테스트가 쓰는 앵커 = 에포크 = <b>앵커가 없던 시절의 위상</b>.
@@ -79,8 +80,8 @@ class GenerationScheduleTest {
         LocalDate start = LocalDate.of(2026, 8, 12);
 
         for (int i = 0; i < 30; i++) {
-            Domain today = GenerationSchedule.cellFor(start.plusDays(i), DOMAINS).domain();
-            Domain tomorrow = GenerationSchedule.cellFor(start.plusDays(i + 1), DOMAINS).domain();
+            DomainCode today = GenerationSchedule.cellFor(start.plusDays(i), DOMAINS).domain();
+            DomainCode tomorrow = GenerationSchedule.cellFor(start.plusDays(i + 1), DOMAINS).domain();
             assertThat(today).as("%d일째와 다음 날의 분야", i).isNotEqualTo(tomorrow);
         }
     }
@@ -144,7 +145,7 @@ class GenerationScheduleTest {
     @DisplayName("주기가 끝나면 다음 분야로 넘어간다 — 한 분야에 머무르면 나머지가 영영 안 나온다")
     void movesToNextDomainAfterEachCycle() {
         LocalDate cycleStart = firstDayOfCycle(LocalDate.of(2026, 8, 12));
-        List<Domain> visited = new java.util.ArrayList<>();
+        List<DomainCode> visited = new java.util.ArrayList<>();
 
         for (int cycle = 0; cycle < DOMAINS.size(); cycle++) {
             visited.add(GenerationSchedule

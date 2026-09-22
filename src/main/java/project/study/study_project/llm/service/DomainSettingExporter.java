@@ -109,7 +109,7 @@ public class DomainSettingExporter extends SnapshotExporter {
     /** 엔티티 → 파일 한 줄. */
     private static DomainSettingsFile.Entry toEntry(DomainSetting setting) {
         return new DomainSettingsFile.Entry(
-                setting.getDomain().name(), setting.isEnabled(), setting.getSortOrder(),
+                setting.getDomain().value(), setting.isEnabled(), setting.getSortOrder(),
                 setting.getDisplayName(), setting.getHint());
     }
 }

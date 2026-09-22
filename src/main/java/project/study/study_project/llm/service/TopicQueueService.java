@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminTopicQueueRequest;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -136,7 +137,7 @@ public class TopicQueueService {
      * @param q 주제·메모에서 찾을 말. 비어 있으면 거르지 않는다(대소문자 무시)
      */
     @Transactional(readOnly = true)
-    public PageResponse<TopicQueueItemResponse> search(String q, Domain domain, TopicUsage usage,
+    public PageResponse<TopicQueueItemResponse> search(String q, DomainCode domain, TopicUsage usage,
                                                        Pageable pageable) {
         List<TopicQueueItemResponse> all = getAll();
 
@@ -305,12 +306,12 @@ public class TopicQueueService {
             throw new BusinessException(ErrorCode.TOPIC_002);
         }
 
-        Domain before = item.getDomain();
+        DomainCode before = item.getDomain();
         item.edit(request.domain(), topic, trimToNull(request.memo()));
 
         // 분야가 바뀐 것은 따로 남긴다. 이 값이 사흘치 문제의 분야까지 정하므로, 나중에
         // "왜 이날 문제가 딴 분야지"를 되짚을 때 이 줄 하나가 실마리가 된다.
-        if (before != request.domain()) {
+        if (!Objects.equals(before, request.domain())) { // != 는 참조 비교라 매번 "바뀜"이 된다
             log.info("주제 범위 분야 변경: #{} {} → {} — 이 범위로 만들 문서와 사흘치 문제의 분야가 함께 바뀝니다",
                     id, before, request.domain());
         }
@@ -556,7 +557,7 @@ public class TopicQueueService {
 
     /** 손으로 적은 줄을 DB로 들여온다. 형식이 틀리거나 이미 있으면 {@code null}. */
     private TopicQueueItem adopt(TopicQueueFile.Entry entry, int sortOrder) {
-        Domain domain = TopicQueue.parseDomain(entry.domain());
+        DomainCode domain = TopicQueue.parseDomain(entry.domain());
         if (domain == null || entry.topic() == null || entry.topic().isBlank()) {
             return null;
         }

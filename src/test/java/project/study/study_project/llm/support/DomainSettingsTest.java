@@ -3,7 +3,8 @@ package project.study.study_project.llm.support;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.TestDomains;
+import project.study.study_project.global.common.DomainCode;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,8 +30,8 @@ class DomainSettingsTest {
 
         DomainSettings settings = DomainSettings.read(dir);
 
-        assertThat(settings.batchDomains()).containsExactly(Domain.OS, Domain.NETWORK);
-        assertThat(settings.hints().rawHintFor(Domain.NETWORK)).isEqualTo("TCP 위주");
+        assertThat(settings.batchDomains()).containsExactly(TestDomains.OS, TestDomains.NETWORK);
+        assertThat(settings.hints().rawHintFor(TestDomains.NETWORK)).isEqualTo("TCP 위주");
     }
 
     @Test
@@ -59,13 +60,13 @@ class DomainSettingsTest {
                   {"domain":"OS","enabled":true,"sortOrder":1,"displayName":"운영체제","hint":null}
                 ]}""");
 
-        assertThat(DomainSettings.read(dir).batchDomains()).containsExactly(Domain.OS);
+        assertThat(DomainSettings.read(dir).batchDomains()).containsExactly(TestDomains.OS);
     }
 
     @Test
     @DisplayName("빈 설정의 힌트는 내장값 — 설정이 없던 때와 같은 프롬프트가 나간다")
     void emptySettingsFallBackToBuiltInHints(@TempDir Path dir) {
-        assertThat(DomainSettings.read(dir).hints().rawHintFor(Domain.SYSTEM_DESIGN))
-                .isEqualTo(DomainHints.BUILT_IN.rawHintFor(Domain.SYSTEM_DESIGN));
+        assertThat(DomainSettings.read(dir).hints().rawHintFor(TestDomains.SYSTEM_DESIGN))
+                .isEqualTo(DomainHints.BUILT_IN.rawHintFor(TestDomains.SYSTEM_DESIGN));
     }
 }

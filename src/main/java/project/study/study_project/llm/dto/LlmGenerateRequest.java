@@ -3,7 +3,7 @@ package project.study.study_project.llm.dto;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.support.GenerationLimits;
 
@@ -17,7 +17,7 @@ import project.study.study_project.llm.support.GenerationLimits;
  *                   더 필요하면 여러 번 누르면 된다(한 방에 많이보다 실패 단위가 작은 쪽이 낫다)
  */
 public record LlmGenerateRequest(
-        Domain domain,
+        DomainCode domain,
         Difficulty difficulty,
         ProblemType type,
 

@@ -12,7 +12,7 @@ import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.dto.DocumentListItem;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -43,7 +43,7 @@ public class DocumentService {
      * @param keyword 제목·본문에서 찾을 말(없거나 공백뿐이면 전체). 대소문자를 안 가린다.
      */
     @Transactional(readOnly = true)
-    public PageResponse<DocumentListItem> getDocuments(Domain domain, List<String> tags,
+    public PageResponse<DocumentListItem> getDocuments(DomainCode domain, List<String> tags,
                                                       String keyword, Pageable pageable) {
         return PageResponse.from(withEditions(
                 documentRepository.searchListItems(domain, tags, keyword, pageable)));

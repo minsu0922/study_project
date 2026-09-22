@@ -10,12 +10,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
@@ -90,7 +91,7 @@ class LlmDocumentServiceTest {
         AdminDocumentRequest request = captor.getValue();
         assertThat(request.title()).isEqualTo("캐시 전략");
         assertThat(request.slug()).isEqualTo("cache-strategy");
-        assertThat(request.domain()).isEqualTo(Domain.SYSTEM_DESIGN);
+        assertThat(request.domain()).isEqualTo(TestDomains.SYSTEM_DESIGN);
         assertThat(request.tags()).containsExactly("cache", "performance");
         assertThat(request.source()).as("AI가 지어낸 가짜 출처를 넣지 않기 위해 비운다").isNull();
 
@@ -421,7 +422,7 @@ class LlmDocumentServiceTest {
     private GeneratedDocumentDraft pendingDraft(String title, String slug, String content) {
         // 흡수 경로와 같은 입구를 쓴다 — 테스트가 엔티티를 직접 만들면 태그 JSON 형식이
         // 실제와 달라져 "테스트만 통과하는" 상태가 된다.
-        return service.saveDraft(Domain.SYSTEM_DESIGN,
+        return service.saveDraft(TestDomains.SYSTEM_DESIGN,
                 new GeneratedDocumentItem(title, slug, content, List.of("cache", "performance")),
                 "claude-opus-5");
     }
@@ -461,7 +462,7 @@ class LlmDocumentServiceTest {
     }
 
     private DocumentDetailResponse detail(Long id) {
-        return new DocumentDetailResponse(id, Domain.SYSTEM_DESIGN, "시스템 설계",
+        return new DocumentDetailResponse(id, TestDomains.SYSTEM_DESIGN, "시스템 설계",
                 "캐시 전략", "cache-strategy", "본문", null, List.of("cache"),
                 LocalDateTime.now(), LocalDateTime.now(), null, null);
     }

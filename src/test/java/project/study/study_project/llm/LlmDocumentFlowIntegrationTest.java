@@ -11,8 +11,9 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
@@ -308,7 +309,7 @@ class LlmDocumentFlowIntegrationTest {
      * 태그 JSON 형식 같은 세부가 실제와 어긋나 "테스트만 통과하는" 상태가 되는 것을 막기 위해서다.
      */
     private GeneratedDocumentDraft saveDraft(String title, String slug, String content) {
-        return llmDocumentService.saveDraft(Domain.SYSTEM_DESIGN,
+        return llmDocumentService.saveDraft(TestDomains.SYSTEM_DESIGN,
                 new GeneratedDocumentItem(title, slug, content, List.of("cache", "performance")),
                 "claude-opus-5");
     }

@@ -2,8 +2,9 @@ package project.study.study_project.llm.cli;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.support.ProblemItemRule;
@@ -225,9 +226,9 @@ class PromptEvalCliTest {
                 PromptEvalCli.score(Difficulty.ADVANCED, 1,
                         List.of(item("이미 늘렸는데도 반복된다. 대응은?", explanation()))));
 
-        String rendered = PromptEvalCli.render(reports, "claude-opus-5", Domain.DATABASE,
+        String rendered = PromptEvalCli.render(reports, "claude-opus-5", TestDomains.DATABASE,
                 Path.of("generated/documents/2026-08-15.json"),
-                new PromptEvalCli.LoadedDocument(Domain.DATABASE,
+                new PromptEvalCli.LoadedDocument(TestDomains.DATABASE,
                         new SourceDocument("iso", "격리 수준", "## 무엇인가\n정의.")));
 
         assertThat(rendered)
@@ -263,8 +264,8 @@ class PromptEvalCliTest {
         String rendered = PromptEvalCli.render(
                 List.of(PromptEvalCli.score(Difficulty.ADVANCED, 1,
                         List.of(item("MVCC가 대가로 문서가 든 것은?", explanation)))),
-                "claude-opus-5", Domain.DATABASE, Path.of("generated/documents/2026-08-15.json"),
-                new PromptEvalCli.LoadedDocument(Domain.DATABASE,
+                "claude-opus-5", TestDomains.DATABASE, Path.of("generated/documents/2026-08-15.json"),
+                new PromptEvalCli.LoadedDocument(TestDomains.DATABASE,
                         new SourceDocument("iso", "격리 수준", "## 무엇인가\n정의.")));
 
         assertThat(rendered)

@@ -7,10 +7,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 
 import java.util.List;
@@ -80,7 +81,7 @@ class QuizTypeFilterIntegrationTest {
     /** 객관식은 보기가 있어야 저장된다(정답 하나 + 오답 하나가 최소). */
     private void createMultipleChoice() {
         adminProblemService.create(new AdminProblemRequest(
-                Domain.SECURITY, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
                 "유형 필터 테스트",
                 "유형 필터 테스트용 객관식 지문 " + UUID.randomUUID(),
                 null, "이 유형이 목록에 어떻게 반영되는지 보려고 만든 문제다.",
@@ -92,7 +93,7 @@ class QuizTypeFilterIntegrationTest {
     /** 유형만 다른 최소 문제 하나. 보기가 필요 없는 유형이라 answer로 채운다. */
     private void create(ProblemType type, String answer) {
         adminProblemService.create(new AdminProblemRequest(
-                Domain.SECURITY, Difficulty.BEGINNER, type,
+                TestDomains.SECURITY, Difficulty.BEGINNER, type,
                 "유형 필터 테스트",
                 "유형 필터 테스트용 지문 " + UUID.randomUUID(),
                 answer, "이 유형이 목록에 어떻게 반영되는지 보려고 만든 문제다.",

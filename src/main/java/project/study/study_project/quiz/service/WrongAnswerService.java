@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.document.repository.DocumentRepository;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.domain.Submission;
@@ -43,7 +43,7 @@ public class WrongAnswerService {
      * @param domain 도메인 필터(선택)
      */
     @Transactional(readOnly = true)
-    public PageResponse<WrongAnswerItem> getWrongAnswers(Long userId, Domain domain, Pageable pageable) {
+    public PageResponse<WrongAnswerItem> getWrongAnswers(Long userId, DomainCode domain, Pageable pageable) {
         Page<Submission> page = submissionRepository.findLatestWrongAnswers(userId, domain, pageable);
         // 이 페이지에 실제로 존재하는 근거 문서 slug를 <한 번에> 조회해 둔다(아래 메서드 주석).
         Set<String> existingSlugs = findExistingDocumentSlugs(page.getContent());

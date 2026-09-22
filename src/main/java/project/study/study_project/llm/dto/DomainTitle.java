@@ -1,6 +1,7 @@
 package project.study.study_project.llm.dto;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 
 /**
  * 분야와 제목 한 쌍 — 중복 회피 목록을 <b>[분야] 제목</b> 꼴로 내보내려고 만들었다(2026-09-03).
@@ -14,10 +15,10 @@ import project.study.study_project.global.common.Domain;
  * <p>정식 문서와 검수 대기 초안이 <b>같은 모양</b>으로 나와야 해서 저장소 두 곳이 이 타입을
  * 함께 쓴다. 각자 다른 타입으로 돌려주면 내보내는 쪽에서 두 갈래로 갈라 붙이게 된다.
  */
-public record DomainTitle(Domain domain, String title) {
+public record DomainTitle(DomainCode domain, String title) {
 
     /** 프롬프트에 실리는 형태. 분야는 한국어 표기로 — 모델에게 {@code NETWORK}보다 읽힌다. */
     public String labeled() {
-        return "[%s] %s".formatted(domain.getDisplayName(), title);
+        return "[%s] %s".formatted(DefaultDomains.displayName(domain), title);
     }
 }

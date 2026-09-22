@@ -2,7 +2,7 @@ package project.study.study_project.llm.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
@@ -117,8 +117,8 @@ public final class PromptEvalCli {
 
         Path documentFile = resolveDocumentFile(opts.get("document"));
         LoadedDocument loaded = readDocument(documentFile);
-        Domain domain = opts.containsKey("domain")
-                ? Domain.valueOf(opts.get("domain")) : loaded.domain();
+        DomainCode domain = opts.containsKey("domain")
+                ? DraftGeneratorCli.knownDomain(opts.get("domain")) : loaded.domain();
 
         System.out.printf("프롬프트 평가 시작: 모델 %s, 난이도당 %d문제, 분야 %s%n", model, count, domain);
         System.out.printf("근거 문서: %s (\"%s\", %d자)%n",
@@ -263,7 +263,7 @@ public final class PromptEvalCli {
      * 마크다운 보고서. 표로 만드는 이유는 <b>두 실행을 나란히 놓고 보기 위해서</b>다 —
      * 줄글이면 무엇이 달라졌는지 눈으로 좇을 수가 없다.
      */
-    static String render(List<DifficultyReport> reports, String model, Domain domain,
+    static String render(List<DifficultyReport> reports, String model, DomainCode domain,
                          Path documentFile, LoadedDocument loaded) {
         StringBuilder sb = new StringBuilder();
         sb.append("# 프롬프트 평가 보고서\n\n");
@@ -375,12 +375,15 @@ public final class PromptEvalCli {
         if (doc == null || doc.contentMd() == null || doc.contentMd().isBlank()) {
             throw new IllegalStateException("근거 문서 본문이 비어 있습니다: " + file);
         }
-        return new LoadedDocument(parsed.domain() == null ? Domain.DATABASE : parsed.domain(),
+        // 분야가 빠진 옛 문서 파일의 폴백. 본코드에서 DefaultDomains 밖에 분야 코드 글자를 둔 유일한 예외다
+        // — 평가 하네스 전용이라 서비스 경로에 닿지 않고, 예전 Domain.DATABASE 폴백을 그대로 옮긴 것이다
+        // (분야 등록부 Task 9의 "코드 글자 금지" 검사가 이 줄을 허용 목록에 둔다).
+        return new LoadedDocument(parsed.domain() == null ? DomainCode.of("DATABASE") : parsed.domain(),
                 new SourceDocument(doc.slug(), doc.title(), doc.contentMd()));
     }
 
     /** 읽어 온 근거 문서와 그 분야. */
-    record LoadedDocument(Domain domain, SourceDocument document) {
+    record LoadedDocument(DomainCode domain, SourceDocument document) {
     }
 
     /**

@@ -10,7 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import project.study.study_project.document.support.DocumentEditions;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.support.DomainHints;
@@ -632,7 +633,7 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     }
 
     @Override
-    public GeneratedDocumentItem generate(Domain domain, String topic,
+    public GeneratedDocumentItem generate(DomainCode domain, String topic,
                                           List<String> avoidTitles, List<String> preferredTags) {
         return call(BEGINNER_SYSTEM_PROMPT,
                 buildPrompt(domain, topic, avoidTitles, preferredTags),
@@ -653,7 +654,7 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      * @param beginner 같은 주제의 입문편(방금 생성한 것). {@code null}이면 호출부의 실수다
      */
     @Override
-    public GeneratedDocumentItem generateAdvanced(Domain domain, GeneratedDocumentItem beginner,
+    public GeneratedDocumentItem generateAdvanced(DomainCode domain, GeneratedDocumentItem beginner,
                                                   List<String> preferredTags) {
         if (beginner == null || beginner.contentMd() == null || beginner.contentMd().isBlank()) {
             throw new BusinessException(ErrorCode.LLM_003, "심화편을 만들려면 입문편 본문이 필요합니다.");
@@ -1286,11 +1287,11 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      * 관리하는 대안도 검토했지만, 분야마다 수십 개를 적어 두는 일이 생기고 결국 갱신되지 않는다.
      * 기존 제목 목록은 어차피 중복 회피용으로 필요하므로, 그것을 그대로 선택의 근거로 쓴다.
      */
-    String buildPrompt(Domain domain, String topic,
+    String buildPrompt(DomainCode domain, String topic,
                        List<String> avoidTitles, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
         // 힌트는 <지금> 읽는다 — 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다.
-        sb.append("분야: ").append(domain.getDisplayName())
+        sb.append("분야: ").append(DefaultDomains.displayName(domain))
                 .append(domainHintsProvider.current().hintFor(domain)).append('\n');
 
         if (topic != null && !topic.isBlank()) {
@@ -1394,10 +1395,10 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      * <p>중복 회피 목록을 주지 않는다. 주제는 입문편이 이미 정했고, 여기서 "이런 주제는 피하라"를
      * 주면 <b>같은 주제를 이어 쓰라는 지시와 정면으로 부딪친다</b>.
      */
-    String buildAdvancedPrompt(Domain domain, GeneratedDocumentItem beginner, List<String> preferredTags) {
+    String buildAdvancedPrompt(DomainCode domain, GeneratedDocumentItem beginner, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
         // 입문편과 같은 자리에서 <다시> 읽는다 — 두 편 사이에 힌트가 바뀌었다면 심화편은 새 값을 따른다.
-        sb.append("분야: ").append(domain.getDisplayName())
+        sb.append("분야: ").append(DefaultDomains.displayName(domain))
                 .append(domainHintsProvider.current().hintFor(domain)).append("\n\n");
         // 값을 채우는 자리에 규칙을 붙인다 — 시스템 프롬프트에도 같은 지시가 있지만,
         // 붙일 대상(입문편 제목·slug)이 요청마다 바뀌는 값이라 거기에는 실물을 적을 수 없다.

@@ -108,7 +108,7 @@ public class TopicQueueExporter extends SnapshotExporter {
      */
     private static TopicQueueFile.Entry toEntry(TopicQueueItem item) {
         return new TopicQueueFile.Entry(
-                item.getId(), item.getDomain().name(), item.getTopic(), item.getMemo(),
+                item.getId(), item.getDomain().value(), item.getTopic(), item.getMemo(),
                 item.getLastUsedAt() == null ? null : item.getLastUsedAt().toString(),
                 item.getUsedCount() == 0 ? null : item.getUsedCount());
     }

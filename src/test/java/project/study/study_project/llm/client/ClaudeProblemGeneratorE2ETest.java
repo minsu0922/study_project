@@ -4,8 +4,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.yaml.snakeyaml.Yaml;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 
 import java.io.InputStream;
@@ -49,7 +50,7 @@ class ClaudeProblemGeneratorE2ETest {
         String model = configuredModel();
 
         List<GeneratedProblemItem> items = new ClaudeProblemGenerator(model).generate(
-                Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 1,               // 비용 통제 — 계약 검증에 1개면 충분하다
                 List.of(),       // 중복 회피 목록 없음(입력 토큰 절약)
                 List.of());      // 거절 사례 없음 — 이 테스트는 API 계약만 보므로 프롬프트를 최소로 둔다

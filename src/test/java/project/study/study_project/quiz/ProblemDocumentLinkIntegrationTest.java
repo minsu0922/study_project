@@ -7,10 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.dto.QuizSubmitRequest;
@@ -181,14 +182,14 @@ class ProblemDocumentLinkIntegrationTest {
     private String createDocument() {
         String slug = "doclink-" + UUID.randomUUID().toString().substring(0, 8);
         adminDocumentService.create(new AdminDocumentRequest(
-                Domain.NETWORK, "TCP 3-way 핸드셰이크", slug, "# TCP\n\n본문", null, List.of()));
+                TestDomains.NETWORK, "TCP 3-way 핸드셰이크", slug, "# TCP\n\n본문", null, List.of()));
         return slug;
     }
 
     /** OX 문제 하나 — 정답은 "O". 링크 규칙은 문제 유형과 무관하므로 가장 단순한 것을 쓴다. */
     private Problem createProblem(String documentSlug) {
         return problemRepository.save(Problem.create(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX, "TCP의 연결 지향 성질",
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX, "TCP의 연결 지향 성질",
                 "TCP는 연결 지향 프로토콜이다. " + UUID.randomUUID(), "O", "해설", documentSlug));
     }
 }

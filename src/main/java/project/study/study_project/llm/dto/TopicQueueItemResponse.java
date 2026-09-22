@@ -1,6 +1,7 @@
 package project.study.study_project.llm.dto;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.domain.TopicQueueItem;
 
 import java.time.LocalDate;
@@ -23,7 +24,7 @@ import java.time.LocalDate;
  */
 public record TopicQueueItemResponse(
         Long id,
-        Domain domain,
+        DomainCode domain,
         String domainLabel,
         String topic,
         String memo,
@@ -36,7 +37,7 @@ public record TopicQueueItemResponse(
 
     public static TopicQueueItemResponse from(TopicQueueItem item, boolean next, int order) {
         return new TopicQueueItemResponse(
-                item.getId(), item.getDomain(), item.getDomain().getDisplayName(),
+                item.getId(), item.getDomain(), DefaultDomains.displayName(item.getDomain()),
                 item.getTopic(), item.getMemo(), item.getSortOrder(),
                 item.getLastUsedAt(), item.getUsedCount(), next, order);
     }

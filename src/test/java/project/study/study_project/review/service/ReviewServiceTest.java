@@ -8,8 +8,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.review.domain.ReviewItem;
@@ -57,7 +58,7 @@ class ReviewServiceTest {
     void setUp() {
         reviewService = new ReviewService(reviewItemRepository);
         // OX 문제 하나면 충분 — 전이 규칙은 문제 타입과 무관하다(채점 결과 boolean만 본다).
-        problem = Problem.create(Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+        problem = Problem.create(TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 "TCP의 연결 지향 성질",
                 "TCP는 연결 지향 프로토콜이다.", "O", "3-way handshake로 연결을 만든다.", null);
     }

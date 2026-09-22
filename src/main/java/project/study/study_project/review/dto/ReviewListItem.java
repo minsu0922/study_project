@@ -1,6 +1,7 @@
 package project.study.study_project.review.dto;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
 
@@ -24,7 +25,7 @@ public record ReviewListItem(
         Long problemId,
         String title,
         String question,
-        Domain domain,
+        DomainCode domain,
         String domainLabel,
         int stage,
         ReviewStatus status,
@@ -40,7 +41,7 @@ public record ReviewListItem(
         boolean due = r.getStatus() == ReviewStatus.LEARNING && !r.getNextReviewAt().isAfter(now);
         return new ReviewListItem(
                 r.getProblem().getId(), r.getProblem().getTitle(), r.getProblem().getQuestion(),
-                r.getProblem().getDomain(), r.getProblem().getDomain().getDisplayName(),
+                r.getProblem().getDomain(), DefaultDomains.displayName(r.getProblem().getDomain()),
                 r.getStage(), r.getStatus(), r.getReviewCount(), r.getNextReviewAt(), due);
     }
 }

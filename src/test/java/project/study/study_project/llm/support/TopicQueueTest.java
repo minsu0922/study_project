@@ -3,7 +3,8 @@ package project.study.study_project.llm.support;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.TestDomains;
+import project.study.study_project.global.common.DomainCode;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -85,7 +86,7 @@ class TopicQueueTest {
 
         assertThat(picked.index()).isEqualTo(1);
         assertThat(picked.topic()).isEqualTo("Spring 트랜잭션");
-        assertThat(picked.domain()).isEqualTo(Domain.BACKEND_FRAMEWORK);
+        assertThat(picked.domain()).isEqualTo(TestDomains.BACKEND_FRAMEWORK);
         assertThat(queue.size()).as("범위는 쓴다고 없어지지 않는다").isEqualTo(3);
     }
 
@@ -139,7 +140,7 @@ class TopicQueueTest {
         TopicQueue queue = TopicQueue.read(dir);
         TopicQueue.Picked picked = queue.next();
 
-        assertThat(picked.domain()).isEqualTo(Domain.OS);
+        assertThat(picked.domain()).isEqualTo(TestDomains.OS);
         assertThat(queue.problems()).hasSize(1);
         // 몇 번째 항목이 왜 걸렸는지가 사유에 있어야 파일을 열어 고칠 수 있다
         assertThat(queue.problems().get(0)).contains("빈 생명주기").contains("SPRING");
@@ -165,7 +166,7 @@ class TopicQueueTest {
 
         TopicQueue queue = TopicQueue.read(dir);
 
-        assertThat(queue.next().domain()).isEqualTo(Domain.OS);
+        assertThat(queue.next().domain()).isEqualTo(TestDomains.OS);
         assertThat(queue.problems()).hasSize(2);
         assertThat(queue.size()).as("형식이 틀린 항목은 개수에 넣지 않는다").isEqualTo(1);
     }
@@ -185,7 +186,7 @@ class TopicQueueTest {
     void acceptsLowercaseDomain() throws Exception {
         write("{ \"topics\": [ { \"domain\": \" backend_framework \", \"topic\": \"AOP 프록시\" } ] }");
 
-        assertThat(TopicQueue.read(dir).next().domain()).isEqualTo(Domain.BACKEND_FRAMEWORK);
+        assertThat(TopicQueue.read(dir).next().domain()).isEqualTo(TestDomains.BACKEND_FRAMEWORK);
     }
 
     /* ── 사용 기록(되쓰기) ────────────────────────────────────── */

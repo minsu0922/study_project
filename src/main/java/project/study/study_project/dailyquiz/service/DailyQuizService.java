@@ -9,7 +9,7 @@ import project.study.study_project.dailyquiz.domain.DailyQuiz;
 import project.study.study_project.dailyquiz.domain.DailyQuizSource;
 import project.study.study_project.dailyquiz.dto.DailyQuizResponse;
 import project.study.study_project.dailyquiz.repository.DailyQuizRepository;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.domain.Submission;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -109,10 +109,10 @@ public class DailyQuizService {
 
         // ② 취약 칸 — 가장 약한 도메인부터 순회하며 채운다.
         int weakNeed = WEAK_TARGET;
-        for (Domain domain : weakDomainsOrderedByAccuracy(userId)) {
+        for (DomainCode domain : weakDomainsOrderedByAccuracy(userId)) {
             if (weakNeed <= 0) break;
             List<Problem> found = problemRepository.findRandomExcluding(
-                    domain.name(), excludeIds(picks), weakNeed);
+                    domain.value(), excludeIds(picks), weakNeed);
             found.forEach(p -> picks.put(p, DailyQuizSource.WEAK));
             weakNeed -= found.size();
         }
@@ -149,7 +149,7 @@ public class DailyQuizService {
      * 취약 도메인을 정답률 오름차순(가장 약한 것부터)으로 — 표본 부족(제출 5회 미만) 도메인은
      * 쿼리의 HAVING이 이미 걸렀다. 정렬을 자바에서 하는 이유는 리포지토리 주석 참고(최대 10행).
      */
-    private List<Domain> weakDomainsOrderedByAccuracy(Long userId) {
+    private List<DomainCode> weakDomainsOrderedByAccuracy(Long userId) {
         return submissionRepository.aggregateUserDomainStats(userId, MIN_SUBMISSIONS_FOR_WEAK).stream()
                 .sorted(Comparator.comparingDouble(s -> (double) s.getCorrectCount() / s.getTotal()))
                 .map(SubmissionRepository.UserDomainStat::getDomain)

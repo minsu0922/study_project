@@ -9,9 +9,10 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.document.repository.DocumentRepository;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
@@ -85,7 +86,7 @@ class DocumentImportServiceTest {
         GeneratedDocumentDraft draft = capturedDraft();
         assertThat(draft.getTitle()).isEqualTo("캐시 전략");
         assertThat(draft.getSlug()).isEqualTo("cache-strategy");
-        assertThat(draft.getDomain()).isEqualTo(Domain.SYSTEM_DESIGN);
+        assertThat(draft.getDomain()).isEqualTo(TestDomains.SYSTEM_DESIGN);
         assertThat(draft.getStatus()).as("흡수된 초안은 항상 검수 대기 상태로 태어난다")
                 .isEqualTo(DraftStatus.PENDING);
         assertThat(draft.getTagsJson()).isEqualTo("[\"cache\",\"performance\"]");
@@ -241,7 +242,7 @@ class DocumentImportServiceTest {
                                    GeneratedDocumentItem advanced) throws Exception {
         GeneratedDocumentFile file = new GeneratedDocumentFile(
                 "테스트용", filename.replace(".json", ""), "2026-08-12T21:17:00Z",
-                Domain.SYSTEM_DESIGN, model, document, advanced);
+                TestDomains.SYSTEM_DESIGN, model, document, advanced);
         Path path = tempDir.resolve(filename);
         objectMapper.writeValue(path.toFile(), file);
         return path;

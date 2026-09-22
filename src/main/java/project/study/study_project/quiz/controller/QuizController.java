@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.quiz.dto.QuizCheckRequest;
@@ -42,7 +42,7 @@ public class QuizController {
      */
     @GetMapping
     public ApiResponse<QuizResponse> getQuiz(
-            @RequestParam(required = false) Domain domain,
+            @RequestParam(required = false) DomainCode domain,
             @RequestParam(required = false) Difficulty level,
             @RequestParam(required = false) ProblemType type,
             @RequestParam(required = false, defaultValue = "" + QuizService.DEFAULT_SIZE) int size

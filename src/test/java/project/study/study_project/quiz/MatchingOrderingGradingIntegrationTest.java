@@ -6,11 +6,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.quiz.dto.QuizProblemItem;
@@ -168,7 +169,7 @@ class MatchingOrderingGradingIntegrationTest {
     /** 캐시 무효화 순서 — answer "4|2|1|3"이 정답 순서다(등록 순서가 seq 1..4). */
     private AdminProblemDetail createOrdering() {
         return adminProblemService.create(new AdminProblemRequest(
-                Domain.SYSTEM_DESIGN, Difficulty.INTERMEDIATE, ProblemType.ORDERING,
+                TestDomains.SYSTEM_DESIGN, Difficulty.INTERMEDIATE, ProblemType.ORDERING,
                 "캐시를 함께 쓰는 갱신 처리의 순서",
                 "DB와 캐시를 함께 쓰는 갱신 처리에서 권장되는 순서로 배열하시오. " + UUID.randomUUID(),
                 "4|2|1|3", "캐시를 먼저 지우면 지운 직후 들어온 조회가 옛 값을 다시 채운다.",
@@ -182,7 +183,7 @@ class MatchingOrderingGradingIntegrationTest {
     /** 격리 수준 짝짓기 — 한 줄이 한 쌍이다(V16). */
     private AdminProblemDetail createMatching() {
         return adminProblemService.create(new AdminProblemRequest(
-                Domain.DATABASE, Difficulty.BEGINNER, ProblemType.MATCHING,
+                TestDomains.DATABASE, Difficulty.BEGINNER, ProblemType.MATCHING,
                 "격리 수준과 그 성질",
                 "다음 격리 수준과 그 성질을 알맞게 연결하시오. " + UUID.randomUUID(),
                 null, "각 격리 수준이 어디까지 막아 주는지가 다르다.",

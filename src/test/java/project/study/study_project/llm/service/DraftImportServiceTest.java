@@ -9,10 +9,11 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemGenerator;
@@ -254,7 +255,7 @@ class DraftImportServiceTest {
                                 GeneratedProblemItem... items) throws Exception {
         GeneratedBatchFile batch = new GeneratedBatchFile(
                 "테스트용", filename.replace(".json", ""), "2026-08-12T21:17:00Z",
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, model,
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, model,
                 documentSlug, List.of(items));
         Path file = tempDir.resolve(filename);
         objectMapper.writeValue(file.toFile(), batch);

@@ -20,7 +20,7 @@ package project.study.study_project.quiz.dto;
  *                      (AI 초안은 {@code GeneratedProblemDraft}라는 다른 테이블)
  * @param documentCount 개념 문서 편수. 입문편·심화편이 각각 한 편으로 세어진다 —
  *                      독자에게는 읽을 거리 두 개가 맞다
- * @param domainCount   분야 수. {@code Domain} enum의 크기라 DB를 보지 않는다
+ * @param domainCount   분야 수. 기본 분야 목록({@code DefaultDomains.codes()})의 크기라 DB를 보지 않는다
  */
 public record PublicStatsResponse(
         long problemCount,

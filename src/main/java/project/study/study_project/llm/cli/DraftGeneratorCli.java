@@ -3,7 +3,7 @@ package project.study.study_project.llm.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.yaml.snakeyaml.Yaml;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
@@ -15,6 +15,7 @@ import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
 import project.study.study_project.llm.support.BatchCountRule;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.DifficultyMaterialRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.DraftCheck;
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -172,7 +174,7 @@ public final class DraftGeneratorCli {
         // DomainSettings.read는 파일이 깨져도 절대 예외를 던지지 않으므로(클래스 Javadoc)
         // 여기서 try-catch가 필요 없다.
         DomainSettings settings = DomainSettings.read(outDir);
-        List<Domain> batchDomains = resolveBatchDomains(settings, (String) generation.get("batch-domains"));
+        List<DomainCode> batchDomains = resolveBatchDomains(settings, (String) generation.get("batch-domains"));
         // 주기의 0일차로 삼을 날. 값이 없으면 에포크 = 앵커가 없던 시절과 같은 위상이다.
         LocalDate cycleAnchor = GenerationSchedule.parseAnchor((String) generation.get("cycle-anchor"));
 
@@ -219,7 +221,7 @@ public final class DraftGeneratorCli {
         }
 
         // 수동 실행(workflow_dispatch)에서 특정 칸을 지정한 경우만 주기를 덮어쓴다
-        Domain domain = opts.containsKey("domain") ? Domain.valueOf(opts.get("domain")) : plan.domain();
+        DomainCode domain = opts.containsKey("domain") ? knownDomain(opts.get("domain")) : plan.domain();
         Difficulty difficulty = opts.containsKey("difficulty")
                 ? Difficulty.valueOf(opts.get("difficulty")) : plan.difficulty();
         ProblemType type = resolveProblemType(opts.get(PROBLEM_TYPE_OPT));
@@ -276,8 +278,8 @@ public final class DraftGeneratorCli {
             }
             difficulty = fallback.difficulty();
         } else if (resolved != null && !opts.containsKey("domain")) {
-            Domain aligned = alignDomainWithDocument(domain, resolved.domain());
-            if (aligned != domain) {
+            DomainCode aligned = alignDomainWithDocument(domain, resolved.domain());
+            if (!Objects.equals(aligned, domain)) { // record라 != 는 참조 비교 — 같은 분야도 "다르다"가 된다
                 System.out.printf("주기 분야(%s)와 근거 문서 분야(%s)가 달라 문서 쪽으로 맞춥니다%n",
                         domain, aligned);
                 domain = aligned;
@@ -419,7 +421,7 @@ public final class DraftGeneratorCli {
      * @param documentDomain 근거 문서에 기록된 분야. {@code null}이면 조정하지 않는다
      *                       (옛 형식 파일 방어 — 알 수 없는 값 때문에 멀쩡한 분야를 버리면 안 된다)
      */
-    static Domain alignDomainWithDocument(Domain planDomain, Domain documentDomain) {
+    static DomainCode alignDomainWithDocument(DomainCode planDomain, DomainCode documentDomain) {
         return documentDomain != null ? documentDomain : planDomain;
     }
 
@@ -630,7 +632,7 @@ public final class DraftGeneratorCli {
      * 그 record가 <b>프롬프트에 실릴 내용</b>만 담는 그릇이기 때문이다 — 분야는 프롬프트의
      * 다른 자리(조건 줄)에 이미 들어가므로 문서 블록에 또 넣으면 중복이다.
      */
-    record ResolvedSource(Domain domain, SourceDocument document) {
+    record ResolvedSource(DomainCode domain, SourceDocument document) {
     }
 
     /* ── 개념 문서 생성 ───────────────────────────────────────── */
@@ -652,7 +654,7 @@ public final class DraftGeneratorCli {
      * </ul>
      */
     private static void generateDocument(Map<String, String> opts, String model, DomainHints hints,
-                                         List<Domain> batchDomains, LocalDate cycleAnchor) throws Exception {
+                                         List<DomainCode> batchDomains, LocalDate cycleAnchor) throws Exception {
         LocalDate date = resolveDate(opts);
         // main()이 이미 같은 opts로 outDir을 정해 뒀지만, 이 메서드는 main()의 지역 변수를
         // 볼 수 없어 resolveOutDir로 다시 구한다 — opts가 같으므로 값은 항상 같다.
@@ -676,7 +678,7 @@ public final class DraftGeneratorCli {
         }
 
         // 분야를 지정하지 않으면 그날의 주기 분야를 쓴다(난이도는 문서에 의미가 없어 버린다)
-        Domain domain = documentDomain(date, batchDomains, opts.get("domain"), cycleAnchor);
+        DomainCode domain = documentDomain(date, batchDomains, opts.get("domain"), cycleAnchor);
         String topic = resolveTopic(opts);
 
         // 주제 대기열 — 사람이 미리 적어 둔 세부 주제를 위에서부터 꺼내 쓴다(2026-08-19).
@@ -771,7 +773,7 @@ public final class DraftGeneratorCli {
      * @param requestedDomain 수동 실행의 {@code --domain}. 비어 있으면 대기열 쪽을 쓴다
      * @param picked          대기열에서 꺼낸 항목
      */
-    static Domain topicDomain(Domain planned, String requestedDomain, TopicQueue.Picked picked) {
+    static DomainCode topicDomain(DomainCode planned, String requestedDomain, TopicQueue.Picked picked) {
         if (requestedDomain != null && !requestedDomain.isBlank()) {
             if (picked != null && picked.domain() != planned) {
                 System.out.printf("수동 지정 분야(%s)와 대기열 주제의 분야(%s)가 다릅니다 — 수동 지정을 따릅니다%n",
@@ -842,10 +844,10 @@ public final class DraftGeneratorCli {
      * @param cycleAnchor     주기의 0일차({@code llm.generation.cycle-anchor}). 문제 쪽 배선과
      *                        <b>같은 값</b>이어야 한다 — 어긋나면 문서와 문제의 분야가 갈린다
      */
-    static Domain documentDomain(LocalDate date, List<Domain> candidates, String requestedDomain,
+    static DomainCode documentDomain(LocalDate date, List<DomainCode> candidates, String requestedDomain,
                                  LocalDate cycleAnchor) {
         if (requestedDomain != null && !requestedDomain.isBlank()) {
-            return Domain.valueOf(requestedDomain.trim());
+            return knownDomain(requestedDomain.trim());
         }
         // ⚠️ 반드시 planFor다. cellFor로 바꾸면 위 계산대로 두 분야만 반복된다.
         return GenerationSchedule.planFor(date, candidates, cycleAnchor).domain();
@@ -1104,7 +1106,7 @@ public final class DraftGeneratorCli {
      * 무한정 길어지면 입력 토큰 비용이 계속 오르기 때문. 파일명이 날짜라 이름 역순 정렬이
      * 곧 최신순이다.
      */
-    private static List<String> buildAvoidList(Path outDir, Domain domain) throws Exception {
+    private static List<String> buildAvoidList(Path outDir, DomainCode domain) throws Exception {
         List<String> avoid = new ArrayList<>();
 
         // (1) 이전에 생성된 배치 파일 — 최신 날짜부터
@@ -1135,7 +1137,7 @@ public final class DraftGeneratorCli {
             ExistingQuestions snapshot = MAPPER.readValue(existing.toFile(), ExistingQuestions.class);
             if (snapshot.questions() != null) {
                 snapshot.questions().stream()
-                        .filter(q -> q.domain() == domain)
+                        .filter(q -> Objects.equals(q.domain(), domain)) // == 이면 같은 분야를 하나도 못 거른다
                         .map(ExistingQuestion::question)
                         .limit(AVOID_LIST_SIZE - avoid.size())
                         .forEach(avoid::add);
@@ -1539,7 +1541,7 @@ public final class DraftGeneratorCli {
     private record ExistingQuestions(String note, String exportedAt, List<ExistingQuestion> questions) {
     }
 
-    private record ExistingQuestion(Domain domain, String question) {
+    private record ExistingQuestion(DomainCode domain, String question) {
     }
 
     /* ── 설정·인자 파싱 ───────────────────────────────────────── */
@@ -1593,16 +1595,34 @@ public final class DraftGeneratorCli {
      * <p>배치를 멈추는 수단은 {@code batch-enabled} 하나다 — "분야를 전부 끄면 멈춘다"는 뜻을
      * 여기서 만들지 않는다(두 번째 정지 수단이 생기면 둘의 뜻이 또 어긋난다).
      */
-    static List<Domain> resolveBatchDomains(DomainSettings settings, String ymlBatchDomains) {
+    static List<DomainCode> resolveBatchDomains(DomainSettings settings, String ymlBatchDomains) {
         return settings.isEmpty() ? parseDomains(ymlBatchDomains) : settings.batchDomains();
     }
 
-    private static List<Domain> parseDomains(String csv) {
+    private static List<DomainCode> parseDomains(String csv) {
         if (csv == null || csv.isBlank()) {
             return List.of();
         }
         return Arrays.stream(csv.split(",")).map(String::trim).filter(s -> !s.isEmpty())
-                .map(Domain::valueOf).toList();
+                .map(DraftGeneratorCli::knownDomain).toList();
+    }
+
+    /**
+     * 사람이 적은 분야 이름(--domain=, yml batch-domains) → 코드. <b>옛 enum의 {@code valueOf}와 같은
+     * 엄격함</b>을 지킨다: 모르는 이름이면 {@link IllegalArgumentException}으로 실행을 멈춘다.
+     *
+     * <p>{@link DomainCode#of}만 쓰면 형식만 맞는 이름({@code FRONTEND_CS}처럼 기본 목록에서 지운
+     * 분야, 또는 오타 난 {@code NETWROK})이 그대로 통과해, 없는 분야로 유료 API를 부르고 그 결과를
+     * 저장하려다 뒤늦게 깨진다. 그래서 {@link DefaultDomains#isKnown}을 함께 본다. 대소문자는
+     * 예전처럼 봐주지 않는다(옛 enum의 {@code valueOf}도 봐주지 않았다 — 봐주는 것은 파일을 읽는
+     * {@code TopicQueue}·{@code DomainSettings}뿐이다). {@code PromptEvalCli}도 이 메서드를 빌려 쓴다.
+     */
+    static DomainCode knownDomain(String raw) {
+        DomainCode code = DomainCode.of(raw);
+        if (!DefaultDomains.isKnown(code)) {
+            throw new IllegalArgumentException("알 수 없는 분야입니다: " + raw);
+        }
+        return code;
     }
 
     // cycle-anchor 파싱은 2026-09-21에 GenerationSchedule.parseAnchor로 옮겼다. Task 9의

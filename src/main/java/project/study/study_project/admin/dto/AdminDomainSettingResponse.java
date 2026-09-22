@@ -6,7 +6,7 @@ import project.study.study_project.llm.support.DomainHints;
 /**
  * 분야 설정 관리 화면 한 줄.
  *
- * @param code          분야 코드({@link project.study.study_project.global.common.Domain#name()}).
+ * @param code          분야 코드({@link project.study.study_project.global.common.DomainCode#value()}).
  *                       화면은 문자열로 받아 그대로 API 주소({@code /{domain}/move} 등)에 되돌려 쓴다
  * @param enabled       배치 자동 선택 후보인지
  * @param sortOrder     날짜 순환 순서 — 이 값이 곧 미리보기가 계산하는 순서다
@@ -27,7 +27,7 @@ public record AdminDomainSettingResponse(
 
     public static AdminDomainSettingResponse from(DomainSetting setting, DomainHints hints) {
         return new AdminDomainSettingResponse(
-                setting.getDomain().name(),
+                setting.getDomain().value(),
                 setting.isEnabled(),
                 setting.getSortOrder(),
                 setting.getDisplayName(),

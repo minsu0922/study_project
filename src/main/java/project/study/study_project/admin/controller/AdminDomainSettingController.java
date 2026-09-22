@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.admin.dto.AdminDomainSettingMoveRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingResponse;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
@@ -28,7 +28,7 @@ import java.util.List;
  * <p>{@code /api/admin/**} 아래라 SecurityConfig의 {@code hasRole(ADMIN)}이 일괄 적용된다
  * ({@code AdminTopicQueueController}와 같은 규칙, 컨트롤러에 권한 코드를 두지 않는다).
  *
- * <p>행 자체는 {@link project.study.study_project.global.common.Domain} enum 상수 수만큼
+ * <p>행 자체는 기본 분야({@link project.study.study_project.llm.support.DefaultDomains}) 수만큼
  * 고정이다(기동 시 동기화가 맞춰 둔다). 그래서 이 API에는 "추가"·"삭제"가 없다 — 있는 행을
  * 고치고({@link #edit}) 순서를 옮기는({@link #move}) 것, 그리고 그 결과를 저장 전에
  * 미리 보는 것({@link #preview})뿐이다.
@@ -76,7 +76,7 @@ public class AdminDomainSettingController {
      * 두므로 정상 경로에서는 나지 않는다.
      */
     @PutMapping("/{domain}")
-    public ApiResponse<Void> edit(@PathVariable Domain domain,
+    public ApiResponse<Void> edit(@PathVariable DomainCode domain,
                                   @Valid @RequestBody AdminDomainSettingRequest request) {
         domainSettingService.edit(domain, request);
         return ApiResponse.ok();
@@ -93,7 +93,7 @@ public class AdminDomainSettingController {
      * 보기가 무서워진다({@code DomainSettingService.move} Javadoc).
      */
     @PostMapping("/{domain}/move")
-    public ApiResponse<Void> move(@PathVariable Domain domain,
+    public ApiResponse<Void> move(@PathVariable DomainCode domain,
                                   @Valid @RequestBody AdminDomainSettingMoveRequest request) {
         domainSettingService.move(domain, request.direction());
         return ApiResponse.ok();
@@ -121,13 +121,13 @@ public class AdminDomainSettingController {
      */
     @GetMapping("/preview")
     public ApiResponse<List<DomainSettingService.PreviewCell>> preview(
-            @RequestParam(required = false) List<Domain> domains,
+            @RequestParam(required = false) List<DomainCode> domains,
             @RequestParam(defaultValue = "" + DEFAULT_PREVIEW_DAYS) int days) {
         if (days < 1 || days > MAX_PREVIEW_DAYS) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR,
                     "days는 1~" + MAX_PREVIEW_DAYS + " 사이여야 합니다: " + days);
         }
-        List<Domain> target = (domains == null || domains.isEmpty())
+        List<DomainCode> target = (domains == null || domains.isEmpty())
                 ? domainSettingService.batchDomains() : domains;
         return ApiResponse.ok(domainSettingService.preview(target, days));
     }

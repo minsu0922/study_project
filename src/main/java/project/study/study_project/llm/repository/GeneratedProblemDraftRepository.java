@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -55,7 +55,7 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
             """)
     Page<GeneratedProblemDraft> findForReview(
             @Param("status") DraftStatus status,
-            @Param("domain") Domain domain,
+            @Param("domain") DomainCode domain,
             @Param("difficulty") Difficulty difficulty,
             @Param("documentSlug") String documentSlug,
             Pageable pageable);
@@ -85,7 +85,7 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
             select d.question from GeneratedProblemDraft d
             where d.domain = :domain and d.status = 'PENDING'
             """)
-    List<String> findPendingQuestionsByDomain(@Param("domain") Domain domain);
+    List<String> findPendingQuestionsByDomain(@Param("domain") DomainCode domain);
 
     /**
      * 검수 대기(PENDING) 초안의 도메인×난이도 집계 — "가장 부족한 칸" 선택에 정식 문제와 <b>합산</b>된다.

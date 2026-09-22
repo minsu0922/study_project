@@ -8,11 +8,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 
@@ -110,7 +111,7 @@ class AnonymousCheckIntegrationTest {
 
     private AdminProblemDetail createMultipleChoice() {
         return adminProblemService.create(new AdminProblemRequest(
-                Domain.SECURITY, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
                 "공개 채점 테스트",
                 "공개 채점 테스트용 지문 " + UUID.randomUUID(),
                 null, "정답인 이유를 적은 해설입니다.",

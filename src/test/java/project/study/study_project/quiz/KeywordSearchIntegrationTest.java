@@ -9,11 +9,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -168,12 +169,12 @@ class KeywordSearchIntegrationTest {
     }
 
     private Problem ox(String question, String documentSlug) {
-        return Problem.create(Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+        return Problem.create(TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 null, question, "O", "해설", documentSlug);
     }
 
     private Document doc(String title, String body, String suffix) {
-        return Document.create(Domain.NETWORK, title,
+        return Document.create(TestDomains.NETWORK, title,
                 "search-" + suffix + "-" + UUID.randomUUID().toString().substring(0, 8),
                 body, null, java.util.Set.of());
     }

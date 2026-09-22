@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.dto.DocumentListItem;
 import project.study.study_project.document.service.DocumentService;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 
@@ -37,7 +37,7 @@ public class DocumentController {
      */
     @GetMapping
     public ApiResponse<PageResponse<DocumentListItem>> list(
-            @RequestParam(required = false) Domain domain,
+            @RequestParam(required = false) DomainCode domain,
             @RequestParam(required = false, name = "tag") List<String> tags,
             // 제목·본문에서 찾을 말. 비어 있으면 안 거른다.
             @RequestParam(required = false) String keyword,

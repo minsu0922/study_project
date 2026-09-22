@@ -9,8 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.domain.Problem;
@@ -78,7 +79,7 @@ class ReviewFlowIntegrationTest {
                 .build());
         userId = user.getId();
         problem = problemRepository.save(Problem.create(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX, "TCP의 연결 지향 성질",
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX, "TCP의 연결 지향 성질",
                 "TCP는 연결 지향 프로토콜이다.", "O", "3-way handshake로 연결을 만든다.", null));
     }
 
@@ -273,7 +274,7 @@ class ReviewFlowIntegrationTest {
     /** 같은 사용자·다른 문제를 만들 때 쓰는 헬퍼 — 지문만 다르면 되므로 나머지는 고정. */
     private Problem saveProblem(String question) {
         return problemRepository.save(Problem.create(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX, null,
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX, null,
                 question, "O", "해설", null));
     }
 }

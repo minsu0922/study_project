@@ -1,6 +1,6 @@
 package project.study.study_project.llm.client;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.util.List;
 
@@ -23,7 +23,7 @@ public interface DocumentGenerator {
      * @param preferredTags 기존 태그 목록. 비슷한 태그가 무한히 늘어나는 것을 막으려고 재사용을 유도한다
      * @return 생성된 문서(검증 전 원본)
      */
-    GeneratedDocumentItem generate(Domain domain, String topic,
+    GeneratedDocumentItem generate(DomainCode domain, String topic,
                                    List<String> avoidTitles, List<String> preferredTags);
 
     /**
@@ -41,6 +41,6 @@ public interface DocumentGenerator {
      * @param preferredTags 기존 태그 목록
      * @return 생성된 심화편(검증 전 원본)
      */
-    GeneratedDocumentItem generateAdvanced(Domain domain, GeneratedDocumentItem beginner,
+    GeneratedDocumentItem generateAdvanced(DomainCode domain, GeneratedDocumentItem beginner,
                                            List<String> preferredTags);
 }

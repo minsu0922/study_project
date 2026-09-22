@@ -10,7 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -151,7 +152,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
     }
 
     @Override
-    public List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
+    public List<GeneratedProblemItem> generate(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                int count, List<String> avoidQuestions,
                                                List<RejectionNote> rejectionNotes,
                                                SourceDocument sourceDocument,
@@ -798,7 +799,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
               버전이 올라가면 정답이 조용히 틀린 문제가 된다.
             """;
 
-    String buildPrompt(Domain domain, Difficulty difficulty, ProblemType type,
+    String buildPrompt(DomainCode domain, Difficulty difficulty, ProblemType type,
                        int count, List<String> avoidQuestions,
                        List<RejectionNote> rejectionNotes, SourceDocument sourceDocument,
                        QuestionKind requestedKind) {
@@ -806,7 +807,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         sb.append("다음 조건으로 문제 ").append(count).append("개를 만들어라.\n\n");
         // 힌트는 <지금> 읽는다 — 필드에 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다
         // (domainHintsProvider 필드 주석).
-        sb.append("- 분야: ").append(domain.getDisplayName())
+        sb.append("- 분야: ").append(DefaultDomains.displayName(domain))
                 .append(domainHintsProvider.current().hintFor(domain)).append('\n');
         sb.append("- 난이도: ").append(difficultyRule(difficulty)).append('\n');
         sb.append("- 유형: ").append(typeRule(type)).append('\n');

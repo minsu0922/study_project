@@ -7,11 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.ProblemListItem;
@@ -202,11 +204,11 @@ class ProblemListIntegrationTest {
         List<StudySummaryResponse.DomainProgress> domains =
                 problemListService.getSummary(userId).domains();
 
-        assertThat(domains).hasSize(Domain.values().length);
-        assertThat(domains).filteredOn(d -> d.domain() == Domain.NETWORK)
+        assertThat(domains).hasSize(DefaultDomains.codes().size());
+        assertThat(domains).filteredOn(d -> d.domain().equals(TestDomains.NETWORK))
                 .singleElement().extracting(StudySummaryResponse.DomainProgress::solved)
                 .isEqualTo(1L);
-        assertThat(domains).filteredOn(d -> d.domain() == Domain.SECURITY)
+        assertThat(domains).filteredOn(d -> d.domain().equals(TestDomains.SECURITY))
                 .singleElement().extracting(StudySummaryResponse.DomainProgress::solved)
                 .isEqualTo(0L);
     }
@@ -216,7 +218,7 @@ class ProblemListIntegrationTest {
     /** 정답이 "O"인 OX 문제 하나. 지문을 매번 다르게 해 중복 제약에 걸리지 않게 한다. */
     private Long newOx(String title) {
         AdminProblemDetail created = adminProblemService.create(new AdminProblemRequest(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX, title,
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX, title,
                 title + " 지문 " + UUID.randomUUID(), "O", "해설입니다.", null, null));
         return created.id();
     }

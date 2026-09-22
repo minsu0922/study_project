@@ -4,8 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedTitle;
 import project.study.study_project.llm.client.TitleGenerator;
@@ -195,7 +196,7 @@ class ProblemTitleBackfillServiceTest {
      * setter를 뚫는 것보다 낫다 — 그 setter는 실제 코드에서도 부를 수 있게 된다.
      */
     private static Problem problem(long id, String question) {
-        Problem p = Problem.create(Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+        Problem p = Problem.create(TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 null, question, "O", "해설", null);
         try {
             Field idField = Problem.class.getDeclaredField("id");

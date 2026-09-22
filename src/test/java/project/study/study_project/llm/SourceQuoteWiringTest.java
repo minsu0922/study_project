@@ -5,8 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
@@ -120,7 +121,7 @@ class SourceQuoteWiringTest {
         GeneratedProblemItem item = itemWithQuote("");   // 문서가 없으니 인용도 비어 온다
 
         GeneratedProblemDraft saved = llmProblemService.saveDrafts(
-                Domain.BACKEND_FRAMEWORK, Difficulty.BEGINNER, ProblemType.OX,
+                TestDomains.BACKEND_FRAMEWORK, Difficulty.BEGINNER, ProblemType.OX,
                 List.of(item), "test-model", null).get(0);
 
         assertThat(saved.getSourceQuoteCheck()).isNull();
@@ -132,7 +133,7 @@ class SourceQuoteWiringTest {
         SourceDocument doc = new SourceDocument(
                 "connection-pool", "커넥션 풀", DOC_BODY, SourceDocument.Kind.UPLOADED);
         return llmProblemService.saveDrafts(
-                Domain.BACKEND_FRAMEWORK, Difficulty.BEGINNER, ProblemType.OX,
+                TestDomains.BACKEND_FRAMEWORK, Difficulty.BEGINNER, ProblemType.OX,
                 List.of(item), "test-model", null, doc).get(0);
     }
 

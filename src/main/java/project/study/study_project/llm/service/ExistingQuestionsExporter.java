@@ -7,13 +7,13 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.dto.ExistingQuestionsFile;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -111,7 +111,9 @@ public class ExistingQuestionsExporter extends SnapshotExporter {
      * 같은 내용인데도 파일이 바뀐 것처럼 보일 수 있다.
      */
     private List<ExistingQuestionsFile.Item> collectQuestions() {
-        Map<Domain, Integer> countPerDomain = new EnumMap<>(Domain.class);
+        // 예전엔 EnumMap. 이 맵은 분야별 개수를 세는 계수기일 뿐이고 파일에 쓰이는 순서는 result 목록
+        // (조회 순서 = id 역순)이 정한다 — 맵을 순회하는 곳이 없어 순서가 파일에 닿지 않으므로 HashMap이면 된다.
+        Map<DomainCode, Integer> countPerDomain = new HashMap<>();
         List<ExistingQuestionsFile.Item> result = new ArrayList<>();
 
         for (ProblemRepository.DomainQuestion row : problemRepository.findAllDomainQuestions()) {

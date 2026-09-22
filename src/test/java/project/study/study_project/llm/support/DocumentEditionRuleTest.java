@@ -4,8 +4,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 
@@ -145,7 +146,7 @@ class DocumentEditionRuleTest {
 
     private GeneratedDocumentFile file(GeneratedDocumentItem beginner, GeneratedDocumentItem advanced) {
         return new GeneratedDocumentFile("테스트", "2026-09-14", "2026-09-14T00:00:00Z",
-                Domain.NETWORK, "test-model", beginner, advanced);
+                TestDomains.NETWORK, "test-model", beginner, advanced);
     }
 
     private GeneratedDocumentItem item(String slug, String body) {

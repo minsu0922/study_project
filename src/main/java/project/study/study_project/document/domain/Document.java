@@ -3,8 +3,6 @@ package project.study.study_project.document.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,7 +19,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.tag.domain.Tag;
 
 import java.time.LocalDateTime;
@@ -54,9 +52,8 @@ public class Document {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private Domain domain;
+    private DomainCode domain;
 
     @Column(nullable = false, length = 200)
     private String title;
@@ -87,7 +84,7 @@ public class Document {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    private Document(Domain domain, String title, String slug, String contentMd,
+    private Document(DomainCode domain, String title, String slug, String contentMd,
                      String source, Set<Tag> tags) {
         this.domain = domain;
         this.title = title;
@@ -98,7 +95,7 @@ public class Document {
     }
 
     /** 관리자 등록용 팩터리. slug 중복 검사는 서비스 책임(DOC_002). */
-    public static Document create(Domain domain, String title, String slug, String contentMd,
+    public static Document create(DomainCode domain, String title, String slug, String contentMd,
                                   String source, Set<Tag> tags) {
         return new Document(domain, title, slug, contentMd, source, tags);
     }
@@ -108,7 +105,7 @@ public class Document {
      * 태그도 컬렉션을 갈아끼우면 JPA가 조인 테이블(document_tag)의 diff를 알아서 반영한다.
      * {@code updated_at}은 @LastModifiedDate가 자동 갱신.
      */
-    public void update(Domain domain, String title, String slug, String contentMd,
+    public void update(DomainCode domain, String title, String slug, String contentMd,
                        String source, Set<Tag> tags) {
         this.domain = domain;
         this.title = title;

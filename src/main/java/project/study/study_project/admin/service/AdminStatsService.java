@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminDashboardResponse;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
@@ -73,7 +73,7 @@ public class AdminStatsService {
     /**
      * 배치가 채우는 분야 — "빈 칸"을 세는 기준이다(2026-08-29).
      *
-     * <p><b>왜 전체 분야로 세지 않나.</b> Domain enum에는 배치가 건드리지 않는 분야도 있다
+     * <p><b>왜 전체 분야로 세지 않나.</b> 기본 분야 목록(옛 Domain enum)에는 배치가 건드리지 않는 분야도 있다
      * (클라우드·인프라, 통합시나리오 등). 그걸 함께 세면 채울 계획도 없는 칸이 "빈 칸"으로
      * 잡혀 숫자가 늘 크게 떠 있고, 그러면 사람은 그 타일을 아예 안 보게 된다.
      *
@@ -133,7 +133,7 @@ public class AdminStatsService {
 
         // 빈 칸 — 배치가 채우는 분야 안에서만 센다(batchDomains 주석). 조회할 때마다 다시 읽는다 —
         // 필드로 굳히면 관리자가 화면에서 분야를 켜고 꺼도 재기동 전까지 이 숫자가 안 바뀐다.
-        List<Domain> batchDomains = domainSettingService.batchDomains();
+        List<DomainCode> batchDomains = domainSettingService.batchDomains();
         Set<String> filled = matrix.stream()
                 .filter(cell -> cell.count() > 0)
                 .map(cell -> cell.domain() + "|" + cell.difficulty())

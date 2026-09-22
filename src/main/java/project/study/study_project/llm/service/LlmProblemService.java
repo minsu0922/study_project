@@ -16,7 +16,8 @@ import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -42,6 +43,7 @@ import project.study.study_project.report.service.ProblemReportService;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -160,7 +162,7 @@ public class LlmProblemService {
         }
 
         // 도메인·난이도를 지정하지 않으면 "가장 부족한 칸"을 고른다(빈 칸 채우기 전략, docs/13)
-        Domain domain = request.domain();
+        DomainCode domain = request.domain();
         Difficulty difficulty = request.difficulty();
         if (domain == null || difficulty == null) {
             ScarceCell cell = pickScarcestCell(domain, difficulty);
@@ -278,7 +280,7 @@ public class LlmProblemService {
             }
         }
 
-        Domain domain = request.domain();
+        DomainCode domain = request.domain();
         Difficulty difficulty = request.difficulty();
 
         // 중복 회피·거절 사례는 기존 경로와 똑같이 싣는다. 근거 문서가 다르다고 해서
@@ -318,7 +320,7 @@ public class LlmProblemService {
      *                     여기서 slug의 실재 여부를 확인하지 않는다 — 근거 문서가 아직 검수
      *                     대기라 {@code document} 테이블에 없을 수 있고, 그건 정상 상황이다(V9 주석)
      */
-    public List<GeneratedProblemDraft> saveDrafts(Domain domain, Difficulty difficulty, ProblemType type,
+    public List<GeneratedProblemDraft> saveDrafts(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                   List<GeneratedProblemItem> items, String model,
                                                   String documentSlug) {
         return saveDrafts(domain, difficulty, type, items, model, documentSlug, null);
@@ -335,7 +337,7 @@ public class LlmProblemService {
      * @param source 근거 문서. {@code null}이면 인용 대조를 건너뛴다 — 대조할 원본이 없는데
      *               경고를 내면 그 경로의 모든 문제에 헛울린다({@code SourceQuoteRule}의 판단 그대로)
      */
-    public List<GeneratedProblemDraft> saveDrafts(Domain domain, Difficulty difficulty, ProblemType type,
+    public List<GeneratedProblemDraft> saveDrafts(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                   List<GeneratedProblemItem> items, String model,
                                                   String documentSlug, SourceDocument source) {
         // 근거 편 판정에 쓸 두 본문을 <한 번만> 읽는다. 문제마다 읽으면 다섯 문제에 조회가
@@ -397,9 +399,11 @@ public class LlmProblemService {
      * 예산을 쓰지 않게 하려는 것. 반대로 도메인을 명시하면(관리자 화면에서 직접 고른 경우)
      * 목록 밖이어도 그대로 생성한다.
      */
-    private ScarceCell pickScarcestCell(Domain fixedDomain, Difficulty fixedDifficulty) {
+    private ScarceCell pickScarcestCell(DomainCode fixedDomain, Difficulty fixedDifficulty) {
         // 집계 결과를 맵으로 — 문제가 0개인 칸은 GROUP BY 결과에 아예 없으므로 getOrDefault(0)로 보정
-        Map<Domain, Map<Difficulty, Long>> counts = new EnumMap<>(Domain.class);
+        // 예전엔 EnumMap. 이 맵은 getOrDefault 조회에만 쓰이고, 도는 순서는 아래 domainCandidates
+        // 목록이 정한다 — 맵 순서가 결과(동점일 때 어느 칸이 먼저 뽑히나)에 닿지 않으므로 HashMap이면 된다.
+        Map<DomainCode, Map<Difficulty, Long>> counts = new HashMap<>();
         accumulate(counts, problemRepository.countGroupByDomainAndDifficulty());
         accumulate(counts, draftRepository.countPendingGroupByDomainAndDifficulty());
 
@@ -407,14 +411,14 @@ public class LlmProblemService {
         // 생성자에서 한 번만 읽어 굳히면 관리자가 화면에서 고쳐도 재기동 전까지 반영되지 않는다
         // (위 domainSettingService 필드 주석). 빈 목록은 "아직 설정 행이 없는 첫 기동"으로 보고
         // 전체 분야를 후보로 되돌린다 — 설정 누락이 배치를 완전히 멈추게 하지 않기 위한 방어다.
-        List<Domain> batchDomains = domainSettingService.batchDomains();
-        List<Domain> domainCandidates = fixedDomain != null ? List.of(fixedDomain)
-                : (batchDomains == null || batchDomains.isEmpty() ? List.of(Domain.values()) : batchDomains);
+        List<DomainCode> batchDomains = domainSettingService.batchDomains();
+        List<DomainCode> domainCandidates = fixedDomain != null ? List.of(fixedDomain)
+                : (batchDomains == null || batchDomains.isEmpty() ? DefaultDomains.codes() : batchDomains);
 
-        Domain bestDomain = null;
+        DomainCode bestDomain = null;
         Difficulty bestDifficulty = null;
         long min = Long.MAX_VALUE;
-        for (Domain d : domainCandidates) {
+        for (DomainCode d : domainCandidates) {
             for (Difficulty diff : fixedDifficulty != null ? new Difficulty[]{fixedDifficulty} : Difficulty.values()) {
                 long cnt = counts.getOrDefault(d, Map.of()).getOrDefault(diff, 0L);
                 if (cnt < min) {
@@ -430,14 +434,14 @@ public class LlmProblemService {
     }
 
     /** 집계 행들을 도메인×난이도 맵에 더한다(merge) — 두 저장소의 결과를 같은 맵에 합치기 위한 것. */
-    private void accumulate(Map<Domain, Map<Difficulty, Long>> counts,
+    private void accumulate(Map<DomainCode, Map<Difficulty, Long>> counts,
                             List<ProblemRepository.DomainDifficultyCount> rows) {
         rows.forEach(row -> counts
                 .computeIfAbsent(row.getDomain(), d -> new EnumMap<>(Difficulty.class))
                 .merge(row.getDifficulty(), row.getCnt(), Long::sum));
     }
 
-    private record ScarceCell(Domain domain, Difficulty difficulty) {
+    private record ScarceCell(DomainCode domain, Difficulty difficulty) {
     }
 
     /**
@@ -472,7 +476,7 @@ public class LlmProblemService {
     }
 
     /** 중복 회피 목록 — 정식 문제(최신 50) + 아직 검수 안 된 같은 도메인 초안. */
-    private List<String> buildAvoidList(Domain domain) {
+    private List<String> buildAvoidList(DomainCode domain) {
         List<String> avoid = new ArrayList<>(
                 problemRepository.findQuestionTextsByDomain(domain, PageRequest.of(0, AVOID_LIST_SIZE)));
         avoid.addAll(draftRepository.findPendingQuestionsByDomain(domain));
@@ -488,7 +492,7 @@ public class LlmProblemService {
      * 상태가 된다 — 그러면 경고를 믿을 수 없어지고 결국 무시하게 된다.
      */
     private java.util.Optional<GeneratedProblemDraft> toDraft(GeneratedProblemItem item,
-                                                              Domain domain, Difficulty difficulty, ProblemType type,
+                                                              DomainCode domain, Difficulty difficulty, ProblemType type,
                                                               String model, String documentSlug,
                                                               SourceDocument source) {
         String defect = ProblemItemRule.defectOf(item, type);
@@ -530,7 +534,7 @@ public class LlmProblemService {
      * 좁혀 보는 길이 필요했다 — 자세한 배경은 {@code findForReview}의 주석에 있다.
      */
     @Transactional(readOnly = true)
-    public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, Domain domain, Difficulty difficulty,
+    public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, DomainCode domain, Difficulty difficulty,
                                                     String documentSlug, Pageable pageable) {
         DraftStatus target = status != null ? status : DraftStatus.PENDING;
         return PageResponse.from(draftRepository
@@ -687,7 +691,7 @@ public class LlmProblemService {
                 : List.of();
 
         return new LlmDraftResponse(
-                d.getId(), d.getDomain(), d.getDomain().getDisplayName(), d.getDifficulty(), d.getType(),
+                d.getId(), d.getDomain(), DefaultDomains.displayName(d.getDomain()), d.getDifficulty(), d.getType(),
                 d.getTitle(), d.getQuestion(), d.getAnswer(), d.getExplanation(), choices,
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedProblemId(),
                 d.getDocumentSlug(), d.getQuestionKind(),

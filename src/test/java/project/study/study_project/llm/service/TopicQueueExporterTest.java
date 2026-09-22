@@ -9,7 +9,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.TestDomains;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
@@ -53,8 +54,8 @@ class TopicQueueExporterTest {
     @Test
     @DisplayName("범위를 순서대로 내보낸다 — 배치가 그대로 읽어 다음 차례를 고른다")
     void exportsRangesInOrder() throws Exception {
-        given(item(1L, Domain.BACKEND_FRAMEWORK, "Spring 트랜잭션", "메모", 1),
-                item(2L, Domain.OS, "메모리 관리", null, 2));
+        given(item(1L, TestDomains.BACKEND_FRAMEWORK, "Spring 트랜잭션", "메모", 1),
+                item(2L, TestDomains.OS, "메모리 관리", null, 2));
 
         assertThat(exporter.export(tempDir)).isTrue();
 
@@ -64,7 +65,7 @@ class TopicQueueExporterTest {
         assertThat(queue.size()).isEqualTo(2);
         TopicQueue.Picked picked = queue.next();
         assertThat(picked.topic()).isEqualTo("Spring 트랜잭션");
-        assertThat(picked.domain()).isEqualTo(Domain.BACKEND_FRAMEWORK);
+        assertThat(picked.domain()).isEqualTo(TestDomains.BACKEND_FRAMEWORK);
     }
 
     /**
@@ -74,7 +75,7 @@ class TopicQueueExporterTest {
     @Test
     @DisplayName("각 줄에 DB id가 실린다 — 이게 없으면 사용 기록이 돌아올 길이 없다")
     void includesDatabaseId() throws Exception {
-        given(item(42L, Domain.OS, "메모리 관리", null, 1));
+        given(item(42L, TestDomains.OS, "메모리 관리", null, 1));
 
         exporter.export(tempDir);
 
@@ -88,7 +89,7 @@ class TopicQueueExporterTest {
     @Test
     @DisplayName("이미 쓴 범위도 사용 기록과 함께 내보낸다 — 순환의 근거가 되는 값이다")
     void exportsUsedRangesWithTheirRecord() throws Exception {
-        given(used(1L, Domain.OS, "메모리 관리", 1, LocalDate.of(2026, 8, 19), 3));
+        given(used(1L, TestDomains.OS, "메모리 관리", 1, LocalDate.of(2026, 8, 19), 3));
 
         exporter.export(tempDir);
 
@@ -100,7 +101,7 @@ class TopicQueueExporterTest {
     @Test
     @DisplayName("아직 안 쓴 범위에는 기록 칸을 아예 넣지 않는다 — 고쳐도 소용없는 칸은 함정이다")
     void omitsEmptyUsageColumns() throws Exception {
-        given(item(1L, Domain.OS, "메모리 관리", null, 1));
+        given(item(1L, TestDomains.OS, "메모리 관리", null, 1));
 
         exporter.export(tempDir);
 
@@ -114,7 +115,7 @@ class TopicQueueExporterTest {
     @Test
     @DisplayName("내용이 같으면 다시 쓰지 않는다 — 켤 때마다 파일이 바뀌면 진짜 변경을 못 알아본다")
     void doesNotRewriteWhenUnchanged() throws Exception {
-        given(item(1L, Domain.OS, "메모리 관리", null, 1));
+        given(item(1L, TestDomains.OS, "메모리 관리", null, 1));
 
         assertThat(exporter.export(tempDir)).isTrue();
         assertThat(exporter.export(tempDir)).as("두 번째 호출은 아무것도 하지 않아야 한다").isFalse();
@@ -139,13 +140,13 @@ class TopicQueueExporterTest {
         return objectMapper.readValue(tempDir.resolve(TopicQueue.FILE_NAME).toFile(), TopicQueueFile.class);
     }
 
-    private TopicQueueItem item(Long id, Domain domain, String topic, String memo, int sortOrder) {
+    private TopicQueueItem item(Long id, DomainCode domain, String topic, String memo, int sortOrder) {
         TopicQueueItem item = TopicQueueItem.fresh(domain, topic, memo, sortOrder);
         ReflectionTestUtils.setField(item, "id", id);
         return item;
     }
 
-    private TopicQueueItem used(Long id, Domain domain, String topic, int sortOrder,
+    private TopicQueueItem used(Long id, DomainCode domain, String topic, int sortOrder,
                                 LocalDate lastUsedAt, int usedCount) {
         TopicQueueItem item = item(id, domain, topic, null, sortOrder);
         item.recordUse(lastUsedAt, usedCount);

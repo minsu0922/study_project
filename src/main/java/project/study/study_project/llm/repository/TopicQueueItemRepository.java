@@ -2,7 +2,7 @@ package project.study.study_project.llm.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.TopicQueueItem;
 
 import java.util.List;
@@ -26,7 +26,7 @@ public interface TopicQueueItemRepository extends JpaRepository<TopicQueueItem, 
      * 정당했기 때문인데, 범위는 소진되지 않으므로 같은 이름이 둘 있으면 <b>그냥 중복</b>이다
      * (순환에서 그 범위만 두 배로 자주 나온다).
      */
-    boolean existsByDomainAndTopic(Domain domain, String topic);
+    boolean existsByDomainAndTopic(DomainCode domain, String topic);
 
     /**
      * 위와 같되 <b>자기 자신은 뺀다</b> — 수정(2026-09-14)이 쓴다.
@@ -35,7 +35,7 @@ public interface TopicQueueItemRepository extends JpaRepository<TopicQueueItem, 
      * 그대로 둔 채 저장하면 자기 자신이 중복으로 잡히기 때문이다. 대놓고 막히는 종류라
      * 금방 드러나겠지만, 드러내는 쪽이 사람이면 기능을 안 만드느니만 못하다.
      */
-    boolean existsByDomainAndTopicAndIdNot(Domain domain, String topic, Long id);
+    boolean existsByDomainAndTopicAndIdNot(DomainCode domain, String topic, Long id);
 
     /**
      * 지금까지 쓴 가장 큰 순서값. 새 범위는 이 뒤에 붙는다.

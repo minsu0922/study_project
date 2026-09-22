@@ -2,7 +2,7 @@ package project.study.study_project.llm.dto;
 
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.QuestionKind;
 import project.study.study_project.llm.domain.DraftStatus;
@@ -21,7 +21,7 @@ import java.util.List;
  */
 public record LlmDraftResponse(
         Long id,
-        Domain domain,
+        DomainCode domain,
         String domainLabel,
         Difficulty difficulty,
         ProblemType type,

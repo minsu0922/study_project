@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
@@ -130,7 +130,7 @@ public class AdminLlmProblemController {
     @GetMapping
     public ApiResponse<PageResponse<LlmDraftResponse>> list(
             @RequestParam(required = false) DraftStatus status,
-            @RequestParam(required = false) Domain domain,
+            @RequestParam(required = false) DomainCode domain,
             @RequestParam(required = false) Difficulty difficulty,
             @RequestParam(required = false) String documentSlug,
             @PageableDefault(size = 20) Pageable pageable

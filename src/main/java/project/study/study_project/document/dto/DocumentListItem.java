@@ -1,6 +1,6 @@
 package project.study.study_project.document.dto;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.List;
  */
 public record DocumentListItem(
         Long id,
-        Domain domain,
+        DomainCode domain,
         String domainLabel,
         String title,
         String slug,

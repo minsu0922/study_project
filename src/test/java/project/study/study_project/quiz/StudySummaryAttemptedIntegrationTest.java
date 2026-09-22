@@ -11,9 +11,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -133,7 +134,7 @@ class StudySummaryAttemptedIntegrationTest {
 
     /** 정답이 "O"인 OX 한 문제. */
     private Problem ox(String question) {
-        return Problem.create(Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+        return Problem.create(TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 null, question + " " + UUID.randomUUID(), "O", "해설", null);
     }
 }

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.admin.dto.AdminTopicQueueMoveRequest;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.admin.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
@@ -69,7 +69,7 @@ public class AdminTopicQueueController {
     @GetMapping
     public ApiResponse<PageResponse<TopicQueueItemResponse>> list(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) Domain domain,
+            @RequestParam(required = false) DomainCode domain,
             @RequestParam(defaultValue = "ALL") TopicQueueService.TopicUsage usage,
             @PageableDefault(size = 20) Pageable pageable
     ) {

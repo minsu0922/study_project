@@ -1,7 +1,8 @@
 package project.study.study_project.review.dto;
 
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.dto.QuizChoiceItem;
@@ -30,7 +31,7 @@ import java.util.List;
  */
 public record ReviewTodayItem(
         Long problemId,
-        Domain domain,
+        DomainCode domain,
         String domainLabel,
         Difficulty difficulty,
         ProblemType type,
@@ -53,7 +54,7 @@ public record ReviewTodayItem(
                 ? QuizMatchOption.shuffledFrom(p.getId(), p.getChoices())
                 : List.of();
         return new ReviewTodayItem(
-                p.getId(), p.getDomain(), p.getDomain().getDisplayName(),
+                p.getId(), p.getDomain(), DefaultDomains.displayName(p.getDomain()),
                 p.getDifficulty(), p.getType(), p.getQuestion(), choices, matchOptions,
                 r.getStage(), r.getNextReviewAt(), r.getReviewCount());
     }

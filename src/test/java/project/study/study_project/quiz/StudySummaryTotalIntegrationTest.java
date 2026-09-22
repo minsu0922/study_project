@@ -9,9 +9,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -45,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <ol>
  *   <li><b>{@code group by}는 해당 행이 없는 분야를 아예 안 준다.</b> 문제가 0개인 분야가
  *       응답에서 사라지면 화면에서 그 분야가 통째로 없어진다 — 정작 "여기부터 해 볼까"의
- *       후보가 안 보이게 된다. 서비스가 {@code Domain.values()}로 빈 칸을 채우는지 봐야 한다.
+ *       후보가 안 보이게 된다. 서비스가 {@code DefaultDomains.codes()}로 빈 칸을 채우는지 봐야 한다.
  *   <li><b>프로젝션 인터페이스의 별칭이 게터 이름과 어긋나면 런타임에만 터진다.</b>
  *       부팅도 되고 컴파일도 된다.
  * </ol>
@@ -82,12 +84,12 @@ class StudySummaryTotalIntegrationTest {
     @Test
     @DisplayName("분야별 진척에 그 분야의 전체 문제 수가 함께 온다")
     void domainProgressCarriesTotal() throws Exception {
-        long networkBefore = totalOf(Domain.NETWORK);
-        long databaseBefore = totalOf(Domain.DATABASE);
+        long networkBefore = totalOf(TestDomains.NETWORK);
+        long databaseBefore = totalOf(TestDomains.DATABASE);
 
-        problemRepository.save(ox(Domain.NETWORK, "네트워크 분모 확인 1"));
-        problemRepository.save(ox(Domain.NETWORK, "네트워크 분모 확인 2"));
-        problemRepository.save(ox(Domain.DATABASE, "DB 분모 확인 1"));
+        problemRepository.save(ox(TestDomains.NETWORK, "네트워크 분모 확인 1"));
+        problemRepository.save(ox(TestDomains.NETWORK, "네트워크 분모 확인 2"));
+        problemRepository.save(ox(TestDomains.DATABASE, "DB 분모 확인 1"));
 
         mockMvc.perform(summaryRequest())
                 .andExpect(status().isOk())
@@ -104,14 +106,14 @@ class StudySummaryTotalIntegrationTest {
         // 손대지 않은 분야가 사라져 "여기부터 해 볼까"의 후보가 안 보인다.
         mockMvc.perform(summaryRequest())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.domains.length()").value(Domain.values().length))
+                .andExpect(jsonPath("$.data.domains.length()").value(DefaultDomains.codes().size()))
                 // 하나라도 total이 빠지면 화면에서 그 줄의 막대가 NaN이 되어 사라진다.
                 //
                 // hasSize를 쓰는 이유: 필터식 뒤에 .length()를 붙이면 JsonPath가 그것을
                 // <걸러진 배열의 길이>가 아니라 <각 원소의 길이>로 읽어, 객체 필드 수가
                 // 원소 수만큼 담긴 목록이 나온다. 한 번 그렇게 틀렸다.
                 .andExpect(jsonPath("$.data.domains[?(@.total >= 0)]")
-                        .value(hasSize(Domain.values().length)));
+                        .value(hasSize(DefaultDomains.codes().size())));
     }
 
     /* ── 헬퍼 ── */
@@ -121,18 +123,18 @@ class StudySummaryTotalIntegrationTest {
     }
 
     /** 지금 응답에 찍힌 그 분야의 분모. 없으면 0 — 필드가 아직 없을 때도 이 호출은 성립한다. */
-    private long totalOf(Domain domain) throws Exception {
+    private long totalOf(DomainCode domain) throws Exception {
         String body = mockMvc.perform(summaryRequest())
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         java.util.List<Integer> found = com.jayway.jsonpath.JsonPath.parse(body)
-                .read("$.data.domains[?(@.domain == '" + domain.name() + "')].total");
+                .read("$.data.domains[?(@.domain == '" + domain.value() + "')].total");
         return found.isEmpty() || found.get(0) == null ? 0L : found.get(0).longValue();
     }
 
     /** 정답 "O" 고정 OX — 이 테스트는 채점을 하지 않으므로 내용은 아무래도 좋다. */
-    private Problem ox(Domain domain, String question) {
+    private Problem ox(DomainCode domain, String question) {
         return Problem.create(domain, Difficulty.BEGINNER, ProblemType.OX,
                 null, question + " " + UUID.randomUUID(), "O", "해설", null);
     }

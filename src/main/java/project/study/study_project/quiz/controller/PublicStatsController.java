@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.document.repository.DocumentRepository;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.quiz.dto.PublicStatsResponse;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -41,6 +41,6 @@ public class PublicStatsController {
         return ApiResponse.ok(new PublicStatsResponse(
                 problemRepository.count(),
                 documentRepository.count(),
-                Domain.values().length));
+                DefaultDomains.codes().size()));
     }
 }

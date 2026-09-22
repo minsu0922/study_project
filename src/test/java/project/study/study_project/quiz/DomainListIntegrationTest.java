@@ -8,7 +8,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.TestDomains;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.repository.DomainSettingRepository;
 
@@ -62,7 +64,7 @@ class DomainListIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].code").value("NETWORK"))
                 .andExpect(jsonPath("$.data[0].displayName").value("네트워크"))
-                .andExpect(jsonPath("$.data.length()").value(Domain.values().length));
+                .andExpect(jsonPath("$.data.length()").value(DefaultDomains.codes().size()));
     }
 
     @Test
@@ -87,7 +89,7 @@ class DomainListIntegrationTest {
     @Test
     @DisplayName("꺼진 분야도 목록에 남는다 — 이미 그 분야 문제가 있을 수 있어 필터가 이름을 잃으면 안 된다")
     void includesDisabledDomain() throws Exception {
-        DomainSetting target = domainSettingRepository.findByDomain(Domain.DS_ALGORITHM)
+        DomainSetting target = domainSettingRepository.findByDomain(TestDomains.DS_ALGORITHM)
                 .orElseThrow(() -> new AssertionError("동기화가 DS_ALGORITHM 행을 만들어 뒀어야 한다"));
         target.edit(false, target.getDisplayName(), target.getHint()); // enabled만 끈다
 

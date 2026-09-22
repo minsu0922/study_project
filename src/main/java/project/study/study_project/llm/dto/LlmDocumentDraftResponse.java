@@ -1,6 +1,6 @@
 package project.study.study_project.llm.dto;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.support.DraftCheck;
 
@@ -23,7 +23,7 @@ import java.util.List;
  */
 public record LlmDocumentDraftResponse(
         Long id,
-        Domain domain,
+        DomainCode domain,
         String domainName,
         String title,
         String slug,

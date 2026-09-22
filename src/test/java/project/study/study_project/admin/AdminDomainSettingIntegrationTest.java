@@ -10,9 +10,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
@@ -74,7 +75,7 @@ class AdminDomainSettingIntegrationTest {
                                 {"enabled":true,"displayName":"네트워크","hint":"TCP 혼잡 제어 위주"}"""))
                 .andExpect(status().isOk());
 
-        assertThat(domainSettingService.hints().rawHintFor(Domain.NETWORK))
+        assertThat(domainSettingService.hints().rawHintFor(TestDomains.NETWORK))
                 .isEqualTo("TCP 혼잡 제어 위주");
     }
 
@@ -109,7 +110,7 @@ class AdminDomainSettingIntegrationTest {
                         .contentType(APPLICATION_JSON).content("{\"direction\":\"UP\"}"))
                 .andExpect(status().isOk());
 
-        assertThat(domainSettingService.batchDomains()).startsWith(Domain.OS, Domain.NETWORK);
+        assertThat(domainSettingService.batchDomains()).startsWith(TestDomains.OS, TestDomains.NETWORK);
     }
 
     @Test
@@ -120,19 +121,19 @@ class AdminDomainSettingIntegrationTest {
                         .contentType(APPLICATION_JSON).content("{\"direction\":\"UP\"}"))
                 .andExpect(status().isOk());
 
-        assertThat(domainSettingService.batchDomains()).startsWith(Domain.NETWORK);
+        assertThat(domainSettingService.batchDomains()).startsWith(TestDomains.NETWORK);
     }
 
     @Test
     @DisplayName("미리보기는 저장하지 않은 순서로도 계산한다 — 보고 나서 저장할 수 있어야 한다")
     void previewUsesGivenOrderWithoutSaving() throws Exception {
         List<DomainSettingService.PreviewCell> cells = domainSettingService.preview(
-                List.of(Domain.OS, Domain.NETWORK), 7);
+                List.of(TestDomains.OS, TestDomains.NETWORK), 7);
 
         assertThat(cells).hasSize(7);
         assertThat(cells).anyMatch(c -> c.domain().equals("OS"));
         // 저장은 안 됐다
-        assertThat(domainSettingService.batchDomains()).startsWith(Domain.NETWORK);
+        assertThat(domainSettingService.batchDomains()).startsWith(TestDomains.NETWORK);
     }
 
     @Test
@@ -186,7 +187,7 @@ class AdminDomainSettingIntegrationTest {
     @Test
     @DisplayName("마지막으로 켜진 분야를 끄면 400 — 배치를 멈추는 수단은 batch-enabled 하나다")
     void cannotDisableLastEnabledDomain() throws Exception {
-        leaveOnlyEnabled(Domain.OS);
+        leaveOnlyEnabled(TestDomains.OS);
 
         String body = mockMvc.perform(put("/api/admin/domain-settings/OS")
                         .header(HttpHeaders.AUTHORIZATION, bearer())
@@ -197,13 +198,13 @@ class AdminDomainSettingIntegrationTest {
                 .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
 
         assertThat(body).contains("DOMAIN_002").contains("batch-enabled");
-        assertThat(domainSettingService.batchDomains()).containsExactly(Domain.OS);
+        assertThat(domainSettingService.batchDomains()).containsExactly(TestDomains.OS);
     }
 
     @Test
     @DisplayName("다른 분야가 켜져 있으면 끌 수 있고, 마지막 분야의 이름·힌트는 그대로 고칠 수 있다")
     void lastDomainRuleOnlyBlocksTurningOff() throws Exception {
-        leaveOnlyEnabled(Domain.OS);
+        leaveOnlyEnabled(TestDomains.OS);
 
         // 켜진 채로 이름만 고치는 것은 막지 않는다 — 막는 것은 "변경 결과 0개"뿐이다.
         mockMvc.perform(put("/api/admin/domain-settings/OS")
@@ -242,7 +243,7 @@ class AdminDomainSettingIntegrationTest {
                 .andExpect(status().isOk());
 
         assertThat(domainSettingService.findAll())
-                .filteredOn(s -> s.getDomain() == Domain.NETWORK)
+                .filteredOn(s -> s.getDomain().equals(TestDomains.NETWORK))
                 .singleElement()
                 .extracting(s -> s.getDisplayName())
                 .isEqualTo("네트워크");
@@ -264,13 +265,13 @@ class AdminDomainSettingIntegrationTest {
     }
 
     /** {@code keep} 하나만 켜진 상태를 만든다. 순서가 중요하다 — 먼저 켜 둬야 나머지를 끌 때 "마지막"에 안 걸린다. */
-    private void leaveOnlyEnabled(Domain keep) {
+    private void leaveOnlyEnabled(DomainCode keep) {
         domainSettingService.findAll().stream()
-                .filter(s -> s.getDomain() == keep)
+                .filter(s -> s.getDomain().equals(keep))
                 .forEach(s -> domainSettingService.edit(keep,
                         new AdminDomainSettingRequest(true, s.getDisplayName(), s.getHint())));
         domainSettingService.findAll().stream()
-                .filter(s -> s.getDomain() != keep && s.isEnabled())
+                .filter(s -> !s.getDomain().equals(keep) && s.isEnabled())
                 .forEach(s -> domainSettingService.edit(s.getDomain(),
                         new AdminDomainSettingRequest(false, s.getDisplayName(), s.getHint())));
     }

@@ -5,9 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
@@ -64,7 +65,7 @@ class LlmChoiceRationaleIntegrationTest {
                  {"text":"오답 셋","correct":false,"rationale":"사전 요청을 거치는 줄 안 오해다"}]""";
 
         GeneratedProblemDraft draft = draftRepository.save(GeneratedProblemDraft.pending(
-                Domain.SECURITY, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.SECURITY, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 "오답 설명 배관 테스트",
                 "오답 설명 배관 테스트용 지문 " + UUID.randomUUID(),
                 null, "정답인 이유를 적은 해설입니다.", choicesJson, "test-model", null, null, null));
@@ -106,7 +107,7 @@ class LlmChoiceRationaleIntegrationTest {
                 [{"text":"정답 보기","correct":true},{"text":"오답 보기","correct":false}]""";
 
         GeneratedProblemDraft draft = draftRepository.save(GeneratedProblemDraft.pending(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
                 "옛 초안 승인 테스트",
                 "옛 초안 승인 테스트용 지문 " + UUID.randomUUID(),
                 null, "해설입니다.", legacyJson, "test-model", null, null, null));

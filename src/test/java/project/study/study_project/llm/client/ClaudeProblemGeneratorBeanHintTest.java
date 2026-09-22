@@ -5,9 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.service.DomainSettingService;
@@ -59,13 +60,13 @@ class ClaudeProblemGeneratorBeanHintTest {
     @Test
     @DisplayName("스프링 빈 문제 생성기는 화면에서 고친 힌트를 바로 다음 프롬프트에 싣는다")
     void problemGeneratorBeanReadsHintAtUseTime() {
-        editHint(Domain.NETWORK, "빈경로-표지 첫째");
+        editHint(TestDomains.NETWORK, "빈경로-표지 첫째");
 
         assertThat(problemPrompt())
                 .as("빈이 내장 힌트로 만들어졌다면 이 표지는 나올 수 없다")
                 .contains("(빈경로-표지 첫째)");
 
-        editHint(Domain.NETWORK, "빈경로-표지 둘째");
+        editHint(TestDomains.NETWORK, "빈경로-표지 둘째");
 
         assertThat(problemPrompt())
                 .as("첫 호출에서 읽어 굳혔다면 재시작 전까지 첫째가 남는다")
@@ -76,23 +77,23 @@ class ClaudeProblemGeneratorBeanHintTest {
     @Test
     @DisplayName("스프링 빈 문서 생성기도 같은 공급자를 호출 시점에 읽는다")
     void documentGeneratorBeanReadsHintAtUseTime() {
-        editHint(Domain.NETWORK, "빈경로-표지 문서");
+        editHint(TestDomains.NETWORK, "빈경로-표지 문서");
 
-        String prompt = documentGenerator.buildPrompt(Domain.NETWORK, null, List.of(), List.of());
+        String prompt = documentGenerator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of());
 
         assertThat(prompt).contains("(빈경로-표지 문서)");
     }
 
     /** 8인자 — {@code ClaudeProblemGeneratorPromptTest}의 호출 모양과 같다. */
     private String problemPrompt() {
-        return problemGenerator.buildPrompt(Domain.NETWORK, Difficulty.BEGINNER,
+        return problemGenerator.buildPrompt(TestDomains.NETWORK, Difficulty.BEGINNER,
                 ProblemType.MULTIPLE_CHOICE, 1, List.of(), List.of(), null, null);
     }
 
     /** 켜짐·이름은 그대로 두고 힌트만 바꾼다 — 화면의 "저장" 버튼과 같은 경로({@code DomainSettingService.edit}). */
-    private void editHint(Domain domain, String hint) {
+    private void editHint(DomainCode domain, String hint) {
         DomainSetting current = domainSettingService.findAll().stream()
-                .filter(s -> s.getDomain() == domain)
+                .filter(s -> s.getDomain().equals(domain))
                 .findFirst()
                 .orElseThrow();
         domainSettingService.edit(domain,

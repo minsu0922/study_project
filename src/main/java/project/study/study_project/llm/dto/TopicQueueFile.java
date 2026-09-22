@@ -24,7 +24,7 @@ import java.util.List;
  *       못 읽는 상태가 되면 안 된다. 그날 대기열이 통째로 사라지는 것이 훨씬 나쁘다.
  *   <li>{@code @JsonInclude(NON_NULL)} — 배치가 파일을 다시 쓸 때 {@code "memo": null} 같은
  *       빈 칸이 늘어나면 사람이 읽고 고치기 나쁘다.
- *   <li>{@code domain}이 {@link project.study.study_project.global.common.Domain}이 아니라
+ *   <li>{@code domain}이 {@link project.study.study_project.global.common.DomainCode}가 아니라
  *       <b>문자열</b>인 이유 — 오타 하나("SPRING")로 Jackson이 예외를 던지면 <b>멀쩡한 나머지
  *       범위까지</b> 못 읽는다. 문자열로 받아 항목 단위로 판정하고, 잘못된 것만 건너뛴다
  *       ({@link project.study.study_project.llm.support.TopicQueue}).

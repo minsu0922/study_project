@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.quiz.domain.Submission;
 
 import java.time.LocalDateTime;
@@ -64,7 +64,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             """)
     Page<Submission> findLatestWrongAnswers(
             @Param("userId") Long userId,
-            @Param("domain") Domain domain,
+            @Param("domain") DomainCode domain,
             Pageable pageable
     );
 
@@ -119,7 +119,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
     /** {@link #aggregateUserDomainStats} 결과 행. */
     interface UserDomainStat {
-        Domain getDomain();
+        DomainCode getDomain();
         long getTotal();
         long getCorrectCount();
     }
@@ -225,7 +225,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
      * 것은 아무것도 잘못하지 않았는데 벌을 주는 표시다. 절대 개수만 보여 준다.
      *
      * <p>맞힌 적 없는 분야는 결과에 아예 없다(GROUP BY의 성질). 화면이 0으로 채운다 —
-     * 여기서 모든 분야를 만들어 내려면 Domain enum을 SQL이 알아야 한다.
+     * 여기서 모든 분야를 만들어 내려면 분야 목록(DefaultDomains)을 SQL이 알아야 한다.
      */
     @Query("""
             select p.domain as domain, count(distinct p.id) as solved
@@ -238,7 +238,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
     /** {@link #countSolvedByDomain} 결과 행. */
     interface DomainSolvedCount {
-        Domain getDomain();
+        DomainCode getDomain();
         long getSolved();
     }
     /**

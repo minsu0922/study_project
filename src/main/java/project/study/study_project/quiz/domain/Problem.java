@@ -21,7 +21,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 
 import java.time.LocalDateTime;
@@ -60,9 +60,8 @@ public class Problem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private Domain domain;
+    private DomainCode domain;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
@@ -129,7 +128,7 @@ public class Problem {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    private Problem(Domain domain, Difficulty difficulty, ProblemType type, String title,
+    private Problem(DomainCode domain, Difficulty difficulty, ProblemType type, String title,
                     String question, String answer, String explanation, String documentSlug) {
         this.domain = domain;
         this.difficulty = difficulty;
@@ -149,14 +148,14 @@ public class Problem {
      * String이라 순서를 바꿔 넣어도 컴파일된다 — 컬럼 순서(V13)와 필드 순서에 맞춰 title을
      * 앞에 두었으니, 부르는 쪽도 같은 순서로 적어 눈으로 대조할 수 있게 한다.
      */
-    public static Problem create(Domain domain, Difficulty difficulty, ProblemType type, String title,
+    public static Problem create(DomainCode domain, Difficulty difficulty, ProblemType type, String title,
                                  String question, String answer, String explanation,
                                  String documentSlug) {
         return new Problem(domain, difficulty, type, title, question, answer, explanation, documentSlug);
     }
 
     /** 관리자 수정용 — id/created_at만 남기고 내용 필드를 통째로 교체한다(부분 수정 없음: 폼 전체 제출 방식). */
-    public void update(Domain domain, Difficulty difficulty, ProblemType type, String title,
+    public void update(DomainCode domain, Difficulty difficulty, ProblemType type, String title,
                        String question, String answer, String explanation, String documentSlug) {
         this.domain = domain;
         this.difficulty = difficulty;

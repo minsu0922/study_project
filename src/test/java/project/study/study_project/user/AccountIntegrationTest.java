@@ -12,9 +12,10 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -184,7 +185,7 @@ class AccountIntegrationTest {
     }
 
     private Problem ox() {
-        return Problem.create(Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+        return Problem.create(TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 null, "탈퇴 확인용 " + UUID.randomUUID(), "O", "해설", null);
     }
 }

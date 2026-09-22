@@ -14,7 +14,8 @@ import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -83,7 +84,7 @@ public class LlmDocumentService {
      *              (현재 설정값을 쓰면 모델 교체 후 흡수한 옛 파일이 새 모델로 둔갑한다)
      */
     @Transactional
-    public GeneratedDocumentDraft saveDraft(Domain domain, GeneratedDocumentItem item, String model) {
+    public GeneratedDocumentDraft saveDraft(DomainCode domain, GeneratedDocumentItem item, String model) {
         GeneratedDocumentDraft draft = GeneratedDocumentDraft.pending(
                 domain,
                 truncate(trimToEmpty(item.title()), 200),
@@ -266,7 +267,7 @@ public class LlmDocumentService {
                         d.getTitle(), d.getSlug(), d.getContentMd()))
                 : List.of();
         return new LlmDocumentDraftResponse(
-                d.getId(), d.getDomain(), d.getDomain().getDisplayName(),
+                d.getId(), d.getDomain(), DefaultDomains.displayName(d.getDomain()),
                 d.getTitle(), d.getSlug(), d.getContentMd(), readTags(d.getTagsJson()),
                 d.getContentMd() == null ? 0 : d.getContentMd().length(),
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedDocumentId(),

@@ -5,7 +5,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.ProblemListItem;
 import project.study.study_project.quiz.dto.StudySummaryResponse;
@@ -16,7 +17,7 @@ import project.study.study_project.review.repository.ReviewItemRepository;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +50,7 @@ public class ProblemListService {
      * @param onlyDue {@code true}면 지금 복습 차례인 문제만
      */
     @Transactional(readOnly = true)
-    public PageResponse<ProblemListItem> getList(Long userId, Domain domain, Difficulty difficulty,
+    public PageResponse<ProblemListItem> getList(Long userId, DomainCode domain, Difficulty difficulty,
                                                  ProblemListItem.SolveState state, boolean onlyDue,
                                                  String keyword, String documentSlug,
                                                  Pageable pageable) {
@@ -62,7 +63,7 @@ public class ProblemListService {
                         row.getId(),
                         row.getTitle(),
                         row.getDomain(),
-                        row.getDomain().getDisplayName(),
+                        DefaultDomains.displayName(row.getDomain()),
                         row.getDifficulty(),
                         row.getType(),
                         row.getLastAttemptedAt(),
@@ -132,7 +133,7 @@ public class ProblemListService {
      *
      * <p>집계 쿼리는 해당 행이 없는 분야를 아예 안 준다(GROUP BY의 성질). 그대로 내려보내면
      * 화면에서 <b>손대지 않은 분야가 사라져</b>, 정작 "여기부터 해 볼까"의 후보가 안 보인다.
-     * 빠진 분야를 만들어 내려면 Domain 목록이 필요한데 그건 자바가 아는 것이라 여기서 채운다.
+     * 빠진 분야를 만들어 내려면 분야 목록({@link DefaultDomains#codes()})이 필요한데 그건 자바가 아는 것이라 여기서 채운다.
      *
      * <h2>왜 조인 한 방으로 안 묶나</h2>
      *
@@ -145,18 +146,20 @@ public class ProblemListService {
      * 집계라 무겁지 않다. 이 화면은 필터를 바꿔도 다시 부르지 않는다(위 주석 참고).
      */
     private List<StudySummaryResponse.DomainProgress> domainProgress(Long userId) {
-        Map<Domain, Long> solved = new EnumMap<>(Domain.class);
+        // 예전엔 EnumMap. 두 맵은 getOrDefault 조회에만 쓰이고, 응답 순서는 아래 DefaultDomains.codes()
+        // (옛 enum 선언 순서)가 정한다 — 맵 순서는 밖으로 드러나지 않으므로 HashMap이면 된다.
+        Map<DomainCode, Long> solved = new HashMap<>();
         submissionRepository.countSolvedByDomain(userId)
                 .forEach(row -> solved.put(row.getDomain(), row.getSolved()));
 
-        Map<Domain, Long> total = new EnumMap<>(Domain.class);
+        Map<DomainCode, Long> total = new HashMap<>();
         problemRepository.countGroupByDomain()
                 .forEach(row -> total.put(row.getDomain(), row.getCnt()));
 
-        return java.util.Arrays.stream(Domain.values())
+        return DefaultDomains.codes().stream()
                 .map(domain -> new StudySummaryResponse.DomainProgress(
                         domain,
-                        domain.getDisplayName(),
+                        DefaultDomains.displayName(domain),
                         solved.getOrDefault(domain, 0L),
                         total.getOrDefault(domain, 0L)))
                 .toList();

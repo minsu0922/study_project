@@ -17,7 +17,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -52,9 +52,8 @@ public class GeneratedProblemDraft {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private Domain domain;
+    private DomainCode domain;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
@@ -160,7 +159,7 @@ public class GeneratedProblemDraft {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
-    private GeneratedProblemDraft(Domain domain, Difficulty difficulty, ProblemType type, String title,
+    private GeneratedProblemDraft(DomainCode domain, Difficulty difficulty, ProblemType type, String title,
                                   String question, String answer, String explanation,
                                   String choicesJson, String model, String documentSlug,
                                   QuestionKind questionKind, String sourceQuoteCheck) {
@@ -185,7 +184,7 @@ public class GeneratedProblemDraft {
      * <p>{@code title}과 {@code question}이 나란한 String 두 개라 순서를 바꿔도 컴파일된다.
      * 컬럼 순서(V13)·필드 순서와 같게 맞춰 두었으니 부르는 쪽도 그 순서로 적는다.
      */
-    public static GeneratedProblemDraft pending(Domain domain, Difficulty difficulty, ProblemType type,
+    public static GeneratedProblemDraft pending(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                 String title, String question, String answer,
                                                 String explanation, String choicesJson,
                                                 String model, String documentSlug,

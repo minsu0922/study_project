@@ -2,8 +2,9 @@ package project.study.study_project.llm.client;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import project.study.study_project.TestDomains;
 import project.study.study_project.document.support.DocumentEditions;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 
 import java.util.List;
@@ -29,7 +30,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("주제 범위를 주면 '그 안에서 하나 골라 쓰라'는 지시가 실린다 — 범위 전체를 개괄하면 안 된다")
     void includesGivenTopicAsRange() {
-        String prompt = generator.buildPrompt(Domain.NETWORK, "TCP 혼잡 제어", List.of(), List.of());
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, "TCP 혼잡 제어", List.of(), List.of());
 
         assertThat(prompt).contains("주제 범위: TCP 혼잡 제어");
         assertThat(prompt).as("범위일 때는 '이 주제로 써라'가 아니라 '이 안에서 골라라'여야 한다")
@@ -39,7 +40,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("범위를 비우면 분야 안에서 모델이 직접 고르도록 지시한다")
     void asksModelToPickWhenTopicOmitted() {
-        String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of());
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of());
 
         assertThat(prompt).contains("주제를 하나 골라");
         assertThat(prompt).doesNotContain("주제 범위:");
@@ -48,7 +49,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("공백만 있는 범위는 지정하지 않은 것으로 본다 — 워크플로 입력이 비면 그렇게 온다")
     void treatsBlankTopicAsUnspecified() {
-        String prompt = generator.buildPrompt(Domain.NETWORK, "   ", List.of(), List.of());
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, "   ", List.of(), List.of());
 
         assertThat(prompt).contains("주제를 하나 골라");
         assertThat(prompt).doesNotContain("주제 범위:");
@@ -65,7 +66,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("주제를 비우면 '분야만큼 넓게 고르지 마라'가 예시와 함께 실린다 — 분야 이름만 한 주제가 나왔다")
     void asksToNarrowTopicWhenModelPicks() {
-        String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, null, List.of(), List.of());
+        String prompt = generator.buildPrompt(TestDomains.BACKEND_FRAMEWORK, null, List.of(), List.of());
 
         assertThat(prompt).contains("분야 전체를 개괄하지 마라");
         assertThat(prompt).as("크기 지시는 예시로 줘야 지켜진다").contains("(X)").contains("(O)");
@@ -79,7 +80,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("범위를 줄 때 '아직 안 다룬 것을 고르라'가 함께 실린다 — 같은 범위가 계속 돌아온다")
     void asksToPickUncoveredTopicWithinRange() {
-        String prompt = generator.buildPrompt(Domain.BACKEND_FRAMEWORK, "Spring 트랜잭션", List.of(), List.of());
+        String prompt = generator.buildPrompt(TestDomains.BACKEND_FRAMEWORK, "Spring 트랜잭션", List.of(), List.of());
 
         assertThat(prompt).contains("[주제 선정 원칙]");
         assertThat(prompt).contains("범위 전체를 개괄하지 마라");
@@ -107,7 +108,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("주제 선정 예시가 특정 분야로 기울지 않는다 — 예시가 규칙을 이기므로 주제까지 끌고 간다")
     void topicPickingExamplesStayNeutral() {
-        String prompt = generator.buildPrompt(Domain.OS, "프로세스와 스레드", List.of(), List.of());
+        String prompt = generator.buildPrompt(TestDomains.OS, "프로세스와 스레드", List.of(), List.of());
 
         assertThat(prompt)
                 .as("시스템 프롬프트가 이미 예시 주제로 쓰는 캐시라 '이건 예시일 뿐'이 뚜렷하다")
@@ -132,7 +133,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("기존 문서 제목이 중복 회피 목록으로 실린다 — 없으면 있는 주제를 또 쓴다")
     void includesAvoidTitles() {
-        String prompt = generator.buildPrompt(Domain.NETWORK, null,
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, null,
                 List.of("TCP 3-way 핸드셰이크와 연결 종료", "HTTP와 HTTPS — 무엇이 다른가"), List.of());
 
         assertThat(prompt).contains("이미 문서가 있는 주제");
@@ -143,7 +144,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("기존 태그가 실린다 — 없으면 tcp/TCP/tcp-handshake처럼 비슷한 태그가 계속 늘어난다")
     void includesPreferredTags() {
-        String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of("tcp", "http"));
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of("tcp", "http"));
 
         assertThat(prompt).contains("기존 태그: tcp, http");
     }
@@ -151,7 +152,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("태그 목록을 줄 때는 '새 태그 남발 금지'가 함께 실린다 — 1차 실물이 태그 3개를 전부 새로 만들었다")
     void limitsNewTagsWhenPreferredTagsGiven() {
-        String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of("tcp", "http"));
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of("tcp", "http"));
 
         assertThat(prompt).contains("[태그 부여 규칙]");
         assertThat(prompt).contains("새로 만들되 1개까지다");
@@ -162,7 +163,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("목록이 비어 있으면 그 블록 자체를 넣지 않는다 — 빈 제목만 남으면 토큰 낭비다")
     void omitsEmptyBlocks() {
-        String prompt = generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of());
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of());
 
         assertThat(prompt).doesNotContain("이미 문서가 있는 주제");
         assertThat(prompt).doesNotContain("[태그 부여 규칙]");
@@ -171,11 +172,11 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("스프링·백엔드와 언어·런타임은 경계 힌트가 붙는다 — 둘 다 'Java 관련'이라 헷갈린다")
     void addsDomainHintForConfusablePair() {
-        assertThat(generator.buildPrompt(Domain.BACKEND_FRAMEWORK, null, List.of(), List.of()))
+        assertThat(generator.buildPrompt(TestDomains.BACKEND_FRAMEWORK, null, List.of(), List.of()))
                 .contains("순수 JVM/GC 주제는 제외");
-        assertThat(generator.buildPrompt(Domain.LANGUAGE_RUNTIME, null, List.of(), List.of()))
+        assertThat(generator.buildPrompt(TestDomains.LANGUAGE_RUNTIME, null, List.of(), List.of()))
                 .contains("프레임워크 주제는 제외");
-        assertThat(generator.buildPrompt(Domain.NETWORK, null, List.of(), List.of()))
+        assertThat(generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of()))
                 .as("경계가 헷갈리지 않는 분야에는 군더더기를 붙이지 않는다")
                 .doesNotContain("제외)");
     }
@@ -379,7 +380,7 @@ class ClaudeDocumentGeneratorTest {
                 "부모 행을 지울 때 자식 행은 어떻게 되는가", "on-delete-actions",
                 "# 제목\n\n## 무엇인가\n정의.", List.of("database"));
 
-        assertThat(generator.buildAdvancedPrompt(Domain.DATABASE, beginner, List.of("database")))
+        assertThat(generator.buildAdvancedPrompt(TestDomains.DATABASE, beginner, List.of("database")))
                 .contains("\"부모 행을 지울 때 자식 행은 어떻게 되는가\"")
                 .contains("\"on-delete-actions" + DocumentEditions.ADVANCED_SUFFIX + "\"")
                 .as("입문편 전문을 넘기는 것이 이 편의 존재 이유다")

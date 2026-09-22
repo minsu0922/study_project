@@ -16,7 +16,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 
@@ -51,9 +51,8 @@ public class GeneratedDocumentDraft {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private Domain domain;
+    private DomainCode domain;
 
     @Column(nullable = false, length = 200)
     private String title;
@@ -93,7 +92,7 @@ public class GeneratedDocumentDraft {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
-    private GeneratedDocumentDraft(Domain domain, String title, String slug,
+    private GeneratedDocumentDraft(DomainCode domain, String title, String slug,
                                    String contentMd, String tagsJson, String model) {
         this.domain = domain;
         this.title = title;
@@ -105,7 +104,7 @@ public class GeneratedDocumentDraft {
     }
 
     /** 흡수 직후 저장용 팩터리 — 초안은 항상 PENDING으로 태어난다. */
-    public static GeneratedDocumentDraft pending(Domain domain, String title, String slug,
+    public static GeneratedDocumentDraft pending(DomainCode domain, String title, String slug,
                                                  String contentMd, String tagsJson, String model) {
         return new GeneratedDocumentDraft(domain, title, slug, contentMd, tagsJson, model);
     }

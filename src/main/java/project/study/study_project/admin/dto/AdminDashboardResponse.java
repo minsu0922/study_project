@@ -1,7 +1,7 @@
 package project.study.study_project.admin.dto;
 
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.util.List;
 
@@ -67,7 +67,7 @@ public record AdminDashboardResponse(
     ) {
     }
 
-    public record MatrixCell(Domain domain, Difficulty difficulty, long count) {
+    public record MatrixCell(DomainCode domain, Difficulty difficulty, long count) {
     }
 
     /**

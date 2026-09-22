@@ -3,8 +3,6 @@ package project.study.study_project.llm.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -14,7 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,9 +54,8 @@ public class TopicQueueItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private Domain domain;
+    private DomainCode domain;
 
     @Column(nullable = false, length = 200)
     private String topic;
@@ -82,7 +79,7 @@ public class TopicQueueItem {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    private TopicQueueItem(Domain domain, String topic, String memo, int sortOrder,
+    private TopicQueueItem(DomainCode domain, String topic, String memo, int sortOrder,
                            LocalDate lastUsedAt, int usedCount) {
         this.domain = domain;
         this.topic = topic;
@@ -93,7 +90,7 @@ public class TopicQueueItem {
     }
 
     /** 관리자 화면에서 새로 추가하는 범위 — 아직 한 번도 안 쓴 상태로 태어난다. */
-    public static TopicQueueItem fresh(Domain domain, String topic, String memo, int sortOrder) {
+    public static TopicQueueItem fresh(DomainCode domain, String topic, String memo, int sortOrder) {
         return new TopicQueueItem(domain, topic, memo, sortOrder, null, 0);
     }
 
@@ -104,7 +101,7 @@ public class TopicQueueItem {
      * 아직 앱을 안 켠 상태). 기록을 버리고 새것처럼 들여오면 <b>그 범위가 곧바로 다음 차례가
      * 되어</b> 순환이 한쪽으로 쏠린다.
      */
-    public static TopicQueueItem imported(Domain domain, String topic, String memo,
+    public static TopicQueueItem imported(DomainCode domain, String topic, String memo,
                                           int sortOrder, LocalDate lastUsedAt, int usedCount) {
         return new TopicQueueItem(domain, topic, memo, sortOrder, lastUsedAt, usedCount);
     }
@@ -181,7 +178,7 @@ public class TopicQueueItem {
      * <p>{@code sortOrder}를 인자로 받지 않는 것도 같은 원칙이다 — 순서는 {@link #changeOrder}의
      * 몫이고, 한 메서드가 두 가지 일을 하면 부르는 쪽이 의도를 못 드러낸다.
      */
-    public void edit(Domain domain, String topic, String memo) {
+    public void edit(DomainCode domain, String topic, String memo) {
         this.domain = domain;
         this.topic = topic;
         this.memo = memo;

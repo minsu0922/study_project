@@ -12,7 +12,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
 import project.study.study_project.document.domain.QDocument;
 import project.study.study_project.document.dto.DocumentListItem;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.tag.domain.QTag;
 
 import java.time.LocalDateTime;
@@ -54,11 +55,11 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
      * <b>public인 이유</b>: Projections.constructor가 리플렉션으로 생성자를 찾는데,
      * private record는 생성자도 private이라 "No constructor found" 예외가 난다(실제 겪음).
      */
-    public record DocRow(Long id, Domain domain, String title, String slug, LocalDateTime updatedAt) {
+    public record DocRow(Long id, DomainCode domain, String title, String slug, LocalDateTime updatedAt) {
     }
 
     @Override
-    public Page<DocumentListItem> searchListItems(Domain domain, List<String> tagNames,
+    public Page<DocumentListItem> searchListItems(DomainCode domain, List<String> tagNames,
                                                  String keyword, Pageable pageable) {
         QDocument d = QDocument.document;
 
@@ -104,7 +105,7 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
 
         List<DocumentListItem> content = rows.stream()
                 .map(r -> new DocumentListItem(
-                        r.id(), r.domain(), r.domain().getDisplayName(), r.title(), r.slug(),
+                        r.id(), r.domain(), DefaultDomains.displayName(r.domain()), r.title(), r.slug(),
                         // 편(입문/심화)은 여기서 채우지 않는다 — 짝이 실제로 있는지 알아야 하는데
                         // 그건 이 페이지 밖의 문서를 봐야 하는 질문이라 서비스가 한 번에 처리한다.
                         tagsByDocId.getOrDefault(r.id(), List.of()), r.updatedAt(), null))

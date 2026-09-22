@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 
@@ -70,7 +70,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             order by p.id desc
             """)
     Page<Problem> findForAdmin(
-            @Param("domain") Domain domain,
+            @Param("domain") DomainCode domain,
             @Param("difficulty") Difficulty difficulty,
             @Param("type") ProblemType type,
             @Param("documentSlug") String documentSlug,
@@ -131,7 +131,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
     /** {@link #countGroupByDomainAndDifficulty} 결과 행 — select 별칭과 getter 이름이 매핑 규약이다. */
     interface DomainDifficultyCount {
-        Domain getDomain();
+        DomainCode getDomain();
         Difficulty getDifficulty();
         long getCnt();
     }
@@ -159,7 +159,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
     /** {@link #countGroupByDomain} 결과 행 — select 별칭과 getter 이름이 매핑 규약이다. */
     interface DomainCount {
-        Domain getDomain();
+        DomainCode getDomain();
         long getCnt();
     }
 
@@ -170,7 +170,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      * 개수 제한은 호출부가 Pageable(예: 상위 50건)로 건다 — JPQL엔 LIMIT이 없다.
      */
     @Query("select p.question from Problem p where p.domain = :domain order by p.id desc")
-    List<String> findQuestionTextsByDomain(@Param("domain") Domain domain, Pageable pageable);
+    List<String> findQuestionTextsByDomain(@Param("domain") DomainCode domain, Pageable pageable);
 
     /**
      * 관리 화면의 근거 문서 필터에 채울 slug 목록 — <b>문제에 실제로 붙어 있는</b> 것만.
@@ -220,7 +220,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
     /** 스냅샷용 프로젝션 — 엔티티를 통째로 읽지 않기 위해(본문 TEXT·보기 LAZY 부담 회피). */
     interface DomainQuestion {
-        Domain getDomain();
+        DomainCode getDomain();
 
         String getQuestion();
     }
@@ -406,7 +406,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      */
     Page<ProblemListRow> findListForUser(
             @Param("userId") Long userId,
-            @Param("domain") Domain domain,
+            @Param("domain") DomainCode domain,
             @Param("difficulty") Difficulty difficulty,
             @Param("keyword") String keyword,
             @Param("documentSlug") String documentSlug,
@@ -423,7 +423,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     interface ProblemListRow {
         Long getId();
         String getTitle();
-        Domain getDomain();
+        DomainCode getDomain();
         Difficulty getDifficulty();
         ProblemType getType();
         LocalDateTime getLastAttemptedAt();

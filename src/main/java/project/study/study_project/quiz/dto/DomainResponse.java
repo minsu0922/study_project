@@ -5,7 +5,7 @@ import project.study.study_project.llm.domain.DomainSetting;
 /**
  * {@code GET /api/domains} 한 줄 — 화면이 필요로 하는 최소한만 담는다.
  *
- * <p>{@code code}는 {@link project.study.study_project.global.common.Domain} 상수명이다
+ * <p>{@code code}는 {@link project.study.study_project.global.common.DomainCode#value()} 코드 문자열이다
  * (예: {@code NETWORK}). 화면 JS의 {@code DOMAINS} 배열이 {@code [code, displayName]} 쌍의
  * 목록이던 것과 그대로 맞춰, 응답을 받은 쪽이 배열로 변환하는 코드 한 줄만 바꾸면 되게 했다
  * (api.js 주석 참고).
@@ -18,6 +18,6 @@ import project.study.study_project.llm.domain.DomainSetting;
 public record DomainResponse(String code, String displayName) {
 
     public static DomainResponse from(DomainSetting setting) {
-        return new DomainResponse(setting.getDomain().name(), setting.getDisplayName());
+        return new DomainResponse(setting.getDomain().value(), setting.getDisplayName());
     }
 }

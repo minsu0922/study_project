@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.dailyquiz.domain.DailyQuiz;
 import project.study.study_project.dailyquiz.domain.DailyQuizSource;
 import project.study.study_project.dailyquiz.dto.DailyQuizItemResponse;
@@ -15,7 +16,7 @@ import project.study.study_project.dailyquiz.dto.DailyQuizResponse;
 import project.study.study_project.dailyquiz.repository.DailyQuizRepository;
 import project.study.study_project.dailyquiz.service.DailyQuizService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.dto.QuizSubmitRequest;
@@ -90,8 +91,8 @@ class DailyQuizFlowIntegrationTest {
      * 나중에 이 테스트가 깨졌을 때 원인을 읽기 어려워진다.
      */
     private void createProblemPool() {
-        Domain[] poolDomains = {Domain.DS_ALGORITHM, Domain.SYSTEM_DESIGN,
-                Domain.LANGUAGE_RUNTIME, Domain.BACKEND_FRAMEWORK};
+        DomainCode[] poolDomains = {TestDomains.DS_ALGORITHM, TestDomains.SYSTEM_DESIGN,
+                TestDomains.LANGUAGE_RUNTIME, TestDomains.BACKEND_FRAMEWORK};
         for (int i = 0; i < 12; i++) {
             newOx(poolDomains[i % poolDomains.length], "새 문제 풀 " + i + " " + UUID.randomUUID());
         }
@@ -100,7 +101,7 @@ class DailyQuizFlowIntegrationTest {
     /* ── 헬퍼 ── */
 
     /** OX 문제 생성 — 정답 "O" 고정이라 테스트가 정답/오답을 마음대로 만들 수 있다. */
-    private Problem newOx(Domain domain, String question) {
+    private Problem newOx(DomainCode domain, String question) {
         return problemRepository.save(Problem.create(
                 domain, Difficulty.BEGINNER, ProblemType.OX, null, question, "O", "해설", null));
     }
@@ -185,8 +186,8 @@ class DailyQuizFlowIntegrationTest {
     @DisplayName("배합: 복습 due는 REVIEW 칸에, 정답률 낮은 도메인은 WEAK 칸에, 나머지는 NEW로 채워진다")
     void mixRecipe() {
         // 복습 재료: NETWORK 문제 2개를 틀리고 시간 여행으로 due 상태로 만든다
-        Problem due1 = newOx(Domain.NETWORK, "복습 대상 1");
-        Problem due2 = newOx(Domain.NETWORK, "복습 대상 2");
+        Problem due1 = newOx(TestDomains.NETWORK, "복습 대상 1");
+        Problem due2 = newOx(TestDomains.NETWORK, "복습 대상 2");
         submit(due1.getId(), "X");
         submit(due2.getId(), "X");
         timeTravelToDue(List.of(due1.getId(), due2.getId()));
@@ -195,7 +196,7 @@ class DailyQuizFlowIntegrationTest {
         // 다른 도메인은 제출 5회 미만이라 판정에서 제외 → OS가 유일한(=가장 약한) 취약 도메인.
         // 이 오답들의 복습 예정은 "내일"이라 due가 아니다 — 복습 칸과 섞이지 않는다(헬퍼 주석).
         for (int i = 0; i < 5; i++) {
-            Problem p = newOx(Domain.OS, "취약 재료 " + i);
+            Problem p = newOx(TestDomains.OS, "취약 재료 " + i);
             submit(p.getId(), i == 0 ? "O" : "X");
         }
 
@@ -210,7 +211,7 @@ class DailyQuizFlowIntegrationTest {
         List<DailyQuizItemResponse> weak =
                 items.stream().filter(i -> i.source() == DailyQuizSource.WEAK).toList();
         assertThat(weak).hasSize(DailyQuizService.WEAK_TARGET);
-        assertThat(weak).allMatch(i -> i.problem().domain() == Domain.OS);
+        assertThat(weak).allMatch(i -> i.problem().domain().equals(TestDomains.OS));
 
         // NEW 칸: 남은 자리를 채우고, 전부 내가 제출한 적 없는 문제다
         Set<Long> mySubmitted = em.createQuery(
@@ -237,7 +238,7 @@ class DailyQuizFlowIntegrationTest {
 
         // 1문제 풀면 solved 1 — 세트 밖 문제는 아무리 풀어도 진행률과 무관
         submit(firstProblemId, anyValidAnswer(items.get(0)));
-        Problem outsider = newOx(Domain.SECURITY, "세트 밖 문제");
+        Problem outsider = newOx(TestDomains.SECURITY, "세트 밖 문제");
         submit(outsider.getId(), "O");
         // 같은 문제 재제출도 진행률 불변(첫 제출만 연결 — docs/12)
         submit(firstProblemId, anyValidAnswer(items.get(0)));

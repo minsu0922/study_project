@@ -6,11 +6,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.repository.DomainSettingRepository;
+import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.llm.support.DomainEntry;
 import project.study.study_project.llm.support.DomainHints;
 import project.study.study_project.llm.support.DomainHintsProvider;
 import project.study.study_project.llm.support.GenerationSchedule;
@@ -18,14 +21,14 @@ import project.study.study_project.llm.support.GenerationSchedule;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * {@code domain_setting} 테이블을 {@link Domain} enum에 맞춰 두는 서비스 — 동기화, 그리고
+ * {@code domain_setting} 테이블을 기본 분야 목록({@link DefaultDomains})에 맞춰 두는 서비스 — 동기화, 그리고
  * 그 결과를 읽는 조회 셋(배치 후보·힌트·전체 목록).
  *
  * <h2>왜 행을 손으로 만들지 않나</h2>
@@ -33,15 +36,15 @@ import java.util.Set;
  * <p>{@code DomainSetting} 클래스 주석에 적었듯, enum 상수가 늘거나 줄 때마다 마이그레이션을
  * 새로 쓰게 만들면 <b>깜빡한 상수는 행 없이 조용히 배치에서 빠진다</b>. 화면에는 그 분야가
  * 멀쩡히 보이는데(enum에는 있으므로) 배치 후보 목록에서만 빠져 있어서, 증상이 "왜 저 분야만
- * 문제가 안 늘지"로만 드러나고 원인을 찾기 어렵다. 그래서 {@link #syncWithEnum()}이 기동마다
- * enum을 진실로 삼아 행을 맞춘다.
+ * 문제가 안 늘지"로만 드러나고 원인을 찾기 어렵다. 그래서 {@link #syncWithDefaults()}가 기동마다
+ * 기본 분야 목록(옛 enum의 11개, {@link DefaultDomains})을 진실로 삼아 행을 맞춘다.
  *
  * <h2>새 행의 초기값은 폴백 배치 목록에서 온다</h2>
  *
  * <p>{@code llm.generation.batch-domains}는 원래 {@code LlmProblemService}가 "모델이 분야를
  * 알아서 고를 때"의 후보 목록으로 읽던 설정값이다(관리 화면이 생기기 전의 유일한 배치 분야
  * 설정). 이 서비스는 같은 값을 <b>새 행이 태어날 때만</b> 재사용한다 — 이미 있는 행은 이
- * 목록이 바뀌어도 절대 따라 바뀌지 않는다(아래 {@link #syncWithEnum()} 참고). 설정값이 비어
+ * 목록이 바뀌어도 절대 따라 바뀌지 않는다(아래 {@link #syncWithDefaults()} 참고). 설정값이 비어
  * 있으면(오타로 지워진 경우 등) 새 행이 전부 꺼진 채로 태어날 뿐, 예외를 던지지 않는다 —
  * {@code LlmProblemService}가 빈 목록을 "전체 후보"로 되돌리는 것과 달리, 여기서는 "일단
  * 꺼 두고 관리자가 화면에서 켜게 한다"가 더 안전한 기본값이다(잘못 켜진 채 배치가 도는 것보다
@@ -49,7 +52,7 @@ import java.util.Set;
  */
 @Slf4j
 @Service
-public class DomainSettingService implements DomainHintsProvider {
+public class DomainSettingService implements DomainHintsProvider, DomainCatalog {
 
     /** 미리보기의 "오늘" 기준 — 워크플로가 KST로 변환해 배치에 넘기는 것과 맞춘다. */
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
@@ -64,16 +67,16 @@ public class DomainSettingService implements DomainHintsProvider {
      *
      * <p>기본값을 8개 이름 그대로 적어 둔다({@code LlmProblemService}의 같은 필드와 동일한
      * 이유) — 빈 문자열을 기본값으로 두면 Spring이 그것을 "빈 문자열 원소 1개짜리 목록"으로
-     * 보고 {@link Domain}으로 변환하려다 실패한다. 실제 값은 application.yml의
+     * 보고 {@link DomainCode}로 변환하려다 실패한다(빈 코드는 형식 검사에 걸린다). 실제 값은 application.yml의
      * {@code llm.generation.batch-domains}에서 온다.
      */
-    private final List<Domain> fallbackBatchDomains;
+    private final List<DomainCode> fallbackBatchDomains;
 
     /**
      * 주기의 0일차로 삼을 날 — {@link #preview}가 배치와 같은 위상으로 계산하기 위한 값.
      *
      * <p><b>왜 문자열로 받나.</b> {@code DraftGeneratorCli}도 {@code String}으로 받아
-     * {@link GenerationSchedule#parseAnchor}로 파싱한다. {@code List<Domain>}처럼 컨버터가
+     * {@link GenerationSchedule#parseAnchor}로 파싱한다. {@code List<DomainCode>}처럼 컨버터가
      * 있는 타입이 아니라 빈 값 처리에서 Spring이 애매하게 구는 일이 없다 —
      * {@code fallbackBatchDomains}가 빈 문자열 기본값을 못 쓰는 것과 같은 함정을 여기서는
      * 아예 피해 간다.
@@ -94,7 +97,7 @@ public class DomainSettingService implements DomainHintsProvider {
                                  @Value("${llm.generation.batch-domains:"
                                          + "NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,"
                                          + "LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
-                                 List<Domain> fallbackBatchDomains,
+                                 List<DomainCode> fallbackBatchDomains,
                                  @Value("${llm.generation.cycle-anchor:}") String rawCycleAnchor) {
         this.repository = repository;
         this.events = events;
@@ -121,7 +124,7 @@ public class DomainSettingService implements DomainHintsProvider {
      *
      * @param date        그 날짜
      * @param documentDay 문서일인지. {@code true}면 {@code difficulty}는 없다
-     * @param domain      그날 나올 분야 이름({@link Domain#name()})
+     * @param domain      그날 나올 분야 코드 문자열({@link DomainCode#value()})
      * @param difficulty  문제일의 난이도 이름. 문서일에는 {@code null} —
      *                    {@link GenerationSchedule.Plan#difficulty()}가 문서일에 null을 주는
      *                    그대로를 옮긴다(NPE를 피하려 여기서 값을 지어내지 않는다)
@@ -130,7 +133,7 @@ public class DomainSettingService implements DomainHintsProvider {
     }
 
     /**
-     * enum과 테이블을 맞춘다 — 기동 시 {@code DomainSettingSyncRunner}가 부른다.
+     * 기본 분야 목록과 테이블을 맞춘다 — 기동 시 {@code DomainSettingSyncRunner}가 부른다.
      *
      * <h2>있는 행은 절대 건드리지 않는다</h2>
      *
@@ -144,56 +147,59 @@ public class DomainSettingService implements DomainHintsProvider {
      * <ul>
      *   <li>{@code enabled}: 폴백 목록에 들어 있으면 {@code true}, 아니면 {@code false}.
      *   <li>{@code sortOrder}: 폴백 목록에 있으면 그 안에서의 자리(0부터). 목록 밖이면
-     *       <b>목록 길이부터</b> 이어서, {@link Domain} 선언 순서대로 번호를 매긴다 — 이렇게
+     *       <b>목록 길이부터</b> 이어서, {@link DefaultDomains#codes()} 순서(옛 enum 선언 순서)대로 번호를 매긴다 — 이렇게
      *       해야 목록 안팎을 합쳐도 값이 겹치는 행이 생기지 않는다.
-     *   <li>{@code displayName}: {@code domain.getDisplayName()}.
+     *   <li>{@code displayName}: {@link DefaultDomains#displayName}(옛 {@code Domain.getDisplayName()} 그대로).
      *   <li>{@code hint}: {@link DomainHints#BUILT_IN}의 {@link DomainHints#rawHintFor}
      *       — 코드에 박혀 있던 경계 설명을 그대로 초기값으로 준다({@code DomainHints} 클래스
      *       주석의 "내장값은 행을 처음 만들 때의 초기값으로만 쓰인다"가 바로 이 자리다).
      * </ul>
      *
-     * <h2>고아 행 — enum에서 빠진 이름을 가진 행은 지운다</h2>
+     * <h2>고아 행 — 기본 분야에서 빠진 이름을 가진 행은 지운다</h2>
      *
-     * <p>2026-09-21에 {@code FRONTEND_CS}를 실제로 지운 적이 있고, 앞으로도 enum에서 상수가
-     * 빠지는 일은 또 생긴다. 그 행이 그대로 남으면 관리 화면 목록에 "고를 수도, 지울 수도
-     * 없는 뜻 없는 줄"이 하나 계속 낀다. 조회 자체가 enum 변환을 타면 그 행 때문에 죽으므로
-     * (변환은 {@code @Enumerated(EnumType.STRING)}이 {@code Enum.valueOf}로 한다),
+     * <p>2026-09-21에 {@code FRONTEND_CS}를 실제로 지운 적이 있고, 앞으로도 기본 목록에서
+     * 분야가 빠지는 일은 또 생긴다. 그 행이 그대로 남으면 관리 화면 목록에 "고를 수도, 지울 수도
+     * 없는 뜻 없는 줄"이 하나 계속 낀다. enum 시절에는 조회가 enum 변환({@code Enum.valueOf})을
+     * 타서 그 행 하나 때문에 죽었다. {@link DomainCode} 변환기는 형식만 보므로 이제 그 이유로
+     * 죽지는 않지만, 형식이 깨진 옛 값이 섞여 있을 가능성은 남는다 — 그래서 여전히
      * {@link DomainSettingRepository#findAllDomainNamesNative}로 변환 없이 문자열만 읽어
-     * 비교하고, 지우기도 {@link DomainSettingRepository#deleteByDomainNameNative}로 한다.
+     * 비교하고, 지우기도 {@link DomainSettingRepository#deleteByDomainNameNative}로 한다
+     * (외래키가 들어오는 다음 태스크 전까지는 이 고아 정리가 필요하다).
      */
     @Transactional
-    public void syncWithEnum() {
+    public void syncWithDefaults() {
         // 존재 여부만 필요하므로 엔티티로 읽지 않는다 — 고아 행이 섞여 있으면 엔티티 변환이
         // 그 자리에서 터진다(위 Javadoc 참고). 문자열 집합으로만 다룬다.
         Set<String> existingNames = new HashSet<>(repository.findAllDomainNamesNative());
 
-        // 1) enum에는 있는데 행이 없는 분야 — 새로 만든다.
+        // 1) 기본 분야에는 있는데 행이 없는 분야 — 새로 만든다.
         //    폴백 목록 길이 다음부터 번호를 이어 붙이려면 순회 중에 값을 누적해야 하므로
         //    for-each 바깥에 카운터를 둔다(스트림으로 짜면 이 누적 상태를 감추기 더 번거롭다).
+        //    DefaultDomains.codes()는 옛 enum 선언 순서 그대로라, 목록 밖 분야의 번호도 예전과 같다.
         int nextOrderAfterFallback = fallbackBatchDomains.size();
-        for (Domain domain : Domain.values()) {
-            if (existingNames.contains(domain.name())) {
+        for (DomainCode domain : DefaultDomains.codes()) {
+            if (existingNames.contains(domain.value())) {
                 continue; // 있는 행은 손대지 않는다 — 이 메서드의 첫 번째 규칙
             }
             int fallbackIndex = fallbackBatchDomains.indexOf(domain);
             boolean enabled = fallbackIndex >= 0;
             int sortOrder = enabled ? fallbackIndex : nextOrderAfterFallback++;
             repository.save(DomainSetting.initial(domain, enabled, sortOrder,
-                    domain.getDisplayName(), DomainHints.BUILT_IN.rawHintFor(domain)));
+                    DefaultDomains.displayName(domain), DomainHints.BUILT_IN.rawHintFor(domain)));
             log.info("분야 설정: [{}] 행이 없어 새로 만들었습니다 (enabled={}, sortOrder={})",
                     domain, enabled, sortOrder);
         }
 
-        // 2) 행은 있는데 enum에 없는 이름 — 지운다. 새로 만든 행은 전부 유효한 이름이므로
+        // 2) 행은 있는데 기본 분야에 없는 이름 — 지운다. 새로 만든 행은 전부 유효한 이름이므로
         //    동기화 시작 시점의 existingNames만 봐도 충분하다(다시 조회할 필요 없음).
         Set<String> validNames = new HashSet<>();
-        for (Domain domain : Domain.values()) {
-            validNames.add(domain.name());
+        for (DomainCode domain : DefaultDomains.codes()) {
+            validNames.add(domain.value());
         }
         for (String name : existingNames) {
             if (!validNames.contains(name)) {
                 repository.deleteByDomainNameNative(name);
-                log.info("분야 설정: enum에서 빠진 '{}' 행을 지웠습니다", name);
+                log.info("분야 설정: 기본 분야에서 빠진 '{}' 행을 지웠습니다", name);
             }
         }
     }
@@ -205,7 +211,7 @@ public class DomainSettingService implements DomainHintsProvider {
      * 고친다).
      */
     @Transactional(readOnly = true)
-    public List<Domain> batchDomains() {
+    public List<DomainCode> batchDomains() {
         return repository.findAllByOrderBySortOrderAsc().stream()
                 .filter(DomainSetting::isEnabled)
                 .map(DomainSetting::getDomain)
@@ -223,7 +229,9 @@ public class DomainSettingService implements DomainHintsProvider {
      */
     @Transactional(readOnly = true)
     public DomainHints hints() {
-        Map<Domain, String> map = new EnumMap<>(Domain.class);
+        // 예전엔 EnumMap. DomainHints.of가 곧바로 조회 전용 HashMap으로 복사하므로 이 맵의
+        // 순서는 밖으로 드러나지 않는다 — HashMap이면 충분하다.
+        Map<DomainCode, String> map = new HashMap<>();
         for (DomainSetting setting : repository.findAllByOrderBySortOrderAsc()) {
             map.put(setting.getDomain(), setting.getHint());
         }
@@ -252,6 +260,44 @@ public class DomainSettingService implements DomainHintsProvider {
         return repository.findAllByOrderBySortOrderAsc();
     }
 
+    /* ── DomainCatalog ───────────────────────────────────────────
+     * 아래 네 메서드는 이 태스크(enum → DomainCode 치환)에서 인터페이스만 맞춰 둔 것이다. 아직
+     * 부르는 곳이 없어 기존 동작은 하나도 바뀌지 않는다 — 호출부를 옮기는 일은 뒤 태스크의 몫이고,
+     * 그때 각자 리뷰를 받는다. hints()는 위에 이미 있다(같은 시그니처라 그대로 인터페이스를 채운다).
+     * DomainCatalog 주석대로 전부 호출 시점에 DB를 다시 읽는다 — 캐시하면 화면에서 고친 값이
+     * 재시작 전까지 안 보인다.
+     */
+
+    /** 정렬 순서대로 전체 행. 힌트가 없는 행({@code null})은 빈 문자열로 — {@link DomainEntry} 계약. */
+    @Override
+    @Transactional(readOnly = true)
+    public List<DomainEntry> all() {
+        return repository.findAllByOrderBySortOrderAsc().stream()
+                .map(s -> new DomainEntry(s.getDomain(), s.isEnabled(), s.getSortOrder(),
+                        s.getDisplayName(), s.getHint() == null ? "" : s.getHint()))
+                .toList();
+    }
+
+    /** 켜진 분야 코드 — {@link #batchDomains()}와 같은 값이다(이름만 인터페이스 쪽 이름). */
+    @Override
+    @Transactional(readOnly = true)
+    public List<DomainCode> enabled() {
+        return batchDomains();
+    }
+
+    /** 행이 없으면 코드 글자 그대로 — 화면에 빈칸이 뜨는 것보다 낫다({@link DefaultDomains#displayName}과 같은 판단). */
+    @Override
+    @Transactional(readOnly = true)
+    public String displayName(DomainCode code) {
+        return repository.findByDomain(code).map(DomainSetting::getDisplayName).orElse(code.value());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean exists(DomainCode code) {
+        return repository.existsById(code);
+    }
+
     /* ── 관리 화면 변경(Task 9) ───────────────────────────────── */
 
     /**
@@ -268,12 +314,12 @@ public class DomainSettingService implements DomainHintsProvider {
      * (워크플로의 {@code force}와 짝)로 따로 있으므로, 새 "정지 모드"를 만들기보다 이 상태 자체를
      * 못 만들게 막는 편이 단순하다 — 정지 수단이 둘이면 둘의 뜻이 어긋나는 일이 또 생긴다.
      *
-     * @throws BusinessException DOMAIN_001 — enum에는 있는데 행이 없을 때. {@code syncWithEnum}이
+     * @throws BusinessException DOMAIN_001 — 행이 없을 때. {@code syncWithDefaults}가
      *                            기동마다 전체 분야에 행을 맞춰 두므로 정상 경로에서는 나지 않는다
      * @throws BusinessException DOMAIN_002(400) — 이 변경으로 켜진 분야가 0개가 될 때
      */
     @Transactional
-    public void edit(Domain domain, AdminDomainSettingRequest request) {
+    public void edit(DomainCode domain, AdminDomainSettingRequest request) {
         DomainSetting setting = find(domain);
         if (!request.enabled() && noOtherEnabled(domain)) {
             // "변경 결과" 켜진 분야가 0개인지를 본다 — 이미 꺼진 분야의 이름만 고치는 요청은
@@ -297,7 +343,7 @@ public class DomainSettingService implements DomainHintsProvider {
      * 편이 "끝에 닿았다"는 사실을 자연스럽게 전달한다.
      */
     @Transactional
-    public void move(Domain domain, Direction direction) {
+    public void move(DomainCode domain, Direction direction) {
         List<DomainSetting> all = repository.findAllByOrderBySortOrderAsc();
         int index = indexOf(all, domain);
         int target = direction == Direction.UP ? index - 1 : index + 1;
@@ -338,7 +384,7 @@ public class DomainSettingService implements DomainHintsProvider {
      * @param days    미리 볼 일수
      */
     @Transactional(readOnly = true)
-    public List<PreviewCell> preview(List<Domain> domains, int days) {
+    public List<PreviewCell> preview(List<DomainCode> domains, int days) {
         LocalDate today = LocalDate.now(KST);
         List<PreviewCell> cells = new ArrayList<>(days);
         for (int i = 0; i < days; i++) {
@@ -348,27 +394,27 @@ public class DomainSettingService implements DomainHintsProvider {
             // 여기서 값을 지어내지 않고 그 null을 그대로 옮긴다. name()을 무조건 부르면
             // 문서일마다 NPE로 죽는다.
             String difficulty = plan.documentDay() ? null : plan.difficulty().name();
-            cells.add(new PreviewCell(date, plan.documentDay(), plan.domain().name(), difficulty));
+            cells.add(new PreviewCell(date, plan.documentDay(), plan.domain().value(), difficulty));
         }
         return cells;
     }
 
     /* ── 도우미 ───────────────────────────────────────────────── */
 
-    private DomainSetting find(Domain domain) {
+    private DomainSetting find(DomainCode domain) {
         return repository.findByDomain(domain)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DOMAIN_001));
     }
 
     /** {@code domain}을 빼고 켜진 분야가 하나도 없는지 — {@link #edit}의 "마지막 분야" 판정. */
-    private boolean noOtherEnabled(Domain domain) {
+    private boolean noOtherEnabled(DomainCode domain) {
         return repository.findAllByOrderBySortOrderAsc().stream()
-                .noneMatch(s -> s.getDomain() != domain && s.isEnabled());
+                .noneMatch(s -> !s.getDomain().equals(domain) && s.isEnabled()); // record라 == 는 참조 비교 — equals로 값 비교
     }
 
-    private int indexOf(List<DomainSetting> settings, Domain domain) {
+    private int indexOf(List<DomainSetting> settings, DomainCode domain) {
         for (int i = 0; i < settings.size(); i++) {
-            if (settings.get(i).getDomain() == domain) {
+            if (settings.get(i).getDomain().equals(domain)) { // == 이면 같은 코드라도 다른 인스턴스라 못 찾는다
                 return i;
             }
         }

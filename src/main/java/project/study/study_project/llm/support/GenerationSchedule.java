@@ -1,7 +1,7 @@
 package project.study.study_project.llm.support;
 
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -58,7 +58,7 @@ public final class GenerationSchedule {
     }
 
     /** 하루치 생성 대상 — 분야 × 난이도 한 칸. */
-    public record Cell(Domain domain, Difficulty difficulty) {
+    public record Cell(DomainCode domain, Difficulty difficulty) {
     }
 
     /**
@@ -72,7 +72,7 @@ public final class GenerationSchedule {
      *                     문제일에 {@code generated/documents/{documentDate}.json}을 읽으면 된다.
      *                     문서일에는 오늘 날짜 그 자체다
      */
-    public record Plan(boolean documentDay, Domain domain, Difficulty difficulty, LocalDate documentDate) {
+    public record Plan(boolean documentDay, DomainCode domain, Difficulty difficulty, LocalDate documentDate) {
     }
 
     /**
@@ -110,14 +110,14 @@ public final class GenerationSchedule {
      * @param domains 후보 분야. 비어 있으면 전체를 후보로 본다(설정 누락 시 기능 정지 방지)
      * @param anchor  주기의 0일차로 삼을 날. {@code null}이면 {@link #DEFAULT_ANCHOR}
      */
-    public static Plan planFor(LocalDate date, List<Domain> domains, LocalDate anchor) {
-        List<Domain> candidates = candidates(domains);
+    public static Plan planFor(LocalDate date, List<DomainCode> domains, LocalDate anchor) {
+        List<DomainCode> candidates = candidates(domains);
         long offset = date.toEpochDay() - (anchor == null ? DEFAULT_ANCHOR : anchor).toEpochDay();
 
         int dayInCycle = (int) Math.floorMod(offset, CYCLE_DAYS);
         long cycleIndex = Math.floorDiv(offset, CYCLE_DAYS);
 
-        Domain domain = candidates.get((int) Math.floorMod(cycleIndex, candidates.size()));
+        DomainCode domain = candidates.get((int) Math.floorMod(cycleIndex, candidates.size()));
         LocalDate documentDate = date.minusDays(dayInCycle);
 
         if (dayInCycle == 0) {
@@ -143,20 +143,20 @@ public final class GenerationSchedule {
      * 주기가 없다 — 하루 한 칸씩 24칸을 도는 평평한 순환이라 위상을 옮겨도 <b>같은 집합을 다른
      * 순서로</b> 돌 뿐이다. 인자만 하나 늘고 얻는 것이 없다.
      */
-    public static Cell cellFor(LocalDate date, List<Domain> domains) {
-        List<Domain> candidates = candidates(domains);
+    public static Cell cellFor(LocalDate date, List<DomainCode> domains) {
+        List<DomainCode> candidates = candidates(domains);
         Difficulty[] difficulties = Difficulty.values();
 
         int totalCells = candidates.size() * difficulties.length;
         int index = (int) Math.floorMod(date.toEpochDay(), totalCells);
 
-        Domain domain = candidates.get(index % candidates.size());
+        DomainCode domain = candidates.get(index % candidates.size());
         Difficulty difficulty = difficulties[(index / candidates.size()) % difficulties.length];
         return new Cell(domain, difficulty);
     }
 
-    private static List<Domain> candidates(List<Domain> domains) {
-        return (domains == null || domains.isEmpty()) ? List.of(Domain.values()) : domains;
+    private static List<DomainCode> candidates(List<DomainCode> domains) {
+        return (domains == null || domains.isEmpty()) ? DefaultDomains.codes() : domains;
     }
 
     /**

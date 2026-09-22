@@ -8,8 +8,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -187,7 +188,7 @@ class ProblemReportServiceTest {
     }
 
     private Problem problem() {
-        return Problem.create(Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+        return Problem.create(TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 "TCP 3-way handshake", "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "해설", null);
     }
 }

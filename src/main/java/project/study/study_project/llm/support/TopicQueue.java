@@ -1,7 +1,7 @@
 package project.study.study_project.llm.support;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.dto.TopicQueueFile;
 
 import java.nio.file.Files;
@@ -73,7 +73,7 @@ public final class TopicQueue {
     }
 
     /** 꺼내 온 주제 한 건. {@code index}는 되쓸 때 어느 줄에 도장을 찍을지 가리킨다. */
-    public record Picked(int index, Domain domain, String topic) {
+    public record Picked(int index, DomainCode domain, String topic) {
     }
 
     /* ── 읽기 ─────────────────────────────────────────────────── */
@@ -245,12 +245,16 @@ public final class TopicQueue {
      * "이 파일의 domain 문자열을 어떻게 읽는가"가 두 곳에 따로 있으면, 한쪽만 관대해져
      * <b>배치는 건너뛴 항목을 앱은 흡수하는</b> 어긋남이 난다.
      */
-    public static Domain parseDomain(String raw) {
+    public static DomainCode parseDomain(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
         try {
-            return Domain.valueOf(raw.trim().toUpperCase());
+            // 옛 enum의 valueOf는 모르는 이름이면 예외였다. DomainCode.of는 형식만 보므로(FRONTEND_CS처럼
+            // 형식은 맞는 옛 이름이 통과한다) isKnown으로 "기본 분야에 있는가"를 따로 확인해 같은 결과를 낸다.
+            // 형식이 틀린 값은 DomainCode.of가 IllegalArgumentException을 던져 아래 catch로 똑같이 빠진다.
+            DomainCode code = DomainCode.of(raw.trim().toUpperCase());
+            return DefaultDomains.isKnown(code) ? code : null;
         } catch (IllegalArgumentException e) {
             return null;
         }

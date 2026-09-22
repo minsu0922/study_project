@@ -1,7 +1,7 @@
 package project.study.study_project.admin.dto;
 
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -99,8 +99,8 @@ public record AdminBatchStatus(
     public record TodayPlan(
             int dayInCycle,
             boolean documentDay,
-            Domain domain,
-            Domain cycleDomain,
+            DomainCode domain,
+            DomainCode cycleDomain,
             Difficulty difficulty,
             LocalDate documentDate,
             String documentSlug
@@ -163,7 +163,7 @@ public record AdminBatchStatus(
             LocalDate date,
             int dayInCycle,
             boolean documentDay,
-            Domain domain,
+            DomainCode domain,
             Difficulty difficulty,
             DayState state,
             String filename,

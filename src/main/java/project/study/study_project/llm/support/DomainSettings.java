@@ -1,14 +1,14 @@
 package project.study.study_project.llm.support;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.dto.DomainSettingsFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +27,7 @@ import java.util.Map;
  *
  * <h2>모르는 분야 이름은 그 줄만 버린다</h2>
  *
- * <p>{@link DomainSettingsFile.Entry#domain}이 {@link Domain} enum이 아니라 문자열인 이유는
+ * <p>{@link DomainSettingsFile.Entry#domain}이 분야 타입({@link DomainCode})이 아니라 문자열인 이유는
  * 그 record의 Javadoc이 설명한다 — 요지는 "상수 하나가 enum에서 빠져도(2026-09-21의
  * {@code FRONTEND_CS}처럼) 그 줄만 걸러지고 나머지 분야는 살아야 한다"이다. 그 줄 단위
  * 판단이 이 클래스의 몫이라고 그 Javadoc이 못 박아 둔 자리가 바로 여기, {@link #parseDomain}과
@@ -42,7 +42,7 @@ import java.util.Map;
  * 지킨다({@link DomainHints}의 "설정값이 오면 내장값은 쓰지 않는다" 참고). 이 구분을 안 두면
  * "화면에서 힌트를 지웠는데 다음 배치에 옛 힌트가 그대로 나간다"는 조용한 어긋남이 생긴다.
  */
-public final class DomainSettings {
+public final class DomainSettings implements DomainCatalog {
 
     /** 배치와 관리 화면 내보내기가 함께 가리키는 파일 이름. {@code DomainSettingExporter}가 빌려 쓴다. */
     public static final String FILE_NAME = "_domain-settings.json";
@@ -95,7 +95,7 @@ public final class DomainSettings {
      * <p>모르는 분야 이름(enum에서 빠진 옛 이름 등)은 그 줄만 건너뛴다 — 나머지 분야까지
      * 함께 버리면 옛 이름 하나가 그날 배치 전체의 후보를 비운다.
      */
-    public List<Domain> batchDomains() {
+    public List<DomainCode> batchDomains() {
         List<DomainSettingsFile.Entry> domains = file.domains();
         if (domains == null || domains.isEmpty()) {
             return List.of();
@@ -103,12 +103,12 @@ public final class DomainSettings {
         List<DomainSettingsFile.Entry> sorted = new ArrayList<>(domains);
         sorted.sort(Comparator.comparingInt(DomainSettingsFile.Entry::sortOrder));
 
-        List<Domain> result = new ArrayList<>();
+        List<DomainCode> result = new ArrayList<>();
         for (DomainSettingsFile.Entry entry : sorted) {
             if (!entry.enabled()) {
                 continue;
             }
-            Domain domain = parseDomain(entry.domain());
+            DomainCode domain = parseDomain(entry.domain());
             if (domain != null) {
                 result.add(domain);
             }
@@ -128,13 +128,15 @@ public final class DomainSettings {
      * 나가야 프롬프트의 분야 경계 설명이 빠지지 않는다. 꺼진 분야를 여기서 걸러 버리면
      * "순환에서는 안 나오지만 지정하면 만들어지는" 분야만 힌트 없이 생성되는 조용한 결함이 된다.
      */
+    @Override
     public DomainHints hints() {
         if (isEmpty()) {
             return DomainHints.BUILT_IN;
         }
-        Map<Domain, String> map = new EnumMap<>(Domain.class);
+        // 예전엔 EnumMap. DomainHints.of가 조회 전용으로 다시 복사하므로 순서가 밖으로 드러나지 않는다.
+        Map<DomainCode, String> map = new HashMap<>();
         for (DomainSettingsFile.Entry entry : file.domains()) {
-            Domain domain = parseDomain(entry.domain());
+            DomainCode domain = parseDomain(entry.domain());
             if (domain != null && entry.hint() != null) {
                 map.put(domain, entry.hint());
             }
@@ -147,19 +149,79 @@ public final class DomainSettings {
         return file.domains() == null || file.domains().isEmpty();
     }
 
+    /* ── DomainCatalog ───────────────────────────────────────────
+     * enum → DomainCode 치환 태스크에서 인터페이스만 맞춰 둔 것이다. 아직 부르는 곳이 없어
+     * 배치의 기존 동작은 바뀌지 않는다(호출부 이전은 뒤 태스크의 몫). 판단 기준은 위의
+     * batchDomains()/hints()와 같다 — 모르는 이름의 줄은 그 줄만 건너뛴다.
+     */
+
+    /** 파일의 모든 줄(켜짐+꺼짐)을 {@code sortOrder} 순으로. 모르는 이름은 뺀다. */
+    @Override
+    public List<DomainEntry> all() {
+        List<DomainEntry> result = new ArrayList<>();
+        for (DomainSettingsFile.Entry entry : sortedEntries()) {
+            DomainCode code = parseDomain(entry.domain());
+            if (code != null) {
+                result.add(new DomainEntry(code, entry.enabled(), entry.sortOrder(),
+                        nameOf(entry, code), entry.hint() == null ? "" : entry.hint()));
+            }
+        }
+        return result;
+    }
+
+    /** {@link #batchDomains()}와 같은 값 — 인터페이스 쪽 이름. */
+    @Override
+    public List<DomainCode> enabled() {
+        return batchDomains();
+    }
+
+    /** 파일에 이름이 없으면 기본 이름, 그것도 없으면 코드 글자 그대로({@link DefaultDomains#displayName}). */
+    @Override
+    public String displayName(DomainCode code) {
+        List<DomainSettingsFile.Entry> domains = file.domains() == null ? List.of() : file.domains();
+        for (DomainSettingsFile.Entry entry : domains) {
+            if (code.equals(parseDomain(entry.domain()))) {
+                return nameOf(entry, code);
+            }
+        }
+        return DefaultDomains.displayName(code);
+    }
+
+    @Override
+    public boolean exists(DomainCode code) {
+        List<DomainSettingsFile.Entry> domains = file.domains() == null ? List.of() : file.domains();
+        return domains.stream().anyMatch(entry -> code.equals(parseDomain(entry.domain())));
+    }
+
     /* ── 도우미 ───────────────────────────────────────────────── */
+
+    private List<DomainSettingsFile.Entry> sortedEntries() {
+        List<DomainSettingsFile.Entry> sorted = new ArrayList<>(file.domains() == null ? List.of() : file.domains());
+        sorted.sort(Comparator.comparingInt(DomainSettingsFile.Entry::sortOrder));
+        return sorted;
+    }
+
+    /** 파일 속 이름이 비었으면 기본 이름으로 — 화면에 빈칸이 뜨지 않게. */
+    private static String nameOf(DomainSettingsFile.Entry entry, DomainCode code) {
+        String name = entry.displayName();
+        return (name == null || name.isBlank()) ? DefaultDomains.displayName(code) : name;
+    }
 
     /**
      * 분야 문자열 → 상수. 모르는 값이면 {@code null}(예외를 던지지 않는다) — {@link
      * TopicQueue#parseDomain}과 같은 판단이다. 대소문자·앞뒤 공백은 봐주지만 없는 상수명은
      * 봐줄 수 없다: 비슷한 이름으로 짐작해 붙이면 엉뚱한 분야가 배치에 섞인다.
      */
-    private static Domain parseDomain(String raw) {
+    private static DomainCode parseDomain(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
         try {
-            return Domain.valueOf(raw.trim().toUpperCase());
+            // 옛 enum의 valueOf는 모르는 이름이면 예외였다. DomainCode.of는 형식만 보므로(FRONTEND_CS처럼
+            // 형식은 맞는 옛 이름이 통과한다) isKnown으로 "기본 분야에 있는가"를 따로 확인해 같은 결과를 낸다.
+            // 형식이 틀린 값은 DomainCode.of가 IllegalArgumentException을 던져 아래 catch로 똑같이 빠진다.
+            DomainCode code = DomainCode.of(raw.trim().toUpperCase());
+            return DefaultDomains.isKnown(code) ? code : null;
         } catch (IllegalArgumentException e) {
             return null;
         }

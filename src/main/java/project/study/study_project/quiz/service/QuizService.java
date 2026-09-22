@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.dailyquiz.service.DailyQuizService;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -62,7 +62,7 @@ public class QuizService {
      *             클라이언트 재시도를 강제할 이유가 없다고 판단(트레이드오프: 명시성 ↓, 편의성 ↑).
      */
     @Transactional(readOnly = true)
-    public QuizResponse getQuiz(Domain domain, Difficulty level, ProblemType type, int size) {
+    public QuizResponse getQuiz(DomainCode domain, Difficulty level, ProblemType type, int size) {
         if (type != null && !type.isAutoScored()) {
             throw new BusinessException(ErrorCode.QUIZ_002);
         }
@@ -70,7 +70,7 @@ public class QuizService {
 
         // 네이티브 쿼리는 enum을 자동 변환하지 못하므로 name() 문자열로 넘긴다(리포지토리 주석 참고).
         List<Problem> problems = problemRepository.findRandomForQuiz(
-                domain == null ? null : domain.name(),
+                domain == null ? null : domain.value(),
                 level == null ? null : level.name(),
                 type == null ? null : type.name(),
                 limit

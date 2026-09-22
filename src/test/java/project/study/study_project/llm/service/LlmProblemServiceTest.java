@@ -9,13 +9,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -70,7 +71,7 @@ class LlmProblemServiceTest {
     /** 정해진 결과를 돌려주고 호출 인자를 기록하는 가짜 생성기 — Mockito mock보다 인자 검증이 읽기 쉽다. */
     static class FakeGenerator implements ProblemGenerator {
         List<GeneratedProblemItem> toReturn = List.of();
-        Domain calledDomain;
+        DomainCode calledDomain;
         Difficulty calledDifficulty;
         ProblemType calledType;
         List<String> calledAvoid;
@@ -81,7 +82,7 @@ class LlmProblemServiceTest {
         QuestionKind calledRequestedKind;
 
         @Override
-        public List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
+        public List<GeneratedProblemItem> generate(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                    int count, List<String> avoidQuestions,
                                                    List<RejectionNote> rejectionNotes,
                                                    project.study.study_project.llm.client.SourceDocument sourceDocument,
@@ -98,8 +99,8 @@ class LlmProblemServiceTest {
     }
 
     /** 기본 후보 도메인 — 대부분의 테스트는 도메인을 명시하므로 값 자체는 중요하지 않다. */
-    private static final List<Domain> DEFAULT_BATCH_DOMAINS =
-            List.of(Domain.NETWORK, Domain.OS, Domain.DATABASE, Domain.BACKEND_FRAMEWORK);
+    private static final List<DomainCode> DEFAULT_BATCH_DOMAINS =
+            List.of(TestDomains.NETWORK, TestDomains.OS, TestDomains.DATABASE, TestDomains.BACKEND_FRAMEWORK);
 
     @BeforeEach
     void setUp() {
@@ -123,7 +124,7 @@ class LlmProblemServiceTest {
      * 다시 읽으므로, 테스트도 같은 모양으로 맞춘다 — 목록을 넘기는 자리만 바뀌었을 뿐 그
      * 목록이 하는 일(부족 칸 자동 선택의 후보 제한)은 그대로다.
      */
-    private LlmProblemService newService(List<Domain> batchDomains) {
+    private LlmProblemService newService(List<DomainCode> batchDomains) {
         DomainSettingService domainSettingService = mock(DomainSettingService.class);
         // lenient: 도메인을 직접 지정하는 테스트(explicitDomainIgnoresBatchDomainFilter 등)는
         // 이 값을 아예 읽지 않아 stubbing이 "쓰이지 않음"으로 잡힐 수 있다.
@@ -143,8 +144,8 @@ class LlmProblemServiceTest {
     }
 
     /** GROUP BY 집계 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */
-    private record CountRow(Domain d, Difficulty diff, long c) implements ProblemRepository.DomainDifficultyCount {
-        @Override public Domain getDomain() { return d; }
+    private record CountRow(DomainCode d, Difficulty diff, long c) implements ProblemRepository.DomainDifficultyCount {
+        @Override public DomainCode getDomain() { return d; }
         @Override public Difficulty getDifficulty() { return diff; }
         @Override public long getCnt() { return c; }
     }
@@ -183,9 +184,9 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null, null, null), uploaded);
+                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null, null, null), uploaded);
 
-            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.NETWORK);
+            assertThat(fakeGenerator.calledDomain).isEqualTo(TestDomains.NETWORK);
             assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.ADVANCED);
             // 자동 선택을 탔다면 집계를 조회했을 것이다. setUp에서 stub하지 않았으므로
             // 값이 비어 엉뚱한 칸이 나왔을 텐데, 위 단언이 그것까지 함께 막는다.
@@ -197,7 +198,7 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
+                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
 
             assertThat(fakeGenerator.calledSourceDocument).isSameAs(uploaded);
             assertThat(fakeGenerator.calledSourceDocument.kind()).isEqualTo(SourceDocument.Kind.UPLOADED);
@@ -214,7 +215,7 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
+                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
 
             assertThat(fakeGenerator.calledAvoid).contains("이미 있는 문제");
             assertThat(fakeGenerator.calledRejectionNotes).isNotNull();
@@ -232,7 +233,7 @@ class LlmProblemServiceTest {
             ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
+                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
             assertThat(captor.getValue()).singleElement()
@@ -243,7 +244,7 @@ class LlmProblemServiceTest {
         @DisplayName("서술형은 업로드 경로에서도 거부한다 — 자동채점이 안 되는 건 출처와 무관하다")
         void rejectsEssayOnThisPathToo() {
             assertThatThrownBy(() -> service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null, null, null), uploaded))
+                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null, null, null), uploaded))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("자동채점");
         }
@@ -274,7 +275,7 @@ class LlmProblemServiceTest {
          * 그래야 "입문편 + 고급"이 막히는 것을 아래에서 잴 수 있다.
          */
         private Document registered() {
-            return Document.create(Domain.NETWORK, "TIME_WAIT — 2MSL을 더 기다리는 이유", SLUG,
+            return Document.create(TestDomains.NETWORK, "TIME_WAIT — 2MSL을 더 기다리는 이유", SLUG,
                     "## 무엇인가\n\n본문이다.\n\n### 왜 이렇게 설계됐는가\n\n그래서 이렇게 했다.\n",
                     null, java.util.Set.of());
         }
@@ -293,7 +294,7 @@ class LlmProblemServiceTest {
 
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source);
+                    TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
             assertThat(captor.getValue()).singleElement()
@@ -334,7 +335,7 @@ class LlmProblemServiceTest {
 
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG,
+                    TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG,
                     QuestionKind.JUDGMENT), source);
 
             assertThat(fakeGenerator.calledRequestedKind).isEqualTo(QuestionKind.JUDGMENT);
@@ -349,7 +350,7 @@ class LlmProblemServiceTest {
 
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG,
+                    TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG,
                     null), source);
 
             assertThat(fakeGenerator.calledRequestedKind).isNull();
@@ -385,7 +386,7 @@ class LlmProblemServiceTest {
             SourceDocument source = service.findRegisteredDocument(SLUG);
 
             assertThatThrownBy(() -> service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source))
+                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source))
                     .isInstanceOf(BusinessException.class)
                     .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.QUIZ_004))
                     .as("무엇을 고쳐야 하는지까지 말해야 문서가 아니라 드롭다운을 고치러 간다")
@@ -405,14 +406,14 @@ class LlmProblemServiceTest {
         @Test
         @DisplayName("한 편짜리 옛 문서로는 고급도 뽑힌다 — 이름이 아니라 절이 있는지를 본다")
         void allowsAdvancedOnLegacySingleEditionDocument() {
-            Document legacy = Document.create(Domain.NETWORK, "TIME_WAIT", SLUG,
+            Document legacy = Document.create(TestDomains.NETWORK, "TIME_WAIT", SLUG,
                     "## 무엇인가\n\n본문이다.\n\n## 언제 깨지는가\n\n이럴 때 깨진다.\n", null, java.util.Set.of());
             when(documentRepository.findBySlug(SLUG)).thenReturn(Optional.of(legacy));
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    Domain.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source);
+                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(any());
         }
@@ -427,13 +428,13 @@ class LlmProblemServiceTest {
         void picksScarcestDifficultyWithinFixedDomain() {
             // BACKEND_FRAMEWORK: 초급 5, 중급 2, 고급은 집계에 없음(=0문제) → 고급이 선택되어야 한다
             when(problemRepository.countGroupByDomainAndDifficulty()).thenReturn(List.of(
-                    new CountRow(Domain.BACKEND_FRAMEWORK, Difficulty.BEGINNER, 5),
-                    new CountRow(Domain.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, 2)));
+                    new CountRow(TestDomains.BACKEND_FRAMEWORK, Difficulty.BEGINNER, 5),
+                    new CountRow(TestDomains.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, 2)));
             fakeGenerator.toReturn = List.of(mcItem("Spring Bean 스코프 문제", 0));
 
-            service.generate(new LlmGenerateRequest(Domain.BACKEND_FRAMEWORK, null, null, 1));
+            service.generate(new LlmGenerateRequest(TestDomains.BACKEND_FRAMEWORK, null, null, 1));
 
-            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.BACKEND_FRAMEWORK);
+            assertThat(fakeGenerator.calledDomain).isEqualTo(TestDomains.BACKEND_FRAMEWORK);
             assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.ADVANCED);
             assertThat(fakeGenerator.calledType).isEqualTo(ProblemType.MULTIPLE_CHOICE); // type 미지정 → 객관식
         }
@@ -442,10 +443,10 @@ class LlmProblemServiceTest {
         @DisplayName("중복 회피 목록에는 기존 문제와 검수 대기 초안의 질문이 함께 들어간다")
         void avoidListIncludesProblemsAndPendingDrafts() {
             when(problemRepository.findQuestionTextsByDomain(any(), any())).thenReturn(List.of("기존 문제 질문"));
-            when(draftRepository.findPendingQuestionsByDomain(Domain.NETWORK)).thenReturn(List.of("대기 초안 질문"));
+            when(draftRepository.findPendingQuestionsByDomain(TestDomains.NETWORK)).thenReturn(List.of("대기 초안 질문"));
             fakeGenerator.toReturn = List.of(mcItem("새 문제", 0));
 
-            service.generate(new LlmGenerateRequest(Domain.NETWORK, Difficulty.BEGINNER, null, 1));
+            service.generate(new LlmGenerateRequest(TestDomains.NETWORK, Difficulty.BEGINNER, null, 1));
 
             assertThat(fakeGenerator.calledAvoid).containsExactlyInAnyOrder("기존 문제 질문", "대기 초안 질문");
         }
@@ -458,7 +459,7 @@ class LlmProblemServiceTest {
                     new NoteRow("Redis 기본 포트는?", "단순 암기 확인이라 원리를 묻지 않는다")));
             fakeGenerator.toReturn = List.of(mcItem("새 문제", 0));
 
-            service.generate(new LlmGenerateRequest(Domain.NETWORK, Difficulty.BEGINNER, null, 1));
+            service.generate(new LlmGenerateRequest(TestDomains.NETWORK, Difficulty.BEGINNER, null, 1));
 
             assertThat(fakeGenerator.calledRejectionNotes)
                     .extracting(RejectionNote::reason)
@@ -474,7 +475,7 @@ class LlmProblemServiceTest {
         void emptyRejectionNotesDoNotBlockGeneration() {
             fakeGenerator.toReturn = List.of(mcItem("새 문제", 0));
 
-            service.generate(new LlmGenerateRequest(Domain.NETWORK, Difficulty.BEGINNER, null, 1));
+            service.generate(new LlmGenerateRequest(TestDomains.NETWORK, Difficulty.BEGINNER, null, 1));
 
             assertThat(fakeGenerator.calledRejectionNotes).isEmpty();
         }
@@ -484,14 +485,14 @@ class LlmProblemServiceTest {
         void pendingDraftsCountTowardCellSize() {
             // NETWORK 정식 문제: 초급 0, 중급 2, 고급 2. 초안만 보면 초급이 제일 비어 보인다.
             when(problemRepository.countGroupByDomainAndDifficulty()).thenReturn(List.of(
-                    new CountRow(Domain.NETWORK, Difficulty.INTERMEDIATE, 2),
-                    new CountRow(Domain.NETWORK, Difficulty.ADVANCED, 2)));
+                    new CountRow(TestDomains.NETWORK, Difficulty.INTERMEDIATE, 2),
+                    new CountRow(TestDomains.NETWORK, Difficulty.ADVANCED, 2)));
             // 그런데 초급에는 이미 검수 대기 초안 5건이 쌓여 있다 → 합산하면 초급이 가장 많은 칸이 된다
             when(draftRepository.countPendingGroupByDomainAndDifficulty()).thenReturn(List.of(
-                    new CountRow(Domain.NETWORK, Difficulty.BEGINNER, 5)));
+                    new CountRow(TestDomains.NETWORK, Difficulty.BEGINNER, 5)));
             fakeGenerator.toReturn = List.of(mcItem("네트워크 문제", 0));
 
-            service.generate(new LlmGenerateRequest(Domain.NETWORK, null, null, 1));
+            service.generate(new LlmGenerateRequest(TestDomains.NETWORK, null, null, 1));
 
             // 합산하지 않으면 BEGINNER(0건)가 뽑힌다 — 이 단정이 회귀를 막는다
             assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.INTERMEDIATE);
@@ -500,40 +501,40 @@ class LlmProblemServiceTest {
         @Test
         @DisplayName("도메인을 지정하지 않으면 batch-domains 후보 안에서만 고른다 — 후보 밖이 더 비어 있어도 뽑지 않는다")
         void autoPickStaysWithinBatchDomains() {
-            service = newService(List.of(Domain.NETWORK, Domain.OS));
+            service = newService(List.of(TestDomains.NETWORK, TestDomains.OS));
             // 후보인 NETWORK·OS는 문제가 꽉 차 있고, 후보가 아닌 INTEGRATED는 집계에 없다(=0건)
             when(problemRepository.countGroupByDomainAndDifficulty()).thenReturn(List.of(
-                    new CountRow(Domain.NETWORK, Difficulty.BEGINNER, 10),
-                    new CountRow(Domain.NETWORK, Difficulty.INTERMEDIATE, 10),
-                    new CountRow(Domain.NETWORK, Difficulty.ADVANCED, 10),
-                    new CountRow(Domain.OS, Difficulty.BEGINNER, 7),
-                    new CountRow(Domain.OS, Difficulty.INTERMEDIATE, 10),
-                    new CountRow(Domain.OS, Difficulty.ADVANCED, 10)));
+                    new CountRow(TestDomains.NETWORK, Difficulty.BEGINNER, 10),
+                    new CountRow(TestDomains.NETWORK, Difficulty.INTERMEDIATE, 10),
+                    new CountRow(TestDomains.NETWORK, Difficulty.ADVANCED, 10),
+                    new CountRow(TestDomains.OS, Difficulty.BEGINNER, 7),
+                    new CountRow(TestDomains.OS, Difficulty.INTERMEDIATE, 10),
+                    new CountRow(TestDomains.OS, Difficulty.ADVANCED, 10)));
             fakeGenerator.toReturn = List.of(mcItem("OS 문제", 0));
 
             service.generate(new LlmGenerateRequest(null, null, null, 1));
 
             // 가장 비어 있는 칸은 INTEGRATED(0건)지만 후보가 아니므로, 후보 중 최소인 OS×초급이 뽑힌다
-            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.OS);
+            assertThat(fakeGenerator.calledDomain).isEqualTo(TestDomains.OS);
             assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.BEGINNER);
         }
 
         @Test
         @DisplayName("도메인을 직접 지정하면 batch-domains 후보 밖이어도 생성한다 — 제한은 자동 선택에만 적용")
         void explicitDomainIgnoresBatchDomainFilter() {
-            service = newService(List.of(Domain.NETWORK, Domain.OS)); // INTEGRATED는 후보가 아님
+            service = newService(List.of(TestDomains.NETWORK, TestDomains.OS)); // INTEGRATED는 후보가 아님
             fakeGenerator.toReturn = List.of(mcItem("여러 분야를 엮은 문제", 0));
 
-            service.generate(new LlmGenerateRequest(Domain.INTEGRATED, Difficulty.BEGINNER, null, 1));
+            service.generate(new LlmGenerateRequest(TestDomains.INTEGRATED, Difficulty.BEGINNER, null, 1));
 
-            assertThat(fakeGenerator.calledDomain).isEqualTo(Domain.INTEGRATED);
+            assertThat(fakeGenerator.calledDomain).isEqualTo(TestDomains.INTEGRATED);
         }
 
         @Test
         @DisplayName("서술형(ESSAY) 생성 요청은 QUIZ_002로 거부한다")
         void rejectsEssayType() {
             assertThatThrownBy(() -> service.generate(
-                    new LlmGenerateRequest(Domain.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1)))
+                    new LlmGenerateRequest(TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1)))
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode").isEqualTo(ErrorCode.QUIZ_002);
         }
@@ -552,7 +553,7 @@ class LlmProblemServiceTest {
                     new GeneratedProblemItem.GeneratedChoice("B", true)));
             fakeGenerator.toReturn = List.of(mcItem("정상 문제", 1), invalid);
 
-            service.generate(new LlmGenerateRequest(Domain.OS, Difficulty.BEGINNER, null, 2));
+            service.generate(new LlmGenerateRequest(TestDomains.OS, Difficulty.BEGINNER, null, 2));
 
             ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
@@ -571,7 +572,7 @@ class LlmProblemServiceTest {
                     new GeneratedProblemItem("answer 없는 OX", "", "해설", List.of()),
                     new GeneratedProblemItem("정상 OX", "O", "해설", List.of()));
 
-            service.generate(new LlmGenerateRequest(Domain.OS, Difficulty.BEGINNER, ProblemType.OX, 2));
+            service.generate(new LlmGenerateRequest(TestDomains.OS, Difficulty.BEGINNER, ProblemType.OX, 2));
 
             ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
@@ -601,7 +602,7 @@ class LlmProblemServiceTest {
                     new GeneratedProblemItem.GeneratedChoice("보기2", false)),
                     "", "  캐시 스탬피드가 나는 조건  ")); // 앞뒤 공백은 저장 전에 정리되어야 한다
 
-            service.generate(new LlmGenerateRequest(Domain.OS, Difficulty.BEGINNER, null, 1));
+            service.generate(new LlmGenerateRequest(TestDomains.OS, Difficulty.BEGINNER, null, 1));
 
             ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
@@ -622,7 +623,7 @@ class LlmProblemServiceTest {
         void storesNullWhenTitleIsBlank() {
             fakeGenerator.toReturn = List.of(mcItem("제목 없는 문제", 0)); // 짧은 생성자 → title=""
 
-            service.generate(new LlmGenerateRequest(Domain.OS, Difficulty.BEGINNER, null, 1));
+            service.generate(new LlmGenerateRequest(TestDomains.OS, Difficulty.BEGINNER, null, 1));
 
             ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
@@ -638,7 +639,7 @@ class LlmProblemServiceTest {
         private GeneratedProblemDraft mcDraft() {
             // 저장 형태 그대로의 초안 — choices JSON은 AdminProblemRequest.ChoiceItem 직렬화 모양
             return GeneratedProblemDraft.pending(
-                    Domain.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                    TestDomains.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                     "트랜잭션 전파의 기본값", // title
                     "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.",
                     "[{\"text\":\"REQUIRED\",\"correct\":true},{\"text\":\"REQUIRES_NEW\",\"correct\":false}]", // choicesJson
@@ -652,7 +653,7 @@ class LlmProblemServiceTest {
         void approveConvertsAndRegisters() {
             GeneratedProblemDraft draft = mcDraft();
             when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
-            AdminProblemDetail created = new AdminProblemDetail(99L, Domain.BACKEND_FRAMEWORK,
+            AdminProblemDetail created = new AdminProblemDetail(99L, TestDomains.BACKEND_FRAMEWORK,
                     Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, "트랜잭션 전파의 기본값",
                     "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.", LocalDateTime.now(), List.of());
             when(adminProblemService.create(any())).thenReturn(created);
@@ -777,7 +778,7 @@ class LlmProblemServiceTest {
             draft.reject("실수로 거절");
             when(draftRepository.findById(7L)).thenReturn(Optional.of(draft));
             when(adminProblemService.create(any())).thenReturn(new AdminProblemDetail(
-                    99L, Domain.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                    99L, TestDomains.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                     "트랜잭션 전파의 기본값",
                     "@Transactional 전파 문제", null, "해설", LocalDateTime.now(), List.of()));
 

@@ -1,6 +1,6 @@
 package project.study.study_project.llm.dto;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.util.List;
 
@@ -28,6 +28,6 @@ public record ExistingQuestionsFile(
         List<Item> questions
 ) {
     /** 지문 한 건. CLI의 {@code ExistingQuestion} record와 필드 이름이 같아야 읽힌다. */
-    public record Item(Domain domain, String question) {
+    public record Item(DomainCode domain, String question) {
     }
 }

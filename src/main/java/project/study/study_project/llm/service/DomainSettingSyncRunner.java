@@ -8,9 +8,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * 기동 시 {@code domain_setting} 테이블을 {@code Domain} enum에 맞춰 둔다.
+ * 기동 시 {@code domain_setting} 테이블을 기본 분야 목록({@code DefaultDomains})에 맞춰 둔다.
  *
- * <p>실제 동기화 규칙은 {@link DomainSettingService#syncWithEnum()}에 있다 — 이 클래스는
+ * <p>실제 동기화 규칙은 {@link DomainSettingService#syncWithDefaults()}에 있다 — 이 클래스는
  * "언제 부를 것인가"만 책임진다({@code TopicQueueSyncRunner}와 같은 역할 분리).
  *
  * <p><b>부팅을 막지 않는 다른 러너들과 달리, 여기서는 예외를 삼키지 않는다.</b>
@@ -40,7 +40,7 @@ public class DomainSettingSyncRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        domainSettingService.syncWithEnum();
+        domainSettingService.syncWithDefaults();
         log.info("분야 설정 동기화 완료");
     }
 }

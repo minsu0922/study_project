@@ -7,12 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminBatchStatus;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.admin.service.AdminBatchService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
@@ -191,7 +192,7 @@ class AdminBatchStatusIntegrationTest {
         AdminBatchStatus.TodayPlan plan = adminBatchService.getStatus().plan();
 
         assertThat(plan.documentSlug()).isEqualTo("aligned-probe");
-        assertThat(plan.domain()).isEqualTo(Domain.NETWORK);
+        assertThat(plan.domain()).isEqualTo(TestDomains.NETWORK);
         // 주기가 고른 분야는 그대로 남아 있어야 한다 — 화면이 "무엇에서 무엇으로 바뀌었는지"를
         // 말해 주려면 둘 다 필요하다. 덮어써 버리면 어긋남이 있었다는 사실 자체가 사라진다.
         assertThat(plan.cycleDomain()).isNotNull();
@@ -340,8 +341,8 @@ class AdminBatchStatusIntegrationTest {
     void calendarUsesDocumentDomain() throws Exception {
         Files.createDirectories(DIR.resolve("documents"));
         LocalDate documentDate = adminBatchService.getStatus().plan().documentDate();
-        Domain planned = cellOf(adminBatchService.getStatus(), documentDate).domain();
-        Domain other = otherThan(planned);
+        DomainCode planned = cellOf(adminBatchService.getStatus(), documentDate).domain();
+        DomainCode other = otherThan(planned);
         writeDocumentAt(documentDate, "calendar-probe", other);
 
         List<AdminBatchStatus.DayCell> cycle = adminBatchService.getStatus().calendar().stream()
@@ -367,7 +368,7 @@ class AdminBatchStatusIntegrationTest {
                 .filter(c -> !c.documentDay())
                 .findFirst()
                 .orElseThrow();
-        Domain domain = otherThan(target.domain());
+        DomainCode domain = otherThan(target.domain());
         Difficulty difficulty = target.difficulty() == Difficulty.BEGINNER
                 ? Difficulty.ADVANCED : Difficulty.BEGINNER;
         importedDraftFileRepository.deleteById(target.filename());
@@ -469,7 +470,7 @@ class AdminBatchStatusIntegrationTest {
         AdminBatchStatus.Harvest before = adminBatchService.getStatus().harvest();
 
         generatedProblemDraftRepository.save(GeneratedProblemDraft.pending(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE,
                 "제목", "질문?", "1", "해설", "[]", "test-model", null, null, null));
 
         AdminBatchStatus.Harvest after = adminBatchService.getStatus().harvest();
@@ -495,21 +496,21 @@ class AdminBatchStatusIntegrationTest {
     @DisplayName("오늘 카드와 달력은 분야 설정 테이블을 읽는다 — yml 순서가 아니라")
     void usesDomainSettingTableNotYml() {
         domainSettingService.findAll().stream()
-                .filter(s -> s.getDomain() == Domain.OS)
-                .forEach(s -> domainSettingService.edit(Domain.OS,
+                .filter(s -> s.getDomain().equals(TestDomains.OS))
+                .forEach(s -> domainSettingService.edit(TestDomains.OS,
                         new AdminDomainSettingRequest(true, s.getDisplayName(), s.getHint())));
         domainSettingService.findAll().stream()
-                .filter(s -> s.getDomain() != Domain.OS && s.isEnabled())
+                .filter(s -> !s.getDomain().equals(TestDomains.OS) && s.isEnabled())
                 .forEach(s -> domainSettingService.edit(s.getDomain(),
                         new AdminDomainSettingRequest(false, s.getDisplayName(), s.getHint())));
 
         AdminBatchStatus status = adminBatchService.getStatus();
 
-        assertThat(status.plan().cycleDomain()).isEqualTo(Domain.OS);
+        assertThat(status.plan().cycleDomain()).isEqualTo(TestDomains.OS);
         assertThat(status.calendar())
                 .extracting(AdminBatchStatus.DayCell::domain)
                 .as("yml 8개로 계산했다면 24일 동안 여러 분야가 섞인다")
-                .containsOnly(Domain.OS);
+                .containsOnly(TestDomains.OS);
     }
 
     /** 달력에서 그 날짜의 칸을 꺼낸다. 없으면 창(24일)이 잘못 잡힌 것이므로 단언으로 알린다. */
@@ -528,10 +529,10 @@ class AdminBatchStatusIntegrationTest {
     }
 
     private void writeDocumentAt(LocalDate date, String slug) throws Exception {
-        writeDocumentAt(date, slug, Domain.NETWORK);
+        writeDocumentAt(date, slug, TestDomains.NETWORK);
     }
 
-    private void writeDocumentAt(LocalDate date, String slug, Domain domain) throws Exception {
+    private void writeDocumentAt(LocalDate date, String slug, DomainCode domain) throws Exception {
         var file = new GeneratedDocumentFile("테스트", date.toString(), date + "T00:00:00Z",
                 domain, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
         objectMapper.writeValue(DIR.resolve("documents").resolve(date + ".json").toFile(), file);
@@ -550,14 +551,14 @@ class AdminBatchStatusIntegrationTest {
     }
 
     /** 주어진 것과 다른 분야 하나. 계획과 우연히 같은 값을 넣어 테스트가 헛돌지 않게 한다. */
-    private Domain otherThan(Domain domain) {
-        return domain == Domain.NETWORK ? Domain.OS : Domain.NETWORK;
+    private DomainCode otherThan(DomainCode domain) {
+        return TestDomains.NETWORK.equals(domain) ? TestDomains.OS : TestDomains.NETWORK;
     }
 
     /** 두 편이 다 있는 문서. 편을 고르는 규칙을 확인하려면 고를 것이 둘이어야 한다. */
     private GeneratedDocumentFile writeBothEditionsAt(LocalDate date, String slug) throws Exception {
         var file = new GeneratedDocumentFile("테스트", date.toString(), date + "T00:00:00Z",
-                Domain.NETWORK, "test",
+                TestDomains.NETWORK, "test",
                 new GeneratedDocumentItem("제목", slug, "# 입문편", List.of("net")),
                 new GeneratedDocumentItem("제목", slug + "-advanced", "# 심화편", List.of("net")));
         objectMapper.writeValue(DIR.resolve("documents").resolve(date + ".json").toFile(), file);
@@ -570,7 +571,7 @@ class AdminBatchStatusIntegrationTest {
 
     private void writeDocument(String name, String slug) throws Exception {
         var file = new GeneratedDocumentFile("테스트", "2026-01-03", "2026-01-03T00:00:00Z",
-                Domain.NETWORK, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
+                TestDomains.NETWORK, "test", new GeneratedDocumentItem("제목", slug, "# 본문", List.of("net")), null);
         objectMapper.writeValue(DIR.resolve("documents").resolve(name).toFile(), file);
     }
 }

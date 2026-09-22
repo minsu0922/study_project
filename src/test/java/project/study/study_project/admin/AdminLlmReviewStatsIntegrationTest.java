@@ -11,9 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
@@ -172,7 +173,7 @@ class AdminLlmReviewStatsIntegrationTest {
      */
     private GeneratedProblemDraft saveDraft() {
         return draftRepository.save(GeneratedProblemDraft.pending(
-                Domain.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 "승인율 집계 테스트용 제목",
                 "승인율 집계 테스트용 지문 " + UUID.randomUUID(),
                 "1", "해설", "[]", MODEL, null, null, null));

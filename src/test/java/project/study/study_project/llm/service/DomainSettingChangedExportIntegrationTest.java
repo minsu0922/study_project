@@ -7,8 +7,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.repository.DomainSettingRepository;
 
@@ -47,7 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DomainSettingChangedExportIntegrationTest {
 
     private static final Path DIR = Path.of("build/test-domain-setting-changed-export");
-    private static final Domain TARGET = Domain.NETWORK;
+    private static final DomainCode TARGET = TestDomains.NETWORK;
 
     @Autowired
     private DomainSettingService domainSettingService;

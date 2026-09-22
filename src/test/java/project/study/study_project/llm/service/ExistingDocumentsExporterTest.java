@@ -1,6 +1,7 @@
 package project.study.study_project.llm.service;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.TestDomains;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.dto.DomainTitle;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -160,9 +161,9 @@ class ExistingDocumentsExporterTest {
         // 저장소가 분야를 함께 준다(2026-09-03). 시험용 분야는 아무거나 쓰되, 두 저장소를
         // 다르게 둬서 <어느 쪽 라벨이 붙었는지> 구별되게 한다.
         lenient().when(documentRepository.findAllDomainTitles()).thenReturn(
-                documentTitles.stream().map(t -> new DomainTitle(Domain.NETWORK, t)).toList());
+                documentTitles.stream().map(t -> new DomainTitle(TestDomains.NETWORK, t)).toList());
         lenient().when(draftRepository.findPendingDomainTitles()).thenReturn(
-                draftTitles.stream().map(t -> new DomainTitle(Domain.DATABASE, t)).toList());
+                draftTitles.stream().map(t -> new DomainTitle(TestDomains.DATABASE, t)).toList());
         lenient().when(draftRepository.findRejectedSlugs()).thenReturn(rejectedSlugs);
         when(tagRepository.findAll()).thenReturn(tagNames.stream().map(Tag::of).toList());
     }

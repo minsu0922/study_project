@@ -1,7 +1,7 @@
 package project.study.study_project.quiz.dto;
 
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 
@@ -21,7 +21,7 @@ import java.util.List;
  */
 public record QuizProblemItem(
         Long id,
-        Domain domain,
+        DomainCode domain,
         Difficulty difficulty,
         ProblemType type,
         String question,

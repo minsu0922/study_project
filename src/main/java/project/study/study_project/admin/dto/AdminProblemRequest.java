@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 
 import java.util.List;
@@ -37,7 +37,7 @@ import java.util.List;
 public record AdminProblemRequest(
 
         @NotNull(message = "domain은 필수입니다.")
-        Domain domain,
+        DomainCode domain,
 
         @NotNull(message = "difficulty는 필수입니다.")
         Difficulty difficulty,

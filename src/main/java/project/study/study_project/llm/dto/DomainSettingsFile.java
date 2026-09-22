@@ -2,7 +2,7 @@ package project.study.study_project.llm.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.util.List;
 
@@ -25,7 +25,7 @@ import java.util.List;
  *       못 읽는 상태가 되면 안 된다. 그날 배치가 분야 설정 없이 통째로 도는 것이 훨씬 나쁘다.
  *   <li>{@code @JsonInclude(NON_NULL)} — 힌트를 안 쓴 분야마다 {@code "hint": null}이 줄줄이
  *       찍히면 사람이 훑어보기 나쁘다.
- *   <li>{@code domain}이 {@link project.study.study_project.global.common.Domain}이 아니라
+ *   <li>{@code domain}이 {@link project.study.study_project.global.common.DomainCode}가 아니라
  *       <b>문자열</b>인 이유 — 오늘(2026-09-21) {@code FRONTEND_CS}가 enum에서 빠지면서,
  *       그 이름 하나로 이 테이블을 엔티티로 읽는 모든 조회가 {@code IllegalArgumentException}으로
  *       죽는 것을 실제로 봤다({@code DomainSettingRepository}의 네이티브 조회가 그 우회다).
@@ -45,7 +45,7 @@ public record DomainSettingsFile(String note, List<Entry> domains) {
     /**
      * 분야 설정 한 줄.
      *
-     * @param domain      분야 상수명({@code NETWORK} 등). {@link Domain} enum이 아니라 문자열인
+     * @param domain      분야 상수명({@code NETWORK} 등). {@link DomainCode}가 아니라 문자열인
      *                    이유는 이 record 상단 Javadoc 참고
      * @param enabled     배치 자동 선택 후보인가
      * @param sortOrder   날짜 순환 순서

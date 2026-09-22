@@ -3,8 +3,9 @@ package project.study.study_project.llm.cli;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
@@ -82,22 +83,22 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("주기 분야와 문서 분야가 다르면 문서 쪽으로 맞춘다 — 근거 문서가 곧 그 주기의 주제다")
     void alignsDomainWithDocumentWhenTheyDiffer() {
-        assertThat(DraftGeneratorCli.alignDomainWithDocument(Domain.OS, Domain.SYSTEM_DESIGN))
-                .isEqualTo(Domain.SYSTEM_DESIGN);
+        assertThat(DraftGeneratorCli.alignDomainWithDocument(TestDomains.OS, TestDomains.SYSTEM_DESIGN))
+                .isEqualTo(TestDomains.SYSTEM_DESIGN);
     }
 
     @Test
     @DisplayName("문서에 분야가 없으면(옛 형식) 주기 분야를 그대로 쓴다 — 알 수 없는 값 때문에 멀쩡한 분야를 버리지 않는다")
     void keepsPlanDomainWhenDocumentDomainMissing() {
-        assertThat(DraftGeneratorCli.alignDomainWithDocument(Domain.OS, null))
-                .isEqualTo(Domain.OS);
+        assertThat(DraftGeneratorCli.alignDomainWithDocument(TestDomains.OS, null))
+                .isEqualTo(TestDomains.OS);
     }
 
     @Test
     @DisplayName("둘이 같으면 그대로 — 정상 주기에서는 아무 일도 일어나지 않는다")
     void keepsDomainWhenAlreadyMatching() {
-        assertThat(DraftGeneratorCli.alignDomainWithDocument(Domain.SECURITY, Domain.SECURITY))
-                .isEqualTo(Domain.SECURITY);
+        assertThat(DraftGeneratorCli.alignDomainWithDocument(TestDomains.SECURITY, TestDomains.SECURITY))
+                .isEqualTo(TestDomains.SECURITY);
     }
 
     /* ══ 무엇을 만들지 결정 (batch-type) ═══════════════════════ */
@@ -179,9 +180,9 @@ class DraftGeneratorCliTest {
      * {@code batch-domains}와 같은 순서·개수. 실제 설정을 그대로 써야 버그가 재현된다 —
      * 후보가 8개일 때 "4의 배수 mod 8 = 0 아니면 4"라는 산술이 성립하기 때문이다.
      */
-    private static final List<Domain> CANDIDATES = List.of(
-            Domain.NETWORK, Domain.OS, Domain.DATABASE, Domain.DS_ALGORITHM,
-            Domain.SYSTEM_DESIGN, Domain.SECURITY, Domain.LANGUAGE_RUNTIME, Domain.BACKEND_FRAMEWORK);
+    private static final List<DomainCode> CANDIDATES = List.of(
+            TestDomains.NETWORK, TestDomains.OS, TestDomains.DATABASE, TestDomains.DS_ALGORITHM,
+            TestDomains.SYSTEM_DESIGN, TestDomains.SECURITY, TestDomains.LANGUAGE_RUNTIME, TestDomains.BACKEND_FRAMEWORK);
 
     /**
      * <b>이 프로젝트에서 실제로 터진 버그를 못 박는 테스트다.</b>
@@ -204,7 +205,7 @@ class DraftGeneratorCliTest {
         LocalDate start = LocalDate.of(2026, 8, 11); // 실제 첫 주기의 0일차
         int onePass = GenerationSchedule.CYCLE_DAYS * CANDIDATES.size(); // 4 × 8 = 32일
 
-        List<Domain> documentDomains = new ArrayList<>();
+        List<DomainCode> documentDomains = new ArrayList<>();
         for (int i = 0; i < onePass; i++) {
             LocalDate date = start.plusDays(i);
             if (GenerationSchedule.planFor(date, CANDIDATES, ANCHOR).documentDay()) {
@@ -227,13 +228,13 @@ class DraftGeneratorCliTest {
     @DisplayName("문서일마다 주기가 정한 분야가 나온다 — 버그 당시엔 NETWORK·SYSTEM_DESIGN만 번갈아 나왔다")
     void documentDomainMatchesTheCycleOnRealDates() {
         assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 11), CANDIDATES, null, ANCHOR))
-                .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(Domain.OS);
+                .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(TestDomains.OS);
         assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, null, ANCHOR))
-                .as("버그 당시 실제 값: NETWORK").isEqualTo(Domain.DATABASE);
+                .as("버그 당시 실제 값: NETWORK").isEqualTo(TestDomains.DATABASE);
         assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 19), CANDIDATES, null, ANCHOR))
-                .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(Domain.DS_ALGORITHM);
+                .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(TestDomains.DS_ALGORITHM);
         assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 23), CANDIDATES, null, ANCHOR))
-                .as("버그 당시 실제 값: NETWORK").isEqualTo(Domain.SYSTEM_DESIGN);
+                .as("버그 당시 실제 값: NETWORK").isEqualTo(TestDomains.SYSTEM_DESIGN);
     }
 
     /**
@@ -244,7 +245,7 @@ class DraftGeneratorCliTest {
     @DisplayName("문서일의 분야 = 뒤따르는 사흘 문제의 분야 — 이 짝이 어긋난 것이 버그였다")
     void documentDomainMatchesTheProblemDaysThatFollow() {
         LocalDate documentDay = LocalDate.of(2026, 8, 15);
-        Domain forDocument = DraftGeneratorCli.documentDomain(documentDay, CANDIDATES, null, ANCHOR);
+        DomainCode forDocument = DraftGeneratorCli.documentDomain(documentDay, CANDIDATES, null, ANCHOR);
 
         for (int i = 1; i <= 3; i++) {
             GenerationSchedule.Plan problemDay =
@@ -262,14 +263,14 @@ class DraftGeneratorCliTest {
     @DisplayName("수동으로 분야를 지정하면 주기를 무시한다 — 워크플로에서 직접 고른 값이 가장 세다")
     void manualDomainBeatsTheCycle() {
         assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "SECURITY", ANCHOR))
-                .isEqualTo(Domain.SECURITY);
+                .isEqualTo(TestDomains.SECURITY);
     }
 
     @Test
     @DisplayName("빈 문자열은 지정 안 한 것으로 본다 — 워크플로 입력을 비우면 이렇게 넘어온다")
     void blankDomainFallsBackToTheCycle() {
         assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "   ", ANCHOR))
-                .isEqualTo(Domain.DATABASE);
+                .isEqualTo(TestDomains.DATABASE);
     }
 
     /* ══ 근거 문서 지목 (--document-date) ═══════════════════════ */
@@ -1217,24 +1218,24 @@ class DraftGeneratorCliTest {
     @DisplayName("대기열 주제의 분야가 주기 분야를 이긴다 — 이름표보다 실제 내용이 우선이다")
     void topicQueueDomainBeatsCycleDomain() {
         TopicQueue.Picked picked =
-                new TopicQueue.Picked(0, Domain.BACKEND_FRAMEWORK, "@Transactional 전파 속성");
+                new TopicQueue.Picked(0, TestDomains.BACKEND_FRAMEWORK, "@Transactional 전파 속성");
 
-        assertThat(DraftGeneratorCli.topicDomain(Domain.OS, null, picked))
-                .isEqualTo(Domain.BACKEND_FRAMEWORK);
+        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, picked))
+                .isEqualTo(TestDomains.BACKEND_FRAMEWORK);
     }
 
     @Test
     @DisplayName("수동으로 분야를 지정하면 대기열보다 그것이 이긴다 — 사람의 가장 최근 의사 표시다")
     void manualDomainBeatsTopicQueue() {
-        TopicQueue.Picked picked = new TopicQueue.Picked(0, Domain.BACKEND_FRAMEWORK, "AOP 프록시");
+        TopicQueue.Picked picked = new TopicQueue.Picked(0, TestDomains.BACKEND_FRAMEWORK, "AOP 프록시");
 
-        assertThat(DraftGeneratorCli.topicDomain(Domain.OS, "OS", picked)).isEqualTo(Domain.OS);
+        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, "OS", picked)).isEqualTo(TestDomains.OS);
     }
 
     @Test
     @DisplayName("대기열이 비면 주기 분야를 그대로 쓴다 — 대기열을 안 채워도 파이프라인은 예전대로 돈다")
     void keepsCycleDomainWhenQueueEmpty() {
-        assertThat(DraftGeneratorCli.topicDomain(Domain.OS, null, null)).isEqualTo(Domain.OS);
+        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, null)).isEqualTo(TestDomains.OS);
     }
 
     /**
@@ -1460,7 +1461,7 @@ class DraftGeneratorCliTest {
             java.nio.file.Path docDir = outDir.resolve("documents");
             java.nio.file.Files.createDirectories(docDir);
             var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
-                    "테스트", DATE.toString(), DATE + "T00:00:00Z", Domain.NETWORK, "test-model",
+                    "테스트", DATE.toString(), DATE + "T00:00:00Z", TestDomains.NETWORK, "test-model",
                     new project.study.study_project.llm.client.GeneratedDocumentItem(
                             "제목", "test-slug", contentMd, List.of("net")), null);
             new com.fasterxml.jackson.databind.ObjectMapper()
@@ -1516,7 +1517,7 @@ class DraftGeneratorCliTest {
             java.nio.file.Path docDir = tmp.resolve("documents");
             java.nio.file.Files.createDirectories(docDir);
             var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
-                    "테스트", DATE.toString(), DATE + "T00:00:00Z", Domain.NETWORK, "test-model",
+                    "테스트", DATE.toString(), DATE + "T00:00:00Z", TestDomains.NETWORK, "test-model",
                     new project.study.study_project.llm.client.GeneratedDocumentItem(
                             "제목", "test-slug",
                             "# 입문편\n\n## 무엇인가\n정의.\n\n### 왜 이렇게 설계됐는가\n버린 대안이 있다.\n",
@@ -1605,7 +1606,7 @@ class DraftGeneratorCliTest {
                 "# 심화편\n\n## 실제로는 어디에서 만나는가\n자리.\n\n## 언제 깨지는가\n조건.",
                 List.of("os"));
         var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
-                "테스트", "2026-09-07", "2026-09-07T00:00:00Z", Domain.OS, "test-model",
+                "테스트", "2026-09-07", "2026-09-07T00:00:00Z", TestDomains.OS, "test-model",
                 beginner, advanced);
 
         assertThat(DraftGeneratorCli.editionFor(file, Difficulty.BEGINNER)).isSameAs(beginner);
@@ -1628,7 +1629,7 @@ class DraftGeneratorCliTest {
         var only = new project.study.study_project.llm.client.GeneratedDocumentItem(
                 "옛 단일 문서", "cache-strategy", "# 옛 문서\n\n## 언제 깨지는가\n조건.", List.of("cache"));
         var file = new project.study.study_project.llm.dto.GeneratedDocumentFile(
-                "테스트", "2026-08-12", "2026-08-12T00:00:00Z", Domain.SYSTEM_DESIGN, "test-model",
+                "테스트", "2026-08-12", "2026-08-12T00:00:00Z", TestDomains.SYSTEM_DESIGN, "test-model",
                 only, null);
 
         assertThat(DraftGeneratorCli.editionFor(file, Difficulty.ADVANCED)).isSameAs(only);
@@ -1654,7 +1655,7 @@ class DraftGeneratorCliTest {
                 ]}""");
         DomainSettings settings = DomainSettings.read(dir);
 
-        List<Domain> candidates = DraftGeneratorCli.resolveBatchDomains(settings, YML_BATCH_DOMAINS);
+        List<DomainCode> candidates = DraftGeneratorCli.resolveBatchDomains(settings, YML_BATCH_DOMAINS);
 
         assertThat(candidates)
                 .as("yml 8개로 가면 CLI와 앱이 같은 상태에서 다른 분야를 고른다")
@@ -1662,12 +1663,12 @@ class DraftGeneratorCliTest {
         // 빈 목록이 실제로 <전체>로 넓어지는지까지 본다 — 비어 있다는 것만 보면, 누가
         // GenerationSchedule의 보정을 지웠을 때 여기서는 모른다. 전체 11개 순환이면
         // yml에 없는 분야(CLOUD_INFRA 등)도 언젠가 나와야 한다.
-        java.util.Set<Domain> seen = java.util.EnumSet.noneOf(Domain.class);
+        java.util.Set<DomainCode> seen = new java.util.HashSet<>();
         LocalDate start = LocalDate.of(2026, 1, 1);
         for (int i = 0; i < 400; i++) {
             seen.add(GenerationSchedule.planFor(start.plusDays(i), candidates, null).domain());
         }
-        assertThat(seen).contains(Domain.CLOUD_INFRA, Domain.INTEGRATED, Domain.SOFTWARE_ENGINEERING);
+        assertThat(seen).contains(TestDomains.CLOUD_INFRA, TestDomains.INTEGRATED, TestDomains.SOFTWARE_ENGINEERING);
     }
 
     @Test
@@ -1676,8 +1677,8 @@ class DraftGeneratorCliTest {
         DomainSettings settings = DomainSettings.read(dir);
 
         assertThat(DraftGeneratorCli.resolveBatchDomains(settings, YML_BATCH_DOMAINS))
-                .containsExactly(Domain.NETWORK, Domain.OS, Domain.DATABASE, Domain.DS_ALGORITHM,
-                        Domain.SYSTEM_DESIGN, Domain.SECURITY, Domain.LANGUAGE_RUNTIME, Domain.BACKEND_FRAMEWORK);
+                .containsExactly(TestDomains.NETWORK, TestDomains.OS, TestDomains.DATABASE, TestDomains.DS_ALGORITHM,
+                        TestDomains.SYSTEM_DESIGN, TestDomains.SECURITY, TestDomains.LANGUAGE_RUNTIME, TestDomains.BACKEND_FRAMEWORK);
     }
 
     @Test
@@ -1690,6 +1691,6 @@ class DraftGeneratorCliTest {
                 ]}""");
 
         assertThat(DraftGeneratorCli.resolveBatchDomains(DomainSettings.read(dir), YML_BATCH_DOMAINS))
-                .containsExactly(Domain.OS);
+                .containsExactly(TestDomains.OS);
     }
 }

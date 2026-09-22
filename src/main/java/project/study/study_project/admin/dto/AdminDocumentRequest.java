@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.util.List;
 
@@ -18,7 +18,7 @@ import java.util.List;
 public record AdminDocumentRequest(
 
         @NotNull(message = "domain은 필수입니다.")
-        Domain domain,
+        DomainCode domain,
 
         @NotBlank(message = "title은 필수입니다.")
         @Size(max = 200, message = "title은 200자 이하여야 합니다.")

@@ -8,9 +8,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -235,7 +236,7 @@ class ProblemReportIntegrationTest {
 
     private Problem saveProblem() {
         return problemRepository.save(Problem.create(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 "TCP 3-way handshake",
                 "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
     }

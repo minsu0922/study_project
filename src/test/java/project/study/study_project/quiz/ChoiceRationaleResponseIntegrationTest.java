@@ -7,11 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.dto.QuizChoiceResult;
 import project.study.study_project.quiz.dto.QuizSubmitRequest;
@@ -115,7 +116,7 @@ class ChoiceRationaleResponseIntegrationTest {
     @DisplayName("OX 문제는 빈 목록을 받는다 — null이 아니라 빈 목록이어야 화면 검사가 하나로 끝난다")
     void nonMultipleChoiceGetsEmptyList() {
         AdminProblemDetail ox = adminProblemService.create(new AdminProblemRequest(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX, "OX 제목",
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX, "OX 제목",
                 "OX 지문 " + UUID.randomUUID(), "O", "해설입니다.", null, null));
 
         QuizSubmitResponse response = quizService.submit(userId,
@@ -149,7 +150,7 @@ class ChoiceRationaleResponseIntegrationTest {
     /** 오답 둘에만 설명이 붙은 객관식 문제. 승인 경로와 같은 서비스를 탄다. */
     private AdminProblemDetail createMultipleChoice() {
         return adminProblemService.create(new AdminProblemRequest(
-                Domain.SECURITY, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                TestDomains.SECURITY, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                 "오답 설명 응답 테스트",
                 "오답 설명 응답 테스트용 지문 " + UUID.randomUUID(),
                 null, "정답인 이유를 적은 해설입니다.",

@@ -6,8 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.service.LlmProblemService;
@@ -121,7 +122,7 @@ class ProblemReportFeedbackTest {
 
     private Problem saveProblem(String question) {
         return problemRepository.save(Problem.create(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 "되먹임 테스트용", question, "O", "해설", null));
     }
 }

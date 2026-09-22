@@ -8,8 +8,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -60,7 +62,7 @@ class PublicStatsIntegrationTest {
                 .andExpect(jsonPath("$.data.problemCount").exists())
                 .andExpect(jsonPath("$.data.documentCount").exists())
                 // 분야 수는 DB가 아니라 enum이 안다 — 값이 흔들릴 이유가 없어 단정한다
-                .andExpect(jsonPath("$.data.domainCount").value(Domain.values().length));
+                .andExpect(jsonPath("$.data.domainCount").value(DefaultDomains.codes().size()));
     }
 
     @Test
@@ -69,7 +71,7 @@ class PublicStatsIntegrationTest {
         long before = problemCount();
 
         problemRepository.save(Problem.create(
-                Domain.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 null, "집계용 문제 " + UUID.randomUUID(), "O", "해설", null));
 
         mockMvc.perform(get("/api/stats"))

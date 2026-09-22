@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.ProblemListItem;
@@ -52,7 +52,7 @@ public class ProblemListController {
     @GetMapping("/api/problems")
     public ApiResponse<PageResponse<ProblemListItem>> list(
             @AuthenticationPrincipal Long userId,
-            @RequestParam(required = false) Domain domain,
+            @RequestParam(required = false) DomainCode domain,
             @RequestParam(required = false) Difficulty difficulty,
             @RequestParam(required = false) ProblemListItem.SolveState state,
             @RequestParam(required = false, defaultValue = "false") boolean reviewDue,

@@ -1,6 +1,6 @@
 package project.study.study_project.quiz.dto;
 
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 
 import java.util.List;
 
@@ -73,6 +73,6 @@ public record StudySummaryResponse(
      * @param total  그 분야의 전체 문제 수. 배치가 문제를 더하면 <b>커진다</b> —
      *               그래서 화면은 이 둘로 퍼센트를 만들지 않는다(위 주석 참고)
      */
-    public record DomainProgress(Domain domain, String label, long solved, long total) {
+    public record DomainProgress(DomainCode domain, String label, long solved, long total) {
     }
 }

@@ -1,7 +1,7 @@
 package project.study.study_project.llm.client;
 
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 
 import java.util.List;
@@ -28,7 +28,7 @@ public interface ProblemGenerator {
      *                       사람의 검수 결과를 다음 생성에 되먹이는 통로다(docs/14)
      * @return 생성된 문제 목록(모델이 count보다 적게/많이 줄 수도 있어 호출부가 방어)
      */
-    default List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
+    default List<GeneratedProblemItem> generate(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                 int count, List<String> avoidQuestions,
                                                 List<RejectionNote> rejectionNotes) {
         return generate(domain, difficulty, type, count, avoidQuestions, rejectionNotes, null);
@@ -45,7 +45,7 @@ public interface ProblemGenerator {
      *
      * @param sourceDocument 근거 문서. {@code null}이면 근거 없이(모델의 지식으로) 생성한다
      */
-    default List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
+    default List<GeneratedProblemItem> generate(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                 int count, List<String> avoidQuestions,
                                                 List<RejectionNote> rejectionNotes,
                                                 SourceDocument sourceDocument) {
@@ -71,7 +71,7 @@ public interface ProblemGenerator {
      *
      * @param requestedKind 지목할 형태. {@code null}이면 모델이 고른다(배치의 기본 동작)
      */
-    List<GeneratedProblemItem> generate(Domain domain, Difficulty difficulty, ProblemType type,
+    List<GeneratedProblemItem> generate(DomainCode domain, Difficulty difficulty, ProblemType type,
                                         int count, List<String> avoidQuestions,
                                         List<RejectionNote> rejectionNotes,
                                         SourceDocument sourceDocument,

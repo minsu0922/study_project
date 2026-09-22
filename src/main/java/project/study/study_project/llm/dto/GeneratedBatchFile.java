@@ -1,7 +1,7 @@
 package project.study.study_project.llm.dto;
 
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 
@@ -45,7 +45,7 @@ public record GeneratedBatchFile(
         String note,
         String date,
         String generatedAt,
-        Domain domain,
+        DomainCode domain,
         Difficulty difficulty,
         ProblemType type,
         String model,
@@ -54,7 +54,7 @@ public record GeneratedBatchFile(
         List<String> shortfallReasons
 ) {
     /** 사유 없이 만드는 편의 생성자 — 필드를 붙이기 전 호출부(테스트)가 그대로 컴파일되게 한다. */
-    public GeneratedBatchFile(String note, String date, String generatedAt, Domain domain,
+    public GeneratedBatchFile(String note, String date, String generatedAt, DomainCode domain,
                               Difficulty difficulty, ProblemType type, String model,
                               String documentSlug, List<GeneratedProblemItem> problems) {
         this(note, date, generatedAt, domain, difficulty, type, model, documentSlug, problems, null);

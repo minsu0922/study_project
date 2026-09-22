@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminBatchStatus;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.Domain;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
@@ -129,7 +129,7 @@ public class AdminBatchService {
         // 달력에 같은 목록을 넘긴다 — 따로 읽으면 그 사이 저장이 끼어들 때 한 화면에 두 순서가 섞인다.
         // 빈 목록 보정은 따로 하지 않는다: GenerationSchedule.planFor가 빈 목록을 전체로 넓히고,
         // 그게 LlmProblemService가 빈 목록을 enum 전체로 되돌리는 것과 같은 결과다.
-        List<Domain> batchDomains = domainSettingService.batchDomains();
+        List<DomainCode> batchDomains = domainSettingService.batchDomains();
 
         AdminBatchStatus.TodayPlan plan = planOf(today, dir, batchDomains);
         // 개수는 <오늘 난이도의> 값을 싣는다(2026-09-05). 난이도별 배분이 생긴 뒤로도
@@ -181,7 +181,7 @@ public class AdminBatchService {
      * 무엇보다 <b>파일 이름 규칙을 배치와 똑같이 적는</b> 코드가 된다(접미사 파일은 세지 않는다는
      * 규칙이 자연히 지켜진다 — 이름이 정확히 {@code <날짜>.json}인 것만 묻기 때문).
      */
-    private List<AdminBatchStatus.DayCell> calendar(Path dir, LocalDate today, List<Domain> batchDomains) {
+    private List<AdminBatchStatus.DayCell> calendar(Path dir, LocalDate today, List<DomainCode> batchDomains) {
         LocalDate start = GenerationSchedule.planFor(today, batchDomains, cycleAnchor)
                 .documentDate()
                 .minusDays((long) GenerationSchedule.CYCLE_DAYS * PAST_CYCLES);
@@ -208,7 +208,7 @@ public class AdminBatchService {
         // 3) 근거 문서는 주기마다 한 번만 읽는다(같은 주기의 나흘이 같은 파일을 가리킨다).
         //    읽는 것은 분야 하나다 — 파일이 없으면 null이고, 그것이 곧 "폴백"이라는 뜻이기도 하다.
         //    Optional로 감싸는 이유: HashMap.computeIfAbsent는 null을 "아직 안 셈"으로 보고 매번 다시 읽는다.
-        Map<LocalDate, java.util.Optional<Domain>> documentDomains = new HashMap<>();
+        Map<LocalDate, java.util.Optional<DomainCode>> documentDomains = new HashMap<>();
 
         List<AdminBatchStatus.DayCell> cells = new ArrayList<>();
         for (int i = 0; i < totalDays; i++) {
@@ -226,7 +226,7 @@ public class AdminBatchService {
             // 다음다음 주기의 문제일 셋이 전부 "근거없음"으로 떴는데, 그 주기의 문서일 자체가
             // 나흘 뒤였다. 아직 만들 차례가 아닌 것을 결함처럼 칠하면 경고가 값을 잃는다.
             // 반대로 <b>내일</b> 문제일의 근거 문서가 어제 안 나온 것은 진짜 경고다 — 그건 남는다.
-            java.util.Optional<Domain> documentDomain = documentDomains.computeIfAbsent(
+            java.util.Optional<DomainCode> documentDomain = documentDomains.computeIfAbsent(
                     plan.documentDate(), d -> java.util.Optional.ofNullable(documentDomainAt(dir, d)));
             boolean fallback = !plan.documentDay()
                     && !plan.documentDate().isAfter(today)
@@ -243,7 +243,7 @@ public class AdminBatchService {
             // 파일을 맨 앞에 두는 이유는 08-29에 손으로 채운 파일들 때문이다. 옛 위상으로 만들어져
             // 계획과 난이도까지 다른데(예: 09-21 계획 중급, 파일은 초급), 그날 배치는 파일이
             // 있어 건너뛰므로 <들어오는 것은 파일 내용>이다. 화면은 들어올 것을 말해야 한다.
-            Domain domain = documentDomain.orElse(plan.domain());
+            DomainCode domain = documentDomain.orElse(plan.domain());
             Difficulty difficulty = plan.difficulty();
             Integer produced = null;
             List<String> shortfallReasons = null;
@@ -357,7 +357,7 @@ public class AdminBatchService {
      * <p>{@link #sourceOf}와 달리 편(입문·심화)을 고르지 않는다. 분야는 파일 머리에 한 번만
      * 적혀 있어 두 편이 같은 값을 공유하기 때문이다.
      */
-    private Domain documentDomainAt(Path dir, LocalDate documentDate) {
+    private DomainCode documentDomainAt(Path dir, LocalDate documentDate) {
         Path file = dir.resolve(DOCUMENT_SUBDIR).resolve(documentDate + ".json");
         if (!Files.exists(file)) {
             return null;
@@ -435,7 +435,7 @@ public class AdminBatchService {
      * {@code alignDomainWithDocument}) — 주기가 가리킨 분야와 문서의 분야가 다르면 문서 쪽으로
      * 맞춘다. 화면이 주기 분야만 보여 주면 실제로 나오는 것과 달라지므로 <b>둘 다</b> 싣는다.
      */
-    private AdminBatchStatus.TodayPlan planOf(LocalDate today, Path dir, List<Domain> batchDomains) {
+    private AdminBatchStatus.TodayPlan planOf(LocalDate today, Path dir, List<DomainCode> batchDomains) {
         GenerationSchedule.Plan plan = GenerationSchedule.planFor(today, batchDomains, cycleAnchor);
         // dayInCycle을 다시 계산하지 않고 <문서 날짜와의 차이>로 얻는다. 주기 길이를 여기서 또
         // 나눠 세면 GenerationSchedule의 계산과 갈라질 수 있고, 그때 화면만 조용히 틀린다.
@@ -444,7 +444,7 @@ public class AdminBatchService {
         // 난이도를 함께 넘긴다(2026-09-14). 배치는 난이도에 따라 편을 갈라 읽는데
         // 여기서 안 넘기면 화면이 늘 입문편 slug를 찍는다 — 실제로 그랬다.
         SourceInfo source = sourceOf(dir, plan.documentDate(), plan.difficulty());
-        Domain actual = source.domain() != null ? source.domain() : plan.domain();
+        DomainCode actual = source.domain() != null ? source.domain() : plan.domain();
 
         return new AdminBatchStatus.TodayPlan(
                 dayInCycle, plan.documentDay(), actual, plan.domain(), plan.difficulty(),
@@ -452,7 +452,7 @@ public class AdminBatchService {
     }
 
     /** 근거 문서에서 화면이 쓰는 두 가지. 둘 다 없을 수 있다(파일이 없거나 못 읽는 경우). */
-    private record SourceInfo(String slug, Domain domain) {
+    private record SourceInfo(String slug, DomainCode domain) {
         static final SourceInfo NONE = new SourceInfo(null, null);
     }
 
