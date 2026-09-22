@@ -13,6 +13,7 @@ import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
+import project.study.study_project.admin.dto.AdminTopicQueueRequest;
 import project.study.study_project.admin.service.AdminDocumentService;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
@@ -23,7 +24,16 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.domain.DomainSetting;
+import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.domain.GeneratedProblemDraft;
+import project.study.study_project.llm.dto.LlmDocumentDraftResponse;
+import project.study.study_project.llm.dto.LlmDraftResponse;
+import project.study.study_project.llm.dto.TopicQueueItemResponse;
+import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.service.DomainSettingService;
+import project.study.study_project.llm.service.LlmDocumentService;
+import project.study.study_project.llm.service.LlmProblemService;
+import project.study.study_project.llm.service.TopicQueueService;
 import project.study.study_project.quiz.dto.ProblemListItem;
 import project.study.study_project.quiz.dto.QuizSubmitRequest;
 import project.study.study_project.quiz.dto.StudySummaryResponse;
@@ -72,6 +82,17 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>로컬 DB에 이미 있는 문제·문서·복습 항목에 기대면, 그 행이 우연히 마침 확인하려는
  * 분야가 아니거나 다른 테스트가 먼저 지워 버릴 수 있다. 각 테스트가 필요한 데이터를 직접
  * 만들고, 클래스 {@code @Transactional}이 끝난 뒤 전부 되돌린다.
+ *
+ * <h2>수정 1차 — 관리자 검수 화면 셋을 추가로 덮는다(코드 리뷰 지적)</h2>
+ *
+ * <p>1차 코드 리뷰에서 13곳 중 넷이 이 테스트 없이 고쳐졌다는 지적을 받았다 — 문제 초안·
+ * 문서 초안 검수 화면(관리자가 매일 보는 화면)과 주제 대기열 화면이다. 그 넷은 나머지와
+ * 위험이 다르다: 나머지는 학습자가 매일 보는 화면이라 이름이 틀리면 바로 눈에 띄지만,
+ * 이 셋은 관리자만 보는 화면이라 되돌림 회귀가 한참 동안 아무에게도 안 보일 수 있다.
+ * {@code DomainTitle.labeled}는 이 클래스에 없다 — 유일한 호출부(
+ * {@code ExistingDocumentsExporter})가 다른 패키지의 패키지 전용 메서드를 거쳐야 해서
+ * {@code DomainRenameDocumentTitleIntegrationTest}(같은 디렉터리, {@code llm.service} 패키지)로
+ * 따로 뺐다 — 이유는 이 클래스가 {@code llm.client}에 있는 이유(위 문단)와 같다.
  */
 @SpringBootTest
 @Transactional
@@ -97,6 +118,14 @@ class DomainRenameIntegrationTest {
     private QuizService quizService;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private TopicQueueService topicQueueService;
+    @Autowired
+    private LlmDocumentService llmDocumentService;
+    @Autowired
+    private LlmProblemService llmProblemService;
+    @Autowired
+    private GeneratedProblemDraftRepository problemDraftRepository;
     @PersistenceContext
     private EntityManager em;
 
@@ -208,6 +237,66 @@ class DomainRenameIntegrationTest {
         DocumentListItem item = list.content().stream()
                 .filter(i -> i.slug().equals(slug)).findFirst().orElseThrow();
         assertThat(item.domainLabel()).isEqualTo("시스템설계 실전");
+    }
+
+    /**
+     * 관리자 "주제 대기열" 화면 — {@link TopicQueueService#add}가 곧 그 화면의 등록 버튼이 부르는
+     * 자리다. 응답을 별도 조회 없이 그 자리에서 돌려주므로, 등록 직후 화면에 뜨는 라벨이 바로
+     * 이 값이다.
+     */
+    @Test
+    @DisplayName("이름을 바꾸면 주제 대기열 항목의 분야 라벨도 새 이름이다")
+    void topicQueueShowsRenamedDomain() {
+        rename(TestDomains.CLOUD_INFRA, "클라우드 실무");
+
+        TopicQueueItemResponse created = topicQueueService.add(
+                new AdminTopicQueueRequest(TestDomains.CLOUD_INFRA, "컨테이너 오케스트레이션", null));
+
+        assertThat(created.domainLabel()).isEqualTo("클라우드 실무");
+    }
+
+    /**
+     * 관리자 "문서 검수" 화면 — {@link LlmDocumentService#getDrafts}가 그 화면의 목록 조회다.
+     * {@link LlmDocumentService#saveDraft}로 PENDING 초안 하나를 만들어 실제 흡수 경로를 태운다.
+     */
+    @Test
+    @DisplayName("이름을 바꾸면 문서 검수 화면 초안의 분야 라벨도 새 이름이다")
+    void documentDraftReviewShowsRenamedDomain() {
+        rename(TestDomains.SOFTWARE_ENGINEERING, "소프트웨어공학 실무");
+        String slug = "domain-rename-draft-" + UUID.randomUUID().toString().substring(0, 8);
+        llmDocumentService.saveDraft(TestDomains.SOFTWARE_ENGINEERING,
+                new GeneratedDocumentItem("제목", slug, "# 제목\n\n## 무엇인가\n정의.", List.of()),
+                "test-model");
+
+        PageResponse<LlmDocumentDraftResponse> drafts =
+                llmDocumentService.getDrafts(DraftStatus.PENDING, PageRequest.of(0, 200));
+        LlmDocumentDraftResponse draft = drafts.content().stream()
+                .filter(d -> d.slug().equals(slug)).findFirst().orElseThrow();
+
+        assertThat(draft.domainName()).isEqualTo("소프트웨어공학 실무");
+    }
+
+    /**
+     * 관리자 "문제 검수" 화면 — {@link LlmProblemService#getDrafts}가 그 화면의 목록 조회다.
+     * 초안은 저장소에 바로 넣는다 — {@link LlmProblemService#saveDrafts}는 품질 규칙
+     * ({@code ProblemItemRule})에 걸리면 조용히 건너뛰므로, 이름 표기만 확인하는 이 테스트에서는
+     * 그 판정이 결과를 흔들 이유가 없다.
+     */
+    @Test
+    @DisplayName("이름을 바꾸면 문제 검수 화면 초안의 분야 라벨도 새 이름이다")
+    void problemDraftReviewShowsRenamedDomain() {
+        rename(TestDomains.LANGUAGE_RUNTIME, "언어·런타임 실무");
+        GeneratedProblemDraft draft = problemDraftRepository.save(GeneratedProblemDraft.pending(
+                TestDomains.LANGUAGE_RUNTIME, Difficulty.BEGINNER, ProblemType.OX,
+                "제목", "지문 " + UUID.randomUUID(), "O", "해설입니다.", null,
+                "test-model", null, null, null));
+
+        PageResponse<LlmDraftResponse> drafts = llmProblemService.getDrafts(
+                DraftStatus.PENDING, TestDomains.LANGUAGE_RUNTIME, null, null, PageRequest.of(0, 200));
+        LlmDraftResponse response = drafts.content().stream()
+                .filter(d -> d.id().equals(draft.getId())).findFirst().orElseThrow();
+
+        assertThat(response.domainLabel()).isEqualTo("언어·런타임 실무");
     }
 
     /* ── 도우미 ─────────────────────────────────────────────── */
