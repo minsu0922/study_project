@@ -8,6 +8,7 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
+import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.TopicQueue;
@@ -1631,5 +1632,64 @@ class DraftGeneratorCliTest {
                 only, null);
 
         assertThat(DraftGeneratorCli.editionFor(file, Difficulty.ADVANCED)).isSameAs(only);
+    }
+
+    /* ── 후보 분야의 폴백 조건(최종 리뷰 Important 3) ─────────────────────────
+     *
+     * 전에는 "켜진 분야 0개"여도 yml 8개로 폴백했다. 같은 상태를 앱(LlmProblemService)은
+     * enum 전체로 읽어, 분야를 다 꺼서 배치를 멈추려 한 관리자는 배치가 조용히 yml 8개로
+     * 계속 도는 것을 봤다. 이제 yml은 파일이 <없을 때만>이고, 켜진 0개는 빈 목록 → 전체다. */
+
+    private static final String YML_BATCH_DOMAINS =
+            "NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK";
+
+    @Test
+    @DisplayName("파일은 있는데 켜진 분야가 0개면 yml이 아니라 전체로 간다 — 앱과 같은 답이어야 한다")
+    void allDisabledFileWidensToAllDomainsNotYml(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
+            throws Exception {
+        java.nio.file.Files.writeString(dir.resolve(DomainSettings.FILE_NAME), """
+                {"note":"","domains":[
+                  {"domain":"NETWORK","enabled":false,"sortOrder":0,"displayName":"네트워크","hint":null},
+                  {"domain":"OS","enabled":false,"sortOrder":1,"displayName":"운영체제","hint":null}
+                ]}""");
+        DomainSettings settings = DomainSettings.read(dir);
+
+        List<Domain> candidates = DraftGeneratorCli.resolveBatchDomains(settings, YML_BATCH_DOMAINS);
+
+        assertThat(candidates)
+                .as("yml 8개로 가면 CLI와 앱이 같은 상태에서 다른 분야를 고른다")
+                .isEmpty();
+        // 빈 목록이 실제로 <전체>로 넓어지는지까지 본다 — 비어 있다는 것만 보면, 누가
+        // GenerationSchedule의 보정을 지웠을 때 여기서는 모른다. 전체 11개 순환이면
+        // yml에 없는 분야(CLOUD_INFRA 등)도 언젠가 나와야 한다.
+        java.util.Set<Domain> seen = java.util.EnumSet.noneOf(Domain.class);
+        LocalDate start = LocalDate.of(2026, 1, 1);
+        for (int i = 0; i < 400; i++) {
+            seen.add(GenerationSchedule.planFor(start.plusDays(i), candidates, null).domain());
+        }
+        assertThat(seen).contains(Domain.CLOUD_INFRA, Domain.INTEGRATED, Domain.SOFTWARE_ENGINEERING);
+    }
+
+    @Test
+    @DisplayName("파일이 없을 때만 yml 목록으로 폴백한다 — 관리 화면을 안 쓴 저장소는 예전처럼 돈다")
+    void missingFileFallsBackToYml(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) {
+        DomainSettings settings = DomainSettings.read(dir);
+
+        assertThat(DraftGeneratorCli.resolveBatchDomains(settings, YML_BATCH_DOMAINS))
+                .containsExactly(Domain.NETWORK, Domain.OS, Domain.DATABASE, Domain.DS_ALGORITHM,
+                        Domain.SYSTEM_DESIGN, Domain.SECURITY, Domain.LANGUAGE_RUNTIME, Domain.BACKEND_FRAMEWORK);
+    }
+
+    @Test
+    @DisplayName("켜진 분야가 있으면 파일 순서를 그대로 쓴다")
+    void enabledFileDomainsWin(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        java.nio.file.Files.writeString(dir.resolve(DomainSettings.FILE_NAME), """
+                {"note":"","domains":[
+                  {"domain":"OS","enabled":true,"sortOrder":0,"displayName":"운영체제","hint":null},
+                  {"domain":"NETWORK","enabled":false,"sortOrder":1,"displayName":"네트워크","hint":null}
+                ]}""");
+
+        assertThat(DraftGeneratorCli.resolveBatchDomains(DomainSettings.read(dir), YML_BATCH_DOMAINS))
+                .containsExactly(Domain.OS);
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Domain;
 import project.study.study_project.llm.service.DomainSettingService;
@@ -174,6 +175,52 @@ class AdminDomainSettingIntegrationTest {
 
     /* ── 최종 리뷰 수정(2026-09-22) ─────────────────────────────────── */
 
+    /**
+     * <b>마지막으로 켜진 분야는 끌 수 없다</b>(Important 3).
+     *
+     * <p>전부 꺼진 상태를 CLI는 yml 8개로, 앱은 enum 전체로 읽어 배치가 조용히 계속 돌았다.
+     * 배치를 멈추는 스위치는 {@code batch-enabled} 하나이므로 이 상태 자체를 못 만들게 막는다.
+     * 개발 DB의 실제 켜짐 상태에 기대지 않으려고, OS 하나만 켜진 상태를 먼저 만든다
+     * ({@code @Transactional}이 되돌린다).
+     */
+    @Test
+    @DisplayName("마지막으로 켜진 분야를 끄면 400 — 배치를 멈추는 수단은 batch-enabled 하나다")
+    void cannotDisableLastEnabledDomain() throws Exception {
+        leaveOnlyEnabled(Domain.OS);
+
+        String body = mockMvc.perform(put("/api/admin/domain-settings/OS")
+                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"enabled":false,"displayName":"운영체제","hint":null}"""))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+
+        assertThat(body).contains("DOMAIN_002").contains("batch-enabled");
+        assertThat(domainSettingService.batchDomains()).containsExactly(Domain.OS);
+    }
+
+    @Test
+    @DisplayName("다른 분야가 켜져 있으면 끌 수 있고, 마지막 분야의 이름·힌트는 그대로 고칠 수 있다")
+    void lastDomainRuleOnlyBlocksTurningOff() throws Exception {
+        leaveOnlyEnabled(Domain.OS);
+
+        // 켜진 채로 이름만 고치는 것은 막지 않는다 — 막는 것은 "변경 결과 0개"뿐이다.
+        mockMvc.perform(put("/api/admin/domain-settings/OS")
+                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"enabled":true,"displayName":"운영체제2","hint":"프로세스 위주"}"""))
+                .andExpect(status().isOk());
+        // 이미 꺼진 분야를 꺼진 채로 고치는 것도 막지 않는다(켜진 OS가 남아 있다).
+        mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
+                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"enabled":false,"displayName":"네트워크","hint":null}"""))
+                .andExpect(status().isOk());
+    }
+
     @Test
     @DisplayName("화면 이름이 40자를 넘으면 400 — 전에는 DB 오류(500)로 떨어졌다")
     void displayNameHasMaxLength() throws Exception {
@@ -214,6 +261,18 @@ class AdminDomainSettingIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer())
                         .param("days", "60"))
                 .andExpect(status().isOk());
+    }
+
+    /** {@code keep} 하나만 켜진 상태를 만든다. 순서가 중요하다 — 먼저 켜 둬야 나머지를 끌 때 "마지막"에 안 걸린다. */
+    private void leaveOnlyEnabled(Domain keep) {
+        domainSettingService.findAll().stream()
+                .filter(s -> s.getDomain() == keep)
+                .forEach(s -> domainSettingService.edit(keep,
+                        new AdminDomainSettingRequest(true, s.getDisplayName(), s.getHint())));
+        domainSettingService.findAll().stream()
+                .filter(s -> s.getDomain() != keep && s.isEnabled())
+                .forEach(s -> domainSettingService.edit(s.getDomain(),
+                        new AdminDomainSettingRequest(false, s.getDisplayName(), s.getHint())));
     }
 
     private String bearer() {

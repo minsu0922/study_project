@@ -168,14 +168,11 @@ public final class DraftGeneratorCli {
         Path outDir = resolveOutDir(opts);
 
         // 분야 설정 파일 → 관리 화면이 켜 둔 분야를 sortOrder 순으로 후보로 삼는다.
-        // 파일이 없거나 비어 있으면(관리 화면을 아직 한 번도 안 썼거나, 전부 꺼 둔 경우)
-        // 지금까지처럼 application.yml의 batch-domains로 폴백한다 — 그것도 비면
-        // GenerationSchedule이 전체 분야로 보정한다. DomainSettings.read는 파일이 깨져도
-        // 절대 예외를 던지지 않으므로(클래스 Javadoc) 여기서 try-catch가 필요 없다.
+        // 폴백 조건은 resolveBatchDomains 주석에 — 파일이 "없을 때만" yml로 간다.
+        // DomainSettings.read는 파일이 깨져도 절대 예외를 던지지 않으므로(클래스 Javadoc)
+        // 여기서 try-catch가 필요 없다.
         DomainSettings settings = DomainSettings.read(outDir);
-        List<Domain> batchDomains = settings.batchDomains().isEmpty()
-                ? parseDomains((String) generation.get("batch-domains"))
-                : settings.batchDomains();
+        List<Domain> batchDomains = resolveBatchDomains(settings, (String) generation.get("batch-domains"));
         // 주기의 0일차로 삼을 날. 값이 없으면 에포크 = 앵커가 없던 시절과 같은 위상이다.
         LocalDate cycleAnchor = GenerationSchedule.parseAnchor((String) generation.get("cycle-anchor"));
 
@@ -1577,6 +1574,29 @@ public final class DraftGeneratorCli {
     }
 
     /** "NETWORK,OS,..." → enum 목록. 비어 있으면 빈 목록(스케줄이 전체 도메인으로 보정한다). */
+    /**
+     * 날짜 순환의 후보 분야 — 분야 설정 파일이 먼저, yml {@code batch-domains}는 <b>파일이 없을 때만</b>.
+     *
+     * <p><b>폴백 조건을 {@link DomainSettings#isEmpty()} 하나로 좁혔다</b>(최종 리뷰 Important 3).
+     * 전에는 "켜진 분야가 0개"여도 yml 8개로 갔다. 그러면 파일은 있는데 전부 꺼진 상태를
+     * CLI는 yml 8개로, 앱({@code LlmProblemService})은 enum 전체로 읽어 두 쪽이 같은 상태에서
+     * 다른 답을 냈다. 지금은:
+     * <ul>
+     *   <li>파일 없음·깨짐·빈 배열({@code isEmpty()}) → yml {@code batch-domains}. 관리 화면을 한 번도
+     *       안 쓴 저장소가 예전처럼 돌게 하는 자리다.
+     *   <li>파일은 있는데 켜진 분야가 0개 → <b>빈 목록을 그대로</b> 넘긴다. {@code GenerationSchedule}이
+     *       빈 목록을 전체 분야로 넓히므로 앱과 같은 결과가 된다. 관리 화면은 마지막 분야를 끄지
+     *       못하게 막으므로(DOMAIN_002) 이 경우는 사람이 파일을 손으로 고쳤을 때만 생긴다.
+     * </ul>
+     * yml이 비어도 빈 목록이 되고, 역시 {@code GenerationSchedule}이 전체로 넓힌다.
+     *
+     * <p>배치를 멈추는 수단은 {@code batch-enabled} 하나다 — "분야를 전부 끄면 멈춘다"는 뜻을
+     * 여기서 만들지 않는다(두 번째 정지 수단이 생기면 둘의 뜻이 또 어긋난다).
+     */
+    static List<Domain> resolveBatchDomains(DomainSettings settings, String ymlBatchDomains) {
+        return settings.isEmpty() ? parseDomains(ymlBatchDomains) : settings.batchDomains();
+    }
+
     private static List<Domain> parseDomains(String csv) {
         if (csv == null || csv.isBlank()) {
             return List.of();

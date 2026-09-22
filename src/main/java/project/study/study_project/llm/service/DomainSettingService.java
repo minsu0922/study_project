@@ -261,12 +261,27 @@ public class DomainSettingService implements DomainHintsProvider {
      * ({@link DomainSettingExporter}가 {@code AFTER_COMMIT}에 듣는다) — 그래서 <b>고칠 때마다
      * 커밋이 필요</b>하고, 커밋하지 않으면 클라우드 배치는 여전히 옛 값으로 돈다.
      *
+     * <p><b>마지막으로 켜진 분야는 끌 수 없다</b>(최종 리뷰 Important 3). 전부 꺼진 상태를
+     * 세 곳이 서로 다르게 읽었다 — CLI는 yml 8개로 폴백하고, 앱은 enum 전체로 넓히고, 화면은
+     * "하나는 켜야 배치가 돈다"고 안내했다. 분야를 다 꺼서 배치를 멈추려 한 관리자는 배치가
+     * 조용히 계속 도는 것을 보게 된다. 배치를 멈추는 스위치는 이미 {@code llm.generation.batch-enabled}
+     * (워크플로의 {@code force}와 짝)로 따로 있으므로, 새 "정지 모드"를 만들기보다 이 상태 자체를
+     * 못 만들게 막는 편이 단순하다 — 정지 수단이 둘이면 둘의 뜻이 어긋나는 일이 또 생긴다.
+     *
      * @throws BusinessException DOMAIN_001 — enum에는 있는데 행이 없을 때. {@code syncWithEnum}이
      *                            기동마다 전체 분야에 행을 맞춰 두므로 정상 경로에서는 나지 않는다
+     * @throws BusinessException DOMAIN_002(400) — 이 변경으로 켜진 분야가 0개가 될 때
      */
     @Transactional
     public void edit(Domain domain, AdminDomainSettingRequest request) {
         DomainSetting setting = find(domain);
+        if (!request.enabled() && noOtherEnabled(domain)) {
+            // "변경 결과" 켜진 분야가 0개인지를 본다 — 이미 꺼진 분야의 이름만 고치는 요청은
+            // 여기 오지 않는다(다른 켜진 분야가 있으므로). 판정은 고치기 <전에> 한다:
+            // 예외가 나면 트랜잭션이 되돌리긴 하지만, 엔티티를 먼저 바꿔 두면 판정 조회가
+            // 자동 플러시로 반쯤 바뀐 상태를 읽게 된다.
+            throw new BusinessException(ErrorCode.DOMAIN_002);
+        }
         setting.edit(request.enabled(), request.displayName(), request.hint());
         log.info("분야 설정 수정: [{}] enabled={}, displayName={} — 커밋해야 다음 배치부터 반영됩니다",
                 domain, request.enabled(), request.displayName());
@@ -343,6 +358,12 @@ public class DomainSettingService implements DomainHintsProvider {
     private DomainSetting find(Domain domain) {
         return repository.findByDomain(domain)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DOMAIN_001));
+    }
+
+    /** {@code domain}을 빼고 켜진 분야가 하나도 없는지 — {@link #edit}의 "마지막 분야" 판정. */
+    private boolean noOtherEnabled(Domain domain) {
+        return repository.findAllByOrderBySortOrderAsc().stream()
+                .noneMatch(s -> s.getDomain() != domain && s.isEnabled());
     }
 
     private int indexOf(List<DomainSetting> settings, Domain domain) {
