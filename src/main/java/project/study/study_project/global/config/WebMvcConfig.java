@@ -1,8 +1,10 @@
 package project.study.study_project.global.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import project.study.study_project.global.common.StringToDomainCodeConverter;
 
 /**
  * 화면 경로 보정 — {@code /admin}·{@code /admin/}으로 들어와도 관리 대시보드가 열리게 한다.
@@ -25,5 +27,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addViewControllers(ViewControllerRegistry registry) {
         registry.addViewController("/admin").setViewName("forward:/admin/index.html");
         registry.addViewController("/admin/").setViewName("forward:/admin/index.html");
+    }
+
+    @Override
+    public void addFormatters(FormatterRegistry registry) {
+        registry.addConverter(new StringToDomainCodeConverter());
     }
 }
