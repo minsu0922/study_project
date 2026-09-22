@@ -36,19 +36,35 @@ class DomainSettingServiceTest {
      * 로컬 DB의 문제 147건이 domain_setting을 외래키로 가리키고 있어(V20) 삭제 자체가
      * DataIntegrityViolationException으로 거부된다.
      *
-     * <p>대신 기본 분야 중 <b>내용 표 다섯 곳 어디에도 행이 없는 하나</b>만 지워 "행이 없다"를
-     * 재현한다. {@code INTEGRATED}("통합시나리오")가 그 자리다 — 2026-09-22 로컬 DB 실측으로
-     * problem·document·generated_problem_draft·generated_document_draft·topic_queue 전부
-     * 0건이라 안전하게 지울 수 있고, 폴백 배치 목록(NETWORK~BACKEND_FRAMEWORK 8개)에도 없어
-     * "폴백 밖 분야는 꺼진 채로 태어난다"는 원래 검증(옛 CLOUD_INFRA 자리)도 그대로 잇는다.
+     * <p>대신 기본 분야 중 하나({@code INTEGRATED}, "통합시나리오")의 행만 지워 "행이 없다"를
+     * 재현한다. <b>비어 있다는 사실은 이 테스트가 직접 만든다</b> — "지금 로컬 DB를 재 보니
+     * 0건이더라"에 기대면, 나중에 누군가 이 분야와 무관한 이유로 INTEGRATED 문제를 하나 등록하는
+     * 순간 여기서 외래키 위반이 나고 그 실패는 분야 등록부 버그처럼 보인다(실제로는 아니다).
+     * 그래서 내용 다섯 표(problem·document·generated_problem_draft·generated_document_draft·
+     * topic_queue)에서 이 분야를 참조하는 행을 먼저 네이티브 DELETE로 지운다 — 위 orphan 삽입과
+     * 같은 방식으로, JPA 엔티티 매핑을 거치지 않고 표를 직접 다룬다. {@code @Transactional}이라
+     * 이 delete들도 테스트가 끝나면 전부 롤백된다. INTEGRATED를 고른 이유는 폴백 배치 목록
+     * (NETWORK~BACKEND_FRAMEWORK 8개)에 없어 "폴백 밖 분야는 꺼진 채로 태어난다"는 원래 검증
+     * (옛 CLOUD_INFRA 자리)을 그대로 잇기 때문이다.
      *
-     * <p>만약 이 분야에 나중에 실제 콘텐츠가 생기면 이 테스트는 <b>FK 위반으로 실패</b>한다 —
-     * 조용히 깨지는 대신 원인이 분명한 실패로 알려 주므로, 그때는 지금도 비어 있는 다른
-     * 기본 분야로 바꾸면 된다.
+     * <p><b>"폴백 목록에 든 분야는 켠 채로 태어난다" 쪽은 여기서 다루지 않는다.</b> 그 경우를
+     * 재현하려면 NETWORK처럼 폴백 목록에 든 분야의 행을 지워야 하는데, NETWORK의 문제는
+     * submission·review_item·choice 등이 물고 있어 지우려면 스키마 절반을 함께 비워야 한다 —
+     * 그 값을 얻으려고 이 통합 테스트를 무겁게 만들 이유가 없다. 그 규칙은
+     * {@link DomainSettingServiceSyncTest}가 저장소를 가짜로 두고 DB 없이 확인한다.
      */
     @Test
     @DisplayName("기본 분야에 있는데 행이 없으면 만든다 — 폴백 목록 밖 분야는 꺼진 채로")
     void createsMissingRows() {
+        for (String table : List.of("problem", "document", "generated_problem_draft",
+                "generated_document_draft", "topic_queue")) {
+            em.createNativeQuery("DELETE FROM " + table + " WHERE domain = :domain")
+                    .setParameter("domain", TestDomains.INTEGRATED.value())
+                    .executeUpdate();
+        }
+        em.flush();
+        em.clear();
+
         repository.deleteById(TestDomains.INTEGRATED);
 
         service.syncWithDefaults();
