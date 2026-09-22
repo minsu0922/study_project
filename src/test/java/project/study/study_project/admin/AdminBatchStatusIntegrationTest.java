@@ -8,6 +8,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminBatchStatus;
+import project.study.study_project.admin.dto.AdminDomainSettingRequest;
+import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.admin.service.AdminBatchService;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.Domain;
@@ -69,6 +71,9 @@ class AdminBatchStatusIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private DomainSettingService domainSettingService;
 
     /**
      * 매 테스트마다 폴더를 비운다.
@@ -473,6 +478,38 @@ class AdminBatchStatusIntegrationTest {
         assertThat(after.pending()).isEqualTo(before.pending() + 1);
         // 합이 맞아야 한다 — 화면이 이 셋으로 막대를 그리므로 어긋나면 막대가 100%를 넘는다.
         assertThat(after.generated()).isEqualTo(after.approved() + after.rejected() + after.pending());
+    }
+
+    /**
+     * <b>배치 현황도 분야 설정 테이블의 순서로 돈다</b>(최종 리뷰 Important 1, 2026-09-22).
+     *
+     * <p>이 서비스만 yml {@code batch-domains}를 {@code @Value}로 받아 달력을 그렸다. 설정 화면에서
+     * 순서를 바꾸고 커밋하면 배치와 미리보기는 새 순서로 도는데 이 화면만 옛 순서를 보여 줬다.
+     *
+     * <p>OS 하나만 켠다 — yml 8개로 계산하면 24일 달력에 여러 분야가 섞이므로, 칸이 전부 OS인지로
+     * 어느 목록을 읽었는지가 갈린다. 저장 <직후> 같은 빈으로 다시 부르는 것도 본다 — 목록을 필드에
+     * 굳혀 두면 재시작 전까지 옛 순서가 남는다. 폴더를 비웠으므로 근거 문서·결과 파일이 칸의 분야를
+     * 덮어쓰지 않는다(그 우선순위는 위 두 테스트가 따로 본다).
+     */
+    @Test
+    @DisplayName("오늘 카드와 달력은 분야 설정 테이블을 읽는다 — yml 순서가 아니라")
+    void usesDomainSettingTableNotYml() {
+        domainSettingService.findAll().stream()
+                .filter(s -> s.getDomain() == Domain.OS)
+                .forEach(s -> domainSettingService.edit(Domain.OS,
+                        new AdminDomainSettingRequest(true, s.getDisplayName(), s.getHint())));
+        domainSettingService.findAll().stream()
+                .filter(s -> s.getDomain() != Domain.OS && s.isEnabled())
+                .forEach(s -> domainSettingService.edit(s.getDomain(),
+                        new AdminDomainSettingRequest(false, s.getDisplayName(), s.getHint())));
+
+        AdminBatchStatus status = adminBatchService.getStatus();
+
+        assertThat(status.plan().cycleDomain()).isEqualTo(Domain.OS);
+        assertThat(status.calendar())
+                .extracting(AdminBatchStatus.DayCell::domain)
+                .as("yml 8개로 계산했다면 24일 동안 여러 분야가 섞인다")
+                .containsOnly(Domain.OS);
     }
 
     /** 달력에서 그 날짜의 칸을 꺼낸다. 없으면 창(24일)이 잘못 잡힌 것이므로 단언으로 알린다. */

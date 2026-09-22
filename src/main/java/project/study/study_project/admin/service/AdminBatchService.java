@@ -16,6 +16,7 @@ import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
+import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.GenerationSchedule;
@@ -79,6 +80,20 @@ public class AdminBatchService {
     private final GeneratedDocumentDraftRepository generatedDocumentDraftRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 날짜 순환이 도는 분야와 그 순서의 출처 — 분야 설정 화면이 고치는 {@code domain_setting} 테이블.
+     *
+     * <p>전에는 yml {@code batch-domains}를 {@code @Value}로 받아 {@code planFor}를 돌렸다. 그 값은
+     * 이제 새 행의 초기값이자 파일이 없을 때의 폴백일 뿐이라, 설정 화면에서 순서를 바꾸고 커밋하면
+     * 배치와 설정 미리보기는 새 순서로 도는데 <b>이 화면만 옛 순서</b>를 보여 줬다(최종 리뷰
+     * Important 1). 이 화면의 존재 이유가 "설정과 실제가 어긋난 것을 한눈에 보는 것"인데 정작 이
+     * 화면이 어긋나 있었다.
+     *
+     * <p>목록을 필드에 굳히지 않고 {@link #getStatus()}가 불릴 때마다 읽는다
+     * ({@code LlmProblemService}와 같은 판단 — 굳히면 재시작해야 반영된다).
+     */
+    private final DomainSettingService domainSettingService;
+
     @Value("${llm.generation.batch-enabled:true}")
     private boolean batchEnabled;
 
@@ -93,11 +108,6 @@ public class AdminBatchService {
     // 꺼내 쓰고 싶지만 @Value는 상수 표현식만 받으므로, 어긋나지 않게 테스트가 둘을 대조한다.
     @Value("${llm.generation.batch-count-by-difficulty:BEGINNER=7,INTERMEDIATE=5,ADVANCED=3}")
     private String batchCountByDifficulty;
-
-    // 기본값 문자열이 AdminStatsService·LlmProblemService와 같아야 한다. 갈라지면 화면이 말하는
-    // "이번 주기의 분야"와 배치가 실제로 고르는 분야가 어긋난다(그쪽 주석의 판단을 따른다).
-    @Value("${llm.generation.batch-domains:NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK}")
-    private List<Domain> batchDomains;
 
     // 주기의 0일차(2026-09-02 신설). 이 값이 CLI가 읽는 것과 어긋나면 <b>화면이 거짓말을 한다</b> —
     // "오늘은 문서일"이라고 띄우는데 배치는 고급 문제를 만든다. 기본값을 에포크로 둔 것도 같은
@@ -115,7 +125,13 @@ public class AdminBatchService {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         Path dir = Path.of(importDir);
 
-        AdminBatchStatus.TodayPlan plan = planOf(today, dir);
+        // 분야 순서는 <지금> 테이블에서 읽는다(domainSettingService 필드 주석). 한 번 읽어 오늘 카드와
+        // 달력에 같은 목록을 넘긴다 — 따로 읽으면 그 사이 저장이 끼어들 때 한 화면에 두 순서가 섞인다.
+        // 빈 목록 보정은 따로 하지 않는다: GenerationSchedule.planFor가 빈 목록을 전체로 넓히고,
+        // 그게 LlmProblemService가 빈 목록을 enum 전체로 되돌리는 것과 같은 결과다.
+        List<Domain> batchDomains = domainSettingService.batchDomains();
+
+        AdminBatchStatus.TodayPlan plan = planOf(today, dir, batchDomains);
         // 개수는 <오늘 난이도의> 값을 싣는다(2026-09-05). 난이도별 배분이 생긴 뒤로도
         // batch-count를 그대로 보여 주면 초급 날에도 화면은 "5건"이라 말하는데 실제로는 7건이
         // 나온다 — 이 화면의 존재 이유가 "설정과 실제가 어긋난 것을 한눈에 보는 것"이라
@@ -126,7 +142,7 @@ public class AdminBatchService {
         return new AdminBatchStatus(
                 batchEnabled, batchType, count, today,
                 plan,
-                calendar(dir, today),
+                calendar(dir, today, batchDomains),
                 harvest(today),
                 generatedProblemDraftRepository.countByStatus(DraftStatus.PENDING),
                 generatedDocumentDraftRepository.countByStatus(DraftStatus.PENDING),
@@ -165,7 +181,7 @@ public class AdminBatchService {
      * 무엇보다 <b>파일 이름 규칙을 배치와 똑같이 적는</b> 코드가 된다(접미사 파일은 세지 않는다는
      * 규칙이 자연히 지켜진다 — 이름이 정확히 {@code <날짜>.json}인 것만 묻기 때문).
      */
-    private List<AdminBatchStatus.DayCell> calendar(Path dir, LocalDate today) {
+    private List<AdminBatchStatus.DayCell> calendar(Path dir, LocalDate today, List<Domain> batchDomains) {
         LocalDate start = GenerationSchedule.planFor(today, batchDomains, cycleAnchor)
                 .documentDate()
                 .minusDays((long) GenerationSchedule.CYCLE_DAYS * PAST_CYCLES);
@@ -419,7 +435,7 @@ public class AdminBatchService {
      * {@code alignDomainWithDocument}) — 주기가 가리킨 분야와 문서의 분야가 다르면 문서 쪽으로
      * 맞춘다. 화면이 주기 분야만 보여 주면 실제로 나오는 것과 달라지므로 <b>둘 다</b> 싣는다.
      */
-    private AdminBatchStatus.TodayPlan planOf(LocalDate today, Path dir) {
+    private AdminBatchStatus.TodayPlan planOf(LocalDate today, Path dir, List<Domain> batchDomains) {
         GenerationSchedule.Plan plan = GenerationSchedule.planFor(today, batchDomains, cycleAnchor);
         // dayInCycle을 다시 계산하지 않고 <문서 날짜와의 차이>로 얻는다. 주기 길이를 여기서 또
         // 나눠 세면 GenerationSchedule의 계산과 갈라질 수 있고, 그때 화면만 조용히 틀린다.
