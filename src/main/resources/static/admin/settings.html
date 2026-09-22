@@ -29,26 +29,34 @@ try {
          사라지지 않는다</b> — showSavedNotice 주석 참고. -->
     <div id="sMessage"></div>
 
-    <!-- 이 화면의 본체. 체크·순서·이름·힌트를 줄마다 고치고, 줄 안에서 곧장 저장한다
-         (task-9의 PUT /{domain}이 분야 하나만 받으므로 일괄 저장 버튼을 두지 않는다 —
-         버튼이 하나면 "무엇을 저장했는지"가 흐려진다). -->
-    <div class="card">
-      <h3>분야 목록 <span class="meta">(켜짐·순서·이름·힌트 — 줄마다 저장)</span></h3>
-      <p class="meta">
-        순서는 <b>누르는 즉시</b> 반영된다(TopicQueue의 순서 이동과 같다). 켜짐·이름·힌트는
-        <b>저장을 눌러야</b> 반영된다 — 저장 전 상태는 아래 미리보기에서 먼저 확인할 수 있다.
-      </p>
-      <div id="sList">불러오는 중…</div>
-    </div>
+    <!-- 좌: 분야 목록 / 우: 다음 7일 미리보기(sticky). 두 칸으로 나눈 이유는
+         css/style.css의 "분야 설정 화면" 절 — 세로로 쌓으면 미리보기가 목록 맨 아래에 깔려,
+         체크를 바꾼 결과를 보려고 스크롤을 끝까지 내려야 했다. -->
+    <div class="settings-layout">
 
-    <!-- 순서가 곧 날짜 순환이라, 한 줄만 올려도 앞으로 며칠 동안 무엇이 나올지가 통째로
-         밀린다. 예전에 순환이 분야 두 개에 갇혀 나머지 여섯이 개념 문서를 영영 못 받던
-         사고가 여기서 났다(DraftGeneratorCli 주석) — 그 일이 다시 나면 저장 전에 보이게
-         둔다. 그래서 저장 버튼(줄마다 있는 그 버튼) 옆이 아니라 <b>화면에 늘 떠 있는</b>
-         자리에 둔다 — 체크·순서를 바꿀 때마다 곧장 다시 그려야 그 순간에 보인다. -->
-    <div class="card">
-      <h3>다음 7일 미리보기 <span class="meta">(저장 전, 화면에 지금 놓인 순서·켜짐 기준)</span></h3>
-      <div id="sPreview">불러오는 중…</div>
+      <!-- 이 화면의 본체. 분야 하나가 한 줄이고, 이름·힌트는 "편집"을 눌러 그 줄 아래로 펼친다.
+           저장은 줄마다 따로 한다(PUT /{domain}이 분야 하나만 받는다 — 버튼이 하나면
+           "무엇을 저장했는지"가 흐려진다). 저장 버튼은 그 줄에 바뀐 것이 있을 때만 뜬다. -->
+      <div class="card">
+        <h3>분야 목록</h3>
+        <p class="meta">
+          <b>순서(▲▼)</b>는 누르는 즉시 반영됩니다. <b>켜기·이름·힌트</b>는 줄에 뜨는 <b>저장</b>을 눌러야 반영됩니다.
+          번호는 순환에서 몇 번째인지이고, 꺼진 분야는 순환에 끼지 않아 번호가 없습니다.
+        </p>
+        <div id="sList">불러오는 중…</div>
+      </div>
+
+      <!-- 순서가 곧 날짜 순환이라, 한 줄만 올려도 앞으로 며칠 동안 무엇이 나올지가 통째로
+           밀린다. 예전에 순환이 분야 두 개에 갇혀 나머지 여섯이 개념 문서를 영영 못 받던
+           사고가 여기서 났다(DraftGeneratorCli 주석) — 그 일이 다시 나면 저장 전에 보이게
+           둔다. 그래서 <b>화면에 늘 떠 있는</b> 오른쪽 칸에 둔다 — 체크·순서를 바꿀 때마다
+           곧장 다시 그려야 그 순간에 보인다. -->
+      <div class="card settings-preview">
+        <h3>다음 7일</h3>
+        <p class="meta">저장 전이라도 지금 화면의 켜짐·순서로 계산합니다.</p>
+        <div id="sPreview">불러오는 중…</div>
+      </div>
+
     </div>
   </div>
 </main>
@@ -99,78 +107,142 @@ function renderSettings() {
   el.innerHTML = settingsRows
     .map((row, i) => domainRowHtml(row, i === 0, i === settingsRows.length - 1))
     .join("");
+  renumber();
 }
 
 /**
- * 줄 하나. 체크(enabled)·순서 이동(▲▼)·이름·힌트·프롬프트 미리보기·저장을 한 덩이로 둔다.
+ * 줄 하나 — 위는 늘 보이는 한 줄(.domain-line), 아래는 "편집"을 눌러야 펼치는 칸(.domain-edit).
  *
- * <p><b>&lt;table&gt;로 가두지 않은 이유.</b> 힌트 입력칸(여러 줄)과 그 아래 프롬프트
- * 미리보기 문장까지 붙으면 표 셀 하나에 담기 애매해진다 — 셀은 값 하나를 위한 자리라,
- * 여러 단짜리 내용을 넣으면 줄바꿈이 셀마다 다르게 깨진다. 카드 안에 쌓는 줄(.domain-row,
- * css/style.css 끝부분)로 두면 줄마다 필요한 만큼 늘어난다.
+ * <p><b>왜 둘로 나눴나(2026-09-22).</b> 처음에는 이름·힌트 입력칸·프롬프트 문장·저장 버튼을
+ * 분야마다 다 펼쳐 둬서 한 분야가 여섯 줄 남짓이었고, 열한 분야면 화면 서너 장이었다.
+ * 그런데 자주 만지는 것은 켜기와 순서뿐이고 이름·힌트는 가끔이다. 자주 만지는 것만 줄에 두면
+ * 열한 줄이 한 화면에 들어오고, 옆의 7일 미리보기와 나란히 보인다.
+ *
+ * <p><b>접혀 있어도 입력칸은 DOM에 둔다.</b> 저장({@link saveDomain})은 이 줄의 입력칸 값을
+ * 읽는다. 펼칠 때마다 새로 그리면 접었다 편 사이에 고치던 값이 날아간다 — 그래서 CSS로만 숨긴다.
+ *
+ * <p><b>저장 버튼은 바뀐 것이 있을 때만 뜬다.</b> 열한 줄에 저장 버튼이 늘 떠 있으면
+ * "어느 줄을 저장해야 하나"가 안 보인다. 바뀐 줄에만 뜨고, 그 줄에 왼쪽 막대가 붙는다
+ * ({@link refreshRowState}).
  */
 function domainRowHtml(row, isFirst, isLast) {
   const hint = row.hint || "";
   const remain = 500 - hint.length;
   const preview = row.promptPreview
     ? escapeHtml(row.promptPreview)
-    : "(아직 없음)";
+    : "(힌트 없음 — 프롬프트에 아무것도 붙지 않습니다)";
+  const summary = hint
+    ? `<span class="domain-hint-summary" title="${escapeHtml(hint)}">${escapeHtml(hint)}</span>`
+    : `<span class="domain-hint-summary empty">힌트 없음</span>`;
 
   return `
-    <div class="domain-row" data-code="${row.code}">
-      <div class="domain-row-head">
-        <label>
-          <input type="checkbox" data-field="enabled" ${row.enabled ? "checked" : ""}
-                 aria-label="${escapeHtml(row.displayName)} 배치 후보로 켜기">
-          <b>${escapeHtml(row.displayName)}</b> <span class="meta">(${escapeHtml(row.code)})</span>
-        </label>
-        <span class="row-actions">
+    <div class="domain-row${row.enabled ? "" : " off"}" data-code="${row.code}">
+      <div class="domain-line">
+        <input type="checkbox" data-field="enabled" ${row.enabled ? "checked" : ""}
+               aria-label="${escapeHtml(row.displayName)} 배치 순환에 넣기">
+        <span class="row-actions move">
           <button type="button" class="btn-outline" data-action="up"
                   ${isFirst ? 'disabled title="맨 위입니다"' : 'title="한 칸 위로(즉시 반영)"'}>▲</button>
           <button type="button" class="btn-outline" data-action="down"
                   ${isLast ? 'disabled title="맨 아래입니다"' : 'title="한 칸 아래로(즉시 반영)"'}>▼</button>
         </span>
+        <span class="domain-pos" data-role="pos" title="순환에서 몇 번째인지"></span>
+        <span class="domain-name" title="${escapeHtml(row.displayName)} (${escapeHtml(row.code)})">${escapeHtml(row.displayName)}</span>
+        ${summary}
+        <span class="row-actions">
+          <button type="button" data-action="save" hidden>저장</button>
+          <button type="button" class="btn-outline" data-action="edit" aria-expanded="false">편집</button>
+        </span>
       </div>
 
-      <div class="domain-row-fields">
+      <div class="domain-edit">
         <div class="field">
-          <label>이름</label>
+          <label>이름 <span class="code">— 코드 ${escapeHtml(row.code)} (배치 수동 실행의 domain 칸에 쓰는 값)</span></label>
           <input type="text" data-field="displayName" value="${escapeHtml(row.displayName)}">
         </div>
         <div class="field">
           <label>힌트 <span class="hint-remain${remain < 0 ? " over" : ""}" data-role="remain">${remain}자 남음</span></label>
           <!-- 일부러 maxlength를 안 둔다 — 500자를 넘겨 <b>타이핑까지는</b> 허용하고,
                넘은 순간 남은 글자 수를 빨갛게 바꾸고 저장 버튼을 잠가 "서버가 막기 전에"
-               한계가 보이게 한다(브리프 요구사항). maxlength로 조용히 잘라내면 이 신호가 없다. -->
-          <textarea data-field="hint" rows="2">${escapeHtml(hint)}</textarea>
+               한계가 보이게 한다. maxlength로 조용히 잘라내면 이 신호가 없다. -->
+          <textarea data-field="hint" rows="3">${escapeHtml(hint)}</textarea>
+        </div>
+        <!-- promptPreview를 원문 그대로 보여준다(AdminDomainSettingResponse Javadoc) — 앞 공백과
+             괄호까지 포함한 값이라, 여기서 새로 조립하지 않고 서버 값을 그대로 옮긴다.
+             이 값은 마지막으로 <b>저장된</b> 상태 기준이다 — 지금 타이핑 중인 값이 아니라
+             실제로 지금 모델에게 보내는 값을 보여주는 것이 이 칸의 목적이다. -->
+        <div class="domain-row-preview">
+          지금 프롬프트에 붙는 문장: <code>${preview}</code>
         </div>
       </div>
-
-      <!-- promptPreview를 원문 그대로 보여준다(AdminDomainSettingResponse Javadoc) — 앞 공백과
-           괄호까지 포함한 값이라, 여기서 새로 조립하지 않고 서버 값을 그대로 옮긴다.
-           이 값은 마지막으로 <b>저장된</b> 상태 기준이다 — 지금 입력칸에 타이핑 중인 값이
-           아니라 실제로 지금 배치가 모델에게 보낼 값을 보여주는 것이 이 칸의 목적이다. -->
-      <div class="domain-row-preview">
-        프롬프트에 이렇게 실립니다: <code>${preview}</code>
-      </div>
-
-      <div class="row-actions" style="margin-top:8px">
-        <button type="button" data-action="save">저장</button>
-      </div>
     </div>`;
+}
+
+/**
+ * 켜진 분야에만 순환 번호를 매긴다. 꺼진 분야는 "–".
+ *
+ * <p>목록 위치가 아니라 <b>순환 위치</b>를 보여 주는 이유: 이 화면에서 순서가 뜻을 갖는 곳은
+ * 순환뿐이다. 꺼진 줄까지 세어 번호를 매기면 "3번인데 왜 셋째 날에 안 나오지"가 된다.
+ * 체크를 바꿀 때마다(저장 전이라도) 다시 센다 — 옆 미리보기와 같은 기준이어야 한다.
+ */
+function renumber() {
+  let n = 0;
+  document.querySelectorAll(".domain-row").forEach(row => {
+    const on = row.querySelector('[data-field="enabled"]').checked;
+    row.querySelector('[data-role="pos"]').textContent = on ? String(++n) : "–";
+  });
+}
+
+/**
+ * 이 줄에 저장 안 한 변경이 있는지 따져, 저장 버튼·왼쪽 막대·흐림을 맞춘다.
+ *
+ * <p>기준은 마지막으로 불러온 서버 값(settingsRows)이다. 한 번 바꿨다가 되돌리면
+ * 다시 "변경 없음"이 된다 — 버튼이 한 번 뜨면 계속 남는 식이면 무엇이 진짜 바뀐 줄인지
+ * 가려낼 수 없다.
+ */
+function refreshRowState(row) {
+  const orig = settingsRows.find(r => r.code === row.dataset.code);
+  const enabled = row.querySelector('[data-field="enabled"]').checked;
+  const name = row.querySelector('[data-field="displayName"]').value.trim();
+  const hint = row.querySelector('[data-field="hint"]').value;
+  const dirty = enabled !== orig.enabled
+    || name !== orig.displayName
+    || hint !== (orig.hint || "");
+
+  row.classList.toggle("dirty", dirty);
+  row.classList.toggle("off", !enabled);
+  const saveBtn = row.querySelector('button[data-action="save"]');
+  saveBtn.hidden = !dirty;
+  saveBtn.disabled = hint.length > 500;
+}
+
+/** 편집칸을 펼치거나 접는다. 한 번에 한 줄만 펼친다 — 여럿 펼치면 다시 세로로 길어진다. */
+function toggleEdit(row, btn) {
+  const opening = !row.classList.contains("open");
+  document.querySelectorAll(".domain-row.open").forEach(r => {
+    r.classList.remove("open");
+    r.querySelector('button[data-action="edit"]').setAttribute("aria-expanded", "false");
+  });
+  if (opening) {
+    row.classList.add("open");
+    btn.setAttribute("aria-expanded", "true");
+    row.querySelector('[data-field="hint"]').focus();
+  }
 }
 
 /** 목록 컨테이너에 이벤트를 한 번만 건다(위임) — 매 렌더링마다 다시 걸 필요가 없다. */
 function wireSettingsList() {
   const el = document.getElementById("sList");
 
-  // 힌트를 입력하는 중 남은 글자 수를 바로 갱신한다. change가 아니라 input인 이유는
-  // "다 입력하고 포커스를 옮겨야" 보이면 500자를 이미 넘긴 뒤에야 알기 때문이다.
+  // 입력하는 중에 곧장 상태를 맞춘다. change가 아니라 input인 이유는 "다 입력하고 포커스를
+  // 옮겨야" 보이면 500자를 이미 넘긴 뒤에야 알고, 저장 버튼도 그제야 뜨기 때문이다.
   el.addEventListener("input", e => {
-    if (e.target.dataset.field === "hint") updateRemain(e.target);
+    const field = e.target.dataset.field;
+    if (field === "hint") updateRemain(e.target);
+    if (field === "hint" || field === "displayName") refreshRowState(e.target.closest(".domain-row"));
   });
 
-  // 체크박스는 저장 없이도 미리보기에 곧장 반영된다 — "저장 전에 보이게 한다"는
+  // 체크박스는 저장 없이도 번호와 미리보기에 곧장 반영된다 — "저장 전에 보이게 한다"는
   // 요구가 힌트·이름에는 해당하지 않는다(둘은 순환 계산에 안 쓰인다).
   el.addEventListener("change", e => {
     if (e.target.dataset.field !== "enabled") return;
@@ -182,6 +254,8 @@ function wireSettingsList() {
       showLastDomainNotice();
       return;
     }
+    refreshRowState(e.target.closest(".domain-row"));
+    renumber();
     recomputePreview();
   });
 
@@ -192,20 +266,18 @@ function wireSettingsList() {
     const code = row.dataset.code;
     if (btn.dataset.action === "up") moveDomain(code, "UP");
     else if (btn.dataset.action === "down") moveDomain(code, "DOWN");
+    else if (btn.dataset.action === "edit") toggleEdit(row, btn);
     else if (btn.dataset.action === "save") saveDomain(code, row, btn);
   });
 }
 
-/** 힌트칸 옆 "N자 남음"을 갱신하고, 500자를 넘기면 저장 버튼을 잠근다. */
+/** 힌트칸 옆 "N자 남음"을 갱신한다. 500자 초과 시 저장 잠금은 refreshRowState가 맡는다. */
 function updateRemain(textarea) {
   const row = textarea.closest(".domain-row");
   const remainEl = row.querySelector('[data-role="remain"]');
-  const saveBtn = row.querySelector('button[data-action="save"]');
   const remain = 500 - textarea.value.length;
-  const over = remain < 0;
   remainEl.textContent = `${remain}자 남음`;
-  remainEl.classList.toggle("over", over);
-  saveBtn.disabled = over;
+  remainEl.classList.toggle("over", remain < 0);
 }
 
 /**
@@ -316,28 +388,32 @@ function showLastDomainNotice() {
   showError(document.getElementById("sMessage"), { message: LAST_DOMAIN_MESSAGE });
 }
 
+/**
+ * 미리보기 표. 칸을 넷(날짜·무엇·분야·난이도)에서 셋으로 줄였다(2026-09-22) — 오른쪽 300px
+ * 칸에 네 칸을 넣으면 글자가 줄마다 꺾여 오히려 한눈에 안 읽힌다. "무엇"과 "난이도"는
+ * 합칠 수 있다: 문서일에는 난이도가 없고(PreviewCell Javadoc), 문제일에는 난이도가 곧
+ * 그날 무엇을 만드는지다.
+ */
 function previewTableHtml(cells) {
   return `<div class="table-wrap"><table class="grid">
-    <thead><tr><th>날짜</th><th>무엇</th><th>분야</th><th>난이도</th></tr></thead>
+    <thead><tr><th>날짜</th><th>분야</th><th>만드는 것</th></tr></thead>
     <tbody>${cells.map(previewRowHtml).join("")}</tbody>
   </table></div>`;
 }
 
 /**
- * 미리보기 한 줄. 문서일에는 difficulty가 null이다(PreviewCell Javadoc) — 빈칸이나
- * 지어낸 값 대신 "—"로 그 자리가 원래 없다는 것을 보여준다(table.grid td.zero와 같은 규칙,
- * 일 실적 표의 "실행 없음"과 같은 이유 — 값이 없는 것과 0인 것을 다르게 보여준다).
+ * 미리보기 한 줄. 문서일에는 difficulty가 null이다 — 지어낸 난이도 대신 "개념 문서"라고
+ * 적는다. 난이도 칸이 따로 있던 때는 "—"로 비웠지만, 칸을 합친 지금은 그 자리에
+ * 그날의 실제 산출물 이름이 들어가는 편이 정확하다.
  */
 function previewRowHtml(c) {
-  const what = c.documentDay ? "문서" : "문제";
-  const difficulty = c.documentDay
-    ? `<td class="zero">—</td>`
-    : `<td>${escapeHtml(difficultyLabel(c.difficulty))}</td>`;
+  const what = c.documentDay
+    ? `<b>개념 문서</b>`
+    : `${escapeHtml(difficultyLabel(c.difficulty))} 문제`;
   return `<tr>
     <td>${formatPreviewDate(c.date)}</td>
-    <td>${what}</td>
     <td>${escapeHtml(domainLabel(c.domain))}</td>
-    ${difficulty}
+    <td>${what}</td>
   </tr>`;
 }
 

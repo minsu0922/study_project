@@ -2575,32 +2575,97 @@ a.batch-chip:hover { border-color: var(--primary); background: var(--primary-sof
   .yield-short { grid-column: 2 / -1; margin-top: -4px; font-size: 12px; }
 }
 
-/* ── 분야 설정 화면(admin/settings.html, Task 10) ──────────────────────
+/* ── 분야 설정 화면(admin/settings.html) ──────────────────────────────
  *
- * <table>로 가두지 않은 이유: 한 분야가 체크·순서·이름 한 줄에 이어 힌트 입력칸(여러 줄)과
- * 프롬프트 미리보기 문장까지 딸려 온다. 표의 칸은 값 하나를 담는 자리라 이런 여러 단짜리
- * 내용을 넣으면 칸마다 줄바꿈이 다르게 깨진다. 카드 안에 쌓는 줄(.domain-row)로 두면
- * 줄마다 필요한 만큼 늘어난다 — 다음 7일 미리보기 쪽은 값이 한 줄짜리라 그대로 table.grid를
- * 쓴다(settings.html의 previewTableHtml). */
-.domain-row { border-bottom: 1px solid var(--border); padding: var(--sp-3) 0; }
-.domain-row:first-child { padding-top: 0; }
-.domain-row:last-child { border-bottom: none; padding-bottom: 0; }
+ * [2026-09-22 개편 — 세로로 쌓던 것을 한 줄 목록 + 옆 미리보기로]
+ * 처음 판은 분야마다 체크·순서·이름·힌트 입력칸·프롬프트 문장·저장 버튼을 세로로 쌓았다.
+ * 한 분야가 여섯 줄 남짓이라 열한 분야면 화면 서너 장이 됐고, 정작 이 화면의 핵심인
+ * "다음 7일 미리보기"는 그 맨 아래에 깔렸다. 체크 하나를 끄고 결과를 보려면 스크롤을
+ * 끝까지 내려야 했다 — 미리보기를 둔 목적(바꾼 순간 그 결과가 보인다)이 무너진 것이다.
+ *
+ * 그래서 두 가지를 바꿨다.
+ *  1. 분야 하나 = 한 줄. 자주 만지는 것(켜기·순서)만 줄에 두고, 가끔 고치는 것(이름·힌트)은
+ *     "편집"을 눌러야 그 줄 아래로 펼친다. 열한 줄이 한 화면에 들어온다.
+ *  2. 미리보기를 오른쪽 칸에 sticky로 붙인다. 목록을 어디까지 내리든 옆에 떠 있어서,
+ *     체크를 끄는 순간 바로 옆 표가 바뀌는 것이 보인다.
+ *
+ * 여전히 <table>이 아닌 이유: 펼친 편집칸(여러 줄 입력)이 줄 사이에 끼어들어야 해서다.
+ * 표 셀은 값 하나를 담는 자리라, 행 사이에 폭 전체를 쓰는 칸을 끼우면 colspan 계산이
+ * 화면마다 달라진다. 줄마다 grid를 쓰면 편집칸은 그 줄 안의 다음 줄로 자연히 내려간다. */
 
-.domain-row-head {
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: var(--sp-2);
-  margin-bottom: var(--sp-2);
+/* 좌: 분야 목록 / 우: 7일 미리보기. 1000px 컨테이너에서 오른쪽을 300px로 고정하는 이유 —
+   미리보기는 "날짜·분야·종류" 세 칸짜리 짧은 표라 그 이상 넓혀도 빈칸만 는다. */
+.settings-layout {
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--sp-4); align-items: start;
 }
-.domain-row-head label { display: flex; align-items: center; gap: 8px; }
-/* 18px — 텍스트 크기의 체크박스를 그대로 두면 손가락으로는 겨우 맞히는 크기다.
-   버튼(min-height 44px)만큼 키우지 않은 것은 체크박스가 줄 전체가 아니라
-   이름과 나란히 놓이는 인라인 요소라, 너무 크면 줄이 위아래로 들쭉날쭉해진다. */
-.domain-row-head input[type=checkbox] { width: 18px; height: 18px; flex: none; }
+/* top은 관리 콘솔 상단 띠 높이(--shell-top-h)만큼 내린다 — 0으로 두면 띠 밑으로 파고든다. */
+.settings-preview { position: sticky; top: calc(var(--shell-top-h) + var(--sp-3)); }
+/* 좁은 화면에서는 한 칸으로 접는다. 300px 오른쪽 칸을 억지로 두면 목록 쪽이 너무 좁아져
+   분야 이름이 잘린다. 접힌 상태에서는 sticky를 끈다 — 위에 붙은 채 목록을 가리면 안 된다. */
+@media (max-width: 900px) {
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-preview { position: static; }
+}
 
-/* 이름·힌트 입력칸 — 카드 폭 전부를 쓰지 않고 560px로 접는다. 힌트는 문장 하나짜리
-   경계 설명이라(validation-thresholds 메모) 넓게 펴 봐야 줄만 짧아지고 안 읽기 편해진다. */
-.domain-row-fields { display: grid; gap: var(--sp-2); max-width: 560px; }
-.domain-row-fields .field { margin-bottom: 0; }
+.domain-row { border-bottom: 1px solid var(--border); }
+.domain-row:last-child { border-bottom: none; }
+
+/* 한 줄의 칸: 체크 | ▲▼ | 순번 | 이름 | 힌트 요약 | 동작.
+   힌트 요약 칸만 minmax(0, 1fr)로 늘고 줄어든다 — 나머지는 내용 폭이 거의 고정이라
+   그 칸이 남는 폭을 다 받는 것이 맞다. 0을 최솟값으로 주지 않으면 긴 힌트가 grid를
+   밀어 내 동작 버튼이 화면 밖으로 나간다. */
+.domain-line {
+  display: grid;
+  grid-template-columns: auto auto 1.6rem minmax(6rem, 9rem) minmax(0, 1fr) auto;
+  align-items: center; gap: var(--sp-2);
+  padding: 7px 4px;
+}
+.domain-line input[type=checkbox] { width: 18px; height: 18px; margin: 0; }
+.domain-line .row-actions { white-space: nowrap; }
+.domain-line .move button { padding: 2px 7px; }
+.domain-line .move button + button { margin-left: 2px; }
+/* 마우스로 쓰는 화면에서만 줄 안 버튼을 30px로 낮춘다. 전역 버튼은 min-height 44px인데
+   (손가락 터치 크기), 한 줄에 버튼이 셋이라 그대로 두면 줄 높이가 60px 가까이 되어
+   열한 줄이 한 화면을 넘는다. pointer:fine으로 가둔 이유 — 폰·태블릿에서는 44px 규칙이
+   그대로 살아 있어야 한다. 줄이 길어지는 것보다 잘못 누르는 쪽이 더 나쁘다. */
+@media (pointer: fine) {
+  .domain-line button { min-height: 30px; }
+}
+
+/* 순번 = 순환에서 몇 번째인가. 켜진 분야만 번호를 받는다 — 꺼진 분야는 순환에 안 끼므로
+   "–"로 둔다. 목록 위치가 아니라 순환 위치를 보여 주는 이유: 이 화면에서 순서가 의미를
+   갖는 곳은 순환뿐이라, 꺼진 줄까지 세면 "3번인데 왜 세 번째 날에 안 나오지"가 된다. */
+.domain-pos { font-variant-numeric: tabular-nums; color: var(--muted); text-align: right; font-size: var(--fs-1); }
+.domain-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 힌트 요약 — 한 줄로 자르고 옅게. 전문은 "편집"을 펼치면 본다. 여기서는 "힌트가 있나,
+   대충 무슨 말인가"만 알면 된다. */
+.domain-hint-summary {
+  color: var(--muted); font-size: var(--fs-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.domain-hint-summary.empty { font-style: italic; }
+
+/* 꺼진 분야는 흐리게 — 순환에 안 끼는 줄이 켜진 줄과 같은 진하기면, 목록만 보고
+   "지금 도는 분야"를 가려내기 어렵다. 체크박스는 흐려도 그대로 누를 수 있다. */
+.domain-row.off .domain-name,
+.domain-row.off .domain-hint-summary { opacity: .5; }
+
+/* 저장 안 한 변경이 있는 줄 — 왼쪽 막대로 표시한다. 편집칸을 접어 두면 무엇을 바꿨는지
+   안 보이므로, 막대와 "저장" 버튼 둘로 "이 줄은 아직 반영 안 됐다"를 알린다. */
+.domain-row.dirty .domain-line { box-shadow: inset 3px 0 0 var(--primary); background: var(--primary-soft); }
+
+/* 펼친 편집칸. 접혀 있어도 입력칸은 DOM에 남긴다 — 저장이 이 줄의 입력칸 값을 읽으므로,
+   display:none으로 숨겼다가 펼칠 때마다 새로 그리면 접었다 편 사이에 입력이 날아간다. */
+.domain-edit {
+  display: grid; gap: var(--sp-2);
+  padding: var(--sp-2) 4px var(--sp-3) calc(18px + var(--sp-2));   /* 체크박스 폭만큼 들여 줄과 붙어 보이게 */
+}
+.domain-row:not(.open) .domain-edit { display: none; }
+.domain-edit .field { margin-bottom: 0; }
+.domain-edit input[type=text] { max-width: 16rem; }
+.domain-edit .code { color: var(--muted); font-size: var(--fs-1); }
 
 /* 남은 글자 수 — 500자를 넘으면(서버가 막기 전에) 색으로 먼저 알린다. */
 .hint-remain { font-size: var(--fs-1); color: var(--muted); font-weight: 400; }
@@ -2611,7 +2676,13 @@ a.batch-chip:hover { border-color: var(--primary); background: var(--primary-sof
 .domain-row-preview {
   font-size: var(--fs-1); color: var(--text-2);
   background: var(--fill); border-radius: var(--radius);
-  padding: 8px 10px; margin-top: var(--sp-2);
-  max-width: 720px;
+  padding: 8px 10px;
 }
 .domain-row-preview code { white-space: pre-wrap; word-break: break-word; color: var(--text); }
+
+/* 폰 폭에서는 힌트 요약 칸을 뺀다 — 여섯 칸을 다 두면 이름이 두세 글자로 잘린다.
+   힌트는 어차피 "편집"을 펼쳐야 제대로 읽힌다. */
+@media (max-width: 560px) {
+  .domain-line { grid-template-columns: auto auto 1.4rem minmax(0, 1fr) auto; }
+  .domain-hint-summary { display: none; }
+}
