@@ -15,6 +15,7 @@ import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.support.DomainHints;
+import project.study.study_project.llm.support.DomainHintsProvider;
 import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.util.List;
@@ -96,33 +97,57 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      * 분야 경계 설명. 예전에는 {@code switch}로 코드에 박혀 있었는데, 그 한 줄이 생성 품질을
      * 직접 흔드는 값인데도 고치려면 재배포가 필요했다. 이제 관리자 화면에서 고치고
      * {@code generated/_domain-settings.json}으로 배치까지 나른다(docs/21).
+     *
+     * <p><b>값이 아니라 공급자를 든다.</b> 힌트는 {@link #buildPrompt}가 프롬프트에 붙이는
+     * <b>그 순간</b> {@link DomainHintsProvider#current()}로 읽는다. 생성자에서 한 번 읽어
+     * 필드에 굳히면, 스프링 빈은 기동 때 한 번만 만들어지므로 관리자가 화면에서 힌트를 고쳐도
+     * 앱을 재시작하기 전까지 옛 힌트가 나간다 — Task 7이 배치 후보 목록에서 없앤 그 증상이다
+     * (자세한 판단은 {@link DomainHintsProvider} 클래스 주석).
      */
-    private final DomainHints domainHints;
+    private final DomainHintsProvider domainHintsProvider;
 
     /**
      * 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다.
      *
-     * <p>{@code @Autowired}가 필요한 이유: 생성자가 둘이면 스프링은 어느 것을 빈 생성에 쓸지
-     * 스스로 고르지 못한다(생성자가 하나뿐일 때만 자동 선택한다). {@code @Value}는 "이 인자에
-     * 무엇을 넣을지"만 정할 뿐 "이 생성자를 써라"는 뜻이 아니라서, 표시가 없으면 컨테이너
-     * 기동 자체가 실패한다 — 실제로 이 표시를 빠뜨렸다가 {@code @SpringBootTest} 전체가
-     * 깨지는 사고를 겪었다(Task 2 fix round 1).
+     * <p><b>스프링이 쓰는 생성자가 아니다.</b> 전에는 여기에 {@code @Autowired}·{@code @Value}가
+     * 붙어 있어 스프링 빈이 이 생성자로 만들어졌고, 그래서 앱 안에서 생성하면(관리자 "생성 실행"·
+     * 문서 업로드) 화면에서 고친 힌트가 무시되고 늘 내장값이 나갔다(최종 리뷰 Important 2).
+     * 지금은 {@link #ClaudeProblemGenerator(String, DomainHintsProvider)}가 빈 생성을 맡는다.
+     * 이 생성자를 지우지 않는 이유: {@code PromptEvalCli}·E2E 테스트·프롬프트 테스트가 DB 없이
+     * {@code new}로 만든다.
      */
-    @Autowired
-    public ClaudeProblemGenerator(@Value("${llm.generation.model:claude-opus-4-8}") String model) {
+    public ClaudeProblemGenerator(String model) {
         this(model, DomainHints.BUILT_IN);
     }
 
     /**
-     * 관리자 화면에서 고친 힌트를 주입받는 생성자 — Task 6에서 스프링 빈 등록에 쓴다.
+     * 이미 정해진 힌트 한 벌로 도는 생성자 — 배치 CLI가 {@code _domain-settings.json}에서 읽은
+     * 값을 넣는다({@code DraftGeneratorCli}).
      *
-     * <p>{@code @Value}를 여기 붙이지 않는 이유: 두 생성자 모두 {@code @Value}가 붙으면
-     * 스프링이 둘 중 어느 것을 쓸지 판단하지 못해 기동이 막힌다. 위 한 인자 생성자만
-     * 프로퍼티를 읽고, 이 생성자는 이미 만들어진 {@link DomainHints}를 그대로 받는다.
+     * <p>CLI는 한 번 실행되고 끝나는 프로세스라, 실행 도중 파일이 바뀌어도 다시 읽을 까닭이 없다.
+     * 그래서 상수를 감싼 공급자({@code () -> domainHints})로 위임한다 — 호출부는 하나도 안 바뀐다.
      */
     public ClaudeProblemGenerator(String model, DomainHints domainHints) {
+        this(model, () -> domainHints);
+    }
+
+    /**
+     * <b>스프링 빈을 만드는 생성자</b> — 앱 안의 생성이 관리자 화면에서 고친 힌트를 따르게 한다.
+     * 앱에서는 {@code DomainSettingService}가 {@link DomainHintsProvider}를 구현해 DB 값을 내준다.
+     *
+     * <p><b>{@code @Autowired}는 이 생성자 하나에만 붙인다.</b> 생성자가 여럿이면 스프링은
+     * 스스로 하나를 고르지 못하고(자동 선택은 생성자가 하나뿐일 때만 된다), 표시가 둘 이상이거나
+     * 하나도 없으면 컨텍스트가 아예 안 뜬다 — 이 브랜치에서 두 번 겪었다(Task 2 fix round 1,
+     * 커밋 9aaea73). {@code @Value}는 "이 인자에 무엇을 넣을지"만 정할 뿐 "이 생성자를 써라"는
+     * 표시가 아니다. 그리고 그 사고 때 프롬프트 테스트는 전부 초록이었다 — 컨텍스트를 안 띄우고
+     * {@code new}로 만들기 때문이다. 그래서 빈 경로는 {@code ClaudeProblemGeneratorBeanHintTest}가
+     * 따로 지킨다.
+     */
+    @Autowired
+    public ClaudeProblemGenerator(@Value("${llm.generation.model:claude-opus-4-8}") String model,
+                                  DomainHintsProvider domainHintsProvider) {
         this.model = model;
-        this.domainHints = domainHints;
+        this.domainHintsProvider = domainHintsProvider;
     }
 
     @Override
@@ -779,7 +804,10 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                        QuestionKind requestedKind) {
         StringBuilder sb = new StringBuilder();
         sb.append("다음 조건으로 문제 ").append(count).append("개를 만들어라.\n\n");
-        sb.append("- 분야: ").append(domain.getDisplayName()).append(domainHints.hintFor(domain)).append('\n');
+        // 힌트는 <지금> 읽는다 — 필드에 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다
+        // (domainHintsProvider 필드 주석).
+        sb.append("- 분야: ").append(domain.getDisplayName())
+                .append(domainHintsProvider.current().hintFor(domain)).append('\n');
         sb.append("- 난이도: ").append(difficultyRule(difficulty)).append('\n');
         sb.append("- 유형: ").append(typeRule(type)).append('\n');
 

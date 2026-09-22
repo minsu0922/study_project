@@ -14,6 +14,7 @@ import project.study.study_project.global.common.Domain;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.support.DomainHints;
+import project.study.study_project.llm.support.DomainHintsProvider;
 
 import java.util.List;
 
@@ -584,32 +585,50 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      * {@code generated/_domain-settings.json}으로 배치까지 나른다(docs/21).
      *
      * <p>문제 생성기와 같은 값을 쓴다 — 한쪽만 바뀌면 "문서는 절차를 썼는데 문제는 부하를
-     * 묻는" 어긋남이 생긴다(위 클래스 주석의 09-03 개정과 같은 이유).
+     * 묻는" 어긋남이 생긴다(위 클래스 주석의 09-03 개정과 같은 이유). 앱에서는 두 생성기가
+     * 같은 공급자({@code DomainSettingService})를 받으므로 같은 순간에 같은 값을 읽는다.
+     *
+     * <p><b>값이 아니라 공급자를 들고, 프롬프트를 짜는 순간 {@link DomainHintsProvider#current()}로
+     * 읽는다.</b> 이유는 {@link ClaudeProblemGenerator}의 같은 필드와 같다 — 생성자에서 한 번
+     * 읽어 굳히면 화면에서 고친 힌트가 앱을 재시작해야 반영된다.
      */
-    private final DomainHints domainHints;
+    private final DomainHintsProvider domainHintsProvider;
 
     /**
      * 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다.
      *
-     * <p>{@code @Autowired}가 필요한 이유는 {@link ClaudeProblemGenerator}의 같은 생성자와
-     * 같다 — 생성자가 둘이면 스프링이 자동으로 하나를 고르지 못한다(자동 선택은 생성자가
-     * 하나뿐일 때만 된다). {@code @Value}는 인자 값을 정할 뿐 "이 생성자를 쓰라"는 표시가
-     * 아니라서, 이 표시가 빠지면 컨테이너 기동이 막힌다(Task 2 fix round 1에서 실제로 겪음).
+     * <p><b>스프링이 쓰는 생성자가 아니다.</b> 전에는 여기에 {@code @Autowired}·{@code @Value}가
+     * 붙어 있어 앱 안의 문서 생성(관리자 "생성 실행"·문서 업로드)이 화면에서 고친 힌트를 무시하고
+     * 늘 내장값을 썼다(최종 리뷰 Important 2). 지금은
+     * {@link #ClaudeDocumentGenerator(String, DomainHintsProvider)}가 빈 생성을 맡는다.
+     * 테스트가 DB 없이 {@code new}로 만들기 때문에 남겨 둔다.
      */
-    @Autowired
-    public ClaudeDocumentGenerator(@Value("${llm.generation.model:claude-opus-5}") String model) {
+    public ClaudeDocumentGenerator(String model) {
         this(model, DomainHints.BUILT_IN);
     }
 
     /**
-     * 관리자 화면에서 고친 힌트를 주입받는 생성자 — Task 6에서 스프링 빈 등록에 쓴다.
-     *
-     * <p>{@code @Value}를 여기 붙이지 않는 이유는 {@link ClaudeProblemGenerator}의 같은
-     * 생성자와 같다 — 두 생성자 모두 붙으면 스프링이 어느 것을 쓸지 판단하지 못한다.
+     * 이미 정해진 힌트 한 벌로 도는 생성자 — 배치 CLI가 {@code _domain-settings.json}에서 읽은
+     * 값을 넣는다({@code DraftGeneratorCli}). 한 번 돌고 끝나는 프로세스라 상수를 감싼 공급자로
+     * 위임한다 — 호출부는 바뀌지 않는다.
      */
     public ClaudeDocumentGenerator(String model, DomainHints domainHints) {
+        this(model, () -> domainHints);
+    }
+
+    /**
+     * <b>스프링 빈을 만드는 생성자.</b> 앱에서는 {@code DomainSettingService}가
+     * {@link DomainHintsProvider}를 구현해 DB의 힌트를 내준다.
+     *
+     * <p>{@code @Autowired}는 <b>이 생성자 하나에만</b> 붙인다 — 이유는
+     * {@link ClaudeProblemGenerator}의 같은 생성자와 같다. 생성자가 셋이라 표시가 둘 이상이거나
+     * 하나도 없으면 컨텍스트가 안 뜬다(커밋 9aaea73에서 실제로 겪음).
+     */
+    @Autowired
+    public ClaudeDocumentGenerator(@Value("${llm.generation.model:claude-opus-5}") String model,
+                                   DomainHintsProvider domainHintsProvider) {
         this.model = model;
-        this.domainHints = domainHints;
+        this.domainHintsProvider = domainHintsProvider;
     }
 
     @Override
@@ -1270,7 +1289,9 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     String buildPrompt(Domain domain, String topic,
                        List<String> avoidTitles, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
-        sb.append("분야: ").append(domain.getDisplayName()).append(domainHints.hintFor(domain)).append('\n');
+        // 힌트는 <지금> 읽는다 — 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다.
+        sb.append("분야: ").append(domain.getDisplayName())
+                .append(domainHintsProvider.current().hintFor(domain)).append('\n');
 
         if (topic != null && !topic.isBlank()) {
             // 이 값은 대개 "Spring", "JVM 메모리" 같은 <범위>다(주제 범위 목록에서 온다).
@@ -1375,7 +1396,9 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      */
     String buildAdvancedPrompt(Domain domain, GeneratedDocumentItem beginner, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
-        sb.append("분야: ").append(domain.getDisplayName()).append(domainHints.hintFor(domain)).append("\n\n");
+        // 입문편과 같은 자리에서 <다시> 읽는다 — 두 편 사이에 힌트가 바뀌었다면 심화편은 새 값을 따른다.
+        sb.append("분야: ").append(domain.getDisplayName())
+                .append(domainHintsProvider.current().hintFor(domain)).append("\n\n");
         // 값을 채우는 자리에 규칙을 붙인다 — 시스템 프롬프트에도 같은 지시가 있지만,
         // 붙일 대상(입문편 제목·slug)이 요청마다 바뀌는 값이라 거기에는 실물을 적을 수 없다.
         // 규칙과 재료가 떨어져 있으면 지켜지지 않는다는 것을 이 파이프라인에서 여러 번 겪었다.
@@ -1407,5 +1430,5 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
 
     // domainHint(Domain)는 Task 2에서 지웠다 — DomainHints.hintFor(Domain)로 대체됐다.
     // 문구 자체는 DomainHints.BUILT_IN에 그대로 옮겨 뒀다(문자 단위 대조 완료, docs/21).
-    // 문제 생성기와 같은 값을 쓰는 이유는 위 domainHints 필드 주석 참고.
+    // 문제 생성기와 같은 값을 쓰는 이유는 위 domainHintsProvider 필드 주석 참고.
 }
