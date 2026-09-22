@@ -1,7 +1,6 @@
 package project.study.study_project.llm.dto;
 
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.domain.TopicQueueItem;
 
 import java.time.LocalDate;
@@ -35,9 +34,13 @@ public record TopicQueueItemResponse(
         int order
 ) {
 
-    public static TopicQueueItemResponse from(TopicQueueItem item, boolean next, int order) {
+    /**
+     * @param domainLabel 화면 표기 이름. DTO의 정적 팩터리는 스프링 빈({@code DomainCatalog})에
+     *                    닿을 수 없으므로 부르는 서비스가 미리 찾아 넘긴다(Task 4 규칙)
+     */
+    public static TopicQueueItemResponse from(TopicQueueItem item, String domainLabel, boolean next, int order) {
         return new TopicQueueItemResponse(
-                item.getId(), item.getDomain(), DefaultDomains.displayName(item.getDomain()),
+                item.getId(), item.getDomain(), domainLabel,
                 item.getTopic(), item.getMemo(), item.getSortOrder(),
                 item.getLastUsedAt(), item.getUsedCount(), next, order);
     }

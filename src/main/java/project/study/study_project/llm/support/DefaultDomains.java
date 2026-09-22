@@ -2,6 +2,7 @@ package project.study.study_project.llm.support;
 
 import project.study.study_project.global.common.DomainCode;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +102,51 @@ public final class DefaultDomains {
 
     public static Map<DomainCode, String> hints() {
         return HINTS;
+    }
+
+    /**
+     * DB·설정 파일 어느 쪽도 못 읽는 자리(테스트, {@code PromptEvalCli})가 쓰는 고정 카탈로그 —
+     * 이 클래스의 11개가 전부 켜진 것으로 본다.
+     *
+     * <p><b>왜 필드가 아니라 이 안에서 값을 매번 계산하지 않고 하나로 캐시해 두나.</b>
+     * {@link DomainCatalog} 인터페이스 주석의 "쓰는 순간에 읽어야 한다"는 <b>관리자가 화면에서
+     * 고칠 수 있는 값</b>에 대한 규칙이다. 이 카탈로그가 감싸는 것은 컴파일 시점에 박힌 상수뿐이라
+     * 실행 중에 바뀔 길이 없다 — 그래서 캐시해도 "고쳤는데 안 바뀐다"는 문제가 애초에 생기지 않는다.
+     */
+    private static final DomainCatalog CATALOG = new DomainCatalog() {
+        @Override
+        public List<DomainEntry> all() {
+            List<DomainEntry> result = new ArrayList<>();
+            int order = 0;
+            for (DomainCode code : CODES) {
+                result.add(new DomainEntry(code, true, order++, displayName(code), HINTS.getOrDefault(code, "")));
+            }
+            return result;
+        }
+
+        @Override
+        public List<DomainCode> enabled() {
+            return CODES; // 이 카탈로그에는 "꺼진 분야"라는 개념이 없다 — 11개가 전부 후보다.
+        }
+
+        @Override
+        public String displayName(DomainCode code) {
+            return DefaultDomains.displayName(code);
+        }
+
+        @Override
+        public DomainHints hints() {
+            return DomainHints.BUILT_IN;
+        }
+
+        @Override
+        public boolean exists(DomainCode code) {
+            return isKnown(code);
+        }
+    };
+
+    public static DomainCatalog catalog() {
+        return CATALOG;
     }
 
     private static Map<DomainCode, String> buildDisplayNames() {

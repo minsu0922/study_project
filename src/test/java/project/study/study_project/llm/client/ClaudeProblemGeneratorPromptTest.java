@@ -6,7 +6,10 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.DocumentEditionRule;
+import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.llm.support.DomainEntry;
 import project.study.study_project.llm.support.DomainHints;
 import project.study.study_project.llm.support.ProblemItemRule;
 
@@ -1165,12 +1168,43 @@ class ClaudeProblemGeneratorPromptTest {
      * <p>여기서 지키는 것은 "설정에서 온 힌트가 내장값을 <b>덮어쓰는가</b>"다. 이전에는
      * {@code domainHint(Domain)}가 switch로 코드에 박혀 있어, 힌트 문구를 고치려면 재배포가
      * 필요했다. 관리자 화면에서 고친 값이 재배포 없이 프롬프트에 실려야 그 화면이 의미가 있다.
+     *
+     * <p><b>Task 4에서 {@code DomainHints}를 직접 받던 생성자를 지웠다</b> — 힌트만 갈아 끼우고
+     * 분야 이름은 여전히 {@code DefaultDomains}에서 읽는 낡은 경로였다(그 경로가 바로
+     * "화면에서 이름을 바꿔도 프롬프트는 옛 이름" 버그의 원인, 스펙 6절). 지금은 이름·힌트가
+     * 항상 같은 {@link DomainCatalog} 한 벌에서 나온다. 여기서는 그 카탈로그를 즉석에서
+     * 감싸 힌트만 바꿔치기한다 — 이름 쪽은 {@link DefaultDomains}에 그대로 위임한다.
      */
     @Test
     @DisplayName("주입한 힌트가 프롬프트에 실린다 — 재배포 없이 경계를 고칠 수 있어야 한다")
     void injectedHintAppearsInPrompt() {
-        ClaudeProblemGenerator custom = new ClaudeProblemGenerator(
-                "claude-opus-5", DomainHints.of(Map.of(TestDomains.NETWORK, "TCP 혼잡 제어 위주")));
+        DomainHints injected = DomainHints.of(Map.of(TestDomains.NETWORK, "TCP 혼잡 제어 위주"));
+        ClaudeProblemGenerator custom = new ClaudeProblemGenerator("claude-opus-5", new DomainCatalog() {
+            @Override
+            public List<DomainEntry> all() {
+                return DefaultDomains.catalog().all();
+            }
+
+            @Override
+            public List<DomainCode> enabled() {
+                return DefaultDomains.codes();
+            }
+
+            @Override
+            public String displayName(DomainCode code) {
+                return DefaultDomains.displayName(code);
+            }
+
+            @Override
+            public DomainHints hints() {
+                return injected;
+            }
+
+            @Override
+            public boolean exists(DomainCode code) {
+                return DefaultDomains.isKnown(code);
+            }
+        });
 
         String prompt = custom.buildPrompt(TestDomains.NETWORK, Difficulty.BEGINNER,
                 ProblemType.MULTIPLE_CHOICE, 1, List.of(), List.of(), null, null);

@@ -15,7 +15,7 @@ import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -62,6 +62,9 @@ public class LlmDocumentService {
 
     /** 검수가 끝났음을 알린다 — 스냅샷 내보내기가 커밋 뒤에 듣는다({@link ReviewCompleted}). */
     private final ApplicationEventPublisher events;
+
+    /** 초안 응답의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로 싣는다(Task 4). */
+    private final DomainCatalog domainCatalog;
 
     /* ── 흡수(저장) ───────────────────────────────────────────── */
 
@@ -267,7 +270,7 @@ public class LlmDocumentService {
                         d.getTitle(), d.getSlug(), d.getContentMd()))
                 : List.of();
         return new LlmDocumentDraftResponse(
-                d.getId(), d.getDomain(), DefaultDomains.displayName(d.getDomain()),
+                d.getId(), d.getDomain(), domainCatalog.displayName(d.getDomain()),
                 d.getTitle(), d.getSlug(), d.getContentMd(), readTags(d.getTagsJson()),
                 d.getContentMd() == null ? 0 : d.getContentMd().length(),
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedDocumentId(),

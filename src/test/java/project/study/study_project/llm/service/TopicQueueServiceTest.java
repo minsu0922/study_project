@@ -18,6 +18,7 @@ import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
+import project.study.study_project.llm.support.DefaultDomains;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -49,7 +50,7 @@ class TopicQueueServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TopicQueueService(repository, events);
+        service = new TopicQueueService(repository, events, DefaultDomains.catalog());
     }
 
     /* ── 추가 ─────────────────────────────────────────────────── */

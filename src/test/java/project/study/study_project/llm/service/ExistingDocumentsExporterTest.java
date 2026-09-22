@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.llm.dto.ExistingDocumentsFile;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.tag.domain.Tag;
 import project.study.study_project.tag.repository.TagRepository;
 
@@ -54,7 +55,7 @@ class ExistingDocumentsExporterTest {
     @BeforeEach
     void setUp() {
         exporter = new ExistingDocumentsExporter(
-                documentRepository, draftRepository, tagRepository, objectMapper);
+                documentRepository, draftRepository, tagRepository, objectMapper, DefaultDomains.catalog());
     }
 
     @Test

@@ -16,6 +16,7 @@ import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.llm.support.TopicQueue;
 
 import java.time.LocalDate;
@@ -67,6 +68,9 @@ public class TopicQueueService {
 
     /** 대기열이 바뀌면 파일을 다시 내보내야 한다 — 듣는 쪽은 {@link TopicQueueExporter}. */
     private final ApplicationEventPublisher events;
+
+    /** 응답의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로 싣는다(Task 4). */
+    private final DomainCatalog domainCatalog;
 
     /**
      * 순서 이동 방향. 문자열("up")을 그대로 받으면 오타가 런타임까지 살아남는다.
@@ -210,7 +214,8 @@ public class TopicQueueService {
         List<TopicQueueItemResponse> responses = new ArrayList<>(items.size());
         for (int i = 0; i < items.size(); i++) {
             TopicQueueItem item = items.get(i);
-            responses.add(TopicQueueItemResponse.from(item, item == next, i + 1));
+            responses.add(TopicQueueItemResponse.from(
+                    item, domainCatalog.displayName(item.getDomain()), item == next, i + 1));
         }
         return responses;
     }
@@ -280,7 +285,8 @@ public class TopicQueueService {
         // 범위라 다음 차례를 곧바로 받지만, 그 판정은 목록 전체를 봐야 하고 화면은 추가 직후
         // 목록을 다시 불러 정확한 값을 받는다. 여기서 짐작해 true를 넣으면 그 순간만 맞고
         // 다른 안 쓴 범위가 앞에 있을 때 틀린다.
-        return TopicQueueItemResponse.from(saved, false, (int) repository.count());
+        return TopicQueueItemResponse.from(
+                saved, domainCatalog.displayName(saved.getDomain()), false, (int) repository.count());
     }
 
     /**
@@ -320,7 +326,8 @@ public class TopicQueueService {
 
         // add와 같은 이유로 next는 false다 — 판정에 목록 전체가 필요하고, 화면은 수정 직후
         // 목록을 다시 불러 정확한 값을 받는다.
-        return TopicQueueItemResponse.from(item, false, (int) repository.count());
+        return TopicQueueItemResponse.from(
+                item, domainCatalog.displayName(item.getDomain()), false, (int) repository.count());
     }
 
     /**

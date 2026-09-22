@@ -3,7 +3,6 @@ package project.study.study_project.document.dto;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.tag.domain.Tag;
 
 import java.time.LocalDateTime;
@@ -36,21 +35,25 @@ public record DocumentDetailResponse(
      *
      * <p>여기서 짝을 찾지 않는 이유: 관리자 응답은 방금 저장한 것을 되돌려 주는 자리라
      * 화면이 배지를 쓰지 않는다. 쓰지도 않을 값을 위해 조회를 한 번 더 하지 않는다.
+     *
+     * @param domainLabel 화면 표기 이름. DTO의 정적 팩터리는 스프링 빈({@code DomainCatalog})에
+     *                    닿을 수 없으므로 부르는 서비스가 미리 찾아 넘긴다(Task 4 규칙)
      */
-    public static DocumentDetailResponse from(Document d) {
-        return withEdition(d, null);
+    public static DocumentDetailResponse from(Document d, String domainLabel) {
+        return withEdition(d, domainLabel, null);
     }
 
     /**
      * 짝이 있는지 아는 자리에서 쓴다(학습자 단건 조회).
      *
+     * @param domainLabel     화면 표기 이름 — {@link #from} 참고
      * @param counterpartSlug 실제로 존재하는 짝의 slug. 짝이 없으면 {@code null}
      */
-    public static DocumentDetailResponse withEdition(Document d, String counterpartSlug) {
+    public static DocumentDetailResponse withEdition(Document d, String domainLabel, String counterpartSlug) {
         return new DocumentDetailResponse(
                 d.getId(),
                 d.getDomain(),
-                DefaultDomains.displayName(d.getDomain()),
+                domainLabel,
                 d.getTitle(),
                 d.getSlug(),
                 d.getContentMd(),

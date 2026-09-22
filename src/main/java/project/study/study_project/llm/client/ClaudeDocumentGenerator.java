@@ -14,8 +14,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
-import project.study.study_project.llm.support.DomainHints;
-import project.study.study_project.llm.support.DomainHintsProvider;
+import project.study.study_project.llm.support.DomainCatalog;
 
 import java.util.List;
 
@@ -581,55 +580,51 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     private final String model;
 
     /**
-     * 분야 경계 설명. 예전에는 {@code switch}로 코드에 박혀 있었는데, 그 한 줄이 생성 품질을
-     * 직접 흔드는 값인데도 고치려면 재배포가 필요했다. 이제 관리자 화면에서 고치고
-     * {@code generated/_domain-settings.json}으로 배치까지 나른다(docs/21).
+     * 분야 이름·경계 힌트를 읽는 창구. 예전에는 이름은 {@code DefaultDomains}에, 힌트는
+     * {@code switch}로 코드에 박혀 있었는데, 둘 다 생성 품질을 직접 흔드는 값인데도 고치려면
+     * 재배포가 필요했다. 이제 관리자 화면에서 고치고 {@code generated/_domain-settings.json}으로
+     * 배치까지 나른다(docs/21).
      *
      * <p>문제 생성기와 같은 값을 쓴다 — 한쪽만 바뀌면 "문서는 절차를 썼는데 문제는 부하를
      * 묻는" 어긋남이 생긴다(위 클래스 주석의 09-03 개정과 같은 이유). 앱에서는 두 생성기가
-     * 같은 공급자({@code DomainSettingService})를 받으므로 같은 순간에 같은 값을 읽는다.
+     * 같은 구현체({@code DomainSettingService})를 받으므로 같은 순간에 같은 값을 읽는다.
      *
-     * <p><b>값이 아니라 공급자를 들고, 프롬프트를 짜는 순간 {@link DomainHintsProvider#current()}로
-     * 읽는다.</b> 이유는 {@link ClaudeProblemGenerator}의 같은 필드와 같다 — 생성자에서 한 번
-     * 읽어 굳히면 화면에서 고친 힌트가 앱을 재시작해야 반영된다.
+     * <p><b>값이 아니라 창구(카탈로그)를 들고, 프롬프트를 짜는 순간 {@link DomainCatalog#displayName}·
+     * {@link DomainCatalog#hints()}로 읽는다.</b> 이유는 {@link ClaudeProblemGenerator}의 같은
+     * 필드와 같다 — 생성자에서 한 번 읽어 굳히면 화면에서 고친 이름·힌트가 앱을 재시작해야
+     * 반영된다. 이름을 {@code DefaultDomains}에서 직접 읽던 옛 경로가 바로 "화면에서 분야명을
+     * 바꿔도 프롬프트는 옛 이름"이던 버그였다(스펙 6절, Task 4).
      */
-    private final DomainHintsProvider domainHintsProvider;
+    private final DomainCatalog domainCatalog;
 
     /**
-     * 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다.
+     * 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 이름·힌트로 돈다.
      *
      * <p><b>스프링이 쓰는 생성자가 아니다.</b> 전에는 여기에 {@code @Autowired}·{@code @Value}가
      * 붙어 있어 앱 안의 문서 생성(관리자 "생성 실행"·문서 업로드)이 화면에서 고친 힌트를 무시하고
      * 늘 내장값을 썼다(최종 리뷰 Important 2). 지금은
-     * {@link #ClaudeDocumentGenerator(String, DomainHintsProvider)}가 빈 생성을 맡는다.
+     * {@link #ClaudeDocumentGenerator(String, DomainCatalog)}가 빈 생성을 맡는다.
      * 테스트가 DB 없이 {@code new}로 만들기 때문에 남겨 둔다.
      */
     public ClaudeDocumentGenerator(String model) {
-        this(model, DomainHints.BUILT_IN);
-    }
-
-    /**
-     * 이미 정해진 힌트 한 벌로 도는 생성자 — 배치 CLI가 {@code _domain-settings.json}에서 읽은
-     * 값을 넣는다({@code DraftGeneratorCli}). 한 번 돌고 끝나는 프로세스라 상수를 감싼 공급자로
-     * 위임한다 — 호출부는 바뀌지 않는다.
-     */
-    public ClaudeDocumentGenerator(String model, DomainHints domainHints) {
-        this(model, () -> domainHints);
+        this(model, DefaultDomains.catalog());
     }
 
     /**
      * <b>스프링 빈을 만드는 생성자.</b> 앱에서는 {@code DomainSettingService}가
-     * {@link DomainHintsProvider}를 구현해 DB의 힌트를 내준다.
+     * {@link DomainCatalog}를 구현해 DB의 이름·힌트를 내준다. 배치 CLI({@code DraftGeneratorCli})도
+     * <b>같은 생성자</b>를 쓴다 — {@code _domain-settings.json}을 읽은 {@code DomainSettings}가
+     * 또 하나의 {@link DomainCatalog} 구현이기 때문이다(문제 생성기와 같은 판단).
      *
      * <p>{@code @Autowired}는 <b>이 생성자 하나에만</b> 붙인다 — 이유는
-     * {@link ClaudeProblemGenerator}의 같은 생성자와 같다. 생성자가 셋이라 표시가 둘 이상이거나
+     * {@link ClaudeProblemGenerator}의 같은 생성자와 같다. 생성자가 여럿이라 표시가 둘 이상이거나
      * 하나도 없으면 컨텍스트가 안 뜬다(커밋 9aaea73에서 실제로 겪음).
      */
     @Autowired
     public ClaudeDocumentGenerator(@Value("${llm.generation.model:claude-opus-5}") String model,
-                                   DomainHintsProvider domainHintsProvider) {
+                                   DomainCatalog domainCatalog) {
         this.model = model;
-        this.domainHintsProvider = domainHintsProvider;
+        this.domainCatalog = domainCatalog;
     }
 
     @Override
@@ -1290,9 +1285,9 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     String buildPrompt(DomainCode domain, String topic,
                        List<String> avoidTitles, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
-        // 힌트는 <지금> 읽는다 — 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다.
-        sb.append("분야: ").append(DefaultDomains.displayName(domain))
-                .append(domainHintsProvider.current().hintFor(domain)).append('\n');
+        // 이름·힌트는 <지금> 읽는다 — 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다.
+        sb.append("분야: ").append(domainCatalog.displayName(domain))
+                .append(domainCatalog.hints().hintFor(domain)).append('\n');
 
         if (topic != null && !topic.isBlank()) {
             // 이 값은 대개 "Spring", "JVM 메모리" 같은 <범위>다(주제 범위 목록에서 온다).
@@ -1397,9 +1392,9 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      */
     String buildAdvancedPrompt(DomainCode domain, GeneratedDocumentItem beginner, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
-        // 입문편과 같은 자리에서 <다시> 읽는다 — 두 편 사이에 힌트가 바뀌었다면 심화편은 새 값을 따른다.
-        sb.append("분야: ").append(DefaultDomains.displayName(domain))
-                .append(domainHintsProvider.current().hintFor(domain)).append("\n\n");
+        // 입문편과 같은 자리에서 <다시> 읽는다 — 두 편 사이에 이름·힌트가 바뀌었다면 심화편은 새 값을 따른다.
+        sb.append("분야: ").append(domainCatalog.displayName(domain))
+                .append(domainCatalog.hints().hintFor(domain)).append("\n\n");
         // 값을 채우는 자리에 규칙을 붙인다 — 시스템 프롬프트에도 같은 지시가 있지만,
         // 붙일 대상(입문편 제목·slug)이 요청마다 바뀌는 값이라 거기에는 실물을 적을 수 없다.
         // 규칙과 재료가 떨어져 있으면 지켜지지 않는다는 것을 이 파이프라인에서 여러 번 겪었다.

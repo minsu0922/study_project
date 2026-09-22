@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.ProblemListItem;
 import project.study.study_project.quiz.dto.StudySummaryResponse;
@@ -40,6 +41,9 @@ public class ProblemListService {
     private final SubmissionRepository submissionRepository;
     private final ReviewItemRepository reviewItemRepository;
 
+    /** 목록·진척 카드의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로 싣는다(Task 4). */
+    private final DomainCatalog domainCatalog;
+
     /**
      * 목록 한 판.
      *
@@ -63,7 +67,7 @@ public class ProblemListService {
                         row.getId(),
                         row.getTitle(),
                         row.getDomain(),
-                        DefaultDomains.displayName(row.getDomain()),
+                        domainCatalog.displayName(row.getDomain()),
                         row.getDifficulty(),
                         row.getType(),
                         row.getLastAttemptedAt(),
@@ -159,7 +163,7 @@ public class ProblemListService {
         return DefaultDomains.codes().stream()
                 .map(domain -> new StudySummaryResponse.DomainProgress(
                         domain,
-                        DefaultDomains.displayName(domain),
+                        domainCatalog.displayName(domain),
                         solved.getOrDefault(domain, 0L),
                         total.getOrDefault(domain, 0L)))
                 .toList();

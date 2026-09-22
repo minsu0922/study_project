@@ -11,6 +11,7 @@ import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.llm.dto.ExistingDocumentsFile;
 import project.study.study_project.llm.dto.DomainTitle;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.tag.domain.Tag;
 import project.study.study_project.tag.repository.TagRepository;
 
@@ -51,15 +52,18 @@ public class ExistingDocumentsExporter extends SnapshotExporter {
     private final DocumentRepository documentRepository;
     private final GeneratedDocumentDraftRepository draftRepository;
     private final TagRepository tagRepository;
+    private final DomainCatalog domainCatalog; // 제목 앞 [분야] 표기 — 관리 화면이 고친 이름을 그대로(Task 4)
 
     public ExistingDocumentsExporter(DocumentRepository documentRepository,
                                      GeneratedDocumentDraftRepository draftRepository,
                                      TagRepository tagRepository,
-                                     ObjectMapper objectMapper) {
+                                     ObjectMapper objectMapper,
+                                     DomainCatalog domainCatalog) {
         super(objectMapper);
         this.documentRepository = documentRepository;
         this.draftRepository = draftRepository;
         this.tagRepository = tagRepository;
+        this.domainCatalog = domainCatalog;
     }
 
     @Override
@@ -87,8 +91,10 @@ public class ExistingDocumentsExporter extends SnapshotExporter {
         // 파일 형식(List<String>)은 그대로 둔다. 구조를 바꾸면 이미 커밋된 스냅샷을 읽는
         // 배치가 깨지는데, 라벨을 문자열에 녹이면 옛 파일은 라벨 없이 그대로 읽힌다.
         List<String> titles = new ArrayList<>(
-                documentRepository.findAllDomainTitles().stream().map(DomainTitle::labeled).toList());
-        draftRepository.findPendingDomainTitles().stream().map(DomainTitle::labeled).forEach(titles::add);
+                documentRepository.findAllDomainTitles().stream()
+                        .map(dt -> dt.labeled(domainCatalog)).toList());
+        draftRepository.findPendingDomainTitles().stream()
+                .map(dt -> dt.labeled(domainCatalog)).forEach(titles::add);
 
         List<String> tags = tagRepository.findAll().stream()
                 .map(Tag::getName)

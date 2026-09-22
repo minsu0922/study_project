@@ -15,7 +15,6 @@ import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.llm.support.DomainEntry;
 import project.study.study_project.llm.support.DomainHints;
-import project.study.study_project.llm.support.DomainHintsProvider;
 import project.study.study_project.llm.support.GenerationSchedule;
 
 import java.time.LocalDate;
@@ -52,7 +51,7 @@ import java.util.Set;
  */
 @Slf4j
 @Service
-public class DomainSettingService implements DomainHintsProvider, DomainCatalog {
+public class DomainSettingService implements DomainCatalog {
 
     /** 미리보기의 "오늘" 기준 — 워크플로가 KST로 변환해 배치에 넘기는 것과 맞춘다. */
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
@@ -236,22 +235,6 @@ public class DomainSettingService implements DomainHintsProvider, DomainCatalog 
             map.put(setting.getDomain(), setting.getHint());
         }
         return DomainHints.of(map);
-    }
-
-    /**
-     * 앱 안의 두 생성기({@code ClaudeProblemGenerator}·{@code ClaudeDocumentGenerator})가
-     * 프롬프트를 짤 때마다 부르는 자리 — {@link #hints()}와 같은 값이다.
-     *
-     * <p><b>왜 매번 DB를 읽나.</b> 생성기는 스프링이 기동 때 한 번 만드는 빈이라, 여기서 얻은
-     * 값을 붙잡아 두면 관리자가 화면에서 힌트를 고쳐도 재시작 전까지 옛 힌트가 나간다. 호출은
-     * 생성 한 번(수십 초짜리 유료 API 호출)마다 한두 번뿐이라 열한 줄짜리 조회를 캐시할 까닭이
-     * 없다. 생성기가 이 서비스 타입을 직접 모르게 하려고 {@link DomainHintsProvider}로 받는다
-     * (그 인터페이스 주석 참고).
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public DomainHints current() {
-        return hints();
     }
 
     /** 관리 화면 목록 — {@code sortOrder} 순 전체. */

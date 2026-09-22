@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
@@ -67,6 +68,9 @@ public class ReviewService {
     private static final int MAX_SIZE = 50;
 
     private final ReviewItemRepository reviewItemRepository;
+
+    /** 응답의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로 싣는다(Task 4). */
+    private final DomainCatalog domainCatalog;
 
     /**
      * "지금부터 {@code days}일 뒤"의 복습 예정 시각 — <b>시각이 아니라 학습일로 센다</b>.
@@ -209,7 +213,8 @@ public class ReviewService {
     @Transactional(readOnly = true)
     public PageResponse<ReviewTodayItem> getTodayReviews(Long userId, Pageable pageable) {
         Page<ReviewItem> page = reviewItemRepository.findDue(userId, LocalDateTime.now(), clamp(pageable));
-        return PageResponse.from(page.map(ReviewTodayItem::from));
+        return PageResponse.from(page.map(
+                r -> ReviewTodayItem.from(r, domainCatalog.displayName(r.getProblem().getDomain()))));
     }
 
     /**
@@ -239,7 +244,8 @@ public class ReviewService {
         Page<ReviewItem> page = (problemIds == null || problemIds.isEmpty())
                 ? reviewItemRepository.findAllOfUser(userId, status, clamp(pageable))
                 : reviewItemRepository.findAllOfUserByProblemIds(userId, capIds(problemIds), clamp(pageable));
-        return PageResponse.from(page.map(r -> ReviewListItem.from(r, now)));
+        return PageResponse.from(page.map(
+                r -> ReviewListItem.from(r, now, domainCatalog.displayName(r.getProblem().getDomain()))));
     }
 
     /**

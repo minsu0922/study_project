@@ -15,8 +15,7 @@ import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
-import project.study.study_project.llm.support.DomainHints;
-import project.study.study_project.llm.support.DomainHintsProvider;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.util.List;
@@ -95,46 +94,46 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
     private final String model;
 
     /**
-     * 분야 경계 설명. 예전에는 {@code switch}로 코드에 박혀 있었는데, 그 한 줄이 생성 품질을
-     * 직접 흔드는 값인데도 고치려면 재배포가 필요했다. 이제 관리자 화면에서 고치고
-     * {@code generated/_domain-settings.json}으로 배치까지 나른다(docs/21).
+     * 분야 이름·경계 힌트를 읽는 창구. 예전에는 이름은 {@code DefaultDomains}에, 힌트는
+     * {@code switch}로 코드에 박혀 있었는데, 둘 다 생성 품질을 직접 흔드는 값인데도 고치려면
+     * 재배포가 필요했다. 이제 관리자 화면에서 고치고 {@code generated/_domain-settings.json}으로
+     * 배치까지 나른다(docs/21).
      *
-     * <p><b>값이 아니라 공급자를 든다.</b> 힌트는 {@link #buildPrompt}가 프롬프트에 붙이는
-     * <b>그 순간</b> {@link DomainHintsProvider#current()}로 읽는다. 생성자에서 한 번 읽어
-     * 필드에 굳히면, 스프링 빈은 기동 때 한 번만 만들어지므로 관리자가 화면에서 힌트를 고쳐도
-     * 앱을 재시작하기 전까지 옛 힌트가 나간다 — Task 7이 배치 후보 목록에서 없앤 그 증상이다
-     * (자세한 판단은 {@link DomainHintsProvider} 클래스 주석).
+     * <p><b>값이 아니라 창구(카탈로그)를 든다.</b> 이름·힌트는 {@link #buildPrompt}가 프롬프트에
+     * 붙이는 <b>그 순간</b> {@link DomainCatalog#displayName}·{@link DomainCatalog#hints()}로
+     * 읽는다. 생성자에서 한 번 읽어 필드에 굳히면, 스프링 빈은 기동 때 한 번만 만들어지므로
+     * 관리자가 화면에서 이름·힌트를 고쳐도 앱을 재시작하기 전까지 옛 값이 나간다 — Task 7이
+     * 배치 후보 목록에서 없앤 것과 같은 증상이다(자세한 판단은 {@link DomainCatalog} 클래스 주석).
+     *
+     * <p><b>왜 이름도 여기서 읽나(Task 4).</b> 전에는 이름을 {@code DefaultDomains.displayName}로
+     * 직접 읽었다. 그러면 힌트는 관리자가 고친 값이 나가는데 <b>같은 줄의 분야 이름만 옛 이름</b>인
+     * 프롬프트가 나간다 — 화면에서 분야명을 바꿔도 필터 목록만 바뀌고 나머지 화면·프롬프트는
+     * 그대로였던 버그(스펙 6절)가 바로 이 자리였다. {@code DomainHints}였던 필드 타입을
+     * {@link DomainCatalog}로 넓혀 이름·힌트가 <b>같은 창구, 같은 순간</b>에서 나오게 한다.
      */
-    private final DomainHintsProvider domainHintsProvider;
+    private final DomainCatalog domainCatalog;
 
     /**
-     * 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 힌트로 돈다.
+     * 설정을 못 읽는 자리(테스트·평가 CLI)에서 쓰는 생성자 — 내장 이름·힌트로 돈다.
      *
      * <p><b>스프링이 쓰는 생성자가 아니다.</b> 전에는 여기에 {@code @Autowired}·{@code @Value}가
      * 붙어 있어 스프링 빈이 이 생성자로 만들어졌고, 그래서 앱 안에서 생성하면(관리자 "생성 실행"·
      * 문서 업로드) 화면에서 고친 힌트가 무시되고 늘 내장값이 나갔다(최종 리뷰 Important 2).
-     * 지금은 {@link #ClaudeProblemGenerator(String, DomainHintsProvider)}가 빈 생성을 맡는다.
+     * 지금은 {@link #ClaudeProblemGenerator(String, DomainCatalog)}가 빈 생성을 맡는다.
      * 이 생성자를 지우지 않는 이유: {@code PromptEvalCli}·E2E 테스트·프롬프트 테스트가 DB 없이
      * {@code new}로 만든다.
      */
     public ClaudeProblemGenerator(String model) {
-        this(model, DomainHints.BUILT_IN);
+        this(model, DefaultDomains.catalog());
     }
 
     /**
-     * 이미 정해진 힌트 한 벌로 도는 생성자 — 배치 CLI가 {@code _domain-settings.json}에서 읽은
-     * 값을 넣는다({@code DraftGeneratorCli}).
-     *
-     * <p>CLI는 한 번 실행되고 끝나는 프로세스라, 실행 도중 파일이 바뀌어도 다시 읽을 까닭이 없다.
-     * 그래서 상수를 감싼 공급자({@code () -> domainHints})로 위임한다 — 호출부는 하나도 안 바뀐다.
-     */
-    public ClaudeProblemGenerator(String model, DomainHints domainHints) {
-        this(model, () -> domainHints);
-    }
-
-    /**
-     * <b>스프링 빈을 만드는 생성자</b> — 앱 안의 생성이 관리자 화면에서 고친 힌트를 따르게 한다.
-     * 앱에서는 {@code DomainSettingService}가 {@link DomainHintsProvider}를 구현해 DB 값을 내준다.
+     * <b>스프링 빈을 만드는 생성자</b> — 앱 안의 생성이 관리자 화면에서 고친 이름·힌트를 따르게 한다.
+     * 앱에서는 {@code DomainSettingService}가 {@link DomainCatalog}를 구현해 DB 값을 내준다.
+     * 배치 CLI({@code DraftGeneratorCli})도 <b>같은 생성자</b>를 쓴다 — {@code _domain-settings.json}을
+     * 읽은 {@code DomainSettings}가 또 하나의 {@link DomainCatalog} 구현이기 때문이다. 두 실행
+     * 환경이 생성자를 공유하므로 "배치 프롬프트는 옛 이름, 앱 프롬프트는 새 이름"으로 갈라질
+     * 여지가 애초에 없다.
      *
      * <p><b>{@code @Autowired}는 이 생성자 하나에만 붙인다.</b> 생성자가 여럿이면 스프링은
      * 스스로 하나를 고르지 못하고(자동 선택은 생성자가 하나뿐일 때만 된다), 표시가 둘 이상이거나
@@ -146,9 +145,9 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      */
     @Autowired
     public ClaudeProblemGenerator(@Value("${llm.generation.model:claude-opus-4-8}") String model,
-                                  DomainHintsProvider domainHintsProvider) {
+                                  DomainCatalog domainCatalog) {
         this.model = model;
-        this.domainHintsProvider = domainHintsProvider;
+        this.domainCatalog = domainCatalog;
     }
 
     @Override
@@ -805,10 +804,11 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                        QuestionKind requestedKind) {
         StringBuilder sb = new StringBuilder();
         sb.append("다음 조건으로 문제 ").append(count).append("개를 만들어라.\n\n");
-        // 힌트는 <지금> 읽는다 — 필드에 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다
-        // (domainHintsProvider 필드 주석).
-        sb.append("- 분야: ").append(DefaultDomains.displayName(domain))
-                .append(domainHintsProvider.current().hintFor(domain)).append('\n');
+        // 이름·힌트는 <지금> 읽는다 — 필드에 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다
+        // (domainCatalog 필드 주석). 이름을 DefaultDomains가 아니라 카탈로그에서 읽어야
+        // 관리자가 화면에서 분야명을 바꾼 직후 이 줄도 새 이름을 쓴다(스펙 6절 버그 수정).
+        sb.append("- 분야: ").append(domainCatalog.displayName(domain))
+                .append(domainCatalog.hints().hintFor(domain)).append('\n');
         sb.append("- 난이도: ").append(difficultyRule(difficulty)).append('\n');
         sb.append("- 유형: ").append(typeRule(type)).append('\n');
 

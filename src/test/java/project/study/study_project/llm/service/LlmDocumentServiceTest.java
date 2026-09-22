@@ -22,6 +22,7 @@ import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.dto.LlmDocumentDraftResponse;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
@@ -66,7 +67,8 @@ class LlmDocumentServiceTest {
     @BeforeEach
     void setUp() {
         service = new LlmDocumentService(
-                draftRepository, documentRepository, adminDocumentService, objectMapper, event -> { });
+                draftRepository, documentRepository, adminDocumentService, objectMapper, event -> { },
+                DefaultDomains.catalog());
         lenient().when(draftRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         // 기본값은 "짝이 없다". 2026-09-03 이전 문서는 한 편짜리이므로 이쪽이 보통이고,
         // 짝을 보는 테스트만 아래에서 덮어쓴다. 안 두면 목록을 훑는 다른 테스트가

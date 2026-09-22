@@ -13,7 +13,7 @@ import org.springframework.data.support.PageableExecutionUtils;
 import project.study.study_project.document.domain.QDocument;
 import project.study.study_project.document.dto.DocumentListItem;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.tag.domain.QTag;
 
 import java.time.LocalDateTime;
@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
+    private final DomainCatalog domainCatalog; // 목록의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로(Task 4)
 
     /**
      * 1방째 결과를 담는 중간 행 — domainLabel·tags를 붙이기 전의 순수 DB 값.
@@ -105,7 +106,7 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
 
         List<DocumentListItem> content = rows.stream()
                 .map(r -> new DocumentListItem(
-                        r.id(), r.domain(), DefaultDomains.displayName(r.domain()), r.title(), r.slug(),
+                        r.id(), r.domain(), domainCatalog.displayName(r.domain()), r.title(), r.slug(),
                         // 편(입문/심화)은 여기서 채우지 않는다 — 짝이 실제로 있는지 알아야 하는데
                         // 그건 이 페이지 밖의 문서를 봐야 하는 질문이라 서비스가 한 번에 처리한다.
                         tagsByDocId.getOrDefault(r.id(), List.of()), r.updatedAt(), null))

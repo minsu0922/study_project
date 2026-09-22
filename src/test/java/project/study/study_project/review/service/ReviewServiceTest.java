@@ -16,6 +16,7 @@ import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
 import project.study.study_project.review.repository.ReviewItemRepository;
+import project.study.study_project.llm.support.DefaultDomains;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -56,7 +57,7 @@ class ReviewServiceTest {
 
     @BeforeEach
     void setUp() {
-        reviewService = new ReviewService(reviewItemRepository);
+        reviewService = new ReviewService(reviewItemRepository, DefaultDomains.catalog());
         // OX 문제 하나면 충분 — 전이 규칙은 문제 타입과 무관하다(채점 결과 boolean만 본다).
         problem = Problem.create(TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
                 "TCP의 연결 지향 성질",

@@ -20,7 +20,6 @@ import project.study.study_project.llm.support.DifficultyMaterialRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
-import project.study.study_project.llm.support.DomainHints;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationLimits;
 import project.study.study_project.llm.support.GenerationSchedule;
@@ -209,7 +208,10 @@ public final class DraftGeneratorCli {
         BatchAction action = decideAction(
                 opts.get("type"), (String) generation.get("batch-type"), plan.documentDay());
         if (action == BatchAction.DOCUMENT) {
-            generateDocument(opts, model, settings.hints(), batchDomains, cycleAnchor);
+            // settings(DomainSettings)를 카탈로그 그대로 넘긴다 — hints()만 뽑아 넘기면 분야
+            // 이름은 여전히 DefaultDomains 고정값을 쓰게 되어, 관리 화면에서 고친 이름이
+            // 배치 프롬프트에는 반영되지 않는다(Task 4, 스펙 6절 버그의 배치 쪽 절반).
+            generateDocument(opts, model, settings, batchDomains, cycleAnchor);
             return;
         }
         if (action == BatchAction.SKIP) {
@@ -294,10 +296,12 @@ public final class DraftGeneratorCli {
                 source == null ? "없음(폴백)" : source.slug(), avoid.size(), rejectionNotes.size());
 
         // ── 7. 실제 호출 ──────────────────────────────────────────
-        // hints()는 settings가 비어 있으면 DomainHints.BUILT_IN으로 떨어진다(DomainSettings
+        // settings(DomainSettings)를 카탈로그 그대로 넘긴다 — 분야 이름도 힌트와 같은 자리에서
+        // 나와야 "화면에서 분야명을 고쳤는데 배치 프롬프트만 옛 이름"이 되지 않는다(Task 4).
+        // displayName()·hints() 둘 다 파일이 비어 있으면 DefaultDomains로 떨어진다(DomainSettings
         // Javadoc) — 관리 화면을 아직 안 썼거나 파일이 깨졌을 때도 2026-09-21 이전과 같은
         // 프롬프트가 나가야 하므로, 여기서 따로 null 방어를 하지 않는다.
-        List<GeneratedProblemItem> problems = new ClaudeProblemGenerator(model, settings.hints())
+        List<GeneratedProblemItem> problems = new ClaudeProblemGenerator(model, settings)
                 .generate(domain, difficulty, type, count, avoid, rejectionNotes, source);
 
         // 빈 응답은 성공이 아니다 — 조용히 빈 파일을 커밋하면 "돌긴 돌았는데 왜 문제가 없지"가 된다.
@@ -653,7 +657,7 @@ public final class DraftGeneratorCli {
      *       기존 흡수 코드가 파싱에 실패한다({@code GeneratedDocumentFile} 주석 참고).
      * </ul>
      */
-    private static void generateDocument(Map<String, String> opts, String model, DomainHints hints,
+    private static void generateDocument(Map<String, String> opts, String model, DomainSettings settings,
                                          List<DomainCode> batchDomains, LocalDate cycleAnchor) throws Exception {
         LocalDate date = resolveDate(opts);
         // main()이 이미 같은 opts로 outDir을 정해 뒀지만, 이 메서드는 main()의 지역 변수를
@@ -702,7 +706,7 @@ public final class DraftGeneratorCli {
         System.out.printf("문서 생성 시작: %s / 주제 %s (모델 %s, 기존 문서 %d편, 태그 %d개)%n",
                 domain, topic == null ? "자동 선택" : topic, model, avoidTitles.size(), tags.size());
 
-        ClaudeDocumentGenerator generator = new ClaudeDocumentGenerator(model, hints);
+        ClaudeDocumentGenerator generator = new ClaudeDocumentGenerator(model, settings);
         GeneratedDocumentItem document = generator.generate(domain, topic, avoidTitles, tags);
 
         // 빈 응답은 성공이 아니다 — job을 실패시켜 메일을 받는 쪽이 낫다(문제 생성과 같은 판단)

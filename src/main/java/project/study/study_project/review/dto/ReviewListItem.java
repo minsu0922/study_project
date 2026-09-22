@@ -1,7 +1,6 @@
 package project.study.study_project.review.dto;
 
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
 
@@ -34,14 +33,16 @@ public record ReviewListItem(
         boolean due
 ) {
     /**
-     * @param now due 판정 기준 시각 — 페이지 전체가 같은 "지금"으로 판정되도록 서비스가
-     *            한 번만 구해서 넘긴다(항목마다 now()를 부르면 페이지 안에서 기준이 미세하게 갈린다)
+     * @param now         due 판정 기준 시각 — 페이지 전체가 같은 "지금"으로 판정되도록 서비스가
+     *                    한 번만 구해서 넘긴다(항목마다 now()를 부르면 페이지 안에서 기준이 미세하게 갈린다)
+     * @param domainLabel 화면 표기 이름. DTO의 정적 팩터리는 스프링 빈({@code DomainCatalog})에
+     *                    닿을 수 없으므로 부르는 서비스가 미리 찾아 넘긴다(Task 4 규칙)
      */
-    public static ReviewListItem from(ReviewItem r, LocalDateTime now) {
+    public static ReviewListItem from(ReviewItem r, LocalDateTime now, String domainLabel) {
         boolean due = r.getStatus() == ReviewStatus.LEARNING && !r.getNextReviewAt().isAfter(now);
         return new ReviewListItem(
                 r.getProblem().getId(), r.getProblem().getTitle(), r.getProblem().getQuestion(),
-                r.getProblem().getDomain(), DefaultDomains.displayName(r.getProblem().getDomain()),
+                r.getProblem().getDomain(), domainLabel,
                 r.getStage(), r.getStatus(), r.getReviewCount(), r.getNextReviewAt(), due);
     }
 }

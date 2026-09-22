@@ -691,7 +691,7 @@ public class LlmProblemService {
                 : List.of();
 
         return new LlmDraftResponse(
-                d.getId(), d.getDomain(), DefaultDomains.displayName(d.getDomain()), d.getDifficulty(), d.getType(),
+                d.getId(), d.getDomain(), domainSettingService.displayName(d.getDomain()), d.getDifficulty(), d.getType(),
                 d.getTitle(), d.getQuestion(), d.getAnswer(), d.getExplanation(), choices,
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedProblemId(),
                 d.getDocumentSlug(), d.getQuestionKind(),

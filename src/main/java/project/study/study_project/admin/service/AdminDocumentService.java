@@ -14,6 +14,7 @@ import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.config.CacheConfig;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.tag.service.TagService;
 
 /**
@@ -31,6 +32,7 @@ public class AdminDocumentService {
     private final DocumentRepository documentRepository;
     private final TagService tagService;
     private final CacheManager cacheManager; // 문서 캐시 무효화용 (로드맵 2, CacheConfig 참고)
+    private final DomainCatalog domainCatalog; // 응답의 분야 표기 이름 — 관리자가 화면에서 고친 이름을 그대로(Task 4)
 
     /** 문서 등록. slug는 URL 식별자라 중복이면 409(DOC_002). 태그는 find-or-create. */
     @Transactional
@@ -47,7 +49,7 @@ public class AdminDocumentService {
         // 실어 나르기 때문이다 — 심화편을 지금 승인하면 이미 캐시된 입문편은 여전히
         // "짝 없음"으로 남아, 한쪽에서만 링크가 보이는 상태가 최대 10분(TTL)간 이어진다.
         evictDocumentCache(DocumentEditions.counterpartSlugOf(request.slug()));
-        return DocumentDetailResponse.from(saved);
+        return DocumentDetailResponse.from(saved, domainCatalog.displayName(saved.getDomain()));
     }
 
     /**
@@ -71,7 +73,7 @@ public class AdminDocumentService {
         evictDocumentCache(oldSlug, request.slug(),
                 DocumentEditions.counterpartSlugOf(oldSlug),
                 DocumentEditions.counterpartSlugOf(request.slug()));
-        return DocumentDetailResponse.from(document); // 변경 감지로 커밋 시 UPDATE
+        return DocumentDetailResponse.from(document, domainCatalog.displayName(document.getDomain())); // 변경 감지로 커밋 시 UPDATE
     }
 
     /**

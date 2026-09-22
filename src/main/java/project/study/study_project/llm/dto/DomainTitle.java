@@ -1,7 +1,7 @@
 package project.study.study_project.llm.dto;
 
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.llm.support.DomainCatalog;
 
 /**
  * 분야와 제목 한 쌍 — 중복 회피 목록을 <b>[분야] 제목</b> 꼴로 내보내려고 만들었다(2026-09-03).
@@ -17,8 +17,14 @@ import project.study.study_project.llm.support.DefaultDomains;
  */
 public record DomainTitle(DomainCode domain, String title) {
 
-    /** 프롬프트에 실리는 형태. 분야는 한국어 표기로 — 모델에게 {@code NETWORK}보다 읽힌다. */
-    public String labeled() {
-        return "[%s] %s".formatted(DefaultDomains.displayName(domain), title);
+    /**
+     * 프롬프트에 실리는 형태. 분야는 한국어 표기로 — 모델에게 {@code NETWORK}보다 읽힌다.
+     *
+     * <p>record 인스턴스 메서드라 빈에 직접 닿을 수 없으므로, 이름을 찾을 카탈로그를 호출부가
+     * 넘겨준다(Task 4 규칙) — {@code DefaultDomains}를 여기서 직접 읽으면 관리자가 화면에서
+     * 분야명을 바꿔도 이 목록만 옛 이름을 쓰게 된다.
+     */
+    public String labeled(DomainCatalog catalog) {
+        return "[%s] %s".formatted(catalog.displayName(domain), title);
     }
 }

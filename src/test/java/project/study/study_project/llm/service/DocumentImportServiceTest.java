@@ -20,6 +20,7 @@ import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
+import project.study.study_project.llm.support.DefaultDomains;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,7 +67,7 @@ class DocumentImportServiceTest {
         LlmDocumentService llmDocumentService =
                 new LlmDocumentService(
                         draftRepository, documentRepository, adminDocumentService,
-                        objectMapper, event -> { });
+                        objectMapper, event -> { }, DefaultDomains.catalog());
         service = new DocumentImportService(llmDocumentService, importedFileRepository, objectMapper);
 
         // save는 받은 엔티티를 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내

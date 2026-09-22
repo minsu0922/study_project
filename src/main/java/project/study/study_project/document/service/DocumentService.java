@@ -16,6 +16,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.support.DomainCatalog;
 
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,7 @@ import java.util.Set;
 public class DocumentService {
 
     private final DocumentRepository documentRepository;
+    private final DomainCatalog domainCatalog; // 응답의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로(Task 4)
 
     /**
      * 문서 목록. 도메인·태그 필터는 선택. 본문은 제외한 요약 항목으로 페이지를 만든다.
@@ -93,7 +95,8 @@ public class DocumentService {
     public DocumentDetailResponse getDocument(String slug) {
         Document document = documentRepository.findBySlug(slug)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DOC_001));
-        return DocumentDetailResponse.withEdition(document, existingCounterpartOf(slug));
+        return DocumentDetailResponse.withEdition(document,
+                domainCatalog.displayName(document.getDomain()), existingCounterpartOf(slug));
     }
 
     /**

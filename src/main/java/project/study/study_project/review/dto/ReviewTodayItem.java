@@ -2,7 +2,6 @@ package project.study.study_project.review.dto;
 
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.dto.QuizChoiceItem;
@@ -42,7 +41,11 @@ public record ReviewTodayItem(
         LocalDateTime nextReviewAt,
         int reviewCount
 ) {
-    public static ReviewTodayItem from(ReviewItem r) {
+    /**
+     * @param domainLabel 화면 표기 이름. DTO의 정적 팩터리는 스프링 빈({@code DomainCatalog})에
+     *                    닿을 수 없으므로 부르는 서비스가 미리 찾아 넘긴다(Task 4 규칙)
+     */
+    public static ReviewTodayItem from(ReviewItem r, String domainLabel) {
         Problem p = r.getProblem();
         // 행을 쓰는 유형일 때만 LAZY 보기 컬렉션에 접근한다(불필요한 쿼리 방지 — QuizProblemItem과 동일).
         // 섞는 것도 같이 재사용한다. 복습이야말로 순서를 섞어야 하는 자리다 —
@@ -54,7 +57,7 @@ public record ReviewTodayItem(
                 ? QuizMatchOption.shuffledFrom(p.getId(), p.getChoices())
                 : List.of();
         return new ReviewTodayItem(
-                p.getId(), p.getDomain(), DefaultDomains.displayName(p.getDomain()),
+                p.getId(), p.getDomain(), domainLabel,
                 p.getDifficulty(), p.getType(), p.getQuestion(), choices, matchOptions,
                 r.getStage(), r.getNextReviewAt(), r.getReviewCount());
     }
