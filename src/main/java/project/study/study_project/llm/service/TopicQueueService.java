@@ -148,7 +148,13 @@ public class TopicQueueService {
         String keyword = (q == null) ? "" : q.trim().toLowerCase();
         List<TopicQueueItemResponse> matched = all.stream()
                 .filter(item -> keyword.isEmpty() || matches(item, keyword))
-                .filter(item -> domain == null || item.domain() == domain)
+                // Objects.equals다. DomainCode는 record(값 타입)라 ==는 참조 비교인데, 여기서
+                // 견주는 둘은 <절대 같은 인스턴스가 아니다> — item.domain()은 Hibernate가 행에서
+                // 만든 것이고, domain은 MVC 변환기가 요청 파라미터에서 만든 것이다. ==로 두면
+                // ?domain=DATABASE가 늘 빈 목록을 주는데, 오류가 아니라 "그 분야에 주제가 없다"로
+                // 보여 조용하다(최종 리뷰 Important 1). enum 시절에는 상수가 하나뿐이라 ==가
+                // 맞았고, 그 습관이 그대로 남아 있던 자리다.
+                .filter(item -> domain == null || Objects.equals(item.domain(), domain))
                 .filter(item -> matchesUsage(item, usage))
                 .toList();
 

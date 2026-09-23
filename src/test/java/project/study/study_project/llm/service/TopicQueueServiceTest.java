@@ -313,14 +313,28 @@ class TopicQueueServiceTest {
         assertThat(listed(null, TopicQueueService.TopicUsage.ALL)).hasSize(2);
     }
 
+    /**
+     * <b>거르는 분야를 일부러 다른 인스턴스로 만든다</b>(최종 리뷰 Important 1).
+     *
+     * <p>이 테스트는 예전에 양쪽에 같은 {@code TestDomains.DATABASE} 인스턴스를 넣어
+     * <b>{@code ==}로도 통과했다</b> — 거짓 안심이었다. 실제 요청 경로에서는 대기열 항목의 분야를
+     * Hibernate가 만들고 질의 조건은 MVC 변환기가 만들어, 두 {@link DomainCode}는 값이 같아도
+     * 절대 같은 물건이 아니다. 그래서 여기서도 {@code DomainCode.of("DATABASE")}를 <b>따로</b>
+     * 만들어 넘긴다 — 서비스가 {@code ==}로 되돌아가면 빈 목록이 나와 반드시 깨진다.
+     */
     @Test
-    @DisplayName("분야로 거른다 — 자바만 손보려는데 여든 줄을 훑을 이유가 없다")
+    @DisplayName("분야로 거른다 — 값이 같고 인스턴스가 다른 분야도 걸러야 한다(==로 되돌리면 깨진다)")
     void filtersByDomain() {
         when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
                 item(1L, TestDomains.OS, "운영체제 것", 1),
                 item(2L, TestDomains.DATABASE, "디비 것", 2)));
 
-        assertThat(listed(TestDomains.DATABASE, TopicQueueService.TopicUsage.ALL))
+        DomainCode separatelyBuilt = DomainCode.of("DATABASE");
+        // 값은 같지만 물건은 다르다 — 이 전제가 깨지면 이 테스트는 다시 거짓 안심이 된다.
+        assertThat(separatelyBuilt).isEqualTo(TestDomains.DATABASE);
+        assertThat(separatelyBuilt).isNotSameAs(TestDomains.DATABASE);
+
+        assertThat(listed(separatelyBuilt, TopicQueueService.TopicUsage.ALL))
                 .containsExactly("디비 것");
     }
 
