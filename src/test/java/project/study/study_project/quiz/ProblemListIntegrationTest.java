@@ -15,7 +15,6 @@ import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.service.DomainSettingService;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.ProblemListItem;
@@ -200,6 +199,15 @@ class ProblemListIntegrationTest {
      * 사이드바는 손대지 않은 분야도 보여 줘야 한다 — 정작 "여기부터 해 볼까"의 후보가
      * 그쪽이기 때문이다. 집계 쿼리는 그런 분야를 아예 주지 않으므로 서비스가 채운다.
      */
+    /**
+     * <b>리뷰 라운드 1 수정(2026-09-23).</b> 예전에는 {@code hasSize(DefaultDomains.codes().size())}
+     * (기본 11개 고정값)와 비교했다. 이 테스트가 <b>실제로</b> 통과한 이유는 개발 DB에 우연히
+     * 딱 11개 분야만 있었기 때문이지, 사이드바가 기본값을 따른다는 뜻이 아니었다 — Task 7로
+     * 사이드바는 이제 등록부(DB)를 따른다({@code ProblemListService.domainProgress} 참고).
+     * 그래서 "지금 DB에 실제로 등록된 행 수"({@code domainSettingService.findAll().size()})와
+     * 비교해야, DB가 기본 11개와 우연히 같은지 여부와 무관하게 이 테스트가 성립한다(이전
+     * 작업에서 이미 고친 것과 같은 함정 — {@code report §7} 참고).
+     */
     @Test
     @DisplayName("분야 진척에는 손대지 않은 분야도 0으로 들어 있다 — 빠지면 시작할 곳이 안 보인다")
     void domainProgressIncludesUntouchedDomains() {
@@ -208,7 +216,7 @@ class ProblemListIntegrationTest {
         List<StudySummaryResponse.DomainProgress> domains =
                 problemListService.getSummary(userId).domains();
 
-        assertThat(domains).hasSize(DefaultDomains.codes().size());
+        assertThat(domains).hasSize(domainSettingService.findAll().size());
         assertThat(domains).filteredOn(d -> d.domain().equals(TestDomains.NETWORK))
                 .singleElement().extracting(StudySummaryResponse.DomainProgress::solved)
                 .isEqualTo(1L);
@@ -222,10 +230,15 @@ class ProblemListIntegrationTest {
      * 사이드바에도 0진척으로 곧바로 나타나야 한다. 예전({@code DefaultDomains.codes()} 고정값)
      * 에는 이 테스트가 성립할 수 없었다 — 등록부에 무엇을 추가하든 사이드바는 재배포 전까지
      * 그대로였기 때문이다.
+     *
+     * <p>크기 비교는 <b>추가 전에 잰 등록부 행 수 + 1</b>과 한다({@code DefaultDomains.codes().size()}가
+     * 아니다) — DB의 실제 행 수가 기본 11개와 같다고 가정하지 않아야, 다른 테스트가 분야를
+     * 남겨 두거나 관리자가 미리 분야를 늘려 둔 환경에서도 이 테스트가 성립한다.
      */
     @Test
     @DisplayName("분야를 추가하면 사이드바에도 곧바로 0진척으로 나타난다 — 화면에서 늘린 분야가 학습자 화면까지 닿는다")
     void domainProgressIncludesNewlyRegisteredDomain() {
+        int before = domainSettingService.findAll().size();
         DomainCode added = DomainCode.of("MESSAGING_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         domainSettingService.create(new AdminDomainCreateRequest(
                 added, "테스트용 새 분야", "사이드바 반영 확인용"));
@@ -233,7 +246,7 @@ class ProblemListIntegrationTest {
         List<StudySummaryResponse.DomainProgress> domains =
                 problemListService.getSummary(userId).domains();
 
-        assertThat(domains).hasSize(DefaultDomains.codes().size() + 1);
+        assertThat(domains).hasSize(before + 1);
         assertThat(domains).filteredOn(d -> d.domain().equals(added))
                 .singleElement()
                 .satisfies(p -> {

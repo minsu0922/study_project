@@ -9,6 +9,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
@@ -289,6 +290,61 @@ class DraftGeneratorCliTest {
         assertThatThrownBy(() -> DraftGeneratorCli.documentDomain(
                 LocalDate.of(2026, 8, 15), CANDIDATES, "SPRING", ANCHOR))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * <b>위 {@link #unknownManualDomainFailsBeforeSpending}만으로는 옛 규칙과 새 규칙을
+     * 가르지 못한다</b> — "SPRING"은 {@code DefaultDomains}에도 애초에 없어서, 옛
+     * {@code DefaultDomains.isKnown} 기준으로 되돌려도 그 테스트는 그대로 통과한다(리뷰
+     * 라운드 1 지적). 이 테스트가 그 구멍을 메운다: {@code CLOUD_INFRA}는 기본 11개
+     * <b>안</b>에 있지만 이번 실행의 candidates(yml 8개, CLOUD_INFRA 없음) <b>밖</b>이다.
+     *
+     * <p><b>이 방향이 가리키는 것 — "기본값이어도 candidates 밖이면 거부해야 한다".</b>
+     * 옛 {@code DefaultDomains.isKnown} 기준으로 되돌리면 CLOUD_INFRA는 기본 11개 안에
+     * 있으므로 <b>통과해 버린다</b> — 파일이 CLOUD_INFRA를 빼 둔 뜻(관리자가 순환에서
+     * 뺐다)을 무시하고 유료 API가 나간다. 이 테스트가 실패해야 그 회귀를 잡는다.
+     */
+    @Test
+    @DisplayName("기본 11개 안에 있어도 이번 실행의 후보 밖이면 거부한다 — 되돌리면 못 잡는 회귀")
+    void builtInDomainOutsideCandidatesIsRejected() {
+        assertThat(CANDIDATES).as("이 테스트의 전제 — CLOUD_INFRA는 yml 8개 후보 밖이다")
+                .doesNotContain(TestDomains.CLOUD_INFRA);
+
+        assertThatThrownBy(() -> DraftGeneratorCli.knownDomain("CLOUD_INFRA", CANDIDATES))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("CLOUD_INFRA");
+    }
+
+    /**
+     * {@link #builtInDomainOutsideCandidatesIsRejected}의 반대 방향 — <b>기본 11개에 없어도
+     * candidates 안이면 받아들여야 한다</b>. "MESSAGING"은 화면에서 새로 추가한 분야를
+     * 흉내 낸 것으로, {@code DefaultDomains}에는 없지만(반드시 없어야 이 테스트가 의미가 있다)
+     * 이번 실행의 candidates에는 들어 있다.
+     *
+     * <p><b>이 방향이 가리키는 것 — "candidates 안이면 기본값이 아니어도 통과해야 한다".</b>
+     * 옛 {@code DefaultDomains.isKnown} 기준으로 되돌리면 MESSAGING은 기본 11개에 없으므로
+     * <b>거부돼 버린다</b> — 관리자가 화면에서 추가한 분야로 {@code --domain=MESSAGING}
+     * 수동 실행을 걸어도 "알 수 없는 분야"로 막히는, 이 작업이 고치려던 바로 그 버그가
+     * 되살아난다. {@code DomainSettingsTest.fileDefinedDomainIsKnownToBatch}는 파일을 읽는
+     * 층(파싱)만 보고 이 CLI 검증 층은 보지 않으므로, 이 테스트가 그 빈자리를 채운다.
+     */
+    @Test
+    @DisplayName("기본 11개에 없어도 이번 실행의 후보 안이면 받아들인다 — 화면에서 추가한 분야가 통과해야 한다")
+    void fileDefinedDomainInCandidatesIsAccepted() {
+        DomainCode messaging = DomainCode.of("MESSAGING");
+        assertThat(DefaultDomains.codes())
+                .as("이 테스트의 전제 — MESSAGING은 기본 11개에 없다")
+                .doesNotContain(messaging);
+        List<DomainCode> candidatesWithFileDefinedDomain = new ArrayList<>(CANDIDATES);
+        candidatesWithFileDefinedDomain.add(messaging);
+
+        assertThat(DraftGeneratorCli.knownDomain("MESSAGING", candidatesWithFileDefinedDomain))
+                .isEqualTo(messaging);
+        // documentDomain도 같은 candidates로 같은 판정을 해야 한다 — knownDomain만 고치고
+        // 이쪽을 빠뜨리면 문서 흐름만 여전히 새 분야를 거부하는 어긋남이 생긴다.
+        assertThat(DraftGeneratorCli.documentDomain(
+                LocalDate.of(2026, 8, 15), candidatesWithFileDefinedDomain, "MESSAGING", ANCHOR))
+                .isEqualTo(messaging);
     }
 
     /* ══ 근거 문서 지목 (--document-date) ═══════════════════════ */
