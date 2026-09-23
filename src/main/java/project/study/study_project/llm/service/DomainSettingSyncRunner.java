@@ -8,17 +8,24 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * 기동 시 {@code domain_setting} 테이블을 기본 분야 목록({@code DefaultDomains})에 맞춰 둔다.
+ * 기동 시 {@code domain_setting} 표가 <b>완전히 비어 있으면</b> 기본 분야 11개로 채운다.
  *
- * <p>실제 동기화 규칙은 {@link DomainSettingService#syncWithDefaults()}에 있다 — 이 클래스는
+ * <p>실제 시드 규칙은 {@link DomainSettingService#seedIfEmpty()}에 있다 — 이 클래스는
  * "언제 부를 것인가"만 책임진다({@code TopicQueueSyncRunner}와 같은 역할 분리).
+ *
+ * <p><b>이 러너의 이름·역할이 6번 작업(등록부 추가·삭제)에서 바뀌었다.</b> 예전에는 기동마다
+ * 기본 분야 목록과 표를 맞추는 "동기화"였다(없는 행을 만들고, 기본 목록에서 빠진 행은 지웠다).
+ * 등록부가 관리자 손으로 늘고 주는 것으로 바뀐 지금 그 동작을 그대로 두면, 관리자가 화면에서
+ * 추가한 분야가 다음 기동에 "기본 목록에 없다"는 이유로 조용히 지워진다 — 이 러너는 이제
+ * <b>빈 표를 한 번 채우는 시드</b>일 뿐이고, 행이 하나라도 있으면 아무 일도 하지 않는다
+ * ({@link DomainSettingService#seedIfEmpty()} Javadoc 참고).
  *
  * <p><b>부팅을 막지 않는 다른 러너들과 달리, 여기서는 예외를 삼키지 않는다.</b>
  * {@code TopicQueueSyncRunner}·{@code DraftImportRunner}는 파일 형식이 깨져도 조용히
  * 건너뛴다 — 대기열·초안 흡수는 부가 기능이라 그것 때문에 퀴즈 풀이까지 죽으면 안 되기
- * 때문이다. 하지만 분야 설정은 다르다. 이 테이블이 비거나 어긋난 채로 넘어가면, 관리 화면과
+ * 때문이다. 하지만 분야 설정은 다르다. 이 표가 비거나 어긋난 채로 넘어가면, 관리 화면과
  * 배치가 서로 다른 분야 목록을 보게 되는데 그 증상은 "왜 저 분야만 문제가 안 늘지"처럼
- * 한참 뒤에야 드러난다(서비스 클래스 Javadoc 참고). 동기화가 실패했다면 그 순간 기동을
+ * 한참 뒤에야 드러난다(서비스 클래스 Javadoc 참고). 시드가 실패했다면 그 순간 기동을
  * 멈춰 원인을 바로 보는 편이, 잘못된 상태로 조용히 뜨는 것보다 낫다.
  */
 @Slf4j
@@ -40,7 +47,7 @@ public class DomainSettingSyncRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        domainSettingService.syncWithDefaults();
-        log.info("분야 설정 동기화 완료");
+        domainSettingService.seedIfEmpty();
+        log.info("분야 설정 시드 확인 완료");
     }
 }

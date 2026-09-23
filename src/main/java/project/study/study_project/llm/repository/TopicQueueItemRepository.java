@@ -46,4 +46,10 @@ public interface TopicQueueItemRepository extends JpaRepository<TopicQueueItem, 
      */
     @Query("select coalesce(max(t.sortOrder), 0) from TopicQueueItem t")
     int findMaxSortOrder();
+
+    /**
+     * 분야 삭제 전 사용량 확인(6번 작업, {@code DomainSettingService#delete})용 —
+     * 이 분야를 쓰는 대기 범위가 몇 건인지. 소진 개념이 없어(클래스 Javadoc) 상태 조건이 필요 없다.
+     */
+    long countByDomain(DomainCode domain);
 }

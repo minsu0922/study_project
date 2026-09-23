@@ -2,6 +2,8 @@ package project.study.study_project.admin.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,7 +11,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import project.study.study_project.admin.dto.AdminDomainCreateRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingMoveRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingResponse;
@@ -17,21 +21,22 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
+import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.llm.support.DomainHints;
 
 import java.util.List;
 
 /**
- * 분야 설정 관리 API — Task 9.
+ * 분야 설정 관리 API — Task 9(수정·순서 이동·미리보기) + Task 6(등록부 추가·삭제).
  *
  * <p>{@code /api/admin/**} 아래라 SecurityConfig의 {@code hasRole(ADMIN)}이 일괄 적용된다
  * ({@code AdminTopicQueueController}와 같은 규칙, 컨트롤러에 권한 코드를 두지 않는다).
  *
- * <p>행 자체는 기본 분야({@link project.study.study_project.llm.support.DefaultDomains}) 수만큼
- * 고정이다(기동 시 동기화가 맞춰 둔다). 그래서 이 API에는 "추가"·"삭제"가 없다 — 있는 행을
- * 고치고({@link #edit}) 순서를 옮기는({@link #move}) 것, 그리고 그 결과를 저장 전에
- * 미리 보는 것({@link #preview})뿐이다.
+ * <p><b>행 수가 기본 분야 수로 고정이던 시절(Task 9)에는 이 API에 "추가"·"삭제"가 없었다.</b>
+ * 6번 작업에서 외래키(V20)가 등록부를 실제 등록부로 만들면서 그 제약이 풀렸다 —
+ * {@link #create}·{@link #delete}가 새로 생긴 이유다. 있는 행을 고치고({@link #edit}) 순서를
+ * 옮기는({@link #move}) 것, 저장 전 미리 보는 것({@link #preview})은 그대로다.
  */
 @RestController
 @RequestMapping("/api/admin/domain-settings")
@@ -67,13 +72,37 @@ public class AdminDomainSettingController {
     }
 
     /**
+     * 새 분야 등록 — 항상 <b>꺼진 채로</b>, 맨 끝 순서로 생긴다({@code DomainSettingService#create}
+     * Javadoc). 코드 형식이 틀리면 400(COMMON_001, 몸통 역직렬화 단계에서 걸린다), 이미 쓰는
+     * 코드면 400(DOMAIN_004), 화면 이름이 비었거나 40자를 넘으면 400, 힌트가 500자를 넘어도 400.
+     */
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<AdminDomainSettingResponse> create(@Valid @RequestBody AdminDomainCreateRequest request) {
+        DomainSetting created = domainSettingService.create(request);
+        return ApiResponse.ok(AdminDomainSettingResponse.from(created, domainSettingService.hints()));
+    }
+
+    /**
+     * 분야 삭제 — 문제·문서·생성 문제 초안·생성 문서 초안(거절 포함)·주제 대기열 중 하나라도
+     * 이 분야를 쓰면 400(DOMAIN_005, 메시지에 어느 표에 몇 건인지 실린다), 마지막으로 켜진
+     * 분야면 400(DOMAIN_002), 없는 분야면 404(DOMAIN_001). 기본 11개도 특별 취급하지 않는다
+     * ({@code DomainSettingService#delete} Javadoc).
+     */
+    @DeleteMapping("/{domain}")
+    public ApiResponse<Void> delete(@PathVariable DomainCode domain) {
+        domainSettingService.delete(domain);
+        return ApiResponse.ok();
+    }
+
+    /**
      * 분야 하나의 켜짐 여부·이름·힌트를 고친다. 순서는 {@link #move}의 몫이라 여기서는
      * 건드리지 않는다.
      *
      * <p>힌트가 500자를 넘으면 400 — 유료 LLM 프롬프트에 그대로 실리는 값이라, 문서를 통째로
      * 붙여 넣는 실수가 매 배치 요금으로 돌아오는 것을 막는다({@code AdminDomainSettingRequest}
-     * Javadoc). 없는 분야면 404(DOMAIN_001) — enum 동기화가 기동마다 전체 분야에 행을 맞춰
-     * 두므로 정상 경로에서는 나지 않는다.
+     * Javadoc). 없는 분야면 404(DOMAIN_001) — 목록이 늘 실제 있는 행만 보여 주므로 정상
+     * 경로에서는 나지 않는다(다른 창에서 그 사이 {@link #delete}로 지워졌을 때만 난다).
      */
     @PutMapping("/{domain}")
     public ApiResponse<Void> edit(@PathVariable DomainCode domain,

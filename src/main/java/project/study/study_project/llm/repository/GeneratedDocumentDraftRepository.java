@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 
@@ -27,6 +28,13 @@ public interface GeneratedDocumentDraftRepository extends JpaRepository<Generate
 
     /** 대기 건수 — 관리자 화면 배지("문서 검수 대기 N건")용. */
     long countByStatus(DraftStatus status);
+
+    /**
+     * 분야 삭제 전 사용량 확인(6번 작업, {@code DomainSettingService#delete})용 — 상태를 가리지
+     * 않고 이 분야를 쓰는 초안이 몇 건인지({@code GeneratedProblemDraftRepository#countByDomain}과
+     * 같은 이유로 거절된 것도 센다).
+     */
+    long countByDomain(DomainCode domain);
 
     /**
      * 아직 검수 안 된 초안의 제목 — 다음 생성의 중복 회피 목록에 정식 문서 제목과 <b>함께</b> 넣는다.

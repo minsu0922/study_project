@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import project.study.study_project.document.domain.Document;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.dto.DomainTitle;
 
 import java.util.Collection;
@@ -75,4 +76,10 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, Docum
      */
     @Query("select d.slug from Document d where d.slug in :slugs")
     List<String> findExistingSlugs(@Param("slugs") Collection<String> slugs);
+
+    /**
+     * 분야 삭제 전 사용량 확인(6번 작업, {@code DomainSettingService#delete})용 —
+     * 이 분야를 쓰는 문서가 몇 건인지. {@link ProblemRepository#countByDomain}과 같은 이유.
+     */
+    long countByDomain(DomainCode domain);
 }

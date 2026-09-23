@@ -243,6 +243,13 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     long countByTitleIsNull();
 
     /**
+     * 분야 삭제 전 사용량 확인(6번 작업, {@code DomainSettingService#delete})용 —
+     * 이 분야를 쓰는 문제가 몇 건인지. 외래키(V20)가 최후의 방어선이지만 그건 500으로 나오므로,
+     * 저장을 시도하기 전에 먼저 세어 400 메시지에 건수를 실어 준다.
+     */
+    long countByDomain(DomainCode domain);
+
+    /**
      * 오답 설명이 빠진 객관식 문제 — 오답 설명 채우기(V15)가 채울 대상.
      *
      * <p>{@link #findWithoutTitle}과 같은 이유로 <b>엔티티</b>로 읽는다: 읽고 끝이 아니라

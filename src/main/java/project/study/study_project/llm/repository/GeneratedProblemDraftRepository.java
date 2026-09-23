@@ -78,6 +78,15 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
     long countByStatus(DraftStatus status);
 
     /**
+     * 분야 삭제 전 사용량 확인(6번 작업, {@code DomainSettingService#delete})용 —
+     * 상태를 가리지 않고 이 분야를 쓰는 초안이 몇 건인지. <b>거절(REJECTED)된 초안도 센다</b> —
+     * 거절 사유는 {@link #findRecentRejectionNotes}가 생성 프롬프트에 되먹이는 학습 자료라,
+     * 분야를 지우면 그 되먹임 근거까지 함께 사라진다({@code ProblemRepository#countByDomain}과
+     * 같은 이유로 상태 조건을 걸지 않는다).
+     */
+    long countByDomain(DomainCode domain);
+
+    /**
      * 같은 도메인의 PENDING 초안 질문 텍스트 — 생성 프롬프트의 중복 회피 목록에 포함한다.
      * 기존 problem만 피하게 하면 "아직 검수 안 된 초안과 똑같은 문제"가 또 생성될 수 있다.
      */
