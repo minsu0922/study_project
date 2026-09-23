@@ -107,11 +107,12 @@ public final class GenerationSchedule {
      * 그대로 두면 인덱스가 음수가 되어 배치가 {@code IndexOutOfBounds}로 통째로 죽는다.
      *
      * @param date    기준 날짜(UTC가 아니라 <b>한국 날짜</b>를 넘길 것 — 워크플로가 KST로 변환해 전달)
-     * @param domains 후보 분야. 비어 있으면 전체를 후보로 본다(설정 누락 시 기능 정지 방지)
+     * @param domains 후보 분야. <b>부르는 쪽이 이미 넓혀 온 목록이어야 한다</b> — 빈 목록·null은
+     *                더 이상 "전체"로 보정하지 않는다(아래 {@link #requireCandidates} 참고)
      * @param anchor  주기의 0일차로 삼을 날. {@code null}이면 {@link #DEFAULT_ANCHOR}
      */
     public static Plan planFor(LocalDate date, List<DomainCode> domains, LocalDate anchor) {
-        List<DomainCode> candidates = candidates(domains);
+        List<DomainCode> candidates = requireCandidates(domains);
         long offset = date.toEpochDay() - (anchor == null ? DEFAULT_ANCHOR : anchor).toEpochDay();
 
         int dayInCycle = (int) Math.floorMod(offset, CYCLE_DAYS);
@@ -142,9 +143,12 @@ public final class GenerationSchedule {
      * <p><b>여기에는 앵커가 없다</b>(2026-09-02). 앵커가 옮기는 것은 "주기의 시작"인데 이 규칙에는
      * 주기가 없다 — 하루 한 칸씩 24칸을 도는 평평한 순환이라 위상을 옮겨도 <b>같은 집합을 다른
      * 순서로</b> 돌 뿐이다. 인자만 하나 늘고 얻는 것이 없다.
+     *
+     * @param domains 후보 분야. {@link #planFor}와 같은 계약 — <b>부르는 쪽이 이미 넓혀 온 목록</b>이어야
+     *                하고, 빈 목록·null은 {@link #requireCandidates}가 예외로 막는다
      */
     public static Cell cellFor(LocalDate date, List<DomainCode> domains) {
-        List<DomainCode> candidates = candidates(domains);
+        List<DomainCode> candidates = requireCandidates(domains);
         Difficulty[] difficulties = Difficulty.values();
 
         int totalCells = candidates.size() * difficulties.length;
@@ -155,8 +159,29 @@ public final class GenerationSchedule {
         return new Cell(domain, difficulty);
     }
 
-    private static List<DomainCode> candidates(List<DomainCode> domains) {
-        return (domains == null || domains.isEmpty()) ? DefaultDomains.codes() : domains;
+    /**
+     * 후보 목록 계약 — <b>이 클래스는 더 이상 빈 목록을 넓히지 않는다</b>(Task 7, 2026-09-22).
+     *
+     * <p><b>왜 지웠나.</b> 예전에는 여기서 {@code DefaultDomains.codes()}로 조용히 넓혔다.
+     * 그런데 "전체"의 뜻이 자리마다 다르다 — 앱은 등록부(DB) 전체, 배치는 설정 파일 →
+     * yml → {@code DefaultDomains} 순 폴백이다(task-7-brief 표). 이 클래스가 그중 하나
+     * ({@code DefaultDomains})로 고정해 넓히면, 앱 쪽 호출자는 등록부에 있는데 이 클래스가
+     * 모르는 분야(관리자가 새로 추가한 분야)를 빠뜨린 채 순환을 돌리게 된다 — 정확히 이
+     * 태스크가 고치려는 버그다. 그래서 "무엇으로 넓힐지"를 이 클래스에서 빼앗아 <b>일곱 호출자
+     * 각자</b>에게 넘겼다({@code LlmProblemService}·{@code AdminBatchService}·
+     * {@code DraftGeneratorCli}) — 그래야 이 클래스는 분야 코드를 전혀 몰라도 된다({@code
+     * DefaultDomains} import를 뺀 이유).
+     *
+     * <p><b>빈 목록은 프로그래밍 오류다.</b> 부르는 쪽이 "이미 넓힌" 목록을 넘기는 것이 계약이므로,
+     * 그래도 빈 목록이 들어오면 조용히 아무 분야나 고르는 대신 즉시 예외로 알린다 — 조용한
+     * 폴백이 이 프로젝트가 가장 경계하는 실패 모양이라는 점은 {@link #parseAnchor}의 판단과 같다.
+     */
+    private static List<DomainCode> requireCandidates(List<DomainCode> domains) {
+        if (domains == null || domains.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "GenerationSchedule의 후보 분야 목록이 비어 있습니다 — 부르는 쪽이 이미 넓힌 목록을 넘겨야 합니다.");
+        }
+        return domains;
     }
 
     /**

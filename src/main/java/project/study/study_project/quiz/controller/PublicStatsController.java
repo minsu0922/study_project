@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.document.repository.DocumentRepository;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.quiz.dto.PublicStatsResponse;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -35,12 +35,22 @@ public class PublicStatsController {
     private final ProblemRepository problemRepository;
     private final DocumentRepository documentRepository;
 
+    /**
+     * 분야 수의 출처 — 등록부(domain_setting)의 모든 행.
+     *
+     * <p>Task 7(2026-09-22) 전에는 {@code DefaultDomains.codes().size()}(기본 11개 고정값)였다.
+     * 그러면 관리자가 화면에서 분야를 추가·삭제해도 이 숫자는 재배포 전까지 그대로다 — 랜딩
+     * 화면이 "가입할지 말지 정하는 중"인 방문자에게 <b>거짓 숫자</b>를 보여 주게 된다
+     * (클래스 상단 Javadoc "왜 서버가 세나"와 정확히 같은 이유로 이 값도 서버가 매번 세야 한다).
+     */
+    private final DomainCatalog domainCatalog;
+
     /** 랜딩 화면이 화면을 열 때 한 번 부른다. */
     @GetMapping("/api/stats")
     public ApiResponse<PublicStatsResponse> stats() {
         return ApiResponse.ok(new PublicStatsResponse(
                 problemRepository.count(),
                 documentRepository.count(),
-                DefaultDomains.codes().size()));
+                domainCatalog.all().size()));
     }
 }

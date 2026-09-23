@@ -17,7 +17,6 @@ import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -33,6 +32,7 @@ import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.support.DifficultyMaterialRule;
+import project.study.study_project.llm.support.DomainEntry;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.SourceEditionRule;
@@ -425,9 +425,17 @@ public class LlmProblemService {
         // 생성자에서 한 번만 읽어 굳히면 관리자가 화면에서 고쳐도 재기동 전까지 반영되지 않는다
         // (위 domainSettingService 필드 주석). 빈 목록은 "아직 설정 행이 없는 첫 기동"으로 보고
         // 전체 분야를 후보로 되돌린다 — 설정 누락이 배치를 완전히 멈추게 하지 않기 위한 방어다.
+        //
+        // Task 7(2026-09-22): 그 "전체"가 예전에는 DefaultDomains.codes()(기본 11개 고정값)였다.
+        // 그러면 관리자가 화면에서 새 분야를 추가해도, 켜진 분야가 0개인 순간(막 추가만 하고
+        // 아직 하나도 안 켠 상태)에는 그 새 분야가 후보에 안 잡힌다 — 앱에서 "전체"는 등록부
+        // (domain_setting)의 모든 행이어야 한다는 이 작업의 원칙과 어긋난다. 그래서 지금은
+        // domainSettingService.all()(DB의 모든 행)로 넓힌다 — DefaultDomains를 더는 몰라도 된다.
         List<DomainCode> batchDomains = domainSettingService.batchDomains();
         List<DomainCode> domainCandidates = fixedDomain != null ? List.of(fixedDomain)
-                : (batchDomains == null || batchDomains.isEmpty() ? DefaultDomains.codes() : batchDomains);
+                : (batchDomains == null || batchDomains.isEmpty()
+                        ? domainSettingService.all().stream().map(DomainEntry::code).toList()
+                        : batchDomains);
 
         DomainCode bestDomain = null;
         Difficulty bestDifficulty = null;

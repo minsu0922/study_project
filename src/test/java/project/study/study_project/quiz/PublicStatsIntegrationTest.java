@@ -9,10 +9,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
+import project.study.study_project.admin.dto.AdminDomainCreateRequest;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
@@ -51,18 +52,22 @@ class PublicStatsIntegrationTest {
 
     @Autowired MockMvc mockMvc;
     @Autowired ProblemRepository problemRepository;
+    @Autowired DomainSettingService domainSettingService;
 
     @Test
     @DisplayName("로그인하지 않아도 집계를 볼 수 있다")
     void openToAnonymous() throws Exception {
-        // 헤더를 하나도 붙이지 않는다 — 랜딩을 여는 사람의 상태 그대로다
+        // Task 7(2026-09-22) 전에는 여기서 DefaultDomains.codes().size()(기본 11개 고정값)와
+        // 단정했다 — "분야 수는 DB가 아니라 enum이 안다"는 그 시절 전제가 이제는 틀렸다.
+        // 등록부가 DB로 넘어갔으므로 domainCount도 "먼저 재고 넣고 늘었는지 본다"는 이 클래스의
+        // 다른 단정들과 같은 방식으로 봐야 한다 — 아래 domainCountFollowsRegistry가 그 자리다.
+        // 여기서는 값의 존재만 본다.
         mockMvc.perform(get("/api/stats"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.problemCount").exists())
                 .andExpect(jsonPath("$.data.documentCount").exists())
-                // 분야 수는 DB가 아니라 enum이 안다 — 값이 흔들릴 이유가 없어 단정한다
-                .andExpect(jsonPath("$.data.domainCount").value(DefaultDomains.codes().size()));
+                .andExpect(jsonPath("$.data.domainCount").exists());
     }
 
     @Test
@@ -79,10 +84,36 @@ class PublicStatsIntegrationTest {
                 .andExpect(jsonPath("$.data.problemCount").value((int) before + 1));
     }
 
+    /**
+     * Task 7의 핵심 성질 — 관리자가 화면(등록부)에서 분야를 추가하면, 재배포 없이 이 공개
+     * 집계에도 곧바로 반영돼야 한다. 예전(DefaultDomains 고정값)에는 이 테스트 자체가 성립할
+     * 수 없었다 — 무엇을 추가하든 숫자가 재배포 전까지 그대로였기 때문이다.
+     */
+    @Test
+    @DisplayName("분야를 추가하면 집계도 따라 는다 — 화면에서 늘린 분야가 랜딩 통계에도 닿는다")
+    void domainCountFollowsRegistry() throws Exception {
+        long before = domainCount();
+
+        domainSettingService.create(new AdminDomainCreateRequest(
+                DomainCode.of("MESSAGING_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()),
+                "집계용 분야", "테스트가 추가한 분야"));
+
+        mockMvc.perform(get("/api/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.domainCount").value((int) before + 1));
+    }
+
     private long problemCount() throws Exception {
         String body = mockMvc.perform(get("/api/stats"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return JsonPath.parse(body).read("$.data.problemCount", Integer.class).longValue();
+    }
+
+    private long domainCount() throws Exception {
+        String body = mockMvc.perform(get("/api/stats"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.parse(body).read("$.data.domainCount", Integer.class).longValue();
     }
 }

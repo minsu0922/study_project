@@ -86,17 +86,23 @@ class GenerationScheduleTest {
         }
     }
 
+    /**
+     * <b>Task 7(2026-09-22)에서 뜻이 바뀐 테스트다.</b> 예전 이름은
+     * {@code fallsBackToAllDomainsWhenCandidatesEmpty}였고, 빈 목록을 주면 이 클래스가
+     * {@code DefaultDomains.codes()}로 조용히 넓혀 줬다. 그 폴백을 지웠다({@link
+     * GenerationSchedule#requireCandidates} Javadoc 참고) — "전체"의 뜻이 앱·배치마다 달라서,
+     * 이 클래스가 그중 하나로 고정해 넓히면 다른 쪽 호출자가 손해를 본다. 그래서 지금은
+     * <b>빈 목록이 들어오면 예외로 막는다</b> — 넓히는 책임은 이제 호출자(부르는 쪽) 몫이다.
+     */
     @Test
-    @DisplayName("후보 도메인이 비어 있으면 전체 도메인으로 보정한다 — 설정 누락이 기능 정지로 이어지지 않게")
-    void fallsBackToAllDomainsWhenCandidatesEmpty() {
+    @DisplayName("후보 도메인이 비어 있으면 예외로 막는다 — 넓히는 책임은 이제 부르는 쪽에 있다")
+    void rejectsEmptyCandidates() {
         LocalDate date = LocalDate.of(2026, 8, 12);
 
-        GenerationSchedule.Cell fromEmpty = GenerationSchedule.cellFor(date, List.of());
-        GenerationSchedule.Cell fromNull = GenerationSchedule.cellFor(date, null);
-
-        assertThat(fromEmpty.domain()).isNotNull();
-        assertThat(fromEmpty.difficulty()).isNotNull();
-        assertThat(fromNull).as("null과 빈 목록은 같게 취급").isEqualTo(fromEmpty);
+        assertThatThrownBy(() -> GenerationSchedule.cellFor(date, List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> GenerationSchedule.cellFor(date, null))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     /* ══ 2단계: 4일 주기(문서 1 + 문제 3) ══════════════════════ */
@@ -177,13 +183,16 @@ class GenerationScheduleTest {
         assertThat(documentDays).isEqualTo(1);
     }
 
+    /** 위 {@link #rejectsEmptyCandidates}와 같은 이유 — {@code planFor}도 더 넓히지 않는다. */
     @Test
-    @DisplayName("계획도 후보 도메인이 비면 전체로 보정한다")
-    void planFallsBackToAllDomainsWhenCandidatesEmpty() {
+    @DisplayName("계획도 후보 도메인이 비면 예외로 막는다")
+    void planRejectsEmptyCandidates() {
         LocalDate date = LocalDate.of(2026, 8, 12);
 
-        assertThat(GenerationSchedule.planFor(date, null, ANCHOR))
-                .isEqualTo(GenerationSchedule.planFor(date, List.of(), ANCHOR));
+        assertThatThrownBy(() -> GenerationSchedule.planFor(date, null, ANCHOR))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> GenerationSchedule.planFor(date, List.of(), ANCHOR))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     /* ══ 3단계: 주기의 시작을 옮기는 앵커(2026-09-02) ═══════════ */

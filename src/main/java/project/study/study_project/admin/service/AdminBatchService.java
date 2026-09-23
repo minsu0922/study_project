@@ -19,6 +19,7 @@ import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
+import project.study.study_project.llm.support.DomainEntry;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
 
@@ -127,9 +128,14 @@ public class AdminBatchService {
 
         // 분야 순서는 <지금> 테이블에서 읽는다(domainSettingService 필드 주석). 한 번 읽어 오늘 카드와
         // 달력에 같은 목록을 넘긴다 — 따로 읽으면 그 사이 저장이 끼어들 때 한 화면에 두 순서가 섞인다.
-        // 빈 목록 보정은 따로 하지 않는다: GenerationSchedule.planFor가 빈 목록을 전체로 넓히고,
-        // 그게 LlmProblemService가 빈 목록을 enum 전체로 되돌리는 것과 같은 결과다.
-        List<DomainCode> batchDomains = domainSettingService.batchDomains();
+        //
+        // Task 7(2026-09-22): 빈 목록 보정을 이제 여기서 직접 한다. 예전에는 GenerationSchedule.planFor가
+        // 빈 목록을 조용히 넓혀 줬는데, "전체"의 뜻이 자리마다 달라서(task-7-brief 표) 그 클래스가
+        // 넓히는 일을 그만뒀다(GenerationSchedule.requireCandidates 참고) — 넓히는 책임은 이제
+        // 부르는 쪽 몫이다. 실무에서는 batchDomains()가 비는 일이 거의 없다(마지막으로 켜진 분야는
+        // 끌 수 없다, DOMAIN_002) — 빈 표가 첫 기동 시드 직전의 아주 짧은 순간에만 가능하다. 그래도
+        // 이 화면이 그 틈에 500으로 죽는 것보다는, 등록부의 전체 행으로 방어하는 편이 안전하다.
+        List<DomainCode> batchDomains = widenIfEmpty(domainSettingService.batchDomains());
 
         AdminBatchStatus.TodayPlan plan = planOf(today, dir, batchDomains);
         // 개수는 <오늘 난이도의> 값을 싣는다(2026-09-05). 난이도별 배분이 생긴 뒤로도
@@ -151,6 +157,24 @@ public class AdminBatchService {
                 blockedDates(dir, today),
                 nextDocumentDate(plan, today),
                 yieldByDifficulty(dir, today));
+    }
+
+    /**
+     * 배치 후보가 비어 있으면 등록부의 전체 행으로 넓힌다(Task 7, 2026-09-22).
+     *
+     * <p>{@code domainSettingService.batchDomains()}(켜진 분야만)가 빈 목록을 줄 수 있는 경우는
+     * 이론상 {@code domain_setting} 표 자체가 완전히 비어 있을 때뿐이다 — 행이 하나라도 있으면
+     * "마지막으로 켜진 분야는 끌 수 없다"(DOMAIN_002)가 항상 1개 이상을 보장한다. 표가 완전히
+     * 비는 순간은 첫 기동 시드({@code DomainSettingSyncRunner})가 끝나기 <b>전</b>뿐이라 사실상
+     * 닿지 않는 경로지만, {@link GenerationSchedule}이 더는 빈 목록을 조용히 넓혀 주지 않으므로
+     * (Task 7 — 넓히는 책임이 호출자로 옮겨 왔다) 이 화면이 그 순간에 500으로 죽지 않도록
+     * 방어선을 여기 둔다.
+     */
+    private List<DomainCode> widenIfEmpty(List<DomainCode> domains) {
+        if (!domains.isEmpty()) {
+            return domains;
+        }
+        return domainSettingService.all().stream().map(DomainEntry::code).toList();
     }
 
     /**

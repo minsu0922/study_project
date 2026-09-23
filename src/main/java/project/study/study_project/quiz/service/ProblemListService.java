@@ -6,8 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.llm.support.DomainEntry;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.ProblemListItem;
 import project.study.study_project.quiz.dto.StudySummaryResponse;
@@ -137,7 +137,12 @@ public class ProblemListService {
      *
      * <p>집계 쿼리는 해당 행이 없는 분야를 아예 안 준다(GROUP BY의 성질). 그대로 내려보내면
      * 화면에서 <b>손대지 않은 분야가 사라져</b>, 정작 "여기부터 해 볼까"의 후보가 안 보인다.
-     * 빠진 분야를 만들어 내려면 분야 목록({@link DefaultDomains#codes()})이 필요한데 그건 자바가 아는 것이라 여기서 채운다.
+     * 빠진 분야를 만들려면 분야 목록이 필요한데, 그 출처는 등록부(DB)다 —
+     * {@link DomainCatalog#all()}로 <b>지금 등록된 모든 분야</b>를 읽어 채운다(Task 7, 2026-09-22).
+     * 예전에는 {@code DefaultDomains.codes()}(기본 11개 고정값)를 썼는데, 그러면 관리자가 화면에서
+     * 새 분야를 추가해도 이 사이드바에는 재배포 전까지 나타나지 않았다 — "화면에서 늘린 분야가
+     * 배치까지 닿아야 한다"는 이 작업의 목표를, 학습자가 매일 보는 바로 이 화면에서는 지키지
+     * 못하고 있던 셈이다.
      *
      * <h2>왜 조인 한 방으로 안 묶나</h2>
      *
@@ -150,8 +155,8 @@ public class ProblemListService {
      * 집계라 무겁지 않다. 이 화면은 필터를 바꿔도 다시 부르지 않는다(위 주석 참고).
      */
     private List<StudySummaryResponse.DomainProgress> domainProgress(Long userId) {
-        // 예전엔 EnumMap. 두 맵은 getOrDefault 조회에만 쓰이고, 응답 순서는 아래 DefaultDomains.codes()
-        // (옛 enum 선언 순서)가 정한다 — 맵 순서는 밖으로 드러나지 않으므로 HashMap이면 된다.
+        // 예전엔 EnumMap. 두 맵은 getOrDefault 조회에만 쓰이고, 응답 순서는 아래 domainCatalog.all()이
+        // 정한다(등록부의 sortOrder 순) — 맵 순서는 밖으로 드러나지 않으므로 HashMap이면 된다.
         Map<DomainCode, Long> solved = new HashMap<>();
         submissionRepository.countSolvedByDomain(userId)
                 .forEach(row -> solved.put(row.getDomain(), row.getSolved()));
@@ -160,12 +165,14 @@ public class ProblemListService {
         problemRepository.countGroupByDomain()
                 .forEach(row -> total.put(row.getDomain(), row.getCnt()));
 
-        return DefaultDomains.codes().stream()
-                .map(domain -> new StudySummaryResponse.DomainProgress(
-                        domain,
-                        domainCatalog.displayName(domain),
-                        solved.getOrDefault(domain, 0L),
-                        total.getOrDefault(domain, 0L)))
+        // entry.displayName()을 그대로 쓴다 — all()이 이미 "지금" 값을 한 번에 읽어 왔으므로
+        // 분야마다 domainCatalog.displayName(code)를 따로 불러 DB를 다시 왕복할 이유가 없다.
+        return domainCatalog.all().stream()
+                .map(entry -> new StudySummaryResponse.DomainProgress(
+                        entry.code(),
+                        entry.displayName(),
+                        solved.getOrDefault(entry.code(), 0L),
+                        total.getOrDefault(entry.code(), 0L)))
                 .toList();
     }
 }

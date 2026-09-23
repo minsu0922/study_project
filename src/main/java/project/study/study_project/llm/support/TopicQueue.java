@@ -235,11 +235,26 @@ public final class TopicQueue {
     /* ── 도우미 ───────────────────────────────────────────────── */
 
     /**
-     * 분야 문자열 → 상수. 모르는 값이면 {@code null}(예외를 던지지 않는다).
+     * 분야 문자열 → 상수. 형식이 틀리면 {@code null}(예외를 던지지 않는다).
      *
      * <p>대소문자와 앞뒤 공백은 봐준다 — 손으로 적는 파일에서 그것까지 틀렸다고 항목을 버리는
-     * 것은 엄격한 게 아니라 불친절한 것이다. 반면 없는 상수명은 봐줄 수 없다: 비슷한 이름으로
-     * 짐작해 붙이면 엉뚱한 분야에 문서가 들어가고, 그게 사흘치 문제까지 끌고 간다.
+     * 것은 엄격한 게 아니라 불친절한 것이다.
+     *
+     * <h2>Task 7 — "기본 분야에 있는가"를 더 이상 묻지 않는다(2026-09-22)</h2>
+     *
+     * <p>예전에는 형식이 맞아도 {@code DefaultDomains.isKnown}으로 한 번 더 걸렀다 — 옛 enum에
+     * 없는 이름(예: 오타 {@code SPRING})을 걸러 내려던 것이었는데, 그 잣대가 <b>등록부가 DB로
+     * 넘어간 지금은 관리자가 화면에서 추가한 새 분야까지 함께 거른다.</b> {@code MESSAGING}을
+     * 화면에서 추가하고 대기열에 그 분야로 주제를 적어도, 이 검사가 남아 있으면 배치는
+     * {@code MESSAGING}을 영원히 "모르는 분야"로 건너뛴다 — 화면에서 늘린 분야가 배치까지
+     * 닿아야 한다는 이 작업의 목표와 정반대다.
+     *
+     * <p>그래서 지금은 <b>형식</b>만 본다. "그런 분야가 실제로 등록돼 있는가"는 이 클래스의 몫이
+     * 아니라 저장하는 쪽의 몫이다 — 앱이 DB로 저장할 때는 {@code TopicQueueService.adopt}가
+     * {@code DomainCatalog#exists}로 다시 확인한다(그 메서드 Javadoc 참고). 배치(CLI)는 그 다음
+     * 확인 단계가 없지만, 이 파일은 관리 화면이 내보낸 산출물이 아니라 <b>사람이 손으로 적는</b>
+     * 파일이라(클래스 상단 Javadoc) 원래도 "적어 둔 그대로 믿고 쓴다"는 전제 위에 있다 —
+     * 형식이 맞는 분야명을 적었다면 사람이 실제로 의도한 분야로 본다.
      *
      * <p>{@code public}인 이유: 같은 파일을 앱 쪽에서도 읽는다({@code TopicQueueSyncRunner}).
      * "이 파일의 domain 문자열을 어떻게 읽는가"가 두 곳에 따로 있으면, 한쪽만 관대해져
@@ -250,11 +265,9 @@ public final class TopicQueue {
             return null;
         }
         try {
-            // 옛 enum의 valueOf는 모르는 이름이면 예외였다. DomainCode.of는 형식만 보므로(FRONTEND_CS처럼
-            // 형식은 맞는 옛 이름이 통과한다) isKnown으로 "기본 분야에 있는가"를 따로 확인해 같은 결과를 낸다.
-            // 형식이 틀린 값은 DomainCode.of가 IllegalArgumentException을 던져 아래 catch로 똑같이 빠진다.
-            DomainCode code = DomainCode.of(raw.trim().toUpperCase());
-            return DefaultDomains.isKnown(code) ? code : null;
+            // 형식이 틀린 값(예: 하이픈이 든 spring-boot)은 DomainCode.of가 IllegalArgumentException을
+            // 던져 아래 catch로 빠진다 — 그 줄만 건너뛰고 나머지 대기열은 살린다.
+            return DomainCode.of(raw.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             return null;
         }

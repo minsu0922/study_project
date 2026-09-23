@@ -564,11 +564,30 @@ public class TopicQueueService {
                 .orElse(false);
     }
 
-    /** 손으로 적은 줄을 DB로 들여온다. 형식이 틀리거나 이미 있으면 {@code null}. */
+    /**
+     * 손으로 적은 줄을 DB로 들여온다. 형식이 틀리거나 이미 있으면 {@code null}.
+     *
+     * <h2>Task 7 이후 이 메서드가 유일한 방어선이다</h2>
+     *
+     * <p>예전에는 {@link TopicQueue#parseDomain}이 {@code DefaultDomains.isKnown}까지 확인해서,
+     * 이 메서드가 굳이 등록 여부를 또 볼 필요가 없었다 — 형식만 맞으면 곧 기본 11개 안에 있다는
+     * 뜻이었기 때문이다. Task 7에서 그 확인을 뺐다(형식만 보게 넓혔다, {@code TopicQueue.parseDomain}
+     * Javadoc 참고) — 그러면서 {@code _topics.json}에 형식은 맞지만 <b>등록부에 없는</b> 분야
+     * (오타, 또는 화면에서 이미 지운 분야)가 그대로 여기까지 들어올 길이 열렸다. 외래키(V20)가
+     * 최후의 방어선이지만 그건 {@code DataIntegrityViolationException}(500)으로 터진다 — 그러면
+     * 동기화 자체가 죽어 <b>같은 파일의 나머지 정상 줄까지</b> 못 들여온다(부팅이 실패하면 안
+     * 된다는 {@link #syncFrom} 클래스 주석과 정면으로 어긋난다). 그래서 저장을 시도하기 전에
+     * {@link DomainCatalog#exists}로 직접 확인하고, 등록 안 된 분야는 다른 형식 오류 줄과 똑같이
+     * <b>조용히 건너뛴다</b>({@code null} 반환) — 예외를 던지지 않는 이유는 이 메서드를 부르는
+     * {@link #syncFrom}이 "형식이 틀린 줄은 조용히 건너뛴다"는 계약을 이미 지키고 있어서다.
+     */
     private TopicQueueItem adopt(TopicQueueFile.Entry entry, int sortOrder) {
         DomainCode domain = TopicQueue.parseDomain(entry.domain());
         if (domain == null || entry.topic() == null || entry.topic().isBlank()) {
             return null;
+        }
+        if (!domainCatalog.exists(domain)) {
+            return null; // 형식은 맞지만 등록부에 없는 분야 — FK 위반으로 터지기 전에 여기서 거른다
         }
         String topic = entry.topic().trim();
         if (repository.existsByDomainAndTopic(domain, topic)) {

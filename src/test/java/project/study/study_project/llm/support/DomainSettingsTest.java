@@ -51,16 +51,44 @@ class DomainSettingsTest {
         assertThat(DomainSettings.read(dir).isEmpty()).isTrue();
     }
 
+    /**
+     * <b>Task 7(2026-09-22)에서 뜻이 바뀐 테스트다.</b> 예전 이름은 {@code unknownDomainNameIsSkipped}
+     * 였고 {@code FRONTEND_CS}(기본 11개에서 빠진, 형식은 멀쩡한 옛 분야명)를 썼다. 그런데
+     * {@link DomainSettings#parseDomain}이 이제 "기본 분야에 있는가"를 더 이상 묻지 않는다 —
+     * 등록부가 DB로 넘어간 지금, 이 파일에 적힌 분야는 <b>파일이 곧 등록부</b>라 그 자체로
+     * 유효하다({@code parseDomain} Javadoc 참고). 그래서 {@code FRONTEND_CS}는 더 이상 걸러지지
+     * 않는다 — 지금 이 클래스가 여전히 걸러야 하는 것은 <b>형식 자체가 틀린</b> 값(대문자로
+     * 시작하지 않거나 하이픈이 섞인 값 등)뿐이라, 그 경우로 바꿔 "한 줄이 깨져도 나머지는
+     * 산다"는 같은 성질을 계속 지킨다.
+     */
     @Test
-    @DisplayName("모르는 분야 이름은 그 줄만 버린다 — 나머지 설정은 살린다")
-    void unknownDomainNameIsSkipped(@TempDir Path dir) throws Exception {
+    @DisplayName("형식이 틀린 분야 이름은 그 줄만 버린다 — 나머지 설정은 살린다")
+    void malformedDomainNameIsSkipped(@TempDir Path dir) throws Exception {
         Files.writeString(dir.resolve(DomainSettings.FILE_NAME), """
                 {"note":"","domains":[
-                  {"domain":"FRONTEND_CS","enabled":true,"sortOrder":0,"displayName":"옛 분야","hint":null},
+                  {"domain":"frontend-cs","enabled":true,"sortOrder":0,"displayName":"형식 오류","hint":null},
                   {"domain":"OS","enabled":true,"sortOrder":1,"displayName":"운영체제","hint":null}
                 ]}""");
 
         assertThat(DomainSettings.read(dir).batchDomains()).containsExactly(TestDomains.OS);
+    }
+
+    /**
+     * Task 7의 핵심 성질 — 화면에서 추가한 분야(기본 11개에 없는 코드)가 배치까지 닿는지를
+     * 이 클래스 수준에서 직접 본다. {@code MESSAGING}은 {@link TestDomains}에도 없는, <b>이
+     * 파일에만</b> 적힌 새 분야다 — 그런데도 걸러지지 않고 그대로 읽혀야 한다.
+     */
+    @Test
+    @DisplayName("파일에 새 분야가 있으면 배치가 그 분야를 안다 — 화면에서 추가한 분야가 배치까지 닿는다")
+    void fileDefinedDomainIsKnownToBatch(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve(DomainSettings.FILE_NAME), """
+                {"note":"","domains":[
+                  {"domain":"MESSAGING","enabled":true,"sortOrder":0,"displayName":"메시징·비동기","hint":"큐·이벤트"},
+                  {"domain":"OS","enabled":true,"sortOrder":1,"displayName":"운영체제","hint":null}
+                ]}""");
+        DomainSettings s = DomainSettings.read(dir);
+        assertThat(s.enabled()).containsExactly(DomainCode.of("MESSAGING"), TestDomains.OS);
+        assertThat(s.displayName(DomainCode.of("MESSAGING"))).isEqualTo("메시징·비동기");
     }
 
     @Test

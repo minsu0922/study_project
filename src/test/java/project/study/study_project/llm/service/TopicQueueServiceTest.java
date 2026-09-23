@@ -601,6 +601,16 @@ class TopicQueueServiceTest {
         assertThat(saved.getUsedCount()).isEqualTo(2);
     }
 
+    /**
+     * <b>Task 7(2026-09-22) 이후 "SPRING"이 걸리는 이유가 바뀌었다.</b> 예전에는
+     * {@code TopicQueue.parseDomain}이 {@code DefaultDomains.isKnown}까지 확인해 형식 검사
+     * 단계에서 걸렀다. 지금은 {@code parseDomain}이 형식만 보고 통과시키고, 대신
+     * {@link #adopt}가 {@code domainCatalog.exists()}로 등록부에 없는 분야를 거른다 — 이
+     * 테스트의 {@code service}는 {@code DefaultDomains.catalog()}를 등록부로 쓰므로(setUp)
+     * "SPRING"은 여전히 등록 안 된 분야다. 검사 지점만 옮겨졌을 뿐 결과(조용히 건너뜀,
+     * 부팅은 안 막힘)는 그대로다 — 아래 {@link #adoptSkipsUnregisteredDomain}이 이 새 방어선을
+     * 직접 겨냥한다.
+     */
     @Test
     @DisplayName("분야가 잘못된 줄은 건너뛰고 부팅을 막지 않는다 — 배치가 이미 요약 화면에 경고를 띄운다")
     void skipsMalformedEntriesQuietly() {
@@ -609,6 +619,29 @@ class TopicQueueServiceTest {
         TopicQueueService.SyncResult result = service.syncFrom(new TopicQueueFile(null, List.of(
                 new TopicQueueFile.Entry(null, "SPRING", "빈 생명주기", null, null, null),
                 new TopicQueueFile.Entry(null, "OS", "   ", null, null, null))));
+
+        assertThat(result.imported()).isZero();
+        verify(repository, never()).save(any());
+        verify(events, never()).publishEvent(any(TopicQueueChanged.class));
+    }
+
+    /**
+     * Task 7이 새로 연 구멍을 직접 겨냥한다 — {@code TopicQueue.parseDomain}이 형식만 보게
+     * 넓혀지면서, 형식은 맞지만 등록부에 없는 분야가 {@link TopicQueueService#adopt}까지
+     * 들어올 길이 열렸다. 외래키(500)로 죽기 전에 {@code domainCatalog.exists()}가 조용히
+     * 걸러야 한다({@code adopt} Javadoc "Task 7 이후 이 메서드가 유일한 방어선이다" 참고).
+     *
+     * <p>"MESSAGING_TEST"는 형식(대문자·밑줄)은 완전히 유효하지만 {@code DefaultDomains}의
+     * 기본 11개에는 없다 — 이 테스트의 {@code service}가 {@code DefaultDomains.catalog()}를
+     * 등록부로 쓰므로(setUp) 딱 "형식은 맞지만 미등록"인 상태를 만든다.
+     */
+    @Test
+    @DisplayName("형식은 맞지만 등록부에 없는 분야는 조용히 건너뛴다 — FK 위반(500)으로 터지기 전에 막는다")
+    void adoptSkipsUnregisteredDomain() {
+        when(repository.findMaxSortOrder()).thenReturn(0);
+
+        TopicQueueService.SyncResult result = service.syncFrom(new TopicQueueFile(null, List.of(
+                new TopicQueueFile.Entry(null, "MESSAGING_TEST", "큐 기본기", null, null, null))));
 
         assertThat(result.imported()).isZero();
         verify(repository, never()).save(any());

@@ -273,6 +273,24 @@ class DraftGeneratorCliTest {
                 .isEqualTo(TestDomains.DATABASE);
     }
 
+    /**
+     * Task 7의 핵심 규칙(task-7-brief 표 마지막 줄) — {@code --domain}은 그 실행의 "전체"
+     * (candidates) 안에 있어야 하고, 아니면 <b>API를 부르기 전에</b> 실패해야 한다. 여기서
+     * 늦게 걸리면 유료 호출이 나간 뒤에야 저장이 깨진다.
+     */
+    @Test
+    @DisplayName("--domain에 후보 목록에 없는 분야를 주면 요금을 쓰기 전에 실패한다")
+    void unknownManualDomainFailsBeforeSpending() {
+        assertThatThrownBy(() -> DraftGeneratorCli.knownDomain("SPRING", CANDIDATES))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("SPRING");
+        // documentDomain(개념 문서 흐름)도 같은 candidates로 같은 판정을 해야 한다 — 문제 흐름만
+        // 막고 문서 흐름은 새지 않게(위 knownDomain 호출과 같은 입력, 같은 결과).
+        assertThatThrownBy(() -> DraftGeneratorCli.documentDomain(
+                LocalDate.of(2026, 8, 15), CANDIDATES, "SPRING", ANCHOR))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     /* ══ 근거 문서 지목 (--document-date) ═══════════════════════ */
 
     /**
@@ -1644,9 +1662,20 @@ class DraftGeneratorCliTest {
     private static final String YML_BATCH_DOMAINS =
             "NETWORK,OS,DATABASE,DS_ALGORITHM,SYSTEM_DESIGN,SECURITY,LANGUAGE_RUNTIME,BACKEND_FRAMEWORK";
 
+    /**
+     * <b>Task 7(2026-09-22)에서 뜻이 바뀐 테스트다.</b> 예전 이름은
+     * {@code allDisabledFileWidensToAllDomainsNotYml}이었고, "파일은 있는데 켜진 분야가 0개"일
+     * 때 {@code GenerationSchedule}이 빈 목록을 {@code DefaultDomains.codes()}(기본 11개)로
+     * 넓혀 주는 것에 기대어 "앱과 같은 답"을 확인했다. 그런데 {@code GenerationSchedule}은 이제
+     * 빈 목록을 넓히지 않고, 넓히는 책임이 {@link DraftGeneratorCli#resolveBatchDomains}로
+     * 옮겨 왔다({@code resolveBatchDomains} Javadoc 참고) — 그 자리에서 정한 새 규칙은
+     * "파일의 모든 항목"이지 옛 11개가 아니다. <b>파일 자신이 배치의 등록부</b>이므로, 파일에
+     * 적히지 않은 분야(예: CLOUD_INFRA)를 지어내면 오히려 파일이 모르는 분야가 순환에 끼어드는
+     * 것이라 이 작업의 원칙(등록되지 않은 것을 지어내지 않는다)에 어긋난다.
+     */
     @Test
-    @DisplayName("파일은 있는데 켜진 분야가 0개면 yml이 아니라 전체로 간다 — 앱과 같은 답이어야 한다")
-    void allDisabledFileWidensToAllDomainsNotYml(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
+    @DisplayName("파일은 있는데 켜진 분야가 0개면 파일의 모든 항목으로 간다 — 파일이 곧 배치의 등록부다")
+    void allDisabledFileWidensToFileEntries(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
             throws Exception {
         java.nio.file.Files.writeString(dir.resolve(DomainSettings.FILE_NAME), """
                 {"note":"","domains":[
@@ -1658,17 +1687,16 @@ class DraftGeneratorCliTest {
         List<DomainCode> candidates = DraftGeneratorCli.resolveBatchDomains(settings, YML_BATCH_DOMAINS);
 
         assertThat(candidates)
-                .as("yml 8개로 가면 CLI와 앱이 같은 상태에서 다른 분야를 고른다")
-                .isEmpty();
-        // 빈 목록이 실제로 <전체>로 넓어지는지까지 본다 — 비어 있다는 것만 보면, 누가
-        // GenerationSchedule의 보정을 지웠을 때 여기서는 모른다. 전체 11개 순환이면
-        // yml에 없는 분야(CLOUD_INFRA 등)도 언젠가 나와야 한다.
+                .as("yml도, 옛 11개도 아니라 파일에 적힌 두 분야 그대로여야 한다")
+                .containsExactly(TestDomains.NETWORK, TestDomains.OS);
+        // 파일에 없는 분야는 순환에 끼어들면 안 된다 — 등록부(파일)가 모르는 분야를 배치가
+        // 지어내면, 그건 이 작업이 고치려는 문제(등록 안 된 분야로 순환이 돈다)를 거꾸로 만든 셈이다.
         java.util.Set<DomainCode> seen = new java.util.HashSet<>();
         LocalDate start = LocalDate.of(2026, 1, 1);
         for (int i = 0; i < 400; i++) {
             seen.add(GenerationSchedule.planFor(start.plusDays(i), candidates, null).domain());
         }
-        assertThat(seen).contains(TestDomains.CLOUD_INFRA, TestDomains.INTEGRATED, TestDomains.SOFTWARE_ENGINEERING);
+        assertThat(seen).containsExactlyInAnyOrder(TestDomains.NETWORK, TestDomains.OS);
     }
 
     @Test

@@ -9,6 +9,7 @@ import project.study.study_project.llm.client.ClaudeProblemGenerator;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
+import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.SourceQuoteRule;
 
@@ -117,8 +118,13 @@ public final class PromptEvalCli {
 
         Path documentFile = resolveDocumentFile(opts.get("document"));
         LoadedDocument loaded = readDocument(documentFile);
+        // 이 하네스는 로컬 평가 도구라 분야 설정 파일·DB를 아예 안 본다(클래스 주석) — 그래서
+        // DraftGeneratorCli.knownDomain에 넘길 "이번 실행의 전체"가 없다. DefaultDomains.codes()를
+        // 그대로 쓴다 — Task 7 이전과 같은 범위(기본 11개)이고, 이 도구의 목적(프롬프트 비교)에는
+        // 관리자가 새로 추가한 분야까지 받을 필요가 없다.
         DomainCode domain = opts.containsKey("domain")
-                ? DraftGeneratorCli.knownDomain(opts.get("domain")) : loaded.domain();
+                ? DraftGeneratorCli.knownDomain(opts.get("domain"), DefaultDomains.codes())
+                : loaded.domain();
 
         System.out.printf("프롬프트 평가 시작: 모델 %s, 난이도당 %d문제, 분야 %s%n", model, count, domain);
         System.out.printf("근거 문서: %s (\"%s\", %d자)%n",

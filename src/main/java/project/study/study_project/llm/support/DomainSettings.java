@@ -20,19 +20,26 @@ import java.util.Map;
  * 고칠 일은 드물지만, 그래도 저장소 파일인 이상 깨질 수 있다(수동 병합 충돌, 커밋 실수).
  * 이미 지불한 API 요금이 오타 하나로 버려지면 안 되므로, <b>모든 실패는 빈 설정으로
  * 떨어진다</b> — 부르는 쪽({@code DraftGeneratorCli})이 지금까지의 폴백(application.yml의
- * {@code batch-domains}, 그리고 그것마저 비면 {@code GenerationSchedule}의 전체 분야)으로
+ * {@code batch-domains}, 그리고 그것마저 비면 {@code DefaultDomains}의 기본 분야)으로
  * 이어 간다. {@link TopicQueue}처럼 "왜 못 읽었는지 크게 알리는" 장치({@code problems()})는
  * 여기 없다 — 이 파일은 사람이 손으로 고치는 대상이 아니라 관리 화면의 산출물이라, 깨졌다면
  * 그건 내보내기 쪽 버그이지 이 파일을 여는 사람이 당장 알아야 할 오타가 아니다.
  *
- * <h2>모르는 분야 이름은 그 줄만 버린다</h2>
+ * <h2>형식이 틀린 줄만 버린다(Task 7, 2026-09-22)</h2>
  *
  * <p>{@link DomainSettingsFile.Entry#domain}이 분야 타입({@link DomainCode})이 아니라 문자열인 이유는
- * 그 record의 Javadoc이 설명한다 — 요지는 "상수 하나가 enum에서 빠져도(2026-09-21의
- * {@code FRONTEND_CS}처럼) 그 줄만 걸러지고 나머지 분야는 살아야 한다"이다. 그 줄 단위
- * 판단이 이 클래스의 몫이라고 그 Javadoc이 못 박아 둔 자리가 바로 여기, {@link #parseDomain}과
- * 그것을 부르는 {@link #read}다. {@code IllegalArgumentException}을 여기서 잡지 않으면
- * 설정 전체가 죽고, 옛 이름 하나 때문에 켜 둔 다른 일곱 분야까지 배치에서 사라진다.
+ * 그 record의 Javadoc이 설명한다 — 요지는 "한 줄이 깨져도(오타, 하이픈이 섞인 형식 등) 그 줄만
+ * 걸러지고 나머지 분야는 살아야 한다"이다. 그 줄 단위 판단이 이 클래스의 몫이라고 그 Javadoc이
+ * 못 박아 둔 자리가 바로 여기, {@link #parseDomain}과 그것을 부르는 {@link #read}다.
+ * {@code IllegalArgumentException}을 여기서 잡지 않으면 설정 전체가 죽고, 오타 하나 때문에 켜
+ * 둔 다른 일곱 분야까지 배치에서 사라진다.
+ *
+ * <p><b>예전에는 "형식은 맞지만 기본 11개에 없는 이름"도 걸렀다</b>({@code DefaultDomains.isKnown}).
+ * 그 규칙은 등록부가 DB로 넘어간 지금은 틀렸다 — 관리자가 화면에서 새 분야를 추가하면 이
+ * 파일에도 그 이름이 나가는데({@code DomainSettingExporter}), 옛 규칙대로면 배치가 그 줄을
+ * "모르는 이름"으로 오인해 계속 버린다. 지금은 <b>형식만</b> 본다 — "그런 분야가 실제로
+ * 있는가"는 이 파일을 내보낸 관리 화면(DB)이 이미 보장한 사실이라, 여기서 다시 좁은 목록으로
+ * 재확인할 필요가 없다({@link #parseDomain} Javadoc에 더 자세히).
  *
  * <h2>힌트가 비면 내장값으로 — 오직 "완전히 빈" 경우에만</h2>
  *
@@ -208,20 +215,32 @@ public final class DomainSettings implements DomainCatalog {
     }
 
     /**
-     * 분야 문자열 → 상수. 모르는 값이면 {@code null}(예외를 던지지 않는다) — {@link
-     * TopicQueue#parseDomain}과 같은 판단이다. 대소문자·앞뒤 공백은 봐주지만 없는 상수명은
-     * 봐줄 수 없다: 비슷한 이름으로 짐작해 붙이면 엉뚱한 분야가 배치에 섞인다.
+     * 분야 문자열 → 상수. 형식이 틀리면 {@code null}(예외를 던지지 않는다) — {@link
+     * TopicQueue#parseDomain}과 같은 판단이다. 대소문자·앞뒤 공백은 봐준다.
+     *
+     * <h2>Task 7 — "기본 분야에 있는가"를 더 이상 묻지 않는다(2026-09-22)</h2>
+     *
+     * <p>예전에는 여기서 {@code DefaultDomains.isKnown}까지 확인해, 형식은 맞아도 옛 enum에서
+     * 빠진 이름({@code FRONTEND_CS})이면 걸러 냈다. 그런데 그 규칙 아래서는 관리자가 화면에서
+     * 새 분야({@code MESSAGING})를 추가해도 <b>이 파일을 읽는 배치만은 그 분야를 영원히 모른다</b>
+     * — {@code DefaultDomains}는 코드에 박힌 11개뿐이고 재배포 전에는 늘지 않기 때문이다.
+     * 등록부(무엇이 유효한 분야인가의 진실)가 DB로 넘어간 지금, 이 파일 자체가 <b>배치 쪽
+     * 등록부의 내보내기 산출물</b>이다({@code DomainSettingExporter}) — 그래서 "이 파일에 적힌
+     * 형식이 맞는 코드"라면 그것으로 충분하고, 더 좁은 기준(옛 11개)을 덧대면 오히려 화면에서
+     * 막 추가한 분야를 배치가 못 알아보는 조용한 버그가 된다.
+     *
+     * <p>형식 검사만으로도 안전한 이유: 이 파일은 사람이 직접 쓰는 파일이 아니라 관리 화면이
+     * 매번 내보내는 산출물이다({@code DomainSettingExporter}). 사람이 실수로 없는 분야를 적을
+     * 통로가 원천적으로 없으므로, 형식만 맞으면(DomainCode.of가 통과시키면) 신뢰해도 된다.
      */
     private static DomainCode parseDomain(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
         try {
-            // 옛 enum의 valueOf는 모르는 이름이면 예외였다. DomainCode.of는 형식만 보므로(FRONTEND_CS처럼
-            // 형식은 맞는 옛 이름이 통과한다) isKnown으로 "기본 분야에 있는가"를 따로 확인해 같은 결과를 낸다.
-            // 형식이 틀린 값은 DomainCode.of가 IllegalArgumentException을 던져 아래 catch로 똑같이 빠진다.
-            DomainCode code = DomainCode.of(raw.trim().toUpperCase());
-            return DefaultDomains.isKnown(code) ? code : null;
+            // 형식이 틀린 값(예: 하이픈이 든 frontend-cs)은 DomainCode.of가 IllegalArgumentException을
+            // 던져 아래 catch로 빠진다 — 그 줄만 건너뛰고 나머지 설정은 살린다(클래스 상단 Javadoc).
+            return DomainCode.of(raw.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             return null;
         }

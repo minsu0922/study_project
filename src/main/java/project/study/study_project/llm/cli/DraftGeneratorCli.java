@@ -20,6 +20,7 @@ import project.study.study_project.llm.support.DifficultyMaterialRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
+import project.study.study_project.llm.support.DomainEntry;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationLimits;
 import project.study.study_project.llm.support.GenerationSchedule;
@@ -223,7 +224,9 @@ public final class DraftGeneratorCli {
         }
 
         // 수동 실행(workflow_dispatch)에서 특정 칸을 지정한 경우만 주기를 덮어쓴다
-        DomainCode domain = opts.containsKey("domain") ? knownDomain(opts.get("domain")) : plan.domain();
+        // batchDomains는 이미 파일→yml→DefaultDomains 순으로 넓혀 온 "이번 실행의 전체"다(Task 7) —
+        // --domain은 그 안에 있어야 한다. 아니면 모르는 분야로 유료 API를 부르기 전에 여기서 끊는다.
+        DomainCode domain = opts.containsKey("domain") ? knownDomain(opts.get("domain"), batchDomains) : plan.domain();
         Difficulty difficulty = opts.containsKey("difficulty")
                 ? Difficulty.valueOf(opts.get("difficulty")) : plan.difficulty();
         ProblemType type = resolveProblemType(opts.get(PROBLEM_TYPE_OPT));
@@ -851,7 +854,9 @@ public final class DraftGeneratorCli {
     static DomainCode documentDomain(LocalDate date, List<DomainCode> candidates, String requestedDomain,
                                  LocalDate cycleAnchor) {
         if (requestedDomain != null && !requestedDomain.isBlank()) {
-            return knownDomain(requestedDomain.trim());
+            // candidates는 이 호출의 "이번 실행의 전체"다(위 knownDomain 주석과 같은 판단) —
+            // 수동 지정도 그 밖으로 나가면 안 된다.
+            return knownDomain(requestedDomain.trim(), candidates);
         }
         // ⚠️ 반드시 planFor다. cellFor로 바꾸면 위 계산대로 두 분야만 반복된다.
         return GenerationSchedule.planFor(date, candidates, cycleAnchor).domain();
@@ -1579,51 +1584,77 @@ public final class DraftGeneratorCli {
         return Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
     }
 
-    /** "NETWORK,OS,..." → enum 목록. 비어 있으면 빈 목록(스케줄이 전체 도메인으로 보정한다). */
     /**
-     * 날짜 순환의 후보 분야 — 분야 설정 파일이 먼저, yml {@code batch-domains}는 <b>파일이 없을 때만</b>.
+     * 날짜 순환의 후보 분야("이번 실행의 전체") — 분야 설정 파일이 먼저, yml {@code batch-domains}는
+     * <b>파일이 없을 때만</b>, 그것마저 없으면 {@link DefaultDomains#codes()}(task-7-brief 표).
      *
-     * <p><b>폴백 조건을 {@link DomainSettings#isEmpty()} 하나로 좁혔다</b>(최종 리뷰 Important 3).
-     * 전에는 "켜진 분야가 0개"여도 yml 8개로 갔다. 그러면 파일은 있는데 전부 꺼진 상태를
-     * CLI는 yml 8개로, 앱({@code LlmProblemService})은 enum 전체로 읽어 두 쪽이 같은 상태에서
-     * 다른 답을 냈다. 지금은:
-     * <ul>
-     *   <li>파일 없음·깨짐·빈 배열({@code isEmpty()}) → yml {@code batch-domains}. 관리 화면을 한 번도
-     *       안 쓴 저장소가 예전처럼 돌게 하는 자리다.
-     *   <li>파일은 있는데 켜진 분야가 0개 → <b>빈 목록을 그대로</b> 넘긴다. {@code GenerationSchedule}이
-     *       빈 목록을 전체 분야로 넓히므로 앱과 같은 결과가 된다. 관리 화면은 마지막 분야를 끄지
+     * <h2>Task 7 — 넓히는 책임이 여기로 왔다(2026-09-22)</h2>
+     *
+     * <p>예전에는 이 메서드가 빈 목록을 그대로 돌려줘도 됐다 — {@code GenerationSchedule.planFor}가
+     * 받는 쪽에서 빈 목록을 조용히 {@code DefaultDomains.codes()}로 넓혀 줬기 때문이다. 그 폴백을
+     * {@code GenerationSchedule}에서 없앴다({@link GenerationSchedule#requireCandidates} 참고) —
+     * "전체"의 뜻이 앱과 배치에서 다른데, 그 클래스가 하나(옛 11개)로 고정해 넓히면 관리자가
+     * 화면에서 새로 추가한 분야가 배치에서 계속 빠진다. 그래서 <b>이 메서드가 직접</b> 세 단계로
+     * 넓힌다:
+     * <ol>
+     *   <li>파일 없음·깨짐·빈 배열({@link DomainSettings#isEmpty()}) → yml {@code batch-domains}.
+     *       그것도 비어 있으면 {@link DefaultDomains#codes()} — 관리 화면을 한 번도 안 쓴 저장소가
+     *       예전처럼 돌게 하는 자리다.
+     *   <li>파일은 있고 켜진 분야가 1개 이상 → 그 목록 그대로(켜진 것만, {@code sortOrder} 순).
+     *   <li>파일은 있는데 켜진 분야가 0개 → <b>파일의 모든 항목</b>(꺼진 것도)으로 넓힌다.
+     *       <b>yml도, 옛 11개도 아니다</b> — 파일이 배치의 등록부이므로, 등록되지 않은 분야를
+     *       지어내지 않으면서도 순환이 완전히 비지는 않게 한다. 관리 화면은 마지막 분야를 끄지
      *       못하게 막으므로(DOMAIN_002) 이 경우는 사람이 파일을 손으로 고쳤을 때만 생긴다.
-     * </ul>
-     * yml이 비어도 빈 목록이 되고, 역시 {@code GenerationSchedule}이 전체로 넓힌다.
+     * </ol>
      *
      * <p>배치를 멈추는 수단은 {@code batch-enabled} 하나다 — "분야를 전부 끄면 멈춘다"는 뜻을
      * 여기서 만들지 않는다(두 번째 정지 수단이 생기면 둘의 뜻이 또 어긋난다).
      */
     static List<DomainCode> resolveBatchDomains(DomainSettings settings, String ymlBatchDomains) {
-        return settings.isEmpty() ? parseDomains(ymlBatchDomains) : settings.batchDomains();
+        if (settings.isEmpty()) {
+            List<DomainCode> yml = parseDomains(ymlBatchDomains);
+            return yml.isEmpty() ? DefaultDomains.codes() : yml;
+        }
+        List<DomainCode> enabled = settings.batchDomains();
+        if (!enabled.isEmpty()) {
+            return enabled;
+        }
+        // 파일은 있는데 켜진 분야가 0개 — 파일의 모든 항목(꺼진 것 포함)으로 넓힌다.
+        // settings.all()도 이론상 비었을 수 있다(모든 줄이 형식 오류) — 그 경우 GenerationSchedule이
+        // 빈 목록을 프로그래밍 오류로 보고 예외를 던진다. 파일 전체가 깨진 극단적 상황이라
+        // 조용히 넘기기보다 큰 소리로 죽는 편이 낫다(클래스 상단 "실패하면 반드시 죽는다" 원칙).
+        return settings.all().stream().map(DomainEntry::code).toList();
     }
 
+    /** yml {@code batch-domains} 문자열("NETWORK,OS,...") → 코드 목록. 형식만 본다 — 후보 목록 자신을 만드는 자리라 비교할 "전체"가 없다. */
     private static List<DomainCode> parseDomains(String csv) {
         if (csv == null || csv.isBlank()) {
             return List.of();
         }
         return Arrays.stream(csv.split(",")).map(String::trim).filter(s -> !s.isEmpty())
-                .map(DraftGeneratorCli::knownDomain).toList();
+                .map(DomainCode::of).toList();
     }
 
     /**
-     * 사람이 적은 분야 이름(--domain=, yml batch-domains) → 코드. <b>옛 enum의 {@code valueOf}와 같은
-     * 엄격함</b>을 지킨다: 모르는 이름이면 {@link IllegalArgumentException}으로 실행을 멈춘다.
+     * 사람이 적은 분야 이름({@code --domain=}) → 코드, <b>candidates 안에 있는지까지</b> 확인한다.
+     * <b>옛 enum의 {@code valueOf}와 같은 엄격함</b>을 지킨다: candidates 밖이면
+     * {@link IllegalArgumentException}으로 실행을 멈춘다 — 요금이 나가기 전에 끊는 것이 목적이라
+     * (task-7-brief 표의 "요금을 쓰기 전에 실패한다") 여기서 절대 조용히 넘어가면 안 된다.
      *
-     * <p>{@link DomainCode#of}만 쓰면 형식만 맞는 이름({@code FRONTEND_CS}처럼 기본 목록에서 지운
-     * 분야, 또는 오타 난 {@code NETWROK})이 그대로 통과해, 없는 분야로 유료 API를 부르고 그 결과를
-     * 저장하려다 뒤늦게 깨진다. 그래서 {@link DefaultDomains#isKnown}을 함께 본다. 대소문자는
-     * 예전처럼 봐주지 않는다(옛 enum의 {@code valueOf}도 봐주지 않았다 — 봐주는 것은 파일을 읽는
-     * {@code TopicQueue}·{@code DomainSettings}뿐이다). {@code PromptEvalCli}도 이 메서드를 빌려 쓴다.
+     * <h2>Task 7 — "기본 11개"가 아니라 candidates(2026-09-22)</h2>
+     *
+     * <p>예전에는 {@link DefaultDomains#isKnown}으로 고정된 기본 11개와만 비교했다. 그러면 관리
+     * 화면에서 새 분야를 추가하고 {@code --domain=MESSAGING}으로 수동 실행해도 "알 수 없는
+     * 분야"로 막힌다 — 화면에서 늘린 분야가 배치까지 닿아야 한다는 이 작업의 목표와 반대다.
+     * 지금은 부르는 쪽이 넘긴 candidates(이번 실행의 "전체" — {@link #resolveBatchDomains}가
+     * 정한 파일/yml/기본값 순 폴백)와 비교한다.
+     *
+     * <p>대소문자는 예전처럼 봐주지 않는다(옛 enum의 {@code valueOf}도 봐주지 않았다 — 봐주는
+     * 것은 파일을 읽는 {@code TopicQueue}·{@code DomainSettings}뿐이다).
      */
-    static DomainCode knownDomain(String raw) {
+    static DomainCode knownDomain(String raw, List<DomainCode> candidates) {
         DomainCode code = DomainCode.of(raw);
-        if (!DefaultDomains.isKnown(code)) {
+        if (!candidates.contains(code)) {
             throw new IllegalArgumentException("알 수 없는 분야입니다: " + raw);
         }
         return code;

@@ -8,11 +8,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
+import project.study.study_project.admin.dto.AdminDomainCreateRequest;
 import project.study.study_project.admin.dto.AdminProblemDetail;
 import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.admin.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.response.PageResponse;
@@ -59,6 +61,8 @@ class ProblemListIntegrationTest {
     private UserRepository userRepository;
     @Autowired
     private ReviewItemRepository reviewItemRepository;
+    @Autowired
+    private DomainSettingService domainSettingService;
 
     private Long userId;
 
@@ -211,6 +215,32 @@ class ProblemListIntegrationTest {
         assertThat(domains).filteredOn(d -> d.domain().equals(TestDomains.SECURITY))
                 .singleElement().extracting(StudySummaryResponse.DomainProgress::solved)
                 .isEqualTo(0L);
+    }
+
+    /**
+     * Task 7의 핵심 성질(2026-09-22) — 관리자가 등록부에 분야를 추가하면, 재배포 없이 이
+     * 사이드바에도 0진척으로 곧바로 나타나야 한다. 예전({@code DefaultDomains.codes()} 고정값)
+     * 에는 이 테스트가 성립할 수 없었다 — 등록부에 무엇을 추가하든 사이드바는 재배포 전까지
+     * 그대로였기 때문이다.
+     */
+    @Test
+    @DisplayName("분야를 추가하면 사이드바에도 곧바로 0진척으로 나타난다 — 화면에서 늘린 분야가 학습자 화면까지 닿는다")
+    void domainProgressIncludesNewlyRegisteredDomain() {
+        DomainCode added = DomainCode.of("MESSAGING_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        domainSettingService.create(new AdminDomainCreateRequest(
+                added, "테스트용 새 분야", "사이드바 반영 확인용"));
+
+        List<StudySummaryResponse.DomainProgress> domains =
+                problemListService.getSummary(userId).domains();
+
+        assertThat(domains).hasSize(DefaultDomains.codes().size() + 1);
+        assertThat(domains).filteredOn(d -> d.domain().equals(added))
+                .singleElement()
+                .satisfies(p -> {
+                    assertThat(p.label()).isEqualTo("테스트용 새 분야");
+                    assertThat(p.solved()).isZero();
+                    assertThat(p.total()).isZero();
+                });
     }
 
     /* ── 도우미 ──────────────────────────────────────────────── */
