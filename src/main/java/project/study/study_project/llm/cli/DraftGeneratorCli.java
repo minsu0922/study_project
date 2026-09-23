@@ -697,7 +697,9 @@ public final class DraftGeneratorCli {
             picked = queue.next();
             if (picked != null) {
                 topic = picked.topic();
-                domain = topicDomain(domain, opts.get("domain"), picked);
+                // batchDomains를 함께 넘긴다 — 등록부 밖(또는 꺼진) 분야를 대기열에 적어 뒀을 때
+                // 경고를 남기는 잣대다(topicDomain Javadoc "등록부에 없는 분야는 알린다").
+                domain = topicDomain(domain, opts.get("domain"), picked, batchDomains);
             }
         }
         reportTopicQueue(queue, picked, topic);
@@ -776,13 +778,40 @@ public final class DraftGeneratorCli {
      * <p><b>왜 수동 지정은 이기지 못하나.</b> 사람이 워크플로에서 분야를 직접 골랐다면 그게
      * 가장 최근의 의사 표시다. 다만 그 조합은 어긋날 수 있으므로 호출부에서 로그로 알린다.
      *
+     * <h2>등록부에 없는 분야는 알린다(최종 리뷰 Minor 3)</h2>
+     *
+     * <p>Task 7에서 {@link TopicQueue#parseDomain}이 "형식만" 보도록 바뀌면서, 등록되지 않은
+     * 분야를 {@code _topics.json}에 손으로 적어도 그 항목이 그대로 쓰인다. 예전에 뜨던 경고가
+     * 그 자리에서 사라진 것이라, 오타 하나가 <b>요금을 쓰고 문서를 만든 뒤</b> 로컬 앱의
+     * {@code DocumentImportService}가 흡수를 거절하는 데서야 드러난다. 그래서 {@link #knownDomain}이
+     * 수동 지정을 재는 것과 <b>같은 잣대</b>(이번 실행의 전체 = {@code batchDomains})로 대기열
+     * 분야도 재서 경고를 되살린다.
+     *
+     * <p><b>막지 않고 알리기만 한다.</b> {@code knownDomain}은 예외로 실행을 끊지만 여기서는
+     * 경고에서 멈춘다 — {@code batchDomains}는 <b>켜진</b> 분야만이라, 등록은 돼 있고 순환에서만
+     * 빠진 분야로 주제를 적어 두는 것은 정상적인 사용법이다. 그 경우까지 죽이면 "순환 밖 분야의
+     * 문서를 손으로 한 편 만든다"는 길이 막힌다. 판단을 사람에게 넘기되, 조용하지는 않게 한다.
+     *
      * @param planned         주기(또는 수동 지정)가 계산해 둔 분야
      * @param requestedDomain 수동 실행의 {@code --domain}. 비어 있으면 대기열 쪽을 쓴다
      * @param picked          대기열에서 꺼낸 항목
+     * @param batchDomains    이번 실행의 후보 전체({@link #resolveBatchDomains}) — 경고 판정의 잣대
      */
-    static DomainCode topicDomain(DomainCode planned, String requestedDomain, TopicQueue.Picked picked) {
+    static DomainCode topicDomain(DomainCode planned, String requestedDomain, TopicQueue.Picked picked,
+                                  List<DomainCode> batchDomains) {
+        // 등록부 밖 분야 경고 — 수동 지정이 이기든 대기열이 이기든, 사람이 적어 둔 그 줄은
+        // 언젠가 쓰이므로 지금 알린다.
+        if (picked != null && batchDomains != null && !batchDomains.contains(picked.domain())) {
+            System.out.printf("⚠️ 대기열 주제의 분야(%s)가 이번 실행의 후보에 없습니다 — "
+                            + "분야 설정에서 꺼져 있거나 등록되지 않은 코드입니다. 주제: %s%n",
+                    picked.domain(), picked.topic());
+        }
         if (requestedDomain != null && !requestedDomain.isBlank()) {
-            if (picked != null && picked.domain() != planned) {
+            // Objects.equals다. DomainCode는 record라 ==는 참조 비교이고, picked.domain()은
+            // TopicQueue가 파일에서 만든 인스턴스라 planned와 같은 물건일 수 없다 — ==면
+            // --domain=을 준 모든 실행에서 이 경고가 <늘> 찍혀 진짜 어긋남을 가린다
+            // (최종 리뷰 Minor 1). 반환값은 원래 맞았으므로 증상이 로그뿐이었다.
+            if (picked != null && !Objects.equals(picked.domain(), planned)) {
                 System.out.printf("수동 지정 분야(%s)와 대기열 주제의 분야(%s)가 다릅니다 — 수동 지정을 따릅니다%n",
                         planned, picked.domain());
             }
@@ -1114,8 +1143,14 @@ public final class DraftGeneratorCli {
      * <p>최신 것부터 {@link #AVOID_LIST_SIZE}개까지만 넣는다 — 파일이 쌓일수록 프롬프트가
      * 무한정 길어지면 입력 토큰 비용이 계속 오르기 때문. 파일명이 날짜라 이름 역순 정렬이
      * 곧 최신순이다.
+     *
+     * <p><b>왜 {@code private}이 아니라 패키지 전용인가</b>(최종 리뷰 Important 2). 이 메서드의
+     * 분야 비교가 {@code ==}라 이전 날짜 파일에서 <b>한 문제도 못 모으고</b> 있었는데,
+     * {@code private static}이라 테스트가 부를 길이 없어 아무도 못 잡았다. 같은 패키지의
+     * {@code DraftGeneratorCliTest}가 직접 부를 수 있게 열어 둔다 — 이 저장소가 프롬프트 조립
+     * 테스트에서 이미 쓰는 방식이다. 검사할 수 없는 코드는 <b>검사하지 않는 코드</b>가 된다.
      */
-    private static List<String> buildAvoidList(Path outDir, DomainCode domain) throws Exception {
+    static List<String> buildAvoidList(Path outDir, DomainCode domain) throws Exception {
         List<String> avoid = new ArrayList<>();
 
         // (1) 이전에 생성된 배치 파일 — 최신 날짜부터
@@ -1133,7 +1168,13 @@ public final class DraftGeneratorCli {
                     break;
                 }
                 GeneratedBatchFile batch = MAPPER.readValue(file.toFile(), GeneratedBatchFile.class);
-                if (batch.domain() != domain || batch.problems() == null) {
+                // Objects.equals다 — 아래 1149행(스냅샷 쪽)과 같은 이유이고, 그 주석이 붙어
+                // 있는데도 이 갈래만 ==로 남아 있었다(최종 리뷰 Important 2). batch.domain()은
+                // Jackson이 파일에서 만든 인스턴스라 인수로 받은 domain과 같은 물건일 수 없고,
+                // ==면 이 continue가 <항상> 걸려 이전 날짜 파일에서 한 문제도 못 모은다.
+                // 증상은 조용하다: 회피 목록이 비어 모델이 이미 낸 문제를 다시 내고, 그 요금은
+                // 실제로 나간다. 회귀 테스트는 DraftGeneratorCliTest.avoidListMatchesDomainByValue.
+                if (!Objects.equals(batch.domain(), domain) || batch.problems() == null) {
                     continue;
                 }
                 batch.problems().stream().map(GeneratedProblemItem::question).forEach(avoid::add);

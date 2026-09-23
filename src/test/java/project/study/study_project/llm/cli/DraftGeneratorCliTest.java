@@ -9,6 +9,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
+import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
@@ -1294,7 +1295,7 @@ class DraftGeneratorCliTest {
         TopicQueue.Picked picked =
                 new TopicQueue.Picked(0, TestDomains.BACKEND_FRAMEWORK, "@Transactional 전파 속성");
 
-        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, picked))
+        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, picked, CANDIDATES))
                 .isEqualTo(TestDomains.BACKEND_FRAMEWORK);
     }
 
@@ -1303,13 +1304,83 @@ class DraftGeneratorCliTest {
     void manualDomainBeatsTopicQueue() {
         TopicQueue.Picked picked = new TopicQueue.Picked(0, TestDomains.BACKEND_FRAMEWORK, "AOP 프록시");
 
-        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, "OS", picked)).isEqualTo(TestDomains.OS);
+        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, "OS", picked, CANDIDATES))
+                .isEqualTo(TestDomains.OS);
     }
 
     @Test
     @DisplayName("대기열이 비면 주기 분야를 그대로 쓴다 — 대기열을 안 채워도 파이프라인은 예전대로 돈다")
     void keepsCycleDomainWhenQueueEmpty() {
-        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, null)).isEqualTo(TestDomains.OS);
+        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, null, CANDIDATES))
+                .isEqualTo(TestDomains.OS);
+    }
+
+    /**
+     * <b>최종 리뷰 Minor 1</b> — 수동 지정과 대기열 분야가 <b>같을 때는</b> 경고가 안 나와야 한다.
+     *
+     * <p>{@code picked.domain() != planned}였을 때는 {@link DomainCode}가 record(값 타입)라
+     * ==가 참조 비교였고, 대기열이 만든 인스턴스와 주기가 만든 인스턴스는 값이 같아도 다른
+     * 물건이라 <b>--domain을 준 모든 실행에서 경고가 늘 찍혔다</b>. 늘 찍히는 경고는 곧
+     * 아무도 안 읽는 경고이고, 그러면 진짜 어긋난 날을 못 알아본다.
+     *
+     * <p>반환값은 그때도 옳았으므로 값만 봐서는 회귀를 못 잡는다 — 표준 출력을 가로채
+     * <b>경고 문구가 없는지</b>를 본다. ==로 되돌리면 문구가 찍혀 이 테스트가 깨진다.
+     */
+    @Test
+    @DisplayName("분야가 같으면 어긋남 경고를 찍지 않는다 — ==로 되돌리면 늘 찍힌다")
+    void doesNotWarnWhenManualDomainMatchesQueue() {
+        // 같은 값을 <따로> 만든다. 이것이 이 테스트의 전부다 — 같은 상수를 두 번 쓰면
+        // ==로도 통과해 회귀를 못 잡는다.
+        TopicQueue.Picked picked = new TopicQueue.Picked(0, DomainCode.of("OS"), "컨텍스트 스위칭");
+
+        String printed = captureStdout(() ->
+                assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, "OS", picked, CANDIDATES))
+                        .isEqualTo(TestDomains.OS));
+
+        assertThat(printed).doesNotContain("다릅니다");
+    }
+
+    /**
+     * <b>최종 리뷰 Minor 3</b> — 등록부(이번 실행의 후보) 밖 분야를 대기열에 적으면 경고한다.
+     *
+     * <p>Task 7에서 {@code TopicQueue.parseDomain}이 "형식만" 보게 되면서 이 경고가 사라졌다.
+     * 그러면 오타 하나가 요금을 쓰고 문서를 만든 <b>뒤에</b>, 로컬 앱이 흡수를 거절하는 데서야
+     * 드러난다. 막지는 않고 알리기만 하는 이유는 {@code topicDomain} Javadoc에 있다.
+     */
+    @Test
+    @DisplayName("후보에 없는 분야를 대기열에 적으면 경고한다 — 요금을 쓴 뒤에 알면 늦다")
+    void warnsWhenQueueDomainIsNotACandidate() {
+        TopicQueue.Picked picked = new TopicQueue.Picked(0, DomainCode.of("MESSAGING"), "카프카 컨슈머 그룹");
+
+        String printed = captureStdout(() ->
+                // 막지 않는다 — 값은 그대로 대기열 분야를 따른다.
+                assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, picked, CANDIDATES))
+                        .isEqualTo(DomainCode.of("MESSAGING")));
+
+        assertThat(printed).contains("MESSAGING").contains("후보에 없습니다");
+    }
+
+    /** 후보에 있는 분야는 조용히 지나간다 — 위 경고가 모든 실행에서 울리면 아무도 안 읽는다. */
+    @Test
+    @DisplayName("후보에 있는 분야면 경고하지 않는다")
+    void doesNotWarnWhenQueueDomainIsACandidate() {
+        TopicQueue.Picked picked = new TopicQueue.Picked(0, DomainCode.of("NETWORK"), "TCP 혼잡 제어");
+
+        assertThat(captureStdout(() -> DraftGeneratorCli.topicDomain(TestDomains.OS, null, picked, CANDIDATES)))
+                .doesNotContain("후보에 없습니다");
+    }
+
+    /** {@code System.out}을 잠깐 가로채 찍힌 글을 돌려준다 — 경고는 반환값이 아니라 출력이라 이 수밖에 없다. */
+    private static String captureStdout(Runnable body) {
+        java.io.PrintStream original = System.out;
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+        try {
+            System.setOut(new java.io.PrintStream(buffer, true, java.nio.charset.StandardCharsets.UTF_8));
+            body.run();
+        } finally {
+            System.setOut(original); // 실패해도 반드시 되돌린다 — 안 그러면 뒤 테스트의 출력이 사라진다
+        }
+        return buffer.toString(java.nio.charset.StandardCharsets.UTF_8);
     }
 
     /**
@@ -1776,5 +1847,58 @@ class DraftGeneratorCliTest {
 
         assertThat(DraftGeneratorCli.resolveBatchDomains(DomainSettings.read(dir), YML_BATCH_DOMAINS))
                 .containsExactly(TestDomains.OS);
+    }
+
+    /* ══ 중복 회피 목록 — 이전 날짜 파일 읽기(최종 리뷰 Important 2) ══ */
+
+    /**
+     * <b>이전 날짜 파일에서 같은 분야의 문제를 실제로 모아 오는지</b>.
+     *
+     * <p>여기가 {@code batch.domain() != domain}으로 막혀 있었다. {@link DomainCode}는
+     * record(값 타입)라 {@code ==}는 <b>참조 비교</b>인데, {@code batch.domain()}은 Jackson이
+     * 파일에서 방금 만든 인스턴스라 인수로 넘긴 코드와 같은 물건일 수가 없다 — 그래서 저 조건이
+     * <b>항상</b> 참이 되어 회피 목록이 늘 비었고, 모델은 <b>이미 낸 문제를 다시 냈다</b>.
+     * 초록불로, 실제 API 요금을 쓰면서.
+     *
+     * <p><b>왜 이 테스트가 이제야 생겼나.</b> {@code buildAvoidList}가 {@code private static}이라
+     * 부를 길이 없었다. 그래서 같은 패키지에서 부를 수 있게 열었다(그 메서드 Javadoc) —
+     * 검사할 수 없는 코드는 결국 검사하지 않는 코드가 된다.
+     *
+     * <p><b>이 테스트는 {@code ==}로 되돌리면 반드시 깨진다.</b> 견주는 두 {@link DomainCode}가
+     * 서로 다른 인스턴스인 것이 전제이기 때문이다 — 파일 쪽은 Jackson이, 인수 쪽은 테스트가
+     * 각자 만든다. 실제 배치도 정확히 그 모양이다.
+     */
+    @Test
+    @DisplayName("이전 날짜 파일에서 같은 분야 문제를 모은다 — ==로 되돌리면 한 건도 못 모은다")
+    void avoidListMatchesDomainByValue(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        writeBatchFile(dir, "2026-09-20.json", "DATABASE", "B+트리 인덱스는 왜 범위 검색에 강한가", "커버링 인덱스란");
+        writeBatchFile(dir, "2026-09-19.json", "OS", "컨텍스트 스위칭 비용은 어디서 나오나");
+        // 언더스코어로 시작하는 파일은 스냅샷이라 배치 결과로 읽지 않는다 — 그 규칙도 함께 본다.
+        writeBatchFile(dir, "_snapshot.json", "DATABASE", "읽으면 안 되는 문제");
+
+        List<String> avoid = DraftGeneratorCli.buildAvoidList(dir, DomainCode.of("DATABASE"));
+
+        assertThat(avoid)
+                .as("==였을 때는 여기가 늘 비어 있었다 — 모델이 같은 문제를 다시 냈다")
+                .containsExactly("B+트리 인덱스는 왜 범위 검색에 강한가", "커버링 인덱스란");
+        // 다른 분야까지 쓸어 담으면 프롬프트만 길어지고 회피 효과는 흐려진다 — 값 비교가
+        // 맞는지를 양쪽 방향으로 본다(모으는 쪽 / 거르는 쪽).
+        assertThat(avoid).doesNotContain("컨텍스트 스위칭 비용은 어디서 나오나", "읽으면 안 되는 문제");
+    }
+
+    /**
+     * 배치 결과 파일 한 개를 만든다 — 실제 {@code GeneratedBatchFile} 직렬화 결과를 그대로 쓴다.
+     * 손으로 JSON을 적으면 필드 이름이 어긋나도 테스트만 통과하는 함정이 생긴다.
+     */
+    private static void writeBatchFile(java.nio.file.Path dir, String fileName, String domain,
+                                       String... questions) throws Exception {
+        List<GeneratedProblemItem> problems = java.util.Arrays.stream(questions)
+                .map(q -> new GeneratedProblemItem(q, "", "해설", List.of()))
+                .toList();
+        GeneratedBatchFile batch = new GeneratedBatchFile("테스트", "2026-09-20", "2026-09-20T00:00:00Z",
+                DomainCode.of(domain), Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
+                "test-model", null, problems);
+        java.nio.file.Files.writeString(dir.resolve(fileName),
+                new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(batch));
     }
 }
