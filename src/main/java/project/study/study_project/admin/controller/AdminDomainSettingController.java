@@ -135,6 +135,8 @@ public class AdminDomainSettingController {
      * — 체크를 끄거나 ▲▼로 순서를 바꾼 직후, 저장 버튼을 누르기 전에 그 결과를 눈으로
      * 확인시키기 위한 값이다({@code DomainSettingService.preview} Javadoc, task-9-brief 룰링 3).
      * 생략하면(화면을 처음 열었을 때 등) 지금 저장된 순서({@code batchDomains()})로 대신한다.
+     * {@code ?domains=NETWORK,,OS}처럼 빈 조각이 섞이면 그 조각만 빼고 나머지로 계산한다
+     * (최종 리뷰 Minor 4 — 전에는 그 자리가 {@code null}로 들어와 500이 났다).
      *
      * <p>예: {@code GET /api/admin/domain-settings/preview?days=7&domains=NETWORK,OS,DATABASE}
      *
@@ -156,8 +158,18 @@ public class AdminDomainSettingController {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR,
                     "days는 1~" + MAX_PREVIEW_DAYS + " 사이여야 합니다: " + days);
         }
-        List<DomainCode> target = (domains == null || domains.isEmpty())
-                ? domainSettingService.batchDomains() : domains;
+        // 빈 원소를 먼저 걷어낸다(최종 리뷰 Minor 4). ?domains=NETWORK,,OS처럼 쉼표가 겹치면
+        // 스프링 변환기가 그 빈 조각을 null 원소로 넣어 주는데, 그대로 두면 preview가
+        // plan.domain().value()에서 NPE를 내고 500이 된다. 관리 화면은 이런 주소를 만들지
+        // 않지만(주소를 손으로 고쳐야 나온다), 500은 "서버가 고장났다"는 뜻이라 원인을 찾는 데
+        // 시간을 쓰게 만든다 — 빈 조각은 "아무 분야도 아님"이므로 조용히 빼는 것이 사실에 맞다.
+        // 400으로 되돌리는 안은 버렸다: 나머지 원소가 멀쩡한데 미리보기 전체를 막을 이유가 없다.
+        List<DomainCode> target = (domains == null) ? List.of()
+                : domains.stream().filter(java.util.Objects::nonNull).toList();
+        if (target.isEmpty()) {
+            // 전부 걸러졌거나 애초에 안 넘어왔으면 지금 저장된 순서로 보여 준다(위 Javadoc).
+            target = domainSettingService.batchDomains();
+        }
         return ApiResponse.ok(domainSettingService.preview(target, days));
     }
 }

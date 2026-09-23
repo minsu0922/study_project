@@ -264,6 +264,32 @@ class AdminDomainSettingIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * <b>빈 원소가 500을 만들던 자리</b>(최종 리뷰 Minor 4).
+     *
+     * <p>{@code ?domains=NETWORK,,OS}처럼 쉼표가 겹치면 스프링 변환기가 가운데 빈 조각을
+     * {@code null} 원소로 넣는다. 예전에는 그 {@code null}이 그대로 {@code preview}까지 흘러가
+     * {@code plan.domain().value()}에서 NPE를 냈고, 관리자는 원인을 알 수 없는 <b>500</b>을 봤다.
+     * 이제는 빈 조각만 빼고 나머지 둘로 계산한다 — 결과에 NETWORK·OS만 나오는지까지 본다.
+     */
+    @Test
+    @DisplayName("분야 목록에 빈 조각이 섞여도 500이 아니다 — 그 조각만 빼고 계산한다")
+    void previewIgnoresBlankDomainElements() throws Exception {
+        String body = mockMvc.perform(get("/api/admin/domain-settings/preview")
+                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .param("days", "7")
+                        .param("domains", "NETWORK,,OS"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+
+        Map<String, Object> response = objectMapper.readValue(body, Map.class);
+        List<Map<String, Object>> cells = (List<Map<String, Object>>) response.get("data");
+        assertThat(cells).hasSize(7);
+        assertThat(cells).extracting(c -> c.get("domain"))
+                .as("빈 조각은 '아무 분야도 아님'이므로 결과에도 나오면 안 된다")
+                .allMatch(d -> d.equals("NETWORK") || d.equals("OS"));
+    }
+
     /** {@code keep} 하나만 켜진 상태를 만든다. 순서가 중요하다 — 먼저 켜 둬야 나머지를 끌 때 "마지막"에 안 걸린다. */
     private void leaveOnlyEnabled(DomainCode keep) {
         domainSettingService.findAll().stream()
