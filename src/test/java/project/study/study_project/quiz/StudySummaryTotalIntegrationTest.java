@@ -13,7 +13,7 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.llm.repository.DomainSettingRepository;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -67,6 +67,8 @@ class StudySummaryTotalIntegrationTest {
     @Autowired MockMvc mockMvc;
     @Autowired UserRepository userRepository;
     @Autowired ProblemRepository problemRepository;
+    /** 기대 분야 수를 등록부에서 읽는다 — 분야는 관리자가 화면에서 늘리고 줄인다. */
+    @Autowired DomainSettingRepository domainSettingRepository;
     @Autowired JwtTokenProvider jwtTokenProvider;
 
     private String token;
@@ -104,16 +106,21 @@ class StudySummaryTotalIntegrationTest {
     void everyDomainStaysInTheResponse() throws Exception {
         // group by는 문제가 0개인 분야를 안 준다. 그대로 내려보내면 화면에서
         // 손대지 않은 분야가 사라져 "여기부터 해 볼까"의 후보가 안 보인다.
+        // 기대값은 등록부의 행 수다. 기본 목록 크기를 박아 두면 관리자가 분야를 하나 추가한
+        // 순간 깨지는데, 그건 이 화면의 버그가 아니다 — 새 분야도 목록에 나오는 것이 맞다
+        // (2026-09-23에 TEST 분야를 추가하며 실제로 겪었다).
+        int registered = (int) domainSettingRepository.count();
+
         mockMvc.perform(summaryRequest())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.domains.length()").value(DefaultDomains.codes().size()))
+                .andExpect(jsonPath("$.data.domains.length()").value(registered))
                 // 하나라도 total이 빠지면 화면에서 그 줄의 막대가 NaN이 되어 사라진다.
                 //
                 // hasSize를 쓰는 이유: 필터식 뒤에 .length()를 붙이면 JsonPath가 그것을
                 // <걸러진 배열의 길이>가 아니라 <각 원소의 길이>로 읽어, 객체 필드 수가
                 // 원소 수만큼 담긴 목록이 나온다. 한 번 그렇게 틀렸다.
                 .andExpect(jsonPath("$.data.domains[?(@.total >= 0)]")
-                        .value(hasSize(DefaultDomains.codes().size())));
+                        .value(hasSize(registered)));
     }
 
     /* ── 헬퍼 ── */

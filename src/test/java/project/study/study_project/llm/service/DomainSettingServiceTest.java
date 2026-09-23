@@ -9,7 +9,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.repository.DomainSettingRepository;
 
@@ -53,6 +52,11 @@ class DomainSettingServiceTest {
     @Test
     @DisplayName("행이 하나라도 남아 있으면 시드는 지운 행을 되살리지 않는다")
     void doesNothingIfAnyRowRemains() {
+        // 기준은 "기본 11개"가 아니라 <지금 등록부에 있는 수>다. 분야는 관리자가 화면에서
+        // 늘리고 줄이므로, 기본 목록 크기를 기대값으로 쓰면 누가 분야를 하나 추가한 순간
+        // 이 테스트가 무관하게 깨진다(2026-09-23에 실제로 그랬다 — TEST 분야 추가).
+        long before = repository.count();
+
         for (String table : List.of("problem", "document", "generated_problem_draft",
                 "generated_document_draft", "topic_queue")) {
             em.createNativeQuery("DELETE FROM " + table + " WHERE domain = :domain")
@@ -66,7 +70,7 @@ class DomainSettingServiceTest {
         service.seedIfEmpty();
 
         assertThat(repository.findByDomain(TestDomains.INTEGRATED)).isEmpty();
-        assertThat(repository.count()).isEqualTo(DefaultDomains.codes().size() - 1);
+        assertThat(repository.count()).isEqualTo(before - 1);
     }
 
     @Test

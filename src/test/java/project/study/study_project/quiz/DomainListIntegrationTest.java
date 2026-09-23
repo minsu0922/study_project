@@ -10,7 +10,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.repository.DomainSettingRepository;
 
@@ -30,14 +29,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>고칠 자리가 자바 enum 한 곳으로 줄어도, 그 값을 화면까지 실제로 나르는 경로가
  * 끊기면 소용없다. 이 테스트는 그 경로 두 군데를 지킨다.
  *
- * <h2>순서를 단정하는 이유 — data[0]이 NETWORK인가</h2>
+ * <h2>기대값을 등록부에서 읽는 이유 — 2026-09-23에 바꿨다</h2>
  *
- * <p>{@code DomainSettingService.findAll()}은 {@code sortOrder} 오름차순을 준다. 이 값은
- * {@code application.yml}의 {@code llm.generation.batch-domains}(첫 값이 NETWORK)를 초기값
- * 삼아 기동 시 동기화 러너가 채운다 — 관리자가 손으로 순서를 바꾸지 않은 한 로컬·CI 어디서
- * 재도 NETWORK가 맨 앞이다. 흔들릴 값이면 여기서 단정하지 않았겠지만, 이 프로젝트에서
- * "분야 목록의 기본 순서"는 실제로 이렇게 고정돼 있다(PublicStatsIntegrationTest의
- * domainCount 단정과 같은 판단 — enum/설정이 정하는 값은 DB에 무엇이 있든 흔들리지 않는다).
+ * <p>예전에는 "첫 항목은 NETWORK, 개수는 기본 11개"라고 단정했다. 분야가 코드에 박힌
+ * 고정 목록이던 시절에는 맞는 단정이었다. 지금은 관리자가 화면에서 분야를 추가·삭제하고
+ * 순서도 바꾸므로, 그 단정은 <b>이 API가 제대로 동작할수록 깨진다</b> — 실제로 분야 하나를
+ * 추가하자마자 이 테스트가 빨간불이 됐다.
+ *
+ * <p>그래서 개수와 첫 항목을 모두 {@code domain_setting} 표에서 읽어 와 비교한다. 이 테스트가
+ * 지키는 것은 "몇 개인가"가 아니라 <b>등록부에 있는 것이 그 순서 그대로 나오는가</b>이고,
+ * 그것은 분야가 몇 개든 성립한다.
  *
  * <h2>왜 로그인 없이도 되는지 확인하나</h2>
  *
@@ -59,12 +60,19 @@ class DomainListIntegrationTest {
     @Test
     @DisplayName("분야 목록을 순환 순서대로 준다 — 화면의 하드코딩을 대신한다")
     void listsDomainsInCycleOrder() throws Exception {
+        // 기대값을 등록부에서 읽는다. 기본 목록 크기를 박아 두면 관리자가 분야를 하나
+        // 추가하는 순간 이 테스트가 깨진다 — 그건 이 API의 버그가 아니라 오히려 정상 동작이다
+        // (2026-09-23에 실제로 겪었다). 첫 항목도 "NETWORK"로 못 박지 않고 순서대로 읽은
+        // 첫 행과 맞춰, 관리자가 순서를 바꿔도 이 테스트가 "순서대로 준다"만 검사하게 한다.
+        List<DomainSetting> registry = domainSettingRepository.findAllByOrderBySortOrderAsc();
+        DomainSetting first = registry.get(0);
+
         mockMvc.perform(get("/api/domains"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].code").value("NETWORK"))
-                .andExpect(jsonPath("$.data[0].displayName").value("네트워크"))
-                .andExpect(jsonPath("$.data.length()").value(DefaultDomains.codes().size()));
+                .andExpect(jsonPath("$.data[0].code").value(first.getDomain().value()))
+                .andExpect(jsonPath("$.data[0].displayName").value(first.getDisplayName()))
+                .andExpect(jsonPath("$.data.length()").value(registry.size()));
     }
 
     @Test

@@ -83,7 +83,13 @@ if (initAdminPage("documents")) {
 }
 
 function initDocumentForm() {
-  fillSelect(document.getElementById("dDomain"), DOMAINS);
+  // 분야 칸은 폴백으로 먼저 채우고 서버 목록이 오면 고른 값을 지킨 채 다시 채운다 —
+  // 이유는 admin/generate.html의 initTopicForm 주석에 길게 적어 뒀다(요약: DOMAINS는 폴백이라
+  // 관리자가 방금 추가한 분야가 거기엔 없고, 그렇다고 응답 전까지 비워 두면 수정 화면이
+  // 분야를 잃는다).
+  const fillDocumentDomain = () => fillDomainSelect(document.getElementById("dDomain"));
+  fillDocumentDomain();
+  domainsReady.then(fillDocumentDomain);
   document.getElementById("dSubmitBtn").addEventListener("click", submitDocument);
   document.getElementById("dCancelBtn").addEventListener("click", resetDocumentForm);
 

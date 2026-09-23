@@ -319,7 +319,33 @@ function slugWithEdition(slug) {
   return edition ? `${escapeHtml(slug)} (${edition})` : escapeHtml(slug);
 }
 
-/** <select>에 "전체" + enum 옵션을 채운다 (목록 필터 공용) */
+/**
+ * 분야 <select>를 채운다 — <b>고른 값을 지킨 채 다시 채울 수 있다.</b>
+ *
+ * <p>분야만 이 함수를 따로 두는 이유: 난이도·유형과 달리 분야 목록은 <b>서버에서 온다</b>
+ * (GET /api/domains → DOMAINS를 제자리에서 교체). 그래서 화면을 그리는 시점과 목록이
+ * 도착하는 시점이 다르고, 쓰는 쪽은 보통 <b>두 번</b> 부른다 — 먼저 폴백으로 채우고,
+ * {@code domainsReady} 뒤에 한 번 더.
+ *
+ * <p><b>왜 두 번 채우나.</b> 한 번만, 그것도 응답 뒤에만 채우면 그때까지 칸이 비어 있다.
+ * 그 사이에 수정 폼이 열리면(문제 목록의 {@code ?edit=}, 주제 범위 수정) 분야 값을 넣을
+ * 자리가 없어 <b>조용히 첫 항목으로 바뀐다</b>. 반대로 폴백으로만 채우면 관리자가 방금
+ * 추가한 분야가 목록에 없다(2026-09-23에 실제로 겪었다 — 분야 TEST를 추가했는데
+ * "새 범위 추가"의 분야 칸에 안 떴다). 둘 다 피하려면 즉시 + 도착 후, 두 번이다.
+ *
+ * <p>다시 채울 때 고른 값을 되돌려 놓는 것이 이 함수의 핵심이다. 그러지 않으면 목록이
+ * 늦게 도착하는 순간 사용자가 고르던 분야가 초기화된다.
+ */
+function fillDomainSelect(selectEl, allLabel) {
+  if (!selectEl) return;
+  const keep = selectEl.value;
+  fillSelect(selectEl, DOMAINS, allLabel);
+  // 되돌릴 값이 목록에 없으면(그 분야가 삭제된 경우) 브라우저가 무시하고 첫 항목을 남긴다 —
+  // 없는 분야를 고른 척하는 것보다 낫다.
+  if (keep) selectEl.value = keep;
+}
+
+/** <select>에 "전체" + 고정 목록 옵션을 채운다 (난이도·유형 등 서버가 안 주는 값) */
 function fillSelect(selectEl, pairs, allLabel) {
   selectEl.innerHTML = "";
   if (allLabel) selectEl.append(new Option(allLabel, ""));
