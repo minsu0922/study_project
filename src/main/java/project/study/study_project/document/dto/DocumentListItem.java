@@ -31,4 +31,24 @@ public record DocumentListItem(
     public DocumentListItem withEdition(String edition) {
         return new DocumentListItem(id, domain, domainLabel, title, slug, tags, updatedAt, edition);
     }
+
+    /**
+     * 분야 표기 이름을 채운 사본 — {@code DocumentRepositoryImpl}(QueryDSL 프로젝션)은 이 값을
+     * {@code null}로 비워 두고, {@code DocumentService}가 {@code DomainCatalog}로 채운다.
+     *
+     * <p><b>왜 리포지토리가 직접 채우지 않나(6번 작업 리뷰 1차).</b> 리포지토리(영속성 계층)가
+     * {@code DomainCatalog}(서비스 계층 인터페이스)를 올려다보는 것 자체가 방향이 거꾸로다 —
+     * 그 역방향 의존이 실제로 사고를 냈다. 6번 작업에서 {@code DomainSettingService}(그
+     * {@code DomainCatalog}의 구현체)가 분야 삭제 시 사용량을 확인하려고 {@code DocumentRepository}를
+     * 물게 되자, 스프링이 두 빈을 서로를 기다리며 만들다 죽었다(순환 참조).
+     * {@code @Lazy}로 그 자리를 미루는 미봉책도 가능했지만, 그러면 "이 저장소 하나만 예외"라는
+     * 근거를 다음 사람이 다시 추적해야 하고, 앞으로 카탈로그가 필요한 프로젝션이 하나 더
+     * 생기면 그 프로젝션마다 같은 미봉책을 반복해야 한다. 근본 해법은 의존 방향을 바로잡는
+     * 것 — {@link project.study.study_project.document.service.DocumentService#getDocuments}가
+     * {@code page.map(...)}로 조회 뒤에 라벨을 붙인다({@code withEditions}가 짝 편 이름을 붙이는
+     * 것과 같은 자리, 같은 방식).
+     */
+    public DocumentListItem withDomainLabel(String domainLabel) {
+        return new DocumentListItem(id, domain, domainLabel, title, slug, tags, updatedAt, edition);
+    }
 }

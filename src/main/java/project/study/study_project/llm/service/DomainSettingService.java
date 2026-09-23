@@ -3,7 +3,6 @@ package project.study.study_project.llm.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminDomainCreateRequest;
@@ -78,17 +77,18 @@ public class DomainSettingService implements DomainCatalog {
      * ExistingDocumentsExporter 등 llm.service 패키지의 다른 서비스도 이미 이 저장소들을
      * 그대로 가져다 쓴다(계층 경계가 애초에 이 방향으로 열려 있다).
      *
-     * <p><b>{@code documentRepository}만 {@code @Lazy}를 붙인 이유.</b> {@code DocumentRepository}의
-     * QueryDSL 구현체({@code DocumentRepositoryImpl})가 생성자로 {@link DomainCatalog}를 받는데,
-     * 이 클래스가 바로 그 인터페이스의 구현체다 — 그대로 두면
-     * {@code DomainSettingService → DocumentRepository(빈) → DocumentRepositoryImpl → DomainCatalog(=DomainSettingService)}
-     * 순환이 생겨 스프링이 기동 자체를 거부한다({@code BeanCurrentlyInCreationException}, 실제로
-     * 겪었다). {@code @Lazy}는 진짜 빈 대신 프록시를 넣어 두고 <b>처음 메서드를 부를 때</b>에야
-     * 실제 빈을 찾으므로, 그 시점에는 두 빈이 이미 다 만들어져 있어 순환이 풀린다. 나머지 네
-     * 저장소는 이런 상호 의존이 없어 그대로 둬도 된다.
+     * <p><b>DocumentRepository를 여기 물려도 이제 순환이 안 생긴다(리뷰 1차 수정).</b> 처음엔
+     * DocumentRepository의 QueryDSL 구현체(DocumentRepositoryImpl)가 생성자로 DomainCatalog를
+     * 받고 있어서 DomainSettingService(그 구현체) → DocumentRepository(빈) →
+     * DocumentRepositoryImpl → DomainCatalog(=DomainSettingService) 순환이 생겼다.
+     * @Lazy로 미루는 미봉책 대신, 진짜 문제였던 "영속성 계층이 서비스 계층 인터페이스를
+     * 올려다보는" 역방향 의존을 없앴다 — DocumentRepositoryImpl은 이제 DomainCatalog를 아예
+     * 모르고, 분야 표기 이름은 DocumentService.getDocuments가 조회 뒤에 붙인다
+     * (DocumentListItem.withDomainLabel Javadoc 참고). 근본 원인을 치웠으므로 이 순서로
+     * 생성자를 둬도 안전하다.
      */
     private final ProblemRepository problemRepository;
-    private final DocumentRepository documentRepository; // 생성자 인자 쪽에 @Lazy가 있다(아래)
+    private final DocumentRepository documentRepository;
     private final GeneratedProblemDraftRepository problemDraftRepository;
     private final GeneratedDocumentDraftRepository documentDraftRepository;
     private final TopicQueueItemRepository topicQueueItemRepository;
@@ -128,7 +128,7 @@ public class DomainSettingService implements DomainCatalog {
 
     public DomainSettingService(DomainSettingRepository repository,
                                  ProblemRepository problemRepository,
-                                 @Lazy DocumentRepository documentRepository,
+                                 DocumentRepository documentRepository,
                                  GeneratedProblemDraftRepository problemDraftRepository,
                                  GeneratedDocumentDraftRepository documentDraftRepository,
                                  TopicQueueItemRepository topicQueueItemRepository,
@@ -481,8 +481,15 @@ public class DomainSettingService implements DomainCatalog {
      * 목록은 다시 {@link DefaultDomains}처럼 본코드가 분야 이름을 아는 자리가 된다 — 이 태스크가
      * 없애려는 바로 그 결합이다.
      *
+     * <h2>판정 순서 — 마지막 켜진 분야인지를 먼저 본다</h2>
+     *
+     * <p>그래서 <b>둘 다에 해당하는 분야</b>(마지막으로 켜져 있으면서 내용도 있는 분야)는
+     * DOMAIN_002로만 응답하고, DOMAIN_005의 "어느 표에 몇 건" 안내는 나오지 않는다. 빠뜨린
+     * 게 아니라 의도한 순서다 — 두 사유가 겹치면 더 근본적인 사유(배치가 멈춘다)를 먼저
+     * 알려야 한다. 끄고 나서 다시 지우려 하면 그때 DOMAIN_005가 내용 건수를 알려 준다.
+     *
      * @throws BusinessException DOMAIN_001(404) — 행이 없을 때
-     * @throws BusinessException DOMAIN_002(400) — 마지막으로 켜진 분야일 때
+     * @throws BusinessException DOMAIN_002(400) — 마지막으로 켜진 분야일 때(내용 확인보다 먼저 본다)
      * @throws BusinessException DOMAIN_005(400) — 다섯 표 중 하나라도 이 분야를 쓸 때
      */
     @Transactional

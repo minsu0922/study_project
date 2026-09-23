@@ -13,7 +13,6 @@ import org.springframework.data.support.PageableExecutionUtils;
 import project.study.study_project.document.domain.QDocument;
 import project.study.study_project.document.dto.DocumentListItem;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.tag.domain.QTag;
 
 import java.time.LocalDateTime;
@@ -49,7 +48,15 @@ import java.util.stream.Collectors;
 public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
-    private final DomainCatalog domainCatalog; // 목록의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로(Task 4)
+    /*
+     * 분야 표기 이름(DomainCatalog)은 <b>여기서 채우지 않는다</b>(6번 작업 리뷰 1차로 뺐다).
+     * 이 클래스는 영속성 계층(QueryDSL 프로젝션)인데 DomainCatalog는 서비스 계층 인터페이스라,
+     * 여기서 그것을 올려다보면 의존 방향이 거꾸로 된다. 실제로 그 역방향이 사고를 냈다 —
+     * DomainSettingService(DomainCatalog 구현체)가 분야 삭제 사용량 확인용으로
+     * DocumentRepository를 물게 되자 두 빈이 서로를 기다리며 순환 참조로 죽었다.
+     * DocumentListItem.withDomainLabel 사용처(DocumentService.getDocuments)에 그 이유를
+     * 자세히 적어 뒀다 — 라벨은 조회 뒤에 서비스가 붙인다.
+     */
 
     /**
      * 1방째 결과를 담는 중간 행 — domainLabel·tags를 붙이기 전의 순수 DB 값.
@@ -106,8 +113,12 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
 
         List<DocumentListItem> content = rows.stream()
                 .map(r -> new DocumentListItem(
-                        r.id(), r.domain(), domainCatalog.displayName(r.domain()), r.title(), r.slug(),
-                        // 편(입문/심화)은 여기서 채우지 않는다 — 짝이 실제로 있는지 알아야 하는데
+                        // domainLabel(둘째 String 자리)은 null로 비워 둔다 — DomainCatalog는 서비스
+                        // 계층 인터페이스라 이 영속성 계층 클래스가 직접 채우지 않는다
+                        // (DocumentListItem.withDomainLabel Javadoc 참고). DocumentService가
+                        // page.map(...)으로 조회 직후 채운다.
+                        r.id(), r.domain(), null, r.title(), r.slug(),
+                        // 편(입문/심화)도 여기서 채우지 않는다 — 짝이 실제로 있는지 알아야 하는데
                         // 그건 이 페이지 밖의 문서를 봐야 하는 질문이라 서비스가 한 번에 처리한다.
                         tagsByDocId.getOrDefault(r.id(), List.of()), r.updatedAt(), null))
                 .toList();

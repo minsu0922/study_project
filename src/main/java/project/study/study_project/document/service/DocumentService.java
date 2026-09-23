@@ -47,8 +47,26 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public PageResponse<DocumentListItem> getDocuments(DomainCode domain, List<String> tags,
                                                       String keyword, Pageable pageable) {
-        return PageResponse.from(withEditions(
-                documentRepository.searchListItems(domain, tags, keyword, pageable)));
+        return PageResponse.from(withEditions(withDomainLabels(
+                documentRepository.searchListItems(domain, tags, keyword, pageable))));
+    }
+
+    /**
+     * 이 페이지 문서들에 분야 표기 이름을 붙인다 — {@code DocumentRepositoryImpl}은 이 값을
+     * {@code null}로 비워 둔다(6번 작업 리뷰 1차로 옮겨 왔다, {@code DocumentListItem.withDomainLabel}
+     * Javadoc 참고). 영속성 계층 클래스가 서비스 계층 인터페이스인 {@link DomainCatalog}를
+     * 직접 올려다보면 의존 방향이 거꾸로 되는데, 실제로 그 역방향이 스프링 빈 순환 참조로
+     * 이어졌다 — {@code DomainSettingService}(그 {@code DomainCatalog} 구현체)가 분야 삭제
+     * 사용량 확인용으로 {@code DocumentRepository}를 물면서다. 조회 뒤에 이 서비스가
+     * {@code page.map(...)}로 붙이는 것은 {@link #withEditions}와 같은 자리, 같은 방식이다 —
+     * 편 이름도 "리포지토리가 모르는 값을 조회 뒤에 서비스가 붙인다"는 같은 이유로 여기서 붙인다.
+     *
+     * <p><b>모든 항목에 붙인다.</b> {@link #withEditions}가 짝이 있는 문서만 골라 붙이는 것과
+     * 달리, 분야 이름은 선택적 배지가 아니라 <b>모든 문서가 항상 가져야 하는 값</b>이다 —
+     * 조건 없이 페이지 전체를 매핑한다.
+     */
+    private Page<DocumentListItem> withDomainLabels(Page<DocumentListItem> page) {
+        return page.map(item -> item.withDomainLabel(domainCatalog.displayName(item.domain())));
     }
 
     /**
