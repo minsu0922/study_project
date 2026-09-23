@@ -164,8 +164,9 @@ async function doRefresh() {
  *
  * [분야(DOMAINS)만 서버에서 다시 채운다 — 8번 작업]
  * 예전에는 이 배열이 자바 enum과 완전히 따로 있어서, 분야 이름 하나를 고치려면
- * api.js와 Domain.java 두 곳을 같이 고쳐야 했다. 이제는 GET /api/domains가
- * DomainSetting 테이블(관리자가 9번 작업 화면에서 고치는 값)을 그대로 내려 준다.
+ * api.js와 Domain.java 두 곳을 같이 고쳐야 했다. enum은 6번 작업에서 사라졌고,
+ * 지금은 GET /api/domains가 domain_setting 표(관리자가 9번 작업 화면에서 추가·삭제·
+ * 수정하는 등록부 그 자체, docs/21)를 그대로 내려 준다.
  *
  * 그런데도 아래 11개 쌍을 <지우지 않고> 그대로 남겨 뒀다. 이유는 하나다 —
  * 이 배열을 쓰는 자리가 이 파일 하나가 아니라 admin/documents.html·admin/generate.html·

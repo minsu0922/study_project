@@ -34,7 +34,7 @@ public record DomainCode(String value) implements Comparable<DomainCode> {
         return new DomainCode(raw);
     }
 
-    /** JSON에는 "NETWORK" 문자열 하나로 — enum 시절 API 모양 그대로. */
+    /** JSON에는 분야 코드 문자열 하나로(예: "MESSAGING") — enum 시절 API 모양 그대로. */
     @JsonValue
     @Override
     public String value() {

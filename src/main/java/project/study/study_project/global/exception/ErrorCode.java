@@ -68,7 +68,7 @@ public enum ErrorCode {
     DOMAIN_002("DOMAIN_002", HttpStatus.BAD_REQUEST,
             "마지막으로 켜진 분야는 끌 수 없습니다. 배치를 멈추려면 분야를 끄지 말고 "
                     + "llm.generation.batch-enabled를 false로 두세요."),
-    // 5번 작업(외래키 + 쓰기 경로 확인). enum이 지워지면서 "NETWORK", "FRONTEND_CS"처럼 형식만
+    // 5번 작업(외래키 + 쓰기 경로 확인). enum이 지워지면서 "MESSAGING"처럼 형식만
     // 맞고 등록되지 않은 코드가 HTTP 파라미터·경로변수·JSON 바디를 그냥 통과하게 됐다 — 예전
     // enum이라면 컴파일도 안 됐을 값이다. DB 외래키(V20)가 최후의 방어선이지만 그건 500(DB 오류)
     // 으로 나온다. 여기서 저장 "전에" DomainCatalog.exists로 먼저 확인해 400으로 바꿔 준다 —

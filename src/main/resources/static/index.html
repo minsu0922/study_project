@@ -421,7 +421,7 @@ function renderStats(s) {
  * 이 목록의 값어치인데 그게 사라진다. "다음에 뭘 할까"는 내 기록 화면의 "약한 곳"이 맡는다.
  *
  * <p>첫날에는 전부 0이라 정렬이 무의미한데, 자바스크립트 sort는 안정 정렬이라 서버가
- * 준 순서(Domain enum 선언 순서 = 기초부터 쌓이는 순서)가 그대로 남는다.
+ * 준 순서(domain_setting의 sortOrder = 관리자가 화면에서 정한 순환 순서)가 그대로 남는다.
  */
 function renderProgress(domains) {
   if (!domains || domains.length === 0) return;

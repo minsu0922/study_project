@@ -10,7 +10,7 @@ CS(컴퓨터 과학) 개념을 정리해 두고 문제로 풀어 보는 학습 �
 | 문서 | 한 줄 요약 |
 |---|---|
 | [01-data-model](01-data-model.md) | DB에 어떤 표(테이블)를 두고, 어떻게 연결하고, 채점은 어떤 규칙으로 하나 |
-| [02-domain-enums](02-domain-enums.md) | 도메인(11)·난이도(3)·문제유형(4) 같은 "정해진 보기" 값들 |
+| [02-domain-enums](02-domain-enums.md) | 난이도(3)·문제유형(4) 같은 "정해진 보기" 값들, 그리고 이제는 enum이 아니라 등록부인 분야 |
 | [03-api-spec](03-api-spec.md) | 전체 API 48개(사용자 15·관리자 33)의 요청/응답을 예시까지 상세히 |
 | [04-response-format](04-response-format.md) | 성공/실패 응답을 항상 같은 모양으로 — 공통 응답 봉투 + 에러 코드 |
 | [05-package-structure](05-package-structure.md) | 코드를 어떤 폴더 구조로 나눌지 |

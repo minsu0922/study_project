@@ -1,19 +1,21 @@
 # 21. 분야 설정 관리창
 
-> 관련: [02-domain-enums](02-domain-enums.md)(Domain enum 자체) ·
+> 관련: [02-domain-enums](02-domain-enums.md)(분야 등록부·`DomainCode`) ·
 > [13-llm-problem-generation](13-llm-problem-generation.md)(힌트가 프롬프트에 실리는 자리) ·
 > [14-llm-batch-automation](14-llm-batch-automation.md)(날짜 순환·과거 사고) ·
 > [16-llm-pipeline-operations](16-llm-pipeline-operations.md)(설정 표·운영 절차)
 >
 > 이 문서는 **지금 무엇이 있는가**를 남긴다. "왜 이 구조를 골랐나"의 논거는
-> `docs/superpowers/specs/2026-09-21-domain-settings-cms-design.md`에 더 자세히 있다.
+> `docs/superpowers/specs/2026-09-21-domain-settings-cms-design.md`(관리창 자체)와
+> `docs/superpowers/specs/2026-09-22-domain-registry-design.md`(화면에서 분야 추가·삭제,
+> `Domain` enum → `DomainCode` + 외래키)에 더 자세히 있다.
 
 ## 쉽게 말하면
 
 배치가 매일 어떤 분야(네트워크·운영체제·…) 문제를 낼지, 그 분야를 모델에게 어디까지라고
 설명해 줄지를 정하는 화면이다. 예전에는 이 값이 코드와 `application.yml`에 박혀 있어서
 한 줄 고치려면 배포를 해야 했다. 지금은 관리 콘솔 **분야 설정** 화면에서 체크박스·▲▼
-버튼·글자 입력으로 고치고, 저장하면 바로 DB에 반영된다.
+버튼·글자 입력으로 고치고, 분야 자체를 추가하거나 지우고, 저장하면 바로 DB에 반영된다.
 
 ## 값이 흐르는 길
 
@@ -70,36 +72,43 @@ GitHub Actions 러너에서 돌고, 그 러너에는 우리 MySQL이 없다([14]
 그대로 계산할 수 있다). 순환이 다시 두 분야에 갇히는 실수를 **저장한 뒤가 아니라 저장하기
 전에** 눈으로 잡기 위한 장치다.
 
-## 왜 이렇게 작았나 — enum을 문자열로 저장한 대가
+## 왜 값 타입 + 외래키로 바꿨나 — enum을 문자열로 저장한 대가
 
-테이블 설계에서 가장 놀랐던 점 하나는 문서화해 둘 가치가 있다.
+**2026-09-21까지**는 `domain_setting.domain` 컬럼이 `Domain` enum을
+`@Enumerated(EnumType.STRING)`으로 저장했다(순서가 바뀌면 데이터가 깨지는 `ORDINAL`은
+이 프로젝트 전체에서 금지, [02](02-domain-enums.md)). 그런데 **enum에 없는 이름을 가진
+행이 테이블에 단 하나만 있어도, 이 테이블에 대한 모든 일반 JPA 조회가 예외를 던졌다** —
+`EnumType.STRING` 변환이 내부적으로 `Enum.valueOf`를 쓰기 때문에, `findAll()`이든
+`findAllByOrderBySortOrderAsc()`든 그 행을 만나는 순간 `IllegalArgumentException`으로
+죽었다. 2026-09-21에 `FRONTEND_CS`를 enum에서 실제로 지웠을 때 이 문제를 그대로 겪었고,
+그때는 두 가지 우회로 버텼다 — 고아 행을 지우는 동기화는 네이티브 쿼리로 변환을 피하고,
+내보내는 파일의 `domain` 필드는 애초에 enum이 아니라 문자열로 받아 옛 이름 한 줄이
+파싱 전체를 죽이지 않게 했다.
 
-`domain_setting.domain` 컬럼은 `Domain` enum을 `@Enumerated(EnumType.STRING)`으로 저장한다
-(순서가 바뀌면 데이터가 깨지는 `ORDINAL`은 이 프로젝트 전체에서 금지, [02](02-domain-enums.md)).
-그런데 **enum에 없는 이름을 가진 행이 테이블에 단 하나만 있어도, 이 테이블에 대한 모든
-일반 JPA 조회가 예외를 던진다** — `EnumType.STRING` 변환이 내부적으로 `Enum.valueOf`를
-쓰기 때문에, `findAll()`이든 `findAllByOrderBySortOrderAsc()`든 그 행을 만나는 순간
-`IllegalArgumentException`으로 죽는다. 2026-09-21에 `FRONTEND_CS`를 enum에서 실제로
-지웠을 때 이 문제를 그대로 겪었다.
+**그 우회는 임시방편이었다.** 진짜 문제는 "분야를 아는 곳이 하나뿐이어야 하는데 코드에도
+있고 DB에도 있어서, 둘이 어긋나는 순간 읽기가 통째로 죽는다"는 구조 자체였다. 6번 작업
+(등록부 추가·삭제)에서 이 구조를 바꿨다.
 
-여기서 두 가지 결정이 따라 나온다.
+- **식별자가 `Domain` enum에서 `DomainCode`(코드 문자열 하나를 감싼 값 타입,
+  `global/common/DomainCode.java`)로 바뀌었다.** `DomainCode`는 형식(대문자로 시작하는
+  대문자·숫자·밑줄 2~30자)만 검사하고 **존재는 검사하지 않는다** — "그런 분야가 실제로
+  있나"는 DB의 사실이라 값 타입이 알 수 없다. 변환이 아예 없으니, 모르는 코드를 가진
+  행이 있어도 **읽기는 절대 죽지 않는다**. `Enum.valueOf`가 사라졌기 때문이다.
+- **존재 확인은 외래키(V20)가 넘겨받았다.** 문제·문서·생성 문제 초안·생성 문서 초안·
+  주제 대기열, 이 다섯 표가 `domain_setting.domain`을 참조한다(아래 "외래키" 절). 모르는
+  코드는 **쓰는 시점**에 거부되므로, 있는 행이 나중에 못 읽히는 일 자체가 생기지 않는다.
+- 그 결과 2026-09-21의 두 우회(`findAllDomainNamesNative`·`deleteByDomainNameNative`,
+  파일의 `domain`을 굳이 문자열로 받던 방어)는 **더 이상 필요 없어 코드에서 지웠다.**
+  고아 행을 찾아 지우는 절차 자체가 사라졌기 때문이다(아래 "추가·삭제"). 내보내는 파일의
+  `domain` 필드는 여전히 문자열이지만, 이제 그 이유는 "파싱이 안 죽게"가 아니라
+  "`DomainCode`가 애초에 `@JsonValue`로 문자열 하나로 직렬화되기 때문"이다.
 
-- **기동 시 동기화(`DomainSettingSyncRunner` → `DomainSettingService.syncWithEnum`)가
-  고아 행을 지울 때는 엔티티 조회를 쓰지 않는다.** 지워야 할 대상을 찾는 조회 자체가
-  그 행 때문에 먼저 죽으면 아무것도 할 수 없다. 그래서
-  `DomainSettingRepository.findAllDomainNamesNative()`로 변환 없이 문자열만 읽고,
-  지우기도 `deleteByDomainNameNative()`로 네이티브 SQL을 쓴다.
-- **내보내는 파일(`DomainSettingsFile.Entry`)의 `domain` 필드는 `Domain` enum이 아니라
-  일반 문자열이다.** 파일 형식에서까지 같은 함정을 반복하면, 옛 이름 하나가 남아 있는
-  파일을 배치가 읽을 때 파싱 전체가 죽는다. 문자열로 받아 두면 `DomainSettings.parseDomain`이
-  줄 단위로 걸러 낼 수 있어 — 모르는 이름 한 줄만 버려지고 나머지 분야는 정상으로 읽힌다.
-
-## 테이블
+## 테이블 — 이제 이 표가 곧 등록부다
 
 ```sql
 -- V19__domain_setting.sql
 CREATE TABLE domain_setting (
-    domain       VARCHAR(30)  NOT NULL,   -- enum Domain 상수명. 그대로 PK
+    domain       VARCHAR(30)  NOT NULL,   -- 분야 코드(DomainCode). 그대로 PK
     enabled      BOOLEAN      NOT NULL,   -- 배치 자동 선택 후보인가
     sort_order   INT          NOT NULL,   -- 날짜 순환 순서
     display_name VARCHAR(40)  NOT NULL,   -- 화면에 뜨는 이름
@@ -108,25 +117,85 @@ CREATE TABLE domain_setting (
 );
 ```
 
-숫자 대리키가 아니라 `domain` 자체를 PK로 쓴다. 행 수가 `Domain` enum 상수 수만큼 고정
-(현재 11개)이고, 이 테이블을 읽는 쪽은 늘 "NETWORK의 설정"을 찾지 "3번 행"을 찾지 않는다.
+숫자 대리키가 아니라 `domain` 자체를 PK로 쓴다. 이 테이블을 읽는 쪽은 늘 "NETWORK의
+설정"을 찾지 "3번 행"을 찾지 않는다.
 
-**행은 Flyway가 채우지 않는다.** 마이그레이션에는 스키마만 넣는다는 원칙
-([11-flyway-migrations](11-flyway-migrations.md))도 있지만, 더 실질적인 이유는 `Domain`
-enum에 상수를 더하거나 뺄 때마다 새 마이그레이션을 써야 한다면 깜빡한 상수가 설정 행
-없이 조용히 배치에서 빠지기 때문이다. 대신 기동 시 `DomainSettingSyncRunner`
-(`@Order(4)`)가 매번 enum을 진실로 삼아 테이블을 맞춘다.
+**행 수는 더 이상 고정이 아니다.** 예전에는 `Domain` enum 상수 수만큼(11개) 고정이었지만,
+6번 작업(등록부 추가·삭제)부터는 "분야가 몇 개인지"의 진실이 코드가 아니라 이 표다 —
+관리자가 화면에서 직접 행을 늘리고 줄인다(아래 "추가·삭제").
 
-- enum에는 있는데 행이 없으면 → 새로 만든다. `enabled`·`sortOrder`는
-  `application.yml`의 `llm.generation.batch-domains`(있으면 그 자리, 없으면 목록 뒤에 이어
-  붙임)를 초기값으로 쓰고, `displayName`은 `Domain.getDisplayName()`, `hint`는
-  `DomainHints.BUILT_IN`(코드에 박혀 있던 옛 경계 설명)에서 가져온다.
-- 행이 있는데 enum에 없으면 → 지운다(2026-09-21의 `FRONTEND_CS`가 이 경우였다).
-- **있는 행은 절대 건드리지 않는다.** 관리자가 화면에서 고쳐 둔 값을 기동마다 폴백
-  목록 기준으로 되돌리면, 그 화면은 아무도 못 믿게 된다.
+### 외래키 — 존재를 지키는 DB 수준의 약속
 
-**따라서 `Domain` 상수를 추가하거나 빼는 데는 마이그레이션이 필요 없다.** 다음 기동 한 번이면
-동기화 러너가 설정 행을 알아서 맞춘다([02-domain-enums](02-domain-enums.md) 참고).
+```sql
+-- V20__domain_foreign_keys.sql
+ALTER TABLE problem                  ADD CONSTRAINT fk_problem_domain FOREIGN KEY (domain) REFERENCES domain_setting (domain);
+ALTER TABLE document                 ADD CONSTRAINT fk_document_domain FOREIGN KEY (domain) REFERENCES domain_setting (domain);
+ALTER TABLE generated_problem_draft  ADD CONSTRAINT fk_gpd_domain FOREIGN KEY (domain) REFERENCES domain_setting (domain);
+ALTER TABLE generated_document_draft ADD CONSTRAINT fk_gdd_domain FOREIGN KEY (domain) REFERENCES domain_setting (domain);
+ALTER TABLE topic_queue              ADD CONSTRAINT fk_topic_domain FOREIGN KEY (domain) REFERENCES domain_setting (domain);
+```
+
+문제·문서·생성 문제 초안·생성 문서 초안·주제 대기열, 이 다섯 표가 `domain_setting.domain`을
+가리킨다. `ON DELETE`·`ON UPDATE` 둘 다 기본값(RESTRICT)이다 — 코드는 바꾸지 않으므로
+(아래 "추가·삭제") 연쇄 수정이 필요 없고, 내용이 있는 분야를 지우려는 시도는 애플리케이션이
+막지 않아도 **DB가 최종적으로 거부한다.** [02-domain-enums](02-domain-enums.md)가 적어 둔
+"엉뚱한 값은 타입이, 없는 값은 외래키가" 원칙이 실제로 이 다섯 표에서 동작하는 자리다.
+
+V20이 외래키를 걸기 **전에** 먼저 하는 일이 하나 있다 — 다섯 내용 표에 나오는 코드 중
+`domain_setting`에 없는 것을 꺼진 행으로 채운다(이름 = 코드 문자열 그대로). V19만 적용되고
+앱이 한 번도 안 뜬 DB는 `domain_setting`이 비어 있는데, 그 상태에서 내용 표에 행이
+있으면 외래키 추가 자체가 실패하기 때문이다. 콘텐츠를 새로 심는 것이 아니라 이미 있는
+데이터가 스스로 일관되게 만드는 것이라 "Flyway엔 스키마만"([11-flyway-migrations](11-flyway-migrations.md))의
+취지와 어긋나지 않는다. 2026-09-22 실측으로 로컬 DB에는 채울 행이 0건이었다.
+
+### 빈 표만 시드한다 — `syncWithEnum`이 `seedIfEmpty`가 된 이유
+
+**행은 Flyway가 채우지 않는다**(스키마만 담는다는 원칙은 그대로). 예전에는 기동 시
+`DomainSettingSyncRunner`가 `Domain` enum을 진실로 삼아 **매번** 표를 맞췄다 — enum에는
+있는데 행이 없으면 만들고, 행이 있는데 enum에 없으면 지웠다(`syncWithEnum`). 그 동작을
+지금 그대로 두면 안 된다. 관리자가 화면에서 새로 추가한 분야는 **정의상 코드 어디에도
+없는 이름**인데, 다음 기동에 "기본 목록에 없다"는 이유로 조용히 지워지면 등록부라는
+말이 무색해진다.
+
+그래서 이 러너의 메서드 이름과 역할이 바뀌었다 — `DomainSettingService.seedIfEmpty()`는
+**표가 완전히 비어 있을 때만** 기본 11개(`DefaultDomains`)로 채우고, **행이 하나라도
+있으면 아무것도 하지 않는다.** 새로 만드는 것도, 지우는 것도 없다. 지우는 것은 이제
+관리자가 화면에서 명시적으로 삭제를 요청할 때뿐이다(아래 "추가·삭제"). `enabled`·
+`sortOrder`는(시드가 실제로 도는 순간에 한해) `application.yml`의
+`llm.generation.batch-domains`를 초기값으로 쓰고, `displayName`·`hint`는
+`DefaultDomains`·`DomainHints.BUILT_IN`(코드에 박혀 있던 옛 값)에서 가져온다. 그 값이
+행으로 태어난 **다음부터는** 이 값이 바뀌어도 기존 행은 절대 따라 바뀌지 않는다 —
+관리자가 화면에서 고쳐 둔 값을 기동마다 되돌리면 그 화면은 아무도 못 믿게 된다.
+
+### 추가·삭제 — 등록부를 실제로 등록부답게 만드는 절차
+
+- **추가**(`DomainSettingService.create`, `POST /api/admin/domain-settings`): 코드·이름을
+  받아 새 행을 만든다. 코드 형식은 `DomainCode`가 역직렬화 단계에서 이미 막으므로 서비스가
+  다시 확인하는 것은 "이미 쓰는 코드인가"뿐이다(중복이면 400, `DOMAIN_004`). **새 행은
+  항상 꺼진 채로, 순서는 맨 끝에** 생긴다 — 켜진 채로 태어나면 관리자가 힌트도 못 적어 둔
+  분야가 바로 다음 배치 순환에 끼어들고, 순서를 중간에 끼워 넣으면 이미 굳어진 날짜
+  순환에서 기존 분야들의 자리가 밀린다.
+- **삭제**(`DomainSettingService.delete`, `DELETE /api/admin/domain-settings/{domain}`):
+  **문제·문서·생성 문제 초안·생성 문서 초안(거절된 것 포함)·주제 대기열, 이 다섯 표 중
+  하나라도 그 코드를 쓰는 행이 있으면 400(`DOMAIN_005`)으로 거절한다** — 메시지에 어느
+  표에 몇 건인지가 그대로 실린다. 옮기거나 숨기는 방법은 없다. 후보는 셋이었다 — 옮기고
+  삭제, 내용 있으면 막기, 숨김(보관). "막기"를 골랐다(2026-09-22 결정). 가장 단순하고,
+  숨김처럼 모든 목록 조회에 "숨김 제외" 조건을 붙일 필요가 없기 때문이다 — 숨김 방식은
+  조건 하나를 빠뜨리면 지워진 분야가 그 화면에만 조용히 다시 보이는 위험을 늘 안고 간다.
+  내용이 쌓인 분야는 **끄기**(`enabled=false`)로 순환에서 빼면 된다.
+  거절된 초안도 세는 이유는, 거절 사유가 다음 생성 프롬프트에 되먹이는 학습 자료라 분야를
+  지우면 그 되먹임 근거까지 함께 사라지기 때문이다. 마지막으로 켜진 분야는(내용이 없어도)
+  400(`DOMAIN_002`)으로 막고, 없는 분야는 404(`DOMAIN_001`)다. **기본 11개도 특별 취급하지
+  않는다** — 내용이 없으면 기본 분야든 나중에 추가한 분야든 같은 규칙으로 지워진다. 특별
+  취급을 넣는 순간 "이 열한 개는 못 지운다"는 목록이 다시 코드에 박히고, 등록부가 아니라
+  "enum + 추가분"으로 되돌아간다.
+- **경쟁 조건.** "내용 건수 확인 → 삭제" 사이에 다른 요청이 그 분야로 문제를 만들면
+  외래키가 삭제를 최종적으로 거부한다. 관리자가 한 명이라 사실상 일어나지 않고, 일어나도
+  DB가 막으니 데이터는 안전하다 — 다만 그 경우엔 오류가 500(DB 제약 위반)으로 보일 수
+  있는데, 여러 명이 쓰게 되면 그때 409로 바꾸는 처리기를 붙이기로 하고 지금은 받아들인다.
+
+**따라서 분야를 늘리거나 줄이는 데는 마이그레이션이 필요 없다.** 화면에서 추가·삭제
+버튼을 누르는 것으로 끝난다([02-domain-enums](02-domain-enums.md) 참고).
 
 ## 읽는 쪽 — 값이 도착하는 세 자리
 
@@ -150,7 +219,7 @@ enum에 상수를 더하거나 뺄 때마다 새 마이그레이션을 써야 �
 
 ## 화면
 
-`/admin/settings.html`. 분야 열한 줄이 순환 순서대로 놓이고, 줄마다 켜짐·이름·힌트를
+`/admin/settings.html`. 분야가 순환 순서대로 한 줄씩 놓이고, 줄마다 켜짐·이름·힌트를
 고친다. 순서 이동(▲▼)은 누르는 즉시 반영되고, 켜짐·이름·힌트는 줄마다 있는 저장
 버튼을 눌러야 반영된다 — 일괄 저장 버튼을 두지 않은 이유는 버튼이 하나면 "무엇을
 저장했는지"가 흐려지기 때문이다.
@@ -161,14 +230,22 @@ enum에 상수를 더하거나 뺄 때마다 새 마이그레이션을 써야 �
 상한을 둔 것도 문서를 통째로 붙여 넣는 실수가 매 배치 요금으로 돌아오는 것을 막기
 위해서다.
 
-행 자체를 화면에서 새로 만들거나 지우는 기능은 없다. 행 수가 enum 상수 수로 고정이라
-"추가"라는 개념이 없고, 있는 행을 고치는 것(`edit`)과 순서를 옮기는 것(`move`)만 있다.
+**목록 위에 "분야 추가" 폼이 있다.** 코드·이름 두 칸과 추가 버튼뿐이다 — 힌트는 여기서
+같이 받지 않는다. 추가한 직후 관리자가 가장 먼저 할 일은 "이 분야가 뭘 다루나"를 적는
+것이고, 그 자리는 이미 있다(줄마다 펼치는 편집칸의 힌트 입력). 추가에 성공하면 그 칸이
+자동으로 펼쳐져 힌트 입력에 초점이 간다. 새 줄은 **꺼진 채로 맨 끝에** 나타난다.
+
+**삭제는 줄에 늘 떠 있지 않고, 편집칸을 펼쳐야 보인다.** 자주 쓰지 않고 되돌릴 수 없는
+동작이라 한 걸음 물려 뒀다. 누르면 브라우저 확인창이 한 번 더 뜨고, 서버가 거절하면
+(`DOMAIN_005`) "어느 표에 몇 건" 메시지를 화면이 그대로 보여준다.
 
 ## API
 
 | 메서드 | 경로 | |
 |---|---|---|
 | GET | `/api/admin/domain-settings` | 목록 — `sortOrder` 순 전체(꺼진 분야도 포함) |
+| POST | `/api/admin/domain-settings` | 분야 추가(코드·이름·힌트). 꺼진 채 맨 끝에 생성, 201 |
+| DELETE | `/api/admin/domain-settings/{domain}` | 분야 삭제. 다섯 표 중 하나라도 내용이 있으면 400(`DOMAIN_005`) |
 | PUT | `/api/admin/domain-settings/{domain}` | 켜짐·이름·힌트 수정 |
 | POST | `/api/admin/domain-settings/{domain}/move` | 이웃과 순서 맞바꾸기(`{"direction":"UP"|"DOWN"}`) |
 | GET | `/api/admin/domain-settings/preview?days=7&domains=...` | 저장 전 미리보기. `domains` 생략 시 지금 저장된 순서 사용 |
@@ -186,13 +263,34 @@ llm:
 
 이 값의 자리는 둘로 줄었다.
 
-1. **동기화 러너가 새 설정 행을 만들 때의 초기값.** enum에 새 상수가 생기면 이 목록에
-   있는지 여부로 그 행의 첫 `enabled`·`sortOrder`가 정해진다.
+1. **표가 완전히 비어 있을 때, 시드(`seedIfEmpty`)가 기본 11개 행을 만들며 쓰는 초기값.**
+   그 목록에 있으면 첫 `enabled`가 `true`로, 없으면 `false`로 행이 태어난다. 행이 하나라도
+   이미 있으면 이 값은 읽히지 않는다 — enum 시절처럼 "새 상수가 생길 때마다" 참고하는
+   값이 아니다(위 "빈 표만 시드한다" 참고).
 2. **`_domain-settings.json` 파일이 없을 때 클라우드 배치가 쓰는 폴백.** 폴백 조건은
    `DomainSettings.isEmpty()` 하나다 — 파일이 없거나, 깨졌거나, 분야 배열이 비었을 때만
-   이 값으로 대신 돈다. 파일은 있는데 켜진 분야가 0개면 yml로 가지 **않고** 빈 목록을
-   넘겨 `GenerationSchedule`이 enum 전체로 넓힌다 — 앱(`LlmProblemService`)과 같은 결과다.
-   yml마저 비어 있을 때도 마찬가지로 enum 전체다.
+   이 값으로 대신 돈다. 그것마저 비어 있으면 `DefaultDomains`의 기본 11개로 한 번 더
+   물러난다. 파일은 있는데 켜진 분야가 0개면 yml로 가지 **않고** 파일의 모든 항목(꺼진
+   것 포함)으로 넓힌다 — 파일이 배치의 등록부이므로, 등록되지 않은 분야로 넓힐 수는
+   없기 때문이다.
+
+### "전체 분야"의 뜻 — 자리마다 다르다
+
+`Domain.values()`가 있던 시절에는 "전체"가 하나였다. 지금은 자리마다 다르고, 순서대로
+넓혀 간다.
+
+| 어디서 | "전체" = |
+|---|---|
+| 앱(`LlmProblemService` 등) | `domain_setting`의 **모든 행**(꺼진 것 포함) |
+| 배치 — 설정 파일 있음 | 그 파일의 **모든 항목** |
+| 배치 — 파일 없음(깨졌거나 빈 배열 포함) | `application.yml`의 `batch-domains` |
+| 배치 — 파일도 yml도 없음 | `DefaultDomains`의 기본 11개 |
+
+마지막 줄이 있어야 관리 화면을 한 번도 안 쓴 새 저장소(설정 파일이 아예 커밋된 적 없는
+경우)에서도 배치가 돈다. 앱 쪽 "전체"가 등록부의 모든 행이어야 하는 이유는, 관리자가
+화면에서 분야를 막 추가만 하고 아직 하나도 안 켠 순간(켜진 분야 0개)에도 그 새 분야가
+"빈 칸" 통계·직접 지정 같은 자리에서 빠지면 안 되기 때문이다 — 기본 11개로 넓히면
+새로 추가한 분야는 계속 안 보인다.
 
 **분야를 전부 꺼서 배치를 멈출 수는 없다.** 설정 화면과 API가 마지막으로 켜진 분야를
 끄는 요청을 거절한다(400, `DOMAIN_002`). 배치를 멈추는 스위치는 `llm.generation.batch-enabled`
@@ -214,6 +312,8 @@ llm:
 개념 문서를 못 받는 사고가 있었어서, 저장 전에 앞으로 7일을 미리 계산해 보여 주는
 장치를 넣었습니다. 구현하면서 제일 뜻밖이었던 건, enum을 문자열로 저장하는 테이블에
 모르는 이름 하나만 섞여도 그 테이블의 모든 일반 조회가 예외를 던진다는 점이었어요 —
-그래서 기동 시 고아 행을 정리하는 동기화는 네이티브 쿼리로 우회하고, 내보내는 파일도
-enum이 아니라 문자열로 domain을 담아서 옛 이름 한 줄 때문에 배치 전체가 죽지 않게
-했습니다."
+그래서 나중에 분야를 화면에서 직접 추가·삭제하게 만들 때, 식별자를 enum에서 형식만
+검사하는 값 타입(`DomainCode`)으로 바꾸고 '존재하는가'는 외래키에 맡겼습니다. 그리고
+삭제는 숨김 처리 대신 내용이 있으면 거절하는 쪽을 골랐어요 — 숨김이었다면 모든 목록
+조회에 '숨김 제외' 조건을 붙여야 했고, 그중 하나만 빠뜨려도 지운 분야가 학습자 화면에
+다시 보이는 사고로 이어졌을 겁니다."

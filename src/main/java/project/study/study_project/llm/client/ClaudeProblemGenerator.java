@@ -1047,7 +1047,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         return s.length() > max ? s.substring(0, max) + "…" : s;
     }
 
-    // domainHint(Domain)는 Task 2에서 지웠다 — DomainHints.hintFor(Domain)로 대체됐다.
+    // domainHint(Domain)는 Task 2에서 지웠다 — DomainHints.hintFor(DomainCode)로 대체됐다.
     // 문구 자체는 DomainHints.BUILT_IN에 그대로 옮겨 뒀다(문자 단위 대조 완료, docs/21).
 
     /**

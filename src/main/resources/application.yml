@@ -207,22 +207,29 @@ llm:
     # 앱(@Value)이 둘 다 읽는데, 중첩 맵이면 꺼내는 코드가 두 벌이 된다. batch-domains와 같은 모양.
     batch-count-by-difficulty: BEGINNER=7,INTERMEDIATE=5,ADVANCED=3
     # 배치 후보 도메인 — 더는 원본이 아니다(2026-09-21, docs/21). 원본은 관리자 화면
-    # "분야 설정"이 고치는 domain_setting 테이블이고, 이 값은 두 자리에서만 쓰인다.
-    #   1) 동기화 러너(DomainSettingSyncRunner)가 새 설정 행을 만들 때의 초기값 —
-    #      이 목록에 있으면 enabled=true로, 없으면 enabled=false로 행이 태어난다.
+    # "분야 설정"이 고치는 domain_setting 테이블, 즉 분야 등록부 자체다(docs/02). 이 값은
+    # enum이 있던 시절과 뜻이 달라졌고, 이제 두 자리에서만 쓰인다.
+    #   1) 표가 완전히 빈 채로 처음 뜬 서버의 시드(DomainSettingSyncRunner →
+    #      DomainSettingService.seedIfEmpty)가 기본 11개 행을 채울 때, 행마다 첫 enabled를
+    #      이 목록에 있으면 true로, 없으면 false로 정한다. 행이 하나라도 있으면 seedIfEmpty는
+    #      아무 일도 하지 않는다 — 있는 행을 지우거나 되돌리는 옛 동기화 동작은 없앴다.
+    #      관리자가 화면에서 늘린 분야가 "기본 목록에 없다"는 이유로 다음 기동에 조용히
+    #      사라지면 안 되기 때문이다.
     #   2) 클라우드 배치의 폴백 — generated/_domain-settings.json이 없거나, 깨졌거나, 분야 배열이
-    #      비었을 때(DomainSettings.isEmpty())만 쓴다. 파일은 있는데 켜진 분야가 0개면 이 값으로
-    #      가지 않고 빈 목록을 넘겨 GenerationSchedule이 enum 전체로 넓힌다 — 앱과 같은 결과.
+    #      비었을 때(DomainSettings.isEmpty())만 쓴다. 그것마저 비어 있으면 DefaultDomains의
+    #      기본 11개로 한 번 더 물러난다. 파일은 있는데 켜진 분야가 0개면 이 값으로 가지 않고
+    #      파일에 있는 모든 항목으로 넓힌다 — 파일이 배치의 등록부라 등록 안 된 분야로 넓힐
+    #      수는 없기 때문이다(DraftGeneratorCli.resolveBatchDomains).
     #      분야를 전부 꺼서 배치를 멈출 수는 없다(화면·API가 마지막 분야 끄기를 거절, DOMAIN_002).
     #      배치를 멈추려면 위 batch-enabled를 false로 둔다.
     # 이미 있는 설정 행은 이 값이 바뀌어도 절대 따라 바뀌지 않는다 — 관리자가 화면에서
     # 고친 값을 기동마다 여기로 되돌리면 그 화면을 아무도 못 믿게 된다.
     #
     # 8개로 좁힌 이유는 그대로 유효하다: 이 프로젝트의 목적은 백엔드 면접 대비인데
-    # (Domain.java 주석: "사용자(백엔드 개발자)의 주력 스택") 전체를 균등하게 채우면
+    # (DefaultDomains.java 주석: "사용자(백엔드 개발자)의 주력 스택") 전체를 균등하게 채우면
     # 매일 나오는 문제의 상당수가 관심 밖 영역이 된다.
     # 제외: SOFTWARE_ENGINEERING, CLOUD_INFRA, INTEGRATED.
-    # (FRONTEND_CS는 2026-09-21에 enum에서 아예 삭제했다 — 이유는 Domain.java 주석)
+    # (FRONTEND_CS는 2026-09-21에 enum에서 아예 삭제했다 — 이유는 DefaultDomains.java 주석)
     #
     # 여기서 빠진 도메인도 관리자 화면에서 "직접 지정"하면 그대로 생성된다(제한은 자동 선택에만
     # 적용) — 이제는 화면에서 그냥 켜는 것만으로도 같은 일을 할 수 있다. 순서가 날짜 순환을
