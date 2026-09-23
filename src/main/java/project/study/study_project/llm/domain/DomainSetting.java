@@ -29,8 +29,16 @@ import java.time.LocalDateTime;
  *
  * <p><b>이 테이블은 마이그레이션이 채우지 않는다.</b> 기본 분야가 늘거나 줄 때마다
  * 마이그레이션을 새로 쓰게 만들면 깜빡한 상수는 설정 행 없이 조용히 배치에서 빠진다.
- * 대신 기동 시 동기화 러너(4번 작업)가 기본 분야 목록({@code DefaultDomains})을 훑어 없는 행을 만들고 사라진 행을 지운다 —
- * {@link #initial}은 그 동기화가 새 행을 만들 때 쓰는 문이다.
+ * 대신 기동 시 러너가 {@code DomainSettingService.seedIfEmpty()}를 부른다 —
+ * {@link #initial}은 그 시드가 새 행을 만들 때 쓰는 문이다.
+ *
+ * <p><b>그 러너는 행을 지우지 않는다</b>(6번 작업에서 바뀐 규칙). 표가 <b>완전히 비어 있을
+ * 때만</b> 기본 분야로 한 번 채우고, 행이 하나라도 있으면 그대로 둔다. 예전 {@code syncWithDefaults}는
+ * "기본 목록에 없는 행"을 지웠는데, 등록부가 관리 화면에서 사람이 늘리고 줄이는 것으로 바뀐
+ * 지금 그 규칙을 두면 <b>관리자가 추가한 분야가 다음 기동에 조용히 사라진다</b> — 새 분야는
+ * 기본 목록에 없는 것이 정상이기 때문이다. 사라진 행을 정리할 필요도 없어졌다: 외래키(V20)가
+ * 다섯 내용 표를 이 표에 묶어 두어 내용이 있는 분야는 애초에 지워지지 않는다
+ * ({@code DomainSettingService#seedIfEmpty()}·{@code DomainSettingRepository} Javadoc 참고).
  *
  * <p><b>감사 필드는 {@code @CreatedDate}와 {@code @LastModifiedDate}를 함께 쓴다.</b>
  * {@code TopicQueueItem}은 {@code @CreatedDate}만 두지만, 이 테이블의 {@code updated_at}은

@@ -155,6 +155,9 @@ class TopicQueueTest {
         assertThat(queue.problems()).hasSize(1);
         // 몇 번째 항목이 왜 걸렸는지가 사유에 있어야 파일을 열어 고칠 수 있다
         assertThat(queue.problems().get(0)).contains("빈 생명주기").contains("spring-boot");
+        // 사람에게 <이제 없는 용어>로 적으라고 시키면 안 된다(머지 전 점검 1). enum이 사라졌으므로
+        // "Domain 상수명"이 아니라 분야 설정 화면에 그대로 뜨는 말인 "분야 코드"여야 한다.
+        assertThat(queue.problems().get(0)).contains("분야 코드").doesNotContain("상수명");
     }
 
     /**

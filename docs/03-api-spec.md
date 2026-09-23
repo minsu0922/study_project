@@ -130,7 +130,7 @@ refresh 토큰을 폐기한다.
 **Query params**
 | 이름 | 필수 | 예 | 설명 |
 |---|---|---|---|
-| `domain` | ✕ | `NETWORK` | Domain enum |
+| `domain` | ✕ | `NETWORK` | 분야 코드(domain_setting 등록부의 코드) |
 | `tag` | ✕ | `tcp` | 태그명(복수: `?tag=tcp&tag=osi`) |
 | `page` | ✕ | `0` | 0-base, 기본 0 |
 | `size` | ✕ | `20` | 기본 20, 최대 100 |
@@ -186,7 +186,7 @@ refresh 토큰을 폐기한다.
 **Query params**
 | 이름 | 필수 | 예 | 설명 |
 |---|---|---|---|
-| `domain` | ✕ | `NETWORK` | Domain enum |
+| `domain` | ✕ | `NETWORK` | 분야 코드(domain_setting 등록부의 코드) |
 | `level` | ✕ | `BEGINNER` | Difficulty enum |
 | `type` | ✕ | `MULTIPLE_CHOICE` | ProblemType (ESSAY 제외) |
 | `size` | ✕ | `10` | 반환 문제 수, 기본 10, 최대 50 |
@@ -244,7 +244,7 @@ refresh 토큰을 폐기한다.
 **Query params**
 | 이름 | 필수 | 예 | 설명 |
 |---|---|---|---|
-| `domain` | ✕ | `NETWORK` | Domain enum |
+| `domain` | ✕ | `NETWORK` | 분야 코드(domain_setting 등록부의 코드) |
 | `difficulty` | ✕ | `BEGINNER` | Difficulty enum (`/api/quiz`는 `level`, 여기는 `difficulty`) |
 | `state` | ✕ | `UNSOLVED` | `UNSOLVED`/`CORRECT`/`WRONG`. 없으면 전체 |
 | `reviewDue` | ✕ | `true` | 지금 복습 차례인 문제만 |

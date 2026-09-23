@@ -54,7 +54,11 @@ public final class TopicQueue {
     private static final String DEFAULT_NOTE =
             "개념 문서의 주제 범위 목록입니다. 배치가 문서일마다 범위 하나를 골라 그 안에서 세부 주제를 정합니다. "
                     + "다음 차례는 '아직 안 쓴 범위 먼저, 그다음은 가장 오래 안 쓴 범위'로 정해집니다(줄은 없어지지 않습니다). "
-                    + "domain은 필수이고 Domain 상수명 그대로 적습니다. lastUsedAt·usedCount는 배치가 적는 칸이니 손대지 마세요. "
+                    // "Domain 상수명"은 enum이 있던 시절의 말이다(머지 전 점검 1). 그 타입이
+                    // 사라진 지금 그대로 두면, 파일을 여는 사람에게 <이제 없는 것>을 찾아보라고
+                    // 시키는 셈이다. 분야 설정 화면에 그대로 뜨는 말인 "분야 코드"로 적는다.
+                    + "domain은 필수이고 분야 코드(NETWORK처럼 분야 설정 화면에 뜨는 영문 코드)를 그대로 적습니다. "
+                    + "lastUsedAt·usedCount는 배치가 적는 칸이니 손대지 마세요. "
                     + "목록이 비면 예전처럼 모델이 주제를 자동으로 고릅니다. 고친 뒤에는 커밋해야 다음 배치에 반영됩니다.";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -170,7 +174,9 @@ public final class TopicQueue {
             if (entry.topic() == null || entry.topic().isBlank()) {
                 problems.add("%d번 항목에 topic이 비어 있어 건너뜁니다.".formatted(i + 1));
             } else {
-                problems.add("%d번 항목(\"%s\")의 domain이 \"%s\"라서 건너뜁니다 — Domain 상수명을 그대로 적어야 합니다."
+                // 위 DEFAULT_NOTE와 같은 말을 써야 한다 — 파일이 "분야 코드"로 적으라 해 놓고
+                // 오류는 "Domain 상수명"을 들이대면, 사람은 서로 다른 두 가지를 찾게 된다.
+                problems.add("%d번 항목(\"%s\")의 domain이 \"%s\"라서 건너뜁니다 — 분야 코드(대문자·숫자·밑줄)를 그대로 적어야 합니다."
                         .formatted(i + 1, entry.topic(), entry.domain()));
             }
         }
