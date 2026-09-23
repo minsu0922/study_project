@@ -43,6 +43,20 @@ try {
           <b>순서(▲▼)</b>는 누르는 즉시 반영됩니다. <b>켜기·이름·힌트</b>는 줄에 뜨는 <b>저장</b>을 눌러야 반영됩니다.
           번호는 순환에서 몇 번째인지이고, 꺼진 분야는 순환에 끼지 않아 번호가 없습니다.
         </p>
+
+        <!-- 새 분야 추가 — 코드·이름만 받는다(task-8-brief 9절). 힌트를 여기서 같이 받지 않는
+             이유: 추가한 직후 관리자가 가장 먼저 할 일은 "이 분야가 뭘 다루나"를 적는 것이고,
+             그 자리는 이미 있다 — 줄마다 펼치는 편집칸의 힌트 입력이다. 추가에 성공하면
+             그 칸을 자동으로 펼쳐 초점을 준다(addDomain). 폼을 하나 더 만들지 않고 기존 칸을
+             재사용해야 "힌트 쓰는 법"이 화면에 두 가지로 갈리지 않는다. -->
+        <form id="sAddForm" class="domain-add-row">
+          <input type="text" id="sAddCode" placeholder="MESSAGING" maxlength="30"
+                 aria-label="새 분야 코드" autocomplete="off">
+          <input type="text" id="sAddName" placeholder="이름" maxlength="40"
+                 aria-label="새 분야 이름" autocomplete="off">
+          <button type="submit">추가</button>
+        </form>
+
         <div id="sList">불러오는 중…</div>
       </div>
 
@@ -83,8 +97,14 @@ const LAST_DOMAIN_MESSAGE =
 // DOM만 훑으면 된다(별도의 순서 상태를 이중으로 들고 다닐 필요가 없다).
 let settingsRows = [];
 
+// 코드 형식 — global/common/DomainCode.java의 FORMAT과 정확히 같은 정규식이어야 한다.
+// 서버가 최종 검사(그 값 타입의 생성자)를 하지만, 여기서 먼저 막아야 "형식이 틀린 채로
+// 요청을 보내고 나서야 안다"는 왕복을 겪지 않는다.
+const DOMAIN_CODE_PATTERN = /^[A-Z][A-Z0-9_]{1,29}$/;
+
 if (initAdminPage("settings")) {
   wireSettingsList();
+  wireAddForm();
   loadSettings();
 }
 
@@ -174,6 +194,13 @@ function domainRowHtml(row, isFirst, isLast) {
         <div class="domain-row-preview">
           지금 프롬프트에 붙는 문장: <code>${preview}</code>
         </div>
+
+        <!-- 삭제는 줄이 아니라 편집칸 안에만 둔다(task-8-brief 9절) — 드물고 되돌릴 수 없는
+             동작이라, "편집"을 한 번 더 눌러야 닿게 한 걸음 물려 둔다. 이 화면의 다른 위험
+             동작(체크 해제 등)과 달리 confirm()으로 막는 이유는 deleteDomain 주석 참고. -->
+        <div class="domain-edit-danger">
+          <button type="button" class="danger" data-action="delete">이 분야 삭제</button>
+        </div>
       </div>
     </div>`;
 }
@@ -216,17 +243,32 @@ function refreshRowState(row) {
   saveBtn.disabled = hint.length > 500;
 }
 
-/** 편집칸을 펼치거나 접는다. 한 번에 한 줄만 펼친다 — 여럿 펼치면 다시 세로로 길어진다. */
-function toggleEdit(row, btn) {
-  const opening = !row.classList.contains("open");
+/**
+ * 이 줄만 펼치고 나머지는 접는다(한 번에 한 줄) — 힌트 칸에 초점까지 준다.
+ *
+ * <p>toggleEdit과 addDomain(추가 직후 자동으로 펼치는 자리) 둘 다 이 함수를 쓴다.
+ * 둘로 나눠 두면(펼치기 따로, 초점 따로) addDomain 쪽에서 순서를 맞추기 실수하기 쉽다 —
+ * "펼치고 나서 초점"이 한 함수 안에 있어야 항상 같은 순서로 일어난다.
+ */
+function openRow(row) {
+  if (!row) return; // 방어적 — addDomain이 loadSettings 직후 바로 찾으므로 정상 경로에서는 항상 있다
   document.querySelectorAll(".domain-row.open").forEach(r => {
+    if (r === row) return;
     r.classList.remove("open");
     r.querySelector('button[data-action="edit"]').setAttribute("aria-expanded", "false");
   });
-  if (opening) {
-    row.classList.add("open");
-    btn.setAttribute("aria-expanded", "true");
-    row.querySelector('[data-field="hint"]').focus();
+  row.classList.add("open");
+  row.querySelector('button[data-action="edit"]').setAttribute("aria-expanded", "true");
+  row.querySelector('[data-field="hint"]').focus();
+}
+
+/** 편집칸을 펼치거나 접는다. 한 번에 한 줄만 펼친다 — 여럿 펼치면 다시 세로로 길어진다. */
+function toggleEdit(row, btn) {
+  if (row.classList.contains("open")) {
+    row.classList.remove("open");
+    btn.setAttribute("aria-expanded", "false");
+  } else {
+    openRow(row);
   }
 }
 
@@ -268,7 +310,70 @@ function wireSettingsList() {
     else if (btn.dataset.action === "down") moveDomain(code, "DOWN");
     else if (btn.dataset.action === "edit") toggleEdit(row, btn);
     else if (btn.dataset.action === "save") saveDomain(code, row, btn);
+    else if (btn.dataset.action === "delete") deleteDomain(code, row);
   });
+}
+
+/**
+ * 추가 폼에 이벤트를 건다 — 코드는 입력하는 대로 대문자로 바꿔 보여주고(task-8-brief 9절),
+ * 제출은 새로고침 대신 addDomain을 부르게 가로챈다.
+ */
+function wireAddForm() {
+  const codeInput = document.getElementById("sAddCode");
+  // 커서 위치는 신경 쓰지 않는다 — 코드는 앞에서부터 이어 치는 값이라(중간을 고칠 일이
+  // 드물다), value를 통째로 바꿔 커서가 끝으로 가는 것이 타이핑 흐름과 맞는다.
+  codeInput.addEventListener("input", () => {
+    codeInput.value = codeInput.value.toUpperCase();
+  });
+  document.getElementById("sAddForm").addEventListener("submit", e => {
+    e.preventDefault();
+    addDomain();
+  });
+}
+
+/**
+ * 새 분야 추가 — 코드 형식은 서버에 보내기 전에 화면에서 막는다. 정규식과 문구 모두
+ * {@code global/common/DomainCode.java}와 같게 맞춘다 — 화면이 다른 말로 막으면 "여기선
+ * 되는데 저기선 안 된다"는 인상을 준다. 형식이 아닌 것(코드 중복 등 DB만 아는 사실)은
+ * 화면이 흉내 내지 않고 그대로 보내 서버 오류(showError)로 보여준다.
+ *
+ * <p>성공하면 목록을 다시 불러온 뒤 <b>새 줄의 편집칸을 펼쳐 힌트 칸에 초점</b>을 준다
+ * ({@link #openRow}). 추가 직후 관리자가 가장 먼저 하고 싶은 일이 "이 분야가 뭘 다루는지"를
+ * 적는 것이라, 코드·이름칸에 초점을 남겨두면 "편집"을 한 번 더 눌러야 하는 헛걸음이 생긴다.
+ */
+async function addDomain() {
+  const msg = document.getElementById("sMessage");
+  const codeInput = document.getElementById("sAddCode");
+  const nameInput = document.getElementById("sAddName");
+  const code = codeInput.value.trim().toUpperCase();
+  const displayName = nameInput.value.trim();
+
+  if (!DOMAIN_CODE_PATTERN.test(code)) {
+    showError(msg, { message: "분야 코드는 영문 대문자로 시작하는 대문자·숫자·밑줄 2~30자여야 합니다: " + code });
+    codeInput.focus();
+    return;
+  }
+  if (!displayName) {
+    showError(msg, { message: "이름을 입력하세요." });
+    nameInput.focus();
+    return;
+  }
+
+  // hint는 이 폼에 없다 — 새로 태어나는 행은 늘 빈 힌트로 시작하고, 곧바로 펼쳐지는
+  // 편집칸에서 채운다(AdminDomainCreateRequest도 hint를 선택값으로 둔다).
+  try {
+    await api("/api/admin/domain-settings", {
+      method: "POST",
+      body: JSON.stringify({ code, displayName, hint: "" }),
+    });
+    codeInput.value = "";
+    nameInput.value = "";
+    await loadSettings();
+    openRow(document.querySelector(`.domain-row[data-code="${code}"]`));
+    showSavedNotice(msg);
+  } catch (e) {
+    showError(msg, e);
+  }
 }
 
 /** 힌트칸 옆 "N자 남음"을 갱신한다. 500자 초과 시 저장 잠금은 refreshRowState가 맡는다. */
@@ -341,6 +446,44 @@ async function moveDomain(code, direction) {
 function showSavedNotice(el) {
   el.innerHTML = `<div class="alert info">
     저장했습니다. <code>generated/_domain-settings.json</code>이 갱신됩니다 —
+    <b>이 파일을 커밋해야 다음 배치부터 반영됩니다.</b>
+  </div>`;
+}
+
+/**
+ * 분야 삭제 — 편집칸 안에서만 누를 수 있다(줄에는 없음, task-8-brief 9절). 드물고
+ * 되돌릴 수 없는 동작이라 <b>confirm()으로 한 번 더 묻는다</b>. 이 화면의 다른 위험 동작
+ * (체크 해제를 되돌리는 것)이나 다른 관리 화면의 armedAction(버튼을 한 번 더 눌러 확정,
+ * 3초 뒤 원복)과 다른 방식을 쓰는 이유: 저 둘은 "잘못 눌러도 아직 아무 일도 안 일어난"
+ * 상태로 되돌아가지만, 이 동작은 성공하는 순간 행이 사라져 armedAction의 재확인 창(3초)
+ * 안에서도 취소할 방법이 없다 — 실행 전에 한 번 <b>멈춰 세우는</b> confirm()이 더 맞는
+ * 모양이다(브리프가 명시).
+ *
+ * <p>서버가 거부하면(DOMAIN_005 — 내용 있는 분야, DOMAIN_002 — 마지막 켜진 분야)
+ * 메시지를 <b>그대로</b> showError로 보여준다. DOMAIN_005 문구는 "어느 표에 몇 건"까지
+ * 담고 있어 다음에 뭘 해야 하는지를 알려주는 유일한 단서라, 화면이 요약하거나 바꿔
+ * 적지 않는다.
+ */
+async function deleteDomain(code, row) {
+  const name = row.querySelector(".domain-name").textContent;
+  if (!confirm(`"${name}"(${code}) 분야를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+
+  const msg = document.getElementById("sMessage");
+  try {
+    await api(`/api/admin/domain-settings/${code}`, { method: "DELETE" });
+    await loadSettings();
+    showDeletedNotice(msg);
+  } catch (e) {
+    showError(msg, e);
+  }
+}
+
+/** 삭제 후 안내 — showSavedNotice와 같은 이유(커밋 필요)지만 "지웠다"고 정확히 적는다.
+ *  삭제도 DomainSettingChanged를 발행해 generated/_domain-settings.json을 갱신하므로
+ *  (DomainSettingService.delete Javadoc), 저장과 똑같이 커밋을 잊기 쉬운 자리다. */
+function showDeletedNotice(el) {
+  el.innerHTML = `<div class="alert info">
+    지웠습니다. <code>generated/_domain-settings.json</code>이 갱신됩니다 —
     <b>이 파일을 커밋해야 다음 배치부터 반영됩니다.</b>
   </div>`;
 }
