@@ -783,6 +783,36 @@ public final class ProblemItemRule {
     public static final int GIVEAWAY_MARGIN = 4;
 
     /**
+     * 네 보기가 모두 {@code 용어 — 뜻} 꼴일 때 쓰는 겹침 문턱. 일반 문턱({@link #GIVEAWAY_MIN_RUN})의 절반이다.
+     *
+     * <p><b>왜 이 꼴만 따로 낮추는가 (2026-09-25).</b> 이 꼴에서 결함은 늘 같은 모양이다 — 질문이
+     * 뜻을 풀어 써 놓고 "용어와 그 뜻"을 물으면, 정답 보기의 뜻 부분이 질문을 <b>말만 바꿔</b>
+     * 되받는다. 모델은 구절을 통째로 옮기지 않고 "컴파일 도중에 만들어 내는"을 "컴파일 도중에
+     * 끼어들어 … 만들어 내는"처럼 쪼개 쓰므로, 이어 붙은 겹침은 6~10자에 그친다. 2026-09-24 배치의
+     * 다섯 문제가 전부 이 모양으로 12자 문턱 아래를 지나갔고, 사람이 다섯 번 같은 사유로 거절했다.
+     *
+     * <p><b>왜 전체 문턱을 내리지 않는가.</b> 일반 문장 보기에서 8자대 겹침은 "Content-Type"·
+     * "HTML 이스케이프"처럼 <b>고유명사가 길어서</b> 생기는 정상 겹침이다(둘 다 승인된 실물).
+     * {@code 용어 — 뜻} 꼴에서는 고유명사가 대시 앞 용어 자리에 들어가, 질문과 겹칠 일이 거의 없다.
+     *
+     * <p><b>실측(초안 179개).</b> 이 꼴 31개 중 6자·차이 3자에 걸리는 것이 11개(전체의 6%)다.
+     * 거절·지적된 실물 8개가 전부 들어가고, 나머지 셋(프로그램 카운터·파일 디스크립터·캐시 TTL)도
+     * 질문의 뜻 풀이를 정답이 되받는 같은 모양이다. 걸리면 안 되는 쪽 중 가장 가까운 것은
+     * "브라우저 파싱 부품"(7자, 차이 2자)이라 {@link #TERM_PAIR_GIVEAWAY_MARGIN}의 여유는 1자뿐이다 —
+     * 문턱을 고칠 때는 이 둘을 다시 재라.
+     */
+    public static final int TERM_PAIR_GIVEAWAY_MIN_RUN = 6;
+
+    /**
+     * {@code 용어 — 뜻} 꼴에서 정답 겹침이 오답 겹침보다 앞서야 하는 차이.
+     *
+     * <p>일반 문턱(4)보다 1 낮은 이유: 2026-09-24 "동적 쿼리" 문제는 정답 7자 / 오답 4자로 차이가 3이었다.
+     * 오답("바인딩 파라미터 — … 실행할 때 따로 넘기는")이 "실행할 때"를 우연히 나눠 가졌을 뿐, 정답만
+     * 질문의 뜻 풀이를 되받는 결함은 그대로였다.
+     */
+    public static final int TERM_PAIR_GIVEAWAY_MARGIN = 3;
+
+    /**
      * 지문·보기·해설에 섞인 마크다운 문법.
      *
      * <p>이 셋은 화면에 <b>평문 그대로</b> 나간다({@code player.js}의 {@code escapeHtml}) —
@@ -1325,7 +1355,12 @@ public final class ProblemItemRule {
                 wrongOverlap = Math.max(wrongOverlap, overlap);
             }
         }
-        if (correctOverlap < GIVEAWAY_MIN_RUN || correctOverlap - wrongOverlap < GIVEAWAY_MARGIN) {
+        // "용어 — 뜻" 꼴은 문턱을 따로 쓴다 — 말만 바꿔 되받는 겹침이 짧게 끊겨 나오기 때문이다
+        // (TERM_PAIR_GIVEAWAY_MIN_RUN 주석의 실측 참고).
+        boolean termPairs = choices.stream().allMatch(c -> c.text() != null && c.text().contains("—"));
+        int minRun = termPairs ? TERM_PAIR_GIVEAWAY_MIN_RUN : GIVEAWAY_MIN_RUN;
+        int margin = termPairs ? TERM_PAIR_GIVEAWAY_MARGIN : GIVEAWAY_MARGIN;
+        if (correctOverlap < minRun || correctOverlap - wrongOverlap < margin) {
             return null;
         }
         return "정답 보기가 질문을 %d자 되풀이함 (\"%s\" — 오답은 %d자, 문장만 견줘도 답이 좁혀진다)"
