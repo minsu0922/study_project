@@ -1,7 +1,13 @@
 {
   "note" : "정식 problem 테이블의 기존 지문 목록입니다. GitHub Actions 생성 배치가 중복 회피 목록으로 읽습니다(클라우드에는 DB가 없으므로). docs/14 참고. 앱이 기동할 때 자동 갱신되며, 커밋해야 다음 배치부터 반영됩니다.",
-  "exportedAt" : "2026-09-20",
+  "exportedAt" : "2026-09-25",
   "questions" : [ {
+    "domain" : "BACKEND_FRAMEWORK",
+    "question" : "QueryDSL에 대한 설명으로 옳은 것은?"
+  }, {
+    "domain" : "BACKEND_FRAMEWORK",
+    "question" : "JPQL(java persistence query language)에 대한 설명으로 옳은 것은?"
+  }, {
     "domain" : "SECURITY",
     "question" : "인증(authentication)에 대한 설명으로 옳은 것은?"
   }, {
