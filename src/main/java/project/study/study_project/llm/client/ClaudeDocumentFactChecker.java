@@ -3,8 +3,10 @@ package project.study.study_project.llm.client;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.StopReason;
 import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.anthropic.models.messages.ThinkingConfigAdaptive;
+import com.anthropic.models.messages.WebSearchTool20260209;
 import lombok.extern.slf4j.Slf4j;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -83,14 +85,46 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
         return edition == DocumentEdition.ADVANCED ? SYSTEM_PROMPT : SYSTEM_PROMPT + UNDEFINED_TERM_RULE;
     }
 
-    private final String model;
+    /**
+     * 웹 검색을 켰을 때 허용하는 공식 문서 도메인. 블로그를 막는 이유는 모델과 같은 오해를
+     * 담은 글이 많아서다. 새 분야 문서가 늘면 그 분야의 공식 문서 도메인을 여기 더한다.
+     */
+    static final List<String> OFFICIAL_DOMAINS = List.of(
+            "redis.io", "docs.spring.io", "spring.io", "documentation.red-gate.com", "flywaydb.org",
+            "man7.org", "kernel.org", "datatracker.ietf.org", "rfc-editor.org", "developer.mozilla.org",
+            "postgresql.org", "dev.mysql.com", "docs.oracle.com", "openjdk.org", "kubernetes.io",
+            "docs.docker.com", "owasp.org", "cheatsheetseries.owasp.org", "nginx.org", "kafka.apache.org");
 
-    /** 이 인스턴스가 쓴 토큰 누계. 사고 토큰은 출력 쪽에 들어간다. */
+    /** 편당 검색 상한. 검색 한 번마다 요금과 결과 토큰이 붙는다. */
+    static final long MAX_SEARCHES = 5;
+
+    static final String WEB_SEARCH_RULE = """
+
+            [공식 문서로 확인하기]
+            web_search 도구로 공식 문서를 찾아볼 수 있다. 검색은 %d번까지다.
+            - 기술의 동작, 기본값, 에러·장애 상황의 동작(적재 중, 디스크 부족, 실패했을 때 등)에 대한 주장 중
+              네가 확신하지 못하는 것을 골라 공식 문서로 확인한다.
+              네가 안다고 생각하는 것도 틀릴 수 있다. 특히 "장애가 나면 어떻게 되는가"는 틀리기 쉽다.
+            - 공식 문서로 확인한 지적에는 sourceUrl에 그 페이지 주소를 적는다. 검색 결과에서 본 주소만 적는다.
+            - 공식 문서와 맞는 주장은 지적하지 않는다.
+            """.formatted(MAX_SEARCHES);
+
+    private final String model;
+    private final boolean webSearch;
+
+    /** 이 인스턴스가 쓴 토큰·검색 누계. 사고 토큰은 출력 쪽에 들어간다. */
     private long inputTokens;
     private long outputTokens;
+    private long searches;
 
     public ClaudeDocumentFactChecker(String model) {
+        this(model, false);
+    }
+
+    /** @param webSearch 적발률이 오르는 걸 확인하기 전까지 배치에서는 끈다(docs/22 §5) */
+    public ClaudeDocumentFactChecker(String model, boolean webSearch) {
         this.model = model;
+        this.webSearch = webSearch;
     }
 
     public long inputTokens() {
@@ -101,26 +135,46 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
         return outputTokens;
     }
 
+    public long searches() {
+        return searches;
+    }
+
+    static String systemPromptFor(DocumentEdition edition, boolean webSearch) {
+        return systemPromptFor(edition) + (webSearch ? WEB_SEARCH_RULE : "");
+    }
+
     @Override
     public List<FactCheckFinding> check(String title, String contentMd, DocumentEdition edition) {
-        StructuredMessageCreateParams<FactCheckFinding.Result> params = MessageCreateParams.builder()
+        MessageCreateParams.Builder builder = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(MAX_TOKENS)
                 // 사실 대조는 "이 동작이 정말 그런가"를 따져 봐야 하는 일이라 사고를 켠다
                 .thinking(ThinkingConfigAdaptive.builder().build())
-                .system(systemPromptFor(edition))
-                .outputConfig(FactCheckFinding.Result.class)
-                .addUserMessage(buildPrompt(title, contentMd))
-                .build();
+                .system(systemPromptFor(edition, webSearch))
+                .addUserMessage(buildPrompt(title, contentMd));
+        if (webSearch) {
+            builder.addTool(WebSearchTool20260209.builder()
+                    .allowedDomains(OFFICIAL_DOMAINS)
+                    .maxUses(MAX_SEARCHES)
+                    .build());
+        }
+        StructuredMessageCreateParams<FactCheckFinding.Result> params =
+                builder.outputConfig(FactCheckFinding.Result.class).build();
 
         List<FactCheckFinding> raw;
         try {
             var response = AnthropicClientHolder.get().messages().create(params);
             inputTokens += response.usage().inputTokens();
             outputTokens += response.usage().outputTokens();
+            searches += response.usage().serverToolUse().map(u -> u.webSearchRequests()).orElse(0L);
+            if (response.stopReason().filter(r -> r.equals(StopReason.PAUSE_TURN)).isPresent()) {
+                // 검색이 길어져 서버가 중간에 멈춘 경우다. 이어 붙이기는 실제로 자주 나면 만든다
+                throw new BusinessException(ErrorCode.LLM_003, "검색 도중 응답이 멈췄습니다(pause_turn).");
+            }
+            // 검색을 켜면 텍스트 블록이 검색 앞뒤로 나뉠 수 있다. 결과 JSON은 마지막 블록에 온다
             raw = response.content().stream()
                     .flatMap(block -> block.text().stream())
-                    .findFirst()
+                    .reduce((first, second) -> second)
                     .map(typed -> typed.text().findings())
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 검수 결과가 없습니다."));
         } catch (AnthropicServiceException e) {

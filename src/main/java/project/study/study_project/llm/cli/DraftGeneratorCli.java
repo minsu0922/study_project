@@ -706,14 +706,16 @@ public final class DraftGeneratorCli {
             return "🔎 %s %s 사실 검수: 지적 없음%n".formatted(date, edition);
         }
         String lines = findings.stream()
-                .map(f -> "- [%s·%s] \"%s\"%n  - 이유: %s%n  - 바로잡으면: %s".formatted(
+                .map(f -> "- [%s·%s] \"%s\"%n  - 이유: %s%n  - 바로잡으면: %s%s".formatted(
                         switch (f.kind()) {
                             case INTERNAL_MISMATCH -> "문서 안 불일치";
                             case UNDEFINED_TERM -> "정의 없는 용어";
                             case FACT_ERROR -> "사실 오류";
                         },
                         f.confidence() == FactCheckFinding.Confidence.HIGH ? "확신" : "의심",
-                        f.quote(), f.reason(), f.correction()))
+                        f.quote(), f.reason(), f.correction(),
+                        // URL은 인자로 넘긴다. 형식 문자열에 붙이면 %20 같은 인코딩이 서식으로 읽힌다
+                        f.sourceUrl() == null || f.sourceUrl().isBlank() ? "" : "\n  - 근거: " + f.sourceUrl()))
                 .collect(java.util.stream.Collectors.joining("\n"));
         return "🔎 **%s %s 사실 검수: %d건** — 승인 전에 확인하세요. AI 지적이라 틀릴 수 있습니다%n%s%n"
                 .formatted(date, edition, findings.size(), lines);

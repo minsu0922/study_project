@@ -116,6 +116,7 @@ class ReviewEvalCliTest {
     void rendersCost() {
         assertThat(ReviewEvalCli.renderCost("claude-opus-5", 1_000_000, 100_000)).contains("$7.50");
         assertThat(ReviewEvalCli.renderCost("unknown-model", 10, 10)).doesNotContain("$");
+        assertThat(ReviewEvalCli.renderCost("claude-opus-5", 1_000_000, 100_000, 10)).contains("검색 10회", "$7.60");
     }
 
     /* ── 실제 표본 파일 ── */

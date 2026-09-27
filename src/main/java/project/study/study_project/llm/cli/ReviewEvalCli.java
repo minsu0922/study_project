@@ -28,6 +28,7 @@ import java.util.Map;
  *   --samples=eval-samples/fact-check.json   표본 정의
  *   --model=claude-opus-5                    검수 모델. 생략하면 생성 모델
  *   --only=redis-persistence                 표본 하나만
+ *   --web-search=true                        공식 문서 검색을 켠다(편당 최대 5회)
  *   --label=before                           보고서 파일 이름 꼬리표
  *   --out=eval                               보고서 디렉터리
  * </pre>
@@ -79,7 +80,9 @@ public final class ReviewEvalCli {
         }
 
         System.out.printf("사실 검수 적발률 측정: 모델 %s, 표본 %d편%n", model, prepared.size());
-        ClaudeDocumentFactChecker checker = new ClaudeDocumentFactChecker(model);
+        boolean webSearch = "true".equals(opts.get("web-search"));
+        System.out.println("공식 문서 검색: " + (webSearch ? "켬" : "끔"));
+        ClaudeDocumentFactChecker checker = new ClaudeDocumentFactChecker(model, webSearch);
         List<SampleScore> scores = new ArrayList<>();
         for (Prepared p : prepared) {
             System.out.printf("  %s 검수 중...%n", p.sample().id());
@@ -88,7 +91,8 @@ public final class ReviewEvalCli {
             scores.add(score(p.sample(), findings));
         }
 
-        String report = render(scores, model) + "\n" + renderCost(model, checker.inputTokens(), checker.outputTokens());
+        String report = render(scores, model + (webSearch ? " + 공식 문서 검색" : "")) + "\n"
+                + renderCost(model, checker.inputTokens(), checker.outputTokens(), checker.searches());
         System.out.println();
         System.out.println(report);
         Path reportFile = writeReport(report, opts);
@@ -248,9 +252,15 @@ public final class ReviewEvalCli {
             if (!s.falseAlarms().isEmpty()) {
                 sb.append("\n헛경보 후보:\n\n");
                 for (FactCheckFinding f : s.falseAlarms()) {
-                    sb.append("- [%s/%s] \"%s\" — %s\n".formatted(f.kind(), f.confidence(), f.quote(), f.reason()));
+                    sb.append("- [%s/%s] \"%s\" — %s%s\n".formatted(f.kind(), f.confidence(), f.quote(), f.reason(),
+                            isBlank(f.sourceUrl()) ? "" : " (" + f.sourceUrl() + ")"));
                 }
             }
+            s.caught().forEach((id, f) -> {
+                if (!isBlank(f.sourceUrl())) {
+                    sb.append("- 근거 문서: %s → %s\n".formatted(id, f.sourceUrl()));
+                }
+            });
         }
         return sb.toString();
     }
@@ -264,14 +274,26 @@ public final class ReviewEvalCli {
             "claude-fable-5-1", new double[]{10.0, 50.0},
             "claude-sonnet-5", new double[]{2.0, 10.0});
 
+    /** 웹 검색 1회 요금. 검색 결과 토큰은 입력 토큰에 이미 들어 있다. */
+    static final double SEARCH_USD = 0.01;
+
     static String renderCost(String model, long inputTokens, long outputTokens) {
-        String tokens = "입력 %,d / 출력 %,d 토큰(사고 포함)".formatted(inputTokens, outputTokens);
+        return renderCost(model, inputTokens, outputTokens, 0);
+    }
+
+    static String renderCost(String model, long inputTokens, long outputTokens, long searches) {
+        String tokens = "입력 %,d / 출력 %,d 토큰(사고 포함)".formatted(inputTokens, outputTokens)
+                + (searches > 0 ? ", 검색 %d회".formatted(searches) : "");
         double[] price = PRICE_PER_MTOK.get(model);
         if (price == null) {
             return "비용: " + tokens + ", 단가표에 없는 모델이라 금액은 계산하지 않음\n";
         }
-        double usd = inputTokens / 1e6 * price[0] + outputTokens / 1e6 * price[1];
+        double usd = inputTokens / 1e6 * price[0] + outputTokens / 1e6 * price[1] + searches * SEARCH_USD;
         return "비용: %s ≈ $%.2f\n".formatted(tokens, usd);
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 
     /* ── 입출력 ──────────────────────────────────────────────── */

@@ -1964,6 +1964,22 @@ class DraftGeneratorCliTest {
     }
 
     @Test
+    @DisplayName("근거 URL을 붙이고, URL 속 %20 같은 인코딩이 서식으로 읽히지 않는다")
+    void rendersSourceUrlSafely() {
+        var finding = new project.study.study_project.llm.client.FactCheckFinding(
+                "적재가 끝날 때까지 접속이 되지 않는다.",
+                project.study.study_project.llm.client.FactCheckFinding.Kind.FACT_ERROR,
+                "적재 중에도 접속은 된다", "LOADING 에러를 돌려준다",
+                "https://redis.io/docs/latest/operate/oss%20and%20stack/persistence/",
+                project.study.study_project.llm.client.FactCheckFinding.Confidence.HIGH);
+
+        String rendered = DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(finding), FACT_DOC,
+                LocalDate.of(2026, 9, 27));
+
+        assertThat(rendered).contains("근거: https://redis.io/docs/latest/operate/oss%20and%20stack/persistence/");
+    }
+
+    @Test
     @DisplayName("지적이 없으면 한 줄만 남긴다")
     void rendersNoFindings() {
         assertThat(DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(), FACT_DOC, LocalDate.of(2026, 9, 27)))

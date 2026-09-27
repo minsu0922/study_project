@@ -28,9 +28,17 @@ public record FactCheckFinding(
         @JsonPropertyDescription("올바른 내용 한두 문장")
         String correction,
 
+        @JsonPropertyDescription("공식 문서로 확인했다면 그 페이지 URL. 검색 결과에서 실제로 본 주소만 적는다. 없으면 빈 문자열")
+        String sourceUrl,
+
         @JsonPropertyDescription("HIGH=틀렸다고 확신한다, LOW=의심되지만 확신하지 못한다")
         Confidence confidence
 ) {
+
+    /** 근거 URL 없이 만드는 편의 생성자 — 웹 검색을 끈 검수와 테스트가 쓴다. */
+    public FactCheckFinding(String quote, Kind kind, String reason, String correction, Confidence confidence) {
+        this(quote, kind, reason, correction, "", confidence);
+    }
 
     public enum Kind { FACT_ERROR, INTERNAL_MISMATCH, UNDEFINED_TERM }
 

@@ -61,6 +61,16 @@ class ClaudeDocumentFactCheckerTest {
     }
 
     @Test
+    @DisplayName("공식 문서 검색 규칙은 검색을 켰을 때만 붙는다")
+    void webSearchRuleOnlyWhenEnabled() {
+        assertThat(ClaudeDocumentFactChecker.systemPromptFor(DocumentEdition.BEGINNER, true))
+                .contains("[공식 문서로 확인하기]", "sourceUrl");
+        assertThat(ClaudeDocumentFactChecker.systemPromptFor(DocumentEdition.BEGINNER, false))
+                .doesNotContain("[공식 문서로 확인하기]");
+        assertThat(ClaudeDocumentFactChecker.OFFICIAL_DOMAINS).contains("redis.io", "docs.spring.io");
+    }
+
+    @Test
     @DisplayName("프롬프트가 찾을 것 두 가지와 원문 복사 규칙을 담고 있다")
     void promptKeepsCoreRules() {
         assertThat(ClaudeDocumentFactChecker.SYSTEM_PROMPT)
