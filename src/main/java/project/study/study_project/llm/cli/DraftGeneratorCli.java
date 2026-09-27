@@ -8,7 +8,10 @@ import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
+import project.study.study_project.llm.client.ClaudeProblemReviewer;
 import project.study.study_project.llm.client.DocumentFactChecker;
+import project.study.study_project.llm.client.ProblemReview;
+import project.study.study_project.llm.client.ProblemReviewer;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
@@ -348,6 +351,48 @@ public final class DraftGeneratorCli {
         announce("✅ **%s 문제 초안 %d건** — %s × %s, 근거 문서 %s → `%s`"
                 .formatted(date, kept.size(), domain, difficulty,
                         source == null ? "없음(폴백)" : source.slug(), outFile));
+
+        // 문제 검수(docs/22 §3.2~3.4). 객관식이고 근거 문서가 있을 때만 — 근거 대조에 문서가 필요하다
+        if (type == ProblemType.MULTIPLE_CHOICE && source != null) {
+            reportProblemReview(new ClaudeProblemReviewer(model), kept, difficulty, source, date);
+        }
+    }
+
+    /**
+     * 문제 검수를 돌려 지적을 요약 화면에 남긴다. 실패해도 job을 죽이지 않는다.
+     * 파일은 이미 저장됐고, 검수는 덧붙이는 단계다.
+     *
+     * @return 요약 화면에 쓴 글(테스트용)
+     */
+    static String reportProblemReview(ProblemReviewer reviewer, List<GeneratedProblemItem> problems,
+                                      Difficulty difficulty, SourceDocument source, LocalDate date) {
+        String rendered;
+        try {
+            rendered = renderProblemReview(date, problems, reviewer.review(problems, difficulty, source));
+        } catch (RuntimeException e) {
+            rendered = "⚠️ **%s 문제 검수 실패** — 문제는 저장했습니다. 승인 전에 사람이 풀어 보세요 (%s)%n"
+                    .formatted(date, e.getMessage());
+        }
+        System.out.println(rendered);
+        appendToStepSummary(rendered);
+        return rendered;
+    }
+
+    static String renderProblemReview(LocalDate date, List<GeneratedProblemItem> problems,
+                                      List<ProblemReview.Finding> findings) {
+        if (findings.isEmpty()) {
+            return "🔎 %s 문제 검수: 지적 없음%n".formatted(date);
+        }
+        String lines = findings.stream()
+                .map(f -> {
+                    GeneratedProblemItem p = problems.get(f.problemIndex());
+                    String name = p.title() == null || p.title().isBlank() ? p.question() : p.title();
+                    return "- %d번 「%s」 [%s] %s".formatted(f.problemIndex() + 1,
+                            name.length() > 40 ? name.substring(0, 40) + "…" : name, f.type().label(), f.message());
+                })
+                .collect(java.util.stream.Collectors.joining("\n"));
+        return "🔎 **%s 문제 검수: %d건** — 승인 전에 확인하세요. AI 지적이라 틀릴 수 있습니다%n%s%n"
+                .formatted(date, findings.size(), lines);
     }
 
     /** 오늘 배치가 할 일. {@link #decideAction}이 결정한다. */

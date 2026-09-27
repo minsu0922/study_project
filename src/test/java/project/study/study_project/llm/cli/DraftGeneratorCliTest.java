@@ -1944,6 +1944,26 @@ class DraftGeneratorCliTest {
     }
 
     @Test
+    @DisplayName("문제 검수 지적은 번호·제목·종류를 적고, 검수가 실패해도 예외를 던지지 않는다")
+    void reportsProblemReview() {
+        var problem = new project.study.study_project.llm.client.GeneratedProblemItem("스키마란?", "", "해설",
+                List.of(), "", "스키마의 뜻");
+        var source = new project.study.study_project.llm.client.SourceDocument("s", "제목", "본문");
+
+        String rendered = DraftGeneratorCli.reportProblemReview((p, d, s) -> List.of(
+                        new project.study.study_project.llm.client.ProblemReview.Finding(0,
+                                project.study.study_project.llm.client.ProblemReview.FindingType.ANSWER_MISMATCH,
+                                "검수 AI는 테이블을 골랐다")),
+                List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
+        String failed = DraftGeneratorCli.reportProblemReview((p, d, s) -> {
+            throw new IllegalStateException("API 오류");
+        }, List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
+
+        assertThat(rendered).contains("문제 검수: 1건", "1번 「스키마의 뜻」 [정답 의심]");
+        assertThat(failed).contains("문제 검수 실패", "API 오류");
+    }
+
+    @Test
     @DisplayName("지적이 없으면 한 줄만 남긴다")
     void rendersNoFindings() {
         assertThat(DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(), FACT_DOC, LocalDate.of(2026, 9, 27)))
