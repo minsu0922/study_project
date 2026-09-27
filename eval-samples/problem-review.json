@@ -29,7 +29,11 @@
         },
         {
           "batch": "generated/2026-09-16.json",
-          "index": 2
+          "index": 2,
+          "note": "원래 결함: 정답 보기가 가장 길다(1.59배). 2026-09-27 기존 규칙이 찾았고 AI는 놓침",
+          "expect": [
+            "CHOICE_CUE_LEAK"
+          ]
         },
         {
           "batch": "generated/2026-09-16.json",

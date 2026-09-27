@@ -12,6 +12,8 @@ import project.study.study_project.llm.client.ProblemReview.FindingType;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
+import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +32,7 @@ import java.util.Map;
  *   --samples=eval-samples/problem-review.json   표본 정의
  *   --model=claude-opus-5                        검수 모델. 생략하면 생성 모델
  *   --label=before                               보고서 파일 이름 꼬리표
+ *   --rules-only=true                            AI 대신 기존 규칙만 돌린다(요금 없음)
  *   --out=eval                                   보고서 디렉터리
  * </pre>
  */
@@ -58,6 +61,17 @@ public final class ProblemReviewEvalCli {
             prepared.add(prepare(g));
         }
 
+        // 기존 규칙만 같은 표본에 돌린다. AI를 부르지 않아 요금이 없다(docs/22 §3.4 규칙 제거 판단용)
+        if ("true".equals(opts.get("rules-only"))) {
+            List<GroupScore> ruleScores = prepared.stream()
+                    .map(p -> score(p.group(), ruleFindingsOf(p.problems(), p.group().difficulty())))
+                    .toList();
+            String report = render(ruleScores, "기존 규칙(ProblemItemRule)");
+            System.out.println(report);
+            writeReport(report, opts, "rules");
+            return;
+        }
+
         System.out.printf("문제 검수 적발률 측정: 모델 %s, 묶음 %d개%n", model, prepared.size());
         ClaudeProblemReviewer reviewer = new ClaudeProblemReviewer(model);
         List<GroupScore> scores = new ArrayList<>();
@@ -71,13 +85,47 @@ public final class ProblemReviewEvalCli {
                 + "\n" + ReviewEvalCli.renderCost(model, reviewer.inputTokens(), reviewer.outputTokens());
         System.out.println();
         System.out.println(report);
+        writeReport(report, opts, opts.get("label"));
+    }
+
+    private static void writeReport(String report, Map<String, String> opts, String label) throws Exception {
         Path dir = Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
         Files.createDirectories(dir);
         String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        String label = opts.containsKey("label") ? "-" + opts.get("label") : "";
-        Path out = dir.resolve("problem-review-" + stamp + label + ".md");
+        Path out = dir.resolve("problem-review-" + stamp + (label == null ? "" : "-" + label) + ".md");
         Files.writeString(out, report);
         System.out.println("보고서 저장: " + out);
+    }
+
+    /* ── 기존 규칙과 견주기 ── */
+
+    /** 규칙 경고를 AI 지적 종류로 옮긴다. 대응하는 AI 지적이 없는 경고(제목·해설 형식 등)는 null. */
+    static FindingType ruleTypeOf(String warning) {
+        if (warning.startsWith("정답이 가장 긴 보기") || warning.contains("같은 문장을 되풀이함")) {
+            return FindingType.CHOICE_CUE_LEAK;
+        }
+        if (warning.startsWith("정답 보기가 질문을")) {
+            return FindingType.QUESTION_REVEALS;
+        }
+        if (warning.startsWith("초급 지문이 김") || warning.startsWith("중급 지문이 김")
+                || warning.contains("에 열지 않은 형태") || warning.startsWith("상황 적용형이")) {
+            return FindingType.DIFFICULTY_MISMATCH;
+        }
+        return null;
+    }
+
+    static List<Finding> ruleFindingsOf(List<GeneratedProblemItem> problems, Difficulty difficulty) {
+        List<Finding> findings = new ArrayList<>();
+        for (int i = 0; i < problems.size(); i++) {
+            for (String w : ProblemItemRule.qualityWarningsOf(problems.get(i), difficulty, true,
+                    ProblemType.MULTIPLE_CHOICE)) {
+                FindingType type = ruleTypeOf(w);
+                if (type != null) {
+                    findings.add(new Finding(i, type, w));
+                }
+            }
+        }
+        return findings;
     }
 
     /* ── 준비 ── */

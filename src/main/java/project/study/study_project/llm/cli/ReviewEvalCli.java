@@ -7,6 +7,8 @@ import project.study.study_project.llm.client.DocumentEdition;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
+import project.study.study_project.llm.support.DocumentDraftValidator;
+import project.study.study_project.llm.support.DraftCheck;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,6 +31,7 @@ import java.util.Map;
  *   --model=claude-opus-5                    검수 모델. 생략하면 생성 모델
  *   --only=redis-persistence                 표본 하나만
  *   --web-search=true                        공식 문서 검색을 켠다(편당 최대 5회)
+ *   --rules-only=true                        AI 대신 기존 규칙만 돌린다(요금 없음)
  *   --label=before                           보고서 파일 이름 꼬리표
  *   --out=eval                               보고서 디렉터리
  * </pre>
@@ -80,6 +83,20 @@ public final class ReviewEvalCli {
         }
 
         System.out.printf("사실 검수 적발률 측정: 모델 %s, 표본 %d편%n", model, prepared.size());
+        // 기존 규칙만 같은 표본에 돌린다. AI를 부르지 않아 요금이 없다(docs/22 §3.4 규칙 제거 판단용)
+        if ("true".equals(opts.get("rules-only"))) {
+            List<SampleScore> ruleScores = new ArrayList<>();
+            for (Prepared p : prepared) {
+                ruleScores.add(ruleScore(p.sample(),
+                        DocumentDraftValidator.validate(p.title(), "rules-only", p.contentMd())));
+            }
+            String report = render(ruleScores, "기존 규칙(DocumentDraftValidator)")
+                    + "\n규칙에 대응하는 지적 종류는 정의 없는 용어뿐이다. 사실 오류·불일치는 규칙이 볼 수 없어 전부 놓침으로 나온다.\n";
+            System.out.println(report);
+            System.out.println("보고서 저장: " + writeReport(report, Map.of("label", "rules")));
+            return;
+        }
+
         boolean webSearch = "true".equals(opts.get("web-search"));
         System.out.println("공식 문서 검색: " + (webSearch ? "켬" : "끔"));
         ClaudeDocumentFactChecker checker = new ClaudeDocumentFactChecker(model, webSearch);
@@ -196,6 +213,57 @@ public final class ReviewEvalCli {
             prev = cur;
         }
         return best;
+    }
+
+    /* ── 기존 규칙과 견주기 ─────────────────────────────────── */
+
+    private static final String UNDEFINED_TERM_WARNING = "정의 없이 쓰인 용어가 있습니다: ";
+
+    /** "정의 없이 쓰인 용어가 있습니다: A, B 외 2개. 그 자리에서..."에서 A, B를 뽑는다. */
+    static List<String> undefinedTermsIn(List<DraftCheck> checks) {
+        List<String> terms = new ArrayList<>();
+        for (DraftCheck c : checks) {
+            String m = c.message();
+            int start = m.indexOf(UNDEFINED_TERM_WARNING);
+            if (start < 0) {
+                continue;
+            }
+            String list = m.substring(start + UNDEFINED_TERM_WARNING.length());
+            // ". "로 자르면 "SELECT ... FOR UPDATE" 같은 용어 이름 안에서 잘린다
+            int end = list.indexOf(". 그 자리에서");
+            list = (end < 0 ? list : list.substring(0, end)).replaceAll(" 외 \\d+개$", "");
+            for (String t : list.split(", ")) {
+                if (!t.isBlank()) {
+                    terms.add(t.trim());
+                }
+            }
+        }
+        return terms;
+    }
+
+    /**
+     * 규칙은 용어 이름만 내고 문장을 인용하지 않는다. 그래서 인용 대조 대신
+     * "규칙이 든 용어가 목표 문장에 들어 있나"로 짝짓는다.
+     */
+    static SampleScore ruleScore(Sample sample, List<DraftCheck> checks) {
+        List<Target> targets = targetsOf(sample);
+        Map<String, FactCheckFinding> caught = new LinkedHashMap<>();
+        List<FactCheckFinding> falseAlarms = new ArrayList<>();
+        for (String term : undefinedTermsIn(checks)) {
+            FactCheckFinding f = new FactCheckFinding(term, FactCheckFinding.Kind.UNDEFINED_TERM,
+                    "규칙이 정의 없는 용어로 짚음", "", FactCheckFinding.Confidence.HIGH);
+            Target hit = targets.stream()
+                    .filter(t -> t.kind() == FactCheckFinding.Kind.UNDEFINED_TERM)
+                    .filter(t -> t.keys().stream().anyMatch(k -> ClaudeDocumentFactChecker.normalize(k).contains(term)))
+                    .findFirst().orElse(null);
+            if (hit != null) {
+                caught.putIfAbsent(hit.id(), f);
+            } else {
+                falseAlarms.add(f);
+            }
+        }
+        List<Target> missed = targets.stream().filter(t -> !caught.containsKey(t.id())).toList();
+        return new SampleScore(sample.id(), targets, caught, missed, falseAlarms, List.of());
     }
 
     /* ── 보고서 ──────────────────────────────────────────────── */

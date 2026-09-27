@@ -119,6 +119,32 @@ class ReviewEvalCliTest {
         assertThat(ReviewEvalCli.renderCost("claude-opus-5", 1_000_000, 100_000, 10)).contains("검색 10회", "$7.60");
     }
 
+    /* ── 기존 규칙과 견주기 ── */
+
+    @Test
+    @DisplayName("규칙 경고에서 용어 이름을 뽑고, '외 N개' 꼬리는 버린다")
+    void parsesUndefinedTermsFromRuleWarning() {
+        var checks = List.of(project.study.study_project.llm.support.DraftCheck.warning(
+                "정의 없이 쓰인 용어가 있습니다: SELECT ... FOR UPDATE, 낙관적 잠금 외 2개. 그 자리에서 풀거나 표에 올리세요."));
+
+        assertThat(ReviewEvalCli.undefinedTermsIn(checks)).containsExactly("SELECT ... FOR UPDATE", "낙관적 잠금");
+    }
+
+    @Test
+    @DisplayName("규칙이 든 용어가 목표 문장에 있으면 적발, 없으면 헛경보 후보다")
+    void scoresRuleTerms() {
+        Sample sample = new Sample("s", "doc.json", "BEGINNER",
+                List.of(new Planted("p", Kind.UNDEFINED_TERM, null, "원래", "원래 낙관적 잠금을 쓴다.", null)),
+                List.of());
+        var checks = List.of(project.study.study_project.llm.support.DraftCheck.warning(
+                "정의 없이 쓰인 용어가 있습니다: 낙관적 잠금, 비관적 잠금. 그 자리에서 풀거나 표에 올리세요."));
+
+        SampleScore score = ReviewEvalCli.ruleScore(sample, checks);
+
+        assertThat(score.caught()).containsOnlyKeys("p");
+        assertThat(score.falseAlarms()).extracting(FactCheckFinding::quote).containsExactly("비관적 잠금");
+    }
+
     /* ── 실제 표본 파일 ── */
 
     @Test
