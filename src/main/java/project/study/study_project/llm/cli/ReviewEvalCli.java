@@ -3,7 +3,6 @@ package project.study.study_project.llm.cli;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
-import project.study.study_project.llm.client.DocumentFactChecker;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
@@ -79,7 +78,7 @@ public final class ReviewEvalCli {
         }
 
         System.out.printf("사실 검수 적발률 측정: 모델 %s, 표본 %d편%n", model, prepared.size());
-        DocumentFactChecker checker = new ClaudeDocumentFactChecker(model);
+        ClaudeDocumentFactChecker checker = new ClaudeDocumentFactChecker(model);
         List<SampleScore> scores = new ArrayList<>();
         for (Prepared p : prepared) {
             System.out.printf("  %s 검수 중...%n", p.sample().id());
@@ -87,7 +86,7 @@ public final class ReviewEvalCli {
             scores.add(score(p.sample(), findings));
         }
 
-        String report = render(scores, model);
+        String report = render(scores, model) + "\n" + renderCost(model, checker.inputTokens(), checker.outputTokens());
         System.out.println();
         System.out.println(report);
         Path reportFile = writeReport(report, opts);
@@ -153,10 +152,10 @@ public final class ReviewEvalCli {
             if (p.alsoAccept() != null) {
                 keys.addAll(p.alsoAccept());
             }
-            targets.add(new Target(p.id(), p.kind(), true, keys));
+            targets.add(new Target(p.id(), p.kind(), true, p.level() == null ? "normal" : p.level(), keys));
         }
         for (Known k : sample.knownOrEmpty()) {
-            targets.add(new Target(k.id(), k.kind(), false, k.quotes()));
+            targets.add(new Target(k.id(), k.kind(), false, "original", k.quotes()));
         }
         return targets;
     }
@@ -214,6 +213,25 @@ public final class ReviewEvalCli {
         sb.append("| 적발률 (심은 오류만) | %d/%d |  |\n".formatted(plantedCaught, planted));
         sb.append("| 헛경보 | %d건, 문서당 %.1f | %.0f 이하 |\n".formatted(falseAlarms, perDoc, MAX_FALSE_ALARMS_PER_DOC));
         sb.append("| 판정 | ").append(pass ? "통과" : "미달").append(" |  |\n\n");
+
+        // 티 나는 오류만 잘 잡는 검수기는 쓸모가 없다. 난이도별로 따로 봐야 그게 드러난다
+        sb.append("| 오류 난이도 | 적발 |\n|---|---|\n");
+        for (String level : List.of("obvious", "normal", "subtle", "original")) {
+            int total = 0;
+            int hit = 0;
+            for (SampleScore s : scores) {
+                for (Target t : s.targets()) {
+                    if (t.level().equals(level)) {
+                        total++;
+                        hit += s.caught().containsKey(t.id()) ? 1 : 0;
+                    }
+                }
+            }
+            if (total > 0) {
+                sb.append("| %s | %d/%d |\n".formatted(level, hit, total));
+            }
+        }
+        sb.append("\n");
         sb.append("헛경보에는 원문에 원래 있던 오류가 섞여 있을 수 있다. 목록을 읽고 진짜 오류면 표본의 known에 올린다.\n");
 
         for (SampleScore s : scores) {
@@ -233,6 +251,24 @@ public final class ReviewEvalCli {
             }
         }
         return sb.toString();
+    }
+
+    /**
+     * 100만 토큰당 달러 단가(2026-06 기준). 사고 토큰은 출력 단가로 나간다.
+     * 표에 없는 모델은 토큰 수만 적는다. 틀린 단가로 계산한 금액이 더 위험하다.
+     */
+    private static final Map<String, double[]> PRICE_PER_MTOK = Map.of(
+            "claude-opus-5", new double[]{5.0, 25.0},
+            "claude-sonnet-5", new double[]{2.0, 10.0});
+
+    static String renderCost(String model, long inputTokens, long outputTokens) {
+        String tokens = "입력 %,d / 출력 %,d 토큰(사고 포함)".formatted(inputTokens, outputTokens);
+        double[] price = PRICE_PER_MTOK.get(model);
+        if (price == null) {
+            return "비용: " + tokens + ", 단가표에 없는 모델이라 금액은 계산하지 않음\n";
+        }
+        double usd = inputTokens / 1e6 * price[0] + outputTokens / 1e6 * price[1];
+        return "비용: %s ≈ $%.2f\n".formatted(tokens, usd);
     }
 
     /* ── 입출력 ──────────────────────────────────────────────── */
@@ -282,13 +318,15 @@ public final class ReviewEvalCli {
         }
     }
 
-    record Planted(String id, FactCheckFinding.Kind kind, String find, String replace, List<String> alsoAccept) {
+    /** level: obvious(티 나는) / normal / subtle(그럴듯하게 틀린). 생략하면 normal. */
+    record Planted(String id, FactCheckFinding.Kind kind, String level, String find, String replace,
+                   List<String> alsoAccept) {
     }
 
     record Known(String id, FactCheckFinding.Kind kind, String note, List<String> quotes) {
     }
 
-    record Target(String id, FactCheckFinding.Kind kind, boolean planted, List<String> keys) {
+    record Target(String id, FactCheckFinding.Kind kind, boolean planted, String level, List<String> keys) {
     }
 
     record Prepared(Sample sample, String title, String contentMd) {

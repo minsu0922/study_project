@@ -32,7 +32,7 @@ class ReviewEvalCliTest {
     }
 
     private static Planted planted(String id, String find, String replace, List<String> alsoAccept) {
-        return new Planted(id, Kind.FACT_ERROR, find, replace, alsoAccept);
+        return new Planted(id, Kind.FACT_ERROR, null, find, replace, alsoAccept);
     }
 
     /* ── 오류 심기 ── */
@@ -109,6 +109,13 @@ class ReviewEvalCliTest {
                 List.of(finding("for (int i = 0; i < 100_000; i++) {")));
 
         assertThat(score.caught()).containsOnlyKeys("p");
+    }
+
+    @Test
+    @DisplayName("비용은 입력·출력(사고 포함) 단가로 계산하고, 단가를 모르는 모델은 금액을 적지 않는다")
+    void rendersCost() {
+        assertThat(ReviewEvalCli.renderCost("claude-opus-5", 1_000_000, 100_000)).contains("$7.50");
+        assertThat(ReviewEvalCli.renderCost("unknown-model", 10, 10)).doesNotContain("$");
     }
 
     /* ── 실제 표본 파일 ── */

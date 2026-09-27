@@ -62,8 +62,20 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
 
     private final String model;
 
+    /** 이 인스턴스가 쓴 토큰 누계. 사고 토큰은 출력 쪽에 들어간다. */
+    private long inputTokens;
+    private long outputTokens;
+
     public ClaudeDocumentFactChecker(String model) {
         this.model = model;
+    }
+
+    public long inputTokens() {
+        return inputTokens;
+    }
+
+    public long outputTokens() {
+        return outputTokens;
     }
 
     @Override
@@ -80,7 +92,10 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
 
         List<FactCheckFinding> raw;
         try {
-            raw = AnthropicClientHolder.get().messages().create(params).content().stream()
+            var response = AnthropicClientHolder.get().messages().create(params);
+            inputTokens += response.usage().inputTokens();
+            outputTokens += response.usage().outputTokens();
+            raw = response.content().stream()
                     .flatMap(block -> block.text().stream())
                     .findFirst()
                     .map(typed -> typed.text().findings())
