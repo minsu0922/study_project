@@ -1901,4 +1901,43 @@ class DraftGeneratorCliTest {
         java.nio.file.Files.writeString(dir.resolve(fileName),
                 new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(batch));
     }
+
+    /* ── 사실 검수 보고 (docs/22 §3.1) ── */
+
+    private static final project.study.study_project.llm.client.GeneratedDocumentItem FACT_DOC =
+            new project.study.study_project.llm.client.GeneratedDocumentItem(
+                    "제목", "slug", "# 제목\n\n적재가 끝날 때까지 접속이 되지 않는다.", List.of("redis"));
+
+    @Test
+    @DisplayName("사실 검수 지적은 인용·이유·바로잡을 내용을 요약 화면에 적는다")
+    void rendersFactCheckFindings() {
+        var finding = new project.study.study_project.llm.client.FactCheckFinding(
+                "적재가 끝날 때까지 접속이 되지 않는다.",
+                project.study.study_project.llm.client.FactCheckFinding.Kind.FACT_ERROR,
+                "적재 중에도 접속은 된다", "명령에 LOADING 에러를 돌려준다",
+                project.study.study_project.llm.client.FactCheckFinding.Confidence.HIGH);
+
+        String rendered = DraftGeneratorCli.reportFactCheck((t, c) -> List.of(finding), FACT_DOC,
+                LocalDate.of(2026, 9, 27));
+
+        assertThat(rendered).contains("사실 검수: 1건", "[사실 오류·확신]",
+                "\"적재가 끝날 때까지 접속이 되지 않는다.\"", "명령에 LOADING 에러를 돌려준다");
+    }
+
+    @Test
+    @DisplayName("지적이 없으면 한 줄만 남긴다")
+    void rendersNoFindings() {
+        assertThat(DraftGeneratorCli.reportFactCheck((t, c) -> List.of(), FACT_DOC, LocalDate.of(2026, 9, 27)))
+                .contains("지적 없음");
+    }
+
+    @Test
+    @DisplayName("검수가 실패해도 예외를 밖으로 던지지 않는다 — 문서는 이미 저장됐다")
+    void factCheckFailureDoesNotKillJob() {
+        String rendered = DraftGeneratorCli.reportFactCheck((t, c) -> {
+            throw new IllegalStateException("API 오류 100%");
+        }, FACT_DOC, LocalDate.of(2026, 9, 27));
+
+        assertThat(rendered).contains("사실 검수 실패", "API 오류 100%");
+    }
 }

@@ -5,8 +5,11 @@ import org.yaml.snakeyaml.Yaml;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
+import project.study.study_project.llm.client.DocumentFactChecker;
+import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.RejectionNote;
@@ -632,6 +635,40 @@ public final class DraftGeneratorCli {
     }
 
     /**
+     * 사실 검수를 돌려 지적을 요약 화면에 남긴다. 실패해도 job을 죽이지 않는다.
+     * 검수는 덧붙이는 단계라, 여기서 죽으면 이미 요금을 낸 문서까지 커밋되지 않는다.
+     *
+     * @return 요약 화면에 쓴 글(테스트용)
+     */
+    static String reportFactCheck(DocumentFactChecker checker, GeneratedDocumentItem document, LocalDate date) {
+        String edition = ClaudeDocumentGenerator.editionOf(document.contentMd()).getDisplayName();
+        String rendered;
+        try {
+            rendered = renderFactCheck(date, edition, checker.check(document.title(), document.contentMd()));
+        } catch (RuntimeException e) {
+            rendered = "⚠️ **%s %s 사실 검수 실패** — 문서는 저장했습니다. 승인 전에 사람이 읽어 주세요 (%s)%n"
+                    .formatted(date, edition, e.getMessage());
+        }
+        System.out.println(rendered);
+        appendToStepSummary(rendered);
+        return rendered;
+    }
+
+    static String renderFactCheck(LocalDate date, String edition, List<FactCheckFinding> findings) {
+        if (findings.isEmpty()) {
+            return "🔎 %s %s 사실 검수: 지적 없음%n".formatted(date, edition);
+        }
+        String lines = findings.stream()
+                .map(f -> "- [%s·%s] \"%s\"%n  - 이유: %s%n  - 바로잡으면: %s".formatted(
+                        f.kind() == FactCheckFinding.Kind.INTERNAL_MISMATCH ? "문서 안 불일치" : "사실 오류",
+                        f.confidence() == FactCheckFinding.Confidence.HIGH ? "확신" : "의심",
+                        f.quote(), f.reason(), f.correction()))
+                .collect(java.util.stream.Collectors.joining("\n"));
+        return "🔎 **%s %s 사실 검수: %d건** — 승인 전에 확인하세요. AI 지적이라 틀릴 수 있습니다%n%s%n"
+                .formatted(date, edition, findings.size(), lines);
+    }
+
+    /**
      * 찾아낸 근거 문서와 <b>그 문서가 속한 분야</b>.
      *
      * <p>분야를 따로 들고 다니는 이유: 주기가 계산한 분야와 실제 문서의 분야가 어긋날 수 있고,
@@ -753,6 +790,13 @@ public final class DraftGeneratorCli {
         reportDraftChecks(document, date);
         if (advanced != null) {
             reportDraftChecks(advanced, date);
+        }
+
+        // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다
+        DocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
+        reportFactCheck(factChecker, document, date);
+        if (advanced != null) {
+            reportFactCheck(factChecker, advanced, date);
         }
 
         // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
