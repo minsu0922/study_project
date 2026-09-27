@@ -18,7 +18,8 @@ public record FactCheckFinding(
         String quote,
 
         @JsonPropertyDescription("FACT_ERROR=사실과 다른 주장, "
-                + "INTERNAL_MISMATCH=같은 문서의 다른 곳과 수치·설명이 어긋남")
+                + "INTERNAL_MISMATCH=같은 문서의 다른 곳과 수치·설명이 어긋남, "
+                + "UNDEFINED_TERM=처음 나온 곳에서 뜻을 풀지 않은 용어(입문편만)")
         Kind kind,
 
         @JsonPropertyDescription("왜 틀렸는지. INTERNAL_MISMATCH면 어긋나는 상대 문장도 함께 적는다")
@@ -31,7 +32,7 @@ public record FactCheckFinding(
         Confidence confidence
 ) {
 
-    public enum Kind { FACT_ERROR, INTERNAL_MISMATCH }
+    public enum Kind { FACT_ERROR, INTERNAL_MISMATCH, UNDEFINED_TERM }
 
     public enum Confidence { HIGH, LOW }
 

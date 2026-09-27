@@ -1917,7 +1917,7 @@ class DraftGeneratorCliTest {
                 "적재 중에도 접속은 된다", "명령에 LOADING 에러를 돌려준다",
                 project.study.study_project.llm.client.FactCheckFinding.Confidence.HIGH);
 
-        String rendered = DraftGeneratorCli.reportFactCheck((t, c) -> List.of(finding), FACT_DOC,
+        String rendered = DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(finding), FACT_DOC,
                 LocalDate.of(2026, 9, 27));
 
         assertThat(rendered).contains("사실 검수: 1건", "[사실 오류·확신]",
@@ -1925,16 +1925,35 @@ class DraftGeneratorCliTest {
     }
 
     @Test
+    @DisplayName("정의 없는 용어 지적은 따로 라벨을 붙이고, 검수기에 편을 넘긴다")
+    void rendersUndefinedTermAndPassesEdition() {
+        var finding = new project.study.study_project.llm.client.FactCheckFinding(
+                "적재가 끝날 때까지 접속이 되지 않는다.",
+                project.study.study_project.llm.client.FactCheckFinding.Kind.UNDEFINED_TERM,
+                "'적재'를 풀지 않았다", "적재: 파일 내용을 메모리로 읽어 들이는 일",
+                project.study.study_project.llm.client.FactCheckFinding.Confidence.LOW);
+        List<project.study.study_project.llm.client.DocumentEdition> seen = new ArrayList<>();
+
+        String rendered = DraftGeneratorCli.reportFactCheck((t, c, e) -> {
+            seen.add(e);
+            return List.of(finding);
+        }, FACT_DOC, LocalDate.of(2026, 9, 27));
+
+        assertThat(rendered).contains("[정의 없는 용어·의심]");
+        assertThat(seen).containsExactly(project.study.study_project.llm.client.DocumentEdition.BEGINNER);
+    }
+
+    @Test
     @DisplayName("지적이 없으면 한 줄만 남긴다")
     void rendersNoFindings() {
-        assertThat(DraftGeneratorCli.reportFactCheck((t, c) -> List.of(), FACT_DOC, LocalDate.of(2026, 9, 27)))
+        assertThat(DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(), FACT_DOC, LocalDate.of(2026, 9, 27)))
                 .contains("지적 없음");
     }
 
     @Test
     @DisplayName("검수가 실패해도 예외를 밖으로 던지지 않는다 — 문서는 이미 저장됐다")
     void factCheckFailureDoesNotKillJob() {
-        String rendered = DraftGeneratorCli.reportFactCheck((t, c) -> {
+        String rendered = DraftGeneratorCli.reportFactCheck((t, c, e) -> {
             throw new IllegalStateException("API 오류 100%");
         }, FACT_DOC, LocalDate.of(2026, 9, 27));
 

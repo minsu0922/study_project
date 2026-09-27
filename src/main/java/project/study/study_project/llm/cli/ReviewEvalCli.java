@@ -3,6 +3,7 @@ package project.study.study_project.llm.cli;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
+import project.study.study_project.llm.client.DocumentEdition;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
@@ -82,7 +83,8 @@ public final class ReviewEvalCli {
         List<SampleScore> scores = new ArrayList<>();
         for (Prepared p : prepared) {
             System.out.printf("  %s 검수 중...%n", p.sample().id());
-            List<FactCheckFinding> findings = checker.check(p.title(), p.contentMd());
+            List<FactCheckFinding> findings = checker.check(p.title(), p.contentMd(),
+                    "ADVANCED".equals(p.sample().edition()) ? DocumentEdition.ADVANCED : DocumentEdition.BEGINNER);
             scores.add(score(p.sample(), findings));
         }
 

@@ -73,6 +73,14 @@
           "quotes": [
             "네 가지를 구분해 두면 뒤가 편하다."
           ]
+        },
+        {
+          "id": "undefined-connection-pool",
+          "kind": "UNDEFINED_TERM",
+          "note": "문서에 한 번만 나오고 뜻풀이가 없다. 2026-09-27 측정에서 검수기가 찾았다",
+          "quotes": [
+            "같은 커넥션 풀과 같은 캐시를 보게 하려고"
+          ]
         }
       ]
     },
@@ -105,6 +113,16 @@
           "level": "subtle",
           "find": "// 생성자가 하나뿐이면 @Autowired를 붙이지 않아도 컨테이너가 이 생성자를 쓴다",
           "replace": "// 생성자가 여럿이어도 @Autowired를 붙이지 않으면 컨테이너가 인자가 가장 많은 생성자를 쓴다"
+        },
+        {
+          "id": "undefined-cglib",
+          "kind": "UNDEFINED_TERM",
+          "level": "normal",
+          "find": "요청을 코드에 표시하는 표기가 **`@Autowired`** 다.",
+          "replace": "요청을 코드에 표시하는 표기가 **`@Autowired`** 다. 이 연결은 CGLIB 프록시를 거치지 않는다.",
+          "alsoAccept": [
+            "이 연결은 CGLIB 프록시를 거치지 않는다."
+          ]
         }
       ],
       "known": []
@@ -168,9 +186,28 @@
           "level": "subtle",
           "find": "반복 마이그레이션은 체크섬이 달라질 때마다 다시 실행된다.",
           "replace": "반복 마이그레이션은 체크섬과 상관없이 migrate를 실행할 때마다 다시 실행된다."
+        },
+        {
+          "id": "undefined-blue-green",
+          "kind": "UNDEFINED_TERM",
+          "level": "normal",
+          "find": "새 서버를 세울 때는 1번 파일부터 마지막 파일까지 차례로 실행하면 같은 스키마가 만들어진다.",
+          "replace": "새 서버를 세울 때는 1번 파일부터 마지막 파일까지 차례로 실행하면 같은 스키마가 만들어진다. 운영에서는 이 작업을 블루그린 배포 전에 끝내 둔다.",
+          "alsoAccept": [
+            "운영에서는 이 작업을 블루그린 배포 전에 끝내 둔다."
+          ]
         }
       ],
-      "known": []
+      "known": [
+        {
+          "id": "undefined-view-procedure",
+          "kind": "UNDEFINED_TERM",
+          "note": "뷰·저장 프로시저가 처음 나온 곳에서 풀리지 않는다. 2026-09-27 측정에서 검수기가 찾았다",
+          "quotes": [
+            "뷰·저장 프로시저처럼"
+          ]
+        }
+      ]
     },
     {
       "id": "redis-persistence",
@@ -197,6 +234,16 @@
           "level": "subtle",
           "find": "1. 추가 전용 로그가 켜져 있으면 로그 파일을 읽는다. 로그가 더 최근 상태를 담고 있기 때문이다.",
           "replace": "1. 두 파일이 모두 있으면 스냅샷 파일을 먼저 읽는다. 스냅샷이 적재가 더 빠르기 때문이다."
+        },
+        {
+          "id": "undefined-thp",
+          "kind": "UNDEFINED_TERM",
+          "level": "normal",
+          "find": "fork는 메모리를 실제로 복사하지 않고 넘기므로 호출 자체가 짧게 끝난다.",
+          "replace": "fork는 메모리를 실제로 복사하지 않고 넘기므로 호출 자체가 짧게 끝난다. 다만 THP가 켜져 있으면 이 비용이 커진다.",
+          "alsoAccept": [
+            "다만 THP가 켜져 있으면 이 비용이 커진다."
+          ]
         }
       ],
       "known": [

@@ -33,7 +33,7 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
             문서에 틀린 주장이 하나 있으면, 그 주장을 정답으로 외우는 학습자가 생긴다.
             너의 일은 이 글을 믿지 않고 읽으며 틀린 곳을 찾아내는 것이다.
 
-            [찾을 것 — 이 두 가지만]
+            [찾을 것 — 여기 적힌 항목만]
             1. FACT_ERROR: 사실과 다른 주장.
                기술의 동작, 기본값, 명령·옵션의 의미, 에러 이름, 표준의 내용이 실제와 다른 곳.
                코드 블록의 주석과 출력 예시도 본문과 똑같이 검사한다.
@@ -60,6 +60,29 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
               잘못된 지적은 검수자가 경고를 안 읽게 만든다.
             """;
 
+    /**
+     * 입문편에만 붙인다. 심화편은 입문편에서 푼 용어를 다시 풀지 않게 쓰므로,
+     * 심화편 하나만 보고 이 항목을 돌리면 입문편 용어가 전부 헛경보로 나온다.
+     */
+    static final String UNDEFINED_TERM_RULE = """
+
+            [찾을 것 — 입문편 추가 항목]
+            3. UNDEFINED_TERM: 처음 나온 곳에서 뜻을 풀지 않은 전문 용어.
+               이 글의 독자는 주제를 오늘 처음 본다. 뜻을 모르는 말이 하나 나오면 거기서 글을 덮는다.
+               quote에는 그 용어가 처음 나온 문장을 옮기고, reason에 어느 용어인지 적는다.
+               correction에는 그 자리에 넣을 한 줄 뜻풀이를 쓴다.
+               다음은 지적하지 않는다.
+               - 같은 문장이나 바로 다음 문장에서 뜻을 푼 용어
+               - 앞에서 이미 뜻을 푼 용어
+               - 개발을 모르는 사람도 아는 일상어
+               - 코드 블록 안의 식별자, 명령어, 설정 이름
+               같은 용어는 처음 나온 곳 한 번만 적는다.
+            """;
+
+    static String systemPromptFor(DocumentEdition edition) {
+        return edition == DocumentEdition.ADVANCED ? SYSTEM_PROMPT : SYSTEM_PROMPT + UNDEFINED_TERM_RULE;
+    }
+
     private final String model;
 
     /** 이 인스턴스가 쓴 토큰 누계. 사고 토큰은 출력 쪽에 들어간다. */
@@ -79,13 +102,13 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
     }
 
     @Override
-    public List<FactCheckFinding> check(String title, String contentMd) {
+    public List<FactCheckFinding> check(String title, String contentMd, DocumentEdition edition) {
         StructuredMessageCreateParams<FactCheckFinding.Result> params = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(MAX_TOKENS)
                 // 사실 대조는 "이 동작이 정말 그런가"를 따져 봐야 하는 일이라 사고를 켠다
                 .thinking(ThinkingConfigAdaptive.builder().build())
-                .system(SYSTEM_PROMPT)
+                .system(systemPromptFor(edition))
                 .outputConfig(FactCheckFinding.Result.class)
                 .addUserMessage(buildPrompt(title, contentMd))
                 .build();

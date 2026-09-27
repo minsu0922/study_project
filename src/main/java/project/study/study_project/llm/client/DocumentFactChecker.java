@@ -7,6 +7,10 @@ import java.util.List;
  */
 public interface DocumentFactChecker {
 
-    /** 원문 인용이 확인된 지적만 돌려준다. */
-    List<FactCheckFinding> check(String title, String contentMd);
+    /**
+     * 원문 인용이 확인된 지적만 돌려준다.
+     *
+     * @param edition 정의 없는 용어는 입문편에서만 본다. 심화편은 입문편에서 푼 용어를 다시 풀지 않는다
+     */
+    List<FactCheckFinding> check(String title, String contentMd, DocumentEdition edition);
 }

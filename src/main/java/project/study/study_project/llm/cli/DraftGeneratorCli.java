@@ -641,10 +641,12 @@ public final class DraftGeneratorCli {
      * @return 요약 화면에 쓴 글(테스트용)
      */
     static String reportFactCheck(DocumentFactChecker checker, GeneratedDocumentItem document, LocalDate date) {
-        String edition = ClaudeDocumentGenerator.editionOf(document.contentMd()).getDisplayName();
+        var documentEdition = ClaudeDocumentGenerator.editionOf(document.contentMd());
+        String edition = documentEdition.getDisplayName();
         String rendered;
         try {
-            rendered = renderFactCheck(date, edition, checker.check(document.title(), document.contentMd()));
+            rendered = renderFactCheck(date, edition,
+                    checker.check(document.title(), document.contentMd(), documentEdition));
         } catch (RuntimeException e) {
             rendered = "⚠️ **%s %s 사실 검수 실패** — 문서는 저장했습니다. 승인 전에 사람이 읽어 주세요 (%s)%n"
                     .formatted(date, edition, e.getMessage());
@@ -660,7 +662,11 @@ public final class DraftGeneratorCli {
         }
         String lines = findings.stream()
                 .map(f -> "- [%s·%s] \"%s\"%n  - 이유: %s%n  - 바로잡으면: %s".formatted(
-                        f.kind() == FactCheckFinding.Kind.INTERNAL_MISMATCH ? "문서 안 불일치" : "사실 오류",
+                        switch (f.kind()) {
+                            case INTERNAL_MISMATCH -> "문서 안 불일치";
+                            case UNDEFINED_TERM -> "정의 없는 용어";
+                            case FACT_ERROR -> "사실 오류";
+                        },
                         f.confidence() == FactCheckFinding.Confidence.HIGH ? "확신" : "의심",
                         f.quote(), f.reason(), f.correction()))
                 .collect(java.util.stream.Collectors.joining("\n"));
