@@ -250,6 +250,12 @@ tasks.register('evalReview', JavaExec) {
     mainClass = 'project.study.study_project.llm.cli.ReviewEvalCli'
     classpath = sourceSets.main.runtimeClasspath
 
+    // 키 주입은 draft 생성 태스크와 같은 규칙이다(Gradle 속성 우선, 없으면 환경변수)
+    String reviewApiKey = project.findProperty('anthropicApiKey') ?: System.getenv('ANTHROPIC_API_KEY')
+    if (reviewApiKey) {
+        environment 'ANTHROPIC_API_KEY', reviewApiKey
+    }
+
     if (project.hasProperty('evalArgs')) {
         String raw = project.property('evalArgs').toString().trim()
         if (!raw.isEmpty()) {
