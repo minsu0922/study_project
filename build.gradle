@@ -241,6 +241,25 @@ tasks.register('evalPrompt', JavaExec) {
     }
 }
 
+// 문제 검수 적발률 측정(docs/22 §4) — 승인된 문제에 오류를 심어 검수기를 채점한다. 묶음 3개면 API 6회다.
+tasks.register('evalProblemReview', JavaExec) {
+    group = 'llm'
+    description = '오류를 심은 객관식 문제로 문제 검수기의 적발률·헛경보를 재고 eval/에 보고서를 남긴다'
+    mainClass = 'project.study.study_project.llm.cli.ProblemReviewEvalCli'
+    classpath = sourceSets.main.runtimeClasspath
+
+    String problemReviewApiKey = project.findProperty('anthropicApiKey') ?: System.getenv('ANTHROPIC_API_KEY')
+    if (problemReviewApiKey) {
+        environment 'ANTHROPIC_API_KEY', problemReviewApiKey
+    }
+    if (project.hasProperty('evalArgs')) {
+        String raw = project.property('evalArgs').toString().trim()
+        if (!raw.isEmpty()) {
+            args raw.split(/\s+/)
+        }
+    }
+}
+
 // 사실 검수 적발률 측정(docs/22 §4) — 오류를 심은 표본으로 검수기를 채점한다.
 //   .\gradlew.bat evalReview -PevalArgs="--label=opus"
 // evalPrompt와 같은 이유로 check/build에 엮지 않는다. 표본 5편이면 API 5회다.

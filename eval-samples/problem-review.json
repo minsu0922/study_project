@@ -1,0 +1,176 @@
+{
+  "note": "문제 검수 적발률 표본(docs/22 §4). 승인된 문제에 mutations로 오류를 심고 expect에 적은 종류의 지적이 나오는지 본다. expect가 없는 문제는 헛경보를 세는 대조군이다. moveAnswerTo·choice는 0부터 센다.",
+  "groups": [
+    {
+      "id": "flyway-beginner",
+      "document": "generated/documents/2026-09-15.json",
+      "edition": "BEGINNER",
+      "difficulty": "BEGINNER",
+      "problems": [
+        {
+          "batch": "generated/2026-09-16.json",
+          "index": 0,
+          "note": "오답 하나를 정답과 같은 뜻으로 바꿈",
+          "mutations": [
+            {
+              "choice": 1,
+              "text": "데이터베이스 구조 — 어떤 표가 있고 각 표에 어떤 칸이 있는지를 통틀어 가리킨다"
+            }
+          ],
+          "expect": [
+            "OTHER_CORRECT",
+            "ANSWER_MISMATCH",
+            "QUESTION_REVEALS"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-16.json",
+          "index": 1
+        },
+        {
+          "batch": "generated/2026-09-16.json",
+          "index": 2
+        },
+        {
+          "batch": "generated/2026-09-16.json",
+          "index": 3,
+          "note": "정답 보기만 길게 늘임",
+          "mutations": [
+            {
+              "choice": 0,
+              "text": "관리 대상 데이터베이스 안에 만들어지며, 어떤 스크립트를 언제 실행해 성공했는지가 한 줄씩 적히고, 체크섬과 실행 시간까지 함께 남아 다음 실행 때 무엇을 건너뛸지 정하는 근거가 된다"
+            }
+          ],
+          "expect": [
+            "CHOICE_CUE_LEAK"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-16.json",
+          "index": 4
+        },
+        {
+          "batch": "generated/2026-09-16.json",
+          "index": 5,
+          "note": "정답 표시를 오답으로 옮김",
+          "mutations": [
+            {
+              "moveAnswerTo": 2
+            }
+          ],
+          "expect": [
+            "ANSWER_MISMATCH"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-16.json",
+          "index": 6
+        }
+      ]
+    },
+    {
+      "id": "session-beginner",
+      "document": "generated/documents/2026-09-19.json",
+      "edition": "BEGINNER",
+      "difficulty": "BEGINNER",
+      "problems": [
+        {
+          "batch": "generated/2026-09-20.json",
+          "index": 0,
+          "note": "정답 표시를 오답으로 옮김",
+          "mutations": [
+            {
+              "moveAnswerTo": 3
+            }
+          ],
+          "expect": [
+            "ANSWER_MISMATCH"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-20.json",
+          "index": 1,
+          "note": "원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음",
+          "expect": [
+            "CHOICE_CUE_LEAK"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-20.json",
+          "index": 2
+        },
+        {
+          "batch": "generated/2026-09-20.json",
+          "index": 3,
+          "note": "원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음",
+          "expect": [
+            "CHOICE_CUE_LEAK"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-20.json",
+          "index": 4,
+          "note": "원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음",
+          "expect": [
+            "CHOICE_CUE_LEAK"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-20.json",
+          "index": 5,
+          "note": "정답 보기가 질문 문장을 되받게 바꿈",
+          "mutations": [
+            {
+              "choice": 0,
+              "text": "헤더 — 요청 한 통을 이루는 네 부분 가운데 쿠키와 토큰이 실려 가는 칸이다"
+            }
+          ],
+          "expect": [
+            "QUESTION_REVEALS",
+            "CHOICE_CUE_LEAK"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-20.json",
+          "index": 6
+        }
+      ]
+    },
+    {
+      "id": "xss-labeled-intermediate",
+      "document": "generated/documents/2026-09-08.json",
+      "edition": "BEGINNER",
+      "difficulty": "INTERMEDIATE",
+      "problems": [
+        {
+          "batch": "generated/2026-09-22.json",
+          "index": 2
+        },
+        {
+          "batch": "generated/2026-09-22.json",
+          "index": 3,
+          "note": "원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음",
+          "expect": [
+            "CHOICE_CUE_LEAK"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-23.json",
+          "index": 2,
+          "note": "고급 문제를 중급 묶음에 섞음",
+          "expect": [
+            "DIFFICULTY_MISMATCH"
+          ]
+        },
+        {
+          "batch": "generated/2026-09-23.json",
+          "index": 3,
+          "note": "고급 문제를 중급 묶음에 섞음",
+          "expect": [
+            "DIFFICULTY_MISMATCH"
+          ]
+        }
+      ]
+    }
+  ]
+}
