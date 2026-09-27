@@ -1,0 +1,215 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-09-28",
+  "generatedAt" : "2026-09-27T23:51:03.657736814Z",
+  "domain" : "CLOUD_INFRA",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5",
+  "documentSlug" : "redis-persistence-rdb-aof",
+  "problems" : [ {
+    "question" : "Redis처럼 데이터의 본체를 디스크가 아닌 메모리에 두고 응답하는 저장소를 부르는 용어와 그 뜻으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "데이터의 본체를 디스크가 아니라 메모리에 두고 읽기와 쓰기를 메모리에서 끝내는 저장소를 인메모리 데이터 저장소라 하며, Redis가 대표적인 예다. 디스크를 거치지 않으므로 응답이 빠른 대신 메모리의 휘발성이 그대로 따라온다. (이 글의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "인메모리 데이터 저장소 — 데이터의 본체를 메모리에 두고 읽기와 쓰기를 메모리에서 끝낸다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "OS 페이지 캐시 — 파일에 쓸 내용을 운영체제가 메모리에 모아 두었다가 나중에 내려보낸다",
+      "correct" : false,
+      "rationale" : "OS 페이지 캐시는 파일에 쓸 내용을 운영체제가 잠시 모아 두는 공간이지, 데이터 본체를 보관하는 저장소가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "영속성 — 저장했다고 응답한 데이터가 장애 뒤에도 남아 있는 성질이다",
+      "correct" : false,
+      "rationale" : "영속성은 저장했다고 응답한 데이터가 장애 뒤에도 남는 성질을 가리키는 말이지 저장소의 종류가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "휘발성 — 전원이 끊기면 담고 있던 내용이 사라지는 성질이다",
+      "correct" : false,
+      "rationale" : "휘발성은 전원이 끊기면 내용이 사라지는 성질을 말하며, 데이터를 어디에 두는 저장소인지를 가리키지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**인메모리 데이터 저장소(in-memory data store)** — 데이터의 본체를 디스크가 아니라 메모리에 두고, 읽기와 쓰기를 메모리에서 끝내는 저장소다. Redis가 대표적이다.",
+    "title" : "본체를 메모리에 두는 저장소의 명칭",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "파일에 쓴 내용이 OS 페이지 캐시에 머물러 있을 때, 그것을 지금 당장 디스크까지 내려보내라고 운영체제에 요청하는 시스템 호출의 이름은?",
+    "answer" : "",
+    "explanation" : "프로그램이 파일에 쓴 내용은 일단 OS 페이지 캐시에 머문다. 이 캐시에 남은 내용을 지금 당장 디스크까지 내려보내라고 운영체제에 요청하는 시스템 호출이 fsync다. 전원이 나갔을 때 살아남는 것은 디스크에 닿은 내용뿐이므로, 유실 구간의 길이는 이 호출의 주기가 결정한다. (이 글의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "fsync",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "fork",
+      "correct" : false,
+      "rationale" : "fork는 프로세스가 자신을 복제해 자식 프로세스를 만드는 호출이며, 파일 내용을 디스크로 내려보내는 것과는 무관하다.",
+      "matchText" : ""
+    }, {
+      "text" : "BGSAVE",
+      "correct" : false,
+      "rationale" : "BGSAVE는 자식 프로세스를 떠서 스냅샷 파일을 만들게 하는 Redis 명령이지 운영체제에 거는 시스템 호출이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "AOF 재작성",
+      "correct" : false,
+      "rationale" : "AOF 재작성은 현재 데이터를 만드는 최소 명령으로 로그 파일을 다시 쓰는 작업으로, 캐시를 비워 내리는 동작이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**fsync** — 지금 이 파일에 대해 페이지 캐시에 남은 내용을 디스크까지 당장 내려보내라고 운영체제에 요청하는 시스템 호출이다.",
+    "title" : "페이지 캐시의 내용을 디스크로 내리는 호출",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "Redis의 영속화 방식 중 스냅샷(RDB 파일)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "스냅샷(RDB 파일)은 결과에 이르는 과정이 아니라 결과 자체를 담는다. 즉 어느 한 시점의 전체 데이터를 압축된 이진 파일 하나로 통째 복사해 둔 것이며, 그래서 파일 크기가 작고 복구가 빠르다. (이 글의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "어느 한 시점의 전체 데이터를 압축된 이진 파일 하나로 통째 복사해 둔 것이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "데이터를 바꾼 명령을 실행된 순서 그대로 파일 끝에 계속 덧붙여 적은 기록이다",
+      "correct" : false,
+      "rationale" : "데이터를 바꾼 명령을 실행 순서대로 파일 끝에 덧붙이는 것은 추가 전용 로그(AOF)의 방식이다.",
+      "matchText" : ""
+    }, {
+      "text" : "마지막으로 디스크에 안전하게 적힌 시점부터 장애가 난 시점까지의 길이다",
+      "correct" : false,
+      "rationale" : "마지막 안전 시점부터 장애까지의 길이는 유실 구간을 뜻하는 설명으로, 파일에 담기는 내용과는 다른 개념이다.",
+      "matchText" : ""
+    }, {
+      "text" : "현재 데이터를 만들어 내는 최소한의 명령만으로 파일을 처음부터 다시 쓴 것이다",
+      "correct" : false,
+      "rationale" : "현재 데이터를 만들어 내는 최소 명령만으로 로그를 다시 쓰는 것은 AOF 재작성에 대한 설명이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**스냅샷(snapshot, RDB 파일)** — 어느 한 시점의 전체 데이터를 압축된 이진 파일 하나로 통째 복사해 둔 것이다.",
+    "title" : "스냅샷(RDB) 파일에 담기는 내용",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "fork 직후 부모와 자식이 같은 메모리를 함께 보다가, 한쪽이 고치려는 부분만 그때 복사해 나누는 방식을 부르는 용어와 그 뜻은?",
+    "answer" : "",
+    "explanation" : "fork 직후 부모와 자식은 같은 메모리를 함께 보고, 어느 한쪽이 어떤 부분을 고치려 할 때 그 부분만 복사해 갈라진다. 이 방식이 Copy-on-Write다. 덕분에 메모리를 통째로 복사하지 않고도 자식은 fork 하던 순간의 모습을 고정해서 볼 수 있다. (이 글의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "Copy-on-Write — fork 직후에는 같은 메모리를 함께 보다가 고치려는 부분만 복사해 나눈다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "fork — 실행 중인 프로세스가 자신을 복제해 자식 프로세스를 만드는 시스템 호출이다",
+      "correct" : false,
+      "rationale" : "fork는 자신을 복제해 자식 프로세스를 만드는 호출 자체를 가리키며, 메모리를 고칠 때 갈라지는 방식의 이름이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "프로세스 — 실행 중인 프로그램 하나이며 자기 몫의 메모리를 따로 가진다",
+      "correct" : false,
+      "rationale" : "프로세스는 실행 중인 프로그램 하나를 가리키는 말이지, 메모리를 나눠 갖는 방식을 가리키는 말이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "BGSAVE — 자식 프로세스를 떠서 스냅샷 파일을 만들게 하는 명령이다",
+      "correct" : false,
+      "rationale" : "BGSAVE는 스냅샷 파일을 만들라고 지시하는 명령이며, 메모리를 어떻게 나눠 갖는지를 설명하는 용어가 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**Copy-on-Write(쓰기 시 복사)** — fork 직후에는 부모와 자식이 같은 메모리를 함께 보다가, 어느 한쪽이 어떤 부분을 고치려 할 때 그 부분만 복사해 나누는 방식이다.",
+    "title" : "고칠 때만 메모리를 갈라 주는 방식",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "Redis 영속화에서 말하는 유실 구간에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "유실 구간은 마지막으로 디스크에 안전하게 적힌 시점부터 장애가 난 시점까지의 길이를 말한다. 이 구간에 들어온 쓰기는 복구해도 돌아오지 않는다. 그래서 방식과 fsync 주기를 고를 때 이 길이를 기준으로 삼는다. (이 글의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "마지막으로 디스크에 안전하게 적힌 시점부터 장애가 난 시점까지의 길이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "재시작한 뒤 파일을 다 읽어 들일 때까지 클라이언트 요청을 받지 못하는 시간이다",
+      "correct" : false,
+      "rationale" : "적재가 끝날 때까지 접속을 받지 않는 시간은 재시작 뒤의 복구 시간이지, 잃어버리는 쓰기의 범위가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "추가 전용 로그가 재작성 없이 계속 커져 디스크를 차지하는 크기다",
+      "correct" : false,
+      "rationale" : "파일 크기가 불어나는 구간은 재작성이 해결하는 문제이며, 복구해도 돌아오지 않는 쓰기의 범위와는 무관하다.",
+      "matchText" : ""
+    }, {
+      "text" : "저장용 자식 프로세스가 부모와 갈라지며 더 쓰게 되는 메모리의 양이다",
+      "correct" : false,
+      "rationale" : "자식 프로세스가 갈라 쓰는 메모리 증가분은 저장 작업의 비용일 뿐, 장애 시 사라지는 데이터의 범위를 뜻하지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**유실 구간** — 마지막으로 디스크에 안전하게 적힌 시점부터 장애가 난 시점까지의 길이이며, 이 구간의 쓰기는 복구해도 돌아오지 않는다.",
+    "title" : "유실 구간이 가리키는 범위",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "추가 전용 로그가 계속 커지는 것을 막기 위해, 현재 데이터를 만들어 내는 최소한의 명령만으로 로그를 다시 쓰는 작업의 이름은?",
+    "answer" : "",
+    "explanation" : "추가 전용 로그는 값을 바꾼 명령이 계속 쌓이므로 가만히 두면 파일이 자란다. 현재 메모리에 있는 데이터를 그대로 만들어 내는 최소한의 명령만으로 새 로그를 처음부터 다시 쓰는 작업이 AOF 재작성이며, 같은 키를 여러 번 고친 기록도 한 줄로 정리된다. (이 글의 'AOF 추가 전용 로그' 부분을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "AOF 재작성",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "BGSAVE",
+      "correct" : false,
+      "rationale" : "BGSAVE는 자식 프로세스를 떠서 스냅샷 파일을 만드는 명령이며, 로그 파일을 최소 명령으로 정리하는 작업이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "Copy-on-Write",
+      "correct" : false,
+      "rationale" : "Copy-on-Write는 부모와 자식이 메모리를 고칠 때만 갈라 쓰는 방식이지, 파일 내용을 줄이는 작업이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "fsync",
+      "correct" : false,
+      "rationale" : "fsync는 페이지 캐시의 내용을 디스크까지 내려보내라는 호출로, 파일 크기를 줄이는 것과는 관련이 없다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "Redis는 **AOF 재작성(rewrite)** 을 한다. 현재 메모리에 있는 데이터를 그대로 만들어 내는 최소한의 명령만으로 새 로그를 처음부터 다시 쓰는 작업이다.",
+    "title" : "불어난 추가 전용 로그를 줄이는 작업",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "Redis의 영속화(persistence)가 무엇인지에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "영속화(persistence)는 메모리에 있는 데이터를 디스크 파일에 적어 두어, 프로세스가 내려갔다 올라온 뒤에도 같은 데이터를 다시 갖추게 하는 기능이다. 영속화를 끄면 Redis는 재시작할 때마다 빈 상태로 올라온다. (이 글의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "메모리에 있는 데이터를 디스크 파일에 적어 두어, 프로세스가 내려갔다 올라온 뒤에도 같은 데이터를 다시 갖추게 하는 기능",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "파일에 쓸 내용을 운영체제가 메모리에 모아 두었다가 적당한 때에 내려보내는 기능",
+      "correct" : false,
+      "rationale" : "운영체제가 파일에 쓸 내용을 메모리에 모아 두는 것은 OS 페이지 캐시의 동작이지 영속화의 정의가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "읽기와 쓰기를 디스크로 내려가지 않고 메모리에서 끝내 응답을 빠르게 만드는 기능",
+      "correct" : false,
+      "rationale" : "디스크를 거치지 않고 메모리에서 응답을 끝내는 것은 인메모리 저장소의 성격으로, 꺼진 뒤에도 값을 남기는 것과는 반대 방향의 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "실행 중인 프로세스가 자신을 복제해 저장 작업을 맡길 자식을 만드는 기능",
+      "correct" : false,
+      "rationale" : "자신을 복제해 자식 프로세스를 만드는 것은 fork에 대한 설명이며, 데이터를 디스크에 남기는 기능 자체를 가리키지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**영속화(persistence)** 는 메모리에 있는 데이터를 디스크 파일에 적어 두어, 프로세스가 내려갔다 올라온 뒤에도 같은 데이터를 다시 갖추게 하는 기능이다.",
+    "title" : "영속화라는 기능이 하는 일",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null
+}
