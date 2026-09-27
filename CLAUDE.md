@@ -19,3 +19,9 @@
 - 개선 경위: `docs/IMPROVEMENTS.md`
 - 면접 대본: `docs/INTERVIEW_SCRIPT.md` (주석에 넣지 않는다)
 - 용어: `docs/GLOSSARY.md`에 정한 말을 쓴다
+
+## 문서 윤문
+
+- `docs/`에 문서를 새로 쓰거나 크게 고치면, 마지막 단계로 `humanize-korean` 스킬을 돌린다.
+- 윤문 뒤 코드 블록·수치·파일 경로·용어가 그대로인지 원문과 대조한다.
+- 배치가 만드는 개념 문서에는 아직 적용하지 않는다.
