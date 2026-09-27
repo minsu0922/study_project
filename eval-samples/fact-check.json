@@ -125,7 +125,17 @@
           ]
         }
       ],
-      "known": []
+      "known": [
+        {
+          "id": "circular-field-injection-boots",
+          "kind": "FACT_ERROR",
+          "note": "Spring Boot 2.6부터 순환 참조는 기본 금지라 필드 주입이어도 기동에 실패한다. 2026-09-27 Fable 5.1 측정에서 찾았다",
+          "quotes": [
+            "이 코드는 애플리케이션이 정상적으로 기동한다.",
+            "필드 주입이었다면 서버는 그대로 떴을 것이고"
+          ]
+        }
+      ]
     },
     {
       "id": "session-vs-token",

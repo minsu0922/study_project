@@ -261,6 +261,7 @@ public final class ReviewEvalCli {
      */
     private static final Map<String, double[]> PRICE_PER_MTOK = Map.of(
             "claude-opus-5", new double[]{5.0, 25.0},
+            "claude-fable-5-1", new double[]{10.0, 50.0},
             "claude-sonnet-5", new double[]{2.0, 10.0});
 
     static String renderCost(String model, long inputTokens, long outputTokens) {
