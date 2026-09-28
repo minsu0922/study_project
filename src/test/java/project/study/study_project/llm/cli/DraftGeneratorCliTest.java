@@ -1980,6 +1980,16 @@ class DraftGeneratorCliTest {
     }
 
     @Test
+    @DisplayName("검수 비용은 날짜·검수 종류·토큰·추정 금액을 한 줄로 남긴다")
+    void reportsReviewCost() {
+        String rendered = DraftGeneratorCli.reportReviewCost(LocalDate.of(2026, 9, 28), "문제 검수",
+                "claude-opus-5", 20_000, 5_000);
+
+        // 입력 20K × $5 + 출력 5K × $25 = $0.10 + $0.125
+        assertThat(rendered).contains("💰 2026-09-28 문제 검수", "입력 20,000", "출력 5,000", "$0.23");
+    }
+
+    @Test
     @DisplayName("지적이 없으면 한 줄만 남긴다")
     void rendersNoFindings() {
         assertThat(DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(), FACT_DOC, LocalDate.of(2026, 9, 27)))

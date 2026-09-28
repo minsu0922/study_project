@@ -354,8 +354,22 @@ public final class DraftGeneratorCli {
 
         // 문제 검수(docs/22 §3.2~3.4). 객관식이고 근거 문서가 있을 때만 — 근거 대조에 문서가 필요하다
         if (type == ProblemType.MULTIPLE_CHOICE && source != null) {
-            reportProblemReview(new ClaudeProblemReviewer(model), kept, difficulty, source, date);
+            ClaudeProblemReviewer reviewer = new ClaudeProblemReviewer(model);
+            reportProblemReview(reviewer, kept, difficulty, source, date);
+            reportReviewCost(date, "문제 검수", model, reviewer.inputTokens(), reviewer.outputTokens());
         }
+    }
+
+    /**
+     * 검수에 쓴 토큰과 추정 금액을 요약 화면에 남긴다. 검수는 생성과 따로 붙는 비용이라,
+     * 2주 운영 뒤 계속 켤지 정할 때(docs/22 §6) 추정이 아닌 실제 값이 필요하다.
+     * 금액은 측정 도구와 같은 단가표로 계산한다. 콘솔 청구액과는 반올림만큼 다를 수 있다.
+     */
+    static String reportReviewCost(LocalDate date, String what, String model, long inputTokens, long outputTokens) {
+        String rendered = "💰 %s %s ".formatted(date, what) + ReviewEvalCli.renderCost(model, inputTokens, outputTokens);
+        System.out.println(rendered);
+        appendToStepSummary(rendered);
+        return rendered;
     }
 
     /**
@@ -846,11 +860,12 @@ public final class DraftGeneratorCli {
         }
 
         // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다
-        DocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
+        ClaudeDocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
         reportFactCheck(factChecker, document, date);
         if (advanced != null) {
             reportFactCheck(factChecker, advanced, date);
         }
+        reportReviewCost(date, "사실 검수", model, factChecker.inputTokens(), factChecker.outputTokens());
 
         // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
         // 문서는 이미 파일에 있으므로 job을 죽이지 않는다 — 대신 다음 주기에 같은 주제가
