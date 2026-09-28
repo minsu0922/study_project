@@ -229,18 +229,16 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
                         quote.isEmpty() ? "정답을 뒷받침하는 문장을 문서에서 찾지 못했다"
                                 : "검수 AI가 든 근거 문장이 문서에 없다(지어낸 인용)"));
             }
+            // 중급 지문에 조건(장면)만 있는 것은 지적하지 않는다. 진짜 중급 16개 중 약 6개가 배경 장면으로
+            // 시작해 헛경보가 된다(docs/22 §9). 급은 오답 성격과 함께 볼 때만 갈린다
             Difficulty judgedLevel = levelOf(s.item().question(), j);
-            boolean condition = hasCondition(s.item().question(), j);
-            String observed = "지문 조건 %s, 다른 조건에서 맞는 오답 %d개. %s".formatted(
-                    condition ? "「" + j.conditionQuote() + "」" : "없음", elsewhereCountOf(j), j.elsewhereReason());
             if (judgedLevel != labeled) {
+                boolean condition = hasCondition(s.item().question(), j);
                 findings.add(new Finding(s.index(), FindingType.DIFFICULTY_MISMATCH,
-                        "%s로 냈지만 %s로 보인다: %s".formatted(
-                                labeled.getDisplayName(), judgedLevel.getDisplayName(), observed)));
-            } else if (labeled == Difficulty.INTERMEDIATE && condition) {
-                // 조건은 있는데 오답이 오해형인 반쪽 고급. 급은 중급으로 나오지만 중급은 조건 없이 묻는다
-                findings.add(new Finding(s.index(), FindingType.DIFFICULTY_MISMATCH,
-                        "중급인데 지문에 답을 가르는 조건이 있다(중급은 조건 없이 묻는다): " + observed));
+                        "%s로 냈지만 %s로 보인다: 지문 조건 %s, 다른 조건에서 맞는 오답 %d개. %s".formatted(
+                                labeled.getDisplayName(), judgedLevel.getDisplayName(),
+                                condition ? "「" + j.conditionQuote() + "」" : "없음",
+                                elsewhereCountOf(j), j.elsewhereReason())));
             }
         }
         return findings;

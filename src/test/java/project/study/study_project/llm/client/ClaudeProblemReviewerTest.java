@@ -153,8 +153,8 @@ class ClaudeProblemReviewerTest {
     }
 
     @Test
-    @DisplayName("중급 라벨에 지문 조건이 있으면, 급이 중급으로 나와도 따로 지적한다")
-    void intermediateWithConditionIsFlagged() {
+    @DisplayName("중급 지문에 조건만 있고 오답이 오해형이면 지적하지 않는다 — 배경 장면으로 시작하는 중급이 흔하다")
+    void intermediateWithSceneOnlyIsNotFlagged() {
         GeneratedProblemItem item = new GeneratedProblemItem(SCENE, "", "해설", List.of(
                 new GeneratedChoice("살균기", true), new GeneratedChoice("정규식", false),
                 new GeneratedChoice("innerHTML", false), new GeneratedChoice("이스케이프", false)));
@@ -165,10 +165,7 @@ class ClaudeProblemReviewerTest {
         List<Finding> findings = ClaudeProblemReviewer.compare(shown, null, new JudgementBatch(List.of(j)),
                 Difficulty.INTERMEDIATE, DOC);
 
-        assertThat(findings).singleElement().satisfies(f -> {
-            assertThat(f.type()).isEqualTo(FindingType.DIFFICULTY_MISMATCH);
-            assertThat(f.message()).contains("조건 없이 묻는다", "원본은 훼손 없이");
-        });
+        assertThat(findings).isEmpty();
     }
 
     @Test
