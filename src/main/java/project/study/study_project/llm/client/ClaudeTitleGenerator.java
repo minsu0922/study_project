@@ -135,10 +135,8 @@ public class ClaudeTitleGenerator implements TitleGenerator {
                 .build();
 
         try {
-            return AnthropicClientHolder.get().messages().create(params).content().stream()
-                    .flatMap(block -> block.text().stream())
-                    .findFirst()
-                    .map(typed -> typed.text().titles())
+            return java.util.Optional.ofNullable(ClaudeCalls.create("제목 생성", params).value())
+                    .map(GeneratedTitle.Batch::titles)
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 제목 목록이 없습니다."));
         } catch (AnthropicServiceException e) {
             log.warn("Claude API 호출 실패(제목 생성): status={}, message={}", e.statusCode(), e.getMessage());

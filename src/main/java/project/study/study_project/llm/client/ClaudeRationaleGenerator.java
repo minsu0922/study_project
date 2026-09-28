@@ -132,10 +132,8 @@ public class ClaudeRationaleGenerator implements RationaleGenerator {
                 .build();
 
         try {
-            return AnthropicClientHolder.get().messages().create(params).content().stream()
-                    .flatMap(block -> block.text().stream())
-                    .findFirst()
-                    .map(typed -> typed.text().rationales())
+            return java.util.Optional.ofNullable(ClaudeCalls.create("오답 설명 생성", params).value())
+                    .map(GeneratedRationale.Batch::rationales)
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 오답 설명 목록이 없습니다."));
         } catch (AnthropicServiceException e) {
             log.warn("Claude API 호출 실패(오답 설명 생성): status={}, message={}", e.statusCode(), e.getMessage());

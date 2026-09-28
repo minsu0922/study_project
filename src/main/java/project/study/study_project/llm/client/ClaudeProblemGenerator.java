@@ -169,10 +169,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                 .build();
 
         try {
-            return AnthropicClientHolder.get().messages().create(params).content().stream()
-                    .flatMap(block -> block.text().stream())
-                    .findFirst()
-                    .map(typed -> typed.text().problems())
+            return java.util.Optional.ofNullable(ClaudeCalls.create("문제 생성", params).value())
+                    .map(GeneratedProblemItem.Batch::problems)
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 문제 목록이 없습니다."));
         } catch (AnthropicServiceException e) {
             // API 쪽 오류(429 한도 초과, 529 과부하 등) — 우리 코드 문제가 아니므로 502로 안내

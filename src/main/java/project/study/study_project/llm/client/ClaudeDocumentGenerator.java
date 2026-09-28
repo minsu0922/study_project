@@ -680,10 +680,8 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
                 .build();
 
         try {
-            return AnthropicClientHolder.get().messages().create(params).content().stream()
-                    .flatMap(block -> block.text().stream())
-                    .findFirst()
-                    .map(typed -> typed.text())
+            return java.util.Optional.ofNullable(ClaudeCalls.create(
+                            "문서 생성(" + edition.getDisplayName() + ")", params).value())
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003,
                             "모델 응답에 문서가 없습니다(%s).".formatted(edition.getDisplayName())));
         } catch (AnthropicServiceException e) {

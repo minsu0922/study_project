@@ -3,7 +3,6 @@ package project.study.study_project.llm.client;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.models.messages.MessageCreateParams;
-import com.anthropic.models.messages.StopReason;
 import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.anthropic.models.messages.ThinkingConfigAdaptive;
 import com.anthropic.models.messages.WebSearchTool20260209;
@@ -163,19 +162,16 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
 
         List<FactCheckFinding> raw;
         try {
-            var response = AnthropicClientHolder.get().messages().create(params);
-            inputTokens += response.usage().inputTokens();
-            outputTokens += response.usage().outputTokens();
-            searches += response.usage().serverToolUse().map(u -> u.webSearchRequests()).orElse(0L);
-            if (response.stopReason().filter(r -> r.equals(StopReason.PAUSE_TURN)).isPresent()) {
+            var response = ClaudeCalls.create("사실 검수", params);
+            inputTokens += response.inputTokens();
+            outputTokens += response.outputTokens();
+            searches += response.webSearches();
+            if (response.pauseTurn()) {
                 // 검색이 길어져 서버가 중간에 멈춘 경우다. 이어 붙이기는 실제로 자주 나면 만든다
                 throw new BusinessException(ErrorCode.LLM_003, "검색 도중 응답이 멈췄습니다(pause_turn).");
             }
-            // 검색을 켜면 텍스트 블록이 검색 앞뒤로 나뉠 수 있다. 결과 JSON은 마지막 블록에 온다
-            raw = response.content().stream()
-                    .flatMap(block -> block.text().stream())
-                    .reduce((first, second) -> second)
-                    .map(typed -> typed.text().findings())
+            raw = java.util.Optional.ofNullable(response.value())
+                    .map(FactCheckFinding.Result::findings)
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 검수 결과가 없습니다."));
         } catch (AnthropicServiceException e) {
             log.warn("Claude API 호출 실패(사실 검수): status={}, message={}", e.statusCode(), e.getMessage());

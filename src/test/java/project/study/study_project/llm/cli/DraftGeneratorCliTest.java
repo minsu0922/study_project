@@ -1980,13 +1980,23 @@ class DraftGeneratorCliTest {
     }
 
     @Test
-    @DisplayName("검수 비용은 날짜·검수 종류·토큰·추정 금액을 한 줄로 남긴다")
-    void reportsReviewCost() {
-        String rendered = DraftGeneratorCli.reportReviewCost(LocalDate.of(2026, 9, 28), "문제 검수",
-                "claude-opus-5", 20_000, 5_000);
+    @DisplayName("비용 요약은 호출 이름별로 묶고, 배치 호출은 반값으로 계산한다")
+    void reportsCostSummary() {
+        var ledger = List.of(
+                new project.study.study_project.llm.client.ClaudeCalls.Usage("문제 생성", "claude-opus-5",
+                        20_000, 5_000, 0, false),
+                new project.study.study_project.llm.client.ClaudeCalls.Usage("문제 검수", "claude-opus-5",
+                        20_000, 5_000, 0, true),
+                new project.study.study_project.llm.client.ClaudeCalls.Usage("문제 검수", "claude-opus-5",
+                        20_000, 5_000, 0, true));
 
-        // 입력 20K × $5 + 출력 5K × $25 = $0.10 + $0.125
-        assertThat(rendered).contains("💰 2026-09-28 문제 검수", "입력 20,000", "출력 5,000", "$0.23");
+        String rendered = DraftGeneratorCli.reportCostSummary(LocalDate.of(2026, 9, 28), ledger);
+
+        // 한 건 정가: 입력 20K × $5 + 출력 5K × $25 = $0.225. 배치 두 건은 반값씩이라 합쳐 $0.225
+        assertThat(rendered).contains("2026-09-28 API 비용 약 $0.45",
+                "| 문제 생성 | 1 (배치 0) | 20,000 | 5,000 | $0.23 |",
+                "| 문제 검수 | 2 (배치 2) | 40,000 | 10,000 | $0.23 |");
+        assertThat(DraftGeneratorCli.reportCostSummary(LocalDate.of(2026, 9, 28), List.of())).isEmpty();
     }
 
     @Test

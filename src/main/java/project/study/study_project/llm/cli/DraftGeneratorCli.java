@@ -5,6 +5,7 @@ import org.yaml.snakeyaml.Yaml;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.client.ClaudeCalls;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
@@ -153,11 +154,60 @@ public final class DraftGeneratorCli {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    /** Batch API 옵션 — 워크플로가 켠다. 로컬 실행은 기본이 바로 호출이라 결과를 곧장 본다. */
+    static final String BATCH_API_OPT = "batch-api";
+
     private DraftGeneratorCli() {
     }
 
     public static void main(String[] args) throws Exception {
         Map<String, String> opts = parseArgs(args);
+        ClaudeCalls.useBatch("true".equalsIgnoreCase(opts.getOrDefault(BATCH_API_OPT, "false")));
+        try {
+            run(opts);
+        } finally {
+            // 흐름마다 끝나는 자리가 달라(쉬는 날, 문서일, 문제일) 한 곳에서 찍는다. 실패한 날에도
+            // 이미 낸 요금은 남아야 한다
+            reportCostSummary(resolveDate(opts), ClaudeCalls.ledger());
+        }
+    }
+
+    /**
+     * 이번 실행의 호출별 토큰과 추정 금액을 이름별로 묶어 요약에 남긴다(docs/23).
+     * 2주 점검(docs/22 §6)과 Batch API 효과 확인에 추정이 아닌 실제 값이 필요하다.
+     *
+     * @return 요약 화면에 쓴 글(테스트용). 호출이 없으면 빈 문자열
+     */
+    static String reportCostSummary(LocalDate date, List<ClaudeCalls.Usage> ledger) {
+        if (ledger.isEmpty()) {
+            return "";
+        }
+        Map<String, List<ClaudeCalls.Usage>> byLabel = new java.util.LinkedHashMap<>();
+        ledger.forEach(u -> byLabel.computeIfAbsent(u.label(), k -> new ArrayList<>()).add(u));
+        StringBuilder lines = new StringBuilder();
+        double total = 0;
+        for (var entry : byLabel.entrySet()) {
+            long in = 0, out = 0, batched = 0;
+            double usd = 0;
+            for (ClaudeCalls.Usage u : entry.getValue()) {
+                in += u.inputTokens();
+                out += u.outputTokens();
+                batched += u.batch() ? 1 : 0;
+                usd += ReviewEvalCli.usd(u.model(), u.inputTokens(), u.outputTokens(), u.webSearches(), u.batch());
+            }
+            total += usd;
+            lines.append("| %s | %d (배치 %d) | %,d | %,d | %s |%n".formatted(entry.getKey(),
+                    entry.getValue().size(), batched, in, out, Double.isNaN(usd) ? "?" : "$%.2f".formatted(usd)));
+        }
+        String rendered = ("💰 **%s API 비용 약 %s** — 사고 토큰은 출력에 포함. 배치 호출은 반값으로 계산%n%n"
+                + "| 호출 | 횟수 | 입력 토큰 | 출력 토큰 | 금액 |%n|---|---|---|---|---|%n")
+                .formatted(date, Double.isNaN(total) ? "?" : "$%.2f".formatted(total)) + lines;
+        System.out.println(rendered);
+        appendToStepSummary(rendered);
+        return rendered;
+    }
+
+    private static void run(Map<String, String> opts) throws Exception {
 
         // ── 1. 설정 읽기 ──────────────────────────────────────────
         // application.yml을 직접 읽는 이유: 모델 ID·후보 도메인을 워크플로에 따로 적어 두면
@@ -354,22 +404,8 @@ public final class DraftGeneratorCli {
 
         // 문제 검수(docs/22 §3.2~3.4). 객관식이고 근거 문서가 있을 때만 — 근거 대조에 문서가 필요하다
         if (type == ProblemType.MULTIPLE_CHOICE && source != null) {
-            ClaudeProblemReviewer reviewer = new ClaudeProblemReviewer(model);
-            reportProblemReview(reviewer, kept, difficulty, source, date);
-            reportReviewCost(date, "문제 검수", model, reviewer.inputTokens(), reviewer.outputTokens());
+            reportProblemReview(new ClaudeProblemReviewer(model), kept, difficulty, source, date);
         }
-    }
-
-    /**
-     * 검수에 쓴 토큰과 추정 금액을 요약 화면에 남긴다. 검수는 생성과 따로 붙는 비용이라,
-     * 2주 운영 뒤 계속 켤지 정할 때(docs/22 §6) 추정이 아닌 실제 값이 필요하다.
-     * 금액은 측정 도구와 같은 단가표로 계산한다. 콘솔 청구액과는 반올림만큼 다를 수 있다.
-     */
-    static String reportReviewCost(LocalDate date, String what, String model, long inputTokens, long outputTokens) {
-        String rendered = "💰 %s %s ".formatted(date, what) + ReviewEvalCli.renderCost(model, inputTokens, outputTokens);
-        System.out.println(rendered);
-        appendToStepSummary(rendered);
-        return rendered;
     }
 
     /**
@@ -860,12 +896,11 @@ public final class DraftGeneratorCli {
         }
 
         // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다
-        ClaudeDocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
+        DocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
         reportFactCheck(factChecker, document, date);
         if (advanced != null) {
             reportFactCheck(factChecker, advanced, date);
         }
-        reportReviewCost(date, "사실 검수", model, factChecker.inputTokens(), factChecker.outputTokens());
 
         // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
         // 문서는 이미 파일에 있으므로 job을 죽이지 않는다 — 대신 다음 주기에 같은 주제가

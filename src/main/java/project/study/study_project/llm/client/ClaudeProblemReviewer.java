@@ -302,13 +302,10 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
         }
         StructuredMessageCreateParams<T> params = builder.outputConfig(schema).build();
         try {
-            var response = AnthropicClientHolder.get().messages().create(params);
-            inputTokens += response.usage().inputTokens();
-            outputTokens += response.usage().outputTokens();
-            return response.content().stream()
-                    .flatMap(block -> block.text().stream())
-                    .findFirst()
-                    .map(typed -> typed.text())
+            var response = ClaudeCalls.create("문제 검수", params);
+            inputTokens += response.inputTokens();
+            outputTokens += response.outputTokens();
+            return java.util.Optional.ofNullable(response.value())
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 검수 결과가 없습니다."));
         } catch (AnthropicServiceException e) {
             log.warn("Claude API 호출 실패(문제 검수): status={}, message={}", e.statusCode(), e.getMessage());

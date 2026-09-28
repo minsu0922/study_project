@@ -349,6 +349,19 @@ public final class ReviewEvalCli {
         return renderCost(model, inputTokens, outputTokens, 0);
     }
 
+    /**
+     * 추정 금액. 단가를 모르는 모델이면 NaN이다.
+     * Batch API는 토큰 요금만 반값이다. 검색 요금에 할인이 붙는지는 문서에 없어 정가로 둔다.
+     */
+    static double usd(String model, long inputTokens, long outputTokens, long searches, boolean batch) {
+        double[] price = PRICE_PER_MTOK.get(model);
+        if (price == null) {
+            return Double.NaN;
+        }
+        double tokens = inputTokens / 1e6 * price[0] + outputTokens / 1e6 * price[1];
+        return tokens * (batch ? 0.5 : 1.0) + searches * SEARCH_USD;
+    }
+
     static String renderCost(String model, long inputTokens, long outputTokens, long searches) {
         String tokens = "입력 %,d / 출력 %,d 토큰(사고 포함)".formatted(inputTokens, outputTokens)
                 + (searches > 0 ? ", 검색 %d회".formatted(searches) : "");
