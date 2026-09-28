@@ -3,7 +3,7 @@
   "samples": [
     {
       "id": "os-thread-memory",
-      "document": "generated/documents/2026-09-03.json",
+      "document": "eval-samples/documents/2026-09-03.json",
       "edition": "BEGINNER",
       "planted": [
         {
@@ -86,7 +86,7 @@
     },
     {
       "id": "spring-constructor-injection",
-      "document": "generated/documents/2026-09-11.json",
+      "document": "eval-samples/documents/2026-09-11.json",
       "edition": "BEGINNER",
       "planted": [
         {
@@ -175,7 +175,7 @@
     },
     {
       "id": "flyway-migration",
-      "document": "generated/documents/2026-09-15.json",
+      "document": "eval-samples/documents/2026-09-15.json",
       "edition": "BEGINNER",
       "planted": [
         {
@@ -221,7 +221,7 @@
     },
     {
       "id": "redis-persistence",
-      "document": "generated/documents/2026-09-27.json",
+      "document": "eval-samples/documents/2026-09-27.json",
       "edition": "BEGINNER",
       "planted": [
         {
