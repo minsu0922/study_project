@@ -66,10 +66,16 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
             4. revealReason: 질문의 표현을 한 보기만 그대로 되받아, 뜻을 몰라도 문장 비교만으로
                답이 좁혀지면 그 이유를 쓴다. 아니면 빈 문자열이다.
                네 보기가 모두 질문의 주제어를 담는 것은 정상이다.
-            5. 아래 [난이도 정의]에 비춰 이 문제가 어느 칸인지 판정한다.
-               질문이 무엇을 묻는지와 오답이 어떤 성격인지로 정한다. 길이로 정하지 마라.
+            5. 난이도는 판정하지 말고 아래 세 가지를 관찰만 한다. 급은 코드가 정한다.
+               - asksDefinition: 질문이 용어의 뜻, 또는 뜻에 맞는 용어만 묻는가.
+               - conditionQuote: 지문에 답을 가르는 조건이 있으면 그 문장을 글자 그대로 옮긴다.
+                 조건은 장면(무엇을 하려다 무엇이 어긋났나)이나 명세(비율, 규모, 유실 허용, 요건)다.
+                 질문의 주제어나 "옳은 것은?" 같은 물음은 조건이 아니다.
+               - elsewhereCount: 오답마다 "이 오답이 정답이 되는 다른 조건"을 대 본다.
+                 오해나 틀린 정의라서 어떤 조건에서도 정답이 될 수 없으면 세지 않는다.
+               길이나 문장의 어려움으로 정하지 마라.
 
-            [난이도 정의]
+            [참고: 난이도 정의]
             %s
             """;
 
@@ -220,13 +226,40 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
                         quote.isEmpty() ? "정답을 뒷받침하는 문장을 문서에서 찾지 못했다"
                                 : "검수 AI가 든 근거 문장이 문서에 없다(지어낸 인용)"));
             }
-            if (j.judgedDifficulty() != null && !j.judgedDifficulty().name().equals(labeled.name())) {
+            Difficulty judgedLevel = levelOf(s.item().question(), j);
+            if (judgedLevel != labeled) {
+                boolean condition = hasCondition(s.item().question(), j);
                 findings.add(new Finding(s.index(), FindingType.DIFFICULTY_MISMATCH,
-                        "%s로 냈지만 %s로 보인다: %s".formatted(labeled.getDisplayName(),
-                                Difficulty.valueOf(j.judgedDifficulty().name()).getDisplayName(), j.difficultyReason())));
+                        "%s로 냈지만 %s로 보인다: 지문 조건 %s, 다른 조건에서 맞는 오답 %d개. %s".formatted(
+                                labeled.getDisplayName(), judgedLevel.getDisplayName(),
+                                condition ? "「" + j.conditionQuote() + "」" : "없음",
+                                j.elsewhereCount(), j.elsewhereReason())));
             }
         }
         return findings;
+    }
+
+    /**
+     * 관찰 셋으로 급을 정한다. 생성 프롬프트의 [고급에는 조건이 반드시 있어야 한다]와
+     * "오답은 조건이 달랐다면 옳았을 대응"을 옮긴 것이다.
+     * AI에게 급을 바로 물으면 고급 문제도 중급으로 봤다(docs/22 §9, 0/2).
+     * 오답 셋 중 둘이면 고급으로 본다. 셋 다를 요구하면 오답 하나를 약하게 쓴 고급을 놓친다.
+     */
+    static Difficulty levelOf(String question, Judgement j) {
+        boolean condition = hasCondition(question, j);
+        if (condition && j.elsewhereCount() >= 2) {
+            return Difficulty.ADVANCED;
+        }
+        if (j.asksDefinition() && !condition) {
+            return Difficulty.BEGINNER;
+        }
+        return Difficulty.INTERMEDIATE;
+    }
+
+    /** 옮겨 적은 조건 문장이 지문에 실제로 있어야 조건으로 친다. 지어낸 조건으로 고급이 되지 않게 한다. */
+    static boolean hasCondition(String question, Judgement j) {
+        String quote = ClaudeDocumentFactChecker.normalize(j.conditionQuote());
+        return !quote.isEmpty() && ClaudeDocumentFactChecker.normalize(question).contains(quote);
     }
 
     private static <T> Map<Integer, T> byNo(List<T> items, Function<T, Integer> no) {

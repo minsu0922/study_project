@@ -10,7 +10,6 @@ import project.study.study_project.llm.client.ProblemReview.Finding;
 import project.study.study_project.llm.client.ProblemReview.FindingType;
 import project.study.study_project.llm.client.ProblemReview.Judgement;
 import project.study.study_project.llm.client.ProblemReview.JudgementBatch;
-import project.study.study_project.llm.client.ProblemReview.Level;
 
 import java.util.List;
 
@@ -34,8 +33,8 @@ class ClaudeProblemReviewerTest {
 
     /** 정답 번호를 맞힌 판정 — 여기서 한 칸만 바꿔 각 지적을 만든다. */
     private static Judgement fine(int no, int correctNo) {
-        return new Judgement(no, "이유", correctNo, 0, "", "스키마는 표의 모양과 배치를 가리킨다.", "", "용어 정의",
-                Level.BEGINNER);
+        return new Judgement(no, "이유", correctNo, 0, "", "스키마는 표의 모양과 배치를 가리킨다.", "",
+                true, "", "", "없음", 0);
     }
 
     @Test
@@ -78,8 +77,8 @@ class ClaudeProblemReviewerTest {
         List<Finding> findings = ClaudeProblemReviewer.compare(shown,
                 new ChoiceOnlyBatch(List.of(new ChoiceOnlyAnswer(3, "하나만 짧다", c2))),
                 new JudgementBatch(List.of(
-                        new Judgement(1, "이유", wrong0, 0, "", "", "", "이유", Level.BEGINNER),
-                        new Judgement(2, "이유", c1, other1, "둘 다 맞다", "지어낸 문장", "되받음", "이유", Level.ADVANCED),
+                        new Judgement(1, "이유", wrong0, 0, "", "", "", true, "", "", "없음", 0),
+                        new Judgement(2, "이유", c1, other1, "둘 다 맞다", "지어낸 문장", "되받음", true, "요건", "스키마는", "셋 다", 3),
                         fine(3, c2))),
                 Difficulty.BEGINNER, DOC);
 
@@ -104,6 +103,59 @@ class ClaudeProblemReviewerTest {
                 new JudgementBatch(List.of(fine(1, correct))), Difficulty.BEGINNER, DOC);
 
         assertThat(findings).isEmpty();
+    }
+
+    /* ── 난이도: 관찰 셋으로 코드가 정한다 ── */
+
+    private static final String SCENE = "사내 위키에서 사용자가 HTML 서식을 직접 써야 하고, 원본은 훼손 없이 남아야 한다. 이 조건에서 옳은 판단은?";
+
+    private static Judgement observed(boolean asksDefinition, String conditionQuote, int elsewhereCount) {
+        return new Judgement(1, "이유", 1, 0, "", "", "", asksDefinition, "조건", conditionQuote, "오답별 상황",
+                elsewhereCount);
+    }
+
+    @Test
+    @DisplayName("지문에 조건이 있고 다른 조건에서 맞는 오답이 둘 이상이면 고급이다")
+    void conditionAndPlausibleDistractorsMeanAdvanced() {
+        assertThat(ClaudeProblemReviewer.levelOf(SCENE, observed(false, "원본은 훼손 없이 남아야 한다", 2)))
+                .isEqualTo(Difficulty.ADVANCED);
+        assertThat(ClaudeProblemReviewer.levelOf(SCENE, observed(false, "원본은 훼손 없이 남아야 한다", 1)))
+                .as("오답이 대부분 오해형이면 조건이 있어도 중급이다").isEqualTo(Difficulty.INTERMEDIATE);
+    }
+
+    @Test
+    @DisplayName("조건 인용이 지문에 없으면 조건이 없는 것으로 본다 — 지어낸 조건으로 고급이 되지 않는다")
+    void fabricatedConditionDoesNotCount() {
+        assertThat(ClaudeProblemReviewer.levelOf(SCENE, observed(false, "초당 요청이 1만 건이다", 3)))
+                .isEqualTo(Difficulty.INTERMEDIATE);
+    }
+
+    @Test
+    @DisplayName("조건 없이 뜻만 물으면 초급, 조건 없이 원리를 물으면 중급이다")
+    void noConditionSplitsBeginnerAndIntermediate() {
+        assertThat(ClaudeProblemReviewer.levelOf("스키마란?", observed(true, "", 0))).isEqualTo(Difficulty.BEGINNER);
+        assertThat(ClaudeProblemReviewer.levelOf("키를 지우도록 권하는 이유는?", observed(false, "", 3)))
+                .isEqualTo(Difficulty.INTERMEDIATE);
+    }
+
+    @Test
+    @DisplayName("난이도가 어긋나면 지적에 조건 인용과 오답 개수를 함께 적는다")
+    void difficultyFindingCarriesObservations() {
+        GeneratedProblemItem item = new GeneratedProblemItem(SCENE, "", "해설", List.of(
+                new GeneratedChoice("살균기", true), new GeneratedChoice("정규식", false),
+                new GeneratedChoice("innerHTML", false), new GeneratedChoice("이스케이프", false)));
+        var shown = ClaudeProblemReviewer.showable(List.of(item));
+        int correct = shown.get(0).correctNo();
+        Judgement j = new Judgement(1, "이유", correct, 0, "", "스키마는 표의 모양과 배치를 가리킨다.", "",
+                false, "요건", "원본은 훼손 없이 남아야 한다", "4번은 서식 요구가 없으면 맞다", 2);
+
+        List<Finding> findings = ClaudeProblemReviewer.compare(shown, null, new JudgementBatch(List.of(j)),
+                Difficulty.INTERMEDIATE, DOC);
+
+        assertThat(findings).singleElement().satisfies(f -> {
+            assertThat(f.type()).isEqualTo(FindingType.DIFFICULTY_MISMATCH);
+            assertThat(f.message()).contains("중급", "고급", "원본은 훼손 없이", "2개");
+        });
     }
 
     @Test

@@ -40,8 +40,6 @@ public final class ProblemReview {
 
     /* ── B. 문서와 함께 풀기 ── */
 
-    public enum Level { BEGINNER, INTERMEDIATE, ADVANCED }
-
     @JsonClassDescription("문서를 보고 문제 하나를 검수한 결과")
     public record Judgement(
             @JsonPropertyDescription("문제 번호. 입력으로 준 번호를 그대로 돌려준다")
@@ -65,11 +63,20 @@ public final class ProblemReview {
             @JsonPropertyDescription("질문의 표현을 한 보기만 되받아 문장 비교만으로 답이 좁혀지면 그 이유. 아니면 빈 문자열")
             String revealReason,
 
-            @JsonPropertyDescription("난이도 정의에 비춰 이 문제가 어느 칸인지 판단한 이유")
-            String difficultyReason,
+            @JsonPropertyDescription("질문이 용어의 뜻, 또는 뜻에 맞는 용어만 묻는가")
+            boolean asksDefinition,
 
-            @JsonPropertyDescription("판정한 난이도")
-            Level judgedDifficulty
+            @JsonPropertyDescription("지문에 적힌, 답을 가르는 조건이 무엇인지. 없으면 빈 문자열")
+            String conditionReason,
+
+            @JsonPropertyDescription("그 조건이 적힌 지문 문장. 지문에서 글자 그대로 복사한다. 없으면 빈 문자열")
+            String conditionQuote,
+
+            @JsonPropertyDescription("오답마다, 그 오답이 정답이 되는 다른 조건. 댈 수 없는 오답은 '없음'")
+            String elsewhereReason,
+
+            @JsonPropertyDescription("다른 조건이었다면 정답이 되는 오답의 개수 0~3")
+            int elsewhereCount
     ) {
     }
 
