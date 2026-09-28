@@ -117,9 +117,10 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    # 어댑티브 사고(thinking)를 켜 둬서 5문제면 수 분까지 걸릴 수 있다.
+    # Batch API로 부르므로(docs/23) 호출마다 결과를 기다린다. 호출 하나는 최대 45분 기다린 뒤
+    # 정가 호출로 대신하고, 하루 호출은 많아야 4번(문서 2 + 사실 검수 2)이라 최악 약 220분이다.
     # 그래도 상한을 둬야 무언가 매달렸을 때 러너 시간을 무한정 쓰지 않는다.
-    timeout-minutes: 20
+    timeout-minutes: 300
 
     # MySQL·Redis 서비스 컨테이너가 없다: DraftGeneratorCli는 Spring을 띄우지 않고
     # 생성기만 직접 만들어 호출하므로 DB가 필요 없다(그래서 빠르고 싸다).
@@ -176,9 +177,10 @@ jobs:
           # 주제는 "TCP 혼잡 제어"처럼 공백이 들어간다. -PdraftArgs는 공백으로 인자를 쪼개므로
           # 거기 실으면 단어 단위로 찢어진다 — CLI가 환경변수로 직접 읽게 한다(DraftGeneratorCli 주석).
           DRAFT_TOPIC: ${{ inputs.topic }}
+        # --batch-api=true: 기다리는 사람이 없는 실행이라 모든 호출을 Batch API(반값)로 보낸다(docs/23)
         run: |
           ./gradlew generateDrafts --no-daemon --console=plain \
-            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --document-date=${IN_DOCUMENT_DATE} --suffix=${IN_SUFFIX} --force=${IN_FORCE} --type=${IN_TYPE} --problem-type=${IN_PROBLEM_TYPE}"
+            -PdraftArgs="--domain=${IN_DOMAIN} --difficulty=${IN_DIFFICULTY} --count=${IN_COUNT} --date=${IN_DATE} --document-date=${IN_DOCUMENT_DATE} --suffix=${IN_SUFFIX} --force=${IN_FORCE} --type=${IN_TYPE} --problem-type=${IN_PROBLEM_TYPE} --batch-api=true"
 
       - name: 결과 커밋 & 푸시
         run: |
