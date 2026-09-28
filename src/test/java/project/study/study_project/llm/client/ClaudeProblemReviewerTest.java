@@ -78,7 +78,7 @@ class ClaudeProblemReviewerTest {
                 new ChoiceOnlyBatch(List.of(new ChoiceOnlyAnswer(3, "하나만 짧다", c2))),
                 new JudgementBatch(List.of(
                         new Judgement(1, "이유", wrong0, 0, "", "", "", true, "", "", "없음", 0),
-                        new Judgement(2, "이유", c1, other1, "둘 다 맞다", "지어낸 문장", "되받음", true, "요건", "스키마는", "셋 다", 3),
+                        new Judgement(2, "이유", c1, other1, "둘 다 맞다", "지어낸 문장", "되받음", false, "", "", "없음", 0),
                         fine(3, c2))),
                 Difficulty.BEGINNER, DOC);
 
@@ -136,6 +136,39 @@ class ClaudeProblemReviewerTest {
         assertThat(ClaudeProblemReviewer.levelOf("스키마란?", observed(true, "", 0))).isEqualTo(Difficulty.BEGINNER);
         assertThat(ClaudeProblemReviewer.levelOf("키를 지우도록 권하는 이유는?", observed(false, "", 3)))
                 .isEqualTo(Difficulty.INTERMEDIATE);
+    }
+
+    @Test
+    @DisplayName("8자 미만 조건 인용은 조건으로 치지 않는다")
+    void shortConditionQuoteDoesNotCount() {
+        assertThat(ClaudeProblemReviewer.levelOf(SCENE, observed(false, "이 조건에서", 3)))
+                .isEqualTo(Difficulty.INTERMEDIATE);
+    }
+
+    @Test
+    @DisplayName("다른 조건에서 맞는 오답 수는 0~3으로 자른다")
+    void clampsElsewhereCount() {
+        assertThat(ClaudeProblemReviewer.elsewhereCountOf(observed(false, "", 4))).isEqualTo(3);
+        assertThat(ClaudeProblemReviewer.elsewhereCountOf(observed(false, "", -1))).isZero();
+    }
+
+    @Test
+    @DisplayName("중급 라벨에 지문 조건이 있으면, 급이 중급으로 나와도 따로 지적한다")
+    void intermediateWithConditionIsFlagged() {
+        GeneratedProblemItem item = new GeneratedProblemItem(SCENE, "", "해설", List.of(
+                new GeneratedChoice("살균기", true), new GeneratedChoice("정규식", false),
+                new GeneratedChoice("innerHTML", false), new GeneratedChoice("이스케이프", false)));
+        var shown = ClaudeProblemReviewer.showable(List.of(item));
+        Judgement j = new Judgement(1, "이유", shown.get(0).correctNo(), 0, "", "스키마는 표의 모양과 배치를 가리킨다.", "",
+                false, "요건", "원본은 훼손 없이 남아야 한다", "셋 다 오해", 0);
+
+        List<Finding> findings = ClaudeProblemReviewer.compare(shown, null, new JudgementBatch(List.of(j)),
+                Difficulty.INTERMEDIATE, DOC);
+
+        assertThat(findings).singleElement().satisfies(f -> {
+            assertThat(f.type()).isEqualTo(FindingType.DIFFICULTY_MISMATCH);
+            assertThat(f.message()).contains("조건 없이 묻는다", "원본은 훼손 없이");
+        });
     }
 
     @Test

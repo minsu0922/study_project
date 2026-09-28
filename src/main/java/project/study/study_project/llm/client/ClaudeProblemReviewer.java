@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 public class ClaudeProblemReviewer implements ProblemReviewer {
 
     private static final long MAX_TOKENS = 32_000L;
+    static final int CONDITION_QUOTE_MIN = 8;
 
     static final String CHOICE_ONLY_PROMPT = """
             너는 객관식 문제의 보기에 정답 단서가 새어 있는지 보는 검수자다.
@@ -67,7 +68,9 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
                답이 좁혀지면 그 이유를 쓴다. 아니면 빈 문자열이다.
                네 보기가 모두 질문의 주제어를 담는 것은 정상이다.
             5. 난이도는 판정하지 말고 아래 세 가지를 관찰만 한다. 급은 코드가 정한다.
-               - asksDefinition: 질문이 용어의 뜻, 또는 뜻에 맞는 용어만 묻는가.
+               - asksDefinition: 질문이 용어가 무엇인지(뜻, 설명, 뜻에 맞는 용어)만 묻는가.
+                 "X에 대한 설명으로 옳은 것은?"도 X가 무엇인지 묻는 것이면 true다.
+                 이유·비교·순서를 묻거나 원리를 적용하게 하면 false다.
                - conditionQuote: 지문에 답을 가르는 조건이 있으면 그 문장을 글자 그대로 옮긴다.
                  조건은 장면(무엇을 하려다 무엇이 어긋났나)이나 명세(비율, 규모, 유실 허용, 요건)다.
                  질문의 주제어나 "옳은 것은?" 같은 물음은 조건이 아니다.
@@ -227,13 +230,17 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
                                 : "검수 AI가 든 근거 문장이 문서에 없다(지어낸 인용)"));
             }
             Difficulty judgedLevel = levelOf(s.item().question(), j);
+            boolean condition = hasCondition(s.item().question(), j);
+            String observed = "지문 조건 %s, 다른 조건에서 맞는 오답 %d개. %s".formatted(
+                    condition ? "「" + j.conditionQuote() + "」" : "없음", elsewhereCountOf(j), j.elsewhereReason());
             if (judgedLevel != labeled) {
-                boolean condition = hasCondition(s.item().question(), j);
                 findings.add(new Finding(s.index(), FindingType.DIFFICULTY_MISMATCH,
-                        "%s로 냈지만 %s로 보인다: 지문 조건 %s, 다른 조건에서 맞는 오답 %d개. %s".formatted(
-                                labeled.getDisplayName(), judgedLevel.getDisplayName(),
-                                condition ? "「" + j.conditionQuote() + "」" : "없음",
-                                j.elsewhereCount(), j.elsewhereReason())));
+                        "%s로 냈지만 %s로 보인다: %s".formatted(
+                                labeled.getDisplayName(), judgedLevel.getDisplayName(), observed)));
+            } else if (labeled == Difficulty.INTERMEDIATE && condition) {
+                // 조건은 있는데 오답이 오해형인 반쪽 고급. 급은 중급으로 나오지만 중급은 조건 없이 묻는다
+                findings.add(new Finding(s.index(), FindingType.DIFFICULTY_MISMATCH,
+                        "중급인데 지문에 답을 가르는 조건이 있다(중급은 조건 없이 묻는다): " + observed));
             }
         }
         return findings;
@@ -247,7 +254,7 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
      */
     static Difficulty levelOf(String question, Judgement j) {
         boolean condition = hasCondition(question, j);
-        if (condition && j.elsewhereCount() >= 2) {
+        if (condition && elsewhereCountOf(j) >= 2) {
             return Difficulty.ADVANCED;
         }
         if (j.asksDefinition() && !condition) {
@@ -256,10 +263,20 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
         return Difficulty.INTERMEDIATE;
     }
 
-    /** 옮겨 적은 조건 문장이 지문에 실제로 있어야 조건으로 친다. 지어낸 조건으로 고급이 되지 않게 한다. */
+    /**
+     * 옮겨 적은 조건 문장이 지문에 실제로 있어야 조건으로 친다. 지어낸 조건으로 고급이 되지 않게 한다.
+     * 8자 미만은 버린다. "이때", "이 조건에서" 같은 조각도 지문에는 있기 때문이다.
+     * 물음 문장 통째("이 조건에서 옳은 판단은?")는 길이로 못 거르고 프롬프트 지시에 맡긴다.
+     */
     static boolean hasCondition(String question, Judgement j) {
         String quote = ClaudeDocumentFactChecker.normalize(j.conditionQuote());
-        return !quote.isEmpty() && ClaudeDocumentFactChecker.normalize(question).contains(quote);
+        return quote.length() >= CONDITION_QUOTE_MIN
+                && ClaudeDocumentFactChecker.normalize(question).contains(quote);
+    }
+
+    /** 오답은 셋뿐이다. 정답까지 세어 4를 적는 응답이 있어도 급이 흔들리지 않게 자른다. */
+    static int elsewhereCountOf(Judgement j) {
+        return Math.max(0, Math.min(3, j.elsewhereCount()));
     }
 
     private static <T> Map<Integer, T> byNo(List<T> items, Function<T, Integer> no) {

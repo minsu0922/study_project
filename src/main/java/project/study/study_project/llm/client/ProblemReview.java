@@ -63,7 +63,7 @@ public final class ProblemReview {
             @JsonPropertyDescription("질문의 표현을 한 보기만 되받아 문장 비교만으로 답이 좁혀지면 그 이유. 아니면 빈 문자열")
             String revealReason,
 
-            @JsonPropertyDescription("질문이 용어의 뜻, 또는 뜻에 맞는 용어만 묻는가")
+            @JsonPropertyDescription("질문이 용어가 무엇인지(뜻, 설명, 뜻에 맞는 용어)만 묻는가. 이유·비교·순서·적용을 물으면 false")
             boolean asksDefinition,
 
             @JsonPropertyDescription("지문에 적힌, 답을 가르는 조건이 무엇인지. 없으면 빈 문자열")
