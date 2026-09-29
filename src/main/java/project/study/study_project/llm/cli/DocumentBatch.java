@@ -173,7 +173,7 @@ final class DocumentBatch {
      * <p><b>왜 대기열 분야가 주기 분야를 이기나.</b> 대기열에 "@Transactional 전파 속성"을
      * 적어 뒀는데 그날 주기가 운영체제 차례라면, 스프링 문서가 운영체제 칸에 들어간다.
      * 그 어긋남은 문서 한 편으로 끝나지 않는다 — 이어지는 사흘의 문제가 그 문서를 근거로
-     * 만들어지므로({@link #alignDomainWithDocument}) 나흘이 통째로 엉킨다.
+     * 만들어지므로({@link SourceDocumentFinder#alignDomainWithDocument}) 나흘이 통째로 엉킨다.
      * 근거 문서가 주기 분야를 이기는 것과 <b>정확히 같은 이유</b>다: 실제 내용이 이름표를 이긴다.
      *
      * <p><b>왜 수동 지정은 이기지 못하나.</b> 사람이 워크플로에서 분야를 직접 골랐다면 그게
@@ -184,7 +184,7 @@ final class DocumentBatch {
      * <p>Task 7에서 {@link TopicQueue#parseDomain}이 "형식만" 보도록 바뀌면서, 등록되지 않은
      * 분야를 {@code _topics.json}에 손으로 적어도 그 항목이 그대로 쓰인다. 예전에 뜨던 경고가
      * 그 자리에서 사라진 것이라, 오타 하나가 <b>요금을 쓰고 문서를 만든 뒤</b> 로컬 앱의
-     * {@code DocumentImportService}가 흡수를 거절하는 데서야 드러난다. 그래서 {@link #knownDomain}이
+     * {@code DocumentImportService}가 흡수를 거절하는 데서야 드러난다. 그래서 {@link BatchOptions#knownDomain}이
      * 수동 지정을 재는 것과 <b>같은 잣대</b>(이번 실행의 전체 = {@code batchDomains})로 대기열
      * 분야도 재서 경고를 되살린다.
      *
@@ -196,7 +196,7 @@ final class DocumentBatch {
      * @param planned         주기(또는 수동 지정)가 계산해 둔 분야
      * @param requestedDomain 수동 실행의 {@code --domain}. 비어 있으면 대기열 쪽을 쓴다
      * @param picked          대기열에서 꺼낸 항목
-     * @param batchDomains    이번 실행의 후보 전체({@link #resolveBatchDomains}) — 경고 판정의 잣대
+     * @param batchDomains    이번 실행의 후보 전체({@link BatchOptions#resolveBatchDomains}) — 경고 판정의 잣대
      */
     static DomainCode topicDomain(DomainCode planned, String requestedDomain, TopicQueue.Picked picked,
                                   List<DomainCode> batchDomains) {
@@ -264,7 +264,7 @@ final class DocumentBatch {
      * </pre>
      *
      * <p>나머지 여섯 분야는 개념 문서를 <b>영원히 못 받는다.</b> 게다가 문제일에는
-     * {@link #alignDomainWithDocument}가 분야를 문서 쪽으로 맞추므로 <b>문제까지 그 두 분야에
+     * {@link SourceDocumentFinder#alignDomainWithDocument}가 분야를 문서 쪽으로 맞추므로 <b>문제까지 그 두 분야에
      * 갇힌다</b> — 백엔드 8개 분야를 고루 돌자던 설계가 25%만 도는 셈이었다.
      *
      * <p><b>왜 아무도 몰랐나.</b> {@code planFor}에는 테스트가 촘촘했지만 <b>그것을 쓰는 쪽</b>은
