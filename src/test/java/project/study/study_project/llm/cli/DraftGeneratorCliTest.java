@@ -85,21 +85,21 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("주기 분야와 문서 분야가 다르면 문서 쪽으로 맞춘다 — 근거 문서가 곧 그 주기의 주제다")
     void alignsDomainWithDocumentWhenTheyDiffer() {
-        assertThat(DraftGeneratorCli.alignDomainWithDocument(TestDomains.OS, TestDomains.SYSTEM_DESIGN))
+        assertThat(SourceDocumentFinder.alignDomainWithDocument(TestDomains.OS, TestDomains.SYSTEM_DESIGN))
                 .isEqualTo(TestDomains.SYSTEM_DESIGN);
     }
 
     @Test
     @DisplayName("문서에 분야가 없으면(옛 형식) 주기 분야를 그대로 쓴다 — 알 수 없는 값 때문에 멀쩡한 분야를 버리지 않는다")
     void keepsPlanDomainWhenDocumentDomainMissing() {
-        assertThat(DraftGeneratorCli.alignDomainWithDocument(TestDomains.OS, null))
+        assertThat(SourceDocumentFinder.alignDomainWithDocument(TestDomains.OS, null))
                 .isEqualTo(TestDomains.OS);
     }
 
     @Test
     @DisplayName("둘이 같으면 그대로 — 정상 주기에서는 아무 일도 일어나지 않는다")
     void keepsDomainWhenAlreadyMatching() {
-        assertThat(DraftGeneratorCli.alignDomainWithDocument(TestDomains.SECURITY, TestDomains.SECURITY))
+        assertThat(SourceDocumentFinder.alignDomainWithDocument(TestDomains.SECURITY, TestDomains.SECURITY))
                 .isEqualTo(TestDomains.SECURITY);
     }
 
@@ -351,7 +351,7 @@ class DraftGeneratorCliTest {
     /* ══ 근거 문서 지목 (--document-date) ═══════════════════════ */
 
     /**
-     * 2026-08-29에 붙인 옵션. 배경은 {@code DraftGeneratorCli#findSourceDocument} 주석에 있다 —
+     * 2026-08-29에 붙인 옵션. 배경은 {@code SourceDocumentFinder#findSourceDocument} 주석에 있다 —
      * 근거 문서가 {@code --date}의 주기에 묶여 있어, 주기의 세 날짜를 다 쓴 문서는 남은 난이도를
      * 채울 방법이 없었다.
      *
@@ -1251,13 +1251,13 @@ class DraftGeneratorCliTest {
                 왜 2MSL인가?
                 """;
 
-        assertThat(DraftGeneratorCli.hasMaterialFor(doc, Difficulty.INTERMEDIATE))
+        assertThat(SourceDocumentFinder.hasMaterialFor(doc, Difficulty.INTERMEDIATE))
                 .as("'### 왜 이렇게 설계됐는가'도 '## 실무에서는 이렇게 쓴다'도 없다")
                 .isFalse();
-        assertThat(DraftGeneratorCli.hasMaterialFor(doc, Difficulty.BEGINNER))
+        assertThat(SourceDocumentFinder.hasMaterialFor(doc, Difficulty.BEGINNER))
                 .as("초급 재료는 멀쩡하다 — 난이도별로 따로 봐야 한다")
                 .isTrue();
-        assertThat(DraftGeneratorCli.hasMaterialFor(doc, Difficulty.ADVANCED)).isTrue();
+        assertThat(SourceDocumentFinder.hasMaterialFor(doc, Difficulty.ADVANCED)).isTrue();
     }
 
     /**
@@ -1270,15 +1270,15 @@ class DraftGeneratorCliTest {
         String onlySubheading = "## 무엇인가\n설명\n\n### 왜 이렇게 설계됐는가\n다른 선택지도 있었다.";
         String onlySection = "## 무엇인가\n설명\n\n## 실무에서는 이렇게 쓴다\n이렇게 쓴다.";
 
-        assertThat(DraftGeneratorCli.hasMaterialFor(onlySubheading, Difficulty.INTERMEDIATE)).isTrue();
-        assertThat(DraftGeneratorCli.hasMaterialFor(onlySection, Difficulty.INTERMEDIATE)).isTrue();
+        assertThat(SourceDocumentFinder.hasMaterialFor(onlySubheading, Difficulty.INTERMEDIATE)).isTrue();
+        assertThat(SourceDocumentFinder.hasMaterialFor(onlySection, Difficulty.INTERMEDIATE)).isTrue();
     }
 
     @Test
     @DisplayName("본문이나 난이도를 모르면 막지 않는다 — 확신 없이 버리면 그날 치가 근거 없이 날아간다")
     void doesNotBlockWhenNothingToJudge() {
-        assertThat(DraftGeneratorCli.hasMaterialFor(null, Difficulty.BEGINNER)).isTrue();
-        assertThat(DraftGeneratorCli.hasMaterialFor("## 무엇인가", null)).isTrue();
+        assertThat(SourceDocumentFinder.hasMaterialFor(null, Difficulty.BEGINNER)).isTrue();
+        assertThat(SourceDocumentFinder.hasMaterialFor("## 무엇인가", null)).isTrue();
     }
 
     /* ══ 주제 대기열의 분야 우선순위(2026-08-19) ═══════════════ */
@@ -1620,7 +1620,7 @@ class DraftGeneratorCliTest {
                 throws Exception {
             java.nio.file.Path outDir = writeDocument(tmp, documentWith(2));
 
-            assertThat(DraftGeneratorCli.findSourceDocument(
+            assertThat(SourceDocumentFinder.findSourceDocument(
                     outDir, DATE, Difficulty.BEGINNER, ProblemType.MATCHING)).isNull();
         }
 
@@ -1630,7 +1630,7 @@ class DraftGeneratorCliTest {
                 throws Exception {
             java.nio.file.Path outDir = writeDocument(tmp, documentWith(2));
 
-            assertThat(DraftGeneratorCli.findSourceDocument(
+            assertThat(SourceDocumentFinder.findSourceDocument(
                     outDir, DATE, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE)).isNotNull();
         }
 
@@ -1640,7 +1640,7 @@ class DraftGeneratorCliTest {
                 throws Exception {
             java.nio.file.Path outDir = writeDocument(tmp, documentWith(4));
 
-            assertThat(DraftGeneratorCli.findSourceDocument(
+            assertThat(SourceDocumentFinder.findSourceDocument(
                     outDir, DATE, Difficulty.BEGINNER, ProblemType.MATCHING)).isNotNull();
         }
 
@@ -1673,7 +1673,7 @@ class DraftGeneratorCliTest {
             new com.fasterxml.jackson.databind.ObjectMapper()
                     .writeValue(docDir.resolve(DATE + ".json").toFile(), file);
 
-            var resolved = DraftGeneratorCli.findSourceDocument(
+            var resolved = SourceDocumentFinder.findSourceDocument(
                     tmp, DATE, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE);
 
             assertThat(resolved).isNotNull();
@@ -1754,11 +1754,11 @@ class DraftGeneratorCliTest {
                 "테스트", "2026-09-07", "2026-09-07T00:00:00Z", TestDomains.OS, "test-model",
                 beginner, advanced);
 
-        assertThat(DraftGeneratorCli.editionFor(file, Difficulty.BEGINNER)).isSameAs(beginner);
-        assertThat(DraftGeneratorCli.editionFor(file, Difficulty.INTERMEDIATE))
+        assertThat(SourceDocumentFinder.editionFor(file, Difficulty.BEGINNER)).isSameAs(beginner);
+        assertThat(SourceDocumentFinder.editionFor(file, Difficulty.INTERMEDIATE))
                 .as("중급 재료(## 실제로는 어디에서 만나는가)는 심화편에만 있다")
                 .isSameAs(advanced);
-        assertThat(DraftGeneratorCli.editionFor(file, Difficulty.ADVANCED))
+        assertThat(SourceDocumentFinder.editionFor(file, Difficulty.ADVANCED))
                 .as("고급 재료(## 언제 깨지는가)는 심화편에만 있다")
                 .isSameAs(advanced);
     }
@@ -1777,7 +1777,7 @@ class DraftGeneratorCliTest {
                 "테스트", "2026-08-12", "2026-08-12T00:00:00Z", TestDomains.SYSTEM_DESIGN, "test-model",
                 only, null);
 
-        assertThat(DraftGeneratorCli.editionFor(file, Difficulty.ADVANCED)).isSameAs(only);
+        assertThat(SourceDocumentFinder.editionFor(file, Difficulty.ADVANCED)).isSameAs(only);
     }
 
     /* ── 후보 분야의 폴백 조건(최종 리뷰 Important 3) ─────────────────────────
