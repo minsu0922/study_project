@@ -1917,7 +1917,7 @@ class DraftGeneratorCliTest {
                 "적재 중에도 접속은 된다", "명령에 LOADING 에러를 돌려준다",
                 project.study.study_project.llm.client.FactCheckFinding.Confidence.HIGH);
 
-        String rendered = DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(finding), FACT_DOC,
+        String rendered = BatchReports.reportFactCheck((t, c, e) -> List.of(finding), FACT_DOC,
                 LocalDate.of(2026, 9, 27));
 
         assertThat(rendered).contains("사실 검수: 1건", "[사실 오류·확신]",
@@ -1934,7 +1934,7 @@ class DraftGeneratorCliTest {
                 project.study.study_project.llm.client.FactCheckFinding.Confidence.LOW);
         List<project.study.study_project.llm.client.DocumentEdition> seen = new ArrayList<>();
 
-        String rendered = DraftGeneratorCli.reportFactCheck((t, c, e) -> {
+        String rendered = BatchReports.reportFactCheck((t, c, e) -> {
             seen.add(e);
             return List.of(finding);
         }, FACT_DOC, LocalDate.of(2026, 9, 27));
@@ -1950,12 +1950,12 @@ class DraftGeneratorCliTest {
                 List.of(), "", "스키마의 뜻");
         var source = new project.study.study_project.llm.client.SourceDocument("s", "제목", "본문");
 
-        String rendered = DraftGeneratorCli.reportProblemReview((p, d, s) -> List.of(
+        String rendered = BatchReports.reportProblemReview((p, d, s) -> List.of(
                         new project.study.study_project.llm.client.ProblemReview.Finding(0,
                                 project.study.study_project.llm.client.ProblemReview.FindingType.ANSWER_MISMATCH,
                                 "검수 AI는 테이블을 골랐다")),
                 List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
-        String failed = DraftGeneratorCli.reportProblemReview((p, d, s) -> {
+        String failed = BatchReports.reportProblemReview((p, d, s) -> {
             throw new IllegalStateException("API 오류");
         }, List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
 
@@ -1973,7 +1973,7 @@ class DraftGeneratorCliTest {
                 "https://redis.io/docs/latest/operate/oss%20and%20stack/persistence/",
                 project.study.study_project.llm.client.FactCheckFinding.Confidence.HIGH);
 
-        String rendered = DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(finding), FACT_DOC,
+        String rendered = BatchReports.reportFactCheck((t, c, e) -> List.of(finding), FACT_DOC,
                 LocalDate.of(2026, 9, 27));
 
         assertThat(rendered).contains("근거: https://redis.io/docs/latest/operate/oss%20and%20stack/persistence/");
@@ -1990,26 +1990,26 @@ class DraftGeneratorCliTest {
                 new project.study.study_project.llm.client.ClaudeCalls.Usage("문제 검수", "claude-opus-5",
                         20_000, 5_000, 0, true));
 
-        String rendered = DraftGeneratorCli.reportCostSummary(LocalDate.of(2026, 9, 28), ledger);
+        String rendered = BatchReports.reportCostSummary(LocalDate.of(2026, 9, 28), ledger);
 
         // 한 건 정가: 입력 20K × $5 + 출력 5K × $25 = $0.225. 배치 두 건은 반값씩이라 합쳐 $0.225
         assertThat(rendered).contains("2026-09-28 API 비용 약 $0.45",
                 "| 문제 생성 | 1 (배치 0) | 20,000 | 5,000 | $0.23 |",
                 "| 문제 검수 | 2 (배치 2) | 40,000 | 10,000 | $0.23 |");
-        assertThat(DraftGeneratorCli.reportCostSummary(LocalDate.of(2026, 9, 28), List.of())).isEmpty();
+        assertThat(BatchReports.reportCostSummary(LocalDate.of(2026, 9, 28), List.of())).isEmpty();
     }
 
     @Test
     @DisplayName("지적이 없으면 한 줄만 남긴다")
     void rendersNoFindings() {
-        assertThat(DraftGeneratorCli.reportFactCheck((t, c, e) -> List.of(), FACT_DOC, LocalDate.of(2026, 9, 27)))
+        assertThat(BatchReports.reportFactCheck((t, c, e) -> List.of(), FACT_DOC, LocalDate.of(2026, 9, 27)))
                 .contains("지적 없음");
     }
 
     @Test
     @DisplayName("검수가 실패해도 예외를 밖으로 던지지 않는다 — 문서는 이미 저장됐다")
     void factCheckFailureDoesNotKillJob() {
-        String rendered = DraftGeneratorCli.reportFactCheck((t, c, e) -> {
+        String rendered = BatchReports.reportFactCheck((t, c, e) -> {
             throw new IllegalStateException("API 오류 100%");
         }, FACT_DOC, LocalDate.of(2026, 9, 27));
 

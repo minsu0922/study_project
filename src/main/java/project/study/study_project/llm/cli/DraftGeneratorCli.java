@@ -11,9 +11,6 @@ import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
 import project.study.study_project.llm.client.ClaudeProblemReviewer;
 import project.study.study_project.llm.client.DocumentFactChecker;
-import project.study.study_project.llm.client.ProblemReview;
-import project.study.study_project.llm.client.ProblemReviewer;
-import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.RejectionNote;
@@ -25,11 +22,8 @@ import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.DefaultDomains;
 import project.study.study_project.llm.support.DifficultyMaterialRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
-import project.study.study_project.llm.support.DraftCheck;
-import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.DomainEntry;
 import project.study.study_project.llm.support.DomainSettings;
-import project.study.study_project.llm.support.GenerationLimits;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.SourceQuoteRule;
@@ -102,19 +96,19 @@ import java.util.stream.Collectors;
 public final class DraftGeneratorCli {
 
     /** 결과 파일이 쌓이는 기본 디렉터리 — 저장소 루트 기준 상대 경로. */
-    private static final String DEFAULT_OUT_DIR = "generated";
+    static final String DEFAULT_OUT_DIR = "generated";
 
     /** 중복 회피 목록에 넣을 지문 수 상한 — 프롬프트 입력 토큰과의 균형점(서비스의 값과 동일). */
-    private static final int AVOID_LIST_SIZE = 50;
+    static final int AVOID_LIST_SIZE = 50;
 
     /** 정식 문제 지문을 내보내 둔 파일. 클라우드에는 DB가 없어 이 스냅샷으로 대신한다. */
-    private static final String EXISTING_QUESTIONS_FILE = "_existing-questions.json";
+    static final String EXISTING_QUESTIONS_FILE = "_existing-questions.json";
 
     /** 검수자의 거절 사례 스냅샷. 로컬 앱(RejectionNotesExporter)이 쓰고 여기서 읽는다. */
-    private static final String REJECTION_NOTES_FILE = "_rejection-notes.json";
+    static final String REJECTION_NOTES_FILE = "_rejection-notes.json";
 
     /** 개념 문서 결과가 쌓이는 하위 디렉터리. 문제 파일과 형식이 달라 폴더로 분리한다(docs/15). */
-    private static final String DOCUMENT_SUBDIR = "documents";
+    static final String DOCUMENT_SUBDIR = "documents";
 
     /** 근거 문서를 지목하는 옵션 이름. 이름을 세 곳에서 문자열로 쓰게 되어 상수로 뽑았다. */
     static final String DOCUMENT_DATE_OPT = "document-date";
@@ -144,15 +138,15 @@ public final class DraftGeneratorCli {
      * 빠뜨리는 것이 생긴다. 첫 글자를 하이픈이 아니게 한 것은 {@code 2026-08-29--x.json}처럼
      * 읽기 나쁜 이름을 막으려는 것이다.
      */
-    private static final Pattern SUFFIX_PATTERN = Pattern.compile("[a-z0-9][a-z0-9-]{0,29}");
+    static final Pattern SUFFIX_PATTERN = Pattern.compile("[a-z0-9][a-z0-9-]{0,29}");
 
     /** 한국 날짜 기준 — 워크플로는 UTC로 도니까 변환하지 않으면 하루 어긋난다. */
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     /** 기존 문서 제목·태그 스냅샷. 문서 주제 중복을 피하고 태그 난립을 막는 데 쓴다. */
-    private static final String EXISTING_DOCUMENTS_FILE = "_existing-documents.json";
+    static final String EXISTING_DOCUMENTS_FILE = "_existing-documents.json";
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** Batch API 옵션 — 워크플로가 켠다. 로컬 실행은 기본이 바로 호출이라 결과를 곧장 본다. */
     static final String BATCH_API_OPT = "batch-api";
@@ -168,46 +162,11 @@ public final class DraftGeneratorCli {
         } finally {
             // 흐름마다 끝나는 자리가 달라(쉬는 날, 문서일, 문제일) 한 곳에서 찍는다. 실패한 날에도
             // 이미 낸 요금은 남아야 한다
-            reportCostSummary(resolveDate(opts), ClaudeCalls.ledger());
+            BatchReports.reportCostSummary(resolveDate(opts), ClaudeCalls.ledger());
         }
     }
 
-    /**
-     * 이번 실행의 호출별 토큰과 추정 금액을 이름별로 묶어 요약에 남긴다(docs/23).
-     * 2주 점검(docs/22 §6)과 Batch API 효과 확인에 추정이 아닌 실제 값이 필요하다.
-     *
-     * @return 요약 화면에 쓴 글(테스트용). 호출이 없으면 빈 문자열
-     */
-    static String reportCostSummary(LocalDate date, List<ClaudeCalls.Usage> ledger) {
-        if (ledger.isEmpty()) {
-            return "";
-        }
-        Map<String, List<ClaudeCalls.Usage>> byLabel = new java.util.LinkedHashMap<>();
-        ledger.forEach(u -> byLabel.computeIfAbsent(u.label(), k -> new ArrayList<>()).add(u));
-        StringBuilder lines = new StringBuilder();
-        double total = 0;
-        for (var entry : byLabel.entrySet()) {
-            long in = 0, out = 0, batched = 0;
-            double usd = 0;
-            for (ClaudeCalls.Usage u : entry.getValue()) {
-                in += u.inputTokens();
-                out += u.outputTokens();
-                batched += u.batch() ? 1 : 0;
-                usd += ReviewEvalCli.usd(u.model(), u.inputTokens(), u.outputTokens(), u.webSearches(), u.batch());
-            }
-            total += usd;
-            lines.append("| %s | %d (배치 %d) | %,d | %,d | %s |%n".formatted(entry.getKey(),
-                    entry.getValue().size(), batched, in, out, Double.isNaN(usd) ? "?" : "$%.2f".formatted(usd)));
-        }
-        String rendered = ("💰 **%s API 비용 약 %s** — 사고 토큰은 출력에 포함. 배치 호출은 반값으로 계산%n%n"
-                + "| 호출 | 횟수 | 입력 토큰 | 출력 토큰 | 금액 |%n|---|---|---|---|---|%n")
-                .formatted(date, Double.isNaN(total) ? "?" : "$%.2f".formatted(total)) + lines;
-        System.out.println(rendered);
-        appendToStepSummary(rendered);
-        return rendered;
-    }
-
-    private static void run(Map<String, String> opts) throws Exception {
+    static void run(Map<String, String> opts) throws Exception {
 
         // ── 1. 설정 읽기 ──────────────────────────────────────────
         // application.yml을 직접 읽는 이유: 모델 ID·후보 도메인을 워크플로에 따로 적어 두면
@@ -240,7 +199,7 @@ public final class DraftGeneratorCli {
         boolean batchEnabled = !Boolean.FALSE.equals(generation.get("batch-enabled"));
         boolean force = "true".equalsIgnoreCase(opts.getOrDefault("force", "false"));
         if (!shouldGenerate(batchEnabled, force)) {
-            announce("""
+            BatchReports.announce("""
                     ⏸️ **아무것도 만들지 않았습니다 — 배치가 꺼져 있습니다**
 
                     `llm.generation.batch-enabled=false`. 수동 실행에서 force=true로 한 번만 무시할 수 있습니다.""");
@@ -272,7 +231,7 @@ public final class DraftGeneratorCli {
             return;
         }
         if (action == BatchAction.SKIP) {
-            announce("""
+            BatchReports.announce("""
                     💤 **아무것도 만들지 않았습니다 — 오늘은 쉬는 날입니다**
 
                     `batch-type=document`인데 %s은 문서일이 아닙니다(4일 주기). 요금 0.""".formatted(date));
@@ -301,7 +260,7 @@ public final class DraftGeneratorCli {
         // 며칠씩 아무것도 안 하는 것을 아무도 몰랐다. 이제는 요약에 남기고, 되풀이하지 않는
         // 방법(--suffix)까지 함께 알려 준다.
         if (Files.exists(outFile)) {
-            announce("""
+            BatchReports.announce("""
                     ⏭️ **아무것도 만들지 않았습니다 — 결과 파일이 이미 있습니다**
 
                     `%s`
@@ -398,51 +357,14 @@ public final class DraftGeneratorCli {
         // 여기 찍는 수는 <파일에 든 개수>다. 전에는 모델 응답 개수를 찍어서, 바로 위 경고가
         // "3개만 쓸 수 있다"고 적은 날에도 이 줄은 "5건"이라고 했다(2026-09-13). 같은 화면에
         // 두 수가 나란히 있으면 사람은 큰 쪽을 믿는다 — 검수함을 열어 보고서야 어긋남을 안다.
-        announce("✅ **%s 문제 초안 %d건** — %s × %s, 근거 문서 %s → `%s`"
+        BatchReports.announce("✅ **%s 문제 초안 %d건** — %s × %s, 근거 문서 %s → `%s`"
                 .formatted(date, kept.size(), domain, difficulty,
                         source == null ? "없음(폴백)" : source.slug(), outFile));
 
         // 문제 검수(docs/22 §3.2~3.4). 객관식이고 근거 문서가 있을 때만 — 근거 대조에 문서가 필요하다
         if (type == ProblemType.MULTIPLE_CHOICE && source != null) {
-            reportProblemReview(new ClaudeProblemReviewer(model), kept, difficulty, source, date);
+            BatchReports.reportProblemReview(new ClaudeProblemReviewer(model), kept, difficulty, source, date);
         }
-    }
-
-    /**
-     * 문제 검수를 돌려 지적을 요약 화면에 남긴다. 실패해도 job을 죽이지 않는다.
-     * 파일은 이미 저장됐고, 검수는 덧붙이는 단계다.
-     *
-     * @return 요약 화면에 쓴 글(테스트용)
-     */
-    static String reportProblemReview(ProblemReviewer reviewer, List<GeneratedProblemItem> problems,
-                                      Difficulty difficulty, SourceDocument source, LocalDate date) {
-        String rendered;
-        try {
-            rendered = renderProblemReview(date, problems, reviewer.review(problems, difficulty, source));
-        } catch (RuntimeException e) {
-            rendered = "⚠️ **%s 문제 검수 실패** — 문제는 저장했습니다. 승인 전에 사람이 풀어 보세요 (%s)%n"
-                    .formatted(date, e.getMessage());
-        }
-        System.out.println(rendered);
-        appendToStepSummary(rendered);
-        return rendered;
-    }
-
-    static String renderProblemReview(LocalDate date, List<GeneratedProblemItem> problems,
-                                      List<ProblemReview.Finding> findings) {
-        if (findings.isEmpty()) {
-            return "🔎 %s 문제 검수: 지적 없음%n".formatted(date);
-        }
-        String lines = findings.stream()
-                .map(f -> {
-                    GeneratedProblemItem p = problems.get(f.problemIndex());
-                    String name = p.title() == null || p.title().isBlank() ? p.question() : p.title();
-                    return "- %d번 「%s」 [%s] %s".formatted(f.problemIndex() + 1,
-                            name.length() > 40 ? name.substring(0, 40) + "…" : name, f.type().label(), f.message());
-                })
-                .collect(java.util.stream.Collectors.joining("\n"));
-        return "🔎 **%s 문제 검수: %d건** — 승인 전에 확인하세요. AI 지적이라 틀릴 수 있습니다%n%s%n"
-                .formatted(date, findings.size(), lines);
     }
 
     /** 오늘 배치가 할 일. {@link #decideAction}이 결정한다. */
@@ -502,7 +424,7 @@ public final class DraftGeneratorCli {
         return documentDay ? BatchAction.DOCUMENT : BatchAction.PROBLEM;
     }
 
-    private static boolean isSet(String s) {
+    static boolean isSet(String s) {
         return s != null && !s.isBlank();
     }
 
@@ -688,90 +610,6 @@ public final class DraftGeneratorCli {
     }
 
     /**
-     * 갓 만든 문서를 검증기에 통과시켜 결과를 로그와 요약 화면에 남긴다.
-     *
-     * <p><b>왜 여기서 또 보는가.</b> {@link DocumentDraftValidator}는 이미 있었지만
-     * <b>승인 화면에서만</b> 돌았다. 그런데 문서는 만든 날 바로 승인되지 않는다 — 그 사이
-     * 이 문서를 근거로 사흘 치 문제가 만들어진다. 형식이 어긋난 것을 <b>사흘 뒤에</b> 알면
-     * 이미 그 주기가 절반 지나간 뒤다. 2026-08-15 문서가 정확히 그 경로로 새어 나갔다.
-     *
-     * <p><b>왜 job을 실패시키지 않는가.</b> 전부 경고이고, 문서 자체는 쓸 수 있다.
-     * 여기서 죽이면 그날 요금을 내고 만든 문서를 버리는 셈인데, 사람이 승인 화면에서
-     * 소제목 하나 고치면 되는 일이 대부분이다. 알리는 데까지가 이 자리의 몫이다.
-     *
-     * <p>차단 항목이 나오면 이야기가 다르다 — 그건 승인 자체가 막힌다는 뜻이라
-     * 그 주기가 통째로 헛돌게 되므로 <b>요약 화면에</b> 눈에 띄게 남긴다.
-     */
-    private static void reportDraftChecks(GeneratedDocumentItem document, LocalDate date) {
-        List<DraftCheck> checks = DocumentDraftValidator.validate(
-                document.title(), document.slug(), document.contentMd());
-        // 하루에 두 편을 만들게 되면서(2026-09-03) 어느 편의 결과인지 밝히지 않으면
-        // 요약 화면에 같은 모양의 블록이 둘 나란히 서서 구별되지 않는다.
-        String edition = ClaudeDocumentGenerator.editionOf(document.contentMd()).getDisplayName();
-        if (checks.isEmpty()) {
-            System.out.println(edition + " 검증 통과: 형식 문제 없음");
-            return;
-        }
-
-        boolean blocking = DocumentDraftValidator.hasBlocking(checks);
-        String lines = checks.stream()
-                .map(c -> "- %s %s".formatted(c.isBlocking() ? "[차단]" : "[경고]", c.message()))
-                .collect(java.util.stream.Collectors.joining("\n"));
-
-        String rendered = "%s **%s %s 검증: %d건**%s%n%s%n".formatted(
-                blocking ? "❌" : "⚠️", date, edition, checks.size(),
-                blocking ? " — 차단 항목이 있어 이대로는 승인되지 않습니다" : "",
-                lines);
-
-        // 서식은 여기서 끝낸다 — 본문에 '%'가 들어 있으면 다시 포맷할 때 예외로 죽는다
-        // (reportYield에서 실제로 겪은 함정).
-        System.out.println(rendered);
-        appendToStepSummary(rendered);
-    }
-
-    /**
-     * 사실 검수를 돌려 지적을 요약 화면에 남긴다. 실패해도 job을 죽이지 않는다.
-     * 검수는 덧붙이는 단계라, 여기서 죽으면 이미 요금을 낸 문서까지 커밋되지 않는다.
-     *
-     * @return 요약 화면에 쓴 글(테스트용)
-     */
-    static String reportFactCheck(DocumentFactChecker checker, GeneratedDocumentItem document, LocalDate date) {
-        var documentEdition = ClaudeDocumentGenerator.editionOf(document.contentMd());
-        String edition = documentEdition.getDisplayName();
-        String rendered;
-        try {
-            rendered = renderFactCheck(date, edition,
-                    checker.check(document.title(), document.contentMd(), documentEdition));
-        } catch (RuntimeException e) {
-            rendered = "⚠️ **%s %s 사실 검수 실패** — 문서는 저장했습니다. 승인 전에 사람이 읽어 주세요 (%s)%n"
-                    .formatted(date, edition, e.getMessage());
-        }
-        System.out.println(rendered);
-        appendToStepSummary(rendered);
-        return rendered;
-    }
-
-    static String renderFactCheck(LocalDate date, String edition, List<FactCheckFinding> findings) {
-        if (findings.isEmpty()) {
-            return "🔎 %s %s 사실 검수: 지적 없음%n".formatted(date, edition);
-        }
-        String lines = findings.stream()
-                .map(f -> "- [%s·%s] \"%s\"%n  - 이유: %s%n  - 바로잡으면: %s%s".formatted(
-                        switch (f.kind()) {
-                            case INTERNAL_MISMATCH -> "문서 안 불일치";
-                            case UNDEFINED_TERM -> "정의 없는 용어";
-                            case FACT_ERROR -> "사실 오류";
-                        },
-                        f.confidence() == FactCheckFinding.Confidence.HIGH ? "확신" : "의심",
-                        f.quote(), f.reason(), f.correction(),
-                        // URL은 인자로 넘긴다. 형식 문자열에 붙이면 %20 같은 인코딩이 서식으로 읽힌다
-                        f.sourceUrl() == null || f.sourceUrl().isBlank() ? "" : "\n  - 근거: " + f.sourceUrl()))
-                .collect(java.util.stream.Collectors.joining("\n"));
-        return "🔎 **%s %s 사실 검수: %d건** — 승인 전에 확인하세요. AI 지적이라 틀릴 수 있습니다%n%s%n"
-                .formatted(date, edition, findings.size(), lines);
-    }
-
-    /**
      * 찾아낸 근거 문서와 <b>그 문서가 속한 분야</b>.
      *
      * <p>분야를 따로 들고 다니는 이유: 주기가 계산한 분야와 실제 문서의 분야가 어긋날 수 있고,
@@ -800,7 +638,7 @@ public final class DraftGeneratorCli {
      *       기존 흡수 코드가 파싱에 실패한다({@code GeneratedDocumentFile} 주석 참고).
      * </ul>
      */
-    private static void generateDocument(Map<String, String> opts, String model, DomainSettings settings,
+    static void generateDocument(Map<String, String> opts, String model, DomainSettings settings,
                                          List<DomainCode> batchDomains, LocalDate cycleAnchor) throws Exception {
         LocalDate date = resolveDate(opts);
         // main()이 이미 같은 opts로 outDir을 정해 뒀지만, 이 메서드는 main()의 지역 변수를
@@ -815,7 +653,7 @@ public final class DraftGeneratorCli {
 
         // 문제 생성과 같은 멱등성 보호 — 수동으로 두 번 눌러도 요금이 두 번 나가지 않는다
         if (Files.exists(outFile)) {
-            announce("""
+            BatchReports.announce("""
                     ⏭️ **아무것도 만들지 않았습니다 — 그 날짜의 개념 문서가 이미 있습니다**
 
                     `%s`
@@ -882,7 +720,7 @@ public final class DraftGeneratorCli {
 
         Files.createDirectories(docDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(file));
-        announce("✅ **%s 개념 문서 %d편** — %s → `%s`%n%n> 입문편(%,d자) %s%n%n> 심화편(%s) %s"
+        BatchReports.announce("✅ **%s 개념 문서 %d편** — %s → `%s`%n%n> 입문편(%,d자) %s%n%n> 심화편(%s) %s"
                 .formatted(date, advanced == null ? 1 : 2, domain, outFile,
                         document.contentMd().length(), document.title(),
                         advanced == null ? "없음" : "%,d자".formatted(advanced.contentMd().length()),
@@ -890,16 +728,16 @@ public final class DraftGeneratorCli {
 
         // 문제 쪽의 수확량 점검에 해당하는 자리다. 지금까지 문서에는 이런 점검이 없었고,
         // 검증은 <며칠 뒤 승인 화면에서만> 돌았다. 그 사이 이 문서로 사흘 치 문제가 만들어진다.
-        reportDraftChecks(document, date);
+        BatchReports.reportDraftChecks(document, date);
         if (advanced != null) {
-            reportDraftChecks(advanced, date);
+            BatchReports.reportDraftChecks(advanced, date);
         }
 
         // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다
         DocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
-        reportFactCheck(factChecker, document, date);
+        BatchReports.reportFactCheck(factChecker, document, date);
         if (advanced != null) {
-            reportFactCheck(factChecker, advanced, date);
+            BatchReports.reportFactCheck(factChecker, advanced, date);
         }
 
         // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
@@ -908,7 +746,7 @@ public final class DraftGeneratorCli {
         if (picked != null && !queue.markUsed(outDir, picked, date)) {
             System.out.println("⚠️ 주제 범위에 사용 기록을 못 남겼습니다 — 다음 문서일에 같은 범위가 또 걸릴 수 있습니다: "
                     + picked.topic());
-            appendToStepSummary("⚠️ `%s`에 사용 기록을 못 남겼습니다 — \"%s\" 범위가 다음 문서일에 또 걸릴 수 있습니다.%n"
+            BatchReports.appendToStepSummary("⚠️ `%s`에 사용 기록을 못 남겼습니다 — \"%s\" 범위가 다음 문서일에 또 걸릴 수 있습니다.%n"
                     .formatted(TopicQueue.FILE_NAME, picked.topic()));
         }
     }
@@ -975,24 +813,24 @@ public final class DraftGeneratorCli {
      * 문서를 만든다. 초록불로 끝나므로 <b>대기열이 안 쓰이고 있다는 사실 자체를 모른다</b>.
      * 스냅샷 낡음 경고를 여기에 둔 것과 같은 판단이다(그 함수 주석 참고).
      */
-    private static void reportTopicQueue(TopicQueue queue, TopicQueue.Picked picked, String topic) {
+    static void reportTopicQueue(TopicQueue queue, TopicQueue.Picked picked, String topic) {
         if (picked != null) {
             String message = "📌 오늘의 주제 범위: **%s** (%s) — 등록된 범위 %d개 중 차례%n"
                     .formatted(picked.topic(), picked.domain(), queue.size());
-            announce(message);
+            BatchReports.announce(message);
         } else if (topic == null) {
             // 수동 지정도 범위 목록도 없는 평소 경로. 오류가 아니므로 아이콘도 정보(ℹ️)로 둔다 —
             // 매일 경고가 뜨면 사람이 경고 전체를 무시하게 된다.
             String message = ("ℹ️ 주제 범위 목록이 비어 모델이 주제를 자동으로 고릅니다. "
                     + "관리자 화면에서 범위를 넣고 `generated/%s`를 커밋하면 다음 문서일부터 그 안에서 고릅니다.%n")
                     .formatted(TopicQueue.FILE_NAME);
-            announce(message);
+            BatchReports.announce(message);
         }
 
         if (!queue.problems().isEmpty()) {
             String message = "⚠️ **주제 범위 목록에서 건너뛴 항목 %d건**%n%s%n"
-                    .formatted(queue.problems().size(), bullets(queue.problems()));
-            announce(message);
+                    .formatted(queue.problems().size(), BatchReports.bullets(queue.problems()));
+            BatchReports.announce(message);
         }
     }
 
@@ -1045,7 +883,7 @@ public final class DraftGeneratorCli {
      * 대신한다. 파일이 없어도 진행한다: 첫 실행이거나 아직 내보내지 않았을 수 있고, 이건 정상
      * 상황이지 오류가 아니다(중복이 날 뿐 생성 자체는 된다).
      */
-    private static ExistingDocuments readExistingDocuments(Path dir) {
+    static ExistingDocuments readExistingDocuments(Path dir) {
         Path file = dir.resolve(EXISTING_DOCUMENTS_FILE);
         if (!Files.exists(file)) {
             return ExistingDocuments.empty();
@@ -1069,7 +907,7 @@ public final class DraftGeneratorCli {
      * 문제를 만드는 낭비를 막는 용도다. 옛 파일에는 이 필드가 없으므로 null 방어가 필요하다 —
      * 위 {@code readExistingDocuments}가 전부 빈 목록으로 정규화해 호출부가 신경 쓰지 않게 한다.
      */
-    private record ExistingDocuments(String note, String exportedAt, List<String> titles,
+    record ExistingDocuments(String note, String exportedAt, List<String> titles,
                                      List<String> tags, List<String> rejectedSlugs) {
 
         static ExistingDocuments empty() {
@@ -1086,7 +924,7 @@ public final class DraftGeneratorCli {
      * 사용자 입력을 셸 명령에 끼워 넣지 않아 스크립트 인젝션 위험도 없다.
      * {@code --topic}은 공백 없는 주제를 로컬에서 빠르게 시험할 때를 위해 남겨 둔다.
      */
-    private static String resolveTopic(Map<String, String> opts) {
+    static String resolveTopic(Map<String, String> opts) {
         String fromEnv = System.getenv("DRAFT_TOPIC");
         if (fromEnv != null && !fromEnv.isBlank()) {
             return fromEnv.trim();
@@ -1095,7 +933,7 @@ public final class DraftGeneratorCli {
     }
 
     /** 기준 날짜 — 한국 기준. 문제·문서 두 흐름이 같은 규칙을 쓰도록 한 곳에 둔다. */
-    private static LocalDate resolveDate(Map<String, String> opts) {
+    static LocalDate resolveDate(Map<String, String> opts) {
         return opts.containsKey("date")
                 ? LocalDate.parse(opts.get("date"))
                 : LocalDate.now(KST);
@@ -1200,7 +1038,7 @@ public final class DraftGeneratorCli {
     }
 
     /** 오류 메시지에 넣을 "쓸 수 있는 값" 목록 — enum에서 뽑아 쓰므로 유형이 늘면 저절로 따라온다. */
-    private static String generatableTypes() {
+    static String generatableTypes() {
         return Arrays.stream(ProblemType.values())
                 .filter(ProblemType::isAutoScored)
                 .map(Enum::name)
@@ -1355,7 +1193,7 @@ public final class DraftGeneratorCli {
      * 이건 정상 상황이지 오류가 아니므로, 파일이 없다고 배치를 실패시키면 안 된다
      * (되먹임은 품질 개선 장치이지 생성의 전제 조건이 아니다).
      */
-    private static List<RejectionNote> readRejectionNotes(Path dir) {
+    static List<RejectionNote> readRejectionNotes(Path dir) {
         Path file = dir.resolve(REJECTION_NOTES_FILE);
         if (!Files.exists(file)) {
             return List.of();
@@ -1419,7 +1257,7 @@ public final class DraftGeneratorCli {
      * <p><b>실패시키지 않는다.</b> 낡은 스냅샷은 중복 문제가 나올 수 있다는 뜻이지 생성이
      * 불가능하다는 뜻이 아니다. 여기서 job을 죽이면 "귀찮아서 껐다"로 끝난다.
      */
-    private static void warnIfSnapshotsAreStale(Path outDir, LocalDate today) {
+    static void warnIfSnapshotsAreStale(Path outDir, LocalDate today) {
         List<String> stale = new ArrayList<>();
         for (String name : List.of(EXISTING_QUESTIONS_FILE, REJECTION_NOTES_FILE, EXISTING_DOCUMENTS_FILE)) {
             Path file = outDir.resolve(name);
@@ -1446,7 +1284,7 @@ public final class DraftGeneratorCli {
                 """.formatted(SNAPSHOT_STALE_DAYS, today, String.join("\n", stale.stream().map(s -> "- " + s).toList()));
 
         System.out.println(message);
-        appendToStepSummary(message);
+        BatchReports.appendToStepSummary(message);
     }
 
     /**
@@ -1456,7 +1294,7 @@ public final class DraftGeneratorCli {
      * 하나뿐이라, 전용 record로 파싱하는 대신 트리로 읽어 필드 하나만 본다. 이렇게 하면
      * 나중에 스냅샷이 하나 더 늘어도 이 함수는 그대로 쓸 수 있다.
      */
-    private static String readExportedAt(Path file) {
+    static String readExportedAt(Path file) {
         try {
             var node = MAPPER.readTree(file.toFile()).get("exportedAt");
             return node == null ? null : node.asText(null);
@@ -1634,16 +1472,16 @@ public final class DraftGeneratorCli {
      * 조용히 사라진다 — 기존 {@code problems.isEmpty()} 방어가 막으려던 것과 같은 사고이고,
      * 다만 "빈 목록"이 아니라 "빈 껍데기"라는 형태로 그 그물을 빠져나갔을 뿐이다.
      */
-    private static void reportYield(YieldCheck yield, LocalDate date) {
+    static void reportYield(YieldCheck yield, LocalDate date) {
         if (yield.usable() == 0) {
             // 요약 화면에도 남긴다 — 실패한 job일수록 원인이 위에 보여야 한다
-            appendToStepSummary("""
+            BatchReports.appendToStepSummary("""
                     ❌ **%s 생성 실패 — 쓸 수 있는 문제가 하나도 없습니다**
 
                     모델이 %d개를 돌려줬지만 전부 규약을 어겼습니다.
 
                     %s
-                    """.formatted(date, yield.received(), bullets(yield.defects())));
+                    """.formatted(date, yield.received(), BatchReports.bullets(yield.defects())));
             throw new IllegalStateException(
                     "모델이 준 %d개가 전부 규약 위반이라 쓸 수 있는 문제가 없습니다: %s"
                             .formatted(yield.received(), String.join(" / ", yield.defects())));
@@ -1659,7 +1497,7 @@ public final class DraftGeneratorCli {
             message.append("⚠️ **%s 생성: 요청 %d개 중 %d개만 쓸 수 있습니다**(모델 응답 %d개)%n%n"
                     .formatted(date, yield.requested(), yield.usable(), yield.received()));
             if (!yield.defects().isEmpty()) {
-                message.append("버려질 항목:%n%s%n%n".formatted(bullets(yield.defects())));
+                message.append("버려질 항목:%n%s%n%n".formatted(BatchReports.bullets(yield.defects())));
             }
             // 근거 문서를 다 우려내면 여기로 온다 — 2026-08-14가 그랬다(고급 재료 8개 중 6개를
             // 앞선 이틀이 이미 소진). 사람이 볼 때 원인을 바로 짚을 수 있게 후보를 적어 둔다.
@@ -1673,7 +1511,7 @@ public final class DraftGeneratorCli {
             // 검수함에는 들어간다는 말을 빼면 안 된다 — 경고를 "버려졌다"로 읽으면
             // 사람이 개수를 세어 보고 혼란스러워한다(경고와 실제 결과가 어긋나 보인다).
             message.append("%n⚠️ **품질 경고 %d건**(검수함에는 들어갑니다)%n%s%n"
-                    .formatted(yield.warnings().size(), bullets(yield.warnings())));
+                    .formatted(yield.warnings().size(), BatchReports.bullets(yield.warnings())));
         }
 
         // 여기서 String.format을 한 번 더 돌리면 안 된다 — 지문 앞부분에 '%'가 들어 있으면
@@ -1681,64 +1519,14 @@ public final class DraftGeneratorCli {
         // 서식은 위에서 인자로 넘겨 이미 끝냈다.
         String rendered = message.toString();
         System.out.println(rendered);
-        appendToStepSummary(rendered);
-    }
-
-    /** 사유 목록을 마크다운 불릿으로. 요약 화면과 표준 출력 양쪽에서 읽히는 형태다. */
-    private static String bullets(List<String> lines) {
-        return String.join(System.lineSeparator(), lines.stream().map(s -> "- " + s).toList());
-    }
-
-    /**
-     * GitHub Actions 실행 요약 화면에 마크다운을 덧붙인다.
-     *
-     * <p>{@code GITHUB_STEP_SUMMARY}는 Actions가 각 실행마다 만들어 주는 임시 파일 경로다.
-     * 여기에 쓴 내용이 실행 결과 화면 맨 위에 렌더링되므로, <b>로그를 펼치지 않아도 보인다</b> —
-     * 경고가 수백 줄 빌드 로그 사이에 묻히면 없는 것과 같다.
-     *
-     * <p>로컬 실행에는 이 환경변수가 없다. 그때는 조용히 넘어간다(표준 출력에는 이미 찍혔다).
-     */
-    /**
-     * 사람에게 알린다 — 로그에 찍고 <b>실행 요약에도</b> 남긴다.
-     *
-     * <h2>왜 만들었나(2026-08-29)</h2>
-     *
-     * <p>끝나는 길이 여섯인데(꺼짐·쉬는 날·문제 건너뜀·문서 건너뜀·문제 저장·문서 저장)
-     * 요약에 무언가를 남기는 것은 수확 경고와 주제 범위뿐이었다. 나머지는 stdout에만 찍고
-     * 종료 코드 0으로 끝나서, Actions 화면에서 <b>5문제 만든 날과 아무것도 안 한 날이 똑같이
-     * 초록불</b>로 보였다. 요약 스텝이 찍는 것도 {@code ls | tail -5}뿐이라 전날과 같은 목록이었다.
-     *
-     * <p>이 프로젝트는 "조용히 아무것도 안 하는 배치"에 이미 한 번 당했다(docs/14, 초안 0건).
-     * 그때 옮긴 것은 <b>실행 주체</b>였고, 이번에 막는 것은 <b>보고</b>다 — 돌긴 도는데 무엇을
-     * 했는지 알 수 없으면 결국 같은 자리로 돌아온다.
-     *
-     * <p>로그와 요약에 같은 문장을 보내는 이유: 두 곳에 다른 말을 쓰기 시작하면 언젠가 한쪽만
-     * 고쳐져 어긋난다. 요약은 로그의 발췌가 아니라 <b>같은 문장의 다른 창</b>이다.
-     */
-    private static void announce(String markdown) {
-        System.out.println(markdown.stripTrailing());
-        appendToStepSummary(markdown);
-    }
-
-    private static void appendToStepSummary(String markdown) {
-        String path = System.getenv("GITHUB_STEP_SUMMARY");
-        if (path == null || path.isBlank()) {
-            return;
-        }
-        try {
-            Files.writeString(Path.of(path), markdown + System.lineSeparator(),
-                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
-        } catch (Exception e) {
-            // 요약 화면에 못 쓰는 것이 생성을 막을 이유는 없다
-            System.out.println("실행 요약에 쓰지 못했습니다(무시하고 계속): " + e.getMessage());
-        }
+        BatchReports.appendToStepSummary(rendered);
     }
 
     /** {@code generated/_existing-questions.json}의 형태 — 이 CLI만 읽으므로 여기 둔다. */
-    private record ExistingQuestions(String note, String exportedAt, List<ExistingQuestion> questions) {
+    record ExistingQuestions(String note, String exportedAt, List<ExistingQuestion> questions) {
     }
 
-    private record ExistingQuestion(DomainCode domain, String question) {
+    record ExistingQuestion(DomainCode domain, String question) {
     }
 
     /* ── 설정·인자 파싱 ───────────────────────────────────────── */
@@ -1768,7 +1556,7 @@ public final class DraftGeneratorCli {
      * 문자열 기본값 {@code "generated"}를 또 하드코딩하는 대신 이 헬퍼 하나로 모았다 —
      * 나중에 기본 출력 경로가 바뀔 때 고칠 자리가 하나뿐이어야 한다.
      */
-    private static Path resolveOutDir(Map<String, String> opts) {
+    static Path resolveOutDir(Map<String, String> opts) {
         return Path.of(opts.getOrDefault("out", DEFAULT_OUT_DIR));
     }
 
@@ -1815,7 +1603,7 @@ public final class DraftGeneratorCli {
     }
 
     /** yml {@code batch-domains} 문자열("NETWORK,OS,...") → 코드 목록. 형식만 본다 — 후보 목록 자신을 만드는 자리라 비교할 "전체"가 없다. */
-    private static List<DomainCode> parseDomains(String csv) {
+    static List<DomainCode> parseDomains(String csv) {
         if (csv == null || csv.isBlank()) {
             return List.of();
         }
