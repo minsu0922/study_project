@@ -180,7 +180,7 @@ final class BatchHistory {
      */
     static void warnIfSnapshotsAreStale(Path outDir, LocalDate today) {
         List<String> stale = new ArrayList<>();
-        for (String name : List.of(EXISTING_QUESTIONS_FILE, REJECTION_NOTES_FILE, DraftGeneratorCli.EXISTING_DOCUMENTS_FILE)) {
+        for (String name : List.of(EXISTING_QUESTIONS_FILE, REJECTION_NOTES_FILE, DocumentBatch.EXISTING_DOCUMENTS_FILE)) {
             Path file = outDir.resolve(name);
             if (!Files.exists(file)) {
                 continue; // 아직 한 번도 안 내보낸 것 — 첫 실행에서는 정상이다

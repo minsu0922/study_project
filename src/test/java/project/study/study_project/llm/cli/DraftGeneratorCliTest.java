@@ -211,7 +211,7 @@ class DraftGeneratorCliTest {
         for (int i = 0; i < onePass; i++) {
             LocalDate date = start.plusDays(i);
             if (GenerationSchedule.planFor(date, CANDIDATES, ANCHOR).documentDay()) {
-                documentDomains.add(DraftGeneratorCli.documentDomain(date, CANDIDATES, null, ANCHOR));
+                documentDomains.add(DocumentBatch.documentDomain(date, CANDIDATES, null, ANCHOR));
             }
         }
 
@@ -229,13 +229,13 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("문서일마다 주기가 정한 분야가 나온다 — 버그 당시엔 NETWORK·SYSTEM_DESIGN만 번갈아 나왔다")
     void documentDomainMatchesTheCycleOnRealDates() {
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 11), CANDIDATES, null, ANCHOR))
+        assertThat(DocumentBatch.documentDomain(LocalDate.of(2026, 8, 11), CANDIDATES, null, ANCHOR))
                 .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(TestDomains.OS);
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, null, ANCHOR))
+        assertThat(DocumentBatch.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, null, ANCHOR))
                 .as("버그 당시 실제 값: NETWORK").isEqualTo(TestDomains.DATABASE);
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 19), CANDIDATES, null, ANCHOR))
+        assertThat(DocumentBatch.documentDomain(LocalDate.of(2026, 8, 19), CANDIDATES, null, ANCHOR))
                 .as("버그 당시 실제 값: SYSTEM_DESIGN").isEqualTo(TestDomains.DS_ALGORITHM);
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 23), CANDIDATES, null, ANCHOR))
+        assertThat(DocumentBatch.documentDomain(LocalDate.of(2026, 8, 23), CANDIDATES, null, ANCHOR))
                 .as("버그 당시 실제 값: NETWORK").isEqualTo(TestDomains.SYSTEM_DESIGN);
     }
 
@@ -247,7 +247,7 @@ class DraftGeneratorCliTest {
     @DisplayName("문서일의 분야 = 뒤따르는 사흘 문제의 분야 — 이 짝이 어긋난 것이 버그였다")
     void documentDomainMatchesTheProblemDaysThatFollow() {
         LocalDate documentDay = LocalDate.of(2026, 8, 15);
-        DomainCode forDocument = DraftGeneratorCli.documentDomain(documentDay, CANDIDATES, null, ANCHOR);
+        DomainCode forDocument = DocumentBatch.documentDomain(documentDay, CANDIDATES, null, ANCHOR);
 
         for (int i = 1; i <= 3; i++) {
             GenerationSchedule.Plan problemDay =
@@ -264,14 +264,14 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("수동으로 분야를 지정하면 주기를 무시한다 — 워크플로에서 직접 고른 값이 가장 세다")
     void manualDomainBeatsTheCycle() {
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "SECURITY", ANCHOR))
+        assertThat(DocumentBatch.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "SECURITY", ANCHOR))
                 .isEqualTo(TestDomains.SECURITY);
     }
 
     @Test
     @DisplayName("빈 문자열은 지정 안 한 것으로 본다 — 워크플로 입력을 비우면 이렇게 넘어온다")
     void blankDomainFallsBackToTheCycle() {
-        assertThat(DraftGeneratorCli.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "   ", ANCHOR))
+        assertThat(DocumentBatch.documentDomain(LocalDate.of(2026, 8, 15), CANDIDATES, "   ", ANCHOR))
                 .isEqualTo(TestDomains.DATABASE);
     }
 
@@ -288,7 +288,7 @@ class DraftGeneratorCliTest {
                 .hasMessageContaining("SPRING");
         // documentDomain(개념 문서 흐름)도 같은 candidates로 같은 판정을 해야 한다 — 문제 흐름만
         // 막고 문서 흐름은 새지 않게(위 knownDomain 호출과 같은 입력, 같은 결과).
-        assertThatThrownBy(() -> DraftGeneratorCli.documentDomain(
+        assertThatThrownBy(() -> DocumentBatch.documentDomain(
                 LocalDate.of(2026, 8, 15), CANDIDATES, "SPRING", ANCHOR))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -343,7 +343,7 @@ class DraftGeneratorCliTest {
                 .isEqualTo(messaging);
         // documentDomain도 같은 candidates로 같은 판정을 해야 한다 — knownDomain만 고치고
         // 이쪽을 빠뜨리면 문서 흐름만 여전히 새 분야를 거부하는 어긋남이 생긴다.
-        assertThat(DraftGeneratorCli.documentDomain(
+        assertThat(DocumentBatch.documentDomain(
                 LocalDate.of(2026, 8, 15), candidatesWithFileDefinedDomain, "MESSAGING", ANCHOR))
                 .isEqualTo(messaging);
     }
@@ -1295,7 +1295,7 @@ class DraftGeneratorCliTest {
         TopicQueue.Picked picked =
                 new TopicQueue.Picked(0, TestDomains.BACKEND_FRAMEWORK, "@Transactional 전파 속성");
 
-        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, picked, CANDIDATES))
+        assertThat(DocumentBatch.topicDomain(TestDomains.OS, null, picked, CANDIDATES))
                 .isEqualTo(TestDomains.BACKEND_FRAMEWORK);
     }
 
@@ -1304,14 +1304,14 @@ class DraftGeneratorCliTest {
     void manualDomainBeatsTopicQueue() {
         TopicQueue.Picked picked = new TopicQueue.Picked(0, TestDomains.BACKEND_FRAMEWORK, "AOP 프록시");
 
-        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, "OS", picked, CANDIDATES))
+        assertThat(DocumentBatch.topicDomain(TestDomains.OS, "OS", picked, CANDIDATES))
                 .isEqualTo(TestDomains.OS);
     }
 
     @Test
     @DisplayName("대기열이 비면 주기 분야를 그대로 쓴다 — 대기열을 안 채워도 파이프라인은 예전대로 돈다")
     void keepsCycleDomainWhenQueueEmpty() {
-        assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, null, CANDIDATES))
+        assertThat(DocumentBatch.topicDomain(TestDomains.OS, null, null, CANDIDATES))
                 .isEqualTo(TestDomains.OS);
     }
 
@@ -1334,7 +1334,7 @@ class DraftGeneratorCliTest {
         TopicQueue.Picked picked = new TopicQueue.Picked(0, DomainCode.of("OS"), "컨텍스트 스위칭");
 
         String printed = captureStdout(() ->
-                assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, "OS", picked, CANDIDATES))
+                assertThat(DocumentBatch.topicDomain(TestDomains.OS, "OS", picked, CANDIDATES))
                         .isEqualTo(TestDomains.OS));
 
         assertThat(printed).doesNotContain("다릅니다");
@@ -1354,7 +1354,7 @@ class DraftGeneratorCliTest {
 
         String printed = captureStdout(() ->
                 // 막지 않는다 — 값은 그대로 대기열 분야를 따른다.
-                assertThat(DraftGeneratorCli.topicDomain(TestDomains.OS, null, picked, CANDIDATES))
+                assertThat(DocumentBatch.topicDomain(TestDomains.OS, null, picked, CANDIDATES))
                         .isEqualTo(DomainCode.of("MESSAGING")));
 
         assertThat(printed).contains("MESSAGING").contains("후보에 없습니다");
@@ -1366,7 +1366,7 @@ class DraftGeneratorCliTest {
     void doesNotWarnWhenQueueDomainIsACandidate() {
         TopicQueue.Picked picked = new TopicQueue.Picked(0, DomainCode.of("NETWORK"), "TCP 혼잡 제어");
 
-        assertThat(captureStdout(() -> DraftGeneratorCli.topicDomain(TestDomains.OS, null, picked, CANDIDATES)))
+        assertThat(captureStdout(() -> DocumentBatch.topicDomain(TestDomains.OS, null, picked, CANDIDATES)))
                 .doesNotContain("후보에 없습니다");
     }
 

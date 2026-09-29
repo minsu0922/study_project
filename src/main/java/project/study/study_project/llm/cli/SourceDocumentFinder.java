@@ -105,7 +105,7 @@ final class SourceDocumentFinder {
             // DocumentEditionRule.bodyFor). 아래 검사들이 전부 <이 본문>을 봐야 한다 —
             // 편의 본문만 보고 통과·탈락을 정하면, 정작 모델이 받는 글과 다른 것을 잰 셈이 된다.
             String body = DocumentEditionRule.bodyFor(parsed, difficulty);
-            if (DraftGeneratorCli.readExistingDocuments(outDir).rejectedSlugs().contains(doc.slug())) {
+            if (DocumentBatch.readExistingDocuments(outDir).rejectedSlugs().contains(doc.slug())) {
                 System.out.println("근거 문서가 검수에서 거절돼 폴백으로 생성합니다: " + doc.slug());
                 return null;
             }
