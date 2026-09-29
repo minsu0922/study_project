@@ -48,10 +48,10 @@ public final class ProblemReviewEvalCli {
     }
 
     public static void main(String[] args) throws Exception {
-        Map<String, String> opts = DraftGeneratorCli.parseArgs(args);
+        Map<String, String> opts = BatchOptions.parseArgs(args);
         String model = opts.containsKey("model")
                 ? opts.get("model")
-                : (String) DraftGeneratorCli.readGenerationConfig().getOrDefault("model", "claude-opus-5");
+                : (String) BatchOptions.readGenerationConfig().getOrDefault("model", "claude-opus-5");
         SampleFile file = MAPPER.readValue(
                 Path.of(opts.getOrDefault("samples", DEFAULT_SAMPLES)).toFile(), SampleFile.class);
 

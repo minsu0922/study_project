@@ -89,7 +89,7 @@ final class SourceDocumentFinder {
         if (difficulty == null) {
             return null; // 문서일에는 근거 문서를 찾을 일이 없다(방어)
         }
-        Path file = outDir.resolve(DraftGeneratorCli.DOCUMENT_SUBDIR).resolve(documentDate + ".json");
+        Path file = outDir.resolve(BatchOptions.DOCUMENT_SUBDIR).resolve(documentDate + ".json");
         if (!Files.exists(file)) {
             System.out.println("근거 문서 없음, 폴백으로 생성합니다: " + file);
             return null;

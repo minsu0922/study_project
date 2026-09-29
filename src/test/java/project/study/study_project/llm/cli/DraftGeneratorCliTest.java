@@ -51,25 +51,25 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("배치가 켜져 있으면 생성한다 — 평소의 예약 실행 경로")
     void generatesWhenEnabled() {
-        assertThat(DraftGeneratorCli.shouldGenerate(true, false)).isTrue();
+        assertThat(BatchOptions.shouldGenerate(true, false)).isTrue();
     }
 
     @Test
     @DisplayName("배치를 끄면 생성하지 않는다 — 스위치의 본래 목적")
     void doesNotGenerateWhenDisabled() {
-        assertThat(DraftGeneratorCli.shouldGenerate(false, false)).isFalse();
+        assertThat(BatchOptions.shouldGenerate(false, false)).isFalse();
     }
 
     @Test
     @DisplayName("꺼져 있어도 force면 생성한다 — 설정을 되돌리는 것을 잊는 사고를 막는 예외 구멍")
     void forceOverridesDisabled() {
-        assertThat(DraftGeneratorCli.shouldGenerate(false, true)).isTrue();
+        assertThat(BatchOptions.shouldGenerate(false, true)).isTrue();
     }
 
     @Test
     @DisplayName("켜져 있는데 force를 줘도 평소와 같다 — force는 켜는 스위치가 아니라 우회로일 뿐")
     void forceIsHarmlessWhenEnabled() {
-        assertThat(DraftGeneratorCli.shouldGenerate(true, true)).isTrue();
+        assertThat(BatchOptions.shouldGenerate(true, true)).isTrue();
     }
 
     /* ══ 2단계: 주기 분야와 근거 문서 분야가 어긋날 때 ══════════ */
@@ -108,28 +108,28 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("auto: 문서일엔 문서, 나머지 날엔 문제 — 기본 동작")
     void autoFollowsCycle() {
-        assertThat(DraftGeneratorCli.decideAction(null, "auto", true))
-                .isEqualTo(DraftGeneratorCli.BatchAction.DOCUMENT);
-        assertThat(DraftGeneratorCli.decideAction(null, "auto", false))
-                .isEqualTo(DraftGeneratorCli.BatchAction.PROBLEM);
+        assertThat(BatchOptions.decideAction(null, "auto", true))
+                .isEqualTo(BatchOptions.BatchAction.DOCUMENT);
+        assertThat(BatchOptions.decideAction(null, "auto", false))
+                .isEqualTo(BatchOptions.BatchAction.PROBLEM);
     }
 
     @Test
     @DisplayName("설정이 비어 있어도 auto로 본다 — 설정 키가 없다고 배치가 멈추면 안 된다")
     void missingConfigBehavesAsAuto() {
-        assertThat(DraftGeneratorCli.decideAction(null, null, true))
-                .isEqualTo(DraftGeneratorCli.BatchAction.DOCUMENT);
-        assertThat(DraftGeneratorCli.decideAction(null, "  ", false))
-                .isEqualTo(DraftGeneratorCli.BatchAction.PROBLEM);
+        assertThat(BatchOptions.decideAction(null, null, true))
+                .isEqualTo(BatchOptions.BatchAction.DOCUMENT);
+        assertThat(BatchOptions.decideAction(null, "  ", false))
+                .isEqualTo(BatchOptions.BatchAction.PROBLEM);
     }
 
     @Test
     @DisplayName("problem: 문서일에도 문제를 만든다 — 문서 생성을 완전히 끄는 스위치")
     void problemModeNeverMakesDocuments() {
-        assertThat(DraftGeneratorCli.decideAction(null, "problem", true))
-                .isEqualTo(DraftGeneratorCli.BatchAction.PROBLEM);
-        assertThat(DraftGeneratorCli.decideAction(null, "problem", false))
-                .isEqualTo(DraftGeneratorCli.BatchAction.PROBLEM);
+        assertThat(BatchOptions.decideAction(null, "problem", true))
+                .isEqualTo(BatchOptions.BatchAction.PROBLEM);
+        assertThat(BatchOptions.decideAction(null, "problem", false))
+                .isEqualTo(BatchOptions.BatchAction.PROBLEM);
     }
 
     /**
@@ -139,10 +139,10 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("document: 문서일에만 만들고 나머지 사흘은 아무것도 안 한다(요금 0)")
     void documentModeSkipsProblemDays() {
-        assertThat(DraftGeneratorCli.decideAction(null, "document", true))
-                .isEqualTo(DraftGeneratorCli.BatchAction.DOCUMENT);
-        assertThat(DraftGeneratorCli.decideAction(null, "document", false))
-                .as("쉬는 날은 실패가 아니라 정상 종료다").isEqualTo(DraftGeneratorCli.BatchAction.SKIP);
+        assertThat(BatchOptions.decideAction(null, "document", true))
+                .isEqualTo(BatchOptions.BatchAction.DOCUMENT);
+        assertThat(BatchOptions.decideAction(null, "document", false))
+                .as("쉬는 날은 실패가 아니라 정상 종료다").isEqualTo(BatchOptions.BatchAction.SKIP);
     }
 
     /**
@@ -152,28 +152,28 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("수동 지정이 설정을 이긴다 — 문서만 만들도록 설정해 뒀어도 '문제'를 고르면 문제가 나온다")
     void manualTypeBeatsConfig() {
-        assertThat(DraftGeneratorCli.decideAction("problem", "document", true))
-                .isEqualTo(DraftGeneratorCli.BatchAction.PROBLEM);
-        assertThat(DraftGeneratorCli.decideAction("document", "problem", false))
-                .isEqualTo(DraftGeneratorCli.BatchAction.DOCUMENT);
+        assertThat(BatchOptions.decideAction("problem", "document", true))
+                .isEqualTo(BatchOptions.BatchAction.PROBLEM);
+        assertThat(BatchOptions.decideAction("document", "problem", false))
+                .isEqualTo(BatchOptions.BatchAction.DOCUMENT);
     }
 
     @Test
     @DisplayName("수동 지정이 auto면 지정 안 한 것과 같다 — 워크플로가 빈 값으로 바꿔 넘기지만 직접 호출도 받아 준다")
     void manualAutoFallsThroughToConfig() {
-        assertThat(DraftGeneratorCli.decideAction("auto", "problem", true))
-                .isEqualTo(DraftGeneratorCli.BatchAction.PROBLEM);
-        assertThat(DraftGeneratorCli.decideAction("auto", null, true))
-                .isEqualTo(DraftGeneratorCli.BatchAction.DOCUMENT);
+        assertThat(BatchOptions.decideAction("auto", "problem", true))
+                .isEqualTo(BatchOptions.BatchAction.PROBLEM);
+        assertThat(BatchOptions.decideAction("auto", null, true))
+                .isEqualTo(BatchOptions.BatchAction.DOCUMENT);
     }
 
     @Test
     @DisplayName("모르는 값은 auto로 본다 — 오타 하나로 배치가 통째로 멈추면 몇 주 뒤에야 알아차린다")
     void unknownValueFallsBackToAuto() {
-        assertThat(DraftGeneratorCli.decideAction(null, "problems", true))
-                .as("problem의 오타").isEqualTo(DraftGeneratorCli.BatchAction.DOCUMENT);
-        assertThat(DraftGeneratorCli.decideAction(null, "DOCUMENT", false))
-                .as("대소문자는 오타가 아니다 — 받아 준다").isEqualTo(DraftGeneratorCli.BatchAction.SKIP);
+        assertThat(BatchOptions.decideAction(null, "problems", true))
+                .as("problem의 오타").isEqualTo(BatchOptions.BatchAction.DOCUMENT);
+        assertThat(BatchOptions.decideAction(null, "DOCUMENT", false))
+                .as("대소문자는 오타가 아니다 — 받아 준다").isEqualTo(BatchOptions.BatchAction.SKIP);
     }
 
     /* ══ 문서를 만들 분야 (2026-08-13 발견한 버그) ══════════════ */
@@ -283,7 +283,7 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("--domain에 후보 목록에 없는 분야를 주면 요금을 쓰기 전에 실패한다")
     void unknownManualDomainFailsBeforeSpending() {
-        assertThatThrownBy(() -> DraftGeneratorCli.knownDomain("SPRING", CANDIDATES))
+        assertThatThrownBy(() -> BatchOptions.knownDomain("SPRING", CANDIDATES))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("SPRING");
         // documentDomain(개념 문서 흐름)도 같은 candidates로 같은 판정을 해야 한다 — 문제 흐름만
@@ -311,7 +311,7 @@ class DraftGeneratorCliTest {
         assertThat(CANDIDATES).as("이 테스트의 전제 — CLOUD_INFRA는 yml 8개 후보 밖이다")
                 .doesNotContain(TestDomains.CLOUD_INFRA);
 
-        assertThatThrownBy(() -> DraftGeneratorCli.knownDomain("CLOUD_INFRA", CANDIDATES))
+        assertThatThrownBy(() -> BatchOptions.knownDomain("CLOUD_INFRA", CANDIDATES))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("CLOUD_INFRA");
     }
@@ -339,7 +339,7 @@ class DraftGeneratorCliTest {
         List<DomainCode> candidatesWithFileDefinedDomain = new ArrayList<>(CANDIDATES);
         candidatesWithFileDefinedDomain.add(messaging);
 
-        assertThat(DraftGeneratorCli.knownDomain("MESSAGING", candidatesWithFileDefinedDomain))
+        assertThat(BatchOptions.knownDomain("MESSAGING", candidatesWithFileDefinedDomain))
                 .isEqualTo(messaging);
         // documentDomain도 같은 candidates로 같은 판정을 해야 한다 — knownDomain만 고치고
         // 이쪽을 빠뜨리면 문서 흐름만 여전히 새 분야를 거부하는 어긋남이 생긴다.
@@ -365,8 +365,8 @@ class DraftGeneratorCliTest {
         // 2026-09-20은 주기상 근거 문서가 2026-09-19지만, 지목한 09-08을 따라야 한다
         GenerationSchedule.Plan plan = GenerationSchedule.planFor(LocalDate.of(2026, 9, 20), CANDIDATES, ANCHOR);
 
-        assertThat(DraftGeneratorCli.resolveDocumentDate(
-                Map.of(DraftGeneratorCli.DOCUMENT_DATE_OPT, "2026-09-08"), plan))
+        assertThat(BatchOptions.resolveDocumentDate(
+                Map.of(BatchOptions.DOCUMENT_DATE_OPT, "2026-09-08"), plan))
                 .isEqualTo(LocalDate.of(2026, 9, 8));
     }
 
@@ -375,7 +375,7 @@ class DraftGeneratorCliTest {
     void unpinnedDocumentDateFollowsTheCycle() {
         GenerationSchedule.Plan plan = GenerationSchedule.planFor(LocalDate.of(2026, 9, 20), CANDIDATES, ANCHOR);
 
-        assertThat(DraftGeneratorCli.resolveDocumentDate(Map.of(), plan))
+        assertThat(BatchOptions.resolveDocumentDate(Map.of(), plan))
                 .isEqualTo(plan.documentDate());
     }
 
@@ -387,10 +387,10 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("빈 값은 지정 안 한 것으로 본다 — 워크플로가 늘 붙여 보내는 형태")
     void blankDocumentDateIsIgnored() {
-        Map<String, String> opts = DraftGeneratorCli.parseArgs(
+        Map<String, String> opts = BatchOptions.parseArgs(
                 new String[]{"--date=2026-09-20", "--document-date="});
 
-        assertThat(opts).doesNotContainKey(DraftGeneratorCli.DOCUMENT_DATE_OPT);
+        assertThat(opts).doesNotContainKey(BatchOptions.DOCUMENT_DATE_OPT);
     }
 
     /* ══ 생성 개수 (--count) ════════════════════════════════════ */
@@ -402,7 +402,7 @@ class DraftGeneratorCliTest {
      */
     /** 난이도별 배분이 없던 시절과 같은 상황 — 그 경로가 그대로 도는지부터 지킨다. */
     private static int count(Map<String, String> opts, int fallback) {
-        return DraftGeneratorCli.resolveCount(opts, null, null, fallback);
+        return BatchOptions.resolveCount(opts, null, null, fallback);
     }
 
     @Test
@@ -456,16 +456,16 @@ class DraftGeneratorCliTest {
     void countComesFromTheDifficultySpec() {
         String spec = "BEGINNER=7,INTERMEDIATE=5,ADVANCED=3";
 
-        assertThat(DraftGeneratorCli.resolveCount(Map.of(), spec, Difficulty.BEGINNER, 5))
+        assertThat(BatchOptions.resolveCount(Map.of(), spec, Difficulty.BEGINNER, 5))
                 .isEqualTo(7);
-        assertThat(DraftGeneratorCli.resolveCount(Map.of(), spec, Difficulty.ADVANCED, 5))
+        assertThat(BatchOptions.resolveCount(Map.of(), spec, Difficulty.ADVANCED, 5))
                 .isEqualTo(3);
     }
 
     @Test
     @DisplayName("--count는 난이도별 배분을 이긴다 — 사람이 고른 것이 규칙을 이긴다")
     void countOptionBeatsTheDifficultySpec() {
-        assertThat(DraftGeneratorCli.resolveCount(
+        assertThat(BatchOptions.resolveCount(
                 Map.of("count", "2"), "BEGINNER=7", Difficulty.BEGINNER, 5))
                 .isEqualTo(2);
     }
@@ -473,9 +473,9 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("배분에 없는 난이도는 batch-count로 내려간다 — 설정을 지운 사람이 지운 대로 돌아야 한다")
     void countFallsBackWhenTheDifficultyIsAbsent() {
-        assertThat(DraftGeneratorCli.resolveCount(Map.of(), "BEGINNER=7", Difficulty.ADVANCED, 5))
+        assertThat(BatchOptions.resolveCount(Map.of(), "BEGINNER=7", Difficulty.ADVANCED, 5))
                 .isEqualTo(5);
-        assertThat(DraftGeneratorCli.resolveCount(Map.of(), null, Difficulty.ADVANCED, 5))
+        assertThat(BatchOptions.resolveCount(Map.of(), null, Difficulty.ADVANCED, 5))
                 .isEqualTo(5);
     }
 
@@ -502,14 +502,14 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("접미사가 없으면 예전 그대로 — 예약 실행의 이름은 달라지지 않는다")
     void noSuffixKeepsThePlainDateName() {
-        assertThat(DraftGeneratorCli.outFileName(LocalDate.of(2026, 8, 29), null))
+        assertThat(BatchOptions.outFileName(LocalDate.of(2026, 8, 29), null))
                 .isEqualTo("2026-08-29.json");
     }
 
     @Test
     @DisplayName("접미사를 주면 날짜 뒤에 붙는다 — 날짜가 앞이라 흡수 순서(이름 오름차순)가 유지된다")
     void suffixGoesAfterTheDate() {
-        assertThat(DraftGeneratorCli.outFileName(LocalDate.of(2026, 8, 29), "csrf-beg"))
+        assertThat(BatchOptions.outFileName(LocalDate.of(2026, 8, 29), "csrf-beg"))
                 .isEqualTo("2026-08-29-csrf-beg.json");
     }
 
@@ -523,11 +523,11 @@ class DraftGeneratorCliTest {
     void suffixCannotEscapeTheDirectory() {
         LocalDate date = LocalDate.of(2026, 8, 29);
 
-        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "../../etc/x"))
+        assertThatThrownBy(() -> BatchOptions.outFileName(date, "../../etc/x"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "a/b"))
+        assertThatThrownBy(() -> BatchOptions.outFileName(date, "a/b"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "_hidden"))
+        assertThatThrownBy(() -> BatchOptions.outFileName(date, "_hidden"))
                 .as("_로 시작하면 흡수가 건너뛴다 — 만들어도 영영 안 들어온다")
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -537,10 +537,10 @@ class DraftGeneratorCliTest {
     void suffixMustBeLowercaseAndNonEmpty() {
         LocalDate date = LocalDate.of(2026, 8, 29);
 
-        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "XSS")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "a b")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> DraftGeneratorCli.outFileName(date, "-x"))
+        assertThatThrownBy(() -> BatchOptions.outFileName(date, "")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BatchOptions.outFileName(date, "XSS")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BatchOptions.outFileName(date, "a b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BatchOptions.outFileName(date, "-x"))
                 .as("하이픈으로 시작하면 2026-08-29--x.json이 되어 읽기 나쁘다")
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -552,11 +552,11 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("빈 값은 지정 안 한 것으로 본다 — 워크플로가 늘 붙여 보내는 형태")
     void blankSuffixIsIgnored() {
-        Map<String, String> opts = DraftGeneratorCli.parseArgs(
+        Map<String, String> opts = BatchOptions.parseArgs(
                 new String[]{"--date=2026-08-29", "--suffix="});
 
-        assertThat(opts).doesNotContainKey(DraftGeneratorCli.SUFFIX_OPT);
-        assertThat(DraftGeneratorCli.outFileName(LocalDate.of(2026, 8, 29), opts.get(DraftGeneratorCli.SUFFIX_OPT)))
+        assertThat(opts).doesNotContainKey(BatchOptions.SUFFIX_OPT);
+        assertThat(BatchOptions.outFileName(LocalDate.of(2026, 8, 29), opts.get(BatchOptions.SUFFIX_OPT)))
                 .isEqualTo("2026-08-29.json");
     }
 
@@ -1535,9 +1535,9 @@ class DraftGeneratorCliTest {
         @Test
         @DisplayName("비어 있으면 객관식 — 예약 실행은 이 옵션을 안 쓰므로 지금까지와 똑같이 동작한다")
         void defaultsToMultipleChoice() {
-            assertThat(DraftGeneratorCli.resolveProblemType(null)).isEqualTo(ProblemType.MULTIPLE_CHOICE);
-            assertThat(DraftGeneratorCli.resolveProblemType("")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
-            assertThat(DraftGeneratorCli.resolveProblemType("   ")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(BatchOptions.resolveProblemType(null)).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(BatchOptions.resolveProblemType("")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(BatchOptions.resolveProblemType("   ")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
         }
 
         /**
@@ -1552,26 +1552,26 @@ class DraftGeneratorCliTest {
         @Test
         @DisplayName("AUTO도 '지정 안 함'으로 본다 — 수동 실행의 기본 선택지가 그대로 넘어온다")
         void treatsAutoAsUnspecified() {
-            assertThat(DraftGeneratorCli.resolveProblemType("AUTO")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
-            assertThat(DraftGeneratorCli.resolveProblemType("auto")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
-            assertThat(DraftGeneratorCli.resolveProblemType(" Auto ")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(BatchOptions.resolveProblemType("AUTO")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(BatchOptions.resolveProblemType("auto")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
+            assertThat(BatchOptions.resolveProblemType(" Auto ")).isEqualTo(ProblemType.MULTIPLE_CHOICE);
         }
 
         @Test
         @DisplayName("새 유형을 이름으로 고를 수 있다 — 소문자와 앞뒤 공백도 받는다")
         void acceptsNewTypes() {
-            assertThat(DraftGeneratorCli.resolveProblemType("MATCHING")).isEqualTo(ProblemType.MATCHING);
-            assertThat(DraftGeneratorCli.resolveProblemType(" ordering ")).isEqualTo(ProblemType.ORDERING);
-            assertThat(DraftGeneratorCli.resolveProblemType("ox")).isEqualTo(ProblemType.OX);
+            assertThat(BatchOptions.resolveProblemType("MATCHING")).isEqualTo(ProblemType.MATCHING);
+            assertThat(BatchOptions.resolveProblemType(" ordering ")).isEqualTo(ProblemType.ORDERING);
+            assertThat(BatchOptions.resolveProblemType("ox")).isEqualTo(ProblemType.OX);
         }
 
         @Test
         @DisplayName("서술형과 오타는 값을 읽는 자리에서 막는다 — API를 부르기 전에 끝내야 요금이 안 나간다")
         void rejectsUnusableValues() {
-            assertThatThrownBy(() -> DraftGeneratorCli.resolveProblemType("ESSAY"))
+            assertThatThrownBy(() -> BatchOptions.resolveProblemType("ESSAY"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("자동채점");
-            assertThatThrownBy(() -> DraftGeneratorCli.resolveProblemType("MATCHNG"))
+            assertThatThrownBy(() -> BatchOptions.resolveProblemType("MATCHNG"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("MATCHING");
         }
@@ -1703,7 +1703,7 @@ class DraftGeneratorCliTest {
     @Test
     @DisplayName("application.yml에 적힌 앵커는 실제로 문서일이다 — 적어 두고 안 읽으면 조용히 옛 위상으로 돈다")
     void configuredAnchorIsADocumentDay() throws Exception {
-        Map<String, Object> generation = DraftGeneratorCli.readGenerationConfig();
+        Map<String, Object> generation = BatchOptions.readGenerationConfig();
         Object raw = generation.get("cycle-anchor");
 
         assertThat(raw).as("cycle-anchor 키가 사라지면 위상이 조용히 에포크로 돌아간다").isNotNull();
@@ -1794,7 +1794,7 @@ class DraftGeneratorCliTest {
      * {@code allDisabledFileWidensToAllDomainsNotYml}이었고, "파일은 있는데 켜진 분야가 0개"일
      * 때 {@code GenerationSchedule}이 빈 목록을 {@code DefaultDomains.codes()}(기본 11개)로
      * 넓혀 주는 것에 기대어 "앱과 같은 답"을 확인했다. 그런데 {@code GenerationSchedule}은 이제
-     * 빈 목록을 넓히지 않고, 넓히는 책임이 {@link DraftGeneratorCli#resolveBatchDomains}로
+     * 빈 목록을 넓히지 않고, 넓히는 책임이 {@link BatchOptions#resolveBatchDomains}로
      * 옮겨 왔다({@code resolveBatchDomains} Javadoc 참고) — 그 자리에서 정한 새 규칙은
      * "파일의 모든 항목"이지 옛 11개가 아니다. <b>파일 자신이 배치의 등록부</b>이므로, 파일에
      * 적히지 않은 분야(예: CLOUD_INFRA)를 지어내면 오히려 파일이 모르는 분야가 순환에 끼어드는
@@ -1811,7 +1811,7 @@ class DraftGeneratorCliTest {
                 ]}""");
         DomainSettings settings = DomainSettings.read(dir);
 
-        List<DomainCode> candidates = DraftGeneratorCli.resolveBatchDomains(settings, YML_BATCH_DOMAINS);
+        List<DomainCode> candidates = BatchOptions.resolveBatchDomains(settings, YML_BATCH_DOMAINS);
 
         assertThat(candidates)
                 .as("yml도, 옛 11개도 아니라 파일에 적힌 두 분야 그대로여야 한다")
@@ -1831,7 +1831,7 @@ class DraftGeneratorCliTest {
     void missingFileFallsBackToYml(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) {
         DomainSettings settings = DomainSettings.read(dir);
 
-        assertThat(DraftGeneratorCli.resolveBatchDomains(settings, YML_BATCH_DOMAINS))
+        assertThat(BatchOptions.resolveBatchDomains(settings, YML_BATCH_DOMAINS))
                 .containsExactly(TestDomains.NETWORK, TestDomains.OS, TestDomains.DATABASE, TestDomains.DS_ALGORITHM,
                         TestDomains.SYSTEM_DESIGN, TestDomains.SECURITY, TestDomains.LANGUAGE_RUNTIME, TestDomains.BACKEND_FRAMEWORK);
     }
@@ -1845,7 +1845,7 @@ class DraftGeneratorCliTest {
                   {"domain":"NETWORK","enabled":false,"sortOrder":1,"displayName":"네트워크","hint":null}
                 ]}""");
 
-        assertThat(DraftGeneratorCli.resolveBatchDomains(DomainSettings.read(dir), YML_BATCH_DOMAINS))
+        assertThat(BatchOptions.resolveBatchDomains(DomainSettings.read(dir), YML_BATCH_DOMAINS))
                 .containsExactly(TestDomains.OS);
     }
 

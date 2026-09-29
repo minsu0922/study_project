@@ -111,8 +111,8 @@ public final class PromptEvalCli {
     }
 
     public static void main(String[] args) throws Exception {
-        Map<String, String> opts = DraftGeneratorCli.parseArgs(args);
-        Map<String, Object> generation = DraftGeneratorCli.readGenerationConfig();
+        Map<String, String> opts = BatchOptions.parseArgs(args);
+        Map<String, Object> generation = BatchOptions.readGenerationConfig();
         String model = (String) generation.getOrDefault("model", "claude-opus-5");
         int count = opts.containsKey("count") ? Integer.parseInt(opts.get("count")) : DEFAULT_COUNT;
 
@@ -123,7 +123,7 @@ public final class PromptEvalCli {
         // 그대로 쓴다 — Task 7 이전과 같은 범위(기본 11개)이고, 이 도구의 목적(프롬프트 비교)에는
         // 관리자가 새로 추가한 분야까지 받을 필요가 없다.
         DomainCode domain = opts.containsKey("domain")
-                ? DraftGeneratorCli.knownDomain(opts.get("domain"), DefaultDomains.codes())
+                ? BatchOptions.knownDomain(opts.get("domain"), DefaultDomains.codes())
                 : loaded.domain();
 
         System.out.printf("프롬프트 평가 시작: 모델 %s, 난이도당 %d문제, 분야 %s%n", model, count, domain);
