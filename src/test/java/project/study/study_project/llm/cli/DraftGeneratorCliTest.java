@@ -573,7 +573,7 @@ class DraftGeneratorCliTest {
     @DisplayName("2주 넘게 그대로면 낡은 것으로 본다 — 커밋을 잊은 신호")
     void detectsStaleSnapshot() {
         LocalDate today = LocalDate.of(2026, 8, 30);
-        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-10", today))
+        assertThat(BatchHistory.isStaleSnapshot("2026-08-10", today))
                 .as("20일 전").isTrue();
     }
 
@@ -586,10 +586,10 @@ class DraftGeneratorCliTest {
     @DisplayName("2주 안이면 조용하다 — 며칠 그대로인 것은 정상이라 경고하면 안 된다")
     void freshSnapshotIsNotStale() {
         LocalDate today = LocalDate.of(2026, 8, 30);
-        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-30", today)).as("오늘").isFalse();
-        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-20", today)).as("10일 전").isFalse();
-        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-16", today))
-                .as("경계 — 정확히 %d일 전은 아직 아니다", DraftGeneratorCli.SNAPSHOT_STALE_DAYS).isFalse();
+        assertThat(BatchHistory.isStaleSnapshot("2026-08-30", today)).as("오늘").isFalse();
+        assertThat(BatchHistory.isStaleSnapshot("2026-08-20", today)).as("10일 전").isFalse();
+        assertThat(BatchHistory.isStaleSnapshot("2026-08-16", today))
+                .as("경계 — 정확히 %d일 전은 아직 아니다", BatchHistory.SNAPSHOT_STALE_DAYS).isFalse();
     }
 
     /**
@@ -600,16 +600,16 @@ class DraftGeneratorCliTest {
     @DisplayName("날짜를 읽을 수 없으면 경고하지 않는다 — 오탐이 경고를 무력화한다")
     void unreadableDateNeverWarns() {
         LocalDate today = LocalDate.of(2026, 8, 30);
-        assertThat(DraftGeneratorCli.isStaleSnapshot(null, today)).as("필드 없음").isFalse();
-        assertThat(DraftGeneratorCli.isStaleSnapshot("  ", today)).as("빈 값").isFalse();
-        assertThat(DraftGeneratorCli.isStaleSnapshot("어제", today)).as("날짜가 아님").isFalse();
-        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-13-45", today)).as("있을 수 없는 날짜").isFalse();
+        assertThat(BatchHistory.isStaleSnapshot(null, today)).as("필드 없음").isFalse();
+        assertThat(BatchHistory.isStaleSnapshot("  ", today)).as("빈 값").isFalse();
+        assertThat(BatchHistory.isStaleSnapshot("어제", today)).as("날짜가 아님").isFalse();
+        assertThat(BatchHistory.isStaleSnapshot("2026-13-45", today)).as("있을 수 없는 날짜").isFalse();
     }
 
     @Test
     @DisplayName("ISO 시각 형태도 읽는다 — 스냅샷마다 날짜만 쓰기도, 시각까지 쓰기도 한다")
     void acceptsIsoTimestamp() {
-        assertThat(DraftGeneratorCli.isStaleSnapshot("2026-08-01T22:07:51.460797951Z",
+        assertThat(BatchHistory.isStaleSnapshot("2026-08-01T22:07:51.460797951Z",
                 LocalDate.of(2026, 8, 30))).isTrue();
     }
 
@@ -1876,7 +1876,7 @@ class DraftGeneratorCliTest {
         // 언더스코어로 시작하는 파일은 스냅샷이라 배치 결과로 읽지 않는다 — 그 규칙도 함께 본다.
         writeBatchFile(dir, "_snapshot.json", "DATABASE", "읽으면 안 되는 문제");
 
-        List<String> avoid = DraftGeneratorCli.buildAvoidList(dir, DomainCode.of("DATABASE"));
+        List<String> avoid = BatchHistory.buildAvoidList(dir, DomainCode.of("DATABASE"));
 
         assertThat(avoid)
                 .as("==였을 때는 여기가 늘 비어 있었다 — 모델이 같은 문제를 다시 냈다")
