@@ -657,8 +657,8 @@ class DraftGeneratorCliTest {
                 // 빈 값으로 채워 보낸 형태 — GeneratedProblemItem 주석)
                 new GeneratedProblemItem("", "", "", fourChoices()));
 
-        DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 5, ProblemType.MULTIPLE_CHOICE, null);
+        YieldReporter.YieldCheck yield =
+                YieldReporter.checkYield(problems, 5, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.received()).isEqualTo(3);
         assertThat(yield.usable()).as("껍데기는 흡수 단계에서 버려지므로 유효가 아니다").isEqualTo(2);
@@ -689,7 +689,7 @@ class DraftGeneratorCliTest {
                 withTitle(new GeneratedProblemItem("", "", goodExplanation(), fourChoices())),
                 withTitle(new GeneratedProblemItem("", "", goodExplanation(), fourChoices())));
 
-        List<GeneratedProblemItem> kept = DraftGeneratorCli.dropBlankQuestions(problems);
+        List<GeneratedProblemItem> kept = YieldReporter.dropBlankQuestions(problems);
 
         assertThat(kept).as("파일에 남는 것은 물음이 있는 셋뿐이다").hasSize(3);
         assertThat(kept).extracting(GeneratedProblemItem::question)
@@ -717,7 +717,7 @@ class DraftGeneratorCliTest {
                         new GeneratedProblemItem.GeneratedChoice("오답 1", false),
                         new GeneratedProblemItem.GeneratedChoice("오답 2", false))));
 
-        assertThat(DraftGeneratorCli.dropBlankQuestions(List.of(twoCorrect)))
+        assertThat(YieldReporter.dropBlankQuestions(List.of(twoCorrect)))
                 .as("규약 위반이어도 읽을 수 있으면 대조할 재료가 된다")
                 .containsExactly(twoCorrect);
     }
@@ -729,7 +729,7 @@ class DraftGeneratorCliTest {
                 multipleChoice("문제 1", goodExplanation()),
                 multipleChoice("문제 2", goodExplanation()));
 
-        assertThat(DraftGeneratorCli.dropBlankQuestions(problems))
+        assertThat(YieldReporter.dropBlankQuestions(problems))
                 .containsExactlyElementsOf(problems);
     }
 
@@ -745,8 +745,8 @@ class DraftGeneratorCliTest {
                 multipleChoice("온라인 DDL로 바꿔도 잠금이 남는 이유는?", goodExplanation()),
                 husk("'어떤 때 통하지 않는가'의 한계 조건을 1번에서 다 썼음"));
 
-        DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 3, ProblemType.MULTIPLE_CHOICE, Difficulty.ADVANCED);
+        YieldReporter.YieldCheck yield =
+                YieldReporter.checkYield(problems, 3, ProblemType.MULTIPLE_CHOICE, Difficulty.ADVANCED);
 
         assertThat(yield.defects()).singleElement().asString()
                 .contains("2번")
@@ -762,7 +762,7 @@ class DraftGeneratorCliTest {
                 husk("면접 절의 질문은 정의를 묻는 것뿐이라 고급 형태로 못 만듦"),
                 husk(""));
 
-        assertThat(DraftGeneratorCli.shortfallReasons(problems)).containsExactly(
+        assertThat(YieldReporter.shortfallReasons(problems)).containsExactly(
                 "2번: 면접 절의 질문은 정의를 묻는 것뿐이라 고급 형태로 못 만듦",
                 // 빠뜨리면 "나옴 1, 요청 3인데 이유는 1개"가 되어 나머지 하나를 또 모르게 된다
                 "3번: (이유를 남기지 않음)");
@@ -773,7 +773,7 @@ class DraftGeneratorCliTest {
     void noShortfallReasonsWhenFull() {
         List<GeneratedProblemItem> problems = List.of(multipleChoice("문제 1", goodExplanation()));
 
-        assertThat(DraftGeneratorCli.shortfallReasons(problems)).isNull();
+        assertThat(YieldReporter.shortfallReasons(problems)).isNull();
     }
 
     @Test
@@ -783,7 +783,7 @@ class DraftGeneratorCliTest {
         GeneratedProblemItem withStrayReason = new GeneratedProblemItem(made.question(), made.answer(),
                 made.explanation(), made.choices(), made.sourceQuote(), made.title(), null, "습관처럼 채운 값");
 
-        assertThat(DraftGeneratorCli.skipReasonOf(withStrayReason)).isNull();
+        assertThat(YieldReporter.skipReasonOf(withStrayReason)).isNull();
     }
 
     /** 지문을 비우고 이유만 적은 빈 자리 — 프롬프트가 요구하는 모양 그대로. */
@@ -798,8 +798,8 @@ class DraftGeneratorCliTest {
                 multipleChoice("문제 1", goodExplanation()),
                 multipleChoice("문제 2", goodExplanation()));
 
-        DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null);
+        YieldReporter.YieldCheck yield =
+                YieldReporter.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).isEqualTo(2);
         assertThat(yield.isShort()).isFalse();
@@ -821,7 +821,7 @@ class DraftGeneratorCliTest {
                 multipleChoice("문제 2", "해설 2"),
                 multipleChoice("문제 3", "해설 3"));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null)
                 .isShort()).isFalse();
     }
 
@@ -837,8 +837,8 @@ class DraftGeneratorCliTest {
                 multipleChoice("해설이 있는 문제", goodExplanation()),
                 multipleChoice("해설이 없는 문제", ""));
 
-        DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null);
+        YieldReporter.YieldCheck yield =
+                YieldReporter.checkYield(problems, 2, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).isEqualTo(2);
         assertThat(yield.isShort()).isFalse();
@@ -857,8 +857,8 @@ class DraftGeneratorCliTest {
                         new GeneratedProblemItem.GeneratedChoice("다", false),
                         new GeneratedProblemItem.GeneratedChoice("라", false))));
 
-        DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
+        YieldReporter.YieldCheck yield =
+                YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).isZero();
         assertThat(yield.defects()).singleElement().asString()
@@ -879,8 +879,8 @@ class DraftGeneratorCliTest {
         List<GeneratedProblemItem> problems = List.of(
                 multipleChoice("짧은 해설", "가".repeat(ProblemItemRule.EXPLANATION_MIN - 1)));
 
-        DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
+        YieldReporter.YieldCheck yield =
+                YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).as("짧아도 퀴즈로는 성립하므로 버리지 않는다").isEqualTo(1);
         // 이 재료는 글자만 채운 해설이라 오답 인용 경고에도 걸린다(2026-08-25 신설).
@@ -911,8 +911,8 @@ class DraftGeneratorCliTest {
         String explanation = "가".repeat(400) + " 2번 보기는 UDP의 특성을 TCP로 착각한 것이다.";
         List<GeneratedProblemItem> problems = List.of(multipleChoice("번호를 가리키는 해설", explanation));
 
-        DraftGeneratorCli.YieldCheck yield =
-                DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
+        YieldReporter.YieldCheck yield =
+                YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null);
 
         assertThat(yield.usable()).as("흡수도 같은 자로 재므로 여기서 세면 안 된다").isZero();
         assertThat(yield.defects()).singleElement().asString()
@@ -934,7 +934,7 @@ class DraftGeneratorCliTest {
         List<GeneratedProblemItem> problems = List.of(
                 multipleChoice("MVCC가 대기 없이 읽는 대신 치르는 대가로 문서가 든 것은?", goodExplanation()));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).singleElement().asString().contains("근거 문서를 가리킴");
     }
 
@@ -953,12 +953,12 @@ class DraftGeneratorCliTest {
 
         // 이 실제 지문에는 백틱도 들어 있어 마크다운 경고가 함께 난다 — 그것까지 세면
         // 이 테스트가 무엇을 재는지 흐려지므로, 길이 경고만 골라 본다.
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.BEGINNER).warnings())
                 .filteredOn(w -> w.contains("초급 지문이 김"))
                 .singleElement().asString().contains("149자");
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
                 .as("같은 149자 지문도 중급에서는 정상이다 — 중급의 기준은 %d자"
                         .formatted(ProblemItemRule.INTERMEDIATE_QUESTION_MAX))
@@ -988,7 +988,7 @@ class DraftGeneratorCliTest {
                 new GeneratedProblemItem.GeneratedChoice("보기4", false),
                 new GeneratedProblemItem.GeneratedChoice("보기5", false))));
 
-        assertThat(DraftGeneratorCli.checkYield(List.of(fiveChoices), 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(List.of(fiveChoices), 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
                 .as("규약 위반이 아니라 통과했으므로, 알리지 않으면 아무도 모른다")
                 // "보기가"로만 거르면 경고 뒤에 붙는 지문 조각("보기가 다섯 개인 문제는?")까지
@@ -1002,7 +1002,7 @@ class DraftGeneratorCliTest {
                 new GeneratedProblemItem.GeneratedChoice("보기2", false),
                 new GeneratedProblemItem.GeneratedChoice("보기3", false))));
 
-        assertThat(DraftGeneratorCli.checkYield(List.of(threeChoices), 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(List.of(threeChoices), 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
                 .as("모자란 쪽은 '적게 내라'가 허용한 결과일 수 있다 — 경고하면 매번 울린다")
                 .filteredOn(w -> w.contains("보기가"))
@@ -1025,13 +1025,13 @@ class DraftGeneratorCliTest {
         String tooLong = "가".repeat(ProblemItemRule.INTERMEDIATE_QUESTION_MAX + 1) + "?";
         List<GeneratedProblemItem> problems = List.of(multipleChoice(tooLong, goodExplanation()));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.INTERMEDIATE).warnings())
                 .filteredOn(w -> w.contains("중급 지문이 김"))
                 .singleElement().asString()
                 .contains("기준 %d자".formatted(ProblemItemRule.INTERMEDIATE_QUESTION_MAX));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.ADVANCED).warnings())
                 .as("고급은 '이미 시도한 것'까지 적어야 해서 더 길다 — 같은 잣대를 대면 매번 울린다")
                 .filteredOn(w -> w.contains("지문이 김"))
@@ -1108,7 +1108,7 @@ class DraftGeneratorCliTest {
     private static List<String> choiceReferenceDefectsFor(String explanationTail) {
         List<GeneratedProblemItem> problems =
                 List.of(multipleChoice("지문", goodExplanation() + " " + explanationTail));
-        return DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+        return YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .defects().stream().filter(w -> w.contains("번호로")).toList();
     }
 
@@ -1129,7 +1129,7 @@ class DraftGeneratorCliTest {
                 new GeneratedProblemItem.GeneratedChoice("다".repeat(32), false),
                 new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false)))));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).singleElement().asString()
                 .contains("정답이 가장 긴 보기")
                 .as("몇 배인지 보여야 얼마나 줄일지 정해진다")
@@ -1151,7 +1151,7 @@ class DraftGeneratorCliTest {
                 new GeneratedProblemItem.GeneratedChoice("다".repeat(40), false),
                 new GeneratedProblemItem.GeneratedChoice("라".repeat(42), false)))));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).isEmpty();
 
         // 오답이 유독 긴 것은 찍히는 단서가 아니다 — 걸리면 안 된다.
@@ -1162,7 +1162,7 @@ class DraftGeneratorCliTest {
                 new GeneratedProblemItem.GeneratedChoice("다".repeat(32), false),
                 new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false)))));
 
-        assertThat(DraftGeneratorCli.checkYield(longDistractor, 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(longDistractor, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).isEmpty();
     }
 
@@ -1175,13 +1175,13 @@ class DraftGeneratorCliTest {
     void warnsOnMarkdownThatCannotBeRendered() {
         List<GeneratedProblemItem> withBacktick = List.of(
                 multipleChoice("`SELECT * FROM item`을 두 번 실행하면?", goodExplanation()));
-        assertThat(DraftGeneratorCli.checkYield(withBacktick, 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(withBacktick, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).singleElement().asString().contains("지문에 마크다운이 섞임");
 
         // 해설의 줄바꿈·하이픈 목록은 CSS(white-space: pre-wrap)로 살아난다 — 막으면 안 된다.
         List<GeneratedProblemItem> withList = List.of(multipleChoice("무엇인가?",
                 goodExplanation() + "\n- 첫째 오답은 이런 오해다.\n- 둘째 오답은 저런 오해다."));
-        assertThat(DraftGeneratorCli.checkYield(withList, 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(withList, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).isEmpty();
     }
 
@@ -1195,7 +1195,7 @@ class DraftGeneratorCliTest {
         List<GeneratedProblemItem> problems = List.of(
                 multipleChoice("팬텀 리드란 무엇인가?", goodExplanation()));
 
-        assertThat(DraftGeneratorCli.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.BEGINNER).warnings()).isEmpty();
     }
 
@@ -1215,11 +1215,11 @@ class DraftGeneratorCliTest {
                         new GeneratedProblemItem.GeneratedChoice("메모리", false)),
                 "이 문장은 저 문서에 없다."));
 
-        assertThat(DraftGeneratorCli.checkYield(List.of(strayQuote), 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(List.of(strayQuote), 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.BEGINNER, doc).warnings())
                 .singleElement().asString().contains("문서에서 찾지 못함");
 
-        assertThat(DraftGeneratorCli.checkYield(List.of(strayQuote), 1, ProblemType.MULTIPLE_CHOICE,
+        assertThat(YieldReporter.checkYield(List.of(strayQuote), 1, ProblemType.MULTIPLE_CHOICE,
                 Difficulty.BEGINNER).warnings())
                 .as("문서를 안 넘긴 예전 호출은 그대로 조용해야 한다 — 폴백 날에 헛울리면 안 된다")
                 .isEmpty();
@@ -1398,7 +1398,7 @@ class DraftGeneratorCliTest {
         // 짧은 생성자는 title을 빈 문자열로 채운다 — "모델이 제목을 안 낸" 상태의 재현이다
         GeneratedProblemItem noTitle = new GeneratedProblemItem("무엇인가?", "", goodExplanation(), fourChoices());
 
-        assertThat(DraftGeneratorCli.checkYield(List.of(noTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(List.of(noTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings())
                 .as("규약 위반이 아니라 통과했으므로, 알리지 않으면 아무도 모른다")
                 .filteredOn(w -> w.contains("제목"))
@@ -1419,7 +1419,7 @@ class DraftGeneratorCliTest {
         GeneratedProblemItem longTitle = new GeneratedProblemItem("무엇인가?", "", goodExplanation(),
                 fourChoices(), "", "제".repeat(ProblemItemRule.TITLE_MAX + 1));
 
-        assertThat(DraftGeneratorCli.checkYield(List.of(longTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(List.of(longTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings())
                 .filteredOn(w -> w.contains("제목"))
                 .singleElement().asString()
@@ -1429,7 +1429,7 @@ class DraftGeneratorCliTest {
 
         GeneratedProblemItem exact = new GeneratedProblemItem("무엇인가?", "", goodExplanation(),
                 fourChoices(), "", "제".repeat(ProblemItemRule.TITLE_MAX));
-        assertThat(DraftGeneratorCli.checkYield(List.of(exact), 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(List.of(exact), 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings())
                 .as("딱 맞는 것은 지시를 지킨 것이다 — 걸리면 지시대로 쓴 제목이 매번 경고를 단다")
                 .filteredOn(w -> w.contains("제목"))
@@ -1454,7 +1454,7 @@ class DraftGeneratorCliTest {
         GeneratedProblemItem questionTitle = new GeneratedProblemItem("무엇인가?", "", goodExplanation(),
                 fourChoices(), "", "이 상황의 원인으로 가장 적절한 것은?");
 
-        assertThat(DraftGeneratorCli.checkYield(List.of(questionTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
+        assertThat(YieldReporter.checkYield(List.of(questionTitle), 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings())
                 .filteredOn(w -> w.contains("제목"))
                 .singleElement().asString()
