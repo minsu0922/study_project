@@ -1,0 +1,220 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-10-02",
+  "generatedAt" : "2026-10-01T21:47:51.616147155Z",
+  "domain" : "SECURITY",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5",
+  "documentSlug" : "jwt-signature-scope-integrity-not-confidentiality",
+  "problems" : [ {
+    "question" : "Base64URL 인코딩이 무엇을 하는 규칙인지 옳게 설명한 것은?",
+    "answer" : "",
+    "explanation" : "Base64URL 인코딩은 화면에 찍히지 않는 바이트까지 통신 줄에 안전하게 실으려고 64종의 글자로 바꿔 적는 규칙이다. 규칙이 공개돼 있어 바꾸는 쪽도 되돌리는 쪽도 열쇠가 필요 없고, 감추려는 의도 자체가 없다. (이 글의 '바탕이 되는 개념' 2단계를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "바이트를 영문 대소문자·숫자와 -, _ 64종의 글자로 바꿔 적는 공개 규칙",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "같은 열쇠로 잠그고 열어, 열쇠가 없으면 내용을 읽을 수 없게 만드는 변환",
+      "correct" : false,
+      "rationale" : "같은 열쇠로 잠그고 여는 대칭키 암호화의 설명이다. 되돌리는 데 열쇠가 필요하다는 점에서 바꿔 적기와 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "아무 길이의 입력을 정해진 길이의 값 하나로 줄이는 한 방향 계산",
+      "correct" : false,
+      "rationale" : "길이를 고정 값으로 줄이는 한 방향 계산은 해시 함수다. 되돌릴 수 없다는 점에서 바꿔 적기와 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "비밀키를 함께 섞어 만들어, 키를 가진 쪽만 만들고 확인하는 값",
+      "correct" : false,
+      "rationale" : "비밀키를 섞어 만든 표식은 MAC이다. 글자 변환이 아니라 위조를 막는 도장 역할이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**Base64URL 인코딩(Base64URL encoding)** — 아무 바이트나 영문 대소문자·숫자·`-`·`_` 64종의 글자로 바꿔 적는 공개 규칙이다.",
+    "title" : "Base64URL 인코딩의 목적과 성격",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "비밀키를 아는 쪽만 만들고 확인할 수 있는 값을 가리키는 용어와 그 뜻으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "MAC은 비밀키를 함께 섞어 만든 해시 값이라, 그 키를 모르는 사람은 내용을 고쳐도 맞는 값을 만들어 낼 수 없다. 해시만으로는 계산법이 공개돼 있어 남이 다시 계산해 붙이면 그만이라는 한계를 메우는 자리다. (이 글의 '바탕이 되는 개념' 4단계를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "MAC — 비밀키를 함께 섞어 만든 해시 값으로, 그 키를 가진 쪽만 만들고 확인한다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "해시 함수 — 공개된 계산법으로 입력을 고정 길이 값으로 줄여, 누구나 같은 값을 얻는다",
+      "correct" : false,
+      "rationale" : "해시 함수는 계산법이 공개돼 있어 누구나 다시 계산해 붙일 수 있다. 키를 섞지 않아 만들 수 있는 쪽을 제한하지 못한다.",
+      "matchText" : ""
+    }, {
+      "text" : "전자서명 — 개인키로 만들고 짝이 되는 공개키로 누구나 확인하는 표식이다",
+      "correct" : false,
+      "rationale" : "전자서명은 개인키로 만들고 짝이 되는 공개키로 확인한다. 같은 비밀키를 양쪽이 나눠 쓰는 방식과 혼동한 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "Base64URL 인코딩 — 공개 규칙으로 바이트를 글자로 바꿔 적어 통신에 싣는다",
+      "correct" : false,
+      "rationale" : "Base64URL은 열쇠 없이 되돌아오는 글자 변환이라 위조를 전혀 막지 못한다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**MAC(message authentication code, 메시지 인증 코드)** — 비밀키를 함께 섞어 만든 해시 값으로, 그 키를 가진 쪽만 만들고 확인한다.",
+    "title" : "비밀키를 섞어 만드는 인증 값의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "서명만 붙인 토큰이 지켜 주는 보안 성질의 이름과 그 뜻으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "문서는 지키려는 성질을 기밀성과 무결성 둘로 나누고, 서명만 붙인 토큰이 지켜 주는 쪽은 무결성이라고 못 박는다. 왁스 도장을 찍은 엽서처럼 내용이 바뀌면 도장 자국이 어긋나지만 배달하는 사람은 글을 다 읽는다. (이 글의 '바탕이 되는 개념' 5단계를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "무결성 — 내용이 중간에 바뀌지 않았음을 확인할 수 있는 성질",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "기밀성 — 허락받지 않은 사람이 내용을 읽지 못하게 하는 성질",
+      "correct" : false,
+      "rationale" : "허락받지 않은 사람이 못 읽게 하는 성질은 기밀성이다. 서명만 붙인 토큰은 이 성질을 주지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "무상태 인증 — 서버가 상태를 보관하지 않고 토큰만으로 판단하는 성질",
+      "correct" : false,
+      "rationale" : "서버가 로그인 상태를 보관하지 않는 운영 방식의 이름이지, 서명이 지켜 주는 보안 성질이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "암호화 — 내용을 암호문으로 만들어 키가 있어야 원문을 읽게 하는 성질",
+      "correct" : false,
+      "rationale" : "내용을 암호문으로 실어 키 없이 못 읽게 하는 것은 JWE 같은 별도 규격이 하는 일이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**무결성(integrity)** — 내용이 중간에 바뀌지 않았음을 확인할 수 있는 성질이다.",
+    "title" : "서명이 지켜 주는 보안 성질의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "JWT 문자열이 점 두 개로 나뉘는 세 조각의 이름을 순서대로 바르게 적은 것은?",
+    "answer" : "",
+    "explanation" : "JWT는 서명 방식이 적힌 헤더, 실어 보낼 내용이 담긴 페이로드, 앞의 두 조각과 비밀키로 만든 서명부가 점 두 개로 이어진 문자열이다. 세 조각 모두 Base64URL 글자로 되어 있어 요청 헤더 한 줄에 그대로 실린다. (이 글의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "헤더, 페이로드, 서명부",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "헤더, 클레임, 서명부",
+      "correct" : false,
+      "rationale" : "클레임은 페이로드 안에 들어가는 이름과 값 한 쌍이지, 점으로 나뉘는 조각이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "헤더, 페이로드, 비밀키",
+      "correct" : false,
+      "rationale" : "비밀키는 서명을 만들 때 서버가 쓰는 값이고 토큰 문자열에는 실리지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "페이로드, exp, 서명부",
+      "correct" : false,
+      "rationale" : "exp는 페이로드에 담기는 만료 시각 클레임이며 독립된 조각이 아니다. 서명 방식이 적히는 조각은 헤더다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "JWT(JSON Web Token, JSON 웹 토큰)는 서버가 알리고 싶은 정보를 JSON으로 적고, Base64URL로 바꾼 뒤, 그 결과에 서명을 붙여 점 두 개로 이어 놓은 문자열 형식이다.",
+    "title" : "JWT를 이루는 세 조각의 구성",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "JWT 페이로드 안에 들어가는 \"이름: 값\" 한 쌍, 즉 사용자 번호나 만료 시각 같은 주장 하나를 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "클레임은 페이로드 안에 들어가는 이름과 값 한 쌍으로, 주장 하나를 뜻한다. 토큰이 누구 것인지 가리키는 sub나 만료 시각을 알리는 exp가 각각 클레임 하나다. (이 글의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "클레임",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "페이로드",
+      "correct" : false,
+      "rationale" : "페이로드는 그런 쌍들이 모여 담기는 둘째 조각 전체를 가리킨다. 쌍 하나를 부르는 말이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "헤더",
+      "correct" : false,
+      "rationale" : "헤더는 어떤 서명 방식을 썼는지 적어 두는 첫째 조각의 이름이다.",
+      "matchText" : ""
+    }, {
+      "text" : "서명부",
+      "correct" : false,
+      "rationale" : "서명부는 앞의 두 조각을 재료로 비밀키를 섞어 만든 셋째 조각이다. 내용 한 쌍을 가리키지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**클레임(claim)** — 페이로드 안에 들어가는 \"이름: 값\" 한 쌍으로, 사용자 번호나 만료 시각 같은 주장 하나를 뜻한다.",
+    "title" : "페이로드 안 이름과 값 한 쌍의 명칭",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "서버가 받은 JWT의 서명을 검증할 때 실제로 하는 일로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "서버는 토큰의 앞 두 조각을 다시 이어 서명 재료를 복원하고, 보관 중인 비밀키로 HMAC을 계산해 값을 새로 만든 뒤 토큰의 셋째 조각과 바이트 단위로 비교한다. 서명 값을 \"푸는\" 것이 아니라 같은 재료로 다시 만들어 대조하는 것이다. (이 글의 '서버가 위조를 걸러내는 순서' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "같은 재료와 비밀키로 서명 값을 새로 만들어 셋째 조각과 대조한다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "셋째 조각을 비밀키로 복호화해 원래 페이로드를 꺼내 비교한다",
+      "correct" : false,
+      "rationale" : "서명 값은 풀어서 원문을 꺼내는 암호문이 아니다. 복호화하는 과정과 혼동한 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "페이로드를 Base64URL로 되돌려 읽고 내용이 올바른 형식인지 본다",
+      "correct" : false,
+      "rationale" : "페이로드는 열쇠 없이 되돌아오는 글자 변환일 뿐이라, 되돌려 읽는 것만으로는 위조 여부를 가릴 수 없다.",
+      "matchText" : ""
+    }, {
+      "text" : "헤더의 서명 방식 이름만 읽고 서버가 지원하는 방식이면 통과시킨다",
+      "correct" : false,
+      "rationale" : "서명 방식 이름은 헤더에 적혀 토큰 안에 들어 있으므로, 그것만 보고 통과시키면 위조를 전혀 걸러 내지 못한다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "서버는 토큰에 실려 온 서명 값을 \"푸는\" 것이 아니다. 같은 재료로 다시 만들어 보고 대조한다.",
+    "title" : "서명 검증에서 서버가 수행하는 계산",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "서버가 로그인 정보를 따로 저장하지 않고 요청에 실려 온 값만으로 판단하는 인증 방식의 이름과 뜻으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "무상태 인증은 서버가 로그인 정보를 메모리나 별도 저장소에 쌓아 두지 않고, 요청에 실려 온 토큰만 검증해 판단하는 방식이다. 서버를 여러 대로 늘려도 비밀키만 함께 가지고 있으면 어느 대가 받든 결과가 같다. (이 글의 '왜 필요한가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "무상태 인증 — 서버가 로그인 상태를 따로 보관하지 않고 요청에 실려 온 토큰만으로 판단한다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "기밀성 — 서버가 보관한 내용을 허락받은 사람만 읽게 제한한다",
+      "correct" : false,
+      "rationale" : "기밀성은 허락받지 않은 사람이 내용을 못 읽게 하는 성질이며, 상태 보관 여부와 관계가 없다.",
+      "matchText" : ""
+    }, {
+      "text" : "JWE — 내용을 암호문으로 실어 키가 있어야 원문을 읽게 하는 규격이다",
+      "correct" : false,
+      "rationale" : "JWE는 내용을 암호문으로 실어 키 없이는 못 읽게 하는 규격이다. 로그인 상태 보관 방식을 가리키는 말이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "HMAC — 해시 함수를 이용해 서명 값을 만드는 표준 절차를 가리킨다",
+      "correct" : false,
+      "rationale" : "HMAC은 해시 함수로 MAC을 만드는 표준 절차의 이름이지, 인증 방식 전체를 부르는 말이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**무상태 인증(stateless authentication)** — 서버가 로그인 상태를 따로 보관하지 않고, 요청에 실려 온 토큰만으로 판단하는 방식이다.",
+    "title" : "서버가 상태를 보관하지 않는 인증 방식의 명칭",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null
+}
