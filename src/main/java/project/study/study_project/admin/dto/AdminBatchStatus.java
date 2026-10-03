@@ -95,6 +95,11 @@ public record AdminBatchStatus(
      * @param documentSlug 그 문서의 slug. <b>파일이 없으면 {@code null}</b>이고, 그때 배치는
      *                     근거 없이 모델 지식으로 만든다(폴백). 이 칸이 비어 있는 것이
      *                     "문서 기반이 헛돌고 있다"는 가장 빠른 신호다
+     * @param cycleDifficulty 날짜 주기가 계산한 난이도. 오늘 결과 파일이 이미 있으면
+     *                     {@code difficulty}는 파일의 값이라 이것과 다를 수 있다
+     * @param fromFile     오늘 결과 파일이 이미 있어 {@code domain}·{@code difficulty}가 그 파일의
+     *                     값인가. 손으로 미리 채운 파일이면 주기 계획과 다르고, 그날 배치는 건너뛴다.
+     *                     달력의 오늘 칸·분야 설정 미리보기와 같은 값을 말하게 하려는 칸이다
      */
     public record TodayPlan(
             int dayInCycle,
@@ -103,7 +108,9 @@ public record AdminBatchStatus(
             DomainCode cycleDomain,
             Difficulty difficulty,
             LocalDate documentDate,
-            String documentSlug
+            String documentSlug,
+            Difficulty cycleDifficulty,
+            boolean fromFile
     ) {
         // 둘이 다른지는 화면이 두 값을 비교해 판단한다. 여기에 boolean 메서드를 두면
         // 레코드 컴포넌트가 아니라 JSON에 실리지 않아, 있는 줄 알고 쓴 화면이 조용히 틀린다.

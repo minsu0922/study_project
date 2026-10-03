@@ -67,7 +67,11 @@ try {
            곧장 다시 그려야 그 순간에 보인다. -->
       <div class="card settings-preview">
         <h3>다음 7일</h3>
-        <p class="meta">저장 전이라도 지금 화면의 켜짐·순서로 계산합니다.</p>
+        <!-- 2026-10-03: 순서만으로 계산하던 때는 배치 현황과 다른 분야가 떴다. 배치는 주제
+             대기열에서 꺼낸 주제의 분야로 문서를 쓰므로, 대기열에 차례가 있는 한 이 화면의
+             순서는 분야를 정하지 못한다. 그 사실을 여기 적어 둔다. -->
+        <p class="meta">실제로 나올 분야입니다. 이미 나온 문서와 주제 대기열의 차례가 먼저이고,
+          이 화면의 켜짐·순서는 대기열이 비었을 때만 쓰입니다.</p>
         <div id="sPreview">불러오는 중…</div>
       </div>
 
@@ -532,14 +536,13 @@ function showLastDomainNotice() {
 }
 
 /**
- * 미리보기 표. 칸을 넷(날짜·무엇·분야·난이도)에서 셋으로 줄였다(2026-09-22) — 오른쪽 300px
- * 칸에 네 칸을 넣으면 글자가 줄마다 꺾여 오히려 한눈에 안 읽힌다. "무엇"과 "난이도"는
- * 합칠 수 있다: 문서일에는 난이도가 없고(PreviewCell Javadoc), 문제일에는 난이도가 곧
- * 그날 무엇을 만드는지다.
+ * 미리보기 표. 칸은 날짜와 내용 둘뿐이다 — 오른쪽 칸 폭이 300px이라 셋만 돼도 마지막 칸이
+ * 가로 스크롤 밖으로 밀려난다. "무엇"과 "난이도"는 합칠 수 있다: 문서일에는 난이도가 없고
+ * (PreviewCell Javadoc), 문제일에는 난이도가 곧 그날 무엇을 만드는지다.
  */
 function previewTableHtml(cells) {
   return `<div class="table-wrap"><table class="grid">
-    <thead><tr><th>날짜</th><th>분야</th><th>만드는 것</th></tr></thead>
+    <thead><tr><th>날짜</th><th>만드는 것 · 분야</th></tr></thead>
     <tbody>${cells.map(previewRowHtml).join("")}</tbody>
   </table></div>`;
 }
@@ -550,14 +553,28 @@ function previewTableHtml(cells) {
  * 그날의 실제 산출물 이름이 들어가는 편이 정확하다.
  */
 function previewRowHtml(c) {
+  // 배지는 문서일에만 쓴다 — 문서일과 문제일을 가르는 유일한 표시다. 분야의 출처까지 배지로
+  // 달면("보안 [문서]") 그날 문서가 나오는 것으로 읽히므로, 출처는 아래 흐린 한 줄로 적는다.
   const what = c.documentDay
-    ? `<b>개념 문서</b>`
+    ? `<span class="badge">개념 문서</span>`
     : `${escapeHtml(difficultyLabel(c.difficulty))} 문제`;
   return `<tr>
     <td>${formatPreviewDate(c.date)}</td>
-    <td>${escapeHtml(domainLabel(c.domain))}</td>
-    <td>${what}</td>
+    <td class="wrap">${what}${c.documentDay ? "" : " · "}<span style="white-space:nowrap">${escapeHtml(domainLabel(c.domain))}</span>${previewSourceNote(c.source)}</td>
   </tr>`;
+}
+
+/**
+ * 분야가 이 화면의 순서가 아닌 곳에서 정해졌으면 어디서 정해졌는지 적는다 — 순서를 바꿔도
+ * 안 움직이는 줄이다. "문서"·"문제"라는 낱말은 피한다. 옆 칸(만드는 것)의 말과 섞인다.
+ */
+function previewSourceNote(source) {
+  const note = {
+    FILE: "분야: 이미 만들어 둔 파일",
+    DOCUMENT: "분야: 이번 주기 주제",
+    QUEUE: "분야: 대기열 차례",
+  }[source];
+  return note ? `<div class="meta">${note}</div>` : "";
 }
 
 /** "2026-09-22" → "9/22 (월)". UTC 자정으로 파싱해 브라우저 시간대에 요일이 흔들리지 않게 한다

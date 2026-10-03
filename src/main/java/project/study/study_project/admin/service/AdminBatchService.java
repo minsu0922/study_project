@@ -16,6 +16,7 @@ import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
+import project.study.study_project.llm.service.BatchDomainForecast;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
@@ -95,6 +96,12 @@ public class AdminBatchService {
      */
     private final DomainSettingService domainSettingService;
 
+    /**
+     * 문서가 아직 없는 앞날 주기의 분야 — 주제 대기열의 차례를 따른다(2026-10-03).
+     * 분야 설정 미리보기와 <b>같은 예측</b>을 써야 두 화면이 같은 분야를 말한다.
+     */
+    private final BatchDomainForecast batchDomainForecast;
+
     @Value("${llm.generation.batch-enabled:true}")
     private boolean batchEnabled;
 
@@ -144,6 +151,11 @@ public class AdminBatchService {
         // (클래스 주석) 그 자리에서 어긋나면 화면이 없느니만 못하다.
         // 문서일에는 difficulty가 null이고, 그때는 만들 문제가 없으므로 폴백 값이 실린다.
         int count = BatchCountRule.countFor(batchCountByDifficulty, plan.difficulty(), batchCount);
+        // 파일이 이미 있는 날은 <그 파일에 든 수>가 오늘 들어오는 수다.
+        Integer producedToday = plan.fromFile() ? producedToday(dir, today) : null;
+        if (producedToday != null) {
+            count = producedToday;
+        }
 
         return new AdminBatchStatus(
                 batchEnabled, batchType, count, today,
@@ -234,6 +246,10 @@ public class AdminBatchService {
         //    Optional로 감싸는 이유: HashMap.computeIfAbsent는 null을 "아직 안 셈"으로 보고 매번 다시 읽는다.
         Map<LocalDate, java.util.Optional<DomainCode>> documentDomains = new HashMap<>();
 
+        // 4) 문서가 아직 없는 앞날 주기는 대기열 차례로 분야를 댄다(batchDomainForecast 필드 주석).
+        Map<LocalDate, BatchDomainForecast.Forecast> forecasts = batchDomainForecast.forDocumentDates(
+                plans.stream().map(GenerationSchedule.Plan::documentDate).toList());
+
         List<AdminBatchStatus.DayCell> cells = new ArrayList<>();
         for (int i = 0; i < totalDays; i++) {
             LocalDate date = dates.get(i);
@@ -263,11 +279,12 @@ public class AdminBatchService {
             // 그래서 지난 네 주기 16칸이 전부 실제와 다른 분야를 달고 있었다 — 오늘 카드(planOf)는
             // 이미 문서 쪽을 따르는데 달력만 계획을 따라, 한 화면 안에서 두 답이 나왔다.
             //
-            // 우선순위: 결과 파일(그날 실제로 나온 것) > 근거 문서의 분야(곧 나올 것) > 계획.
+            // 우선순위: 결과 파일(그날 실제로 나온 것) > 근거 문서의 분야(곧 나올 것)
+            //          > 대기열 차례(문서가 아직 없는 앞날) > 계획.
             // 파일을 맨 앞에 두는 이유는 08-29에 손으로 채운 파일들 때문이다. 옛 위상으로 만들어져
             // 계획과 난이도까지 다른데(예: 09-21 계획 중급, 파일은 초급), 그날 배치는 파일이
             // 있어 건너뛰므로 <들어오는 것은 파일 내용>이다. 화면은 들어올 것을 말해야 한다.
-            DomainCode domain = documentDomain.orElse(plan.domain());
+            DomainCode domain = documentDomain.orElseGet(() -> forecastOr(forecasts, plan));
             Difficulty difficulty = plan.difficulty();
             Integer produced = null;
             List<String> shortfallReasons = null;
@@ -468,11 +485,46 @@ public class AdminBatchService {
         // 난이도를 함께 넘긴다(2026-09-14). 배치는 난이도에 따라 편을 갈라 읽는데
         // 여기서 안 넘기면 화면이 늘 입문편 slug를 찍는다 — 실제로 그랬다.
         SourceInfo source = sourceOf(dir, plan.documentDate(), plan.difficulty());
-        DomainCode actual = source.domain() != null ? source.domain() : plan.domain();
+        // 문서가 아직 없으면(문서일 아침 등) 대기열 차례를 본다 — 달력의 같은 칸과 답이 같아야 한다.
+        DomainCode actual = source.domain() != null ? source.domain()
+                : forecastOr(batchDomainForecast.forDocumentDates(List.of(plan.documentDate())), plan);
+
+        // 오늘 결과 파일이 이미 있으면 그 파일이 이긴다 — 달력의 오늘 칸과 같은 우선순위다.
+        // 카드만 주기 계획을 말하면 한 화면에서 "중급"(카드)과 "고급"(달력)이 함께 뜬다.
+        // 손으로 미리 채운 파일이 있는 날 실제로 그랬다(2026-10-03).
+        Difficulty difficulty = plan.difficulty();
+        String documentSlug = source.slug();
+        boolean fromFile = false;
+        if (!plan.documentDay()) {
+            Path todayFile = dir.resolve(today + ".json");
+            GeneratedBatchFile file = Files.exists(todayFile) ? readBatchFile(todayFile) : null;
+            if (file != null && file.domain() != null) {
+                actual = file.domain();
+                difficulty = file.difficulty() != null ? file.difficulty() : difficulty;
+                // 근거 문서도 파일에 적힌 것을 싣는다 — 이번 주기 문서를 그대로 두면
+                // 네트워크 문제 옆에 JWT 문서가 근거로 찍힌다.
+                documentSlug = file.documentSlug();
+                fromFile = true;
+            }
+        }
 
         return new AdminBatchStatus.TodayPlan(
-                dayInCycle, plan.documentDay(), actual, plan.domain(), plan.difficulty(),
-                plan.documentDate(), source.slug());
+                dayInCycle, plan.documentDay(), actual, plan.domain(), difficulty,
+                plan.documentDate(), documentSlug, plan.difficulty(), fromFile);
+    }
+
+    /** 오늘 결과 파일에 든 문항 수. 파일이 없거나 못 읽으면 {@code null}. */
+    private Integer producedToday(Path dir, LocalDate today) {
+        Path todayFile = dir.resolve(today + ".json");
+        GeneratedBatchFile file = Files.exists(todayFile) ? readBatchFile(todayFile) : null;
+        return file == null ? null : producedCount(file);
+    }
+
+    /** 그 주기에 예측이 있으면 예측 분야를, 없으면 날짜 순환이 계산한 분야를 쓴다. */
+    private static DomainCode forecastOr(Map<LocalDate, BatchDomainForecast.Forecast> forecasts,
+                                         GenerationSchedule.Plan plan) {
+        BatchDomainForecast.Forecast forecast = forecasts.get(plan.documentDate());
+        return forecast == null ? plan.domain() : forecast.domain();
     }
 
     /** 근거 문서에서 화면이 쓰는 두 가지. 둘 다 없을 수 있다(파일이 없거나 못 읽는 경우). */

@@ -76,6 +76,12 @@ class AdminBatchStatusIntegrationTest {
     @Autowired
     private DomainSettingService domainSettingService;
 
+    @Autowired
+    private project.study.study_project.llm.repository.TopicQueueItemRepository topicQueueItemRepository;
+
+    @Autowired
+    private project.study.study_project.llm.service.TopicQueueService topicQueueService;
+
     /**
      * 매 테스트마다 폴더를 비운다.
      *
@@ -495,6 +501,10 @@ class AdminBatchStatusIntegrationTest {
     @Test
     @DisplayName("오늘 카드와 달력은 분야 설정 테이블을 읽는다 — yml 순서가 아니라")
     void usesDomainSettingTableNotYml() {
+        // 대기열을 비운다 — 차례가 있으면 앞날 칸은 순환이 아니라 그 주제의 분야를 따른다
+        // (BatchDomainForecast). 여기서 보려는 것은 순환이 어느 목록을 읽는가다.
+        topicQueueItemRepository.deleteAll();
+
         domainSettingService.findAll().stream()
                 .filter(s -> s.getDomain().equals(TestDomains.OS))
                 .forEach(s -> domainSettingService.edit(TestDomains.OS,
@@ -511,6 +521,65 @@ class AdminBatchStatusIntegrationTest {
                 .extracting(AdminBatchStatus.DayCell::domain)
                 .as("yml 8개로 계산했다면 24일 동안 여러 분야가 섞인다")
                 .containsOnly(TestDomains.OS);
+    }
+
+    /**
+     * 문서가 아직 없는 앞날 주기는 <b>주제 대기열의 차례</b>를 따른다(2026-10-03).
+     *
+     * <p>전에는 날짜 순환 분야를 찍었다. 배치는 대기열에서 꺼낸 주제의 분야로 문서를 쓰므로,
+     * 꺼 둔 분야의 주제가 차례이면 달력이 말한 분야와 실제가 달랐다.
+     */
+    @Test
+    @DisplayName("앞날 주기의 분야는 대기열 차례를 따른다 — 순환 분야가 아니라")
+    void futureCycleFollowsTopicQueue() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        topicQueueItemRepository.deleteAll();
+        // 순환에 없는(꺼진) 분야를 고른다 — 순환이 우연히 같은 분야를 내면 테스트가 헛돈다.
+        DomainCode off = domainSettingService.findAll().stream()
+                .filter(s -> !s.isEnabled()).findFirst().orElseThrow().getDomain();
+        topicQueueService.add(new project.study.study_project.admin.dto.AdminTopicQueueRequest(off, "앞날 주제", null));
+
+        AdminBatchStatus status = adminBatchService.getStatus();
+
+        assertThat(status.calendar())
+                .filteredOn(c -> c.date().minusDays(c.dayInCycle()).isAfter(today))
+                .isNotEmpty()
+                .extracting(AdminBatchStatus.DayCell::domain)
+                .containsOnly(off);
+    }
+
+    /**
+     * 오늘 결과 파일이 이미 있으면 <b>오늘 카드도 파일의 분야·난이도</b>를 말한다(2026-10-03).
+     *
+     * <p>8월에 손으로 채운 {@code 2026-10-03.json}(네트워크 고급)이 있던 날, 달력의 오늘 칸은
+     * "고급"이라 하고 카드는 주기 계획대로 "중급"이라 했다. 그날 배치는 파일이 있어 건너뛰므로
+     * 들어오는 것은 파일의 내용이다.
+     */
+    @Test
+    @DisplayName("오늘 결과 파일이 이미 있으면 오늘 카드도 그 파일을 따른다 — 달력의 오늘 칸과 같은 답")
+    void todayCardFollowsExistingResultFile() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        AdminBatchStatus before = adminBatchService.getStatus();
+        org.junit.jupiter.api.Assumptions.assumeFalse(before.plan().documentDay(),
+                "문서일에는 문제 결과 파일이 뜻이 없다");
+        // 주기 계획과 다른 난이도·분야를 고른다 — 같으면 무엇을 읽었는지 가릴 수 없다.
+        Difficulty other = before.plan().difficulty() == Difficulty.ADVANCED
+                ? Difficulty.BEGINNER : Difficulty.ADVANCED;
+        DomainCode otherDomain = otherThan(before.plan().domain());
+        Files.createDirectories(DIR);
+        write(today + ".json", """
+                {"domain":"%s","difficulty":"%s","problems":[{"question":"하나"},{"question":"둘"}]}"""
+                .formatted(otherDomain.value(), other));
+
+        AdminBatchStatus status = adminBatchService.getStatus();
+
+        assertThat(status.plan().fromFile()).isTrue();
+        assertThat(status.plan().difficulty()).isEqualTo(other);
+        assertThat(status.plan().domain()).isEqualTo(otherDomain);
+        assertThat(status.plan().cycleDifficulty()).isEqualTo(before.plan().difficulty());
+        assertThat(status.count()).as("오늘 들어오는 수는 파일에 든 문항 수다").isEqualTo(2);
+        assertThat(cellOf(status, today).difficulty()).isEqualTo(status.plan().difficulty());
+        assertThat(cellOf(status, today).domain()).isEqualTo(status.plan().domain());
     }
 
     /** 달력에서 그 날짜의 칸을 꺼낸다. 없으면 창(24일)이 잘못 잡힌 것이므로 단언으로 알린다. */

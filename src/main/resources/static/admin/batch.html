@@ -469,16 +469,25 @@ function renderPlan(s) {
   // (배치의 alignDomainWithDocument), 주기 분야만 적으면 화면과 실제가 어긋난다.
   // 다를 때만 둘 다 보여 준다 — 늘 두 개를 적으면 같은 날에도 무언가 어긋난 것처럼 읽힌다.
   // 분야 이름은 관리자가 고치는 값이라 innerHTML에 넣기 전에 escapeHtml로 감싼다.
-  const domain = p.domain !== p.cycleDomain
+  //
+  // 오늘 결과 파일이 이미 있으면(fromFile) 분야·난이도는 그 파일의 값이다. 그때는 "근거 문서
+  // 쪽으로 맞춥니다"가 거짓이 되므로 붙이지 않는다.
+  const domain = (p.domain !== p.cycleDomain && !p.fromFile)
     ? `${escapeHtml(domainLabel(p.domain))} <span class="meta">(주기는 ${escapeHtml(domainLabel(p.cycleDomain))}였지만 근거 문서 쪽으로 맞춥니다)</span>`
     : escapeHtml(domainLabel(p.domain));
+
+  // 손으로 미리 채운 파일이 주기 계획과 다르면 그 사실을 적는다 — 그날 배치는 파일이 있어
+  // 건너뛰므로, 계획했던 난이도의 문제는 만들어지지 않는다. 달력의 오늘 칸과 같은 말을 한다.
+  const presetNote = (p.fromFile && p.difficulty !== p.cycleDifficulty)
+    ? ` <span class="meta">(주기는 ${escapeHtml(difficultyLabel(p.cycleDifficulty))} 차례였지만 이미 만들어 둔 파일이 있어 오늘 배치는 건너뜁니다)</span>`
+    : "";
 
   document.getElementById("bPlan").innerHTML = `
     <table>
       <tr><th>며칠차</th><td>${p.dayInCycle}일차 ${p.documentDay ? "(문서일)" : "(문제일)"}</td></tr>
-      <tr><th>오늘 나올 것</th><td>${escapeHtml(what)}</td></tr>
+      <tr><th>오늘 나올 것</th><td>${escapeHtml(what)}${presetNote}</td></tr>
       <tr><th>나올 분야</th><td>${domain}</td></tr>
-      <tr><th>근거 문서 (${escapeHtml(p.documentDate)})</th><td>${source}</td></tr>
+      <tr><th>근거 문서 (${p.fromFile ? "파일에 적힌 것" : escapeHtml(p.documentDate)})</th><td>${source}</td></tr>
     </table>`;
 }
 

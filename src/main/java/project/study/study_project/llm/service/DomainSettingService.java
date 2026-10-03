@@ -172,9 +172,21 @@ public class DomainSettingService implements DomainCatalog {
      * @param difficulty  문제일의 난이도 이름. 문서일에는 {@code null} —
      *                    {@link GenerationSchedule.Plan#difficulty()}가 문서일에 null을 주는
      *                    그대로를 옮긴다(NPE를 피하려 여기서 값을 지어내지 않는다)
+     * @param documentDate 그날이 속한 주기의 문서일. 분야는 주기 단위로 정해지므로
+     *                    {@link BatchDomainForecast}가 이 날짜로 칸을 묶는다
+     * @param source      분야가 어디서 왔는지 — {@link #SOURCE_ROTATION}(이 화면의 순서),
+     *                    {@link #SOURCE_QUEUE}(주제 대기열), {@link #SOURCE_DOCUMENT}(이미 나온 문서),
+     *                    {@link #SOURCE_FILE}(그날 결과 파일이 이미 있음).
+     *                    순서를 바꿔도 안 움직이는 칸이 어느 것인지 화면이 알려 주는 데 쓴다
      */
-    public record PreviewCell(LocalDate date, boolean documentDay, String domain, String difficulty) {
+    public record PreviewCell(LocalDate date, boolean documentDay, String domain, String difficulty,
+                              LocalDate documentDate, String source) {
     }
+
+    public static final String SOURCE_ROTATION = "ROTATION";
+    public static final String SOURCE_QUEUE = "QUEUE";
+    public static final String SOURCE_DOCUMENT = "DOCUMENT";
+    public static final String SOURCE_FILE = "FILE";
 
     /**
      * 표가 <b>완전히 비어 있을 때만</b> 기본 분야 11개로 채운다 — 기동 시
@@ -406,7 +418,8 @@ public class DomainSettingService implements DomainCatalog {
             // 여기서 값을 지어내지 않고 그 null을 그대로 옮긴다. name()을 무조건 부르면
             // 문서일마다 NPE로 죽는다.
             String difficulty = plan.documentDay() ? null : plan.difficulty().name();
-            cells.add(new PreviewCell(date, plan.documentDay(), plan.domain().value(), difficulty));
+            cells.add(new PreviewCell(date, plan.documentDay(), plan.domain().value(), difficulty,
+                    plan.documentDate(), SOURCE_ROTATION));
         }
         return cells;
     }

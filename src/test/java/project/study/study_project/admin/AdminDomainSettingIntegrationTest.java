@@ -14,6 +14,7 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
@@ -47,7 +48,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * {@code DomainSettingSyncRunner}가 이미 채워 둔 것을 그대로 쓴다 — enum 상수 수만큼 고정이라
  * 이 테스트가 새로 만들 필요가 없다.
  */
-@SpringBootTest(properties = "ratelimit.enabled=false")
+// llm.import.dir을 빈 폴더로 돌린다 — 미리보기가 실제 generated/의 문서 파일을 읽으면
+// 이번 주기 칸의 분야가 그날 저장소 상태에 따라 달라진다.
+@SpringBootTest(properties = {"ratelimit.enabled=false", "llm.import.dir=build/test-domain-setting"})
 @AutoConfigureMockMvc
 @Transactional
 class AdminDomainSettingIntegrationTest {
@@ -64,6 +67,8 @@ class AdminDomainSettingIntegrationTest {
     private JwtTokenProvider jwtTokenProvider;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private TopicQueueItemRepository topicQueueItemRepository;
 
     @Test
     @DisplayName("힌트를 고치면 다음 생성부터 그 값이 실린다")
@@ -139,6 +144,10 @@ class AdminDomainSettingIntegrationTest {
     @Test
     @DisplayName("미리보기 API도 화면이 넘긴 순서로 계산하고, 문서일에는 난이도가 없다")
     void previewEndpointHonoursGivenOrder() throws Exception {
+        // 대기열에 차례가 있으면 그 분야가 넘긴 순서를 이긴다(BatchDomainForecast). 여기서 보려는
+        // 것은 "넘긴 순서로 계산하는가"라, 개발 DB에 든 실제 주제가 끼어들지 않게 비운다.
+        topicQueueItemRepository.deleteAll();
+
         String body = mockMvc.perform(get("/api/admin/domain-settings/preview")
                         .header(HttpHeaders.AUTHORIZATION, bearer())
                         .param("days", "7")
@@ -275,6 +284,8 @@ class AdminDomainSettingIntegrationTest {
     @Test
     @DisplayName("분야 목록에 빈 조각이 섞여도 500이 아니다 — 그 조각만 빼고 계산한다")
     void previewIgnoresBlankDomainElements() throws Exception {
+        topicQueueItemRepository.deleteAll(); // 대기열 분야가 넘긴 목록을 이기지 않게(위 미리보기 테스트와 같은 이유)
+
         String body = mockMvc.perform(get("/api/admin/domain-settings/preview")
                         .header(HttpHeaders.AUTHORIZATION, bearer())
                         .param("days", "7")

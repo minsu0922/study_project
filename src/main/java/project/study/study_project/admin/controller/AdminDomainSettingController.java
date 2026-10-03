@@ -22,6 +22,7 @@ import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.llm.domain.DomainSetting;
+import project.study.study_project.llm.service.BatchDomainForecast;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.llm.support.DomainHints;
 
@@ -44,6 +45,9 @@ import java.util.List;
 public class AdminDomainSettingController {
 
     private final DomainSettingService domainSettingService;
+
+    /** 미리보기가 실제로 나올 분야를 말하게 한다 — 순환보다 문서와 주제 대기열이 먼저다. */
+    private final BatchDomainForecast batchDomainForecast;
 
     /** 미리보기 기본 일수 — 저장 버튼 옆에 "다음 7일"을 그리는 화면(Task 10)에 맞춘다. */
     private static final int DEFAULT_PREVIEW_DAYS = 7;
@@ -138,6 +142,9 @@ public class AdminDomainSettingController {
      * {@code ?domains=NETWORK,,OS}처럼 빈 조각이 섞이면 그 조각만 빼고 나머지로 계산한다
      * (최종 리뷰 Minor 4 — 전에는 그 자리가 {@code null}로 들어와 500이 났다).
      *
+     * <p><b>넘긴 순서가 모든 칸을 정하지는 않는다.</b> 이미 문서가 나온 주기와 주제 대기열에 차례가
+     * 있는 주기는 그쪽 분야가 먼저다({@link BatchDomainForecast}). 칸마다 {@code source}로 알려 준다.
+     *
      * <p>예: {@code GET /api/admin/domain-settings/preview?days=7&domains=NETWORK,OS,DATABASE}
      *
      * <p><b>{@code days}는 1~{@value #MAX_PREVIEW_DAYS}일, 벗어나면 400</b>(최종 리뷰 Minor 4).
@@ -170,6 +177,6 @@ public class AdminDomainSettingController {
             // 전부 걸러졌거나 애초에 안 넘어왔으면 지금 저장된 순서로 보여 준다(위 Javadoc).
             target = domainSettingService.batchDomains();
         }
-        return ApiResponse.ok(domainSettingService.preview(target, days));
+        return ApiResponse.ok(batchDomainForecast.preview(target, days));
     }
 }

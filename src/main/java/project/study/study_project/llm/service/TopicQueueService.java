@@ -171,6 +171,17 @@ public class TopicQueueService {
     }
 
     /**
+     * 배치가 앞으로 꺼낼 범위를 <b>차례대로</b> — 문서일마다 하나씩 쓰인다.
+     *
+     * <p>문서의 분야는 여기서 꺼낸 범위의 분야를 따른다({@code DocumentBatch.topicDomain}).
+     * 그래서 "앞으로 어느 분야가 나오나"를 말하려면 이 차례를 봐야 한다({@link BatchDomainForecast}).
+     */
+    @Transactional(readOnly = true)
+    public List<TopicQueueItemResponse> upcoming() {
+        return byNextUp(getAll());
+    }
+
+    /**
      * <b>배치가 꺼낼 순서</b>로 줄 세운다 — 안 쓴 것 먼저 → 가장 오래전에 쓴 것 → 내가 놓은 순서.
      *
      * <p>{@link #pickNext}가 하나를 고르는 규칙을 목록 전체에 편 것이다. 그래서 <b>첫 줄이 곧
