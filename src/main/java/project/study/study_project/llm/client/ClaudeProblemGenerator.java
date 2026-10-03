@@ -727,8 +727,11 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
               ('## 용어 한눈에'가 그렇다). 편을 빼면 독자가 어느 글을 열지 정할 수 없다.
               예: (심화편의 '어떤 때 통하지 않는가' 절을 다시 읽어 보라)
               예: (입문편의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)
+              근거 문서가 어느 편인지는 [근거 문서]의 '편:' 줄에 적혀 있다.
               위 user 메시지에 "--- 같은 주제 입문편에서 가져온 부분 ---" 아래로 실린 절은
-              <입문편>이고, 그 위는 이 글의 편이다.
+              <입문편>이고, 그 위는 '편:' 줄에 적힌 편이다.
+              "이 글의", "문서의"처럼 편 없이 가리키지 마라. 학습자는 해설을 문서 밖에서 읽는다.
+              '편:' 줄이 없는 문서라면 (문서의 '…' 절을 다시 읽어 보라)로 쓴다.
               절 이름은 <그 문서에 실제로 적힌 대로> 쓴다. 옛 문서는 이름이 다를 수 있다.
             - 분량을 채우려고 같은 말을 되풀이하지 마라. 짧고 빈 해설만큼이나 나쁘다.
 
@@ -915,6 +918,11 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                 + "문서를 읽고 이해했는지가 드러나야 한다.\n");
         sb.append("새로운 상황을 지어내 적용시킬지는 난이도가 정한다 — 초급에는 상황을 붙이지 마라.\n");
         sb.append("\n제목: ").append(doc.title()).append('\n');
+        // 해설이 "어느 편의 절"인지 적으려면 이 문서가 어느 편인지 알아야 한다. 알려 주지 않으면
+        // "(이 글의 '…' 절을…)"로 쓴다. 올린 문서에는 편이 없어 줄을 넣지 않는다.
+        if (doc.kind() == SourceDocument.Kind.GENERATED) {
+            sb.append("편: ").append(ClaudeDocumentGenerator.editionOf(doc.contentMd()).getDisplayName()).append('\n');
+        }
         sb.append("--- 문서 시작 ---\n").append(doc.contentMd()).append("\n--- 문서 끝 ---\n");
         sb.append('\n').append(sourceFocus(difficulty, doc.kind())).append('\n');
 

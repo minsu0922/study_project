@@ -1121,6 +1121,32 @@ class ClaudeProblemGeneratorPromptTest {
     }
 
     /**
+     * 근거 문서가 <b>어느 편인지</b>를 프롬프트가 알려 주는지(2026-10-03).
+     *
+     * <p>편을 적으라고 요구하면서 그 문서가 어느 편인지는 알려 주지 않았다. 초급 배치 셋
+     * (09-24·09-28·10-02) 21건이 전부 "(이 글의 '…' 절을 다시 읽어 보라)"로 나왔다 —
+     * 시스템 프롬프트가 근거 문서를 "이 글"이라 부른 말을 그대로 옮긴 것이다.
+     */
+    @Test
+    @DisplayName("근거 문서가 어느 편인지 알려 준다 — 모르면 '이 글의'로 쓴다")
+    void tellsWhichEditionTheSourceDocumentIs() {
+        String edition = ClaudeDocumentGenerator.editionOf(DOC.contentMd()).getDisplayName();
+
+        assertThat(prompt(Difficulty.BEGINNER, DOC)).contains("편: " + edition);
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .as("편을 어디서 읽는지 알려 줘야 한다")
+                .contains("'편:' 줄")
+                .as("근거 문서를 '이 글'이라 부르면 해설이 그 말을 옮긴다")
+                .doesNotContain("이 글의 편이다");
+
+        SourceDocument uploaded = new SourceDocument("wiki", "사내 위키", "# 위키\n본문",
+                SourceDocument.Kind.UPLOADED);
+        assertThat(prompt(Difficulty.BEGINNER, uploaded))
+                .as("올린 문서에는 편이 없다")
+                .doesNotContain("편: ");
+    }
+
+    /**
      * <b>형태 배분을 숫자로 못 박았는지</b>(2026-09-17).
      *
      * <p>상한 한 줄("최대 2개")은 09-05부터 있었는데 09-17 실물이 상황형 3개로 나왔다.
