@@ -1092,6 +1092,10 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      * 마침 이 초급 예시가 그 예외에 딱 맞는 사례라(정답이 TIME_WAIT라는 용어 자체다)
      * 두 줄로 실물을 보여 주는 편이 설명을 늘리는 것보다 확실하다. 어느 쪽을 버렸는지는
      * 문제를 읽어야만 보이므로, 애초에 버릴 일이 없게 만드는 것이 낫다.
+     *
+     * <p><b>초급 예시의 보기는 용어만 적는다.</b> 지문이 뜻을 풀어 쓴 문제라, 보기에 뜻을 붙이면
+     * 정답만 지문을 되받는다({@code [오답 보기의 조건]}이 금지한 꼴). 예시가 그 꼴이면 규칙을
+     * 적어 둬도 모델은 예시를 따른다 — {@code ProblemItemRule.TERM_PAIR_GIVEAWAY_MIN_RUN}이 재는 결함이다.
      */
     private String difficultyRule(Difficulty difficulty) {
         return switch (difficulty) {
@@ -1121,14 +1125,18 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             case BEGINNER -> """
                     [이 난이도의 예시] 형식만 참고하라. 주제(TCP)는 가져다 쓰지 마라.
                       지문: TCP 연결을 먼저 닫은 쪽이 일정 시간 머무는 상태의 이름은?
-                      보기: (정답) TIME_WAIT — 먼저 닫은 쪽이 마지막 응답을 보낸 뒤 잠시 머문다
-                            CLOSE_WAIT — 상대가 닫자는 신호를 보냈고 아직 답하지 않은 상태다
-                            SYN_RECEIVED — 연결 요청을 받아 응답한 뒤 확인을 기다리는 상태다
-                            LAST_ACK — 닫자는 신호를 보낸 뒤 마지막 확인을 기다리는 상태다
-                      왜 초급인가: 지문에 상황이 없고, 오답이 <다른 개념의 정의>라
+                      보기: (정답) TIME_WAIT
+                            CLOSE_WAIT
+                            SYN_RECEIVED
+                            LAST_ACK
+                      왜 초급인가: 지문에 상황이 없고, 오답이 <같은 문서에 나오는 다른 개념>이라
                                   개념을 아는 사람에게는 명백히 갈린다.
                       용어 처리: 정답이 TIME_WAIT 자체이므로 지문·보기에 뜻을 괄호로 달지 않았다.
-                                달았다면 지문이 답을 알려 주는 문제가 된다.""";
+                                달았다면 지문이 답을 알려 주는 문제가 된다.
+                      보기 처리: 지문이 뜻을 이미 풀어 썼으므로 보기에는 용어만 적었다.
+                                뜻을 다시 붙이면 정답의 뜻만 지문과 닮아, 닮은 문장을 고르면 맞는다.
+                                뜻을 묻고 싶으면 반대로 한다 — 지문에 용어를 주고 보기 넷을 뜻으로 쓴다
+                                (CLOSE_WAIT에 대한 설명으로 옳은 것은?).""";
             case INTERMEDIATE -> """
                     [이 난이도의 예시] 형식만 참고하라. 주제(TCP)는 가져다 쓰지 마라.
                       지문: 연결을 끊은 쪽만 일정 시간 TIME_WAIT에 머물도록 정한 이유는?

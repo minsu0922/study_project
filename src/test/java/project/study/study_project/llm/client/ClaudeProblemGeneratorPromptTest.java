@@ -631,6 +631,28 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("정답이 TIME_WAIT 자체이므로 지문·보기에 뜻을 괄호로 달지 않았다");
     }
 
+    /**
+     * 초급 예시가 {@code [오답 보기의 조건]}의 "질문이 뜻을 풀었으면 보기는 용어만"을 스스로 지키는지.
+     *
+     * <p>2026-09-25에 그 규칙을 넣었는데도 초급 배치에서 같은 결함이 이어졌다(09-28 2건,
+     * 09-30 1건, 10-02 2건). 예시의 정답 보기가 {@code TIME_WAIT — 먼저 닫은 쪽이…}로 지문을
+     * 되받고 있었고, 모델은 규칙이 아니라 예시를 따랐다.
+     */
+    @Test
+    @DisplayName("초급 예시의 보기는 용어만 적는다 — 뜻을 붙이면 정답만 지문을 되받는 꼴을 예시가 가르친다")
+    void beginnerExampleChoicesAreTermsOnly() {
+        String beginner = prompt(Difficulty.BEGINNER, null);
+        String choices = beginner.substring(beginner.indexOf("보기: (정답)"), beginner.indexOf("왜 초급인가"));
+
+        assertThat(choices)
+                .as("보기에 뜻이 붙으면 정답의 뜻만 지문과 닮는다")
+                .doesNotContain("—")
+                .contains("TIME_WAIT", "CLOSE_WAIT", "SYN_RECEIVED", "LAST_ACK");
+        assertThat(beginner)
+                .as("왜 용어만 적었는지를 예시 옆에 적어야 모델이 자기 결과와 대조한다")
+                .contains("보기 처리:");
+    }
+
     /* ── 업로드 문서 분기 (2026-08-18) ──────────────────────────
      * 관리자가 아무 문서나 올려 문제를 뽑는 경로가 생겼다. 프롬프트의 "이번 난이도는 이 절을
      * 캐라" 지시는 '## 무엇인가'처럼 <우리 문서 양식의 절 이름>을 직접 지목하는데, 사내 위키나
