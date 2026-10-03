@@ -297,6 +297,28 @@ class ProblemItemRuleTest {
                         .noneSatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"));
             }
         }
+
+        /**
+         * <b>2026-10-03 실물 오탐 — 네 배치 26건이 전부 헛걸렸다.</b> 패턴이 "문서"라는 낱말을
+         * 요구했는데, 프롬프트의 본보기는 "심화편의…"·"입문편의…"이고 초급 배치는 "이 글의…"로 썼다.
+         * 프롬프트를 따른 해설이 경고를 받는 상태였다.
+         */
+        @Test
+        @DisplayName("편 이름이나 '이 글'로 가리켜도 가리킨 것으로 본다 — 프롬프트 본보기가 그 꼴이다")
+        void acceptsSectionHintsNamedByEdition() {
+            List<String> real = List.of(
+                    "(이 글의 '바탕이 되는 개념' 2단계를 다시 읽어 보라)",
+                    "(이 글의 '무엇인가' 절을 다시 읽어 보라)",
+                    "(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+                    "(입문편의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)");
+
+            for (String line : real) {
+                String explanation = "정답 근거를 길게 설명한다. ".repeat(20) + line;
+                assertThat(warnings(explanation, true))
+                        .as("이 줄이 헛걸리면 경고가 통째로 죽는다: %s", line)
+                        .noneSatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"));
+            }
+        }
     }
 
     @Nested
