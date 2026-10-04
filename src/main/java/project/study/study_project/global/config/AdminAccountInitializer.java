@@ -39,21 +39,47 @@ public class AdminAccountInitializer implements ApplicationRunner {
     @Value("${admin.password}")
     private String adminPassword;
 
+    /**
+     * 관리자가 토론에서 보일 이름. 닉네임은 가입 화면에서 받는데 이 계정은 가입을 거치지 않아
+     * 여기서 붙인다. 기본값을 "관리자"로 두면 그 이름을 남이 먼저 가져갈 수도 없다(유일 제약).
+     */
+    @Value("${admin.nickname:관리자}")
+    private String adminNickname;
+
     @Override
     public void run(ApplicationArguments args) {
         boolean adminExists = userRepository.findAll().stream()
                 .anyMatch(u -> u.getRole() == Role.ADMIN); // 회원 수가 적은 MVP라 전체 스캔으로 충분
+        String username = adminUsername.trim().toLowerCase();
         if (adminExists) {
+            fillMissingNickname(username);
             return;
         }
-        userRepository.save(User.builder()
+        User admin = User.builder()
                 // 아이디는 소문자로 낮춰 저장한다 — AuthService.normalize와 같은 규칙이어야
                 // 설정에 대문자를 적어 둔 날 "만들어졌는데 로그인이 안 되는" 계정이 생기지 않는다.
-                .username(adminUsername.trim().toLowerCase())
+                .username(username)
                 .passwordHash(passwordEncoder.encode(adminPassword))
                 .role(Role.ADMIN)
-                .build());
+                .build();
+        admin.changeNickname(adminNickname);
+        userRepository.save(admin);
         // 비밀번호는 절대 로그에 남기지 않는다 — 아이디까지만.
         log.info("초기 관리자 계정 생성: {} (비밀번호는 application.yml의 admin.password / 환경변수 ADMIN_PASSWORD)", adminUsername);
+    }
+
+    /**
+     * 닉네임이 생기기 전(V21 이전)에 만들어진 관리자 계정에 닉네임을 채운다.
+     * 이미 정해 둔 닉네임은 건드리지 않는다 — 마이페이지에서 바꾼 값을 부팅이 되돌리면 안 된다.
+     */
+    private void fillMissingNickname(String username) {
+        userRepository.findByUsername(username)
+                .filter(admin -> admin.getNickname() == null)
+                .filter(admin -> !userRepository.existsByNickname(adminNickname))
+                .ifPresent(admin -> {
+                    admin.changeNickname(adminNickname);
+                    userRepository.save(admin);
+                    log.info("관리자 계정에 닉네임을 채웠습니다: {}", username);
+                });
     }
 }

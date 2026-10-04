@@ -24,6 +24,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUsername(String username);
 
+    /** 가입할 때의 닉네임 중복 검사. 콜레이션(ai_ci)이 대소문자만 다른 이름도 같은 값으로 본다. */
+    boolean existsByNickname(String nickname);
+
     /** 닉네임 중복 검사. 자기 자신은 뺀다 — 같은 이름으로 다시 저장하는 것은 중복이 아니다. */
     boolean existsByNicknameAndIdNot(String nickname, Long id);
 }

@@ -12,7 +12,9 @@ import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.report.repository.ProblemReportRepository;
 import project.study.study_project.review.repository.ReviewItemRepository;
+import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
+import project.study.study_project.user.support.NicknameRule;
 import project.study.study_project.user.dto.ChangePasswordRequest;
 import project.study.study_project.user.dto.WithdrawRequest;
 import project.study.study_project.user.repository.UserRepository;
@@ -67,6 +69,10 @@ public class AccountService {
     public String changeNickname(Long userId, String nickname) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        // 운영진으로 보이는 이름은 관리자만 쓴다 — 가입과 같은 목록이다(NicknameRule).
+        if (user.getRole() != Role.ADMIN && NicknameRule.isReserved(nickname)) {
+            throw new BusinessException(ErrorCode.DISCUSSION_010);
+        }
         if (userRepository.existsByNicknameAndIdNot(nickname, userId)) {
             throw new BusinessException(ErrorCode.DISCUSSION_004);
         }

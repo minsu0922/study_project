@@ -113,7 +113,7 @@ class CommentIntegrationTest {
     }
 
     @Test
-    @DisplayName("닉네임이 없으면 409 DISCUSSION_003 — 화면이 닉네임 입력을 띄운다")
+    @DisplayName("닉네임이 없으면 409 DISCUSSION_003 — 가입 때 닉네임을 받기 전에 만든 계정이다")
     void needsNickname() throws Exception {
         Problem problem = saveProblem();
         User user = saveUser(Role.USER, false);

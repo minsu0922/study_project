@@ -112,6 +112,25 @@ class NicknameIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("운영진으로 보이는 닉네임으로는 바꿀 수 없다 — 관리자 본인은 쓸 수 있다")
+    void reservedNicknameIsForAdminsOnly() throws Exception {
+        mockMvc.perform(put(PATH).header("Authorization", bearer())
+                        .contentType("application/json").content(body("운영자" + suffix().substring(0, 3))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("DISCUSSION_010"));
+
+        User admin = userRepository.save(User.builder()
+                .username("nick" + UUID.randomUUID().toString().substring(0, 8))
+                .passwordHash(passwordEncoder.encode("password123"))
+                .role(Role.ADMIN)
+                .build());
+        mockMvc.perform(put(PATH).header("Authorization",
+                                "Bearer " + jwtTokenProvider.createToken(admin.getId(), Role.ADMIN))
+                        .contentType("application/json").content(body("운영자" + suffix().substring(0, 3))))
+                .andExpect(status().isOk());
+    }
+
     private String body(String nickname) {
         return "{\"nickname\":\"%s\"}".formatted(nickname);
     }

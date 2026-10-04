@@ -25,7 +25,7 @@ try {
        셋만 있었다. 입력하다 손을 멈춘 사람에게 왜 하고 있었는지를 다시 말해 주는 한 줄이다.
        이메일을 안 받는다는 사실도 여기서 미리 말한다 — 아래 경고와 짝이 되는 정보이고,
        "이메일 없이 가입되네?"를 확인하려고 칸을 다시 훑지 않아도 된다. -->
-  <p class="meta" id="signupIntro">아이디와 비밀번호만 있으면 됩니다. 이메일은 받지 않습니다.
+  <p class="meta" id="signupIntro">아이디·닉네임·비밀번호만 정하면 됩니다. 이메일은 받지 않습니다.
     가입하면 매일 10문제가 준비되고, 틀린 문제는 복습으로 돌아옵니다.</p>
   <!-- 로그인한 채로 이 주소에 들어온 경우 — 로그인 화면과 같은 처리다(그쪽 주석 참고).
        가입 폼을 그대로 보여 주면 "지금 계정은 어떻게 되는 거지"가 된다. -->
@@ -49,6 +49,19 @@ try {
            제출한 뒤에 알려 주면 다시 입력하게 된다. pattern은 브라우저가 먼저 걸러 준다. -->
       <input type="text" id="username" required autocomplete="username"
              pattern="[A-Za-z0-9_]{4,20}" title="영문·숫자·밑줄(_)로 4~20자">
+      <!-- 서버가 "이미 쓰는 값"이라고 돌려준 오류는 그 칸 아래에 띄운다. 맨 위에만 뜨면
+           아이디와 닉네임 중 어느 쪽을 고쳐야 하는지 다시 읽어야 한다. -->
+      <div class="field-error" id="usernameError" hidden></div>
+    </div>
+    <div class="field">
+      <label for="nickname">닉네임 (2~12자, 한글·영문·숫자·밑줄)</label>
+      <!-- 토론에서 글쓴이로 보이는 이름이다(V21). 아이디와 따로 받는 이유: 로그인 아이디를
+           그대로 보여 주면 남이 그 아이디로 로그인을 시도할 수 있다. 가입할 때 받는 이유:
+           글을 쓰다 말고 닉네임을 정하게 하면 흐름이 끊긴다. -->
+      <input type="text" id="nickname" required minlength="2" maxlength="12" autocomplete="nickname"
+             pattern="[가-힣A-Za-z0-9_]{2,12}" title="2~12자의 한글·영문·숫자·밑줄(_)">
+      <div class="field-error" id="nicknameError" hidden></div>
+      <div class="meta">다른 사람에게 보이는 이름입니다. 아이디는 보이지 않습니다.</div>
     </div>
     <div class="field">
       <label for="password">비밀번호 (8자 이상, 영문+숫자 포함)</label>
@@ -103,8 +116,8 @@ try {
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script>
-/* 회원가입 페이지 — 가입 성공 시 같은 계정으로 곧바로 로그인까지 해 준다.
- * (가입 → 로그인 화면 → 또 입력의 번거로움 제거. 실패해도 가입은 된 상태라 로그인 페이지로 안내) */
+/* 회원가입 페이지 — 가입 응답에 실려 온 토큰으로 곧바로 로그인 상태가 된다.
+ * (가입 → 로그인 화면 → 또 입력의 번거로움 제거) */
 renderShell({ title: "회원가입" });
 
 // 로그인한 채로 들어왔으면 폼 대신 상태를 보여 준다 — login.html과 같은 판단이다.
@@ -150,6 +163,32 @@ document.getElementById("pwReveal").addEventListener("change", e => {
   pw2.type = type;
 });
 
+/* 서버 오류 코드 → 고쳐야 할 칸. 여기 없는 코드(요청 제한 등)는 맨 위 알림으로 간다. */
+const FIELD_OF_ERROR = { AUTH_001: "username", DISCUSSION_004: "nickname", DISCUSSION_010: "nickname" };
+
+function showFieldError(fieldId, text) {
+  const input = document.getElementById(fieldId);
+  const box = document.getElementById(fieldId + "Error");
+  box.textContent = text;
+  box.hidden = false;
+  input.classList.add("invalid");
+  input.setAttribute("aria-describedby", box.id);
+  input.focus();
+}
+
+function clearFieldErrors() {
+  ["username", "nickname"].forEach(id => {
+    document.getElementById(id + "Error").hidden = true;
+    document.getElementById(id).classList.remove("invalid");
+  });
+}
+
+// 고치기 시작하면 표시를 거둔다 — 이미 바꾼 값 아래에 옛 오류가 남으면 지금 값이 틀린 줄 안다.
+["username", "nickname"].forEach(id => document.getElementById(id).addEventListener("input", () => {
+  document.getElementById(id + "Error").hidden = true;
+  document.getElementById(id).classList.remove("invalid");
+}));
+
 document.getElementById("signupForm").addEventListener("submit", async e => {
   e.preventDefault();
   const btn = document.getElementById("submitBtn");
@@ -166,21 +205,25 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
 
   btn.disabled = true;
   msg.innerHTML = "";
+  clearFieldErrors();
   // 서버도 소문자로 낮춰 저장하므로(AuthService) 여기서도 맞춰 보낸다 —
   // 대문자로 가입해 놓고 화면에는 소문자가 뜨는 어긋남을 없앤다.
   const username = document.getElementById("username").value.trim().toLowerCase();
   const password = document.getElementById("password").value;
+  const nickname = document.getElementById("nickname").value.trim();
   try {
-    await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ username, password }) });
-    try {
-      // 가입 직후 자동 로그인
-      const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
-      setLogin(data.accessToken, data.refreshToken, username);
-      location.href = "/";
-    } catch (loginErr) {
-      location.href = "/login.html"; // 자동 로그인만 실패한 드문 경우: 수동 로그인으로
-    }
+    // 가입 응답이 토큰을 함께 준다. 로그인을 따로 부르면 인증 요청 제한(분당 5회)을 하나 더 써서,
+    // 닉네임이 겹쳐 몇 번 실패한 사람은 가입에 성공하고도 로그인이 막혔다.
+    const data = await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ username, password, nickname }) });
+    setLogin(data.tokens.accessToken, data.tokens.refreshToken, username);
+    location.href = "/";
   } catch (err) {
+    const fieldId = FIELD_OF_ERROR[err.code];
+    if (fieldId) {
+      showFieldError(fieldId, err.message);
+      btn.disabled = false;
+      return;
+    }
     // 검증 실패(VALIDATION_ERROR)면 어떤 칸이 왜 틀렸는지 필드 단위로 보여준다
     const details = (err.fieldErrors || []).map(f => `<li>${escapeHtml(f.reason)}</li>`).join("");
     msg.innerHTML = `<div class="alert error">${escapeHtml(err.message)}${details ? `<ul style="margin:6px 0 0">${details}</ul>` : ""}</div>`;
