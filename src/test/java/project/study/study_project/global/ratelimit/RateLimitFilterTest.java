@@ -52,6 +52,22 @@ class RateLimitFilterTest {
         assertThat(policy.getValue().capacity()).isEqualTo(5);
     }
 
+    /** 글과 댓글이 통을 따로 쓰면 번갈아 써서 한도의 두 배를 올릴 수 있다. */
+    @Test
+    @DisplayName("글 작성 POST도 comment 정책이다 — 댓글과 같은 통을 쓴다")
+    void postWriteSharesCommentPolicy() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        42L, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+
+        doFilter(new MockHttpServletRequest("POST", "/api/me/posts"));
+        doFilter(new MockHttpServletRequest("PUT", "/api/me/posts/7"));
+
+        ArgumentCaptor<RateLimitPolicy> policy = ArgumentCaptor.forClass(RateLimitPolicy.class);
+        verify(limiter, times(2)).tryConsume(eq("user:42"), policy.capture());
+        assertThat(policy.getAllValues()).extracting(RateLimitPolicy::name).containsExactly("comment", "api");
+    }
+
     @Test
     @DisplayName("댓글 수정·삭제와 읽기는 일반 api 정책이다 — 도배는 쓰기에서만 난다")
     void commentEditAndReadUseApiPolicy() throws Exception {

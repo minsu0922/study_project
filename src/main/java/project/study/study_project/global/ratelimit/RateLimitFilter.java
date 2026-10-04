@@ -46,8 +46,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Set<String> AUTH_PATHS =
             Set.of("/api/auth/login", "/api/auth/signup", "/api/auth/refresh");
 
-    /** 댓글·답글 작성 경로. 수정·삭제는 넣지 않는다 — 도배는 새 글을 쓰는 데서만 난다. */
-    private static final String COMMENT_WRITE_PATH = "/api/me/comments";
+    /**
+     * 글·댓글·답글 작성 경로. 수정·삭제는 넣지 않는다 — 도배는 새 글을 쓰는 데서만 난다.
+     * 글과 댓글이 한 통을 나눠 쓴다. 통을 따로 두면 번갈아 써서 한도의 두 배를 올릴 수 있다.
+     */
+    private static final Set<String> WRITE_PATHS = Set.of("/api/me/comments", "/api/me/posts");
 
     private final TokenBucketRateLimiter rateLimiter;
     private final RateLimitProperties properties;
@@ -86,7 +89,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             bucketKey = "ip:" + clientIp(request);
         } else {
             boolean isCommentWrite = "POST".equals(request.getMethod())
-                    && COMMENT_WRITE_PATH.equals(request.getRequestURI());
+                    && WRITE_PATHS.contains(request.getRequestURI());
             policy = isCommentWrite ? properties.getCommentPolicy() : properties.getApiPolicy();
             Long userId = authenticatedUserId();
             // 로그인 사용자는 id로(NAT 뒤 다수 사용자의 공정성 + IP를 바꿔도 한도 회피 불가),
