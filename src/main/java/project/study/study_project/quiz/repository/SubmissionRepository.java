@@ -71,6 +71,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     /** 관리자 문제 삭제 전 검사용 — 제출 이력이 있으면 삭제 불가(QUIZ_003, FK RESTRICT 정책과 일치). */
     boolean existsByProblemId(Long problemId);
 
+    /** 토론 쓰기 권한 — 이 사용자가 이 문제를 한 번이라도 제출했는가. 맞혔는지는 보지 않는다. */
+    boolean existsByUserIdAndProblem_Id(Long userId, Long problemId);
+
     /**
      * 대시보드 문제별 정답률 — 제출이 0건인 문제도 보여야 하므로 Problem 기준 LEFT JOIN.
      * (INNER JOIN이면 아무도 안 푼 문제가 통계에서 사라져 "안 풀리는 문제"를 발견할 수 없다)
