@@ -90,7 +90,19 @@ public enum ErrorCode {
     // 오류가 아니라 안내로 보여 준다(제보자에게는 실패가 아니라 확인이다).
     REPORT_001("REPORT_001", HttpStatus.CONFLICT, "이미 제보한 문제입니다."),
     REPORT_002("REPORT_002", HttpStatus.NOT_FOUND, "제보를 찾을 수 없습니다."),
-    REPORT_003("REPORT_003", HttpStatus.CONFLICT, "이미 처리된 제보입니다.");
+    REPORT_003("REPORT_003", HttpStatus.CONFLICT, "이미 처리된 제보입니다."),
+
+    // 문제별 토론(V21). 409가 많은 이유는 REPORT와 같다 — "지금 상태와 부딪힌다"는 안내다.
+    DISCUSSION_001("DISCUSSION_001", HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
+    DISCUSSION_002("DISCUSSION_002", HttpStatus.FORBIDDEN, "문제를 풀면 참여할 수 있습니다."),
+    // 화면이 이 코드를 받으면 닉네임 입력을 띄우고, 정한 뒤 같은 요청을 다시 보낸다.
+    DISCUSSION_003("DISCUSSION_003", HttpStatus.CONFLICT, "닉네임을 먼저 정해 주세요."),
+    DISCUSSION_004("DISCUSSION_004", HttpStatus.CONFLICT, "이미 쓰는 이름입니다."),
+    DISCUSSION_005("DISCUSSION_005", HttpStatus.FORBIDDEN, "내가 쓴 댓글만 고치거나 지울 수 있습니다."),
+    DISCUSSION_006("DISCUSSION_006", HttpStatus.CONFLICT, "가려지거나 삭제된 댓글입니다."),
+    DISCUSSION_007("DISCUSSION_007", HttpStatus.CONFLICT, "이미 신고한 댓글입니다."),
+    DISCUSSION_008("DISCUSSION_008", HttpStatus.NOT_FOUND, "신고를 찾을 수 없습니다."),
+    DISCUSSION_009("DISCUSSION_009", HttpStatus.CONFLICT, "이미 처리된 신고입니다.");
 
     private final String code;
     private final HttpStatus httpStatus;

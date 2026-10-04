@@ -104,6 +104,15 @@ public record FieldError(String field, String reason) {}
 | `REPORT_001` | 409 | 같은 문제를 이미 제보함(한 사람당 한 번 · DB UNIQUE) |
 | `REPORT_002` | 404 | 제보 없음 |
 | `REPORT_003` | 409 | 이미 인정·기각한 제보 |
+| `DISCUSSION_001` | 404 | 댓글 없음 |
+| `DISCUSSION_002` | 403 | 안 푼 문제의 토론에 쓰기 |
+| `DISCUSSION_003` | 409 | 닉네임 없이 쓰기 → 화면이 닉네임 입력을 띄움 |
+| `DISCUSSION_004` | 409 | 닉네임 중복 |
+| `DISCUSSION_005` | 403 | 남의 댓글 수정·삭제 |
+| `DISCUSSION_006` | 409 | 가려지거나 삭제된 댓글에 답글·수정·신고 |
+| `DISCUSSION_007` | 409 | 같은 댓글을 두 번 신고 |
+| `DISCUSSION_008` | 404 | 신고 없음 (관리자) |
+| `DISCUSSION_009` | 409 | 이미 처리된 신고 (관리자) |
 
 > 새 에러는 이 표에 추가하고 코드로 `enum ErrorCode`(code, httpStatus, defaultMessage) 관리.
 

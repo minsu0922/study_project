@@ -52,6 +52,15 @@ public class User {
     private String username;
 
     /**
+     * 토론에서 보이는 이름(V21). 첫 댓글을 쓸 때 정하므로 그 전에는 {@code null}이다.
+     *
+     * <p>{@code username}을 그대로 보여 주지 않는 이유: 로그인 아이디가 공개되면 남이 그 아이디로
+     * 로그인을 시도할 수 있다.
+     */
+    @Column(unique = true, length = 12)
+    private String nickname;
+
+    /**
      * 이메일 — <b>지금은 아무 데서도 쓰지 않는다</b>(V12에서 선택 항목이 됐다).
      *
      * <p>지우지 않고 남긴 이유: 비밀번호 찾기나 알림을 붙이면 그때 필요해지는데,
@@ -95,5 +104,10 @@ public class User {
      */
     public void changePassword(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    /** 닉네임 설정·변경. 형식과 중복은 서비스가 본다. */
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
     }
 }
