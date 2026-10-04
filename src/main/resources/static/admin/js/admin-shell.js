@@ -43,6 +43,8 @@ const ADMIN_MENUS = [
     // 다른 것은 판정 대상이 출제 전이냐 후냐뿐이다. 검수함이 비면 제보함을 보는 흐름.
     { key: "llm",       label: "검수",      href: "/admin/llm.html",       icon: "📋" },
     { key: "reports",   label: "제보",      href: "/admin/reports.html",   icon: "🚩" },
+    // 제보 옆인 이유: 둘 다 학습자가 올린 것을 읽고 판정하는 화면이다. 대상이 문제냐 댓글이냐만 다르다.
+    { key: "comments",  label: "댓글 신고", href: "/admin/comments.html",  icon: "💬" },
   ]},
   { group: "콘텐츠", items: [
     { key: "problems",  label: "문제",      href: "/admin/problems.html",  icon: "🗂️" },
@@ -128,16 +130,18 @@ function renderAdminShell(active = "") {
  * </ul>
  */
 async function refreshAdminBadges() {
-  const [problems, documents, topics, reports] = await Promise.all([
+  const [problems, documents, topics, reports, commentReports] = await Promise.all([
     countOf("/api/admin/llm-problems/pending-count"),
     countOf("/api/admin/llm-documents/pending-count"),
     countOf("/api/admin/topic-queue/count"),
     countOf("/api/admin/reports/pending-count"),
+    countOf("/api/admin/comment-reports/pending-count"),
   ]);
 
   setBadge("llm", problems + documents, false);
   setBadge("generate", topics === 0 ? "범위 없음" : null, topics === 0);
   setBadge("reports", reports, reports > 0);
+  setBadge("comments", commentReports, commentReports > 0);
 
   /* 센 숫자를 화면 쪽에도 흘린다.
    *
@@ -150,7 +154,7 @@ async function refreshAdminBadges() {
    * 그 일곱 곳에 손으로 붙이면 여덟 번째를 더하는 날 하나를 빠뜨린다.
    * 여기서 한 번 알리면 듣는 쪽이 알아서 따라온다. */
   document.dispatchEvent(new CustomEvent("admin:counts", {
-    detail: { problems, documents, topics, reports },
+    detail: { problems, documents, topics, reports, commentReports },
   }));
 }
 
