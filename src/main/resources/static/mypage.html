@@ -37,6 +37,21 @@ try {
        계정에 대한 셋뿐이고, 여기 온 사람은 그중 하나를 하러 온 것이다.
        접힌 칸은 <무엇이 있는지 보려면 한 번 더 눌러야> 하고, 그 한 번이 목록을 훑는 것을
        막는다. 접기는 항목이 많아 시야가 넘칠 때 쓰는 장치다. -->
+  <!-- 닉네임(V21). 비밀번호보다 위에 두는 이유: 셋 중 가장 자주 만지고 가장 덜 위험하다. -->
+  <div class="setting-row stacked" id="nickPanel">
+    <b class="setting-head">닉네임</b>
+    <div class="meta">토론에서 글쓴이로 보이는 이름입니다. 로그인 아이디는 다른 사람에게 보이지 않습니다.</div>
+    <div id="nickMessage" role="alert" aria-live="assertive"></div>
+    <form id="nickForm" style="margin-top:10px; max-width:420px">
+      <div class="field">
+        <label for="nickInput">닉네임 (2~12자, 한글·영문·숫자·밑줄)</label>
+        <input type="text" id="nickInput" required minlength="2" maxlength="12"
+               pattern="[가-힣A-Za-z0-9_]{2,12}" autocomplete="nickname">
+      </div>
+      <button type="submit" id="nickSubmit">닉네임 저장</button>
+    </form>
+  </div>
+
   <div class="setting-row stacked" id="pwPanel">
     <b class="setting-head">비밀번호 변경</b>
     <div id="pwMessage" role="alert" aria-live="assertive"></div>
@@ -131,8 +146,40 @@ if (!isLoggedIn()) {
   // 로그아웃은 셸과 <같은 함수>를 쓴다. 복사해 두면 서버 토큰 폐기가 빠진 사본이 생겨,
   // 이 화면에서 로그아웃했을 때만 서버에 14일짜리 출입증이 남는 상태가 된다.
   wireLogout();
+  wireNickname();
   wirePasswordChange();
   wireWithdraw();
+}
+
+/** 닉네임(V21) — 지금 값을 채워 두고, 저장하면 그 자리에서 알린다. */
+async function wireNickname() {
+  const input = document.getElementById("nickInput");
+  const msg = document.getElementById("nickMessage");
+  const btn = document.getElementById("nickSubmit");
+
+  document.getElementById("nickForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    btn.disabled = true;
+    msg.innerHTML = "";
+    try {
+      const { nickname } = await api("/api/me/nickname", {
+        method: "PUT", body: JSON.stringify({ nickname: input.value }) });
+      input.value = nickname;
+      msg.innerHTML = `<div class="alert" style="background:var(--correct-bg); color:var(--correct-fg)">
+        닉네임을 저장했습니다.</div>`;
+    } catch (e2) {
+      msg.innerHTML = `<div class="alert error">${escapeHtml(e2.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  try {
+    const { nickname } = await api("/api/me/nickname");
+    input.value = nickname || "";
+  } catch (e) {
+    msg.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+  }
 }
 
 /**

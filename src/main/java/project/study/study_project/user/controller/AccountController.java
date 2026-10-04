@@ -6,6 +6,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.user.dto.ChangePasswordRequest;
+import project.study.study_project.user.dto.NicknameRequest;
+import project.study.study_project.user.dto.NicknameResponse;
 import project.study.study_project.user.dto.WithdrawRequest;
 import project.study.study_project.user.service.AccountService;
 
@@ -23,6 +25,19 @@ import project.study.study_project.user.service.AccountService;
 public class AccountController {
 
     private final AccountService accountService;
+
+    /** 지금 닉네임. 아직 안 정했으면 {@code nickname}이 null이다. */
+    @GetMapping("/nickname")
+    public ApiResponse<NicknameResponse> nickname(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(new NicknameResponse(accountService.getNickname(userId)));
+    }
+
+    /** 닉네임 설정·변경. 토론에서 글쓴이로 보이는 이름이다. */
+    @PutMapping("/nickname")
+    public ApiResponse<NicknameResponse> changeNickname(@AuthenticationPrincipal Long userId,
+                                                        @Valid @RequestBody NicknameRequest request) {
+        return ApiResponse.ok(new NicknameResponse(accountService.changeNickname(userId, request.nickname())));
+    }
 
     /** 비밀번호 변경. 지금 비밀번호를 함께 받는다(DTO 주석 참고). */
     @PatchMapping("/password")

@@ -2,6 +2,7 @@ package project.study.study_project.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +49,36 @@ public class AccountService {
     private final ReviewItemRepository reviewItemRepository;
     private final DailyQuizRepository dailyQuizRepository;
     private final ProblemReportRepository problemReportRepository;
+
+    @Transactional(readOnly = true)
+    public String getNickname(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003))
+                .getNickname();
+    }
+
+    /**
+     * 닉네임 설정·변경.
+     *
+     * <p>중복을 두 겹으로 막는다. 먼저 세어 보고(안내 문구를 주려고), 그 사이 끼어든 요청은
+     * 유일 제약이 막는다. 제약 위반을 같은 코드로 바꾸지 않으면 같은 상황이 어떨 땐 안내, 어떨 땐 500이 된다.
+     */
+    @Transactional
+    public String changeNickname(Long userId, String nickname) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        if (userRepository.existsByNicknameAndIdNot(nickname, userId)) {
+            throw new BusinessException(ErrorCode.DISCUSSION_004);
+        }
+        try {
+            user.changeNickname(nickname);
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.DISCUSSION_004);
+        }
+        log.info("닉네임 변경: userId={}", userId);
+        return nickname;
+    }
 
     /**
      * 비밀번호 변경.
