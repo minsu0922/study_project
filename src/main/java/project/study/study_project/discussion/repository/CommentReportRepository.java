@@ -1,0 +1,43 @@
+package project.study.study_project.discussion.repository;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import project.study.study_project.discussion.domain.CommentReport;
+import project.study.study_project.report.domain.ReportStatus;
+
+import java.time.LocalDateTime;
+
+public interface CommentReportRepository extends JpaRepository<CommentReport, Long> {
+
+    boolean existsByCommentIdAndUserId(Long commentId, Long userId);
+
+    long countByStatus(ReportStatus status);
+
+    /** 대기 목록 — 오래 기다린 것부터. 방치된 신고가 맨 위에 온다(문제 제보함과 같은 규칙). */
+    @Query("select r from CommentReport r where (:status is null or r.status = :status) order by r.createdAt asc")
+    Page<CommentReport> findOldestFirst(@Param("status") ReportStatus status, Pageable pageable);
+
+    /** 처리된 목록 — 최근 것부터. */
+    @Query("select r from CommentReport r where (:status is null or r.status = :status) order by r.createdAt desc")
+    Page<CommentReport> findNewestFirst(@Param("status") ReportStatus status, Pageable pageable);
+
+    /**
+     * 글을 가릴 때 그 글의 대기 신고를 한 번에 인정으로 바꾼다.
+     *
+     * <p>벌크 연산은 영속성 컨텍스트를 건너뛴다. 같은 트랜잭션에서 이 신고들을 이미 읽어 둔 코드가
+     * 있으면 옛 상태가 보이므로, 부르는 쪽은 이 뒤에 신고를 다시 읽지 않는다.
+     */
+    @Modifying
+    @Query("""
+            update CommentReport r set r.status = :accepted, r.resolvedAt = :now
+            where r.commentId = :commentId and r.status = :pending
+            """)
+    int acceptPendingOf(@Param("commentId") Long commentId,
+                        @Param("pending") ReportStatus pending,
+                        @Param("accepted") ReportStatus accepted,
+                        @Param("now") LocalDateTime now);
+}
