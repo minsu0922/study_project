@@ -6,8 +6,8 @@
  * 언젠가 한쪽만 고쳐진다(report.js와 같은 판단).
  *
  * [사용법]
- *   붙일 자리에 discussionBlock(problemId, open)이 돌려준 HTML을 넣는다. 끝.
- *   open=false면 "토론 N개 보기" 입구만 보이고, 누르면 펼쳐진다 — 문제를 풀기 전 자리에 쓴다.
+ *   붙일 자리에 discussionBlock(problemId, mode)가 돌려준 HTML을 넣는다. 끝.
+ *   mode=true면 펼친 채로, false나 "closed"면 "토론 N개 보기" 입구만 보이고 누르면 펼쳐진다.
  *   불러오기와 동작은 이 파일이 맡는다. 호출부가 따로 부를 것이 없다.
  * ===================================================================== */
 
@@ -19,45 +19,108 @@ const COMMENT_REPORT_REASONS = [
   ["OTHER", "그 밖의 문제"],
 ];
 
-function discussionBlock(problemId, open) {
-  return `<section class="discussion" data-discussion="${problemId}" data-open="${open ? 1 : 0}"></section>`;
+/**
+ * @param mode true면 펼친 채로 낸다. false면 풀기 전 입구(글이 있을 때만, 정답 누설 안내와 함께),
+ *             "closed"면 접힌 입구를 늘 낸다(이미 푼 문제가 목록으로 여럿 나오는 화면)
+ */
+function discussionBlock(problemId, mode) {
+  const open = mode === true;
+  const lazy = open ? "" : (mode === "closed" ? "closed" : "peek");
+  return `<section class="discussion" data-discussion="${problemId}" data-open="${open ? 1 : 0}"
+                   data-lazy="${lazy}"></section>`;
 }
 
-/* 새로 그려진 블록을 찾아 불러온다. 화면이 블록을 넣을 때마다 따로 부르게 하면 언젠가
- * 빠뜨린 화면에서 토론이 비어 있게 된다 — DOM이 바뀌는 것을 지켜보다가 알아서 붙인다. */
+/* 새로 그려진 블록을 찾아 붙인다. 화면이 블록을 넣을 때마다 따로 부르게 하면 언젠가
+ * 빠뜨린 화면에서 토론이 비어 있게 된다 — DOM이 바뀌는 것을 지켜보다가 알아서 붙인다.
+ *
+ * 접힌 블록은 <목록을 읽지 않는다>. 오답노트는 카드 20장이 한 번에 나오는데, 카드마다 목록을
+ * 읽으면 세 쪽만 넘겨도 요청 제한(분당 60회)에 걸려 목록 자체가 안 뜬다. 개수만 한 번에 묻는다. */
 function mountDiscussions() {
+  const lazy = [];
   document.querySelectorAll("[data-discussion]:not([data-mounted])").forEach(box => {
     box.dataset.mounted = "1";
-    loadDiscussion(box, true);
+    if (box.dataset.open === "1") loadDiscussion(box);
+    else lazy.push(box);
   });
+  if (lazy.length) fillLazyCounts(lazy);
 }
 new MutationObserver(mountDiscussions).observe(document.documentElement, { childList: true, subtree: true });
 document.addEventListener("DOMContentLoaded", mountDiscussions);
 
-/** reset이면 첫 쪽부터 다시, 아니면 다음 쪽을 이어 붙인다. 상태는 블록이 들고 있다(box._d). */
-async function loadDiscussion(box, reset) {
-  const page = reset ? 0 : Number(box.dataset.page || 0) + 1;
+/** 문제 id → 보이는 댓글 수. 한 화면에서 같은 문제를 다시 묻지 않으려고 둔다. */
+const discussionCounts = new Map();
+let discussionCountsInFlight = Promise.resolve();
+
+/** 곧 보여 줄 문제들의 댓글 수를 한 번에 읽어 둔다. 플레이어가 세트를 시작할 때 부른다. */
+function prefetchDiscussionCounts(problemIds) {
+  const unknown = [...new Set(problemIds.map(String))].filter(id => !discussionCounts.has(id));
+  if (unknown.length === 0) return discussionCountsInFlight;
+  discussionCountsInFlight = discussionCountsInFlight.then(async () => {
+    try {
+      const counts = await api("/api/quiz/comment-counts?problemIds=" + unknown.join(","));
+      unknown.forEach(id => discussionCounts.set(id, counts[id] || 0));
+    } catch (e) { /* 개수는 없어도 되는 정보다. 입구는 개수 없이 낸다 */ }
+  });
+  return discussionCountsInFlight;
+}
+
+async function fillLazyCounts(boxes) {
+  await prefetchDiscussionCounts(boxes.map(b => b.dataset.discussion));
+  boxes.forEach(renderLazy);
+}
+
+function renderLazy(box) {
+  if (box.dataset.open === "1") return;   // 개수를 기다리는 사이에 펼쳐졌다
+  const total = discussionCounts.get(box.dataset.discussion);
+  const peek = box.dataset.lazy === "peek";
+  // 풀기 전 자리는 글이 없으면 입구도 내지 않는다 — 빈 토론을 열어 볼 이유가 없다.
+  if (peek && !total) { box.innerHTML = ""; return; }
+  box.innerHTML = `
+    <button type="button" class="disc-peek" data-disc-open>
+      💬 토론 ${total === undefined ? "" : total + "개 "}보기${peek
+        ? ` <span class="meta">정답 이야기가 있을 수 있습니다</span>` : ""}
+    </button>`;
+}
+
+/** 이미 읽은 쪽은 그대로 두고 다음 쪽을 이어 붙인다. 처음이면 첫 쪽을 읽는다. 상태는 블록이 든다(box._d). */
+async function loadDiscussion(box) {
+  const page = box._d ? Number(box.dataset.page || 0) + 1 : 0;
   try {
     const data = await api(`/api/quiz/${box.dataset.discussion}/comments?page=${page}`);
-    if (!reset && box._d) data.comments = box._d.comments.concat(data.comments);
-    box._d = data;
-    box.dataset.page = String(page);
-    renderDiscussion(box);
+    if (box._d) {
+      // 방금 쓴 글은 화면에 먼저 붙여 두므로, 다음 쪽에 같은 글이 다시 오면 뺀다.
+      const seen = new Set(box._d.comments.map(c => c.id));
+      data.comments = box._d.comments.concat(data.comments.filter(c => !seen.has(c.id)));
+    }
+    setDiscussionData(box, data, page);
   } catch (e) {
     box.innerHTML = `<div class="disc-msg error">${escapeHtml(e.message)}</div>`;
   }
 }
 
+/** 읽어 둔 쪽까지를 처음부터 다시 읽는다 — 삭제처럼 자리 표시가 바뀌는 일 뒤에 쓴다. */
+async function reloadDiscussion(box) {
+  const last = Number(box.dataset.page || 0);
+  let merged = null;
+  let page = 0;
+  for (; page <= last; page++) {
+    const data = await api(`/api/quiz/${box.dataset.discussion}/comments?page=${page}`);
+    if (merged) data.comments = merged.comments.concat(data.comments);
+    merged = data;
+    if (!data.hasNext) break;
+  }
+  setDiscussionData(box, merged, Math.min(page, last));
+}
+
+function setDiscussionData(box, data, page) {
+  box._d = data;
+  box.dataset.page = String(page);
+  discussionCounts.set(box.dataset.discussion, data.total);
+  renderDiscussion(box);
+}
+
 function renderDiscussion(box) {
   const d = box._d;
-  if (box.dataset.open !== "1") {
-    // 풀기 전 자리. 글이 없으면 입구도 내지 않는다 — 빈 토론을 열어 볼 이유가 없다.
-    box.innerHTML = d.total === 0 ? "" : `
-      <button type="button" class="disc-peek" data-disc-open>
-        💬 토론 ${d.total}개 보기 <span class="meta">정답 이야기가 있을 수 있습니다</span>
-      </button>`;
-    return;
-  }
   box.innerHTML = `
     <h3 class="disc-head">토론 <span class="meta">${d.total}</span></h3>
     <div class="disc-list">${d.comments.length
@@ -134,8 +197,8 @@ document.addEventListener("click", async e => {
   const slot = item ? item.querySelector(":scope > .disc-slot") : null;
   const id = item ? Number(item.dataset.comment) : null;
 
-  if (e.target.closest("[data-disc-open]")) { box.dataset.open = "1"; renderDiscussion(box); return; }
-  if (e.target.closest("[data-disc-more]")) { await loadDiscussion(box, false); return; }
+  if (e.target.closest("[data-disc-open]")) { box.dataset.open = "1"; await loadDiscussion(box); return; }
+  if (e.target.closest("[data-disc-more]")) { await loadDiscussion(box); return; }
   if (e.target.closest("[data-disc-cancel]")) { e.target.closest(".disc-slot").innerHTML = ""; return; }
 
   if (e.target.closest("[data-disc-reply]")) {
@@ -174,7 +237,7 @@ document.addEventListener("click", async e => {
     }
     try {
       await api(`/api/me/comments/${id}`, { method: "DELETE" });
-      await loadDiscussion(box, true);
+      await reloadDiscussion(box);
     } catch (err) { discMsg(box, err.message, true); }
   }
 });
@@ -192,17 +255,19 @@ document.addEventListener("submit", async e => {
     if (form.hasAttribute("data-disc-form")) {
       await postComment(box, form.dataset.id, form.querySelector("textarea").value);
     } else if (form.hasAttribute("data-disc-edit-form")) {
-      await api(`/api/me/comments/${form.dataset.id}`, {
+      const updated = await api(`/api/me/comments/${form.dataset.id}`, {
         method: "PUT", body: JSON.stringify({ body: form.querySelector("textarea").value }) });
-      await loadDiscussion(box, true);
+      // 고친 글만 그 자리에서 바꾼다. 목록을 다시 읽으면 "더 보기"로 펼쳐 둔 쪽이 접힌다.
+      Object.assign(findComment(box, updated.id), { body: updated.body, edited: updated.edited });
+      renderDiscussion(box);
     } else if (form.hasAttribute("data-disc-report-form")) {
       await sendCommentReport(form);
     } else if (form.hasAttribute("data-disc-nick-form")) {
       await api("/api/me/nickname", {
         method: "PUT", body: JSON.stringify({ nickname: form.querySelector("input").value }) });
-      const pending = box._pending;
-      box._pending = null;
-      await postComment(box, pending.parentId, pending.body);
+      // 보낼 글은 등록이 <성공한 뒤에> 비운다(postComment). 닉네임은 저장됐는데 등록이
+      // 실패했을 때(요청 제한 등) 다시 누르면 같은 글을 그대로 보낼 수 있어야 한다.
+      await postComment(box, box._pending.parentId, box._pending.body);
     }
   } catch (err) {
     // 닉네임 폼의 오류는 폼 안에 적는다. 아래 안내 칸에 쓰면 그 칸에 들어 있는 폼이 지워진다.
@@ -220,9 +285,10 @@ document.addEventListener("submit", async e => {
  */
 async function postComment(box, parentId, body) {
   try {
-    await api("/api/me/comments", { method: "POST", body: JSON.stringify({
+    const item = await api("/api/me/comments", { method: "POST", body: JSON.stringify({
       problemId: Number(box.dataset.discussion), parentId: parentId ? Number(parentId) : null, body }) });
-    await loadDiscussion(box, true);
+    box._pending = null;
+    addComment(box, parentId ? Number(parentId) : null, item);
   } catch (err) {
     if (err.code !== "DISCUSSION_003") throw err;
     box._pending = { parentId, body };
@@ -237,6 +303,26 @@ async function postComment(box, parentId, body) {
     </form>`;
     el.querySelector("input").focus();
   }
+}
+
+/**
+ * 방금 쓴 글을 화면에 바로 붙인다. 목록을 다시 읽지 않는 이유: 정렬이 시간순이라 새 글은
+ * 마지막 쪽에 있다. 첫 쪽만 다시 읽으면 댓글이 20개를 넘는 문제에서 쓴 글이 안 보여,
+ * 등록이 안 된 줄 알고 같은 글을 또 올리게 된다.
+ */
+function addComment(box, parentId, item) {
+  item.replies = [];
+  const d = box._d;
+  if (parentId === null) {
+    d.comments.push(item);
+  } else {
+    // 답글에 단 답글도 서버가 원글 아래로 붙인다. 화면도 같은 묶음에 넣는다.
+    const root = d.comments.find(c => c.id === parentId || (c.replies || []).some(r => r.id === parentId));
+    if (root) root.replies.push(item);
+  }
+  d.total += 1;
+  discussionCounts.set(box.dataset.discussion, d.total);
+  renderDiscussion(box);
 }
 
 /** 이미 신고한 글(DISCUSSION_007)은 실패가 아니라 안내다 — 빨갛게 칠하지 않는다. */

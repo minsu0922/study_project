@@ -168,8 +168,9 @@ async function init() {
                  이 화면에 함께 두는 이유: "왜 틀렸지" 하고 다시 읽다가 문제 쪽이 틀렸다는 것을
                  깨닫는 자리가 대개 여기다. 채점 직후에는 아직 자기 답을 의심하고 있다. -->
             ${reportBlock(w.problemId)}
-            <!-- 이미 푼 문제라 토론을 바로 펼친다(V21). -->
-            ${discussionBlock(w.problemId, true)}
+            <!-- 토론 입구(V21). 접어 둔다 — 카드 20장이 각자 목록을 읽으면 몇 쪽만 넘겨도
+                 요청 제한에 걸린다. 개수는 discussion.js가 한 번에 묻는다. -->
+            ${discussionBlock(w.problemId, "closed")}
           </div>`).join("");
       }
 
