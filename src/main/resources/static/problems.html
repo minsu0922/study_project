@@ -402,7 +402,8 @@ function renderList(rows, data) {
       <span class="pl-state">${stateIcon(p.state)}</span>
       <span class="pl-title">${p.title
         ? escapeHtml(p.title)
-        : `<span style="color:var(--muted)">(제목 없음 — 관리 화면에서 채울 수 있습니다)</span>`}</span>
+        : `<span style="color:var(--muted)">(제목 없음 — 관리 화면에서 채울 수 있습니다)</span>`}<span
+          class="pl-comments" data-comments-of="${p.id}"></span></span>
       <span class="pl-type">${escapeHtml(typeLabel(p.type))}</span>
       <span class="pl-lv"><span class="pl-badge" data-lv="${p.difficulty}">${lvLabel}</span></span>
       <span class="pl-when">${whenLabel(p.lastAttemptedAt)}</span>
@@ -419,6 +420,22 @@ function renderList(rows, data) {
          쪽 수는 전체(${data.totalElements}건) 기준입니다.</span>
        </div>`);
   }
+  fillCommentCounts(rows);
+}
+
+/**
+ * 문제별 댓글 수를 뒤늦게 채운다(V21). 목록 조회에 얹지 않고 따로 묻는 이유: 개수는 목록이
+ * 뜨는 데 필요하지 않다. 이 요청이 늦거나 실패해도 목록은 그대로 보인다.
+ */
+async function fillCommentCounts(rows) {
+  if (rows.length === 0) return;
+  try {
+    const counts = await api("/api/quiz/comment-counts?problemIds=" + rows.map(p => p.id).join(","));
+    Object.entries(counts).forEach(([id, n]) => {
+      const el = document.querySelector(`[data-comments-of="${id}"]`);
+      if (el) el.textContent = `💬 ${n}`;
+    });
+  } catch (e) { /* 개수는 없어도 되는 정보다 — 조용히 넘긴다 */ }
 }
 
 /**

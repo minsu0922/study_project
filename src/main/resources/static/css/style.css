@@ -2127,6 +2127,38 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 /* 보내고 난 자리. 폼을 지우고 이 한 줄만 남는다 — 같은 문제는 한 번만 보낼 수 있다. */
 .report-done { margin-top: 10px; font-size: .85rem; color: var(--correct); }
 
+/* ── 문제별 토론 (js/discussion.js, V21) ─────────────────────────────
+ * 채점 결과 아래에 붙는다. 주인공은 여전히 정답과 해설이라 제목과 테두리를 조용하게 둔다. */
+.discussion { margin-top: var(--sp-3); }
+.discussion:empty { display: none; }
+/* 풀기 전의 입구. 제보 입구(.report-open)와 같은 무게다 — 눌러 달라고 조르지 않는다. */
+.disc-peek {
+  background: none; border: none; padding: 10px 0;
+  color: var(--text-2); font-size: .85rem; cursor: pointer; text-align: left;
+}
+@media (hover: hover) { .disc-peek:hover { background: none; color: var(--text); } }
+.disc-head { font-size: 1rem; margin: 0 0 8px; }
+.disc-item { padding: 10px 0; border-top: 1px solid var(--border); }
+.disc-item.reply { margin-left: 20px; padding-left: 12px; border-top: none; border-left: 2px solid var(--border); }
+.disc-item.gone > .meta { font-style: italic; }
+.disc-meta { font-size: .85rem; margin-bottom: 4px; }
+/* 줄바꿈을 살린다. 본문은 평문이고 escapeHtml로 넣으므로 pre-wrap이 없으면 한 문단으로 뭉친다. */
+.disc-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92rem; }
+.disc-tools { display: flex; gap: 12px; margin-top: 4px; }
+.disc-tools button {
+  background: none; border: none; padding: 6px 0;
+  color: var(--muted); font-size: .8rem; cursor: pointer;
+}
+@media (hover: hover) { .disc-tools button:hover { background: none; color: var(--text-2); } }
+.disc-form { margin-top: 8px; }
+.disc-form textarea, .disc-form input, .disc-form select { width: 100%; font-size: .9rem; margin-bottom: 6px; }
+.disc-actions { display: flex; gap: 8px; }
+.disc-note { margin-top: 10px; font-size: .85rem; color: var(--text-2); }
+.disc-msg { margin-top: 8px; font-size: .85rem; color: var(--text-2); }
+.disc-msg.error { color: var(--wrong); }
+/* 문제 목록의 댓글 수. 제목 옆에 조용히 붙는다. */
+.pl-comments { margin-left: 6px; font-size: .8rem; color: var(--muted); white-space: nowrap; }
+
 .reject-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .reject-chips .chip {
   background: var(--card); color: var(--muted);

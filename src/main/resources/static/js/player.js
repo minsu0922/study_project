@@ -73,6 +73,9 @@ function startPlayer(mountEl, problems, opts = {}) {
   }
   const keyHandler = e => {
     if (state.finished) return;
+    // 토론 영역에서 누른 키는 플레이어 것이 아니다. 안 막으면 댓글을 쓰다 Enter를 치는 순간
+    // 다음 문제로 넘어가고, 숫자를 치면 보기가 눌린다.
+    if (e.target.closest && e.target.closest("[data-discussion]")) return;
     if (e.target.tagName === "INPUT") {          // 단답형 입력 중에는 숫자 키를 가로채면 안 된다
       if (e.key === "Enter") { e.preventDefault(); primaryAction(); }
       return;
@@ -161,7 +164,9 @@ function startPlayer(mountEl, problems, opts = {}) {
           ${autoSubmits(p.type) ? "" : `<button id="submitBtn" disabled>제출</button>`}
         </div>
         ${keyHint(shortcutHint(p.type))}
-      </div>`;
+      </div>
+      <!-- 풀기 전에는 접힌 입구만 보인다. 제출하면 showFeedback이 이 자리를 펼친 토론으로 바꾼다. -->
+      <div id="discussionSlot">${discussionBlock(p.id, false)}</div>`;
 
     // 보기 버튼/입력에 이벤트 연결 (innerHTML로 그린 뒤라 여기서 바인딩)
     if (p.type === "SHORT_ANSWER") {
@@ -643,6 +648,10 @@ function startPlayer(mountEl, problems, opts = {}) {
                     : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요 📅"}</div>` : ""}
         ${reportBlock(p.id)}
       </div>`;
+
+    // 토론을 펼친다. 채점 결과 상자 안이 아니라 카드 아래에 둔다 — 상자의 주인공은 정답과 해설이다.
+    const discussionSlot = mountEl.querySelector("#discussionSlot");
+    if (discussionSlot) discussionSlot.innerHTML = discussionBlock(p.id, true);
 
     // 3) 제출 버튼 → 다음/결과 버튼으로 교체
     const isLast = state.idx === problems.length - 1;
