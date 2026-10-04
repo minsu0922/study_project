@@ -4,7 +4,9 @@
     "id" : 10,
     "domain" : "NETWORK",
     "topic" : "TCP와 UDP — 신뢰성을 포기해서 얻는 것",
-    "memo" : "정보처리기사 대비. id 7(3-way 핸드셰이크)과 겹치지 않게 '무엇을 포기하는가' 쪽으로 둔다"
+    "memo" : "정보처리기사 대비. id 7(3-way 핸드셰이크)과 겹치지 않게 '무엇을 포기하는가' 쪽으로 둔다",
+    "lastUsedAt" : "2026-10-05",
+    "usedCount" : 1
   }, {
     "id" : 70,
     "domain" : "DATABASE",
