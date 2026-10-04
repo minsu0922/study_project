@@ -2,6 +2,7 @@ package project.study.study_project.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
+import project.study.study_project.user.support.NicknameRule;
 
 import java.time.Duration;
 
@@ -51,6 +53,9 @@ public class AuthService {
         if (userRepository.existsByUsername(username)) {
             throw new BusinessException(ErrorCode.AUTH_001);
         }
+        if (NicknameRule.isReserved(request.nickname())) {
+            throw new BusinessException(ErrorCode.DISCUSSION_010);
+        }
         // 닉네임도 유일해야 한다 — 토론에서 두 사람이 같은 이름으로 보이면 구분할 수 없다.
         if (userRepository.existsByNickname(request.nickname())) {
             throw new BusinessException(ErrorCode.DISCUSSION_004);
@@ -62,7 +67,20 @@ public class AuthService {
                 .role(Role.USER)
                 .build();
         user.changeNickname(request.nickname());
-        return SignupResponse.from(userRepository.save(user));
+
+        User saved;
+        try {
+            // 여기서 바로 내려보낸다. 위 검사와 저장 사이에 같은 값의 가입이 끼어들면 유일 제약이
+            // 막는데, 그 예외가 메서드 밖(커밋 시점)에서 터지면 500으로 나간다.
+            saved = userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            // 어느 제약에 걸렸는지는 DB가 준 문구로 가른다. 다시 조회하지 않는 이유: 제약 위반이 난
+            // 뒤의 영속성 컨텍스트는 믿을 수 없다. 제약 이름은 V12(uk_user_username)·V21(uk_user_nickname).
+            String cause = String.valueOf(e.getMostSpecificCause().getMessage());
+            throw new BusinessException(cause.contains("uk_user_username")
+                    ? ErrorCode.AUTH_001 : ErrorCode.DISCUSSION_004);
+        }
+        return SignupResponse.of(saved, issueTokens(saved));
     }
 
     /**

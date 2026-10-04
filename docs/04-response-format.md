@@ -85,7 +85,7 @@ public record FieldError(String field, String reason) {}
 | `COMMON_404` | 404 | 리소스 없음 |
 | `COMMON_429` | 429 | 요청 횟수 초과(rate limit) — `Retry-After` 헤더 동반, [09](09-rate-limiting.md) |
 | `COMMON_500` | 500 | 서버 내부 오류 |
-| `AUTH_001` | 409 | 이메일 중복 |
+| `AUTH_001` | 409 | 아이디 중복 |
 | `AUTH_002` | 401 | 로그인 실패(이메일/비번 불일치) |
 | `AUTH_003` | 401 | 토큰 없음/만료/위조 |
 | `AUTH_004` | 403 | 권한 부족 |
@@ -113,6 +113,7 @@ public record FieldError(String field, String reason) {}
 | `DISCUSSION_007` | 409 | 같은 댓글을 두 번 신고 |
 | `DISCUSSION_008` | 404 | 신고 없음 (관리자) |
 | `DISCUSSION_009` | 409 | 이미 처리된 신고 (관리자) |
+| `DISCUSSION_010` | 400 | 운영진으로 보이는 닉네임(관리자·운영자·admin 등)으로 가입·변경. 관리자 계정은 예외 |
 
 > 새 에러는 이 표에 추가하고 코드로 `enum ErrorCode`(code, httpStatus, defaultMessage) 관리.
 

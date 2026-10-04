@@ -97,12 +97,15 @@ public enum ErrorCode {
     DISCUSSION_002("DISCUSSION_002", HttpStatus.FORBIDDEN, "문제를 풀면 참여할 수 있습니다."),
     // 닉네임은 가입할 때 받는다. 그 전에 만든 계정만 여기 걸리고, 화면은 마이페이지로 안내한다.
     DISCUSSION_003("DISCUSSION_003", HttpStatus.CONFLICT, "마이페이지에서 닉네임을 먼저 정해 주세요."),
-    DISCUSSION_004("DISCUSSION_004", HttpStatus.CONFLICT, "이미 쓰는 이름입니다."),
+    DISCUSSION_004("DISCUSSION_004", HttpStatus.CONFLICT, "이미 쓰는 닉네임입니다."),
     DISCUSSION_005("DISCUSSION_005", HttpStatus.FORBIDDEN, "내가 쓴 댓글만 고치거나 지울 수 있습니다."),
     DISCUSSION_006("DISCUSSION_006", HttpStatus.CONFLICT, "가려지거나 삭제된 댓글입니다."),
     DISCUSSION_007("DISCUSSION_007", HttpStatus.CONFLICT, "이미 신고한 댓글입니다."),
     DISCUSSION_008("DISCUSSION_008", HttpStatus.NOT_FOUND, "신고를 찾을 수 없습니다."),
-    DISCUSSION_009("DISCUSSION_009", HttpStatus.CONFLICT, "이미 처리된 신고입니다.");
+    DISCUSSION_009("DISCUSSION_009", HttpStatus.CONFLICT, "이미 처리된 신고입니다."),
+    // 409가 아니라 400인 이유: 지금 상태와 부딪히는 것이 아니라 어떤 상태에서도 받지 않는 값이다.
+    DISCUSSION_010("DISCUSSION_010", HttpStatus.BAD_REQUEST,
+            "운영진으로 보일 수 있는 닉네임은 쓸 수 없습니다. 다른 닉네임을 골라 주세요.");
 
     private final String code;
     private final HttpStatus httpStatus;

@@ -42,11 +42,20 @@ public class AuthController {
      */
     private final AdminGateCookie adminGateCookie;
 
-    /** 회원가입. 성공 시 201 Created + 생성된 회원 정보. */
+    /**
+     * 회원가입. 성공 시 201 Created + 생성된 회원 정보와 로그인 토큰.
+     *
+     * <p>출입증 쿠키도 로그인과 같게 다룬다. 새 계정은 관리자가 아니므로 옛 쿠키가 지워진다 —
+     * 관리자로 쓰던 브라우저에서 새 계정을 만들었을 때 관리 화면이 계속 열리지 않게 한다.
+     */
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
-        return ApiResponse.ok(authService.signup(request));
+    public ApiResponse<SignupResponse> signup(@Valid @RequestBody SignupRequest request,
+                                              HttpServletRequest httpRequest,
+                                              HttpServletResponse httpResponse) {
+        SignupResponse response = authService.signup(request);
+        adminGateCookie.issue(httpRequest, httpResponse, response.tokens().accessToken());
+        return ApiResponse.ok(response);
     }
 
     /**

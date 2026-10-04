@@ -166,6 +166,38 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
     }
 
+    /**
+     * 화면이 가입 뒤에 로그인을 한 번 더 부르면 인증 요청 제한(분당 5회)을 하나 더 쓴다.
+     * 닉네임이 겹쳐 네 번 실패한 사람은 가입에 성공하고도 로그인이 막혔다(2026-10-04 재현).
+     */
+    @Test
+    @DisplayName("가입 응답의 토큰으로 곧바로 보호 API를 쓸 수 있다 — 로그인을 다시 부르지 않는다")
+    void signupReturnsUsableTokens() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(signupBody(freshUsername(), "password1", freshNickname())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.tokens.tokenType").value("Bearer"))
+                .andReturn();
+
+        mockMvc.perform(get("/api/me/reviews/today")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + field(result, "$.data.tokens.accessToken")))
+                .andExpect(status().isOk());
+    }
+
+    /** 누구나 "관리자"로 가입할 수 있으면 토론에서 운영진 행세를 할 수 있다. */
+    @Test
+    @DisplayName("운영진으로 보이는 닉네임으로는 가입할 수 없다 — 400 DISCUSSION_010")
+    void signupReservedNicknameFails() throws Exception {
+        for (String reserved : new String[]{"관리자", "운영자1", "Admin_kr", "csquiz"}) {
+            mockMvc.perform(post("/api/auth/signup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(signupBody(freshUsername(), "password1", reserved)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("DISCUSSION_010"));
+        }
+    }
+
     /** 닉네임은 가입할 때 받는다(2026-10-04). 비워 두면 토론에서 글쓴이를 보여 줄 이름이 없다. */
     @Test
     @DisplayName("닉네임 없이 가입하면 400 VALIDATION_ERROR")

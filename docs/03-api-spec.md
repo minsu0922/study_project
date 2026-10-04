@@ -58,16 +58,26 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
 
 **Request**
 ```json
-{ "email": "user@example.com", "password": "abcd1234" }
+{ "username": "minsu_01", "password": "abcd1234", "nickname": "민수" }
 ```
-- `email`: 이메일 형식, 필수, 중복 불가
+- `username`: 영문·숫자·밑줄 4~20자, 필수, 중복 불가(소문자로 낮춰 저장)
 - `password`: 8자 이상, 영문+숫자 포함
+- `nickname`: 한글·영문·숫자·밑줄 2~12자, 필수, 중복 불가. 운영진으로 보이는 말(관리자·운영자·admin 등)은 받지 않는다
 
 **Response 201**
 ```json
-{ "success": true, "data": { "id": 1, "email": "user@example.com", "role": "USER" }, "error": null }
+{
+  "success": true,
+  "data": {
+    "id": 1, "username": "minsu_01", "role": "USER",
+    "tokens": { "accessToken": "...", "refreshToken": "...", "tokenType": "Bearer", "expiresIn": 3600 }
+  },
+  "error": null
+}
 ```
-**에러**: `VALIDATION_ERROR`(400), `AUTH_001` 이메일 중복(409)
+- `tokens`: 로그인 응답과 같은 묶음. 화면은 이 토큰으로 바로 로그인 상태가 되고 로그인 API를 다시 부르지 않는다
+
+**에러**: `VALIDATION_ERROR`(400), `AUTH_001` 아이디 중복(409), `DISCUSSION_004` 닉네임 중복(409), `DISCUSSION_010` 쓸 수 없는 닉네임(400)
 
 ---
 
