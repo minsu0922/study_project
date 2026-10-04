@@ -127,11 +127,13 @@ comment
 
 | API | 누가 | 동작 |
 |---|---|---|
-| `GET /api/problems/{id}/comments` | 누구나(비로그인 포함) | 댓글 목록. 20개씩 쪽 나누기 |
-| `POST /api/problems/{id}/comments` | 그 문제를 푼 로그인 사용자 | 댓글 작성. `parentId`가 있으면 답글 |
-| `PUT /api/comments/{id}` | 글쓴이 본인 | 수정. `edited_at`을 찍는다 |
-| `DELETE /api/comments/{id}` | 글쓴이 본인 | 삭제. 상태만 `DELETED`로 바꾼다 |
-| `POST /api/comments/{id}/reports` | 로그인 사용자 | 신고 |
+| `GET /api/quiz/{problemId}/comments` | 누구나(비로그인 포함) | 댓글 목록. 20개씩 쪽 나누기 |
+| `GET /api/quiz/comment-counts?problemIds=1,2` | 누구나 | 문제별 댓글 수. 문제 목록이 쓴다 |
+| `POST /api/me/comments` | 그 문제를 푼 로그인 사용자 | 댓글 작성. 본문에 `problemId`를 싣는다. `parentId`가 있으면 답글 |
+| `PUT /api/me/comments/{id}` | 글쓴이 본인 | 수정. `edited_at`을 찍는다 |
+| `DELETE /api/me/comments/{id}` | 글쓴이 본인 | 삭제. 상태만 `DELETED`로 바꾼다 |
+| `POST /api/me/comment-reports` | 로그인 사용자 | 신고. 본문에 `commentId`를 싣는다 |
+| `GET /api/me/nickname` | 로그인 사용자 | 지금 닉네임 |
 | `PUT /api/me/nickname` | 로그인 사용자 | 닉네임 설정·변경 |
 | `GET /api/admin/comment-reports` | 관리자 | 신고 목록 |
 | `GET /api/admin/comment-reports/pending-count` | 관리자 | 처리 안 된 신고 수 |
@@ -139,12 +141,18 @@ comment
 | `POST /api/admin/comments/{id}/restore` | 관리자 | 복구 |
 | `POST /api/admin/comment-reports/{id}/dismiss` | 관리자 | 신고 기각 |
 
+경로는 이 저장소의 규칙을 따른다(2026-10-04 구현 계획을 쓰며 고쳤다). 문제 읽기는 `/api/quiz/**`가
+이미 공개 경로이고, 로그인한 사람이 자기 것을 다루는 API는 전부 `/api/me/**`에 있다. 그 두 자리에
+두면 `SecurityConfig`에 규칙을 더하지 않아도 권한이 맞게 걸린다.
+
 ### 3.1 목록 응답
 
 ```json
 {
   "solved": true,
+  "canWrite": true,
   "total": 3,
+  "hasNext": false,
   "comments": [
     {
       "id": 201,
@@ -166,7 +174,9 @@ comment
 | 칸 | 뜻 |
 |---|---|
 | `solved` | 요청한 사람이 이 문제를 풀었는지. 비로그인이면 `false`다. 화면이 접을지와 쓰기 칸을 낼지를 이 값으로 정한다 |
+| `canWrite` | 쓸 수 있는지. 풀었거나 관리자면 `true`다 |
 | `total` | 가려지거나 삭제된 글을 뺀 댓글·답글 수. 문제 목록의 댓글 수와 같은 값이다 |
+| `hasNext` | 다음 쪽이 있는지. "더 보기"를 낼지 정한다 |
 | `mine` | 내가 쓴 글인지. 수정·삭제 버튼을 낼지 정한다 |
 | `replies` | 그 댓글의 답글 전부. 쪽 나누기는 댓글 단위로만 한다 |
 
@@ -203,10 +213,10 @@ ratelimit:
 
 | 화면 | 바뀌는 것 |
 |---|---|
-| 퀴즈 플레이어(자유 퀴즈·데일리·복습) | 답을 제출하면 해설 아래에 토론이 펼쳐진다 |
-| 문제 목록(`problems.html`) | 문제마다 댓글 수를 보여 준다. 누르면 그 문제의 토론이 열린다 |
+| 퀴즈 플레이어(자유 퀴즈·데일리·복습) | 풀기 전에는 문제 아래에 접힌 토론 입구가 있다. 답을 제출하면 그 자리에 토론이 펼쳐진다 |
+| 문제 목록(`problems.html`) | 문제마다 댓글 수를 보여 준다. 줄을 누르면 지금처럼 플레이어로 가고, 토론은 거기서 본다 |
 | 오답노트(`wrong-answers.html`) | 이미 푼 문제라 토론이 바로 펼쳐진다 |
-| 설정(`settings.html`) | 닉네임 변경 칸 |
+| 마이페이지(`mypage.html`) | 닉네임 변경 칸. 계정 설정(비밀번호·탈퇴)이 있는 화면이다 |
 | 관리 콘솔(신규 `admin/comments.html`) | 신고 목록, 신고된 글 보기, 가림·복구·기각 |
 
 | 규칙 | 내용 |
