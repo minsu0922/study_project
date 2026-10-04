@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 /**
  * 댓글과 답글 — DB의 {@code comment} 테이블(V21).
  *
- * <p>방·글쓴이·부모를 연관관계가 아니라 id 칸으로 둔다. 목록은 방 id로 한 번, 답글은 부모 id 묶음으로
+ * <p>글·글쓴이·부모를 연관관계가 아니라 id 칸으로 둔다. 목록은 글 id로 한 번, 답글은 부모 id 묶음으로
  * 한 번 읽으므로 객체 탐색이 필요 없고, {@code userId}는 탈퇴하면 NULL이 된다(ProblemReport와 같은 방식).
  */
 @Entity
@@ -34,8 +34,9 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "discussion_id", nullable = false)
-    private Long discussionId;
+    /** 이 댓글이 달린 글(V23). 답글도 원글과 같은 글 id를 가진다. */
+    @Column(name = "post_id", nullable = false)
+    private Long postId;
 
     /** 글쓴이 id. 탈퇴한 사용자의 글은 {@code null}이다(외래키 SET NULL). */
     @Column(name = "user_id")
@@ -60,16 +61,16 @@ public class Comment {
     @Column(name = "edited_at")
     private LocalDateTime editedAt;
 
-    private Comment(Long discussionId, Long userId, Long parentId, String body) {
-        this.discussionId = discussionId;
+    private Comment(Long postId, Long userId, Long parentId, String body) {
+        this.postId = postId;
         this.userId = userId;
         this.parentId = parentId;
         this.body = body;
         this.status = CommentStatus.VISIBLE;
     }
 
-    public static Comment of(Long discussionId, Long userId, Long parentId, String body) {
-        return new Comment(discussionId, userId, parentId, body);
+    public static Comment of(Long postId, Long userId, Long parentId, String body) {
+        return new Comment(postId, userId, parentId, body);
     }
 
     public void edit(String body) {

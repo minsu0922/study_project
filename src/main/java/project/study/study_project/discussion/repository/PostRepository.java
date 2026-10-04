@@ -3,8 +3,13 @@ package project.study.study_project.discussion.repository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
+
+import java.util.Collection;
+import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
@@ -18,4 +23,20 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             Long discussionId, CommentStatus status, Pageable pageable);
 
     long countByDiscussionIdAndStatus(Long discussionId, CommentStatus status);
+
+    /** 문제별 보이는 글 수 — 문제 목록이 한 쪽(20건)의 수를 한 번에 묻는다. 글이 없는 문제는 결과에 없다. */
+    @Query("""
+            select d.problemId as problemId, count(p) as cnt
+            from Post p join Discussion d on d.id = p.discussionId
+            where d.problemId in :problemIds and p.status = :visible
+            group by d.problemId
+            """)
+    List<ProblemPostCount> countByProblemIds(@Param("problemIds") Collection<Long> problemIds,
+                                             @Param("visible") CommentStatus visible);
+
+    interface ProblemPostCount {
+        Long getProblemId();
+
+        long getCnt();
+    }
 }

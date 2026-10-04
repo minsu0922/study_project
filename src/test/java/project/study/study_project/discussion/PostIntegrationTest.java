@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
+import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
@@ -57,6 +58,8 @@ class PostIntegrationTest {
     private SubmissionRepository submissionRepository;
     @Autowired
     private PostRepository postRepository;
+    @Autowired
+    private project.study.study_project.discussion.repository.CommentRepository commentRepository;
     @Autowired
     private DiscussionRepository discussionRepository;
     @Autowired
@@ -223,6 +226,43 @@ class PostIntegrationTest {
         mockMvc.perform(get(listPath(problem)).param("page", "1"))
                 .andExpect(jsonPath("$.data.hasNext").value(false))
                 .andExpect(jsonPath("$.data.posts", hasSize(1)));
+    }
+
+    /* ── 개수 ───────────────────────────────────────────── */
+
+    @Test
+    @DisplayName("글 목록의 한 줄에 보이는 댓글 수가 붙는다 — 지운 댓글은 세지 않는다")
+    void listCarriesCommentCount() throws Exception {
+        Problem problem = saveProblem();
+        User user = solver(problem);
+        long withComments = write(bearer(user), problem.getId(), "댓글 있는 글", "본문");
+        write(bearer(user), problem.getId(), "댓글 없는 글", "본문");
+        commentRepository.save(Comment.of(withComments, user.getId(), null, "하나"));
+        commentRepository.save(Comment.of(withComments, user.getId(), null, "둘"));
+        commentRepository.save(Comment.of(withComments, user.getId(), null, "지운 것")).delete();
+
+        mockMvc.perform(get(listPath(problem)))
+                .andExpect(jsonPath("$.data.posts[0].title").value("댓글 없는 글"))
+                .andExpect(jsonPath("$.data.posts[0].commentCount").value(0))
+                .andExpect(jsonPath("$.data.posts[1].commentCount").value(2));
+    }
+
+    @Test
+    @DisplayName("문제별 글 수 — 글이 없는 문제는 응답에 없고, 지우거나 가린 글은 세지 않는다")
+    void postCounts() throws Exception {
+        Problem with = saveProblem();
+        Problem without = saveProblem();
+        String token = bearer(solver(with));
+        write(token, with.getId(), "글 하나", "본문");
+        write(token, with.getId(), "글 둘", "본문");
+        long deleted = write(token, with.getId(), "지울 글", "본문");
+        postRepository.findById(deleted).orElseThrow().delete();
+
+        mockMvc.perform(get("/api/quiz/post-counts")
+                        .param("problemIds", with.getId() + "," + without.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data['" + with.getId() + "']").value(2))
+                .andExpect(jsonPath("$.data['" + without.getId() + "']").doesNotExist());
     }
 
     /* ── 수정·삭제 ───────────────────────────────────────── */

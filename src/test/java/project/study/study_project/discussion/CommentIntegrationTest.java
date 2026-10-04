@@ -12,7 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.discussion.domain.Comment;
+import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.repository.CommentRepository;
+import project.study.study_project.discussion.repository.DiscussionRepository;
+import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
@@ -25,6 +28,10 @@ import project.study.study_project.user.dto.WithdrawRequest;
 import project.study.study_project.user.repository.UserRepository;
 import project.study.study_project.user.service.AccountService;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,6 +66,10 @@ class CommentIntegrationTest {
     @Autowired
     private CommentRepository commentRepository;
     @Autowired
+    private PostRepository postRepository;
+    @Autowired
+    private DiscussionRepository discussionRepository;
+    @Autowired
     private AccountService accountService;
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -83,11 +94,50 @@ class CommentIntegrationTest {
     }
 
     @Test
-    @DisplayName("없는 문제의 토론은 404 QUIZ_001")
-    void unknownProblem() throws Exception {
-        mockMvc.perform(get("/api/quiz/999999999/comments"))
+    @DisplayName("없는 글의 댓글은 404 DISCUSSION_011")
+    void unknownPost() throws Exception {
+        mockMvc.perform(get("/api/quiz/posts/999999999/comments"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error.code").value("QUIZ_001"));
+                .andExpect(jsonPath("$.error.code").value("DISCUSSION_011"));
+    }
+
+    @Test
+    @DisplayName("지운 글에는 댓글을 읽을 수도 쓸 수도 없다 — 404 DISCUSSION_011")
+    void deletedPostHasNoComments() throws Exception {
+        Problem problem = saveProblem();
+        User user = saveUser(Role.USER, true);
+        solve(user, problem);
+        write(bearer(user), problem.getId(), null, "지워지기 전 댓글");
+        postRepository.findById(postId(problem.getId())).orElseThrow().delete();
+
+        mockMvc.perform(get(listPath(problem)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("DISCUSSION_011"));
+        mockMvc.perform(post(WRITE).header("Authorization", bearer(user))
+                        .contentType("application/json").content(writeBody(problem.getId(), null, "늦은 댓글")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("DISCUSSION_011"));
+    }
+
+    /** 가린 글 아래의 댓글이 그대로 보이면 댓글만 읽어도 가린 내용을 짐작할 수 있다. */
+    @Test
+    @DisplayName("가린 글은 댓글도 내보내지 않고, 새 댓글도 받지 않는다 — 409 DISCUSSION_006")
+    void hiddenPostHidesComments() throws Exception {
+        Problem problem = saveProblem();
+        User user = saveUser(Role.USER, true);
+        solve(user, problem);
+        write(bearer(user), problem.getId(), null, "가려지기 전 댓글");
+        postRepository.findById(postId(problem.getId())).orElseThrow().hide();
+
+        mockMvc.perform(get(listPath(problem)).header("Authorization", bearer(user)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.canWrite").value(false))
+                .andExpect(jsonPath("$.data.total").value(0))
+                .andExpect(jsonPath("$.data.comments", hasSize(0)));
+        mockMvc.perform(post(WRITE).header("Authorization", bearer(user))
+                        .contentType("application/json").content(writeBody(problem.getId(), null, "늦은 댓글")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("DISCUSSION_006"));
     }
 
     /* ── 쓰기 권한 ───────────────────────────────────────── */
@@ -209,9 +259,9 @@ class CommentIntegrationTest {
                 .andExpect(jsonPath("$.data.total").value(3));
     }
 
-    /** 받아 주면 한 방의 답글이 다른 방의 원글에 매달린다. */
+    /** 받아 주면 한 글의 답글이 다른 글의 댓글에 매달린다. */
     @Test
-    @DisplayName("다른 문제의 댓글을 부모로 주면 404 DISCUSSION_001")
+    @DisplayName("다른 글의 댓글을 부모로 주면 404 DISCUSSION_001")
     void parentFromAnotherProblemIsRejected() throws Exception {
         Problem a = saveProblem();
         Problem b = saveProblem();
@@ -333,33 +383,25 @@ class CommentIntegrationTest {
                 .andExpect(jsonPath("$.data.comments[0].nickname").doesNotExist());
     }
 
-    /* ── 문제별 개수 ─────────────────────────────────────── */
-
-    @Test
-    @DisplayName("문제별 댓글 수 — 글이 없는 문제는 응답에 없다")
-    void commentCounts() throws Exception {
-        Problem with = saveProblem();
-        Problem without = saveProblem();
-        User user = saveUser(Role.USER, true);
-        solve(user, with);
-        write(bearer(user), with.getId(), null, "하나");
-        write(bearer(user), with.getId(), null, "둘");
-
-        mockMvc.perform(get("/api/quiz/comment-counts")
-                        .param("problemIds", with.getId() + "," + without.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data['" + with.getId() + "']").value(2))
-                .andExpect(jsonPath("$.data['" + without.getId() + "']").doesNotExist());
-    }
-
     /* ── 재료 ───────────────────────────────────────────── */
 
+    /** 문제마다 글 하나를 깔아 둔다. 댓글 테스트는 "그 문제의 글"에 쓰고 읽는다. */
+    private final Map<Long, Long> postIds = new HashMap<>();
+
+    private Long postId(Long problemId) {
+        return postIds.computeIfAbsent(problemId, id -> {
+            discussionRepository.insertIfAbsent(id);
+            Long discussionId = discussionRepository.findIdByProblemIdForShare(id).orElseThrow();
+            return postRepository.saveAndFlush(Post.of(discussionId, null, "토론할 글", "본문")).getId();
+        });
+    }
+
     private String listPath(Problem problem) {
-        return "/api/quiz/" + problem.getId() + "/comments";
+        return "/api/quiz/posts/" + postId(problem.getId()) + "/comments";
     }
 
     private String writeBody(Long problemId, Long parentId, String body) {
-        return "{\"problemId\":%d,\"parentId\":%s,\"body\":\"%s\"}".formatted(problemId, parentId, body);
+        return "{\"postId\":%d,\"parentId\":%s,\"body\":\"%s\"}".formatted(postId(problemId), parentId, body);
     }
 
     private long write(String token, Long problemId, Long parentId, String body) throws Exception {

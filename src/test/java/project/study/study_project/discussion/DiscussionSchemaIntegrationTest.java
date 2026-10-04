@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.CommentStatus;
+import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.global.common.Difficulty;
@@ -27,6 +28,8 @@ class DiscussionSchemaIntegrationTest {
     private DiscussionRepository discussionRepository;
     @Autowired
     private CommentRepository commentRepository;
+    @Autowired
+    private project.study.study_project.discussion.repository.PostRepository postRepository;
     @Autowired
     private ProblemRepository problemRepository;
     @Autowired
@@ -51,28 +54,26 @@ class DiscussionSchemaIntegrationTest {
     }
 
     @Test
-    @DisplayName("문제를 지우면 방과 댓글도 함께 지워진다")
+    @DisplayName("문제를 지우면 방과 글, 댓글도 함께 지워진다")
     void deletingProblemRemovesDiscussion() {
         Problem problem = saveProblem();
-        discussionRepository.insertIfAbsent(problem.getId());
-        Long discussionId = discussionRepository.findIdByProblemIdForShare(problem.getId()).orElseThrow();
-        Long commentId = commentRepository.saveAndFlush(Comment.of(discussionId, null, null, "첫 글")).getId();
+        Long postId = savePost(problem.getId());
+        Long commentId = commentRepository.saveAndFlush(Comment.of(postId, null, null, "첫 댓글")).getId();
 
         problemRepository.delete(problem);
         em.flush();
         em.clear();
 
         assertThat(discussionRepository.countByProblemId(problem.getId())).isZero();
+        assertThat(postRepository.findById(postId)).isEmpty();
         assertThat(commentRepository.findById(commentId)).isEmpty();
     }
 
     @Test
     @DisplayName("댓글은 VISIBLE로 태어나고, 삭제해도 행은 남는다")
     void commentLifecycle() {
-        Long problemId = saveProblem().getId();
-        discussionRepository.insertIfAbsent(problemId);
-        Long discussionId = discussionRepository.findIdByProblemIdForShare(problemId).orElseThrow();
-        Comment comment = commentRepository.saveAndFlush(Comment.of(discussionId, null, null, "첫 글"));
+        Long postId = savePost(saveProblem().getId());
+        Comment comment = commentRepository.saveAndFlush(Comment.of(postId, null, null, "첫 댓글"));
 
         assertThat(comment.getStatus()).isEqualTo(CommentStatus.VISIBLE);
         comment.delete();
@@ -81,7 +82,13 @@ class DiscussionSchemaIntegrationTest {
 
         assertThat(commentRepository.findById(comment.getId()).orElseThrow().getStatus())
                 .isEqualTo(CommentStatus.DELETED);
-        assertThat(commentRepository.countByDiscussionIdAndStatus(discussionId, CommentStatus.VISIBLE)).isZero();
+        assertThat(commentRepository.countByPostIdAndStatus(postId, CommentStatus.VISIBLE)).isZero();
+    }
+
+    private Long savePost(Long problemId) {
+        discussionRepository.insertIfAbsent(problemId);
+        Long discussionId = discussionRepository.findIdByProblemIdForShare(problemId).orElseThrow();
+        return postRepository.saveAndFlush(Post.of(discussionId, null, "글", "본문")).getId();
     }
 
     private Problem saveProblem() {

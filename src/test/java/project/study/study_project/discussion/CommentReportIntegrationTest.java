@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.discussion.domain.Comment;
+import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.repository.CommentReportRepository;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
@@ -48,6 +49,8 @@ class CommentReportIntegrationTest {
     private DiscussionRepository discussionRepository;
     @Autowired
     private CommentRepository commentRepository;
+    @Autowired
+    private project.study.study_project.discussion.repository.PostRepository postRepository;
     @Autowired
     private CommentReportRepository reportRepository;
     @Autowired
@@ -196,6 +199,7 @@ class CommentReportIntegrationTest {
                 "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
         discussionRepository.insertIfAbsent(problem.getId());
         Long discussionId = discussionRepository.findIdByProblemIdForShare(problem.getId()).orElseThrow();
-        return commentRepository.saveAndFlush(Comment.of(discussionId, null, null, "신고될 글"));
+        Long postId = postRepository.saveAndFlush(Post.of(discussionId, null, "신고될 댓글이 달린 글", "본문")).getId();
+        return commentRepository.saveAndFlush(Comment.of(postId, null, null, "신고될 글"));
     }
 }

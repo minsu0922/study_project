@@ -14,6 +14,7 @@ import project.study.study_project.discussion.dto.PostEditRequest;
 import project.study.study_project.discussion.dto.PostListResponse;
 import project.study.study_project.discussion.dto.PostSummary;
 import project.study.study_project.discussion.dto.PostWriteRequest;
+import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.global.exception.BusinessException;
@@ -24,6 +25,7 @@ import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,7 @@ public class PostService {
     private static final int PAGE_SIZE = 20;
 
     private final PostRepository postRepository;
+    private final CommentRepository commentRepository;
     private final DiscussionRepository discussionRepository;
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
@@ -67,8 +70,10 @@ public class PostService {
         Slice<Post> posts = postRepository.findByDiscussionIdAndStatusNotOrderByCreatedAtDescIdDesc(
                 discussionId.get(), CommentStatus.DELETED, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
         Map<Long, String> nicknames = nicknamesOf(posts.getContent());
+        Map<Long, Long> commentCounts = commentCountsOf(posts.getContent());
         List<PostSummary> items = posts.getContent().stream()
-                .map(p -> PostSummary.of(p, nicknames.get(p.getUserId())))
+                .map(p -> PostSummary.of(p, nicknames.get(p.getUserId()),
+                        commentCounts.getOrDefault(p.getId(), 0L)))
                 .toList();
 
         long total = postRepository.countByDiscussionIdAndStatus(discussionId.get(), CommentStatus.VISIBLE);
@@ -127,6 +132,29 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
         requireOwn(userId, post).delete();
+    }
+
+    /** 문제별 보이는 글 수. 글이 없는 문제는 맵에 없다. */
+    @Transactional(readOnly = true)
+    public Map<Long, Long> counts(Collection<Long> problemIds) {
+        Map<Long, Long> counts = new HashMap<>();
+        if (problemIds == null || problemIds.isEmpty()) {
+            return counts;
+        }
+        postRepository.countByProblemIds(problemIds, CommentStatus.VISIBLE)
+                .forEach(row -> counts.put(row.getProblemId(), row.getCnt()));
+        return counts;
+    }
+
+    /** 글 id → 보이는 댓글 수. 한 쪽의 글을 한 번에 센다. */
+    private Map<Long, Long> commentCountsOf(List<Post> posts) {
+        Map<Long, Long> counts = new HashMap<>();
+        if (posts.isEmpty()) {
+            return counts;
+        }
+        commentRepository.countByPostIds(posts.stream().map(Post::getId).toList(), CommentStatus.VISIBLE)
+                .forEach(row -> counts.put(row.getPostId(), row.getCnt()));
+        return counts;
     }
 
     private void requireProblem(Long problemId) {

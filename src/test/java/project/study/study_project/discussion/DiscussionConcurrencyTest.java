@@ -8,10 +8,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionTemplate;
 import project.study.study_project.TestDomains;
-import project.study.study_project.discussion.dto.CommentItem;
-import project.study.study_project.discussion.dto.CommentWriteRequest;
+import project.study.study_project.discussion.dto.PostDetail;
+import project.study.study_project.discussion.dto.PostWriteRequest;
 import project.study.study_project.discussion.repository.DiscussionRepository;
-import project.study.study_project.discussion.service.CommentService;
+import project.study.study_project.discussion.service.PostService;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 한 문제에 첫 댓글 둘이 동시에 온다 — 방은 하나만 생기고 댓글은 둘 다 저장돼야 한다.
+ * 한 문제에 첫 글 둘이 동시에 온다 — 방은 하나만 생기고 글은 둘 다 저장돼야 한다.
  *
  * <p>{@code @Transactional}을 붙이지 않는다. 두 스레드가 서로의 커밋을 봐야 재현되므로 실제로
  * 커밋하고, 만든 것은 끝에 손으로 지운다.
@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DiscussionConcurrencyTest {
 
     @Autowired
-    private CommentService commentService;
+    private PostService postService;
     @Autowired
     private DiscussionRepository discussionRepository;
     @Autowired
@@ -63,7 +63,7 @@ class DiscussionConcurrencyTest {
     @AfterEach
     void cleanUp() {
         tx.executeWithoutResult(status -> {
-            // 제출은 문제를 RESTRICT로 붙잡고 있어 먼저 지운다. 방과 댓글은 문제와 함께 지워진다.
+            // 제출은 문제를 RESTRICT로 붙잡고 있어 먼저 지운다. 방과 글은 문제와 함께 지워진다.
             userIds.forEach(submissionRepository::deleteAllByUserId);
             if (problemId != null) {
                 problemRepository.deleteById(problemId);
@@ -73,8 +73,8 @@ class DiscussionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("첫 댓글 둘이 동시에 와도 방은 하나, 댓글은 둘")
-    void twoFirstCommentsAtOnce() throws Exception {
+    @DisplayName("첫 글 둘이 동시에 와도 방은 하나, 글은 둘")
+    void twoFirstPostsAtOnce() throws Exception {
         tx.executeWithoutResult(status -> {
             Problem problem = problemRepository.save(Problem.create(
                     TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
@@ -92,20 +92,20 @@ class DiscussionConcurrencyTest {
 
         ExecutorService pool = Executors.newFixedThreadPool(2);
         CountDownLatch start = new CountDownLatch(1);
-        List<Future<CommentItem>> results = new ArrayList<>();
+        List<Future<PostDetail>> results = new ArrayList<>();
         for (Long userId : userIds) {
             results.add(pool.submit(() -> {
                 start.await();
-                return commentService.write(userId, new CommentWriteRequest(problemId, null, "동시에 쓴 첫 댓글"));
+                return postService.write(userId, new PostWriteRequest(problemId, "동시에 쓴 첫 글", "본문"));
             }));
         }
         start.countDown();
-        for (Future<CommentItem> result : results) {
+        for (Future<PostDetail> result : results) {
             assertThat(result.get(15, TimeUnit.SECONDS).id()).isNotNull();
         }
         pool.shutdown();
 
         assertThat(discussionRepository.countByProblemId(problemId)).isEqualTo(1);
-        assertThat(commentService.list(problemId, null, 0).total()).isEqualTo(2);
+        assertThat(postService.list(problemId, null, 0).total()).isEqualTo(2);
     }
 }

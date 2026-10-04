@@ -424,13 +424,13 @@ function renderList(rows, data) {
 }
 
 /**
- * 문제별 댓글 수를 뒤늦게 채운다(V21). 목록 조회에 얹지 않고 따로 묻는 이유: 개수는 목록이
+ * 문제별 토론 글 수를 뒤늦게 채운다(V22). 목록 조회에 얹지 않고 따로 묻는 이유: 개수는 목록이
  * 뜨는 데 필요하지 않다. 이 요청이 늦거나 실패해도 목록은 그대로 보인다.
  */
 async function fillCommentCounts(rows) {
   if (rows.length === 0) return;
   try {
-    const counts = await api("/api/quiz/comment-counts?problemIds=" + rows.map(p => p.id).join(","));
+    const counts = await api("/api/quiz/post-counts?problemIds=" + rows.map(p => p.id).join(","));
     Object.entries(counts).forEach(([id, n]) => {
       const el = document.querySelector(`[data-comments-of="${id}"]`);
       if (el) el.textContent = `💬 ${n}`;

@@ -41,6 +41,7 @@ public class CommentReportService {
     private final CommentReportRepository reportRepository;
     private final CommentRepository commentRepository;
     private final DiscussionRepository discussionRepository;
+    private final project.study.study_project.discussion.repository.PostRepository postRepository;
     private final ProblemRepository problemRepository;
     private final UserRepository userRepository;
 
@@ -131,7 +132,8 @@ public class CommentReportService {
     private CommentReportItem toItem(CommentReport report, Comment comment) {
         String nickname = comment.getUserId() == null ? null
                 : userRepository.findById(comment.getUserId()).map(User::getNickname).orElse(null);
-        Long problemId = discussionRepository.findById(comment.getDiscussionId())
+        Long problemId = postRepository.findById(comment.getPostId())
+                .flatMap(post -> discussionRepository.findById(post.getDiscussionId()))
                 .map(Discussion::getProblemId).orElse(null);
         String problemTitle = problemId == null ? null
                 : problemRepository.findById(problemId).map(Problem::getTitle).orElse(null);
