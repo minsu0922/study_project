@@ -32,9 +32,39 @@ class RateLimitFilterTest {
     private TokenBucketRateLimiter limiter;
     private RateLimitFilter filter;
 
-    // 운영 기본값과 같은 정책: auth 5/분, api 60/분, enabled=true
+    // 운영 기본값과 같은 정책: auth 5/분, api 60/분, comment 5/분, enabled=true
     private RateLimitProperties props(boolean enabled) {
-        return new RateLimitProperties(enabled, 5, 5, 60, 60, 60, 60);
+        return new RateLimitProperties(enabled, 5, 5, 60, 60, 60, 60, 5, 5, 60);
+    }
+
+    @Test
+    @DisplayName("댓글 작성 POST는 comment 정책 + 사용자 id 키로 센다")
+    void commentWriteUsesCommentPolicy() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        42L, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+
+        doFilter(new MockHttpServletRequest("POST", "/api/me/comments"));
+
+        ArgumentCaptor<RateLimitPolicy> policy = ArgumentCaptor.forClass(RateLimitPolicy.class);
+        verify(limiter).tryConsume(eq("user:42"), policy.capture());
+        assertThat(policy.getValue().name()).isEqualTo("comment");
+        assertThat(policy.getValue().capacity()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("댓글 수정·삭제와 읽기는 일반 api 정책이다 — 도배는 쓰기에서만 난다")
+    void commentEditAndReadUseApiPolicy() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        42L, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+
+        doFilter(new MockHttpServletRequest("PUT", "/api/me/comments/7"));
+        doFilter(new MockHttpServletRequest("GET", "/api/quiz/3/comments"));
+
+        ArgumentCaptor<RateLimitPolicy> policy = ArgumentCaptor.forClass(RateLimitPolicy.class);
+        verify(limiter, times(2)).tryConsume(eq("user:42"), policy.capture());
+        assertThat(policy.getAllValues()).allMatch(p -> p.name().equals("api"));
     }
 
     @BeforeEach

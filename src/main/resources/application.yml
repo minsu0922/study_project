@@ -90,6 +90,10 @@ ratelimit:
     capacity: 60
     refill-tokens: 60
     refill-period-seconds: 60    # = 분당 60회
+  comment:                       # 댓글·답글 작성 — 사용자당. 도배 방지(V21)
+    capacity: 5
+    refill-tokens: 5
+    refill-period-seconds: 60    # = 분당 5회
 
 # 초기 관리자 계정 — AdminAccountInitializer가 ADMIN이 하나도 없을 때 만든다.
 #
