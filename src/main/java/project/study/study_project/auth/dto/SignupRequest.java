@@ -36,6 +36,15 @@ public record SignupRequest(
                 regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,}$",
                 message = "비밀번호는 8자 이상이며 영문과 숫자를 포함해야 합니다."
         )
-        String password
+        String password,
+
+        // 토론에서 글쓴이로 보이는 이름(V21). 가입할 때 받는다 — 글을 쓰다 말고 정하게 하면
+        // 흐름이 끊기고, 닉네임 없는 계정이 계속 쌓인다. 규칙은 NicknameRequest와 같다.
+        @NotBlank(message = "닉네임은 필수입니다.")
+        @Pattern(
+                regexp = "^[가-힣A-Za-z0-9_]{2,12}$",
+                message = "닉네임은 2~12자의 한글·영문·숫자·밑줄만 쓸 수 있습니다."
+        )
+        String nickname
 ) {
 }

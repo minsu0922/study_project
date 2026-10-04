@@ -76,9 +76,21 @@ class AuthServiceTest {
         void duplicateUsernameFails() {
             when(userRepository.existsByUsername("tester")).thenReturn(true);
 
-            assertThatThrownBy(() -> authService.signup(new SignupRequest("tester", "password1")))
+            assertThatThrownBy(() -> authService.signup(new SignupRequest("tester", "password1", "테스터")))
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode").isEqualTo(ErrorCode.AUTH_001);
+            verify(userRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("이미 쓰는 닉네임이면 DISCUSSION_004, 저장은 시도하지 않는다")
+        void duplicateNicknameFails() {
+            when(userRepository.existsByUsername("tester")).thenReturn(false);
+            when(userRepository.existsByNickname("테스터")).thenReturn(true);
+
+            assertThatThrownBy(() -> authService.signup(new SignupRequest("tester", "password1", "테스터")))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.DISCUSSION_004);
             verify(userRepository, never()).save(any());
         }
 
@@ -87,11 +99,13 @@ class AuthServiceTest {
         void success() {
             when(userRepository.existsByUsername("tester")).thenReturn(false);
             when(passwordEncoder.encode("password1")).thenReturn("hashed");
-            when(userRepository.save(any(User.class)))
+            org.mockito.ArgumentCaptor<User> saved = org.mockito.ArgumentCaptor.forClass(User.class);
+            when(userRepository.save(saved.capture()))
                     .thenAnswer(inv -> userWithId(1L, "tester", "hashed", Role.USER));
 
-            SignupResponse response = authService.signup(new SignupRequest("tester", "password1"));
+            SignupResponse response = authService.signup(new SignupRequest("tester", "password1", "테스터"));
 
+            assertThat(saved.getValue().getNickname()).as("가입할 때 받은 닉네임을 저장한다").isEqualTo("테스터");
             assertThat(response.id()).isEqualTo(1L);
             assertThat(response.username()).isEqualTo("tester");
             assertThat(response.role()).isEqualTo(Role.USER);

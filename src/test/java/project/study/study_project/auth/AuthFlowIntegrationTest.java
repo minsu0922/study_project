@@ -20,6 +20,7 @@ import project.study.study_project.user.repository.UserRepository;
 
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -68,11 +69,20 @@ class AuthFlowIntegrationTest {
         return "auth" + UUID.randomUUID().toString().substring(0, 8);
     }
 
+    /** 닉네임은 유일해야 해서 테스트마다 새로 만든다. 12자 제한이라 UUID 앞 8자만 쓴다(V21). */
+    private String freshNickname() {
+        return "닉" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private String signupBody(String username, String password, String nickname) {
+        return """
+                {"username":"%s","password":"%s","nickname":"%s"}""".formatted(username, password, nickname);
+    }
+
     private MvcResult signup(String username, String password) throws Exception {
         return mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"%s"}""".formatted(username, password)))
+                        .content(signupBody(username, password, freshNickname())))
                 .andReturn();
     }
 
@@ -102,15 +112,19 @@ class AuthFlowIntegrationTest {
     @DisplayName("회원가입 → 로그인 → 토큰으로 보호 API 접근까지 정상 흐름")
     void signupLoginAndAccessProtectedResource() throws Exception {
         String username = freshUsername();
+        String nickname = freshNickname();
 
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"password1"}""".formatted(username)))
+                        .content(signupBody(username, "password1", nickname)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.username").value(username))
                 .andExpect(jsonPath("$.data.role").value("USER"));
+
+        assertThat(userRepository.findByUsername(username).orElseThrow().getNickname())
+                .as("가입할 때 받은 닉네임이 저장된다 — 토론에서 글쓴이로 보이는 이름이다")
+                .isEqualTo(nickname);
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -136,8 +150,7 @@ class AuthFlowIntegrationTest {
 
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"password1"}""".formatted(username)))
+                        .content(signupBody(username, "password1", freshNickname())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("AUTH_001"));
@@ -148,10 +161,40 @@ class AuthFlowIntegrationTest {
     void signupWeakPasswordFails() throws Exception {
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"short1"}""".formatted(freshUsername())))
+                        .content(signupBody(freshUsername(), "short1", freshNickname())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    /** 닉네임은 가입할 때 받는다(2026-10-04). 비워 두면 토론에서 글쓴이를 보여 줄 이름이 없다. */
+    @Test
+    @DisplayName("닉네임 없이 가입하면 400 VALIDATION_ERROR")
+    void signupWithoutNicknameFails() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"%s","password":"password1"}""".formatted(freshUsername())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("남이 쓰는 닉네임으로 가입하면 409 DISCUSSION_004, 계정은 만들어지지 않는다")
+    void signupDuplicateNicknameFails() throws Exception {
+        String nickname = freshNickname();
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(signupBody(freshUsername(), "password1", nickname)))
+                .andExpect(status().isCreated());
+
+        String second = freshUsername();
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(signupBody(second, "password1", nickname)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("DISCUSSION_004"));
+
+        assertThat(userRepository.findByUsername(second)).isEmpty();
     }
 
     @Test

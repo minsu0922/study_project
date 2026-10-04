@@ -51,12 +51,17 @@ public class AuthService {
         if (userRepository.existsByUsername(username)) {
             throw new BusinessException(ErrorCode.AUTH_001);
         }
+        // 닉네임도 유일해야 한다 — 토론에서 두 사람이 같은 이름으로 보이면 구분할 수 없다.
+        if (userRepository.existsByNickname(request.nickname())) {
+            throw new BusinessException(ErrorCode.DISCUSSION_004);
+        }
         User user = User.builder()
                 .username(username)
                 // email은 넘기지 않는다 — 이 서비스는 메일을 보내지 않아 받을 이유가 없다(V12).
                 .passwordHash(passwordEncoder.encode(request.password())) // 단방향 해시
                 .role(Role.USER)
                 .build();
+        user.changeNickname(request.nickname());
         return SignupResponse.from(userRepository.save(user));
     }
 

@@ -51,6 +51,15 @@ try {
              pattern="[A-Za-z0-9_]{4,20}" title="영문·숫자·밑줄(_)로 4~20자">
     </div>
     <div class="field">
+      <label for="nickname">닉네임 (2~12자, 한글·영문·숫자·밑줄)</label>
+      <!-- 토론에서 글쓴이로 보이는 이름이다(V21). 아이디와 따로 받는 이유: 로그인 아이디를
+           그대로 보여 주면 남이 그 아이디로 로그인을 시도할 수 있다. 가입할 때 받는 이유:
+           글을 쓰다 말고 닉네임을 정하게 하면 흐름이 끊긴다. -->
+      <input type="text" id="nickname" required minlength="2" maxlength="12" autocomplete="nickname"
+             pattern="[가-힣A-Za-z0-9_]{2,12}" title="2~12자의 한글·영문·숫자·밑줄(_)">
+      <div class="meta">다른 사람에게 보이는 이름입니다. 아이디는 보이지 않습니다.</div>
+    </div>
+    <div class="field">
       <label for="password">비밀번호 (8자 이상, 영문+숫자 포함)</label>
       <!-- 서버(SignupRequest)와 <같은 정규식>이다. 아이디에는 pattern이 있는데 비밀번호에는
            없어서, 규칙이 라벨에만 적혀 있고 어긋난 값은 서버를 다녀와야 알 수 있었다.
@@ -170,8 +179,9 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
   // 대문자로 가입해 놓고 화면에는 소문자가 뜨는 어긋남을 없앤다.
   const username = document.getElementById("username").value.trim().toLowerCase();
   const password = document.getElementById("password").value;
+  const nickname = document.getElementById("nickname").value.trim();
   try {
-    await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ username, password }) });
+    await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ username, password, nickname }) });
     try {
       // 가입 직후 자동 로그인
       const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });

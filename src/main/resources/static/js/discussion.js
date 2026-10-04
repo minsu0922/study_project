@@ -262,46 +262,32 @@ document.addEventListener("submit", async e => {
       renderDiscussion(box);
     } else if (form.hasAttribute("data-disc-report-form")) {
       await sendCommentReport(form);
-    } else if (form.hasAttribute("data-disc-nick-form")) {
-      await api("/api/me/nickname", {
-        method: "PUT", body: JSON.stringify({ nickname: form.querySelector("input").value }) });
-      // 보낼 글은 등록이 <성공한 뒤에> 비운다(postComment). 닉네임은 저장됐는데 등록이
-      // 실패했을 때(요청 제한 등) 다시 누르면 같은 글을 그대로 보낼 수 있어야 한다.
-      await postComment(box, box._pending.parentId, box._pending.body);
     }
   } catch (err) {
-    // 닉네임 폼의 오류는 폼 안에 적는다. 아래 안내 칸에 쓰면 그 칸에 들어 있는 폼이 지워진다.
-    const nickError = form.querySelector(".disc-nick-error");
-    if (nickError) { nickError.hidden = false; nickError.textContent = err.message; }
-    else discMsg(box, err.message, true);
+    discMsg(box, err.message, true);
   } finally {
     if (btn.isConnected) btn.disabled = false;
   }
 });
 
 /**
- * 댓글 등록. 닉네임이 없으면(DISCUSSION_003) 그 자리에서 닉네임을 받고 같은 글을 다시 보낸다 —
- * 쓴 글을 버리고 다른 화면으로 보내면 돌아와서 다시 써야 한다.
+ * 댓글 등록.
+ *
+ * 닉네임은 가입할 때 받는다. 그 전에 만든 계정만 닉네임이 없을 수 있고(DISCUSSION_003),
+ * 그때는 마이페이지로 안내한다 — 쓴 글은 칸에 그대로 남아 있어 돌아와서 다시 누르면 된다.
  */
 async function postComment(box, parentId, body) {
   try {
     const item = await api("/api/me/comments", { method: "POST", body: JSON.stringify({
       problemId: Number(box.dataset.discussion), parentId: parentId ? Number(parentId) : null, body }) });
-    box._pending = null;
     addComment(box, parentId ? Number(parentId) : null, item);
   } catch (err) {
     if (err.code !== "DISCUSSION_003") throw err;
-    box._pending = { parentId, body };
     const el = box.querySelector(".disc-msg");
     el.hidden = false;
-    el.classList.remove("error");
-    el.innerHTML = `<form class="disc-form" data-disc-nick-form>
-      <label>토론에서 쓸 닉네임을 정해 주세요 (2~12자, 한글·영문·숫자·밑줄)</label>
-      <input type="text" required minlength="2" maxlength="12" pattern="[가-힣A-Za-z0-9_]{2,12}">
-      <div class="disc-actions"><button type="submit" class="btn-sm">정하고 등록</button></div>
-      <div class="disc-nick-error disc-msg error" hidden></div>
-    </form>`;
-    el.querySelector("input").focus();
+    el.classList.add("error");
+    el.innerHTML = `닉네임이 없는 계정입니다. <a href="/mypage.html" target="_blank" rel="noopener">마이페이지</a>에서
+      닉네임을 정한 뒤 다시 등록해 주세요.`;
   }
 }
 

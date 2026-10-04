@@ -106,7 +106,7 @@ public record FieldError(String field, String reason) {}
 | `REPORT_003` | 409 | 이미 인정·기각한 제보 |
 | `DISCUSSION_001` | 404 | 댓글 없음 |
 | `DISCUSSION_002` | 403 | 안 푼 문제의 토론에 쓰기 |
-| `DISCUSSION_003` | 409 | 닉네임 없이 쓰기 → 화면이 닉네임 입력을 띄움 |
+| `DISCUSSION_003` | 409 | 닉네임 없이 쓰기(가입 때 닉네임을 받기 전에 만든 계정) → 화면이 마이페이지로 안내 |
 | `DISCUSSION_004` | 409 | 닉네임 중복 |
 | `DISCUSSION_005` | 403 | 남의 댓글 수정·삭제 |
 | `DISCUSSION_006` | 409 | 가려지거나 삭제된 댓글에 답글·수정·신고 |
