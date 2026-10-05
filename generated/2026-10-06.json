@@ -1,0 +1,215 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-10-06",
+  "generatedAt" : "2026-10-05T22:56:44.700752706Z",
+  "domain" : "NETWORK",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5",
+  "documentSlug" : "transport-layer-reliability-cost-tcp-udp",
+  "problems" : [ {
+    "question" : "패킷에 적힌 목적지 주소를 보고 다음 장비로 넘기는 일만 정해 놓은 규칙의 이름은?",
+    "answer" : "",
+    "explanation" : "패킷에 적힌 목적지 주소를 읽고 다음 장비로 넘기는 일만 정해 놓은 규칙이 IP다. 중간 장비들이 각자 판단해 넘기므로 전체 경로가 미리 정해지지 않고, 전달 결과도 책임지지 않는다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "포트",
+      "correct" : false,
+      "rationale" : "포트는 한 컴퓨터 안에서 어느 프로그램에게 줄지 가리는 번호이지, 주소를 보고 넘기는 규칙이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "IP",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "체크섬",
+      "correct" : false,
+      "rationale" : "체크섬은 내용이 망가졌는지 검사하는 계산값으로, 패킷을 다음 장비로 넘기는 일과는 무관하다.",
+      "matchText" : ""
+    }, {
+      "text" : "전송 계층",
+      "correct" : false,
+      "rationale" : "전송 계층은 IP가 날라 준 패킷을 받아 사고 처리 범위를 정하는 자리이지, 주소를 보고 넘기는 규칙 자체가 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**IP(internet protocol, 인터넷 프로토콜)** — 패킷에 적힌 목적지 주소를 보고 다음 장비로 넘기는 일만 정해 놓은 규칙이다.",
+    "title" : "주소를 보고 다음 장비로 넘기는 규칙의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "보낼 데이터를 정해진 규칙으로 더해 만든 짧은 숫자로, 받는 쪽이 같은 계산을 해 값이 다르면 내용이 망가졌다고 판단하는 데 쓰는 것은?",
+    "answer" : "",
+    "explanation" : "보낼 데이터를 정해진 규칙으로 더해 만든 짧은 숫자가 체크섬이며, 받는 쪽이 같은 계산을 해서 값이 다르면 내용이 망가졌다고 판단한다. 전기적 잡음 등으로 값 일부가 바뀐 채 도착하는 사고를 가려내는 수단이다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "RTT",
+      "correct" : false,
+      "rationale" : "RTT는 보내고 응답이 돌아오기까지의 왕복 시간을 뜻하며, 손상 여부를 가려내는 값이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "순서 번호",
+      "correct" : false,
+      "rationale" : "순서 번호는 각 바이트에 매긴 일련번호로, 빠진 조각을 찾고 순서를 맞추는 데 쓴다.",
+      "matchText" : ""
+    }, {
+      "text" : "체크섬",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "ACK",
+      "correct" : false,
+      "rationale" : "ACK는 어디까지 받았는지 알리는 신호로, 재전송 판단에 쓰일 뿐 내용 손상을 계산해 내지는 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**체크섬(checksum, 검사합)** — 보낼 데이터를 정해진 규칙으로 더해 만든 짧은 숫자로, 받는 쪽이 같은 계산을 해서 값이 다르면 내용이 망가졌다고 판단한다.",
+    "title" : "내용 손상 여부를 가려내는 계산값의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "TCP의 순서 번호(sequence number)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "순서 번호는 보내는 데이터의 각 바이트에 매겨 둔 일련번호다. 받는 쪽은 이 번호를 보고 도착한 조각을 제자리에 끼워 넣고, 비어 있는 번호 구간을 보고 빠진 조각을 찾아낸다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "보낸 데이터의 각 바이트에 매겨 둔 일련번호로, 받는 쪽이 조각을 제자리에 끼워 넣고 빠진 곳을 찾는 데 쓴다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "받는 쪽이 어디까지 잘 받았는지 보내는 쪽에 알려 주는 짧은 신호다",
+      "correct" : false,
+      "rationale" : "받는 쪽이 어디까지 받았는지 알려 주는 신호는 ACK의 설명이다. 순서 번호는 보내는 쪽이 데이터에 매겨 두는 값이다.",
+      "matchText" : ""
+    }, {
+      "text" : "받는 쪽이 자기 여유 공간 크기를 알려 보내는 양을 제한하는 숫자다",
+      "correct" : false,
+      "rationale" : "남은 여유 공간 크기를 알려 보내는 양을 제한하는 것은 흐름 제어에서 쓰는 값이지 순서 번호가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "한 컴퓨터 안에서 통신하는 프로그램을 구분하는 번호다",
+      "correct" : false,
+      "rationale" : "한 컴퓨터 안에서 프로그램을 구분하는 번호는 포트의 설명이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**순서 번호(sequence number)** — 보내는 데이터의 각 바이트에 매겨 둔 일련번호로, 받는 쪽이 이 번호로 조각을 제자리에 끼워 넣고 빠진 곳을 찾아낸다.",
+    "title" : "TCP 순서 번호가 하는 일",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "UDP가 전송 계층에서 하는 일로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "UDP는 포트 번호로 어느 프로그램에게 줄지 가리는 일과 체크섬으로 내용이 망가졌는지 검사하는 일만 하고, 유실과 순서와 중복은 그대로 둔다. 망가진 덩어리는 조용히 버리며 다시 가져오지는 않는다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "유실된 조각을 다시 보내고 도착한 조각의 순서를 맞춰 준다",
+      "correct" : false,
+      "rationale" : "유실·순서·중복을 전송 계층이 직접 해결하는 쪽은 TCP다. UDP는 그 처리를 하지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "포트로 어느 프로그램에게 줄지 가리고, 체크섬으로 손상을 검사한다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "받는 쪽 여유 공간 크기를 받아 보내는 양을 그만큼으로 줄인다",
+      "correct" : false,
+      "rationale" : "받는 쪽 여유 공간에 맞춰 속도를 줄이는 것은 흐름 제어이며, UDP에는 속도 조절 기능이 없다.",
+      "matchText" : ""
+    }, {
+      "text" : "데이터를 보내기 전에 메시지를 주고받아 연결을 먼저 연다",
+      "correct" : false,
+      "rationale" : "데이터를 주고받기 전에 메시지를 교환해 연결을 여는 절차는 TCP의 3-way 핸드셰이크다. UDP에는 연결 설정이 없다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**UDP(user datagram protocol, 사용자 데이터그램 규약)** — 포트로 프로그램을 구분하고 체크섬으로 손상을 검사하는 일만 하고, 유실과 순서와 중복은 그대로 두는 규칙이다.",
+    "title" : "UDP가 전송 계층에서 남겨 둔 기능",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "받는 쪽이 자기 여유 공간 크기를 알려 주고 보내는 쪽이 그만큼만 보내도록 하는 TCP의 조절 장치는?",
+    "answer" : "",
+    "explanation" : "받는 쪽이 아직 처리하지 못한 데이터가 쌓여 넘치지 않도록, 받는 쪽이 자기 여유 공간 크기를 숫자로 알려 주고 보내는 쪽이 그만큼만 보내는 조절이 흐름 제어다. 공간이 0이 되면 보내는 쪽은 전송을 멈춘다. (입문편의 'TCP가 신뢰성을 만드는 네 가지 장치' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "혼잡 제어",
+      "correct" : false,
+      "rationale" : "혼잡 제어는 중간 경로의 여유를 추측해 속도를 조절하는 기능으로, 상대가 숫자로 알려 주지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "흐름 제어",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "3-way 핸드셰이크",
+      "correct" : false,
+      "rationale" : "3-way 핸드셰이크는 데이터 전에 메시지 세 개를 주고받아 연결을 여는 절차이지, 전송 속도를 조절하는 장치가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "헤드 오브 라인 블로킹",
+      "correct" : false,
+      "rationale" : "헤드 오브 라인 블로킹은 앞 항목이 막혀 뒤 항목까지 기다리는 현상을 가리키는 말이지 조절 장치가 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**흐름 제어(flow control)** — 받는 쪽이 아직 처리하지 못한 데이터가 쌓여 넘치지 않도록, 받는 쪽이 자기 여유 공간 크기를 알려 주고 보내는 쪽이 그만큼만 보내는 조절이다.",
+    "title" : "받는 쪽 여유 공간에 맞춰 속도를 줄이는 장치",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "RTT(round trip time)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "RTT는 패킷 하나를 보내고 그에 대한 상대의 응답이 돌아오기까지 걸리는 시간이다. 빛의 속도와 거리가 정하는 값이라 소프트웨어로 줄일 수 없고, 전송 계층이 치르는 비용은 대부분 RTT를 몇 번 쓰느냐로 환산된다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "데이터가 한 방향으로만 흐르고 응답이 없는 통신을 가리킨다",
+      "correct" : false,
+      "rationale" : "데이터가 한 방향으로만 흐르고 되돌아오지 않는 통신을 가리키는 말이 아니며, 왕복 시간과 무관한 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "패킷 하나를 보내고 그에 대한 상대의 응답이 돌아오기까지 걸리는 시간이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "보낸 데이터를 확인 응답이 올 때까지 들고 있어야 하는 메모리 양이다",
+      "correct" : false,
+      "rationale" : "보낸 데이터를 ACK가 올 때까지 들고 있는 메모리 양에 대한 설명으로, 시간을 재는 값인 RTT와 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "받는 쪽이 알려 주는 남은 보관 공간의 크기다",
+      "correct" : false,
+      "rationale" : "받는 쪽이 알려 주는 남은 공간 크기는 흐름 제어에서 쓰는 값이지 왕복 시간이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**RTT(round trip time, 왕복 시간)** — 패킷 하나를 보내고 그에 대한 상대의 응답이 돌아오기까지 걸리는 시간이다.",
+    "title" : "RTT가 가리키는 값",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "한 대의 서버에서 웹 서버와 데이터베이스가 동시에 돌 때, 그 안의 어느 프로그램에게 데이터를 줄지 구분하는 번호의 이름은?",
+    "answer" : "",
+    "explanation" : "IP 주소는 컴퓨터까지만 가리키므로, 한 대에서 여러 프로그램이 동시에 돌 때 누구에게 줄지 가릴 번호가 하나 더 필요하다. 그 번호가 포트이며, 받은 컴퓨터는 패킷에 적힌 번호를 보고 해당 프로그램에 데이터를 넘긴다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "IP 주소",
+      "correct" : false,
+      "rationale" : "IP 주소는 컴퓨터까지만 가리킨다. 그 안의 프로그램을 가리는 역할은 다른 번호가 맡는다.",
+      "matchText" : ""
+    }, {
+      "text" : "포트",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "소켓",
+      "correct" : false,
+      "rationale" : "소켓은 프로그램이 네트워크 통신을 할 때 운영체제에서 받아 쓰는 창구이지, 프로그램을 구분하는 번호 자체가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "패킷",
+      "correct" : false,
+      "rationale" : "패킷은 주소 정보를 붙여 작게 자른 데이터 한 덩어리를 뜻하며, 프로그램을 구분하는 번호가 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**포트(port)** — 한 컴퓨터 안에서 통신하는 프로그램을 구분하는 번호다.",
+    "title" : "한 컴퓨터 안의 프로그램을 구분하는 번호",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null
+}
