@@ -52,6 +52,9 @@ try {
       <!-- 서버가 "이미 쓰는 값"이라고 돌려준 오류는 그 칸 아래에 띄운다. 맨 위에만 뜨면
            아이디와 닉네임 중 어느 쪽을 고쳐야 하는지 다시 읽어야 한다. -->
       <div class="field-error" id="usernameError" hidden></div>
+      <!-- 입력을 멈추면 쓸 수 있는지 알아서 확인해 여기 적는다(아래 wireAvailability).
+           role="status"라 스크린리더가 읽던 것을 끊지 않고 이어서 읽어 준다. -->
+      <div class="field-ok" id="usernameOk" role="status" hidden></div>
     </div>
     <div class="field">
       <label for="nickname">닉네임 (2~12자, 한글·영문·숫자·밑줄)</label>
@@ -61,6 +64,7 @@ try {
       <input type="text" id="nickname" required minlength="2" maxlength="12" autocomplete="nickname"
              pattern="[가-힣A-Za-z0-9_]{2,12}" title="2~12자의 한글·영문·숫자·밑줄(_)">
       <div class="field-error" id="nicknameError" hidden></div>
+      <div class="field-ok" id="nicknameOk" role="status" hidden></div>
       <div class="meta">다른 사람에게 보이는 이름입니다. 아이디는 보이지 않습니다.</div>
     </div>
     <div class="field">
@@ -169,6 +173,8 @@ const FIELD_OF_ERROR = { AUTH_001: "username", DISCUSSION_004: "nickname", DISCU
 function showFieldError(fieldId, text) {
   const input = document.getElementById(fieldId);
   const box = document.getElementById(fieldId + "Error");
+  // 미리 확인한 뒤 제출하는 사이에 남이 먼저 가져갈 수 있다. "쓸 수 있습니다"가 오류 옆에 남지 않게 한다.
+  document.getElementById(fieldId + "Ok").hidden = true;
   box.textContent = text;
   box.hidden = false;
   input.classList.add("invalid");
@@ -177,17 +183,58 @@ function showFieldError(fieldId, text) {
 }
 
 function clearFieldErrors() {
-  ["username", "nickname"].forEach(id => {
-    document.getElementById(id + "Error").hidden = true;
-    document.getElementById(id).classList.remove("invalid");
-  });
+  ["username", "nickname"].forEach(clearFieldMark);
 }
 
-// 고치기 시작하면 표시를 거둔다 — 이미 바꾼 값 아래에 옛 오류가 남으면 지금 값이 틀린 줄 안다.
-["username", "nickname"].forEach(id => document.getElementById(id).addEventListener("input", () => {
+/* 한 칸의 오류·확인 표시를 모두 거둔다. */
+function clearFieldMark(id) {
   document.getElementById(id + "Error").hidden = true;
+  document.getElementById(id + "Ok").hidden = true;
   document.getElementById(id).classList.remove("invalid");
-}));
+}
+
+/* [쓸 수 있는지 입력 도중에 확인한다]
+ *
+ * 전에는 "가입하기"를 눌러야 겹치는지 알 수 있었다. 아이디와 닉네임을 둘 다 고쳐야 하면
+ * 두 번 제출해야 했고, 그때마다 인증 요청 제한(분당 5회)을 하나씩 썼다.
+ *
+ * - 치는 동안에는 0.5초 멈췄을 때만, 형식이 맞을 때만 묻는다. 두 글자째에 "4자 이상"을
+ *   띄우면 아직 다 치지도 않은 사람을 나무라게 된다(비밀번호 확인 칸과 같은 판단).
+ * - 칸을 떠날 때는 형식이 틀려도 묻는다. 그때는 다 쳤다는 뜻이라 이유를 알려 준다.
+ * - 답이 오는 사이에 값이 바뀌었으면 그 답은 버린다. 늦게 온 옛 답이 지금 값 아래에 붙으면
+ *   "쓸 수 있습니다"가 거짓이 된다.
+ * - 확인이 실패해도(요청 제한, 서버 오류) 조용히 넘긴다. 제출하면 서버가 어차피 다시 본다.
+ * - 커서는 옮기지 않는다. 다음 칸을 치고 있는 사람을 끌어오면 안 된다. */
+const AVAILABLE_TEXT = { username: "쓸 수 있는 아이디입니다.", nickname: "쓸 수 있는 닉네임입니다." };
+
+function wireAvailability(id) {
+  const input = document.getElementById(id);
+  let timer = null;
+
+  async function check(evenIfMalformed) {
+    const value = input.value.trim();
+    if (!value) return;
+    if (!evenIfMalformed && !input.checkValidity()) return;
+    try {
+      const r = await api(`/api/auth/availability?${id}=${encodeURIComponent(value)}`);
+      if (input.value.trim() !== value) return;   // 그 사이에 값이 바뀌었다
+      clearFieldMark(id);
+      const box = document.getElementById(id + (r.available ? "Ok" : "Error"));
+      box.textContent = r.available ? "✓ " + AVAILABLE_TEXT[id] : r.reason;
+      box.hidden = false;
+      input.classList.toggle("invalid", !r.available);
+    } catch (e) { /* 확인은 없어도 가입은 된다 */ }
+  }
+
+  input.addEventListener("input", () => {
+    // 고치기 시작하면 표시를 거둔다 — 이미 바꾼 값 아래에 옛 결과가 남으면 지금 값의 결과인 줄 안다.
+    clearFieldMark(id);
+    clearTimeout(timer);
+    timer = setTimeout(() => check(false), 500);
+  });
+  input.addEventListener("blur", () => { clearTimeout(timer); check(true); });
+}
+["username", "nickname"].forEach(wireAvailability);
 
 document.getElementById("signupForm").addEventListener("submit", async e => {
   e.preventDefault();

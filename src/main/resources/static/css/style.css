@@ -1064,6 +1064,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus-ring)
  * 색만 쓰지 않고 테두리도 함께 바꾸는 이유는 늘 같다 — 색 구분이 어려운 사람에게
  * 빨간 글씨는 그냥 글씨다. 위치(칸 바로 아래)와 테두리가 다른 축을 하나씩 더 준다. */
 .field-error { color: var(--wrong-fg); font-size: var(--fs-1); margin-top: var(--sp-1); }
+/* 가입 화면의 "쓸 수 있습니다". 색만으로 알리지 않게 글 앞에 ✓를 붙인다(signup.html). */
+.field-ok { color: var(--correct); font-size: var(--fs-1); margin-top: var(--sp-1); }
 input.invalid { border-color: var(--wrong); }
 input.invalid:focus { outline-color: var(--wrong); }
 

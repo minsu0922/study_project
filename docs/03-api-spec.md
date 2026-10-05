@@ -8,7 +8,7 @@
 
 | 묶음 | 엔드포인트 | |
 |---|---|---|
-| **인증** | `POST /api/auth/signup` · `login` · `refresh` · `logout` | [↓](#post-apiauthsignup) |
+| **인증** | `POST /api/auth/signup` · `login` · `refresh` · `logout` · `GET /api/auth/availability` | [↓](#post-apiauthsignup) |
 | **문서** | `GET /api/documents` · `/{slug}` | [↓](#get-apidocuments) |
 | **퀴즈** | `GET /api/quiz` · `/{problemId}` · `POST /api/quiz/submit` 🔒 | [↓](#get-apiquiz) |
 | **문제 목록** | `GET /api/problems` 🔒 · `GET /api/me/study-summary` 🔒 | [↓](#get-apiproblems-) |
@@ -79,6 +79,22 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
 - `tokens`: 로그인 응답과 같은 묶음. 화면은 이 토큰으로 바로 로그인 상태가 되고 로그인 API를 다시 부르지 않는다
 
 **에러**: `VALIDATION_ERROR`(400), `AUTH_001` 아이디 중복(409), `DISCUSSION_004` 닉네임 중복(409), `DISCUSSION_010` 쓸 수 없는 닉네임(400)
+
+---
+
+## GET /api/auth/availability
+가입 전에 아이디나 닉네임을 쓸 수 있는지 묻는다. 가입 화면이 입력 도중에 부른다. 로그인 없이 쓴다.
+
+- `?username=minsu_01` 또는 `?nickname=민수` — 둘 중 하나만 보낸다. 둘 다 없거나 둘 다 있으면 400.
+
+**Response 200**
+```json
+{ "success": true, "data": { "available": false, "reason": "이미 사용 중인 아이디입니다." }, "error": null }
+```
+- 쓸 수 있으면 `available: true`이고 `reason`은 비어 있다.
+- 형식이 틀렸거나, 이미 있거나, 운영진으로 보이는 닉네임이면 `available: false`와 이유가 온다.
+  가입이 같은 값을 거절할 때와 같은 규칙, 같은 문구다.
+- GET이라 인증 경로의 요청 제한(분당 5회)이 아니라 일반 한도(분당 60회)를 쓴다.
 
 ---
 

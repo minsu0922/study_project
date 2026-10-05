@@ -6,6 +6,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.auth.dto.AvailabilityResponse;
 import project.study.study_project.auth.dto.LoginRequest;
 import project.study.study_project.auth.dto.LoginResponse;
 import project.study.study_project.auth.dto.SignupRequest;
@@ -42,6 +43,41 @@ public class AuthService {
 
     @Value("${jwt.refresh-token-validity-seconds}")
     private long refreshValiditySeconds;
+
+    /**
+     * 가입 전에 아이디를 쓸 수 있는지 답한다 — 가입 화면이 입력 도중에 묻는다.
+     *
+     * <p>가입과 <b>같은 규칙, 같은 문구</b>로 답한다. 여기서 된다고 한 값을 가입이 거절하면
+     * 화면이 거짓말을 한 셈이 된다. 그래서 형식에 안 맞는 값도 오류가 아니라 "불가 + 이유"다.
+     *
+     * <p>아이디가 있는지를 누구에게나 알려 주는 창구이긴 하다. 다만 가입 요청이 이미 같은 것을
+     * 알려 준다(AUTH_001) — 새로 새는 정보는 없고, 요청 제한(분당 60회)이 훑기를 늦춘다.
+     */
+    @Transactional(readOnly = true)
+    public AvailabilityResponse checkUsername(String raw) {
+        String username = normalize(raw);
+        if (!username.matches(SignupRequest.USERNAME_PATTERN)) {
+            return AvailabilityResponse.no(SignupRequest.USERNAME_MESSAGE);
+        }
+        return userRepository.existsByUsername(username)
+                ? AvailabilityResponse.no(ErrorCode.AUTH_001.getDefaultMessage())
+                : AvailabilityResponse.ok();
+    }
+
+    /** 닉네임을 쓸 수 있는지. 판단 순서는 가입({@link #signup})과 같다 — 형식, 운영진으로 보이는 말, 중복. */
+    @Transactional(readOnly = true)
+    public AvailabilityResponse checkNickname(String raw) {
+        String nickname = raw == null ? "" : raw.trim();
+        if (!nickname.matches(SignupRequest.NICKNAME_PATTERN)) {
+            return AvailabilityResponse.no(SignupRequest.NICKNAME_MESSAGE);
+        }
+        if (NicknameRule.isReserved(nickname)) {
+            return AvailabilityResponse.no(ErrorCode.DISCUSSION_010.getDefaultMessage());
+        }
+        return userRepository.existsByNickname(nickname)
+                ? AvailabilityResponse.no(ErrorCode.DISCUSSION_004.getDefaultMessage())
+                : AvailabilityResponse.ok();
+    }
 
     /**
      * 회원가입. 아이디가 이미 있으면 {@link ErrorCode#AUTH_001}(409).
