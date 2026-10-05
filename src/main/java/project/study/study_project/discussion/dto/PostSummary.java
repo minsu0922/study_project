@@ -2,6 +2,7 @@ package project.study.study_project.discussion.dto;
 
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
 
 import java.time.LocalDateTime;
 
@@ -14,6 +15,8 @@ import java.time.LocalDateTime;
  */
 public record PostSummary(
         Long id,
+        PostCategory category,
+        String categoryLabel,
         String title,
         String nickname,
         CommentStatus status,
@@ -25,6 +28,9 @@ public record PostSummary(
         boolean visible = post.isVisible();
         return new PostSummary(
                 post.getId(),
+                // 말머리는 가린 글에도 싣는다. 글의 내용이 아니라 종류라 흘릴 것이 없다.
+                post.getCategory(),
+                post.getCategory().getLabel(),
                 visible ? post.getTitle() : null,
                 visible ? nickname : null,
                 post.getStatus(),

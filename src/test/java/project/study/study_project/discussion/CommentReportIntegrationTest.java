@@ -12,6 +12,7 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.discussion.repository.CommentReportRepository;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
@@ -279,7 +280,7 @@ class CommentReportIntegrationTest {
                 .build());
         String token = "Bearer " + jwtTokenProvider.createToken(writer.getId(), Role.USER);
         Post seed = savePost();
-        Post own = postRepository.saveAndFlush(Post.of(seed.getDiscussionId(), writer.getId(), "내 글", "본문"));
+        Post own = postRepository.saveAndFlush(Post.of(seed.getDiscussionId(), writer.getId(), PostCategory.QUESTION, "내 글", "본문"));
         Comment ownComment = commentRepository.saveAndFlush(Comment.of(seed.getId(), writer.getId(), null, "내 댓글"));
         long before = reportRepository.count();
 
@@ -304,7 +305,7 @@ class CommentReportIntegrationTest {
                 .role(Role.USER)
                 .build());
         Post seed = savePost();
-        Post written = postRepository.saveAndFlush(Post.of(seed.getDiscussionId(), writer.getId(), "신고될 글", "본문"));
+        Post written = postRepository.saveAndFlush(Post.of(seed.getDiscussionId(), writer.getId(), PostCategory.QUESTION, "신고될 글", "본문"));
 
         mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
                         .contentType("application/json").content(postBody(written.getId(), "SPAM")))
@@ -340,7 +341,7 @@ class CommentReportIntegrationTest {
                 .andExpect(jsonPath("$.data.reportedBody").value("본문"))
                 .andExpect(jsonPath("$.data.editedAfterReport").value(false));
 
-        post.edit("질문 있어요", "502가 뭐예요?");
+        post.edit(PostCategory.QUESTION, "질문 있어요", "502가 뭐예요?");
         postRepository.flush();
 
         mockMvc.perform(get("/api/admin/comment-reports").param("status", "PENDING")
@@ -389,7 +390,7 @@ class CommentReportIntegrationTest {
                 "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
         discussionRepository.insertIfAbsent(problem.getId());
         Long discussionId = discussionRepository.findIdByProblemIdForShare(problem.getId()).orElseThrow();
-        return postRepository.saveAndFlush(Post.of(discussionId, null, "신고될 글", "본문"));
+        return postRepository.saveAndFlush(Post.of(discussionId, null, PostCategory.QUESTION, "신고될 글", "본문"));
     }
 
     private String body(Long commentId, String reason) {
@@ -412,7 +413,7 @@ class CommentReportIntegrationTest {
                 "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
         discussionRepository.insertIfAbsent(problem.getId());
         Long discussionId = discussionRepository.findIdByProblemIdForShare(problem.getId()).orElseThrow();
-        Long postId = postRepository.saveAndFlush(Post.of(discussionId, null, "신고될 댓글이 달린 글", "본문")).getId();
+        Long postId = postRepository.saveAndFlush(Post.of(discussionId, null, PostCategory.QUESTION, "신고될 댓글이 달린 글", "본문")).getId();
         return commentRepository.saveAndFlush(Comment.of(postId, null, null, "신고될 글"));
     }
 }

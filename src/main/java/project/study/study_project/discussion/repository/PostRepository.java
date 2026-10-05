@@ -7,7 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
+import project.study.study_project.global.common.DomainCode;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -25,18 +28,94 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     long countByDiscussionIdAndStatus(Long discussionId, CommentStatus status);
 
     /**
-     * 방을 가리지 않고 보이는 글을 새 글부터(V24 인덱스). 문제 id와 제목을 같이 읽는다 —
-     * 글마다 따로 읽으면 한 쪽에 조회가 40번 나간다.
+     * 커뮤니티 목록의 공통 부분 — 방을 가리지 않고 보이는 글을 고른다. 문제 id·제목·분야를 같이
+     * 읽는다. 글마다 따로 읽으면 한 쪽에 조회가 60번 나간다.
+     *
+     * <p>조건은 비어 있으면({@code null}, unanswered는 false) 걸지 않는다. 탭마다 쿼리를 따로 두지
+     * 않고 조건을 얹는 이유: "답변 기다리는 글"은 검색·분야·정렬을 그대로 쓰고, "내 활동"도
+     * 고르는 대상과 한 줄의 모양이 같다. 따로 두면 "보이는 글"의 뜻을 고칠 때 여러 군데를 고쳐야 한다.
+     *
+     * <p>검색어는 부르는 쪽이 앞뒤에 %를 붙이고
+     * 와일드카드를 '!'로 이스케이프해서 넘긴다(PostService.likePattern) — 여기서 붙이면 사용자가
+     * 친 %와 우리가 붙인 %를 가를 수 없다.
+     *
+     * <p>본문 LIKE는 인덱스를 타지 않는다. 글이 수천 건일 때까지는 그대로 두고, 느려지면
+     * 전문 검색 인덱스로 바꾼다.
      */
-    @Query("""
-            select p as post, d.problemId as problemId, pr.title as problemTitle
+    String RECENT_FROM_WHERE = """
+            select p as post, d.problemId as problemId, pr.title as problemTitle, pr.domain as domain
             from Post p
               join Discussion d on d.id = p.discussionId
               join Problem pr on pr.id = d.problemId
             where p.status = :visible
-            order by p.createdAt desc, p.id desc
+              and (:q is null or p.title like :q escape '!' or p.body like :q escape '!')
+              and (:domain is null or pr.domain = :domain)
+              and (:category is null or p.category = :category)
+              and (:unanswered = false
+                   or not exists (select 1 from Comment c where c.postId = p.id and c.status = :visible))
+              and (:authorId is null or p.userId = :authorId)
+              and (:commenterId is null
+                   or exists (select 1 from Comment c
+                              where c.postId = p.id and c.userId = :commenterId and c.status = :visible))
+            """;
+
+    /** 새 글부터(검색어·분야가 없으면 V24 인덱스를 탄다). */
+    @Query(RECENT_FROM_WHERE + "order by p.createdAt desc, p.id desc")
+    Slice<RecentPostRow> findRecent(@Param("visible") CommentStatus visible,
+                                    @Param("q") String q,
+                                    @Param("domain") DomainCode domain,
+                                    @Param("category") PostCategory category,
+                                    @Param("unanswered") boolean unanswered,
+                                    @Param("authorId") Long authorId,
+                                    @Param("commenterId") Long commenterId,
+                                    Pageable pageable);
+
+    /** 보이는 댓글이 많은 글부터. 수가 같으면 새 글이 먼저다 — 순서가 요청마다 흔들리지 않게 한다. */
+    @Query(RECENT_FROM_WHERE + """
+            order by (select count(c) from Comment c where c.postId = p.id and c.status = :visible) desc,
+                     p.createdAt desc, p.id desc
             """)
-    Slice<RecentPostRow> findRecent(@Param("visible") CommentStatus visible, Pageable pageable);
+    Slice<RecentPostRow> findMostCommented(@Param("visible") CommentStatus visible,
+                                           @Param("q") String q,
+                                           @Param("domain") DomainCode domain,
+                                           @Param("category") PostCategory category,
+                                           @Param("unanswered") boolean unanswered,
+                                           @Param("authorId") Long authorId,
+                                           @Param("commenterId") Long commenterId,
+                                           Pageable pageable);
+
+    /**
+     * 토론방 목록 — 보이는 글이 하나라도 있는 문제를, 최근 글이 달린 방부터.
+     *
+     * <p>방(discussion) 표가 아니라 글에서 출발한다. 글을 다 지운 방은 표에는 남아 있지만
+     * 들어가도 볼 것이 없다 — 그런 방을 목록에서 빼려면 "보이는 글이 있는가"로 세어야 한다.
+     */
+    @Query("""
+            select d.problemId as problemId, pr.title as problemTitle, pr.domain as domain,
+                   count(p) as postCount, max(p.createdAt) as lastPostAt
+            from Post p
+              join Discussion d on d.id = p.discussionId
+              join Problem pr on pr.id = d.problemId
+            where p.status = :visible
+              and (:domain is null or pr.domain = :domain)
+            group by d.problemId, pr.title, pr.domain
+            order by max(p.createdAt) desc, d.problemId desc
+            """)
+    Slice<RoomRow> findRooms(@Param("visible") CommentStatus visible,
+                             @Param("domain") DomainCode domain,
+                             Pageable pageable);
+
+    interface RoomRow {
+        Long getProblemId();
+
+        String getProblemTitle();
+
+        DomainCode getDomain();
+
+        long getPostCount();
+
+        LocalDateTime getLastPostAt();
+    }
 
     interface RecentPostRow {
         Post getPost();
@@ -44,6 +123,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
         Long getProblemId();
 
         String getProblemTitle();
+
+        DomainCode getDomain();
     }
 
     /** 문제별 보이는 글 수 — 문제 목록이 한 쪽(20건)의 수를 한 번에 묻는다. 글이 없는 문제는 결과에 없다. */

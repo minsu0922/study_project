@@ -307,6 +307,240 @@ class PostIntegrationTest {
                 .andExpect(jsonPath("$.data.posts[0].id").value(kept));
     }
 
+    /* ── 찾기·정렬·분야 ──────────────────────────────────── */
+
+    /** 개발 DB에 다른 글이 있어도 깨지지 않게, 이 테스트만 쓰는 낱말로 찾아 결과를 좁힌다. */
+    @Test
+    @DisplayName("검색어는 제목과 본문에서 찾는다 — 대소문자를 가리지 않고, 없으면 빈 목록")
+    void searchesTitleAndBody() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long inTitle = write(token, problem.getId(), word + " 제목에 있는 글", "본문");
+        long inBody = write(token, problem.getId(), "평범한 제목", "본문 안에 " + word + " 가 있다");
+        write(token, problem.getId(), "상관없는 글", "본문");
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.posts", hasSize(2)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(inBody))
+                .andExpect(jsonPath("$.data.posts[1].id").value(inTitle));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word.toLowerCase()))
+                .andExpect(jsonPath("$.data.posts", hasSize(2)));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word + "없는말"))
+                .andExpect(jsonPath("$.data.posts", hasSize(0)));
+    }
+
+    /** %와 _는 LIKE의 와일드카드다. 그대로 넘기면 "%"로 찾았을 때 모든 글이 나온다. */
+    @Test
+    @DisplayName("검색어의 %와 _는 글자 그대로 찾는다")
+    void searchTreatsWildcardsLiterally() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long withPercent = write(token, problem.getId(), word + " 100% 확실", "본문");
+        write(token, problem.getId(), word + " 100점 확실", "본문");
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word + " 100%"))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(withPercent));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word + " 100_"))
+                .andExpect(jsonPath("$.data.posts", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("댓글 많은 순으로 정렬할 수 있다 — 같으면 새 글이 먼저, 지운 댓글은 세지 않는다")
+    void sortsByCommentCount() throws Exception {
+        Problem problem = saveProblem();
+        User user = solver(problem);
+        String token = bearer(user);
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long quiet = write(token, problem.getId(), word + " 조용한 글", "본문");
+        long busy = write(token, problem.getId(), word + " 붐비는 글", "본문");
+        long newest = write(token, problem.getId(), word + " 가장 새 글", "본문");
+        commentRepository.save(Comment.of(busy, user.getId(), null, "하나"));
+        commentRepository.save(Comment.of(busy, user.getId(), null, "둘"));
+        commentRepository.save(Comment.of(quiet, user.getId(), null, "지운 것")).delete();
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("sort", "comments"))
+                .andExpect(jsonPath("$.data.posts[0].id").value(busy))
+                .andExpect(jsonPath("$.data.posts[1].id").value(newest))
+                .andExpect(jsonPath("$.data.posts[2].id").value(quiet));
+        // 모르는 정렬 값은 400이다. 조용히 최신순으로 답하면 화면의 선택과 결과가 어긋난 줄 모른다.
+        mockMvc.perform(get("/api/quiz/posts").param("sort", "random"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("분야로 걸러 볼 수 있고, 한 줄에 그 글이 속한 문제의 분야가 실린다")
+    void filtersByDomain() throws Exception {
+        Problem network = saveProblem();
+        Problem security = problemRepository.save(Problem.create(
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX,
+                "보안 문제", "지문", "O", "해설", null));
+        User user = solver(network);
+        solve(user, security);
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long onNetwork = write(bearer(user), network.getId(), word + " 네트워크 글", "본문");
+        long onSecurity = write(bearer(user), security.getId(), word + " 보안 글", "본문");
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("domain", "SECURITY"))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(onSecurity))
+                .andExpect(jsonPath("$.data.posts[0].domain").value("SECURITY"));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("domain", "NETWORK"))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(onNetwork));
+    }
+
+    /* ── 탭: 답변 기다리는 글 · 토론방 · 내 활동 ─────────────── */
+
+    @Test
+    @DisplayName("답변 기다리는 글만 볼 수 있다 — 보이는 댓글이 하나도 없는 글이다")
+    void unansweredOnly() throws Exception {
+        Problem problem = saveProblem();
+        User user = solver(problem);
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long answered = write(bearer(user), problem.getId(), word + " 답이 달린 글", "본문");
+        long waiting = write(bearer(user), problem.getId(), word + " 기다리는 글", "본문");
+        long onlyDeleted = write(bearer(user), problem.getId(), word + " 지운 댓글뿐인 글", "본문");
+        commentRepository.save(Comment.of(answered, user.getId(), null, "답"));
+        commentRepository.save(Comment.of(onlyDeleted, user.getId(), null, "지운 것")).delete();
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("unanswered", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.posts", hasSize(2)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(onlyDeleted))
+                .andExpect(jsonPath("$.data.posts[1].id").value(waiting));
+    }
+
+    /** 개발 DB의 다른 방이 섞여도 깨지지 않게, 이 테스트만 쓰는 분야로 좁혀 본다. */
+    @Test
+    @DisplayName("토론방 목록 — 보이는 글이 있는 문제만, 최근 글이 달린 방부터, 방마다 글 수와 함께")
+    void roomList() throws Exception {
+        Problem older = problemRepository.save(Problem.create(
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX, "먼저 글이 달린 방", "지문", "O", "해설", null));
+        Problem newer = problemRepository.save(Problem.create(
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX, "나중에 글이 달린 방", "지문", "O", "해설", null));
+        Problem emptied = problemRepository.save(Problem.create(
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX, "글을 다 지운 방", "지문", "O", "해설", null));
+        User user = solver(older);
+        solve(user, newer);
+        solve(user, emptied);
+        String token = bearer(user);
+        write(token, older.getId(), "첫째 글", "본문");
+        write(token, older.getId(), "둘째 글", "본문");
+        write(token, newer.getId(), "셋째 글", "본문");
+        long gone = write(token, emptied.getId(), "지울 글", "본문");
+        postRepository.findById(gone).orElseThrow().delete();
+
+        String ours = "$.data.rooms[?(@.problemId == %d)]";
+        mockMvc.perform(get("/api/quiz/rooms").param("domain", "SECURITY").param("size", "200"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(ours.formatted(older.getId()) + ".postCount").value(2))
+                .andExpect(jsonPath(ours.formatted(older.getId()) + ".problemTitle").value("먼저 글이 달린 방"))
+                .andExpect(jsonPath(ours.formatted(newer.getId()) + ".postCount").value(1))
+                .andExpect(jsonPath(ours.formatted(emptied.getId())).isEmpty())
+                // 최근 글이 달린 방이 맨 위다.
+                .andExpect(jsonPath("$.data.rooms[0].problemId").value(newer.getId()))
+                .andExpect(jsonPath("$.data.rooms[0].domain").value("SECURITY"));
+    }
+
+    @Test
+    @DisplayName("내 활동 — 내가 쓴 글과 내가 댓글 단 글을 따로 본다. 남의 것은 섞이지 않는다")
+    void myActivity() throws Exception {
+        Problem problem = saveProblem();
+        User me = solver(problem);
+        User other = solver(problem);
+        long mine = write(bearer(me), problem.getId(), "내가 쓴 글", "본문");
+        long theirs = write(bearer(other), problem.getId(), "남이 쓴 글", "본문");
+        long untouched = write(bearer(other), problem.getId(), "내가 안 건드린 글", "본문");
+        commentRepository.save(Comment.of(theirs, me.getId(), null, "내 댓글"));
+        commentRepository.save(Comment.of(untouched, me.getId(), null, "지운 내 댓글")).delete();
+
+        mockMvc.perform(get("/api/me/posts").param("kind", "written").header("Authorization", bearer(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(mine));
+        mockMvc.perform(get("/api/me/posts").param("kind", "commented").header("Authorization", bearer(me)))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(theirs));
+    }
+
+    @Test
+    @DisplayName("내 활동은 로그인해야 본다 — 401. 모르는 종류는 400")
+    void myActivityRequiresLogin() throws Exception {
+        mockMvc.perform(get("/api/me/posts").param("kind", "written")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/me/posts").param("kind", "liked")
+                        .header("Authorization", bearer(saveUser(Role.USER, true))))
+                .andExpect(status().isBadRequest());
+    }
+
+    /* ── 말머리 ─────────────────────────────────────────── */
+
+    @Test
+    @DisplayName("글에는 말머리가 붙는다 — 쓸 때 고르고, 목록·상세·커뮤니티에 이름과 함께 실린다")
+    void categoryIsStoredAndShown() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long id = write(token, problem.getId(), "SUMMARY", word + " 정리한 글", "본문");
+
+        mockMvc.perform(get(detailPath(id)))
+                .andExpect(jsonPath("$.data.category").value("SUMMARY"))
+                .andExpect(jsonPath("$.data.categoryLabel").value("정리"));
+        mockMvc.perform(get(listPath(problem)))
+                .andExpect(jsonPath("$.data.posts[0].category").value("SUMMARY"))
+                .andExpect(jsonPath("$.data.posts[0].categoryLabel").value("정리"));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word))
+                .andExpect(jsonPath("$.data.posts[0].category").value("SUMMARY"))
+                .andExpect(jsonPath("$.data.posts[0].categoryLabel").value("정리"));
+    }
+
+    @Test
+    @DisplayName("말머리 없이는 쓸 수 없고, 모르는 말머리도 받지 않는다 — 400")
+    void categoryIsRequired() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+
+        mockMvc.perform(post(WRITE).header("Authorization", token).contentType("application/json")
+                        .content("{\"problemId\":%d,\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(WRITE).header("Authorization", token).contentType("application/json")
+                        .content(writeBody(problem.getId(), "CHAT", "제목", "본문")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("말머리는 고칠 수 있다 — 질문으로 올렸다가 정리로 바꾼다")
+    void categoryCanBeEdited() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        long id = write(token, problem.getId(), "QUESTION", "제목", "본문");
+
+        mockMvc.perform(put(WRITE + "/" + id).header("Authorization", token).contentType("application/json")
+                        .content("{\"category\":\"SUMMARY\",\"title\":\"제목\",\"body\":\"본문\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.category").value("SUMMARY"));
+    }
+
+    @Test
+    @DisplayName("커뮤니티에서 말머리로 걸러 볼 수 있다")
+    void filtersByCategory() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        write(token, problem.getId(), "QUESTION", word + " 질문", "본문");
+        long errata = write(token, problem.getId(), "ERRATA", word + " 해설이 틀린 것 같아요", "본문");
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("category", "ERRATA"))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(errata))
+                .andExpect(jsonPath("$.data.posts[0].categoryLabel").value("오류 지적"));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word))
+                .andExpect(jsonPath("$.data.posts", hasSize(2)));
+    }
+
     /* ── 수정·삭제 ───────────────────────────────────────── */
 
     @Test
@@ -399,17 +633,27 @@ class PostIntegrationTest {
         return "/api/quiz/posts/" + postId;
     }
 
+    /** 말머리를 따지지 않는 테스트가 쓴다. 말머리는 질문으로 둔다. */
     private String writeBody(Long problemId, String title, String body) {
-        return "{\"problemId\":%d,\"title\":\"%s\",\"body\":\"%s\"}".formatted(problemId, title, body);
+        return writeBody(problemId, "QUESTION", title, body);
+    }
+
+    private String writeBody(Long problemId, String category, String title, String body) {
+        return "{\"problemId\":%d,\"category\":\"%s\",\"title\":\"%s\",\"body\":\"%s\"}"
+                .formatted(problemId, category, title, body);
     }
 
     private String editBody(String title, String body) {
-        return "{\"title\":\"%s\",\"body\":\"%s\"}".formatted(title, body);
+        return "{\"category\":\"QUESTION\",\"title\":\"%s\",\"body\":\"%s\"}".formatted(title, body);
     }
 
     private long write(String token, Long problemId, String title, String body) throws Exception {
+        return write(token, problemId, "QUESTION", title, body);
+    }
+
+    private long write(String token, Long problemId, String category, String title, String body) throws Exception {
         String response = mockMvc.perform(post(WRITE).header("Authorization", token)
-                        .contentType("application/json").content(writeBody(problemId, title, body)))
+                        .contentType("application/json").content(writeBody(problemId, category, title, body)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(response, "$.data.id")).longValue();

@@ -13,6 +13,7 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
@@ -392,7 +393,7 @@ class CommentIntegrationTest {
         return postIds.computeIfAbsent(problemId, id -> {
             discussionRepository.insertIfAbsent(id);
             Long discussionId = discussionRepository.findIdByProblemIdForShare(id).orElseThrow();
-            return postRepository.saveAndFlush(Post.of(discussionId, null, "토론할 글", "본문")).getId();
+            return postRepository.saveAndFlush(Post.of(discussionId, null, PostCategory.QUESTION, "토론할 글", "본문")).getId();
         });
     }
 

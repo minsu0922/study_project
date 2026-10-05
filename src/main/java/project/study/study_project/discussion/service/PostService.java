@@ -11,14 +11,19 @@ import project.study.study_project.discussion.domain.Discussion;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.dto.PostDetail;
 import project.study.study_project.discussion.dto.PostEditRequest;
+import project.study.study_project.discussion.dto.PostFilter;
 import project.study.study_project.discussion.dto.PostListResponse;
+import project.study.study_project.discussion.dto.PostSort;
 import project.study.study_project.discussion.dto.PostSummary;
 import project.study.study_project.discussion.dto.PostWriteRequest;
 import project.study.study_project.discussion.dto.RecentPostItem;
 import project.study.study_project.discussion.dto.RecentPostResponse;
+import project.study.study_project.discussion.dto.RoomItem;
+import project.study.study_project.discussion.dto.RoomListResponse;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -48,6 +53,9 @@ import java.util.Optional;
 public class PostService {
 
     private static final int PAGE_SIZE = 20;
+    private static final int MAX_QUERY_LENGTH = 50;
+    /** 토론방 목록의 한 쪽 상한. 화면은 20을 쓴다 — 주소로 큰 값을 넣어 통째로 긁지 못하게 막는다. */
+    private static final int MAX_ROOM_PAGE_SIZE = 200;
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
@@ -86,11 +94,21 @@ public class PostService {
         return new PostListResponse(solved, canWrite, total, posts.hasNext(), SuspensionGuard.noticeFor(viewer), items);
     }
 
-    /** 모든 토론방의 최근 글 — 커뮤니티 첫 화면이 읽는다. 지우거나 가린 글은 넣지 않는다. */
+    /**
+     * 모든 토론방의 글 — 커뮤니티 화면이 읽는다. 지우거나 가린 글은 넣지 않는다.
+     *
+     * <p>커뮤니티의 탭(전체·답변 기다리는 글)과 "내 활동"이 모두 이 메서드로 온다.
+     * 무엇을 거를지는 {@link PostFilter}가 정한다.
+     */
     @Transactional(readOnly = true)
-    public RecentPostResponse recent(int page) {
-        Slice<PostRepository.RecentPostRow> rows = postRepository.findRecent(
-                CommentStatus.VISIBLE, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
+    public RecentPostResponse recent(PostFilter filter, int page) {
+        PageRequest pageable = PageRequest.of(Math.max(page, 0), PAGE_SIZE);
+        String pattern = likePattern(filter.q());
+        Slice<PostRepository.RecentPostRow> rows = filter.sort() == PostSort.COMMENTS
+                ? postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, filter.domain(),
+                        filter.category(), filter.unanswered(), filter.authorId(), filter.commenterId(), pageable)
+                : postRepository.findRecent(CommentStatus.VISIBLE, pattern, filter.domain(),
+                        filter.category(), filter.unanswered(), filter.authorId(), filter.commenterId(), pageable);
         List<Post> posts = rows.getContent().stream().map(PostRepository.RecentPostRow::getPost).toList();
         Map<Long, String> nicknames = nicknamesOf(posts);
         Map<Long, Long> commentCounts = commentCountsOf(posts);
@@ -98,9 +116,40 @@ public class PostService {
                 .map(row -> RecentPostItem.of(row.getPost(),
                         nicknames.get(row.getPost().getUserId()),
                         commentCounts.getOrDefault(row.getPost().getId(), 0L),
-                        row.getProblemId(), row.getProblemTitle()))
+                        row.getProblemId(), row.getProblemTitle(), row.getDomain().value()))
                 .toList();
         return new RecentPostResponse(rows.hasNext(), items);
+    }
+
+    /** 토론방 목록 — 보이는 글이 있는 문제를 최근 글이 달린 방부터. */
+    @Transactional(readOnly = true)
+    public RoomListResponse rooms(DomainCode domain, int page, int size) {
+        int capped = Math.min(Math.max(size, 1), MAX_ROOM_PAGE_SIZE);
+        Slice<PostRepository.RoomRow> rows = postRepository.findRooms(
+                CommentStatus.VISIBLE, domain, PageRequest.of(Math.max(page, 0), capped));
+        List<RoomItem> items = rows.getContent().stream()
+                .map(r -> new RoomItem(r.getProblemId(), r.getProblemTitle(), r.getDomain().value(),
+                        r.getPostCount(), r.getLastPostAt()))
+                .toList();
+        return new RoomListResponse(rows.hasNext(), items);
+    }
+
+    /**
+     * 검색어를 LIKE 패턴으로 바꾼다. 비어 있으면 {@code null}(조건을 걸지 않는다).
+     *
+     * <p>사용자가 친 %와 _는 글자 그대로 찾는다. 그대로 넘기면 "%" 한 글자로 모든 글이 나오고
+     * "_"는 아무 글자 하나에 맞는다. 이스케이프 글자는 '!'다(PostRepository의 escape와 짝).
+     * 길이는 50자에서 자른다 — 그보다 긴 검색어는 찾으려는 말이 아니라 붙여 넣은 글이다.
+     */
+    private String likePattern(String q) {
+        if (q == null || q.isBlank()) {
+            return null;
+        }
+        String word = q.trim();
+        if (word.length() > MAX_QUERY_LENGTH) {
+            word = word.substring(0, MAX_QUERY_LENGTH);
+        }
+        return "%" + word.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
     }
 
     /** 지운 글은 없는 글로 답한다. 가린 글은 자리만 돌려준다 — 링크로 들어온 사람에게 이유를 보여 준다. */
@@ -134,7 +183,7 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
 
         Post saved = postRepository.save(
-                Post.of(discussionId, userId, request.title().trim(), request.body().trim()));
+                Post.of(discussionId, userId, request.category(), request.title().trim(), request.body().trim()));
         log.info("글 작성: problemId={} postId={}", problemId, saved.getId());
         return PostDetail.of(saved, problemId, user.getNickname(), userId);
     }
@@ -149,7 +198,7 @@ public class PostService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
         SuspensionGuard.requireNotSuspended(user);
-        post.edit(request.title().trim(), request.body().trim());
+        post.edit(request.category(), request.title().trim(), request.body().trim());
         return PostDetail.of(post, problemIdOf(post), user.getNickname(), userId);
     }
 

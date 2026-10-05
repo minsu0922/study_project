@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionTemplate;
 import project.study.study_project.TestDomains;
+import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.discussion.dto.PostDetail;
 import project.study.study_project.discussion.dto.PostWriteRequest;
 import project.study.study_project.discussion.repository.DiscussionRepository;
@@ -96,7 +97,7 @@ class DiscussionConcurrencyTest {
         for (Long userId : userIds) {
             results.add(pool.submit(() -> {
                 start.await();
-                return postService.write(userId, new PostWriteRequest(problemId, "동시에 쓴 첫 글", "본문"));
+                return postService.write(userId, new PostWriteRequest(problemId, PostCategory.QUESTION, "동시에 쓴 첫 글", "본문"));
             }));
         }
         start.countDown();

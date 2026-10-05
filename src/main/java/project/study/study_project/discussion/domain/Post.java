@@ -41,6 +41,10 @@ public class Post {
     @Column(name = "user_id")
     private Long userId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PostCategory category;
+
     @Column(nullable = false, length = 100)
     private String title;
 
@@ -59,19 +63,21 @@ public class Post {
     @Column(name = "edited_at")
     private LocalDateTime editedAt;
 
-    private Post(Long discussionId, Long userId, String title, String body) {
+    private Post(Long discussionId, Long userId, PostCategory category, String title, String body) {
         this.discussionId = discussionId;
         this.userId = userId;
+        this.category = category;
         this.title = title;
         this.body = body;
         this.status = CommentStatus.VISIBLE;
     }
 
-    public static Post of(Long discussionId, Long userId, String title, String body) {
-        return new Post(discussionId, userId, title, body);
+    public static Post of(Long discussionId, Long userId, PostCategory category, String title, String body) {
+        return new Post(discussionId, userId, category, title, body);
     }
 
-    public void edit(String title, String body) {
+    public void edit(PostCategory category, String title, String body) {
+        this.category = category;
         this.title = title;
         this.body = body;
         this.editedAt = LocalDateTime.now();
