@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.global.common.DomainCode;
 
 import java.util.Collection;
 import java.util.List;
@@ -25,18 +26,42 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     long countByDiscussionIdAndStatus(Long discussionId, CommentStatus status);
 
     /**
-     * 방을 가리지 않고 보이는 글을 새 글부터(V24 인덱스). 문제 id와 제목을 같이 읽는다 —
-     * 글마다 따로 읽으면 한 쪽에 조회가 40번 나간다.
+     * 커뮤니티 목록의 공통 부분 — 방을 가리지 않고 보이는 글을 고른다. 문제 id·제목·분야를 같이
+     * 읽는다. 글마다 따로 읽으면 한 쪽에 조회가 60번 나간다.
+     *
+     * <p>조건은 비어 있으면({@code null}) 걸지 않는다. 검색어는 부르는 쪽이 앞뒤에 %를 붙이고
+     * 와일드카드를 '!'로 이스케이프해서 넘긴다(PostService.likePattern) — 여기서 붙이면 사용자가
+     * 친 %와 우리가 붙인 %를 가를 수 없다.
+     *
+     * <p>본문 LIKE는 인덱스를 타지 않는다. 글이 수천 건일 때까지는 그대로 두고, 느려지면
+     * 전문 검색 인덱스로 바꾼다.
      */
-    @Query("""
-            select p as post, d.problemId as problemId, pr.title as problemTitle
+    String RECENT_FROM_WHERE = """
+            select p as post, d.problemId as problemId, pr.title as problemTitle, pr.domain as domain
             from Post p
               join Discussion d on d.id = p.discussionId
               join Problem pr on pr.id = d.problemId
             where p.status = :visible
-            order by p.createdAt desc, p.id desc
+              and (:q is null or p.title like :q escape '!' or p.body like :q escape '!')
+              and (:domain is null or pr.domain = :domain)
+            """;
+
+    /** 새 글부터(검색어·분야가 없으면 V24 인덱스를 탄다). */
+    @Query(RECENT_FROM_WHERE + "order by p.createdAt desc, p.id desc")
+    Slice<RecentPostRow> findRecent(@Param("visible") CommentStatus visible,
+                                    @Param("q") String q,
+                                    @Param("domain") DomainCode domain,
+                                    Pageable pageable);
+
+    /** 보이는 댓글이 많은 글부터. 수가 같으면 새 글이 먼저다 — 순서가 요청마다 흔들리지 않게 한다. */
+    @Query(RECENT_FROM_WHERE + """
+            order by (select count(c) from Comment c where c.postId = p.id and c.status = :visible) desc,
+                     p.createdAt desc, p.id desc
             """)
-    Slice<RecentPostRow> findRecent(@Param("visible") CommentStatus visible, Pageable pageable);
+    Slice<RecentPostRow> findMostCommented(@Param("visible") CommentStatus visible,
+                                           @Param("q") String q,
+                                           @Param("domain") DomainCode domain,
+                                           Pageable pageable);
 
     interface RecentPostRow {
         Post getPost();
@@ -44,6 +69,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
         Long getProblemId();
 
         String getProblemTitle();
+
+        DomainCode getDomain();
     }
 
     /** 문제별 보이는 글 수 — 문제 목록이 한 쪽(20건)의 수를 한 번에 묻는다. 글이 없는 문제는 결과에 없다. */

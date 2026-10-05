@@ -9,8 +9,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.discussion.dto.PostDetail;
 import project.study.study_project.discussion.dto.PostListResponse;
+import project.study.study_project.discussion.dto.PostSort;
 import project.study.study_project.discussion.dto.RecentPostResponse;
 import project.study.study_project.discussion.service.PostService;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
 
 import java.util.List;
@@ -36,10 +38,20 @@ public class PostController {
         return ApiResponse.ok(postService.counts(limited));
     }
 
-    /** 모든 토론방의 최근 글(새 글부터 20건). 커뮤니티 첫 화면이 읽는다. */
+    /**
+     * 모든 토론방의 글(한 쪽 20건). 커뮤니티 화면이 읽는다.
+     * 예: {@code GET /api/quiz/posts?q=캐시&sort=comments&domain=SYSTEM_DESIGN&page=0}
+     *
+     * @param q      제목·본문에서 찾을 말
+     * @param sort   {@code latest}(기본) 또는 {@code comments}
+     * @param domain 분야 코드. 등록되지 않은 코드면 결과가 빈다
+     */
     @GetMapping("/posts")
-    public ApiResponse<RecentPostResponse> recent(@RequestParam(defaultValue = "0") int page) {
-        return ApiResponse.ok(postService.recent(page));
+    public ApiResponse<RecentPostResponse> recent(@RequestParam(required = false) String q,
+                                                  @RequestParam(required = false) String sort,
+                                                  @RequestParam(required = false) DomainCode domain,
+                                                  @RequestParam(defaultValue = "0") int page) {
+        return ApiResponse.ok(postService.recent(q, PostSort.from(sort), domain, page));
     }
 
     /** {@code userId}는 비로그인이면 null이다. 그때 solved·canWrite는 false로 나간다. */

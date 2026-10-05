@@ -23,7 +23,32 @@ try {
   <p class="meta">문제마다 토론방이 있습니다. 여기에는 모든 토론방의 새 글이 모입니다.
     글은 문제를 푼 뒤 그 문제의 토론방에서 씁니다.</p>
 
+  <!-- 찾기·정렬·분야. 조건은 주소(?q=&sort=&domain=)에 남긴다 — 글을 읽고 뒤로 돌아왔을 때
+       찾던 목록이 그대로 있어야 하고, 찾은 목록을 남에게 보낼 수도 있어야 한다. -->
+  <form class="filters community-filters" id="filterForm" role="search">
+    <div class="field">
+      <label for="q">제목·본문에서 찾기</label>
+      <!-- type="text"다. search로 두면 공용 입력 칸 스타일이 안 걸려 브라우저 기본 모양의 작은 칸이 된다.
+           검색이라는 뜻은 폼의 role="search"와 enterkeyhint가 전한다. -->
+      <input type="text" id="q" maxlength="50" placeholder="예: 캐시, 502" enterkeyhint="search">
+    </div>
+    <div class="field">
+      <label for="domainFilter">분야</label>
+      <select id="domainFilter"></select>
+    </div>
+    <div class="field">
+      <label for="sortSelect">정렬</label>
+      <select id="sortSelect">
+        <option value="latest">최신순</option>
+        <option value="comments">댓글 많은 순</option>
+      </select>
+    </div>
+    <button type="submit">찾기</button>
+  </form>
+
   <div id="message" role="alert"></div>
+  <!-- 무엇으로 걸러 본 목록인지 한 줄. 결과가 0건일 때 "글이 없다"와 "조건에 맞는 글이 없다"를 가른다. -->
+  <p class="meta" id="resultInfo" hidden></p>
   <div id="list"></div>
 
   <div class="pager" id="pager" hidden>
@@ -36,10 +61,36 @@ try {
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script>
-/* 커뮤니티 — 모든 토론방의 최근 글. GET /api/quiz/posts (공개, 새 글부터 20건). */
+/* 커뮤니티 — 모든 토론방의 글. GET /api/quiz/posts?q=&sort=&domain=&page= (공개, 한 쪽 20건). */
 renderShell({ active: "community", title: "커뮤니티" });
 
-let page = 0;
+const qInput = document.getElementById("q");
+const domainFilter = document.getElementById("domainFilter");
+const sortSelect = document.getElementById("sortSelect");
+
+/* 지금 조건. 주소에서 읽어 시작하고, 바뀔 때마다 주소에 다시 적는다. */
+const state = { q: "", domain: "", sort: "latest", page: 0 };
+
+function readStateFromUrl() {
+  const p = new URLSearchParams(location.search);
+  state.q = (p.get("q") || "").trim();
+  state.domain = p.get("domain") || "";
+  state.sort = p.get("sort") === "comments" ? "comments" : "latest";
+  state.page = Math.max(Number(p.get("page")) || 0, 0);
+  qInput.value = state.q;
+  domainFilter.value = state.domain;
+  sortSelect.value = state.sort;
+}
+
+/* 기본값은 주소에 적지 않는다 — 아무것도 안 고른 주소가 /community.html 그대로여야 한다. */
+function stateToParams() {
+  const p = new URLSearchParams();
+  if (state.q) p.set("q", state.q);
+  if (state.domain) p.set("domain", state.domain);
+  if (state.sort !== "latest") p.set("sort", state.sort);
+  if (state.page > 0) p.set("page", state.page);
+  return p;
+}
 
 /* 한 줄에 링크가 둘이다: 글 제목은 글로, 문제 이름은 그 문제의 토론방으로 간다.
  * 그래서 줄 전체를 링크로 감싸지 않는다 — 링크 안에 링크를 넣을 수 없다. */
@@ -48,36 +99,74 @@ function row(p) {
     <a class="post-row-title" href="/post.html?id=${p.id}">${escapeHtml(p.title)}${
       p.commentCount ? ` <span class="post-row-count">💬 ${p.commentCount}</span>` : ""}</a>
     <span class="meta">
+      <span class="post-row-domain">${escapeHtml(domainLabel(p.domain))}</span>
       <a class="post-row-room" href="/discussion.html?problemId=${p.problemId}">${escapeHtml(p.problemTitle)}</a>
       · ${escapeHtml(p.nickname || "탈퇴한 사용자")} · ${formatDate(p.createdAt)}
     </span>
   </div>`;
 }
 
+function filtered() { return !!(state.q || state.domain); }
+
 async function load() {
-  const data = await api("/api/quiz/posts?page=" + page);
+  const data = await api("/api/quiz/posts?" + new URLSearchParams({
+    q: state.q, domain: state.domain, sort: state.sort, page: state.page }));
+
+  const info = document.getElementById("resultInfo");
+  info.hidden = !filtered();
+  if (filtered()) {
+    const parts = [];
+    if (state.q) parts.push(`"${state.q}"`);
+    if (state.domain) parts.push(domainLabel(state.domain));
+    info.innerHTML = `${escapeHtml(parts.join(" · "))} 조건으로 걸러 본 목록입니다. <a href="/community.html">전체 보기</a>`;
+  }
+
   const list = document.getElementById("list");
-  list.innerHTML = data.posts.length
-    ? data.posts.map(row).join("")
-    : `<div class="card meta">${page === 0
-        ? `아직 글이 없습니다. <a href="/problems.html">문제</a>를 풀고 첫 글을 남겨 보세요.`
-        : "이 쪽에는 글이 없습니다."}</div>`;
+  if (data.posts.length) {
+    list.innerHTML = data.posts.map(row).join("");
+  } else if (state.page > 0) {
+    list.innerHTML = `<div class="card meta">이 쪽에는 글이 없습니다.</div>`;
+  } else if (filtered()) {
+    list.innerHTML = `<div class="card meta">조건에 맞는 글이 없습니다. 검색어를 줄이거나 분야를 바꿔 보세요.</div>`;
+  } else {
+    list.innerHTML = `<div class="card meta">아직 글이 없습니다. <a href="/problems.html">문제</a>를 풀고 첫 글을 남겨 보세요.</div>`;
+  }
 
   const pager = document.getElementById("pager");
-  pager.hidden = page === 0 && !data.hasNext;
-  document.getElementById("pageInfo").textContent = `${page + 1}쪽`;
-  document.getElementById("prevBtn").disabled = page === 0;
+  pager.hidden = state.page === 0 && !data.hasNext;
+  document.getElementById("pageInfo").textContent = `${state.page + 1}쪽`;
+  document.getElementById("prevBtn").disabled = state.page === 0;
   document.getElementById("nextBtn").disabled = !data.hasNext;
 }
 
 function show() {
+  document.getElementById("message").innerHTML = "";
   load().catch(e => {
     document.getElementById("message").innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
   });
 }
 
-document.getElementById("prevBtn").addEventListener("click", () => { page -= 1; show(); });
-document.getElementById("nextBtn").addEventListener("click", () => { page += 1; show(); });
+/* 조건을 바꾸면 주소에 한 칸 쌓고 다시 읽는다. 뒤로 가기가 조건을 하나씩 되돌린다. */
+function apply(changes) {
+  Object.assign(state, changes);
+  const query = stateToParams().toString();
+  history.pushState(null, "", query ? "?" + query : location.pathname);
+  show();
+}
+
+document.getElementById("filterForm").addEventListener("submit", e => {
+  e.preventDefault();
+  apply({ q: qInput.value.trim(), page: 0 });
+});
+// 고르는 것은 누르는 즉시 적용한다. 고르고 나서 "찾기"를 또 누르게 하면 한 번이 헛걸음이다.
+domainFilter.addEventListener("change", () => apply({ domain: domainFilter.value, q: qInput.value.trim(), page: 0 }));
+sortSelect.addEventListener("change", () => apply({ sort: sortSelect.value, q: qInput.value.trim(), page: 0 }));
+document.getElementById("prevBtn").addEventListener("click", () => apply({ page: state.page - 1 }));
+document.getElementById("nextBtn").addEventListener("click", () => apply({ page: state.page + 1 }));
+window.addEventListener("popstate", () => { readStateFromUrl(); show(); });
+
+fillSelect(domainFilter, DOMAINS, "전체 분야");
+readStateFromUrl();
 show();
 </script>
 </body>

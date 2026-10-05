@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
  *
  * @param nickname     글쓴이 표시 이름. 탈퇴했으면 {@code null}
  * @param problemTitle 문제 제목. 문제 목록에 이미 보이는 값이라 정답을 흘리지 않는다
+ * @param domain       그 문제의 분야 코드. 화면이 분야 이름으로 바꿔 보여 주고 걸러 보는 데 쓴다
  */
 public record RecentPostItem(
         Long id,
@@ -17,12 +18,13 @@ public record RecentPostItem(
         long commentCount,
         LocalDateTime createdAt,
         Long problemId,
-        String problemTitle
+        String problemTitle,
+        String domain
 ) {
 
     public static RecentPostItem of(Post post, String nickname, long commentCount,
-                                    Long problemId, String problemTitle) {
+                                    Long problemId, String problemTitle, String domain) {
         return new RecentPostItem(post.getId(), post.getTitle(), nickname, commentCount,
-                post.getCreatedAt(), problemId, problemTitle);
+                post.getCreatedAt(), problemId, problemTitle, domain);
     }
 }

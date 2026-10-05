@@ -307,6 +307,92 @@ class PostIntegrationTest {
                 .andExpect(jsonPath("$.data.posts[0].id").value(kept));
     }
 
+    /* ── 찾기·정렬·분야 ──────────────────────────────────── */
+
+    /** 개발 DB에 다른 글이 있어도 깨지지 않게, 이 테스트만 쓰는 낱말로 찾아 결과를 좁힌다. */
+    @Test
+    @DisplayName("검색어는 제목과 본문에서 찾는다 — 대소문자를 가리지 않고, 없으면 빈 목록")
+    void searchesTitleAndBody() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long inTitle = write(token, problem.getId(), word + " 제목에 있는 글", "본문");
+        long inBody = write(token, problem.getId(), "평범한 제목", "본문 안에 " + word + " 가 있다");
+        write(token, problem.getId(), "상관없는 글", "본문");
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.posts", hasSize(2)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(inBody))
+                .andExpect(jsonPath("$.data.posts[1].id").value(inTitle));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word.toLowerCase()))
+                .andExpect(jsonPath("$.data.posts", hasSize(2)));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word + "없는말"))
+                .andExpect(jsonPath("$.data.posts", hasSize(0)));
+    }
+
+    /** %와 _는 LIKE의 와일드카드다. 그대로 넘기면 "%"로 찾았을 때 모든 글이 나온다. */
+    @Test
+    @DisplayName("검색어의 %와 _는 글자 그대로 찾는다")
+    void searchTreatsWildcardsLiterally() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long withPercent = write(token, problem.getId(), word + " 100% 확실", "본문");
+        write(token, problem.getId(), word + " 100점 확실", "본문");
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word + " 100%"))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(withPercent));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word + " 100_"))
+                .andExpect(jsonPath("$.data.posts", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("댓글 많은 순으로 정렬할 수 있다 — 같으면 새 글이 먼저, 지운 댓글은 세지 않는다")
+    void sortsByCommentCount() throws Exception {
+        Problem problem = saveProblem();
+        User user = solver(problem);
+        String token = bearer(user);
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long quiet = write(token, problem.getId(), word + " 조용한 글", "본문");
+        long busy = write(token, problem.getId(), word + " 붐비는 글", "본문");
+        long newest = write(token, problem.getId(), word + " 가장 새 글", "본문");
+        commentRepository.save(Comment.of(busy, user.getId(), null, "하나"));
+        commentRepository.save(Comment.of(busy, user.getId(), null, "둘"));
+        commentRepository.save(Comment.of(quiet, user.getId(), null, "지운 것")).delete();
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("sort", "comments"))
+                .andExpect(jsonPath("$.data.posts[0].id").value(busy))
+                .andExpect(jsonPath("$.data.posts[1].id").value(newest))
+                .andExpect(jsonPath("$.data.posts[2].id").value(quiet));
+        // 모르는 정렬 값은 400이다. 조용히 최신순으로 답하면 화면의 선택과 결과가 어긋난 줄 모른다.
+        mockMvc.perform(get("/api/quiz/posts").param("sort", "random"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("분야로 걸러 볼 수 있고, 한 줄에 그 글이 속한 문제의 분야가 실린다")
+    void filtersByDomain() throws Exception {
+        Problem network = saveProblem();
+        Problem security = problemRepository.save(Problem.create(
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX,
+                "보안 문제", "지문", "O", "해설", null));
+        User user = solver(network);
+        solve(user, security);
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long onNetwork = write(bearer(user), network.getId(), word + " 네트워크 글", "본문");
+        long onSecurity = write(bearer(user), security.getId(), word + " 보안 글", "본문");
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("domain", "SECURITY"))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(onSecurity))
+                .andExpect(jsonPath("$.data.posts[0].domain").value("SECURITY"));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("domain", "NETWORK"))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(onNetwork));
+    }
+
     /* ── 수정·삭제 ───────────────────────────────────────── */
 
     @Test

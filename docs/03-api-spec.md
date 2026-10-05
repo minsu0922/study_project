@@ -514,7 +514,7 @@ refresh 토큰을 폐기한다.
 
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
-| GET | `/api/quiz/posts?page=` | ✕ | 모든 토론방의 최근 글(새 글부터 20건, 문제 id·제목 포함). 커뮤니티 첫 화면 |
+| GET | `/api/quiz/posts?q=&sort=&domain=&page=` | ✕ | 모든 토론방의 글(한 쪽 20건, 문제 id·제목·분야 포함). 커뮤니티 화면. `q`는 제목·본문 검색(50자까지, `%`·`_`는 글자 그대로), `sort`는 `latest`(기본)·`comments`, `domain`은 분야 코드 |
 | GET | `/api/quiz/{problemId}/posts?page=` | ✕ | 그 문제 토론방의 글 목록(새 글부터 20건). 방이 없으면 빈 목록 |
 | GET | `/api/quiz/posts/{postId}` | ✕ | 글 한 건 |
 | GET | `/api/quiz/posts/{postId}/comments?page=` | ✕ | 그 글의 댓글(오래된 것부터 20건, 답글 포함) |

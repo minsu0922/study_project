@@ -2331,6 +2331,14 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 @media (hover: hover) { a.post-row:hover .post-row-title { color: var(--primary); } }
 .post-row-title { font-weight: 600; overflow-wrap: anywhere; color: var(--text); text-decoration: none; }
 @media (hover: hover) { a.post-row-title:hover { color: var(--primary); } }
+/* 커뮤니티의 찾기 줄. 검색 칸이 주인공이라 다른 두 칸보다 넓게 잡는다. */
+.community-filters .field:first-child { flex: 2 1 220px; }
+/* 글이 속한 문제의 분야. 개념 문서 목록의 분야 표시(.doc-line .dm)와 같은 모양이다. */
+.post-row-domain {
+  display: inline-block; margin-right: 6px;
+  font-size: .74rem; color: var(--primary-dark);
+  background: var(--primary-soft); padding: 1px 8px; border-radius: 999px;
+}
 /* 커뮤니티 목록에서 글이 속한 문제. 누르면 그 문제의 토론방으로 간다. */
 .post-row-room { color: var(--text-2); }
 .post-row-count { font-weight: 400; font-size: .8rem; color: var(--muted); white-space: nowrap; }

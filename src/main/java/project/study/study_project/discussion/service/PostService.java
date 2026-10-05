@@ -12,6 +12,7 @@ import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.dto.PostDetail;
 import project.study.study_project.discussion.dto.PostEditRequest;
 import project.study.study_project.discussion.dto.PostListResponse;
+import project.study.study_project.discussion.dto.PostSort;
 import project.study.study_project.discussion.dto.PostSummary;
 import project.study.study_project.discussion.dto.PostWriteRequest;
 import project.study.study_project.discussion.dto.RecentPostItem;
@@ -19,6 +20,7 @@ import project.study.study_project.discussion.dto.RecentPostResponse;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -48,6 +50,7 @@ import java.util.Optional;
 public class PostService {
 
     private static final int PAGE_SIZE = 20;
+    private static final int MAX_QUERY_LENGTH = 50;
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
@@ -86,11 +89,19 @@ public class PostService {
         return new PostListResponse(solved, canWrite, total, posts.hasNext(), SuspensionGuard.noticeFor(viewer), items);
     }
 
-    /** 모든 토론방의 최근 글 — 커뮤니티 첫 화면이 읽는다. 지우거나 가린 글은 넣지 않는다. */
+    /**
+     * 모든 토론방의 글 — 커뮤니티 화면이 읽는다. 지우거나 가린 글은 넣지 않는다.
+     *
+     * @param q      제목·본문에서 찾을 말. 비어 있으면 안 거른다
+     * @param domain 그 글이 속한 문제의 분야. {@code null}이면 전체
+     */
     @Transactional(readOnly = true)
-    public RecentPostResponse recent(int page) {
-        Slice<PostRepository.RecentPostRow> rows = postRepository.findRecent(
-                CommentStatus.VISIBLE, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
+    public RecentPostResponse recent(String q, PostSort sort, DomainCode domain, int page) {
+        PageRequest pageable = PageRequest.of(Math.max(page, 0), PAGE_SIZE);
+        String pattern = likePattern(q);
+        Slice<PostRepository.RecentPostRow> rows = sort == PostSort.COMMENTS
+                ? postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, domain, pageable)
+                : postRepository.findRecent(CommentStatus.VISIBLE, pattern, domain, pageable);
         List<Post> posts = rows.getContent().stream().map(PostRepository.RecentPostRow::getPost).toList();
         Map<Long, String> nicknames = nicknamesOf(posts);
         Map<Long, Long> commentCounts = commentCountsOf(posts);
@@ -98,9 +109,27 @@ public class PostService {
                 .map(row -> RecentPostItem.of(row.getPost(),
                         nicknames.get(row.getPost().getUserId()),
                         commentCounts.getOrDefault(row.getPost().getId(), 0L),
-                        row.getProblemId(), row.getProblemTitle()))
+                        row.getProblemId(), row.getProblemTitle(), row.getDomain().value()))
                 .toList();
         return new RecentPostResponse(rows.hasNext(), items);
+    }
+
+    /**
+     * 검색어를 LIKE 패턴으로 바꾼다. 비어 있으면 {@code null}(조건을 걸지 않는다).
+     *
+     * <p>사용자가 친 %와 _는 글자 그대로 찾는다. 그대로 넘기면 "%" 한 글자로 모든 글이 나오고
+     * "_"는 아무 글자 하나에 맞는다. 이스케이프 글자는 '!'다(PostRepository의 escape와 짝).
+     * 길이는 50자에서 자른다 — 그보다 긴 검색어는 찾으려는 말이 아니라 붙여 넣은 글이다.
+     */
+    private String likePattern(String q) {
+        if (q == null || q.isBlank()) {
+            return null;
+        }
+        String word = q.trim();
+        if (word.length() > MAX_QUERY_LENGTH) {
+            word = word.substring(0, MAX_QUERY_LENGTH);
+        }
+        return "%" + word.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
     }
 
     /** 지운 글은 없는 글로 답한다. 가린 글은 자리만 돌려준다 — 링크로 들어온 사람에게 이유를 보여 준다. */
