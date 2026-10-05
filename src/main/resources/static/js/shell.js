@@ -143,7 +143,13 @@ const MENUS = [
 ];
 
 /**
- * 화면을 감싸는 껍데기를 그린다 — 넓으면 왼쪽 기둥, 좁으면 위 얇은 바 + 아래 탭바.
+ * 화면을 감싸는 껍데기를 그린다 — 넓으면 위 헤더, 좁으면 위 얇은 바 + 아래 탭바.
+ *
+ * <p><b>[기둥에서 헤더로 — 2026-10-05]</b> 넓은 화면의 메뉴는 왼쪽 기둥이었다. 기둥은 메뉴가
+ * 많은 도구에 맞는 틀인데 이 앱의 메뉴는 로그인해도 여덟, 비로그인은 셋이라, 화면 높이
+ * 전체를 쓰는 기둥이 대부분 비어 있었다(사용자가 "제일 비어 보인다"고 짚은 곳). 메뉴를 위
+ * 한 줄로 올리고 기둥이 쓰던 208px을 본문에 돌려줬다. 관리 콘솔은 기둥을 그대로 쓴다 —
+ * 그쪽은 항목이 묶음째로 열 개가 넘는다(admin-shell.js).
  *
  * <p><b>[왜 HTML마다 안 적고 JS가 그리나]</b> 이 프로젝트는 빌드 도구도, head를 공유하는
  * 틀도 없다. 사이드바 마크업을 HTML 열몇 개에 복붙하면 화면이 하나 늘 때마다
@@ -198,11 +204,6 @@ function renderShell({ active = "", title = "" } = {}) {
    * 맨 아래에서 맨 위로 옮긴 것과 같은 이유다 — MENUS의 admin 항목 주석). */
   const anon = !isLoggedIn();
 
-  /* 비로그인 기둥은 <좁다> — 담기는 것이 브랜드·계정·메뉴 둘뿐이다(오늘·개념 문서).
-   * 208px은 여섯 항목과 아이디 한 줄을 담으려고 잰 폭이라, 그 절반도 안 쓰는 상태에서는
-   * 본문에서 빼앗은 자리가 된다. 소개 화면은 읽으라고 있는 화면이라 그 40px이 아깝다.
-   * 클래스를 body에 거는 이유: 폭을 정하는 것이 grid라 그 값을 아는 곳도 body여야 한다. */
-  document.body.classList.toggle("shell-anon", anon);
 
   el.innerHTML = `
     <!-- 반복 영역 건너뛰기 — 평소에는 화면 밖에 있다가 탭으로 초점을 받으면 나타난다.
@@ -238,22 +239,22 @@ function renderShell({ active = "", title = "" } = {}) {
       ${authAreaHtml()}
     </header>
 
-    <nav class="shell-side" aria-label="주 메뉴">
-      <a class="brand" href="/">csquiz</a>
-      ${anon ? `<div class="shell-side-auth top">${authAreaHtml()}</div><div class="shell-rule"></div>` : ""}
-      ${console_.length ? `${sideLinks(console_, active)}<div class="shell-rule"></div>` : ""}
-      ${sideLinks(study, active)}
-      ${personal.length ? `<div class="shell-rule"></div>${sideLinks(personal, active)}` : ""}
-      <span class="spacer"></span>
-      ${anon ? "" : `<div class="shell-rule"></div>
-      <div class="shell-side-auth">
-        ${authAreaHtml()}
-        <!-- 로그아웃이 화면에 <보이는> 유일한 자리다(2026-09-08, authAreaHtml 주석).
-             data-action이라 wireLogout이 알아서 배선한다 — 마이페이지의 같은 버튼과
-             한 함수를 쓰므로 서버 토큰 폐기가 빠질 자리가 없다. -->
-        <a class="shell-logout" href="#" data-action="logout">로그아웃</a>
-      </div>`}
-    </nav>
+    <!-- 넓은 화면의 헤더. 폰에서는 숨고 위의 얇은 바와 아래 탭바가 대신한다(style.css).
+         왼쪽부터 브랜드 / 학습 메뉴 / (관리자면 콘솔 문) / 계정. 개인 메뉴 셋(내 기록·
+         마이페이지·설정)은 계정 이름을 눌러 펴는 목록 안에 둔다 — 한 줄에 여덟을 늘어놓으면
+         학습 메뉴 다섯이 그 사이에 묻힌다. -->
+    <header class="shell-head">
+      <div class="shell-head-inner">
+        <a class="brand" href="/">csquiz</a>
+        <nav class="shell-nav" aria-label="주 메뉴">${headLinks(study, active)}</nav>
+        <span class="spacer"></span>
+        ${console_.length ? `<a class="shell-door" href="/admin/index.html">🛠 관리 콘솔<span id="adminBadge"></span></a>` : ""}
+        ${anon ? `<div class="shell-head-auth">${authAreaHtml()}</div>` : accountMenuHtml(personal, active)}
+      </div>
+    </header>
+
+    <!-- 푸터 — 모든 화면의 맨 아래(폰에서는 탭바 바로 위). 내용은 footerHtml 주석 참고. -->
+    ${footerHtml()}
 
     <nav class="shell-tabs" aria-label="주 메뉴">
       ${tabs.map(m => `
@@ -280,28 +281,124 @@ function renderShell({ active = "", title = "" } = {}) {
 
   loadReviewBadge();
   loadAdminBadge();
+  loadFooterStats();
+  loadNickname();
+  wireAccountMenu();
   wireLogout();
 }
 
 /**
- * 사이드바 링크 한 묶음.
- *
- * <p>아이콘은 {@code tab}(탭바용 그림)을 그대로 재사용하고, 탭에 안 오르는 항목만
- * {@code icon}을 따로 갖는다. 같은 메뉴가 두 자리에서 다른 그림으로 뜨면
- * "이게 그거였나"를 매번 다시 잇게 된다.
+ * 헤더의 학습 메뉴 한 줄. 아이콘 없이 글자만 둔다 — 가로 한 줄에서는 그림이 글자 사이를
+ * 벌려 놓기만 한다. 그림은 폰 탭바에서 쓴다(글자가 10px이라 그림이 표적 노릇을 한다).
  */
-function sideLinks(items, active) {
+function headLinks(items, active) {
   return items.map(m =>
-    `<a class="shell-link${m.key === active ? " active" : ""}" href="${m.href}"
-        ${m.key === active ? 'aria-current="page"' : ""}>
-       <span class="ic" aria-hidden="true">${m.tab || m.icon || ""}</span>
-       <span>${escapeHtml(menuLabel(m))}</span>
-       ${m.badge ? `<span id="${m.badge}"></span>` : ""}
-     </a>`).join("");
+    `<a class="shell-nav-link${m.key === active ? " active" : ""}" href="${m.href}"
+        ${m.key === active ? 'aria-current="page"' : ""}>${escapeHtml(menuLabel(m))}${
+        m.badge ? `<span id="${m.badge}"></span>` : ""}</a>`).join("");
 }
 
 /**
- * 계정 영역 — 셸의 상단 바와 기둥 아래에 같은 것이 들어간다.
+ * 푸터 — 이 사이트가 무엇인지 한 줄, 바로가기, 만든 곳.
+ *
+ * <p>화면이 끝났다는 표시이기도 하다. 본문이 짧은 화면은 내용 아래가 그냥 비어 있어서
+ * "덜 만든 화면"처럼 보였다. 숫자 한 줄(문제·분야·문서 수)은 {@link loadFooterStats}가 채운다.
+ *
+ * <p>바로가기는 메뉴를 되풀이하지 않고 <b>비로그인도 갈 수 있는 곳</b>만 둔다. 문제 목록과
+ * 복습은 로그인해야 열리는데, 화면 맨 아래에서 눌렀다가 로그인으로 튕기면 길을 잃는다.
+ */
+function footerHtml() {
+  return `<footer class="shell-foot">
+    <div class="shell-foot-inner">
+      <div class="shell-foot-about">
+        <div class="brand">csquiz</div>
+        <div>CS 면접 문제를 매일 조금씩 풀고, 틀린 문제는 잊을 때쯤 다시 만나는 학습 사이트입니다.</div>
+        <div id="footStats"></div>
+      </div>
+      <nav class="shell-foot-links" aria-label="바로가기">
+        <span class="shell-foot-label">바로가기</span>
+        <a href="/">${isLoggedIn() ? "오늘" : "소개"}</a>
+        <a href="/documents.html">개념 문서</a>
+        <a href="/community.html">커뮤니티</a>
+      </nav>
+      <div class="shell-foot-links">
+        <span class="shell-foot-label">만든 곳</span>
+        <a href="https://github.com/minsu0922/study_project" target="_blank" rel="noopener">GitHub 저장소 ↗</a>
+        <span>백엔드 CS 개념을 하나씩 실증하며 만든 학습용 프로젝트</span>
+      </div>
+    </div>
+  </footer>`;
+}
+
+/**
+ * 푸터의 숫자 한 줄. 한 번 읽으면 이 탭이 열려 있는 동안 다시 묻지 않는다 —
+ * 모든 화면이 푸터를 그리므로 그냥 두면 화면을 옮길 때마다 요청이 하나씩 는다.
+ * 못 읽으면 줄을 비운다. 없어도 되는 정보다.
+ */
+async function loadFooterStats() {
+  const el = document.getElementById("footStats");
+  if (!el) return;
+  const KEY = "csquiz_foot_stats";
+  try {
+    let s = JSON.parse(sessionStorage.getItem(KEY) || "null");
+    if (!s) {
+      s = await api("/api/stats");
+      sessionStorage.setItem(KEY, JSON.stringify(s));
+    }
+    el.textContent = `문제 ${s.problemCount}개 · 분야 ${s.domainCount}개 · 개념 문서 ${s.documentCount}편`;
+  } catch (e) { /* 숫자는 없어도 된다 */ }
+}
+
+/** 닉네임을 이 브라우저에 적어 두는 키. 로그아웃하면 지운다(api.js clearLogin). */
+const NICKNAME_KEY = "csquiz_nickname";
+
+/**
+ * 헤더 오른쪽의 계정 메뉴 — 이름을 누르면 내 기록·마이페이지·설정·로그아웃이 펴진다.
+ *
+ * <p><b>이름은 닉네임이다.</b> 다른 사람에게 보이는 이름이 닉네임인데 본인 화면에는 로그인
+ * 아이디만 보였다. 닉네임은 로그인 응답에 없어서 한 번 물어 와 적어 둔다({@link loadNickname}).
+ * 아직 모르면 아이디를 먼저 보여 주고, 답이 오면 바꾼다.
+ *
+ * <p><b>details를 쓴다.</b> 여닫기가 브라우저 기본 동작이라 키보드(Enter·Space)와 스크린리더가
+ * 그대로 동작한다. 바깥을 누르면 닫히는 것만 따로 붙인다({@link wireAccountMenu}).
+ */
+function accountMenuHtml(personal, active) {
+  const name = escapeHtml(localStorage.getItem(NICKNAME_KEY) || localStorage.getItem(USERNAME_KEY) || "");
+  return `<details class="shell-account">
+    <summary><span id="accountName">${name}</span><span class="caret" aria-hidden="true">▾</span></summary>
+    <div class="shell-account-menu">
+      ${personal.map(m => `<a href="${m.href}"${m.key === active ? ' aria-current="page" class="active"' : ""}>${
+        escapeHtml(menuLabel(m))}</a>`).join("")}
+      <a href="#" data-action="logout">로그아웃</a>
+    </div>
+  </details>`;
+}
+
+/** 계정 메뉴 바깥을 누르거나 Esc를 누르면 닫는다. details만으로는 열린 채 남는다. */
+function wireAccountMenu() {
+  const menu = document.querySelector(".shell-account");
+  if (!menu) return;
+  document.addEventListener("click", e => { if (!menu.contains(e.target)) menu.open = false; });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") menu.open = false; });
+}
+
+/**
+ * 닉네임을 한 번 물어 와 헤더에 적고 이 브라우저에 적어 둔다. 실패하면 아이디가 그대로 남는다.
+ * 닉네임이 없는 옛 계정도 아이디가 남는다.
+ */
+async function loadNickname() {
+  if (!isLoggedIn() || localStorage.getItem(NICKNAME_KEY)) return;
+  try {
+    const { nickname } = await api("/api/me/nickname");
+    if (!nickname) return;
+    localStorage.setItem(NICKNAME_KEY, nickname);
+    const el = document.getElementById("accountName");
+    if (el) el.textContent = nickname;
+  } catch (e) { /* 이름은 없어도 메뉴는 쓸 수 있다 */ }
+}
+
+/**
+ * 계정 영역 — 폰 상단 바와, 비로그인일 때의 헤더 오른쪽에 같은 것이 들어간다.
  *
  * <h2>로그아웃이 여기 없다 (2026-09-07)</h2>
  *
@@ -337,7 +434,7 @@ function sideLinks(items, active) {
 function authAreaHtml() {
   const name = escapeHtml(localStorage.getItem(USERNAME_KEY) || "");
   if (isLoggedIn()) {
-    // title을 함께 준다 — 기둥이 208px이라 긴 아이디는 잘린다.
+    // 폰 상단 바에만 쓰인다(넓은 화면은 accountMenuHtml). 자리가 좁아 긴 아이디는 잘리므로 title을 준다.
     return `<a class="user-email" href="/mypage.html" title="${name} — 마이페이지">${name}</a>`;
   }
   /* 지금 있는 화면으로 가는 링크는 빼고 그린다 — 2026-09-08.
