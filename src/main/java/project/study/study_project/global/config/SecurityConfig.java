@@ -72,6 +72,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/signup", "/api/auth/login",
                                 "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        // 공개: 가입 화면이 아이디·닉네임을 쓸 수 있는지 묻는다. 아직 계정이 없는 사람이
+                        // 부르는 주소라 인증을 요구할 수 없다.
+                        .requestMatchers(HttpMethod.GET, "/api/auth/availability").permitAll()
                         // 공개: 문서/퀴즈 읽기
                         // /api/quiz/** 로 넓힌 것은 2026-08-29 — 문제 목록에서 한 건을 골라
                         // 들어오는 GET /api/quiz/{id}가 생겼다(docs/18). 이 클래스가 세운 원칙

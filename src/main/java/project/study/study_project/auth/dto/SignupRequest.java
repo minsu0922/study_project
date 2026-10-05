@@ -25,10 +25,7 @@ import jakarta.validation.constraints.Pattern;
 public record SignupRequest(
 
         @NotBlank(message = "아이디는 필수입니다.")
-        @Pattern(
-                regexp = "^[A-Za-z0-9_]{4,20}$",
-                message = "아이디는 영문·숫자·밑줄(_)로 4~20자여야 합니다."
-        )
+        @Pattern(regexp = USERNAME_PATTERN, message = USERNAME_MESSAGE)
         String username,
 
         @NotBlank(message = "비밀번호는 필수입니다.")
@@ -41,10 +38,17 @@ public record SignupRequest(
         // 토론에서 글쓴이로 보이는 이름(V21). 가입할 때 받는다 — 글을 쓰다 말고 정하게 하면
         // 흐름이 끊기고, 닉네임 없는 계정이 계속 쌓인다. 규칙은 NicknameRequest와 같다.
         @NotBlank(message = "닉네임은 필수입니다.")
-        @Pattern(
-                regexp = "^[가-힣A-Za-z0-9_]{2,12}$",
-                message = "닉네임은 2~12자의 한글·영문·숫자·밑줄만 쓸 수 있습니다."
-        )
+        @Pattern(regexp = NICKNAME_PATTERN, message = NICKNAME_MESSAGE)
         String nickname
 ) {
+
+    /*
+     * 형식 규칙과 그 안내 문구. 상수로 뺀 이유: 가입 전에 "쓸 수 있는지"를 묻는 조회
+     * (AuthService.checkAvailability)가 같은 규칙으로 답해야 한다. 따로 적으면 조회는 된다고
+     * 했는데 가입은 거절하는 값이 생긴다.
+     */
+    public static final String USERNAME_PATTERN = "^[A-Za-z0-9_]{4,20}$";
+    public static final String USERNAME_MESSAGE = "아이디는 영문·숫자·밑줄(_)로 4~20자여야 합니다.";
+    public static final String NICKNAME_PATTERN = "^[가-힣A-Za-z0-9_]{2,12}$";
+    public static final String NICKNAME_MESSAGE = "닉네임은 2~12자의 한글·영문·숫자·밑줄만 쓸 수 있습니다.";
 }

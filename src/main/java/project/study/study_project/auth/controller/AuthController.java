@@ -5,11 +5,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import project.study.study_project.auth.dto.AvailabilityResponse;
 import project.study.study_project.auth.dto.LoginRequest;
 import project.study.study_project.auth.dto.LoginResponse;
 import project.study.study_project.auth.dto.RefreshRequest;
@@ -17,6 +20,8 @@ import project.study.study_project.auth.dto.SignupRequest;
 import project.study.study_project.auth.dto.SignupResponse;
 import project.study.study_project.auth.gate.AdminGateCookie;
 import project.study.study_project.auth.service.AuthService;
+import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
 
 /**
@@ -41,6 +46,24 @@ public class AuthController {
      * 테스트도 어려워진다. 컨트롤러가 <b>토큰을 쿠키로 옮겨 담는</b> 일만 한다.
      */
     private final AdminGateCookie adminGateCookie;
+
+    /**
+     * 아이디나 닉네임을 쓸 수 있는지 — 가입 화면이 입력 도중에 묻는다.
+     * 예: {@code GET /api/auth/availability?username=minsu_01}. 둘 중 하나만 준다.
+     *
+     * <p>GET이라 인증 경로의 엄격한 요청 제한(분당 5회)에 들지 않는다. 글자를 칠 때마다 묻는
+     * 화면이라 그 한도면 가입 자체를 못 한다. 일반 한도(분당 60회)를 쓴다.
+     */
+    @GetMapping("/availability")
+    public ApiResponse<AvailabilityResponse> availability(@RequestParam(required = false) String username,
+                                                          @RequestParam(required = false) String nickname) {
+        if ((username == null) == (nickname == null)) {
+            throw new BusinessException(ErrorCode.COMMON_001, "username과 nickname 가운데 하나만 보내 주세요.");
+        }
+        return ApiResponse.ok(username != null
+                ? authService.checkUsername(username)
+                : authService.checkNickname(nickname));
+    }
 
     /**
      * 회원가입. 성공 시 201 Created + 생성된 회원 정보와 로그인 토큰.

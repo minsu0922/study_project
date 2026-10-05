@@ -198,6 +198,68 @@ class AuthFlowIntegrationTest {
         }
     }
 
+    /* ── 쓸 수 있는지 미리 묻기 ─────────────────────────────── */
+
+    /** 가입 화면이 입력 도중에 묻는다. 제출하고 나서야 겹친다는 것을 알면 다시 입력하게 된다. */
+    @Test
+    @DisplayName("아이디를 쓸 수 있는지 로그인 없이 물을 수 있다 — 비어 있으면 가능, 이미 있으면 불가와 이유")
+    void usernameAvailability() throws Exception {
+        String username = freshUsername();
+
+        mockMvc.perform(get("/api/auth/availability").param("username", username))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.available").value(true))
+                .andExpect(jsonPath("$.data.reason").doesNotExist());
+
+        mockMvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+                        .content(signupBody(username, "password1", freshNickname())))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/auth/availability").param("username", username))
+                .andExpect(jsonPath("$.data.available").value(false))
+                .andExpect(jsonPath("$.data.reason").value("이미 사용 중인 아이디입니다."));
+        // 가입은 아이디를 소문자로 낮춰 저장한다. 대문자로 물어도 같은 답이어야 한다.
+        mockMvc.perform(get("/api/auth/availability").param("username", username.toUpperCase()))
+                .andExpect(jsonPath("$.data.available").value(false));
+    }
+
+    @Test
+    @DisplayName("닉네임을 쓸 수 있는지 — 겹치면 불가, 운영진으로 보이는 말도 불가")
+    void nicknameAvailability() throws Exception {
+        String nickname = freshNickname();
+        mockMvc.perform(get("/api/auth/availability").param("nickname", nickname))
+                .andExpect(jsonPath("$.data.available").value(true));
+
+        mockMvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+                        .content(signupBody(freshUsername(), "password1", nickname)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/auth/availability").param("nickname", nickname))
+                .andExpect(jsonPath("$.data.available").value(false))
+                .andExpect(jsonPath("$.data.reason").value("이미 쓰는 닉네임입니다."));
+        mockMvc.perform(get("/api/auth/availability").param("nickname", "관리자"))
+                .andExpect(jsonPath("$.data.available").value(false))
+                .andExpect(jsonPath("$.data.reason").value(
+                        "운영진으로 보일 수 있는 닉네임은 쓸 수 없습니다. 다른 닉네임을 골라 주세요."));
+    }
+
+    /** 가입이 거절할 값을 여기서 "가능"이라고 답하면 화면이 거짓말을 하게 된다. */
+    @Test
+    @DisplayName("형식에 안 맞는 값은 불가와 형식 안내로 답한다. 둘 다 없거나 둘 다 주면 400")
+    void availabilityRejectsBadInput() throws Exception {
+        mockMvc.perform(get("/api/auth/availability").param("username", "ab"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.available").value(false))
+                .andExpect(jsonPath("$.data.reason").value("아이디는 영문·숫자·밑줄(_)로 4~20자여야 합니다."));
+        mockMvc.perform(get("/api/auth/availability").param("nickname", "공백 있음"))
+                .andExpect(jsonPath("$.data.available").value(false))
+                .andExpect(jsonPath("$.data.reason").value("닉네임은 2~12자의 한글·영문·숫자·밑줄만 쓸 수 있습니다."));
+
+        mockMvc.perform(get("/api/auth/availability")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/auth/availability").param("username", "abcd").param("nickname", "가나"))
+                .andExpect(status().isBadRequest());
+    }
+
     /** 닉네임은 가입할 때 받는다(2026-10-04). 비워 두면 토론에서 글쓴이를 보여 줄 이름이 없다. */
     @Test
     @DisplayName("닉네임 없이 가입하면 400 VALIDATION_ERROR")
