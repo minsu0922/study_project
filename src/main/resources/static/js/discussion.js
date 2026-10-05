@@ -18,8 +18,9 @@ const COMMENT_REPORT_REASONS = [
   ["OTHER", "그 밖의 문제"],
 ];
 
-function commentsBlock(postId) {
-  return `<section class="discussion" data-discussion="${postId}"></section>`;
+/** @param problemId 이 글이 속한 문제. 안 푼 사람에게 문제로 가는 길을 내는 데 쓴다 */
+function commentsBlock(postId, problemId) {
+  return `<section class="discussion" data-discussion="${postId}" data-problem="${problemId ?? ""}"></section>`;
 }
 
 /* 새로 그려진 블록을 찾아 붙인다. 화면이 블록을 넣을 때마다 따로 부르게 하면 언젠가
@@ -77,17 +78,20 @@ function renderDiscussion(box) {
       ? d.comments.map(c => commentHtml(c, d.canWrite, false)).join("")
       : `<div class="meta">아직 댓글이 없습니다.</div>`}</div>
     ${d.hasNext ? `<button type="button" class="btn-sm btn-outline" data-disc-more>더 보기</button>` : ""}
-    ${writeAreaHtml(d)}
+    ${writeAreaHtml(d, box.dataset.problem)}
     <div class="disc-msg" hidden></div>`;
 }
 
-function writeAreaHtml(d) {
+function writeAreaHtml(d, problemId) {
+  // "문제를 풀면"만 적으면 어느 문제인지, 어디로 가야 하는지를 다시 찾아야 한다.
+  const solve = problemId
+    ? `<a href="/quiz.html?problemId=${encodeURIComponent(problemId)}">문제를 풀면</a>` : "문제를 풀면";
   if (!isLoggedIn()) {
-    return `<div class="disc-note"><a href="/login.html">로그인</a>하고 문제를 풀면 참여할 수 있습니다.</div>`;
+    return `<div class="disc-note"><a href="/login.html">로그인</a>하고 ${solve} 참여할 수 있습니다.</div>`;
   }
   // 정지 중이면 풀었어도 못 쓴다. 서버가 준 안내(풀리는 날짜와 사유)를 그대로 적는다.
   if (d.suspensionNotice) return `<div class="disc-note">${escapeHtml(d.suspensionNotice)}</div>`;
-  if (!d.canWrite) return `<div class="disc-note">문제를 풀면 참여할 수 있습니다.</div>`;
+  if (!d.canWrite) return `<div class="disc-note">${solve} 참여할 수 있습니다.</div>`;
   return formHtml("data-disc-form", "", "", "댓글을 남겨 보세요 (1,000자까지)", "등록", false);
 }
 

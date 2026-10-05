@@ -2189,6 +2189,8 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   display: inline-block; padding: 10px 0;   /* 세로 여백이 탭 영역을 만든다 */
   color: var(--muted); font-size: .82rem; text-underline-offset: 3px;
 }
+/* 위의 display가 hidden 속성을 이긴다. 비로그인에게 거둔 링크가 그대로 보이지 않게 다시 적는다. */
+.room-link[hidden] { display: none; }
 @media (hover: hover) { .room-link:hover { color: var(--text-2); } }
 .pl-comments[data-room] { cursor: pointer; }
 @media (hover: hover) { .pl-comments[data-room]:hover { color: var(--primary); } }
