@@ -2156,7 +2156,31 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 .disc-note { margin-top: 10px; font-size: .85rem; color: var(--text-2); }
 .disc-msg { margin-top: 8px; font-size: .85rem; color: var(--text-2); }
 .disc-msg.error { color: var(--wrong); }
-/* 문제 목록의 댓글 수. 제목 옆에 조용히 붙는다. */
+/* ── 토론방과 글 (discussion.html, post.html) ──────────────────────── */
+/* 지문은 길 수 있다(상황 지문은 250자). 세 줄에서 자른다 — 전문은 "문제 보기"에 있다. */
+.room-problem-title {
+  font-weight: 600; margin: 4px 0 10px; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.room-bar { display: flex; align-items: center; gap: 8px; margin: var(--sp-3) 0 var(--sp-1); }
+.room-bar .spacer { flex: 1; }
+/* 글 한 줄. 줄 전체가 링크다 — 제목 글자만 눌리면 폰에서 누를 자리가 좁다. */
+.post-row {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 4px; border-top: 1px solid var(--border);
+  color: var(--text); text-decoration: none;
+}
+.post-row:last-child { border-bottom: 1px solid var(--border); }
+@media (hover: hover) { a.post-row:hover .post-row-title { color: var(--primary); } }
+.post-row-title { font-weight: 600; overflow-wrap: anywhere; }
+.post-row-count { font-weight: 400; font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.post-row.gone { font-style: italic; }
+.post-title { font-size: var(--fs-4, 1.3rem); margin: 0 0 6px; overflow-wrap: anywhere; }
+/* 줄바꿈을 살린다. 본문은 서식 없는 글이고 escapeHtml로 넣으므로 pre-wrap이 없으면 한 문단으로 뭉친다. */
+.post-body { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: var(--sp-3); line-height: 1.7; }
+.post .disc-tools { margin-top: var(--sp-3); }
+
+/* 문제 목록의 토론 글 수. 제목 옆에 조용히 붙는다. */
 .pl-comments { margin-left: 6px; font-size: .8rem; color: var(--muted); white-space: nowrap; }
 
 .reject-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
