@@ -65,7 +65,7 @@ public class CommentReportService {
         }
         try {
             CommentReport saved = reportRepository.saveAndFlush(
-                    CommentReport.of(comment.getId(), userId, request.reason(), trimmed(request.detail())));
+                    CommentReport.of(comment, userId, request.reason(), trimmed(request.detail())));
             log.info("댓글 신고 접수: commentId={} reason={}", comment.getId(), request.reason());
             return toItem(saved);
         } catch (DataIntegrityViolationException e) {
@@ -90,7 +90,7 @@ public class CommentReportService {
         }
         try {
             CommentReport saved = reportRepository.saveAndFlush(
-                    CommentReport.ofPost(post.getId(), userId, request.reason(), trimmed(request.detail())));
+                    CommentReport.ofPost(post, userId, request.reason(), trimmed(request.detail())));
             log.info("글 신고 접수: postId={} reason={}", post.getId(), request.reason());
             return toItem(saved);
         } catch (DataIntegrityViolationException e) {

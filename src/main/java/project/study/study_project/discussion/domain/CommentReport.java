@@ -48,6 +48,17 @@ public class CommentReport {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    /** 신고가 들어온 순간의 글 제목(V27). 댓글 신고면 {@code null}이다. */
+    @Column(name = "snapshot_title", length = 100)
+    private String snapshotTitle;
+
+    /**
+     * 신고가 들어온 순간의 본문(V27). 글쓴이가 그 뒤에 고쳐도 관리자는 신고된 내용을 본다.
+     * V27 전에 접수된 신고는 {@code null}이다.
+     */
+    @Column(name = "snapshot_body", length = 5000)
+    private String snapshotBody;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private CommentReportReason reason;
@@ -69,21 +80,26 @@ public class CommentReport {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
-    private CommentReport(Long commentId, Long postId, Long userId, CommentReportReason reason, String detail) {
+    private CommentReport(Long commentId, Long postId, Long userId, CommentReportReason reason, String detail,
+                          String snapshotTitle, String snapshotBody) {
         this.commentId = commentId;
         this.postId = postId;
+        this.snapshotTitle = snapshotTitle;
+        this.snapshotBody = snapshotBody;
         this.userId = userId;
         this.reason = reason;
         this.detail = detail;
         this.status = ReportStatus.PENDING;
     }
 
-    public static CommentReport of(Long commentId, Long userId, CommentReportReason reason, String detail) {
-        return new CommentReport(commentId, null, userId, reason, detail);
+    /** 댓글 신고. 지금의 본문을 베껴 둔다. */
+    public static CommentReport of(Comment comment, Long userId, CommentReportReason reason, String detail) {
+        return new CommentReport(comment.getId(), null, userId, reason, detail, null, comment.getBody());
     }
 
-    public static CommentReport ofPost(Long postId, Long userId, CommentReportReason reason, String detail) {
-        return new CommentReport(null, postId, userId, reason, detail);
+    /** 글 신고. 지금의 제목과 본문을 베껴 둔다. */
+    public static CommentReport ofPost(Post post, Long userId, CommentReportReason reason, String detail) {
+        return new CommentReport(null, post.getId(), userId, reason, detail, post.getTitle(), post.getBody());
     }
 
     public boolean targetsPost() {

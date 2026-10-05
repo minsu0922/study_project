@@ -324,6 +324,58 @@ class CommentReportIntegrationTest {
                 .andExpect(jsonPath("$.data.targetSuspended").value(false));
     }
 
+    /**
+     * 신고된 글을 글쓴이가 고치면 관리자는 고친 뒤의 멀쩡한 내용만 보게 된다 —
+     * 신고가 들어온 순간의 내용을 신고에 함께 남겨 그 길을 막는다.
+     */
+    @Test
+    @DisplayName("신고 뒤에 글을 고쳐도 신고함에는 신고 당시의 제목과 본문이 남는다")
+    void keepsPostAsReported() throws Exception {
+        Post post = savePost();
+
+        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+                        .contentType("application/json").content(postBody(post.getId(), "SPAM")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.reportedTitle").value("신고될 글"))
+                .andExpect(jsonPath("$.data.reportedBody").value("본문"))
+                .andExpect(jsonPath("$.data.editedAfterReport").value(false));
+
+        post.edit("질문 있어요", "502가 뭐예요?");
+        postRepository.flush();
+
+        mockMvc.perform(get("/api/admin/comment-reports").param("status", "PENDING")
+                        .param("size", "200").header("Authorization", bearer(Role.ADMIN)))
+                .andExpect(jsonPath("$.data.content[?(@.postId == %d)].reportedTitle".formatted(post.getId()))
+                        .value("신고될 글"))
+                .andExpect(jsonPath("$.data.content[?(@.postId == %d)].reportedBody".formatted(post.getId()))
+                        .value("본문"))
+                .andExpect(jsonPath("$.data.content[?(@.postId == %d)].targetBody".formatted(post.getId()))
+                        .value("502가 뭐예요?"))
+                .andExpect(jsonPath("$.data.content[?(@.postId == %d)].editedAfterReport".formatted(post.getId()))
+                        .value(true));
+    }
+
+    @Test
+    @DisplayName("댓글도 신고 당시의 본문이 남는다. 댓글에는 제목이 없어 제목은 비어 나간다")
+    void keepsCommentAsReported() throws Exception {
+        Comment comment = saveComment();
+
+        mockMvc.perform(post(REPORT).header("Authorization", bearer(Role.USER))
+                        .contentType("application/json").content(body(comment.getId(), "ABUSE")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.reportedBody").value("신고될 글"))
+                .andExpect(jsonPath("$.data.reportedTitle").doesNotExist())
+                .andExpect(jsonPath("$.data.editedAfterReport").value(false));
+
+        comment.edit("고친 댓글");
+        commentRepository.flush();
+        mockMvc.perform(post(REPORT).header("Authorization", bearer(Role.USER))
+                        .contentType("application/json").content(body(comment.getId(), "ABUSE")))
+                // 두 번째 신고는 고친 뒤에 들어왔으니 그때의 내용이 "신고 당시"다.
+                .andExpect(jsonPath("$.data.reportedBody").value("고친 댓글"))
+                .andExpect(jsonPath("$.data.editedAfterReport").value(false));
+    }
+
     private static final String POST_REPORT = "/api/me/post-reports";
 
     private String postBody(Long postId, String reason) {
