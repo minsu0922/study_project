@@ -538,7 +538,9 @@ refresh 토큰을 폐기한다.
 - 응답 한 줄: `{id, username, nickname, role, createdAt, suspended, indefinite, suspendedUntil, suspendedReason}`.
   무기한이면 `suspendedUntil`은 비고 `indefinite`가 true다.
 - 기간이 지나면 아무도 풀지 않아도 풀린다. 관리자 계정은 정지할 수 없다(`USER_002`).
-- 정지 중인 사용자가 읽는 글·댓글 목록의 `canWrite`는 false로 나간다.
+- 정지 중인 사용자가 읽는 글·댓글 목록의 `canWrite`는 false로 나가고, `suspensionNotice`에
+  풀리는 날짜와 사유가 든 안내가 실린다. 거절 응답(`DISCUSSION_013`)의 문구와 같은 문장이다.
+- `GET /api/me/suspension` 🔒 — 내 정지 상태 `{suspended, notice}`. 마이페이지가 읽는다.
 
 ---
 

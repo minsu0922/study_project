@@ -16,6 +16,8 @@ import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.support.NicknameRule;
 import project.study.study_project.user.dto.ChangePasswordRequest;
+import project.study.study_project.user.dto.SuspensionResponse;
+import project.study.study_project.user.support.SuspensionGuard;
 import project.study.study_project.user.dto.WithdrawRequest;
 import project.study.study_project.user.repository.UserRepository;
 
@@ -57,6 +59,14 @@ public class AccountService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003))
                 .getNickname();
+    }
+
+    @Transactional(readOnly = true)
+    public SuspensionResponse getSuspension(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        String notice = SuspensionGuard.noticeFor(user);
+        return new SuspensionResponse(notice != null, notice);
     }
 
     /**

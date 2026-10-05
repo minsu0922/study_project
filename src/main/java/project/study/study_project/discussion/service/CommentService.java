@@ -65,7 +65,7 @@ public class CommentService {
         boolean solved = viewer != null && submissionRepository.existsByUserIdAndProblem_Id(viewerId, problemId);
         // 가린 글 아래의 댓글이 그대로 보이면 댓글만 읽어도 가린 내용을 짐작할 수 있다.
         if (!post.isVisible()) {
-            return new CommentListResponse(solved, false, 0, false, List.of());
+            return new CommentListResponse(solved, false, 0, false, null, List.of());
         }
         boolean canWrite = (solved || (viewer != null && viewer.getRole() == Role.ADMIN))
                 && !viewer.isSuspended(LocalDateTime.now());
@@ -89,7 +89,8 @@ public class CommentService {
                 .toList();
 
         long total = commentRepository.countByPostIdAndStatus(postId, CommentStatus.VISIBLE);
-        return new CommentListResponse(solved, canWrite, total, threads.hasNext(), items);
+        return new CommentListResponse(solved, canWrite, total, threads.hasNext(),
+                SuspensionGuard.noticeFor(viewer), items);
     }
 
     @Transactional

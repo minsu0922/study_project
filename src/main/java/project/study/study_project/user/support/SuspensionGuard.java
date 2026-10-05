@@ -17,15 +17,26 @@ public final class SuspensionGuard {
     private SuspensionGuard() {
     }
 
-    /** 언제 풀리는지와 왜 정지됐는지를 문구에 싣는다. 모르면 사용자는 고장으로 안다. */
     public static void requireNotSuspended(User user) {
-        if (!user.isSuspended(LocalDateTime.now())) {
-            return;
+        String notice = noticeFor(user);
+        if (notice != null) {
+            throw new BusinessException(ErrorCode.DISCUSSION_013, notice);
+        }
+    }
+
+    /**
+     * 정지 안내 문구. 정지가 아니면(사용자가 없어도) {@code null}이다.
+     *
+     * <p>언제 풀리는지와 왜 정지됐는지를 싣는다. 모르면 사용자는 고장으로 안다.
+     * 거절 응답과 화면의 안내가 같은 문장을 쓰게 여기 한 곳에서 만든다.
+     */
+    public static String noticeFor(User user) {
+        if (user == null || !user.isSuspended(LocalDateTime.now())) {
+            return null;
         }
         String period = user.isSuspendedIndefinitely()
                 ? "무기한 정지입니다."
                 : user.getSuspendedUntil().toLocalDate() + "까지 쓸 수 없습니다.";
-        throw new BusinessException(ErrorCode.DISCUSSION_013,
-                "글쓰기가 정지된 계정입니다. " + period + " 사유: " + user.getSuspendedReason());
+        return "글쓰기가 정지된 계정입니다. " + period + " 사유: " + user.getSuspendedReason();
     }
 }

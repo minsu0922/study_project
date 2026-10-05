@@ -85,6 +85,8 @@ function writeAreaHtml(d) {
   if (!isLoggedIn()) {
     return `<div class="disc-note"><a href="/login.html">로그인</a>하고 문제를 풀면 참여할 수 있습니다.</div>`;
   }
+  // 정지 중이면 풀었어도 못 쓴다. 서버가 준 안내(풀리는 날짜와 사유)를 그대로 적는다.
+  if (d.suspensionNotice) return `<div class="disc-note">${escapeHtml(d.suspensionNotice)}</div>`;
   if (!d.canWrite) return `<div class="disc-note">문제를 풀면 참여할 수 있습니다.</div>`;
   return formHtml("data-disc-form", "", "", "댓글을 남겨 보세요 (1,000자까지)", "등록", false);
 }

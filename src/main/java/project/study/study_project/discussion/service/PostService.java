@@ -70,7 +70,7 @@ public class PostService {
 
         Optional<Long> discussionId = discussionRepository.findIdByProblemId(problemId);
         if (discussionId.isEmpty()) {
-            return new PostListResponse(solved, canWrite, 0, false, List.of());
+            return new PostListResponse(solved, canWrite, 0, false, SuspensionGuard.noticeFor(viewer), List.of());
         }
 
         Slice<Post> posts = postRepository.findByDiscussionIdAndStatusNotOrderByCreatedAtDescIdDesc(
@@ -83,7 +83,7 @@ public class PostService {
                 .toList();
 
         long total = postRepository.countByDiscussionIdAndStatus(discussionId.get(), CommentStatus.VISIBLE);
-        return new PostListResponse(solved, canWrite, total, posts.hasNext(), items);
+        return new PostListResponse(solved, canWrite, total, posts.hasNext(), SuspensionGuard.noticeFor(viewer), items);
     }
 
     /** 모든 토론방의 최근 글 — 커뮤니티 첫 화면이 읽는다. 지우거나 가린 글은 넣지 않는다. */

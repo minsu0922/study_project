@@ -22,6 +22,8 @@ try {
 <main class="container narrow" style="max-width:560px">
   <h1>마이페이지</h1>
   <p class="meta">이 계정에 대한 것만 모여 있습니다.</p>
+  <!-- 글쓰기 정지 안내. 토론방에 가서 글을 쓰려다 알게 하지 않고, 계정 화면에서 먼저 보인다. -->
+  <div id="suspensionNotice" role="status"></div>
 
   <div class="section-label"><span>계정</span></div>
   <div class="setting-row" style="border-top:0">
@@ -146,12 +148,25 @@ if (!isLoggedIn()) {
   // 로그아웃은 셸과 <같은 함수>를 쓴다. 복사해 두면 서버 토큰 폐기가 빠진 사본이 생겨,
   // 이 화면에서 로그아웃했을 때만 서버에 14일짜리 출입증이 남는 상태가 된다.
   wireLogout();
+  showSuspension();
   wireNickname();
   wirePasswordChange();
   wireWithdraw();
 }
 
 /** 닉네임(V21) — 지금 값을 채워 두고, 저장하면 그 자리에서 알린다. */
+/* 정지 중이면 풀리는 날짜와 사유를 맨 위에 적는다. 못 읽어도 이 화면의 나머지는 그대로 쓴다. */
+async function showSuspension() {
+  try {
+    const s = await api("/api/me/suspension");
+    if (s.suspended) {
+      document.getElementById("suspensionNotice").innerHTML =
+        `<div class="alert error">${escapeHtml(s.notice)}<div class="meta" style="margin-top:4px">
+           문제 풀이와 복습, 읽기는 그대로 됩니다.</div></div>`;
+    }
+  } catch (e) { /* 안내는 없어도 화면은 쓸 수 있다 */ }
+}
+
 async function wireNickname() {
   const input = document.getElementById("nickInput");
   const msg = document.getElementById("nickMessage");

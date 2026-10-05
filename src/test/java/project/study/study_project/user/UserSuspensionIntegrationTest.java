@@ -137,6 +137,52 @@ class UserSuspensionIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /* ── 정지된 사람에게 알리기 ───────────────────────────── */
+
+    /**
+     * 화면은 canWrite가 false면 "문제를 풀면 쓸 수 있습니다"를 낸다. 정지된 사람에게 그 말은 틀리다 —
+     * 풀었는데도 못 쓰는 이유를 목록 응답이 함께 준다.
+     */
+    @Test
+    @DisplayName("정지 중이면 글·댓글 목록에 정지 안내가 실린다. 정지가 아니면 실리지 않는다")
+    void listsCarrySuspensionNotice() throws Exception {
+        Problem problem = saveProblem();
+        User user = solver(problem);
+        Post post = savePost(problem, null);
+
+        mockMvc.perform(get("/api/quiz/" + problem.getId() + "/posts").header("Authorization", bearer(user)))
+                .andExpect(jsonPath("$.data.suspensionNotice").doesNotExist());
+
+        suspend(user, 7);
+        String until = userRepository.findById(user.getId()).orElseThrow().getSuspendedUntil().toLocalDate().toString();
+        mockMvc.perform(get("/api/quiz/" + problem.getId() + "/posts").header("Authorization", bearer(user)))
+                .andExpect(jsonPath("$.data.suspensionNotice", containsString(until)))
+                .andExpect(jsonPath("$.data.suspensionNotice", containsString("도배")));
+        mockMvc.perform(get("/api/quiz/posts/" + post.getId() + "/comments").header("Authorization", bearer(user)))
+                .andExpect(jsonPath("$.data.canWrite").value(false))
+                .andExpect(jsonPath("$.data.suspensionNotice", containsString(until)));
+        // 남의 정지는 보이지 않는다.
+        mockMvc.perform(get("/api/quiz/" + problem.getId() + "/posts"))
+                .andExpect(jsonPath("$.data.suspensionNotice").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("내 정지 상태를 물을 수 있다 — 마이페이지가 읽는다")
+    void myStatus() throws Exception {
+        User user = saveUser(Role.USER);
+
+        mockMvc.perform(get("/api/me/suspension")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/me/suspension").header("Authorization", bearer(user)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.suspended").value(false))
+                .andExpect(jsonPath("$.data.notice").doesNotExist());
+
+        suspend(user, null);
+        mockMvc.perform(get("/api/me/suspension").header("Authorization", bearer(user)))
+                .andExpect(jsonPath("$.data.suspended").value(true))
+                .andExpect(jsonPath("$.data.notice", containsString("무기한")));
+    }
+
     /* ── 풀리는 것 ───────────────────────────────────────── */
 
     @Test
