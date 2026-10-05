@@ -107,7 +107,8 @@ public enum ErrorCode {
     DISCUSSION_010("DISCUSSION_010", HttpStatus.BAD_REQUEST,
             "운영진으로 보일 수 있는 닉네임은 쓸 수 없습니다. 다른 닉네임을 골라 주세요."),
     // 토론방 게시글(V22). 지운 글도 이 코드로 답한다 — 지웠다는 사실을 따로 알릴 이유가 없다.
-    DISCUSSION_011("DISCUSSION_011", HttpStatus.NOT_FOUND, "글을 찾을 수 없습니다.");
+    DISCUSSION_011("DISCUSSION_011", HttpStatus.NOT_FOUND, "글을 찾을 수 없습니다."),
+    DISCUSSION_012("DISCUSSION_012", HttpStatus.BAD_REQUEST, "내가 쓴 글은 신고할 수 없습니다.");
 
     private final String code;
     private final HttpStatus httpStatus;

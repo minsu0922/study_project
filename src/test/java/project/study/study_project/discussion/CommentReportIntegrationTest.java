@@ -265,6 +265,35 @@ class CommentReportIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * 화면은 자기 글에 신고 버튼을 내지 않는다. 하지만 주소를 직접 부르면 받아 줬다 —
+     * 자기 글을 신고해 신고함을 채우는 장난을 서버가 막는다.
+     */
+    @Test
+    @DisplayName("내가 쓴 글과 댓글은 신고할 수 없다 — 400 DISCUSSION_012, 신고는 저장되지 않는다")
+    void cannotReportOwn() throws Exception {
+        User writer = userRepository.save(User.builder()
+                .username("crep" + UUID.randomUUID().toString().substring(0, 8))
+                .passwordHash(passwordEncoder.encode("password123"))
+                .role(Role.USER)
+                .build());
+        String token = "Bearer " + jwtTokenProvider.createToken(writer.getId(), Role.USER);
+        Post seed = savePost();
+        Post own = postRepository.saveAndFlush(Post.of(seed.getDiscussionId(), writer.getId(), "내 글", "본문"));
+        Comment ownComment = commentRepository.saveAndFlush(Comment.of(seed.getId(), writer.getId(), null, "내 댓글"));
+        long before = reportRepository.count();
+
+        mockMvc.perform(post(POST_REPORT).header("Authorization", token)
+                        .contentType("application/json").content(postBody(own.getId(), "SPAM")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("DISCUSSION_012"));
+        mockMvc.perform(post(REPORT).header("Authorization", token)
+                        .contentType("application/json").content(body(ownComment.getId(), "SPAM")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("DISCUSSION_012"));
+        assertThat(reportRepository.count()).isEqualTo(before);
+    }
+
     private static final String POST_REPORT = "/api/me/post-reports";
 
     private String postBody(Long postId, String reason) {
