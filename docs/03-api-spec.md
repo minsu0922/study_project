@@ -14,7 +14,7 @@
 | **문제 목록** | `GET /api/problems` 🔒 · `GET /api/me/study-summary` 🔒 | [↓](#get-apiproblems-) |
 | **내 학습** | `GET /api/me/wrong-answers` 🔒<br>`GET /api/me/reviews` · `/reviews/today` 🔒<br>`GET /api/me/daily-quiz` 🔒 | [↓](#get-apimewrong-answers-) |
 | **오류 제보** | `POST /api/me/problem-reports` 🔒 | [↓](#post-apimeproblem-reports-) |
-| **토론방** | `GET /api/quiz/{problemId}/posts` · `/posts/{postId}` · `/posts/{postId}/comments` · `/post-counts`<br>`POST`·`PUT`·`DELETE /api/me/posts` 🔒 · `/api/me/comments` 🔒 · `POST /api/me/comment-reports` 🔒 | [↓](#토론방-api) |
+| **토론방** | `GET /api/quiz/posts` · `/{problemId}/posts` · `/posts/{postId}` · `/posts/{postId}/comments` · `/post-counts`<br>`POST`·`PUT`·`DELETE /api/me/posts` 🔒 · `/api/me/comments` 🔒 · `POST /api/me/comment-reports` 🔒 | [↓](#토론방-api) |
 | **관리자·문제** | `GET`·`POST /api/admin/problems` · `GET`·`PUT`·`DELETE /{id}` · 제목/근거 백필 🛡️ | [↓](#관리자-api-️) |
 | **관리자·문서** | `POST /api/admin/documents` · `PUT`·`DELETE /{id}` 🛡️ | [↓](#관리자-api-️) |
 | **관리자·통계** | `GET /api/admin/dashboard` 🛡️ | [↓](#관리자-api-️) |
@@ -498,6 +498,7 @@ refresh 토큰을 폐기한다.
 
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
+| GET | `/api/quiz/posts?page=` | ✕ | 모든 토론방의 최근 글(새 글부터 20건, 문제 id·제목 포함). 커뮤니티 첫 화면 |
 | GET | `/api/quiz/{problemId}/posts?page=` | ✕ | 그 문제 토론방의 글 목록(새 글부터 20건). 방이 없으면 빈 목록 |
 | GET | `/api/quiz/posts/{postId}` | ✕ | 글 한 건 |
 | GET | `/api/quiz/posts/{postId}/comments?page=` | ✕ | 그 글의 댓글(오래된 것부터 20건, 답글 포함) |

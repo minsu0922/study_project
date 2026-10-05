@@ -582,9 +582,14 @@ body {
   font-weight: 800; font-size: 1.05rem; color: var(--primary);
   letter-spacing: -.02em; flex: none;
 }
-.shell-top .shell-title { color: var(--muted); font-size: var(--fs-2); }
+/* 화면 이름은 꺾이지 않는다. 아이콘이 셋으로 늘면서 375px에서 "커뮤니티"가 두 줄이 됐다 —
+   모자란 자리는 아이디가 줄여서 낸다(말줄임). 아이디는 마이페이지에도 있지만 화면 이름은 여기뿐이다. */
+.shell-top .shell-title { color: var(--muted); font-size: var(--fs-2); white-space: nowrap; flex: none; }
 .shell-top .spacer { flex: 1; }
-.shell-top .user-email { color: var(--muted); font-size: var(--fs-1); }
+.shell-top .user-email {
+  color: var(--muted); font-size: var(--fs-1);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 /* 폰 상단 바의 개인 메뉴 아이콘(마이페이지·설정) — 탭바에 자리가 없는 둘의 유일한 입구다.
    손가락 표적을 지키려고 44px을 채우되, 바가 48px이라 padding이 아니라 크기로 잡는다. */
 .shell-top .shell-icon {
@@ -592,6 +597,8 @@ body {
   width: 40px; min-height: 40px; flex: none;
   font-size: 17px; text-decoration: none; border-radius: var(--radius);
 }
+/* 아이콘끼리는 붙인다. 바의 gap(12px)을 그대로 두면 셋이 144px을 쓴다 — 표적은 40px로 이미 충분하다. */
+.shell-top .shell-icon + .shell-icon { margin-left: -12px; }
 .shell-top .shell-icon:hover { background: var(--fill); }
 
 /* 상단 바의 회원가입 버튼만 min-height 44를 면제한다 — 바가 48px이라 44px 버튼을 넣으면
@@ -2172,7 +2179,10 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 }
 .post-row:last-child { border-bottom: 1px solid var(--border); }
 @media (hover: hover) { a.post-row:hover .post-row-title { color: var(--primary); } }
-.post-row-title { font-weight: 600; overflow-wrap: anywhere; }
+.post-row-title { font-weight: 600; overflow-wrap: anywhere; color: var(--text); text-decoration: none; }
+@media (hover: hover) { a.post-row-title:hover { color: var(--primary); } }
+/* 커뮤니티 목록에서 글이 속한 문제. 누르면 그 문제의 토론방으로 간다. */
+.post-row-room { color: var(--text-2); }
 .post-row-count { font-weight: 400; font-size: .8rem; color: var(--muted); white-space: nowrap; }
 .post-row.gone { font-style: italic; }
 .post-title { font-size: var(--fs-4, 1.3rem); margin: 0 0 6px; overflow-wrap: anywhere; }

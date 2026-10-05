@@ -14,6 +14,8 @@ import project.study.study_project.discussion.dto.PostEditRequest;
 import project.study.study_project.discussion.dto.PostListResponse;
 import project.study.study_project.discussion.dto.PostSummary;
 import project.study.study_project.discussion.dto.PostWriteRequest;
+import project.study.study_project.discussion.dto.RecentPostItem;
+import project.study.study_project.discussion.dto.RecentPostResponse;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
@@ -78,6 +80,23 @@ public class PostService {
 
         long total = postRepository.countByDiscussionIdAndStatus(discussionId.get(), CommentStatus.VISIBLE);
         return new PostListResponse(solved, canWrite, total, posts.hasNext(), items);
+    }
+
+    /** 모든 토론방의 최근 글 — 커뮤니티 첫 화면이 읽는다. 지우거나 가린 글은 넣지 않는다. */
+    @Transactional(readOnly = true)
+    public RecentPostResponse recent(int page) {
+        Slice<PostRepository.RecentPostRow> rows = postRepository.findRecent(
+                CommentStatus.VISIBLE, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
+        List<Post> posts = rows.getContent().stream().map(PostRepository.RecentPostRow::getPost).toList();
+        Map<Long, String> nicknames = nicknamesOf(posts);
+        Map<Long, Long> commentCounts = commentCountsOf(posts);
+        List<RecentPostItem> items = rows.getContent().stream()
+                .map(row -> RecentPostItem.of(row.getPost(),
+                        nicknames.get(row.getPost().getUserId()),
+                        commentCounts.getOrDefault(row.getPost().getId(), 0L),
+                        row.getProblemId(), row.getProblemTitle()))
+                .toList();
+        return new RecentPostResponse(rows.hasNext(), items);
     }
 
     /** 지운 글은 없는 글로 답한다. 가린 글은 자리만 돌려준다 — 링크로 들어온 사람에게 이유를 보여 준다. */

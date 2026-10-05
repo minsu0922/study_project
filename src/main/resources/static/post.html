@@ -52,7 +52,7 @@ try {
  *   PUT    /api/me/posts/{id}     수정(글쓴이만)
  *   DELETE /api/me/posts/{id}     삭제(글쓴이만)
  * 댓글은 discussion.js가 맡는다. 여기서는 붙일 자리만 낸다. */
-renderShell({ title: "토론 글" });
+renderShell({ active: "community", title: "토론 글" });
 
 const postId = new URLSearchParams(location.search).get("id");
 const message = document.getElementById("message");
@@ -151,8 +151,8 @@ if (!postId) {
 } else {
   load().catch(e => {
     showError(e.message);
-    // 지운 글이면 어느 방의 글이었는지도 알 수 없다. 문제 목록으로 길을 낸다.
-    document.getElementById("backLink").innerHTML = `<a href="/problems.html">← 문제 목록으로</a>`;
+    // 지운 글이면 어느 방의 글이었는지도 알 수 없다. 커뮤니티로 길을 낸다.
+    document.getElementById("backLink").innerHTML = `<a href="/community.html">← 커뮤니티로</a>`;
   });
 }
 </script>

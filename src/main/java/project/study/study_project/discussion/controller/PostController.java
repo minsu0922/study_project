@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.discussion.dto.PostDetail;
 import project.study.study_project.discussion.dto.PostListResponse;
+import project.study.study_project.discussion.dto.RecentPostResponse;
 import project.study.study_project.discussion.service.PostService;
 import project.study.study_project.global.response.ApiResponse;
 
@@ -33,6 +34,12 @@ public class PostController {
     public ApiResponse<Map<Long, Long>> counts(@RequestParam List<Long> problemIds) {
         List<Long> limited = problemIds.size() > MAX_COUNT_IDS ? problemIds.subList(0, MAX_COUNT_IDS) : problemIds;
         return ApiResponse.ok(postService.counts(limited));
+    }
+
+    /** 모든 토론방의 최근 글(새 글부터 20건). 커뮤니티 첫 화면이 읽는다. */
+    @GetMapping("/posts")
+    public ApiResponse<RecentPostResponse> recent(@RequestParam(defaultValue = "0") int page) {
+        return ApiResponse.ok(postService.recent(page));
     }
 
     /** {@code userId}는 비로그인이면 null이다. 그때 solved·canWrite는 false로 나간다. */

@@ -265,6 +265,48 @@ class PostIntegrationTest {
                 .andExpect(jsonPath("$.data['" + without.getId() + "']").doesNotExist());
     }
 
+    /* ── 최근 글 ─────────────────────────────────────────── */
+
+    /** 커뮤니티 첫 화면이 읽는다. 글만 보고는 어느 문제 이야기인지 알 수 없어 문제를 함께 싣는다. */
+    @Test
+    @DisplayName("모든 토론방의 최근 글 — 새 글부터, 어느 문제의 글인지와 함께, 비로그인도 읽는다")
+    void recentPostsAcrossRooms() throws Exception {
+        Problem a = saveProblem();
+        Problem b = saveProblem();
+        User user = solver(a);
+        solve(user, b);
+        long onA = write(bearer(user), a.getId(), "A 방의 글", "본문");
+        long onB = write(bearer(user), b.getId(), "B 방의 글", "본문");
+        commentRepository.save(Comment.of(onA, user.getId(), null, "댓글"));
+
+        mockMvc.perform(get("/api/quiz/posts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.posts[0].id").value(onB))
+                .andExpect(jsonPath("$.data.posts[0].problemId").value(b.getId()))
+                .andExpect(jsonPath("$.data.posts[0].problemTitle").value("TCP 3-way handshake"))
+                .andExpect(jsonPath("$.data.posts[0].body").doesNotExist())
+                .andExpect(jsonPath("$.data.posts[1].id").value(onA))
+                .andExpect(jsonPath("$.data.posts[1].title").value("A 방의 글"))
+                .andExpect(jsonPath("$.data.posts[1].nickname").value(user.getNickname()))
+                .andExpect(jsonPath("$.data.posts[1].commentCount").value(1));
+    }
+
+    /** 방 안의 목록은 가린 글의 자리를 남기지만, 여기는 여러 방을 섞은 목록이라 자리를 남길 이유가 없다. */
+    @Test
+    @DisplayName("최근 글에는 지운 글도 가린 글도 나오지 않는다")
+    void recentPostsSkipGoneOnes() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        long kept = write(token, problem.getId(), "남는 글", "본문");
+        long deleted = write(token, problem.getId(), "지울 글", "본문");
+        long hidden = write(token, problem.getId(), "가릴 글", "본문");
+        postRepository.findById(deleted).orElseThrow().delete();
+        postRepository.findById(hidden).orElseThrow().hide();
+
+        mockMvc.perform(get("/api/quiz/posts"))
+                .andExpect(jsonPath("$.data.posts[0].id").value(kept));
+    }
+
     /* ── 수정·삭제 ───────────────────────────────────────── */
 
     @Test

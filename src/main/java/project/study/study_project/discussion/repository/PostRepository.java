@@ -24,6 +24,28 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     long countByDiscussionIdAndStatus(Long discussionId, CommentStatus status);
 
+    /**
+     * 방을 가리지 않고 보이는 글을 새 글부터(V24 인덱스). 문제 id와 제목을 같이 읽는다 —
+     * 글마다 따로 읽으면 한 쪽에 조회가 40번 나간다.
+     */
+    @Query("""
+            select p as post, d.problemId as problemId, pr.title as problemTitle
+            from Post p
+              join Discussion d on d.id = p.discussionId
+              join Problem pr on pr.id = d.problemId
+            where p.status = :visible
+            order by p.createdAt desc, p.id desc
+            """)
+    Slice<RecentPostRow> findRecent(@Param("visible") CommentStatus visible, Pageable pageable);
+
+    interface RecentPostRow {
+        Post getPost();
+
+        Long getProblemId();
+
+        String getProblemTitle();
+    }
+
     /** 문제별 보이는 글 수 — 문제 목록이 한 쪽(20건)의 수를 한 번에 묻는다. 글이 없는 문제는 결과에 없다. */
     @Query("""
             select d.problemId as problemId, count(p) as cnt
