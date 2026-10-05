@@ -14,6 +14,7 @@
 | **문제 목록** | `GET /api/problems` 🔒 · `GET /api/me/study-summary` 🔒 | [↓](#get-apiproblems-) |
 | **내 학습** | `GET /api/me/wrong-answers` 🔒<br>`GET /api/me/reviews` · `/reviews/today` 🔒<br>`GET /api/me/daily-quiz` 🔒 | [↓](#get-apimewrong-answers-) |
 | **오류 제보** | `POST /api/me/problem-reports` 🔒 | [↓](#post-apimeproblem-reports-) |
+| **토론방** | `GET /api/quiz/posts` · `/{problemId}/posts` · `/posts/{postId}` · `/posts/{postId}/comments` · `/post-counts`<br>`POST`·`PUT`·`DELETE /api/me/posts` 🔒 · `/api/me/comments` 🔒 · `POST /api/me/comment-reports` 🔒 | [↓](#토론방-api) |
 | **관리자·문제** | `GET`·`POST /api/admin/problems` · `GET`·`PUT`·`DELETE /{id}` · 제목/근거 백필 🛡️ | [↓](#관리자-api-️) |
 | **관리자·문서** | `POST /api/admin/documents` · `PUT`·`DELETE /{id}` 🛡️ | [↓](#관리자-api-️) |
 | **관리자·통계** | `GET /api/admin/dashboard` 🛡️ | [↓](#관리자-api-️) |
@@ -487,6 +488,39 @@ refresh 토큰을 폐기한다.
 - 되먹임은 거절 사유와 **같은 파일**(`generated/_rejection-notes.json`)로 합류하고,
   사유 앞에 `[출제 후 제보] `가 붙는다. 파일을 새로 파지 않은 이유는
   `LlmProblemService.REPORT_NOTE_PREFIX` 주석에 있다.
+
+---
+
+## 토론방 API
+
+문제마다 토론방이 하나다. 방은 미리 만들어 두지 않고 첫 글이 쓰일 때 생긴다.
+방 안에 제목과 본문이 있는 글을 올리고, 글마다 댓글과 한 단계 답글이 달린다.
+
+| 메서드 | 경로 | 인증 | 설명 |
+|---|---|---|---|
+| GET | `/api/quiz/posts?page=` | ✕ | 모든 토론방의 최근 글(새 글부터 20건, 문제 id·제목 포함). 커뮤니티 첫 화면 |
+| GET | `/api/quiz/{problemId}/posts?page=` | ✕ | 그 문제 토론방의 글 목록(새 글부터 20건). 방이 없으면 빈 목록 |
+| GET | `/api/quiz/posts/{postId}` | ✕ | 글 한 건 |
+| GET | `/api/quiz/posts/{postId}/comments?page=` | ✕ | 그 글의 댓글(오래된 것부터 20건, 답글 포함) |
+| GET | `/api/quiz/post-counts?problemIds=1,2,3` | ✕ | 문제별 보이는 글 수. 글이 없는 문제는 응답에 없다 |
+| POST | `/api/me/posts` | ✓ | 글쓰기 `{problemId, title, body}` → 201 |
+| PUT · DELETE | `/api/me/posts/{id}` | ✓ | 내 글 수정 `{title, body}` · 삭제 |
+| POST | `/api/me/comments` | ✓ | 댓글·답글 쓰기 `{postId, parentId, body}` → 201 |
+| PUT · DELETE | `/api/me/comments/{id}` | ✓ | 내 댓글 수정 `{body}` · 삭제 |
+| POST | `/api/me/comment-reports` | ✓ | 댓글 신고 `{commentId, reason, detail}` |
+| POST | `/api/me/post-reports` | ✓ | 글 신고 `{postId, reason, detail}` |
+| GET | `/api/admin/comment-reports?status=` | 🛡️ | 신고함(글·댓글 한 목록). 한 줄의 `targetType`이 `POST`·`COMMENT`를 가른다 |
+| POST | `/api/admin/posts/{id}/hide` · `/restore` | 🛡️ | 글 가림·복구. 가리면 그 글의 대기 신고가 모두 닫힌다 |
+| POST | `/api/admin/comments/{id}/hide` · `/restore` | 🛡️ | 댓글 가림·복구 |
+| POST | `/api/admin/comment-reports/{id}/dismiss` | 🛡️ | 신고 기각 `{note}` — 대상은 그대로 두고 그 신고만 닫는다 |
+
+- 읽기는 비로그인까지 열려 있다. 쓰기는 그 문제에 제출 기록이 있는 사람과 관리자만 한다(`DISCUSSION_002`).
+- 제목은 2~100자, 글 본문은 5,000자, 댓글은 1,000자까지다. 서식은 없고 줄바꿈만 살린다.
+- 삭제는 행을 지우지 않고 상태만 바꾼다. 지운 글은 목록에서 빠지고 상세는 `DISCUSSION_011`(404)이다.
+- 관리자가 가린 글은 목록에 자리만 남고 제목·본문·글쓴이·댓글을 내보내지 않는다.
+- 신고는 문제를 풀지 않은 사람도 한다. 한 사람이 같은 글·댓글을 한 번만 신고한다(`DISCUSSION_007`).
+  신고가 쌓여도 저절로 가려지지 않고 관리자만 가린다.
+- 글쓰기와 댓글 쓰기는 한 사용자당 합쳐서 분당 5건이다([09](09-rate-limiting.md)).
 
 ---
 

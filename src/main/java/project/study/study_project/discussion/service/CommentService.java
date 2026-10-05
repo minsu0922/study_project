@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.CommentStatus;
+import project.study.study_project.discussion.domain.Discussion;
+import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.discussion.dto.CommentItem;
 import project.study.study_project.discussion.dto.CommentListResponse;
 import project.study.study_project.discussion.dto.CommentWriteRequest;
@@ -15,7 +18,6 @@ import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
-import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
@@ -31,9 +33,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 문제별 토론 — 읽기, 쓰기, 수정, 삭제.
+ * 글에 달리는 댓글 — 읽기, 쓰기, 수정, 삭제.
  *
- * <p>읽기는 누구에게나 열려 있고 쓰기는 그 문제를 푼 사람만 한다. 그 판정을 화면이 아니라 여기서 한다 —
+ * <p>읽기는 누구에게나 열려 있고 쓰기는 그 글이 속한 문제를 푼 사람만 한다. 그 판정을 화면이 아니라 여기서 한다 —
  * 화면에서만 막으면 주소를 직접 불러 쓸 수 있다.
  */
 @Slf4j
@@ -46,7 +48,7 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final DiscussionRepository discussionRepository;
-    private final ProblemRepository problemRepository;
+    private final PostRepository postRepository;
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
 
@@ -54,19 +56,19 @@ public class CommentService {
      * @param viewerId 보는 사람. 비로그인이면 {@code null}
      */
     @Transactional(readOnly = true)
-    public CommentListResponse list(Long problemId, Long viewerId, int page) {
-        requireProblem(problemId);
+    public CommentListResponse list(Long postId, Long viewerId, int page) {
+        Post post = requirePost(postId);
+        Long problemId = problemIdOf(post);
         User viewer = viewerId == null ? null : userRepository.findById(viewerId).orElse(null);
         boolean solved = viewer != null && submissionRepository.existsByUserIdAndProblem_Id(viewerId, problemId);
+        // 가린 글 아래의 댓글이 그대로 보이면 댓글만 읽어도 가린 내용을 짐작할 수 있다.
+        if (!post.isVisible()) {
+            return new CommentListResponse(solved, false, 0, false, List.of());
+        }
         boolean canWrite = solved || (viewer != null && viewer.getRole() == Role.ADMIN);
 
-        Optional<Long> discussionId = discussionRepository.findIdByProblemId(problemId);
-        if (discussionId.isEmpty()) {
-            return new CommentListResponse(solved, canWrite, 0, false, List.of());
-        }
-
         Page<Comment> threads = commentRepository.findThreads(
-                discussionId.get(), CommentStatus.DELETED, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
+                postId, CommentStatus.DELETED, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
         List<Long> threadIds = threads.getContent().stream().map(Comment::getId).toList();
         List<Comment> replies = threadIds.isEmpty()
                 ? List.of()
@@ -83,7 +85,7 @@ public class CommentService {
                         repliesByParent.getOrDefault(c.getId(), List.of())))
                 .toList();
 
-        long total = commentRepository.countByDiscussionIdAndStatus(discussionId.get(), CommentStatus.VISIBLE);
+        long total = commentRepository.countByPostIdAndStatus(postId, CommentStatus.VISIBLE);
         return new CommentListResponse(solved, canWrite, total, threads.hasNext(), items);
     }
 
@@ -91,8 +93,12 @@ public class CommentService {
     public CommentItem write(Long userId, CommentWriteRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
-        Long problemId = request.problemId();
-        requireProblem(problemId);
+        Post post = requirePost(request.postId());
+        if (!post.isVisible()) {
+            throw new BusinessException(ErrorCode.DISCUSSION_006);
+        }
+        Long postId = post.getId();
+        Long problemId = problemIdOf(post);
         if (user.getRole() != Role.ADMIN
                 && !submissionRepository.existsByUserIdAndProblem_Id(userId, problemId)) {
             throw new BusinessException(ErrorCode.DISCUSSION_002);
@@ -101,16 +107,11 @@ public class CommentService {
             throw new BusinessException(ErrorCode.DISCUSSION_003);
         }
 
-        // 방은 첫 댓글 때 만든다. 두 문장의 이유는 DiscussionRepository 주석에 있다.
-        discussionRepository.insertIfAbsent(problemId);
-        Long discussionId = discussionRepository.findIdByProblemIdForShare(problemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
-
         Long rootId = null;
         if (request.parentId() != null) {
-            // 다른 방의 댓글은 "없는 댓글"로 답한다 — 받아 주면 답글이 다른 문제의 원글에 매달린다.
+            // 다른 글의 댓글은 "없는 댓글"로 답한다 — 받아 주면 답글이 다른 글의 댓글에 매달린다.
             Comment parent = commentRepository.findById(request.parentId())
-                    .filter(p -> p.getDiscussionId().equals(discussionId))
+                    .filter(p -> p.getPostId().equals(postId))
                     .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_001));
             if (!parent.isVisible()) {
                 throw new BusinessException(ErrorCode.DISCUSSION_006);
@@ -118,8 +119,8 @@ public class CommentService {
             rootId = parent.getParentId() != null ? parent.getParentId() : parent.getId();
         }
 
-        Comment saved = commentRepository.save(Comment.of(discussionId, userId, rootId, request.body().trim()));
-        log.info("댓글 작성: problemId={} commentId={} reply={}", problemId, saved.getId(), rootId != null);
+        Comment saved = commentRepository.save(Comment.of(postId, userId, rootId, request.body().trim()));
+        log.info("댓글 작성: postId={} commentId={} reply={}", postId, saved.getId(), rootId != null);
         return CommentItem.of(saved, user.getNickname(), userId, List.of());
     }
 
@@ -140,22 +141,17 @@ public class CommentService {
         requireOwn(userId, commentId).delete();
     }
 
-    /** 문제별 보이는 댓글 수. 글이 없는 문제는 맵에 없다. */
-    @Transactional(readOnly = true)
-    public Map<Long, Long> counts(Collection<Long> problemIds) {
-        Map<Long, Long> counts = new HashMap<>();
-        if (problemIds == null || problemIds.isEmpty()) {
-            return counts;
-        }
-        commentRepository.countByProblemIds(problemIds, CommentStatus.VISIBLE)
-                .forEach(row -> counts.put(row.getProblemId(), row.getCnt()));
-        return counts;
+    /** 지운 글은 없는 글로 답한다({@link PostService}와 같은 판단). */
+    private Post requirePost(Long postId) {
+        return postRepository.findById(postId)
+                .filter(p -> !p.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
     }
 
-    private void requireProblem(Long problemId) {
-        if (!problemRepository.existsById(problemId)) {
-            throw new BusinessException(ErrorCode.QUIZ_001);
-        }
+    private Long problemIdOf(Post post) {
+        return discussionRepository.findById(post.getDiscussionId())
+                .map(Discussion::getProblemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
     }
 
     /** 존재를 먼저 보고 주인을 본다 — 뒤집으면 없는 id에 "권한 없음"이 나간다. */

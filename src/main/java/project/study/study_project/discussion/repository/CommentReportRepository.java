@@ -15,6 +15,8 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
 
     boolean existsByCommentIdAndUserId(Long commentId, Long userId);
 
+    boolean existsByPostIdAndUserId(Long postId, Long userId);
+
     long countByStatus(ReportStatus status);
 
     /** 대기 목록 — 오래 기다린 것부터. 방치된 신고가 맨 위에 온다(문제 제보함과 같은 규칙). */
@@ -40,4 +42,15 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
                         @Param("pending") ReportStatus pending,
                         @Param("accepted") ReportStatus accepted,
                         @Param("now") LocalDateTime now);
+
+    /** 글 신고용. 뜻과 주의할 점은 {@link #acceptPendingOf}와 같다. */
+    @Modifying
+    @Query("""
+            update CommentReport r set r.status = :accepted, r.resolvedAt = :now
+            where r.postId = :postId and r.status = :pending
+            """)
+    int acceptPendingOfPost(@Param("postId") Long postId,
+                            @Param("pending") ReportStatus pending,
+                            @Param("accepted") ReportStatus accepted,
+                            @Param("now") LocalDateTime now);
 }

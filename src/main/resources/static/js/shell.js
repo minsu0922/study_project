@@ -114,6 +114,9 @@ const MENUS = [
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
   { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: "🔁" },
   { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: "📚" },
+  // 커뮤니티(문제별 토론방의 최근 글). 읽기가 비로그인까지 열려 있어 메뉴도 누구에게나 보인다.
+  // 탭 없음: 다섯 칸을 학습 화면이 다 쓴다. 폰에서는 상단 바의 아이콘으로 간다.
+  { key: "community", label: "커뮤니티", href: "/community.html", need: "public", icon: "💬" },
   // 탭 라벨만 "나"로 줄인다 — 탭 다섯 칸에 "내 기록"은 안 들어간다
   { key: "me", label: "내 기록", href: "/me.html", need: "user", tab: "🙂", tabLabel: "나" },
   // 마이페이지(계정) — 2026-09-08 신설. 탭 없음: 다섯 상한을 학습 화면이 다 쓴다.
@@ -223,13 +226,13 @@ function renderShell({ active = "", title = "" } = {}) {
            다 쓴다). 그래서 폰에서 관리자는 주소를 직접 치는 수밖에 없었다.
            콘솔 쪽 띠에 있는 "← 학습 화면으로"와 짝이 되는 문이다. -->
       ${console_.length ? `<a class="shell-door" href="/admin/index.html">🛠 관리<span id="adminBadge-door"></span></a>` : ""}
-      <!-- 탭바에 자리를 못 얻은 개인 메뉴(마이페이지·설정)로 가는 길 — 2026-09-08.
+      <!-- 탭바에 자리를 못 얻은 메뉴(커뮤니티·마이페이지·설정)로 가는 길 — 2026-09-08.
            탭 다섯은 학습 화면이 다 쓰고, 기둥은 좁은 화면에서 숨는다. 그래서 그전에는
            내 기록 화면 본문에 입구를 뒀는데, 그건 <메뉴에 이미 있는 화면을 본문이 또
            가리키는> 모양이라 걷어냈다. 길을 내는 것은 셸의 일이다.
            글자 없이 아이콘만 두는 이유: 375px에서 브랜드·화면 이름과 함께 서야 한다.
            title로 이름을 준다(마우스 툴팁 겸 스크린리더 이름). -->
-      ${personal.filter(m => !m.tab).map(m =>
+      ${[...study, ...personal].filter(m => !m.tab).map(m =>
         `<a class="shell-icon" href="${m.href}" title="${escapeHtml(m.label)}"
             aria-label="${escapeHtml(m.label)}">${m.icon || m.tab || "•"}</a>`).join("")}
       ${authAreaHtml()}

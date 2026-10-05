@@ -14,25 +14,25 @@ import java.util.List;
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     /**
-     * 한 방의 댓글(답글 제외)을 시간순으로 읽는다.
+     * 한 글의 댓글(답글 제외)을 시간순으로 읽는다.
      *
      * <p>지워진 댓글은 살아 있는 답글이 있을 때만 남긴다. 화면에서 걸러 내면 20개를 읽었는데
      * 몇 개만 보이는 쪽이 생기므로 조회에서 뺀다.
      */
     @Query(value = """
             select c from Comment c
-            where c.discussionId = :discussionId and c.parentId is null
+            where c.postId = :postId and c.parentId is null
               and (c.status <> :deleted
                    or exists (select 1 from Comment r where r.parentId = c.id and r.status <> :deleted))
             order by c.createdAt asc, c.id asc
             """,
             countQuery = """
             select count(c) from Comment c
-            where c.discussionId = :discussionId and c.parentId is null
+            where c.postId = :postId and c.parentId is null
               and (c.status <> :deleted
                    or exists (select 1 from Comment r where r.parentId = c.id and r.status <> :deleted))
             """)
-    Page<Comment> findThreads(@Param("discussionId") Long discussionId,
+    Page<Comment> findThreads(@Param("postId") Long postId,
                               @Param("deleted") CommentStatus deleted,
                               Pageable pageable);
 
@@ -45,20 +45,20 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findReplies(@Param("parentIds") Collection<Long> parentIds,
                               @Param("deleted") CommentStatus deleted);
 
-    long countByDiscussionIdAndStatus(Long discussionId, CommentStatus status);
+    long countByPostIdAndStatus(Long postId, CommentStatus status);
 
-    /** 문제별 보이는 댓글 수 — 문제 목록이 한 쪽(20건)의 수를 한 번에 묻는다. */
+    /** 글별 보이는 댓글 수 — 글 목록이 한 쪽(20건)의 수를 한 번에 묻는다. 댓글이 없는 글은 결과에 없다. */
     @Query("""
-            select d.problemId as problemId, count(c) as cnt
-            from Comment c join Discussion d on d.id = c.discussionId
-            where d.problemId in :problemIds and c.status = :visible
-            group by d.problemId
+            select c.postId as postId, count(c) as cnt
+            from Comment c
+            where c.postId in :postIds and c.status = :visible
+            group by c.postId
             """)
-    List<ProblemCommentCount> countByProblemIds(@Param("problemIds") Collection<Long> problemIds,
-                                                @Param("visible") CommentStatus visible);
+    List<PostCommentCount> countByPostIds(@Param("postIds") Collection<Long> postIds,
+                                          @Param("visible") CommentStatus visible);
 
-    interface ProblemCommentCount {
-        Long getProblemId();
+    interface PostCommentCount {
+        Long getPostId();
 
         long getCnt();
     }

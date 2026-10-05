@@ -59,4 +59,15 @@ public class AdminCommentController {
     public ApiResponse<Map<String, CommentStatus>> restore(@PathVariable Long id) {
         return ApiResponse.ok(Map.of("status", commentReportService.restore(id)));
     }
+
+    /** 글 가림 — 글 아래 댓글도 함께 안 보이게 된다. */
+    @PostMapping("/posts/{id}/hide")
+    public ApiResponse<Map<String, CommentStatus>> hidePost(@PathVariable Long id) {
+        return ApiResponse.ok(Map.of("status", commentReportService.hidePost(id)));
+    }
+
+    @PostMapping("/posts/{id}/restore")
+    public ApiResponse<Map<String, CommentStatus>> restorePost(@PathVariable Long id) {
+        return ApiResponse.ok(Map.of("status", commentReportService.restorePost(id)));
+    }
 }

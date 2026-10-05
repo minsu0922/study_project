@@ -108,12 +108,13 @@ public record FieldError(String field, String reason) {}
 | `DISCUSSION_002` | 403 | 안 푼 문제의 토론에 쓰기 |
 | `DISCUSSION_003` | 409 | 닉네임 없이 쓰기(가입 때 닉네임을 받기 전에 만든 계정) → 화면이 마이페이지로 안내 |
 | `DISCUSSION_004` | 409 | 닉네임 중복 |
-| `DISCUSSION_005` | 403 | 남의 댓글 수정·삭제 |
-| `DISCUSSION_006` | 409 | 가려지거나 삭제된 댓글에 답글·수정·신고 |
-| `DISCUSSION_007` | 409 | 같은 댓글을 두 번 신고 |
+| `DISCUSSION_005` | 403 | 남의 글·댓글 수정·삭제 |
+| `DISCUSSION_006` | 409 | 가려진 글에 수정·댓글·신고, 가려지거나 삭제된 댓글에 답글·수정·신고, 안 가린 글·댓글 복구 |
+| `DISCUSSION_007` | 409 | 같은 글·댓글을 두 번 신고 |
 | `DISCUSSION_008` | 404 | 신고 없음 (관리자) |
 | `DISCUSSION_009` | 409 | 이미 처리된 신고 (관리자) |
 | `DISCUSSION_010` | 400 | 운영진으로 보이는 닉네임(관리자·운영자·admin 등)으로 가입·변경. 관리자 계정은 예외 |
+| `DISCUSSION_011` | 404 | 토론방 글 없음(지운 글 포함) |
 
 > 새 에러는 이 표에 추가하고 코드로 `enum ErrorCode`(code, httpStatus, defaultMessage) 관리.
 

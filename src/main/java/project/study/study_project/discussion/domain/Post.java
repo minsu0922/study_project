@@ -18,35 +18,33 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 /**
- * 댓글과 답글 — DB의 {@code comment} 테이블(V21).
+ * 토론방의 게시글 — DB의 {@code post} 테이블(V22).
  *
- * <p>글·글쓴이·부모를 연관관계가 아니라 id 칸으로 둔다. 목록은 글 id로 한 번, 답글은 부모 id 묶음으로
- * 한 번 읽으므로 객체 탐색이 필요 없고, {@code userId}는 탈퇴하면 NULL이 된다(ProblemReport와 같은 방식).
+ * <p>방과 글쓴이를 연관관계가 아니라 id 칸으로 둔다({@link Comment}와 같은 이유).
+ * 상태도 댓글과 같은 값을 쓴다 — 보임·가림·삭제의 뜻이 글과 댓글에서 다르지 않다.
  */
 @Entity
-@Table(name = "comment")
+@Table(name = "post")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Comment {
+public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 이 댓글이 달린 글(V23). 답글도 원글과 같은 글 id를 가진다. */
-    @Column(name = "post_id", nullable = false)
-    private Long postId;
+    @Column(name = "discussion_id", nullable = false)
+    private Long discussionId;
 
     /** 글쓴이 id. 탈퇴한 사용자의 글은 {@code null}이다(외래키 SET NULL). */
     @Column(name = "user_id")
     private Long userId;
 
-    /** {@code null}이면 댓글, 값이 있으면 그 댓글의 답글이다. 답글의 답글은 없다. */
-    @Column(name = "parent_id")
-    private Long parentId;
+    @Column(nullable = false, length = 100)
+    private String title;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = 5000)
     private String body;
 
     @Enumerated(EnumType.STRING)
@@ -57,23 +55,24 @@ public class Comment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    /** 마지막으로 고친 시각. 한 번도 안 고쳤으면 {@code null} — 화면의 "수정됨" 표시가 이 값을 본다. */
+    /** 마지막으로 고친 시각. 한 번도 안 고쳤으면 {@code null}. */
     @Column(name = "edited_at")
     private LocalDateTime editedAt;
 
-    private Comment(Long postId, Long userId, Long parentId, String body) {
-        this.postId = postId;
+    private Post(Long discussionId, Long userId, String title, String body) {
+        this.discussionId = discussionId;
         this.userId = userId;
-        this.parentId = parentId;
+        this.title = title;
         this.body = body;
         this.status = CommentStatus.VISIBLE;
     }
 
-    public static Comment of(Long postId, Long userId, Long parentId, String body) {
-        return new Comment(postId, userId, parentId, body);
+    public static Post of(Long discussionId, Long userId, String title, String body) {
+        return new Post(discussionId, userId, title, body);
     }
 
-    public void edit(String body) {
+    public void edit(String title, String body) {
+        this.title = title;
         this.body = body;
         this.editedAt = LocalDateTime.now();
     }
@@ -92,5 +91,9 @@ public class Comment {
 
     public boolean isVisible() {
         return status == CommentStatus.VISIBLE;
+    }
+
+    public boolean isDeleted() {
+        return status == CommentStatus.DELETED;
     }
 }

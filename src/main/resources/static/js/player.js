@@ -63,8 +63,8 @@ function startPlayer(mountEl, problems, opts = {}) {
   // 퀴즈 API는 id, 복습 API는 problemId — 어느 쪽이 와도 동작하게 여기서 흡수한다.
   const pidOf = p => p.id ?? p.problemId;
 
-  // 세트의 댓글 수를 한 번에 읽어 둔다. 문제마다 따로 물으면 빠르게 푸는 사람이 요청 제한에 가까워진다.
-  prefetchDiscussionCounts(problems.map(pidOf));
+  // 세트의 토론 글 수를 한 번에 읽어 둔다. 문제마다 따로 물으면 빠르게 푸는 사람이 요청 제한에 가까워진다.
+  prefetchRoomCounts(problems.map(pidOf));
 
   render();
 
@@ -76,9 +76,6 @@ function startPlayer(mountEl, problems, opts = {}) {
   }
   const keyHandler = e => {
     if (state.finished) return;
-    // 토론 영역에서 누른 키는 플레이어 것이 아니다. 안 막으면 댓글을 쓰다 Enter를 치는 순간
-    // 다음 문제로 넘어가고, 숫자를 치면 보기가 눌린다.
-    if (e.target.closest && e.target.closest("[data-discussion]")) return;
     if (e.target.tagName === "INPUT") {          // 단답형 입력 중에는 숫자 키를 가로채면 안 된다
       if (e.key === "Enter") { e.preventDefault(); primaryAction(); }
       return;
@@ -167,9 +164,7 @@ function startPlayer(mountEl, problems, opts = {}) {
           ${autoSubmits(p.type) ? "" : `<button id="submitBtn" disabled>제출</button>`}
         </div>
         ${keyHint(shortcutHint(p.type))}
-      </div>
-      <!-- 풀기 전에는 접힌 입구만 보인다. 제출하면 showFeedback이 이 자리를 펼친 토론으로 바꾼다. -->
-      <div id="discussionSlot">${discussionBlock(pidOf(p), false)}</div>`;
+      </div>`;
 
     // 보기 버튼/입력에 이벤트 연결 (innerHTML로 그린 뒤라 여기서 바인딩)
     if (p.type === "SHORT_ANSWER") {
@@ -650,11 +645,9 @@ function startPlayer(mountEl, problems, opts = {}) {
           r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요 👋"
                     : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요 📅"}</div>` : ""}
         ${reportBlock(p.id)}
+        <!-- 토론방 링크. 채점 뒤에만 낸다 — 토론에는 정답 이야기가 나오고, 풀던 사람을 밖으로 보내지 않는다. -->
+        <div>${roomLink(pidOf(p))}</div>
       </div>`;
-
-    // 토론을 펼친다. 채점 결과 상자 안이 아니라 카드 아래에 둔다 — 상자의 주인공은 정답과 해설이다.
-    const discussionSlot = mountEl.querySelector("#discussionSlot");
-    if (discussionSlot) discussionSlot.innerHTML = discussionBlock(pidOf(p), true);
 
     // 3) 제출 버튼 → 다음/결과 버튼으로 교체
     const isLast = state.idx === problems.length - 1;

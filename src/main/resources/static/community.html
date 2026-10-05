@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>커뮤니티 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다(이유는 wrong-answers.html의 같은 자리 주석). */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container">
+  <h1>커뮤니티</h1>
+  <!-- 글쓰기 버튼이 여기 없는 이유를 미리 말한다. 글은 문제의 토론방에 쓰는데,
+       이 화면만 본 사람은 어디서 쓰는지 알 길이 없다. -->
+  <p class="meta">문제마다 토론방이 있습니다. 여기에는 모든 토론방의 새 글이 모입니다.
+    글은 문제를 푼 뒤 그 문제의 토론방에서 씁니다.</p>
+
+  <div id="message" role="alert"></div>
+  <div id="list"></div>
+
+  <div class="pager" id="pager" hidden>
+    <button id="prevBtn" class="btn-outline">이전</button>
+    <span class="info" id="pageInfo"></span>
+    <button id="nextBtn" class="btn-outline">다음</button>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+/* 커뮤니티 — 모든 토론방의 최근 글. GET /api/quiz/posts (공개, 새 글부터 20건). */
+renderShell({ active: "community", title: "커뮤니티" });
+
+let page = 0;
+
+/* 한 줄에 링크가 둘이다: 글 제목은 글로, 문제 이름은 그 문제의 토론방으로 간다.
+ * 그래서 줄 전체를 링크로 감싸지 않는다 — 링크 안에 링크를 넣을 수 없다. */
+function row(p) {
+  return `<div class="post-row">
+    <a class="post-row-title" href="/post.html?id=${p.id}">${escapeHtml(p.title)}${
+      p.commentCount ? ` <span class="post-row-count">💬 ${p.commentCount}</span>` : ""}</a>
+    <span class="meta">
+      <a class="post-row-room" href="/discussion.html?problemId=${p.problemId}">${escapeHtml(p.problemTitle)}</a>
+      · ${escapeHtml(p.nickname || "탈퇴한 사용자")} · ${formatDate(p.createdAt)}
+    </span>
+  </div>`;
+}
+
+async function load() {
+  const data = await api("/api/quiz/posts?page=" + page);
+  const list = document.getElementById("list");
+  list.innerHTML = data.posts.length
+    ? data.posts.map(row).join("")
+    : `<div class="card meta">${page === 0
+        ? `아직 글이 없습니다. <a href="/problems.html">문제</a>를 풀고 첫 글을 남겨 보세요.`
+        : "이 쪽에는 글이 없습니다."}</div>`;
+
+  const pager = document.getElementById("pager");
+  pager.hidden = page === 0 && !data.hasNext;
+  document.getElementById("pageInfo").textContent = `${page + 1}쪽`;
+  document.getElementById("prevBtn").disabled = page === 0;
+  document.getElementById("nextBtn").disabled = !data.hasNext;
+}
+
+function show() {
+  load().catch(e => {
+    document.getElementById("message").innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+  });
+}
+
+document.getElementById("prevBtn").addEventListener("click", () => { page -= 1; show(); });
+document.getElementById("nextBtn").addEventListener("click", () => { page += 1; show(); });
+show();
+</script>
+</body>
+</html>

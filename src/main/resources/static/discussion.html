@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>토론방 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다(이유는 wrong-answers.html의 같은 자리 주석). */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container">
+  <p class="meta"><a href="/community.html">← 커뮤니티</a></p>
+  <h1>토론방</h1>
+
+  <!-- 어느 문제의 방인지를 맨 위에 둔다. 글 제목만 보고는 무엇을 두고 하는 이야기인지 알 수 없다. -->
+  <div class="card room-problem" id="problemCard" hidden></div>
+
+  <div id="message" role="alert"></div>
+
+  <div class="room-bar" id="roomBar" hidden>
+    <span class="meta" id="totalInfo"></span>
+    <span class="spacer"></span>
+    <button type="button" id="writeBtn" class="btn-sm" hidden>글쓰기</button>
+  </div>
+  <!-- 쓸 수 없는 사람에게는 버튼을 감추고 이유를 적는다. 눌리지 않는 버튼은 왜 안 되는지 말해 주지 않는다. -->
+  <p class="meta" id="writeNote" hidden></p>
+
+  <form id="writeForm" class="card" hidden>
+    <div class="field">
+      <label for="postTitle">제목 (2~100자)</label>
+      <input type="text" id="postTitle" required minlength="2" maxlength="100">
+    </div>
+    <div class="field">
+      <label for="postBody">내용 (5,000자까지)</label>
+      <textarea id="postBody" rows="8" required maxlength="5000"></textarea>
+    </div>
+    <div id="writeMessage" role="alert"></div>
+    <div class="row-actions">
+      <button type="submit" id="writeSubmit">등록</button>
+      <button type="button" id="writeCancel" class="btn-outline">취소</button>
+    </div>
+  </form>
+
+  <div id="list"></div>
+
+  <div class="pager" id="pager" hidden>
+    <button id="prevBtn" class="btn-outline">이전</button>
+    <span class="info" id="pageInfo"></span>
+    <button id="nextBtn" class="btn-outline">다음</button>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+/* 토론방 — 한 문제에 딸린 글 목록과 글쓰기.
+ *   GET  /api/quiz/{problemId}        문제 제목(공개)
+ *   GET  /api/quiz/{problemId}/posts  글 목록(공개). 방이 아직 없으면 빈 목록이 온다
+ *   POST /api/me/posts                글쓰기(그 문제를 푼 사람만)
+ * 방은 미리 만들어 두지 않는다. 첫 글이 쓰일 때 서버가 만든다. */
+renderShell({ active: "community", title: "토론방" });
+
+const problemId = new URLSearchParams(location.search).get("problemId");
+const message = document.getElementById("message");
+const writeForm = document.getElementById("writeForm");
+let page = 0;
+
+function showError(text) {
+  message.innerHTML = `<div class="alert error">${escapeHtml(text)}</div>`;
+}
+
+async function loadProblem() {
+  const card = document.getElementById("problemCard");
+  const data = await api("/api/quiz/" + encodeURIComponent(problemId));
+  const p = data.problems[0];
+  // 공개 응답에는 문제 제목이 없고 지문만 있다. 지문이 곧 "무엇을 두고 하는 이야기인지"다.
+  card.innerHTML = `
+    <div class="meta">이 문제의 토론방입니다</div>
+    <div class="room-problem-title">${escapeHtml(p.question)}</div>
+    <a class="btn-outline btn-sm btn" href="/quiz.html?problemId=${encodeURIComponent(problemId)}">문제 보기</a>`;
+  card.hidden = false;
+}
+
+async function loadPosts() {
+  const data = await api(`/api/quiz/${encodeURIComponent(problemId)}/posts?page=${page}`);
+  document.getElementById("roomBar").hidden = false;
+  document.getElementById("totalInfo").textContent = `글 ${data.total}개`;
+  renderWriteEntry(data);
+
+  const list = document.getElementById("list");
+  if (data.posts.length === 0) {
+    list.innerHTML = `<div class="card meta">${page === 0
+      ? "아직 글이 없습니다. 첫 글이 쓰이면 이 문제의 토론방이 열립니다."
+      : "이 쪽에는 글이 없습니다."}</div>`;
+  } else {
+    list.innerHTML = data.posts.map(postRow).join("");
+  }
+
+  const pager = document.getElementById("pager");
+  pager.hidden = page === 0 && !data.hasNext;
+  document.getElementById("pageInfo").textContent = `${page + 1}쪽`;
+  document.getElementById("prevBtn").disabled = page === 0;
+  document.getElementById("nextBtn").disabled = !data.hasNext;
+}
+
+/* 가린 글은 줄만 남기고 링크를 걸지 않는다 — 들어가도 볼 것이 없다. */
+function postRow(p) {
+  if (p.status !== "VISIBLE") {
+    return `<div class="post-row gone"><span class="meta">관리자가 가린 글입니다</span></div>`;
+  }
+  return `<a class="post-row" href="/post.html?id=${p.id}">
+    <span class="post-row-title">${escapeHtml(p.title)}${
+      p.commentCount ? ` <span class="post-row-count">💬 ${p.commentCount}</span>` : ""}</span>
+    <span class="meta">${escapeHtml(p.nickname || "탈퇴한 사용자")} · ${formatDate(p.createdAt)}</span>
+  </a>`;
+}
+
+function renderWriteEntry(data) {
+  const btn = document.getElementById("writeBtn");
+  const note = document.getElementById("writeNote");
+  btn.hidden = !data.canWrite;
+  note.hidden = data.canWrite;
+  if (data.canWrite) return;
+  const quizLink = `<a href="/quiz.html?problemId=${encodeURIComponent(problemId)}">문제를 풀면</a>`;
+  note.innerHTML = isLoggedIn()
+    ? `${quizLink} 글을 쓸 수 있습니다. 읽기는 누구나 됩니다.`
+    : `<a href="/login.html">로그인</a>하고 ${quizLink} 글을 쓸 수 있습니다. 읽기는 누구나 됩니다.`;
+}
+
+document.getElementById("writeBtn").addEventListener("click", () => {
+  writeForm.hidden = false;
+  document.getElementById("writeBtn").hidden = true;
+  document.getElementById("postTitle").focus();
+});
+document.getElementById("writeCancel").addEventListener("click", () => {
+  writeForm.hidden = true;
+  document.getElementById("writeBtn").hidden = false;
+});
+
+writeForm.addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = document.getElementById("writeSubmit");
+  const msg = document.getElementById("writeMessage");
+  btn.disabled = true;   // 응답 전에 두 번 눌려 같은 글이 둘 올라가지 않게
+  msg.innerHTML = "";
+  try {
+    const post = await api("/api/me/posts", { method: "POST", body: JSON.stringify({
+      problemId: Number(problemId),
+      title: document.getElementById("postTitle").value,
+      body: document.getElementById("postBody").value }) });
+    // 쓴 글로 바로 간다. 목록으로 돌아가면 방금 쓴 글을 다시 찾아 눌러야 한다.
+    location.href = "/post.html?id=" + post.id;
+  } catch (err) {
+    // 닉네임은 가입할 때 받는다. 그 전에 만든 계정만 여기 걸린다 — 쓴 글은 칸에 남아 있다.
+    msg.innerHTML = err.code === "DISCUSSION_003"
+      ? `<div class="alert error">닉네임이 없는 계정입니다. <a href="/mypage.html" target="_blank"
+           rel="noopener">마이페이지</a>에서 닉네임을 정한 뒤 다시 등록해 주세요.</div>`
+      : `<div class="alert error">${escapeHtml(err.message)}${
+          (err.fieldErrors || []).map(f => `<div>${escapeHtml(f.reason)}</div>`).join("")}</div>`;
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("prevBtn").addEventListener("click", () => { page -= 1; loadPosts().catch(e => showError(e.message)); });
+document.getElementById("nextBtn").addEventListener("click", () => { page += 1; loadPosts().catch(e => showError(e.message)); });
+
+if (!problemId) {
+  showError("어느 문제의 토론방인지 알 수 없습니다. 문제 화면에서 다시 들어와 주세요.");
+} else {
+  // 둘을 따로 부른다 — 한쪽이 실패해도 다른 쪽은 보인다.
+  loadProblem().catch(e => showError(e.message));
+  loadPosts().catch(e => showError(e.message));
+}
+</script>
+</body>
+</html>

@@ -424,19 +424,37 @@ function renderList(rows, data) {
 }
 
 /**
- * 문제별 댓글 수를 뒤늦게 채운다(V21). 목록 조회에 얹지 않고 따로 묻는 이유: 개수는 목록이
+ * 문제별 토론 글 수를 뒤늦게 채운다(V22). 목록 조회에 얹지 않고 따로 묻는 이유: 개수는 목록이
  * 뜨는 데 필요하지 않다. 이 요청이 늦거나 실패해도 목록은 그대로 보인다.
  */
 async function fillCommentCounts(rows) {
   if (rows.length === 0) return;
   try {
-    const counts = await api("/api/quiz/comment-counts?problemIds=" + rows.map(p => p.id).join(","));
+    const counts = await api("/api/quiz/post-counts?problemIds=" + rows.map(p => p.id).join(","));
     Object.entries(counts).forEach(([id, n]) => {
       const el = document.querySelector(`[data-comments-of="${id}"]`);
-      if (el) el.textContent = `💬 ${n}`;
+      if (!el) return;
+      el.textContent = `💬 ${n}`;
+      // 줄 전체가 문제로 가는 링크라 그 안에 링크를 또 넣을 수 없다. 대신 이 조각만 토론방으로 보낸다.
+      el.setAttribute("role", "link");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("aria-label", `토론방 글 ${n}개`);
+      el.dataset.room = id;
     });
   } catch (e) { /* 개수는 없어도 되는 정보다 — 조용히 넘긴다 */ }
 }
+
+/* 글 수를 누르면 문제가 아니라 그 문제의 토론방으로 간다(위 fillCommentCounts가 표시를 단다). */
+function goRoom(e) {
+  const el = e.target.closest("[data-room]");
+  if (!el) return;
+  if (e.type === "keydown" && e.key !== "Enter") return;
+  e.preventDefault();
+  e.stopPropagation();
+  location.href = "/discussion.html?problemId=" + el.dataset.room;
+}
+document.getElementById("list").addEventListener("click", goRoom);
+document.getElementById("list").addEventListener("keydown", goRoom);
 
 /**
  * 상태 아이콘 — <b>색으로만 알리지 않는다</b>(스펙 §4). 기호와 aria-label을 함께 쓴다.

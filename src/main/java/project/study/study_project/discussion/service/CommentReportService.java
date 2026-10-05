@@ -11,11 +11,14 @@ import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.CommentReport;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Discussion;
+import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.dto.CommentReportItem;
 import project.study.study_project.discussion.dto.CommentReportRequest;
+import project.study.study_project.discussion.dto.PostReportRequest;
 import project.study.study_project.discussion.repository.CommentReportRepository;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
+import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -28,7 +31,7 @@ import project.study.study_project.user.repository.UserRepository;
 import java.time.LocalDateTime;
 
 /**
- * 댓글 신고 — 접수(학습자)와 판정(관리자).
+ * 글·댓글 신고 — 접수(학습자)와 판정(관리자).
  *
  * <p>가림은 관리자만 한다(2026-10-03 사용자 결정). 신고가 쌓여도 글은 저절로 가려지지 않는다 —
  * 여럿이 짜고 멀쩡한 글을 내리는 길을 열지 않는다.
@@ -40,6 +43,7 @@ public class CommentReportService {
 
     private final CommentReportRepository reportRepository;
     private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
     private final DiscussionRepository discussionRepository;
     private final ProblemRepository problemRepository;
     private final UserRepository userRepository;
@@ -56,12 +60,34 @@ public class CommentReportService {
         if (reportRepository.existsByCommentIdAndUserId(comment.getId(), userId)) {
             throw new BusinessException(ErrorCode.DISCUSSION_007);
         }
-        String detail = (request.detail() == null || request.detail().isBlank()) ? null : request.detail().trim();
         try {
             CommentReport saved = reportRepository.saveAndFlush(
-                    CommentReport.of(comment.getId(), userId, request.reason(), detail));
+                    CommentReport.of(comment.getId(), userId, request.reason(), trimmed(request.detail())));
             log.info("댓글 신고 접수: commentId={} reason={}", comment.getId(), request.reason());
-            return toItem(saved, comment);
+            return toItem(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.DISCUSSION_007);
+        }
+    }
+
+    /** 글 신고. 지운 글은 없는 글로, 이미 가린 글은 처리된 것으로 답한다. */
+    @Transactional
+    public CommentReportItem reportPost(Long userId, PostReportRequest request) {
+        Post post = requirePost(request.postId());
+        if (post.isDeleted()) {
+            throw new BusinessException(ErrorCode.DISCUSSION_011);
+        }
+        if (!post.isVisible()) {
+            throw new BusinessException(ErrorCode.DISCUSSION_006);
+        }
+        if (reportRepository.existsByPostIdAndUserId(post.getId(), userId)) {
+            throw new BusinessException(ErrorCode.DISCUSSION_007);
+        }
+        try {
+            CommentReport saved = reportRepository.saveAndFlush(
+                    CommentReport.ofPost(post.getId(), userId, request.reason(), trimmed(request.detail())));
+            log.info("글 신고 접수: postId={} reason={}", post.getId(), request.reason());
+            return toItem(saved);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.DISCUSSION_007);
         }
@@ -74,7 +100,7 @@ public class CommentReportService {
         Page<CommentReport> page = status == ReportStatus.PENDING
                 ? reportRepository.findOldestFirst(status, pageable)
                 : reportRepository.findNewestFirst(status, pageable);
-        return PageResponse.from(page.map(r -> toItem(r, requireComment(r.getCommentId()))));
+        return PageResponse.from(page.map(this::toItem));
     }
 
     @Transactional(readOnly = true)
@@ -107,6 +133,31 @@ public class CommentReportService {
         return comment.getStatus();
     }
 
+    /** 글 가림. 글을 가리면 그 아래 댓글도 함께 안 보인다(CommentService.list) — 댓글의 상태는 건드리지 않는다. */
+    @Transactional
+    public CommentStatus hidePost(Long postId) {
+        Post post = requirePost(postId);
+        if (post.isDeleted()) {
+            throw new BusinessException(ErrorCode.DISCUSSION_006);
+        }
+        post.hide();
+        int accepted = reportRepository.acceptPendingOfPost(
+                postId, ReportStatus.PENDING, ReportStatus.ACCEPTED, LocalDateTime.now());
+        log.info("글 가림: postId={} 닫힌 신고={}", postId, accepted);
+        return post.getStatus();
+    }
+
+    @Transactional
+    public CommentStatus restorePost(Long postId) {
+        Post post = requirePost(postId);
+        if (post.getStatus() != CommentStatus.HIDDEN) {
+            throw new BusinessException(ErrorCode.DISCUSSION_006);
+        }
+        post.restore();
+        log.info("글 복구: postId={}", postId);
+        return post.getStatus();
+    }
+
     /** 존재를 먼저 보고 상태를 본다 — 뒤집으면 없는 id에 "이미 처리됨"이 나간다. */
     @Transactional
     public CommentReportItem dismiss(Long reportId, String adminNote) {
@@ -115,26 +166,41 @@ public class CommentReportService {
         if (!report.isPending()) {
             throw new BusinessException(ErrorCode.DISCUSSION_009);
         }
-        report.dismiss((adminNote == null || adminNote.isBlank()) ? null : adminNote.trim());
-        log.info("댓글 신고 기각: reportId={}", reportId);
-        return toItem(report, requireComment(report.getCommentId()));
+        report.dismiss(trimmed(adminNote));
+        log.info("신고 기각: reportId={}", reportId);
+        return toItem(report);
     }
 
     /* ── 내부 ─────────────────────────────────────────────── */
+
+    private String trimmed(String text) {
+        return (text == null || text.isBlank()) ? null : text.trim();
+    }
 
     private Comment requireComment(Long commentId) {
         return commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_001));
     }
 
-    /** 신고 한 줄에 글쓴이 닉네임과 문제 제목을 붙인다. 한 쪽이 20건이라 건마다 읽어도 부담이 없다. */
-    private CommentReportItem toItem(CommentReport report, Comment comment) {
-        String nickname = comment.getUserId() == null ? null
-                : userRepository.findById(comment.getUserId()).map(User::getNickname).orElse(null);
-        Long problemId = discussionRepository.findById(comment.getDiscussionId())
+    /** 지운 글도 돌려준다 — 신고함은 지운 글의 신고도 보여 줘야 한다. 지운 글을 막을지는 부르는 쪽이 정한다. */
+    private Post requirePost(Long postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
+    }
+
+    /** 신고 한 줄에 글쓴이 닉네임과 글·문제 제목을 붙인다. 한 쪽이 20건이라 건마다 읽어도 부담이 없다. */
+    private CommentReportItem toItem(CommentReport report) {
+        Comment comment = report.targetsPost() ? null : requireComment(report.getCommentId());
+        Post post = requirePost(report.targetsPost() ? report.getPostId() : comment.getPostId());
+        Long authorId = comment != null ? comment.getUserId() : post.getUserId();
+        String nickname = authorId == null ? null
+                : userRepository.findById(authorId).map(User::getNickname).orElse(null);
+        Long problemId = discussionRepository.findById(post.getDiscussionId())
                 .map(Discussion::getProblemId).orElse(null);
         String problemTitle = problemId == null ? null
                 : problemRepository.findById(problemId).map(Problem::getTitle).orElse(null);
-        return CommentReportItem.of(report, comment, nickname, problemId, problemTitle);
+        return comment != null
+                ? CommentReportItem.ofComment(report, comment, post, nickname, problemId, problemTitle)
+                : CommentReportItem.ofPost(report, post, nickname, problemId, problemTitle);
     }
 }
