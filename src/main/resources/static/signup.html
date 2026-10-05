@@ -42,13 +42,16 @@ try {
        가입 실패는 <더 진행할 수 없다>는 뜻이라 끊어도 되는 몇 안 되는 알림이다. -->
   <div id="message" role="alert" aria-live="assertive"></div>
 
-  <form id="signupForm" class="card">
+  <form id="signupForm" class="card signup-form">
     <div class="field">
-      <label for="username">아이디 (영문·숫자·밑줄 4~20자)</label>
-      <!-- 규칙을 라벨에 적어 두는 이유: 서버도 같은 규칙으로 막지만(SignupRequest),
-           제출한 뒤에 알려 주면 다시 입력하게 된다. pattern은 브라우저가 먼저 걸러 준다. -->
-      <input type="text" id="username" required autocomplete="username"
+      <!-- 라벨에는 칸 이름만 둔다. 규칙을 괄호로 붙였더니 네 라벨이 모두 긴 회색 한 줄이 되어
+           어느 칸이 무엇인지도, 규칙도 눈에 안 들어왔다. 규칙은 칸 아래 도움말로 내렸다.
+           미리 알려 준다는 점은 그대로다 — 제출한 뒤에 알려 주면 다시 입력하게 된다. -->
+      <label for="username">아이디</label>
+      <input type="text" id="username" required autocomplete="username" aria-describedby="usernameHint"
              pattern="[A-Za-z0-9_]{4,20}" title="영문·숫자·밑줄(_)로 4~20자">
+      <!-- 확인 결과(오류·쓸 수 있음)가 뜨면 이 줄은 숨는다. 작은 글씨가 두세 줄 쌓이지 않게 한다. -->
+      <div class="field-hint" id="usernameHint">영문·숫자·밑줄(_) 4~20자. 로그인할 때 씁니다.</div>
       <!-- 서버가 "이미 쓰는 값"이라고 돌려준 오류는 그 칸 아래에 띄운다. 맨 위에만 뜨면
            아이디와 닉네임 중 어느 쪽을 고쳐야 하는지 다시 읽어야 한다. -->
       <div class="field-error" id="usernameError" hidden></div>
@@ -57,24 +60,44 @@ try {
       <div class="field-ok" id="usernameOk" role="status" hidden></div>
     </div>
     <div class="field">
-      <label for="nickname">닉네임 (2~12자, 한글·영문·숫자·밑줄)</label>
+      <label for="nickname">닉네임</label>
       <!-- 토론에서 글쓴이로 보이는 이름이다(V21). 아이디와 따로 받는 이유: 로그인 아이디를
            그대로 보여 주면 남이 그 아이디로 로그인을 시도할 수 있다. 가입할 때 받는 이유:
            글을 쓰다 말고 닉네임을 정하게 하면 흐름이 끊긴다. -->
       <input type="text" id="nickname" required minlength="2" maxlength="12" autocomplete="nickname"
+             aria-describedby="nicknameHint"
              pattern="[가-힣A-Za-z0-9_]{2,12}" title="2~12자의 한글·영문·숫자·밑줄(_)">
+      <div class="field-hint" id="nicknameHint">한글·영문·숫자·밑줄 2~12자. 다른 사람에게 보이는 이름입니다.</div>
       <div class="field-error" id="nicknameError" hidden></div>
       <div class="field-ok" id="nicknameOk" role="status" hidden></div>
-      <div class="meta">다른 사람에게 보이는 이름입니다. 아이디는 보이지 않습니다.</div>
     </div>
     <div class="field">
-      <label for="password">비밀번호 (8자 이상, 영문+숫자 포함)</label>
+      <label for="password">비밀번호</label>
       <!-- 서버(SignupRequest)와 <같은 정규식>이다. 아이디에는 pattern이 있는데 비밀번호에는
            없어서, 규칙이 라벨에만 적혀 있고 어긋난 값은 서버를 다녀와야 알 수 있었다.
            앞을 내다보는 검사(?=...)는 HTML pattern에서도 그대로 동작한다. -->
       <input type="password" id="password" required autocomplete="new-password"
              pattern="(?=.*[A-Za-z])(?=.*\d).{8,}"
-             title="8자 이상이며 영문과 숫자를 포함해야 합니다">
+             title="8자 이상이며 영문과 숫자를 포함해야 합니다" aria-describedby="pwRules pwLostNote">
+      <!-- 규칙 셋을 따로 적고, 치는 동안 채워진 것부터 ✓로 바꾼다(아래 checkPasswordRules).
+           전에는 규칙이 라벨에만 있어서 "abc"를 쳐도 아무 말이 없었고 제출해야 알 수 있었다.
+           아이디·닉네임은 입력 도중에 알려 주는데 이 칸만 달랐다. -->
+      <ul class="pw-rules" id="pwRules">
+        <li data-rule="length">8자 이상</li>
+        <li data-rule="letter">영문 포함</li>
+        <li data-rule="digit">숫자 포함</li>
+      </ul>
+      <!-- [되찾을 수 없다는 사실을 <가입 전에> 말한다]
+           이 앱은 이메일을 받지 않으므로 재설정 메일을 보낼 곳이 없다(SignupRequest).
+           가입 직후 자동 로그인되므로 오타로 가입해도 그 자리에서는 아무 이상이 없고, 다음
+           로그인에서야 막힌다. 알려야 하는 시점은 <적어 두거나 기억할 수 있는> 지금뿐이다.
+
+           [자리를 가입 버튼 위에서 여기로 옮겼다 — 2026-10-05]
+           노란 띠를 두른 세 줄이 버튼 바로 위에 있어서 화면에서 가장 눈에 띄는 것이 경고였고,
+           누르기 직전에 읽는 말이 불안한 내용이었다. 이 말이 쓸모 있는 때는 비밀번호를
+           <정하는> 순간이라, 그 칸 아래에 도움말 한 줄로 둔다. -->
+      <div class="field-hint" id="pwLostNote">잊으면 되찾을 수 없습니다. 이메일을 받지 않아 재설정할 방법이 없으니,
+        브라우저에 저장하거나 적어 두세요.</div>
     </div>
     <div class="field">
       <label for="password2">비밀번호 확인</label>
@@ -99,17 +122,6 @@ try {
     <label class="pw-reveal">
       <input type="checkbox" id="pwReveal"> 비밀번호 보기
     </label>
-
-    <!-- [되찾을 수 없다는 사실을 <가입 전에> 말한다]
-         이 앱은 이메일을 받지 않으므로 재설정 메일을 보낼 곳이 없다(SignupRequest).
-         지금까지 그 사실은 <코드 주석에만> 있었다 — 정작 그것 때문에 계정을 잃는 사람은
-         주석을 읽지 않는다. 게다가 가입 직후 자동 로그인되므로 오타로 가입해도 그 자리에서는
-         아무 이상이 없고, 다음 로그인에서야 막힌다. 그때는 무엇을 잘못 쳤는지 알 길이 없다.
-         알려야 하는 시점은 <적어 두거나 기억할 수 있는> 지금뿐이다. -->
-    <p class="meta warn-note">
-      비밀번호를 잊으면 되찾을 수 없습니다. 이메일을 받지 않아 재설정 메일을 보낼 곳이 없습니다 —
-      브라우저에 저장하거나 따로 적어 두세요.
-    </p>
 
     <button type="submit" id="submitBtn" style="width:100%">가입하기</button>
   </form>
@@ -152,6 +164,33 @@ function checkPasswordMatch() {
   pw2.classList.toggle("invalid", mismatch && pw2Touched);
 }
 
+/* 비밀번호 규칙 셋을 하나씩 본다. 정규식은 서버(SignupRequest)의 것을 셋으로 쪼갠 것이다.
+ *
+ * 치는 동안에는 채워진 것만 ✓로 바꾸고, 안 채워진 것은 회색으로 둔다 — 첫 글자를 치자마자
+ * 빨간 줄 셋이 뜨면 아직 다 치지도 않은 사람을 나무라게 된다. 칸을 떠났는데도 남은 것이
+ * 있으면 그때 ✕로 바꾼다(비밀번호 확인 칸, 아이디 확인과 같은 판단). */
+const PW_RULES = {
+  length: v => v.length >= 8,
+  letter: v => /[A-Za-z]/.test(v),
+  digit: v => /d/.test(v),
+};
+let pwLeft = false;   // 비밀번호 칸을 한 번이라도 떠났는가
+
+function checkPasswordRules() {
+  const value = pw.value;
+  let allMet = true;
+  document.querySelectorAll("#pwRules li").forEach(li => {
+    const met = PW_RULES[li.dataset.rule](value);
+    allMet = allMet && met;
+    li.classList.toggle("met", met);
+    li.classList.toggle("unmet", !met && pwLeft && value !== "");
+  });
+  pw.classList.toggle("invalid", !allMet && pwLeft && value !== "");
+}
+
+pw.addEventListener("input", checkPasswordRules);
+pw.addEventListener("blur", () => { pwLeft = true; checkPasswordRules(); });
+
 pw2.addEventListener("input", () => { pw2Touched = true; checkPasswordMatch(); });
 // 첫 칸을 나중에 고치는 경우도 있다 — 그때도 판단이 따라와야 한다.
 pw.addEventListener("input", checkPasswordMatch);
@@ -175,6 +214,7 @@ function showFieldError(fieldId, text) {
   const box = document.getElementById(fieldId + "Error");
   // 미리 확인한 뒤 제출하는 사이에 남이 먼저 가져갈 수 있다. "쓸 수 있습니다"가 오류 옆에 남지 않게 한다.
   document.getElementById(fieldId + "Ok").hidden = true;
+  document.getElementById(fieldId + "Hint").hidden = true;
   box.textContent = text;
   box.hidden = false;
   input.classList.add("invalid");
@@ -190,6 +230,7 @@ function clearFieldErrors() {
 function clearFieldMark(id) {
   document.getElementById(id + "Error").hidden = true;
   document.getElementById(id + "Ok").hidden = true;
+  document.getElementById(id + "Hint").hidden = false;   // 결과가 사라지면 규칙 안내가 돌아온다
   document.getElementById(id).classList.remove("invalid");
 }
 
@@ -222,6 +263,7 @@ function wireAvailability(id) {
       const box = document.getElementById(id + (r.available ? "Ok" : "Error"));
       box.textContent = r.available ? "✓ " + AVAILABLE_TEXT[id] : r.reason;
       box.hidden = false;
+      document.getElementById(id + "Hint").hidden = true;
       input.classList.toggle("invalid", !r.available);
     } catch (e) { /* 확인은 없어도 가입은 된다 */ }
   }
@@ -244,6 +286,8 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
   // 서버에 보내기 전에 한 번 더 본다. 입력 중 검사만 믿으면, 붙여넣기처럼
   // input 이벤트를 거치지 않는 경로로 어긋난 값이 그대로 나갈 수 있다.
   pw2Touched = true;
+  pwLeft = true;
+  checkPasswordRules();
   checkPasswordMatch();
   if (pw.value !== pw2.value) {
     pw2.focus();
