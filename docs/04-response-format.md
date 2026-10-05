@@ -115,6 +115,7 @@ public record FieldError(String field, String reason) {}
 | `DISCUSSION_009` | 409 | 이미 처리된 신고 (관리자) |
 | `DISCUSSION_010` | 400 | 운영진으로 보이는 닉네임(관리자·운영자·admin 등)으로 가입·변경. 관리자 계정은 예외 |
 | `DISCUSSION_011` | 404 | 토론방 글 없음(지운 글 포함) |
+| `DISCUSSION_012` | 400 | 내가 쓴 글·댓글을 신고 |
 
 > 새 에러는 이 표에 추가하고 코드로 `enum ErrorCode`(code, httpStatus, defaultMessage) 관리.
 

@@ -57,6 +57,7 @@ public class CommentReportService {
         if (!comment.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
+        rejectOwn(userId, comment.getUserId());
         if (reportRepository.existsByCommentIdAndUserId(comment.getId(), userId)) {
             throw new BusinessException(ErrorCode.DISCUSSION_007);
         }
@@ -80,6 +81,7 @@ public class CommentReportService {
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
+        rejectOwn(userId, post.getUserId());
         if (reportRepository.existsByPostIdAndUserId(post.getId(), userId)) {
             throw new BusinessException(ErrorCode.DISCUSSION_007);
         }
@@ -172,6 +174,13 @@ public class CommentReportService {
     }
 
     /* ── 내부 ─────────────────────────────────────────────── */
+
+    /** 화면은 자기 글에 신고 버튼을 내지 않지만 주소는 직접 부를 수 있다. 내리고 싶으면 지우면 된다. */
+    private void rejectOwn(Long userId, Long authorId) {
+        if (userId.equals(authorId)) {
+            throw new BusinessException(ErrorCode.DISCUSSION_012);
+        }
+    }
 
     private String trimmed(String text) {
         return (text == null || text.isBlank()) ? null : text.trim();
