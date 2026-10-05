@@ -84,7 +84,46 @@ function renderPost() {
     ${post.mine ? `<div class="disc-tools">
       <button type="button" id="editBtn">수정</button>
       <button type="button" id="deleteBtn">삭제</button>
-    </div>` : ""}`;
+    </div>` : ""}
+    ${!post.mine && isLoggedIn() ? `<div class="disc-tools">
+      <button type="button" id="reportBtn">신고</button>
+    </div><div id="reportSlot"></div>` : ""}`;
+}
+
+/* 글 신고. 사유 목록은 댓글 신고와 같은 것을 쓴다(discussion.js의 COMMENT_REPORT_REASONS). */
+function openReportForm() {
+  document.getElementById("reportSlot").innerHTML = `<form class="disc-form" id="reportForm">
+    <select required>
+      <option value="">신고 사유를 골라 주세요</option>
+      ${COMMENT_REPORT_REASONS.map(([v, l]) => `<option value="${v}">${escapeHtml(l)}</option>`).join("")}
+    </select>
+    <input type="text" maxlength="500" placeholder="덧붙일 말 (선택)">
+    <div class="disc-actions">
+      <button type="submit" class="btn-sm">신고 보내기</button>
+      <button type="button" class="btn-sm btn-outline" id="reportCancel">취소</button>
+    </div>
+  </form>`;
+}
+
+/** 이미 신고한 글(DISCUSSION_007)은 실패가 아니라 안내다 — 빨갛게 칠하지 않는다. */
+async function sendPostReport(form) {
+  const slot = document.getElementById("reportSlot");
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    await api("/api/me/post-reports", { method: "POST", body: JSON.stringify({
+      postId: post.id,
+      reason: form.querySelector("select").value,
+      detail: form.querySelector("input").value }) });
+    slot.innerHTML = `<div class="meta">신고를 보냈습니다. 확인하겠습니다.</div>`;
+  } catch (err) {
+    if (err.code === "DISCUSSION_007") {
+      slot.innerHTML = `<div class="meta">${escapeHtml(err.message)}</div>`;
+    } else {
+      btn.disabled = false;
+      showError(err.message);
+    }
+  }
 }
 
 async function load() {
@@ -96,7 +135,15 @@ async function load() {
   }
 }
 
+article.addEventListener("submit", e => {
+  if (e.target.id !== "reportForm") return;
+  e.preventDefault();
+  sendPostReport(e.target);
+});
+
 article.addEventListener("click", async e => {
+  if (e.target.id === "reportBtn") { openReportForm(); return; }
+  if (e.target.id === "reportCancel") { document.getElementById("reportSlot").innerHTML = ""; return; }
   if (e.target.id === "editBtn") {
     document.getElementById("editTitle").value = post.title;
     document.getElementById("editBody").value = post.body;

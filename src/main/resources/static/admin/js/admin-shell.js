@@ -43,8 +43,8 @@ const ADMIN_MENUS = [
     // 다른 것은 판정 대상이 출제 전이냐 후냐뿐이다. 검수함이 비면 제보함을 보는 흐름.
     { key: "llm",       label: "검수",      href: "/admin/llm.html",       icon: "📋" },
     { key: "reports",   label: "제보",      href: "/admin/reports.html",   icon: "🚩" },
-    // 제보 옆인 이유: 둘 다 학습자가 올린 것을 읽고 판정하는 화면이다. 대상이 문제냐 댓글이냐만 다르다.
-    { key: "comments",  label: "댓글 신고", href: "/admin/comments.html",  icon: "💬" },
+    // 제보 옆인 이유: 둘 다 학습자가 올린 것을 읽고 판정하는 화면이다. 대상이 문제냐 토론방의 글·댓글이냐만 다르다.
+    { key: "comments",  label: "토론 신고", href: "/admin/comments.html",  icon: "💬" },
   ]},
   { group: "콘텐츠", items: [
     { key: "problems",  label: "문제",      href: "/admin/problems.html",  icon: "🗂️" },

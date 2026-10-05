@@ -508,11 +508,18 @@ refresh 토큰을 폐기한다.
 | POST | `/api/me/comments` | ✓ | 댓글·답글 쓰기 `{postId, parentId, body}` → 201 |
 | PUT · DELETE | `/api/me/comments/{id}` | ✓ | 내 댓글 수정 `{body}` · 삭제 |
 | POST | `/api/me/comment-reports` | ✓ | 댓글 신고 `{commentId, reason, detail}` |
+| POST | `/api/me/post-reports` | ✓ | 글 신고 `{postId, reason, detail}` |
+| GET | `/api/admin/comment-reports?status=` | 🛡️ | 신고함(글·댓글 한 목록). 한 줄의 `targetType`이 `POST`·`COMMENT`를 가른다 |
+| POST | `/api/admin/posts/{id}/hide` · `/restore` | 🛡️ | 글 가림·복구. 가리면 그 글의 대기 신고가 모두 닫힌다 |
+| POST | `/api/admin/comments/{id}/hide` · `/restore` | 🛡️ | 댓글 가림·복구 |
+| POST | `/api/admin/comment-reports/{id}/dismiss` | 🛡️ | 신고 기각 `{note}` — 대상은 그대로 두고 그 신고만 닫는다 |
 
 - 읽기는 비로그인까지 열려 있다. 쓰기는 그 문제에 제출 기록이 있는 사람과 관리자만 한다(`DISCUSSION_002`).
 - 제목은 2~100자, 글 본문은 5,000자, 댓글은 1,000자까지다. 서식은 없고 줄바꿈만 살린다.
 - 삭제는 행을 지우지 않고 상태만 바꾼다. 지운 글은 목록에서 빠지고 상세는 `DISCUSSION_011`(404)이다.
 - 관리자가 가린 글은 목록에 자리만 남고 제목·본문·글쓴이·댓글을 내보내지 않는다.
+- 신고는 문제를 풀지 않은 사람도 한다. 한 사람이 같은 글·댓글을 한 번만 신고한다(`DISCUSSION_007`).
+  신고가 쌓여도 저절로 가려지지 않고 관리자만 가린다.
 - 글쓰기와 댓글 쓰기는 한 사용자당 합쳐서 분당 5건이다([09](09-rate-limiting.md)).
 
 ---

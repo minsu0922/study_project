@@ -100,7 +100,7 @@ public enum ErrorCode {
     DISCUSSION_004("DISCUSSION_004", HttpStatus.CONFLICT, "이미 쓰는 닉네임입니다."),
     DISCUSSION_005("DISCUSSION_005", HttpStatus.FORBIDDEN, "내가 쓴 글만 고치거나 지울 수 있습니다."),
     DISCUSSION_006("DISCUSSION_006", HttpStatus.CONFLICT, "가려지거나 삭제된 글입니다."),
-    DISCUSSION_007("DISCUSSION_007", HttpStatus.CONFLICT, "이미 신고한 댓글입니다."),
+    DISCUSSION_007("DISCUSSION_007", HttpStatus.CONFLICT, "이미 신고했습니다."),
     DISCUSSION_008("DISCUSSION_008", HttpStatus.NOT_FOUND, "신고를 찾을 수 없습니다."),
     DISCUSSION_009("DISCUSSION_009", HttpStatus.CONFLICT, "이미 처리된 신고입니다."),
     // 409가 아니라 400인 이유: 지금 상태와 부딪히는 것이 아니라 어떤 상태에서도 받지 않는 값이다.
