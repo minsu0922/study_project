@@ -8,6 +8,7 @@ import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.user.dto.ChangePasswordRequest;
 import project.study.study_project.user.dto.NicknameRequest;
 import project.study.study_project.user.dto.NicknameResponse;
+import project.study.study_project.user.dto.SuspensionResponse;
 import project.study.study_project.user.dto.WithdrawRequest;
 import project.study.study_project.user.service.AccountService;
 
@@ -37,6 +38,12 @@ public class AccountController {
     public ApiResponse<NicknameResponse> changeNickname(@AuthenticationPrincipal Long userId,
                                                         @Valid @RequestBody NicknameRequest request) {
         return ApiResponse.ok(new NicknameResponse(accountService.changeNickname(userId, request.nickname())));
+    }
+
+    /** 내 정지 상태. 마이페이지가 읽는다 — 토론방에 가 보기 전에도 정지를 알 수 있어야 한다. */
+    @GetMapping("/suspension")
+    public ApiResponse<SuspensionResponse> suspension(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(accountService.getSuspension(userId));
     }
 
     /** 비밀번호 변경. 지금 비밀번호를 함께 받는다(DTO 주석 참고). */

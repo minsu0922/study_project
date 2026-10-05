@@ -27,6 +27,7 @@ import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.report.domain.ReportStatus;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
+import project.study.study_project.user.support.SuspensionGuard;
 
 import java.time.LocalDateTime;
 
@@ -53,6 +54,7 @@ public class CommentReportService {
     /** 중복은 두 겹으로 막는다 — 미리 세어 안내하고, 끼어든 요청은 유일 제약이 막는다(문제 제보와 같은 방식). */
     @Transactional
     public CommentReportItem report(Long userId, CommentReportRequest request) {
+        requireNotSuspended(userId);
         Comment comment = requireComment(request.commentId());
         if (!comment.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
@@ -74,6 +76,7 @@ public class CommentReportService {
     /** 글 신고. 지운 글은 없는 글로, 이미 가린 글은 처리된 것으로 답한다. */
     @Transactional
     public CommentReportItem reportPost(Long userId, PostReportRequest request) {
+        requireNotSuspended(userId);
         Post post = requirePost(request.postId());
         if (post.isDeleted()) {
             throw new BusinessException(ErrorCode.DISCUSSION_011);
@@ -182,6 +185,13 @@ public class CommentReportService {
         }
     }
 
+    /** 신고도 쓰기다. 정지된 사람이 남의 글을 신고로 괴롭히는 길을 남기지 않는다. */
+    private void requireNotSuspended(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        SuspensionGuard.requireNotSuspended(user);
+    }
+
     private String trimmed(String text) {
         return (text == null || text.isBlank()) ? null : text.trim();
     }
@@ -197,19 +207,18 @@ public class CommentReportService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
     }
 
-    /** 신고 한 줄에 글쓴이 닉네임과 글·문제 제목을 붙인다. 한 쪽이 20건이라 건마다 읽어도 부담이 없다. */
+    /** 신고 한 줄에 글쓴이와 글·문제 제목을 붙인다. 한 쪽이 20건이라 건마다 읽어도 부담이 없다. */
     private CommentReportItem toItem(CommentReport report) {
         Comment comment = report.targetsPost() ? null : requireComment(report.getCommentId());
         Post post = requirePost(report.targetsPost() ? report.getPostId() : comment.getPostId());
         Long authorId = comment != null ? comment.getUserId() : post.getUserId();
-        String nickname = authorId == null ? null
-                : userRepository.findById(authorId).map(User::getNickname).orElse(null);
+        User author = authorId == null ? null : userRepository.findById(authorId).orElse(null);
         Long problemId = discussionRepository.findById(post.getDiscussionId())
                 .map(Discussion::getProblemId).orElse(null);
         String problemTitle = problemId == null ? null
                 : problemRepository.findById(problemId).map(Problem::getTitle).orElse(null);
         return comment != null
-                ? CommentReportItem.ofComment(report, comment, post, nickname, problemId, problemTitle)
-                : CommentReportItem.ofPost(report, post, nickname, problemId, problemTitle);
+                ? CommentReportItem.ofComment(report, comment, post, author, problemId, problemTitle)
+                : CommentReportItem.ofPost(report, post, author, problemId, problemTitle);
     }
 }

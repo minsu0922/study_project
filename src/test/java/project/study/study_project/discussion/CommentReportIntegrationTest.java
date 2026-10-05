@@ -294,6 +294,36 @@ class CommentReportIntegrationTest {
         assertThat(reportRepository.count()).isEqualTo(before);
     }
 
+    /** 신고함에서 글쓴이를 정지하러 건너가려면 누구인지(아이디)와 이미 정지 중인지가 있어야 한다. */
+    @Test
+    @DisplayName("신고함 한 줄에 글쓴이 아이디와 정지 여부가 실린다. 탈퇴한 글쓴이는 비어 나간다")
+    void reportCarriesAuthorForSuspension() throws Exception {
+        User writer = userRepository.save(User.builder()
+                .username("crep" + UUID.randomUUID().toString().substring(0, 8))
+                .passwordHash(passwordEncoder.encode("password123"))
+                .role(Role.USER)
+                .build());
+        Post seed = savePost();
+        Post written = postRepository.saveAndFlush(Post.of(seed.getDiscussionId(), writer.getId(), "신고될 글", "본문"));
+
+        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+                        .contentType("application/json").content(postBody(written.getId(), "SPAM")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.targetUsername").value(writer.getUsername()))
+                .andExpect(jsonPath("$.data.targetSuspended").value(false));
+
+        writer.suspend(java.time.LocalDateTime.now().plusDays(7), "도배");
+        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+                        .contentType("application/json").content(postBody(written.getId(), "SPAM")))
+                .andExpect(jsonPath("$.data.targetSuspended").value(true));
+
+        // savePost는 글쓴이 없이(탈퇴한 사용자의 글처럼) 저장한다.
+        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+                        .contentType("application/json").content(postBody(seed.getId(), "SPAM")))
+                .andExpect(jsonPath("$.data.targetUsername").doesNotExist())
+                .andExpect(jsonPath("$.data.targetSuspended").value(false));
+    }
+
     private static final String POST_REPORT = "/api/me/post-reports";
 
     private String postBody(Long postId, String reason) {

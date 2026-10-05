@@ -1,8 +1,13 @@
 package project.study.study_project.user.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import project.study.study_project.user.domain.User;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -29,4 +34,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** 닉네임 중복 검사. 자기 자신은 뺀다 — 같은 이름으로 다시 저장하는 것은 중복이 아니다. */
     boolean existsByNicknameAndIdNot(String nickname, Long id);
+
+    /**
+     * 관리자 화면의 사용자 찾기 — 아이디나 닉네임의 일부로 찾고, 지금 정지 중인 사람만 추릴 수 있다.
+     *
+     * <p>앞뒤에 %를 붙인 LIKE라 인덱스를 타지 않는다. 관리자만 가끔 부르고 사용자 수가 적어
+     * 그대로 둔다. 가입자가 늘어 느려지면 앞부분 일치로 바꾼다.
+     */
+    @Query("""
+            select u from User u
+            where (:q is null or u.username like concat('%', :q, '%') or u.nickname like concat('%', :q, '%'))
+              and (:suspendedOnly = false or u.suspendedUntil > :now)
+            order by u.id desc
+            """)
+    Page<User> search(@Param("q") String q,
+                      @Param("suspendedOnly") boolean suspendedOnly,
+                      @Param("now") LocalDateTime now,
+                      Pageable pageable);
 }

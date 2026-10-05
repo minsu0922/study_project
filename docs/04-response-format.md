@@ -116,6 +116,9 @@ public record FieldError(String field, String reason) {}
 | `DISCUSSION_010` | 400 | 운영진으로 보이는 닉네임(관리자·운영자·admin 등)으로 가입·변경. 관리자 계정은 예외 |
 | `DISCUSSION_011` | 404 | 토론방 글 없음(지운 글 포함) |
 | `DISCUSSION_012` | 400 | 내가 쓴 글·댓글을 신고 |
+| `DISCUSSION_013` | 403 | 정지된 사용자의 글·댓글 쓰기와 수정, 신고. 문구에 풀리는 날짜와 사유가 실린다 |
+| `USER_001` | 404 | 사용자 없음 (관리자) |
+| `USER_002` | 400 | 관리자 계정을 정지하려 함 (관리자) |
 
 > 새 에러는 이 표에 추가하고 코드로 `enum ErrorCode`(code, httpStatus, defaultMessage) 관리.
 

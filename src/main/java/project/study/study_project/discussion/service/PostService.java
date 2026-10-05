@@ -26,7 +26,9 @@ import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
+import project.study.study_project.user.support.SuspensionGuard;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -62,11 +64,13 @@ public class PostService {
         requireProblem(problemId);
         User viewer = viewerId == null ? null : userRepository.findById(viewerId).orElse(null);
         boolean solved = viewer != null && submissionRepository.existsByUserIdAndProblem_Id(viewerId, problemId);
-        boolean canWrite = solved || (viewer != null && viewer.getRole() == Role.ADMIN);
+        // 정지 중이면 쓸 수 없다고 미리 알린다 — 화면이 글쓰기 버튼을 내지 않는다.
+        boolean canWrite = (solved || (viewer != null && viewer.getRole() == Role.ADMIN))
+                && !viewer.isSuspended(LocalDateTime.now());
 
         Optional<Long> discussionId = discussionRepository.findIdByProblemId(problemId);
         if (discussionId.isEmpty()) {
-            return new PostListResponse(solved, canWrite, 0, false, List.of());
+            return new PostListResponse(solved, canWrite, 0, false, SuspensionGuard.noticeFor(viewer), List.of());
         }
 
         Slice<Post> posts = postRepository.findByDiscussionIdAndStatusNotOrderByCreatedAtDescIdDesc(
@@ -79,7 +83,7 @@ public class PostService {
                 .toList();
 
         long total = postRepository.countByDiscussionIdAndStatus(discussionId.get(), CommentStatus.VISIBLE);
-        return new PostListResponse(solved, canWrite, total, posts.hasNext(), items);
+        return new PostListResponse(solved, canWrite, total, posts.hasNext(), SuspensionGuard.noticeFor(viewer), items);
     }
 
     /** 모든 토론방의 최근 글 — 커뮤니티 첫 화면이 읽는다. 지우거나 가린 글은 넣지 않는다. */
@@ -113,6 +117,7 @@ public class PostService {
     public PostDetail write(Long userId, PostWriteRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        SuspensionGuard.requireNotSuspended(user);
         Long problemId = request.problemId();
         requireProblem(problemId);
         if (user.getRole() != Role.ADMIN
@@ -140,9 +145,12 @@ public class PostService {
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
+        // 수정도 막는다. 정지 중에 이미 올린 글의 내용을 바꿔 치울 수 있으면 정지가 뜻이 없다.
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        SuspensionGuard.requireNotSuspended(user);
         post.edit(request.title().trim(), request.body().trim());
-        String nickname = userRepository.findById(userId).map(User::getNickname).orElse(null);
-        return PostDetail.of(post, problemIdOf(post), nickname, userId);
+        return PostDetail.of(post, problemIdOf(post), user.getNickname(), userId);
     }
 
     /** 이미 지운 글을 또 지워도 오류가 아니다 — 두 번 눌린 삭제 버튼에 실패를 보여 줄 이유가 없다. */

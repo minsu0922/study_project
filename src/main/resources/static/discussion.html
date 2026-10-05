@@ -129,6 +129,8 @@ function renderWriteEntry(data) {
   btn.hidden = !data.canWrite;
   note.hidden = data.canWrite;
   if (data.canWrite) return;
+  // 정지 중이면 "문제를 풀면 쓸 수 있습니다"가 틀린 말이 된다. 서버가 준 안내(풀리는 날짜와 사유)를 그대로 적는다.
+  if (data.suspensionNotice) { note.textContent = data.suspensionNotice; return; }
   const quizLink = `<a href="/quiz.html?problemId=${encodeURIComponent(problemId)}">문제를 풀면</a>`;
   note.innerHTML = isLoggedIn()
     ? `${quizLink} 글을 쓸 수 있습니다. 읽기는 누구나 됩니다.`

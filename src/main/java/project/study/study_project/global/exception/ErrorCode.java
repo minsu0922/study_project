@@ -108,7 +108,14 @@ public enum ErrorCode {
             "운영진으로 보일 수 있는 닉네임은 쓸 수 없습니다. 다른 닉네임을 골라 주세요."),
     // 토론방 게시글(V22). 지운 글도 이 코드로 답한다 — 지웠다는 사실을 따로 알릴 이유가 없다.
     DISCUSSION_011("DISCUSSION_011", HttpStatus.NOT_FOUND, "글을 찾을 수 없습니다."),
-    DISCUSSION_012("DISCUSSION_012", HttpStatus.BAD_REQUEST, "내가 쓴 글은 신고할 수 없습니다.");
+    DISCUSSION_012("DISCUSSION_012", HttpStatus.BAD_REQUEST, "내가 쓴 글은 신고할 수 없습니다."),
+    // 실제 문구는 풀리는 날짜와 사유를 실어 SuspensionGuard가 만든다. 이 문장은 그 안전망이다.
+    DISCUSSION_013("DISCUSSION_013", HttpStatus.FORBIDDEN, "글쓰기가 정지된 계정입니다."),
+
+    // 사용자 관리(V26) — 관리자가 사용자를 정지하고 푼다.
+    USER_001("USER_001", HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
+    // 400인 이유: 지금 상태와의 충돌이 아니라 어떤 상태에서도 받지 않는 요청이다.
+    USER_002("USER_002", HttpStatus.BAD_REQUEST, "관리자 계정은 정지할 수 없습니다.");
 
     private final String code;
     private final HttpStatus httpStatus;

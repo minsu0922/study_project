@@ -6,6 +6,7 @@ import project.study.study_project.discussion.domain.CommentReportReason;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.report.domain.ReportStatus;
+import project.study.study_project.user.domain.User;
 
 import java.time.LocalDateTime;
 
@@ -20,6 +21,8 @@ import java.time.LocalDateTime;
  * @param postId         신고된 글, 댓글 신고면 그 댓글이 달린 글. 관리자가 글 화면으로 건너간다
  * @param targetBody     신고된 글 또는 댓글의 본문
  * @param targetNickname 글쓴이 닉네임. 탈퇴했으면 {@code null}
+ * @param targetUsername  글쓴이 아이디. 관리자가 사용자 화면에서 이 사람을 찾아 정지한다. 탈퇴했으면 {@code null}
+ * @param targetSuspended 글쓴이가 지금 정지 중인지 — 이미 정지한 사람을 또 정지하러 가지 않게 한다
  * @param problemId      그 글이 속한 토론방의 문제. 문제가 지워지면 신고도 함께 지워지므로 늘 값이 있다
  */
 public record CommentReportItem(
@@ -31,6 +34,8 @@ public record CommentReportItem(
         String targetBody,
         CommentStatus targetStatus,
         String targetNickname,
+        String targetUsername,
+        boolean targetSuspended,
         Long problemId,
         String problemTitle,
         CommentReportReason reason,
@@ -42,21 +47,37 @@ public record CommentReportItem(
         LocalDateTime resolvedAt
 ) {
 
-    public static CommentReportItem ofComment(CommentReport report, Comment comment, Post post, String nickname,
+    public static CommentReportItem ofComment(CommentReport report, Comment comment, Post post, User author,
                                               Long problemId, String problemTitle) {
         return new CommentReportItem(
                 report.getId(), "COMMENT", comment.getId(), post.getId(), post.getTitle(),
-                comment.getBody(), comment.getStatus(), nickname, problemId, problemTitle,
+                comment.getBody(), comment.getStatus(), nicknameOf(author), usernameOf(author), suspended(author),
+                problemId, problemTitle,
                 report.getReason(), report.getReason().getLabel(), report.getDetail(),
                 report.getStatus(), report.getAdminNote(), report.getCreatedAt(), report.getResolvedAt());
     }
 
-    public static CommentReportItem ofPost(CommentReport report, Post post, String nickname,
+    public static CommentReportItem ofPost(CommentReport report, Post post, User author,
                                            Long problemId, String problemTitle) {
         return new CommentReportItem(
                 report.getId(), "POST", null, post.getId(), post.getTitle(),
-                post.getBody(), post.getStatus(), nickname, problemId, problemTitle,
+                post.getBody(), post.getStatus(), nicknameOf(author), usernameOf(author), suspended(author),
+                problemId, problemTitle,
                 report.getReason(), report.getReason().getLabel(), report.getDetail(),
                 report.getStatus(), report.getAdminNote(), report.getCreatedAt(), report.getResolvedAt());
+    }
+
+    /* 글쓴이가 탈퇴했으면 author가 null이다. */
+
+    private static String nicknameOf(User author) {
+        return author == null ? null : author.getNickname();
+    }
+
+    private static String usernameOf(User author) {
+        return author == null ? null : author.getUsername();
+    }
+
+    private static boolean suspended(User author) {
+        return author != null && author.isSuspended(LocalDateTime.now());
     }
 }

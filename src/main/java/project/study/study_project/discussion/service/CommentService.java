@@ -22,7 +22,9 @@ import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
+import project.study.study_project.user.support.SuspensionGuard;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -63,9 +65,10 @@ public class CommentService {
         boolean solved = viewer != null && submissionRepository.existsByUserIdAndProblem_Id(viewerId, problemId);
         // 가린 글 아래의 댓글이 그대로 보이면 댓글만 읽어도 가린 내용을 짐작할 수 있다.
         if (!post.isVisible()) {
-            return new CommentListResponse(solved, false, 0, false, List.of());
+            return new CommentListResponse(solved, false, 0, false, null, List.of());
         }
-        boolean canWrite = solved || (viewer != null && viewer.getRole() == Role.ADMIN);
+        boolean canWrite = (solved || (viewer != null && viewer.getRole() == Role.ADMIN))
+                && !viewer.isSuspended(LocalDateTime.now());
 
         Page<Comment> threads = commentRepository.findThreads(
                 postId, CommentStatus.DELETED, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
@@ -86,13 +89,15 @@ public class CommentService {
                 .toList();
 
         long total = commentRepository.countByPostIdAndStatus(postId, CommentStatus.VISIBLE);
-        return new CommentListResponse(solved, canWrite, total, threads.hasNext(), items);
+        return new CommentListResponse(solved, canWrite, total, threads.hasNext(),
+                SuspensionGuard.noticeFor(viewer), items);
     }
 
     @Transactional
     public CommentItem write(Long userId, CommentWriteRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        SuspensionGuard.requireNotSuspended(user);
         Post post = requirePost(request.postId());
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
@@ -130,9 +135,11 @@ public class CommentService {
         if (!comment.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        SuspensionGuard.requireNotSuspended(user);
         comment.edit(body.trim());
-        String nickname = userRepository.findById(userId).map(User::getNickname).orElse(null);
-        return CommentItem.of(comment, nickname, userId, List.of());
+        return CommentItem.of(comment, user.getNickname(), userId, List.of());
     }
 
     /** 이미 지운 글을 또 지워도 오류가 아니다 — 두 번 눌린 삭제 버튼에 실패를 보여 줄 이유가 없다. */

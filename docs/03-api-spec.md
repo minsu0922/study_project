@@ -509,7 +509,7 @@ refresh 토큰을 폐기한다.
 | PUT · DELETE | `/api/me/comments/{id}` | ✓ | 내 댓글 수정 `{body}` · 삭제 |
 | POST | `/api/me/comment-reports` | ✓ | 댓글 신고 `{commentId, reason, detail}` |
 | POST | `/api/me/post-reports` | ✓ | 글 신고 `{postId, reason, detail}` |
-| GET | `/api/admin/comment-reports?status=` | 🛡️ | 신고함(글·댓글 한 목록). 한 줄의 `targetType`이 `POST`·`COMMENT`를 가른다 |
+| GET | `/api/admin/comment-reports?status=` | 🛡️ | 신고함(글·댓글 한 목록). 한 줄의 `targetType`이 `POST`·`COMMENT`를 가르고, `targetUsername`·`targetSuspended`로 글쓴이와 정지 여부를 싣는다 |
 | POST | `/api/admin/posts/{id}/hide` · `/restore` | 🛡️ | 글 가림·복구. 가리면 그 글의 대기 신고가 모두 닫힌다 |
 | POST | `/api/admin/comments/{id}/hide` · `/restore` | 🛡️ | 댓글 가림·복구 |
 | POST | `/api/admin/comment-reports/{id}/dismiss` | 🛡️ | 신고 기각 `{note}` — 대상은 그대로 두고 그 신고만 닫는다 |
@@ -521,6 +521,26 @@ refresh 토큰을 폐기한다.
 - 신고는 문제를 풀지 않은 사람도 한다. 한 사람이 같은 글·댓글을 한 번만 신고한다(`DISCUSSION_007`).
   신고가 쌓여도 저절로 가려지지 않고 관리자만 가린다.
 - 글쓰기와 댓글 쓰기는 한 사용자당 합쳐서 분당 5건이다([09](09-rate-limiting.md)).
+
+---
+
+## 사용자 정지 API  🛡️
+
+관리자가 사용자의 쓰기를 정지한다. 정지된 사용자는 글·댓글을 쓰거나 고치지 못하고 신고도 못 한다
+(`DISCUSSION_013`). 문제 풀이, 복습, 읽기, 자기 글 삭제는 그대로 된다.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/admin/users?q=&suspendedOnly=&page=` | 사용자 찾기. `q`는 아이디나 닉네임의 일부, `suspendedOnly=true`면 정지 중인 사람만 |
+| POST | `/api/admin/users/{id}/suspend` | 정지 `{days, reason}`. `days`는 1·7·30, 비우면 무기한. 이미 정지 중이면 덮어쓴다 |
+| POST | `/api/admin/users/{id}/unsuspend` | 정지 해제 |
+
+- 응답 한 줄: `{id, username, nickname, role, createdAt, suspended, indefinite, suspendedUntil, suspendedReason}`.
+  무기한이면 `suspendedUntil`은 비고 `indefinite`가 true다.
+- 기간이 지나면 아무도 풀지 않아도 풀린다. 관리자 계정은 정지할 수 없다(`USER_002`).
+- 정지 중인 사용자가 읽는 글·댓글 목록의 `canWrite`는 false로 나가고, `suspensionNotice`에
+  풀리는 날짜와 사유가 든 안내가 실린다. 거절 응답(`DISCUSSION_013`)의 문구와 같은 문장이다.
+- `GET /api/me/suspension` 🔒 — 내 정지 상태 `{suspended, notice}`. 마이페이지가 읽는다.
 
 ---
 

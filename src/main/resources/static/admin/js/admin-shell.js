@@ -61,6 +61,11 @@ const ADMIN_MENUS = [
     // 단계 순서 규칙(위 주석) 밖에 있다는 점도 배치와 같다.
     { key: "settings",  label: "분야 설정", href: "/admin/settings.html",  icon: "⚙️" },
   ]},
+  // 따로 묶은 이유: 위 셋은 문제와 문서를 다루고 여기는 사람을 다룬다. 매일 보는 화면도 아니다 —
+  // 대개 토론 신고의 "글쓴이 정지"로 넘어온다.
+  { group: "운영", items: [
+    { key: "users",     label: "사용자",    href: "/admin/users.html",     icon: "👤" },
+  ]},
 ];
 
 /**
