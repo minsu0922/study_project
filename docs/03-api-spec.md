@@ -514,15 +514,15 @@ refresh 토큰을 폐기한다.
 
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
-| GET | `/api/quiz/posts?q=&sort=&domain=&page=` | ✕ | 모든 토론방의 글(한 쪽 20건, 문제 id·제목·분야 포함). 커뮤니티 화면. `q`는 제목·본문 검색(50자까지, `%`·`_`는 글자 그대로), `sort`는 `latest`(기본)·`comments`, `domain`은 분야 코드, `unanswered=true`면 보이는 댓글이 없는 글만 |
+| GET | `/api/quiz/posts?q=&sort=&domain=&page=` | ✕ | 모든 토론방의 글(한 쪽 20건, 문제 id·제목·분야 포함). 커뮤니티 화면. `q`는 제목·본문 검색(50자까지, `%`·`_`는 글자 그대로), `sort`는 `latest`(기본)·`comments`, `domain`은 분야 코드, `category`는 말머리, `unanswered=true`면 보이는 댓글이 없는 글만 |
 | GET | `/api/quiz/rooms?domain=&page=` | ✕ | 토론방 목록 — 보이는 글이 있는 문제를 최근 글이 달린 방부터. 한 줄에 `problemId`·`problemTitle`·`domain`·`postCount`·`lastPostAt` |
 | GET | `/api/me/posts?kind=&page=` | ✓ | 내 활동 — `kind=written`(내가 쓴 글, 기본)·`commented`(내가 댓글 단 글). 응답 모양은 `/api/quiz/posts`와 같다 |
 | GET | `/api/quiz/{problemId}/posts?page=` | ✕ | 그 문제 토론방의 글 목록(새 글부터 20건). 방이 없으면 빈 목록 |
 | GET | `/api/quiz/posts/{postId}` | ✕ | 글 한 건 |
 | GET | `/api/quiz/posts/{postId}/comments?page=` | ✕ | 그 글의 댓글(오래된 것부터 20건, 답글 포함) |
 | GET | `/api/quiz/post-counts?problemIds=1,2,3` | ✕ | 문제별 보이는 글 수. 글이 없는 문제는 응답에 없다 |
-| POST | `/api/me/posts` | ✓ | 글쓰기 `{problemId, title, body}` → 201 |
-| PUT · DELETE | `/api/me/posts/{id}` | ✓ | 내 글 수정 `{title, body}` · 삭제 |
+| POST | `/api/me/posts` | ✓ | 글쓰기 `{problemId, category, title, body}` → 201 |
+| PUT · DELETE | `/api/me/posts/{id}` | ✓ | 내 글 수정 `{category, title, body}` · 삭제 |
 | POST | `/api/me/comments` | ✓ | 댓글·답글 쓰기 `{postId, parentId, body}` → 201 |
 | PUT · DELETE | `/api/me/comments/{id}` | ✓ | 내 댓글 수정 `{body}` · 삭제 |
 | POST | `/api/me/comment-reports` | ✓ | 댓글 신고 `{commentId, reason, detail}` |
@@ -532,6 +532,8 @@ refresh 토큰을 폐기한다.
 | POST | `/api/admin/comments/{id}/hide` · `/restore` | 🛡️ | 댓글 가림·복구 |
 | POST | `/api/admin/comment-reports/{id}/dismiss` | 🛡️ | 신고 기각 `{note}` — 대상은 그대로 두고 그 신고만 닫는다 |
 
+- 글에는 말머리가 붙는다: `QUESTION`(질문) · `SUMMARY`(정리) · `ERRATA`(오류 지적). 쓸 때 반드시 고르고,
+  응답에는 `category`와 화면에 보일 이름 `categoryLabel`이 함께 실린다.
 - 읽기는 비로그인까지 열려 있다. 쓰기는 그 문제에 제출 기록이 있는 사람과 관리자만 한다(`DISCUSSION_002`).
 - 제목은 2~100자, 글 본문은 5,000자, 댓글은 1,000자까지다. 서식은 없고 줄바꿈만 살린다.
 - 삭제는 행을 지우지 않고 상태만 바꾼다. 지운 글은 목록에서 빠지고 상세는 `DISCUSSION_011`(404)이다.

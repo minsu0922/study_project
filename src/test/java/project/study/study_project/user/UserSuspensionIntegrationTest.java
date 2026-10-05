@@ -13,6 +13,7 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
@@ -82,8 +83,8 @@ class UserSuspensionIntegrationTest {
         suspend(user, 7);
 
         String[][] writes = {
-                {"POST", "/api/me/posts", "{\"problemId\":%d,\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())},
-                {"PUT", "/api/me/posts/" + own.getId(), "{\"title\":\"고친 제목\",\"body\":\"고친 본문\"}"},
+                {"POST", "/api/me/posts", "{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())},
+                {"PUT", "/api/me/posts/" + own.getId(), "{\"category\":\"QUESTION\",\"title\":\"고친 제목\",\"body\":\"고친 본문\"}"},
                 {"POST", "/api/me/comments", "{\"postId\":%d,\"parentId\":null,\"body\":\"댓글\"}".formatted(others.getId())},
                 {"PUT", "/api/me/comments/" + ownComment.getId(), "{\"body\":\"고친 댓글\"}"},
                 {"POST", "/api/me/post-reports", "{\"postId\":%d,\"reason\":\"SPAM\"}".formatted(others.getId())},
@@ -103,7 +104,7 @@ class UserSuspensionIntegrationTest {
     void rejectionSaysWhenAndWhy() throws Exception {
         Problem problem = saveProblem();
         User user = solver(problem);
-        String body = "{\"problemId\":%d,\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId());
+        String body = "{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId());
 
         suspend(user, 7);
         String until = userRepository.findById(user.getId()).orElseThrow().getSuspendedUntil().toLocalDate().toString();
@@ -198,7 +199,7 @@ class UserSuspensionIntegrationTest {
                 .andExpect(jsonPath("$.data.suspended").value(false));
 
         mockMvc.perform(post("/api/me/posts").header("Authorization", bearer(user)).contentType("application/json")
-                        .content("{\"problemId\":%d,\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
+                        .content("{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
                 .andExpect(status().isCreated());
     }
 
@@ -210,7 +211,7 @@ class UserSuspensionIntegrationTest {
         user.suspend(LocalDateTime.now().minusMinutes(1), "지난 정지");
 
         mockMvc.perform(post("/api/me/posts").header("Authorization", bearer(user)).contentType("application/json")
-                        .content("{\"problemId\":%d,\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
+                        .content("{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
                 .andExpect(status().isCreated());
     }
 
@@ -352,7 +353,7 @@ class UserSuspensionIntegrationTest {
     private Post savePost(Problem problem, Long userId) {
         discussionRepository.insertIfAbsent(problem.getId());
         Long discussionId = discussionRepository.findIdByProblemIdForShare(problem.getId()).orElseThrow();
-        return postRepository.saveAndFlush(Post.of(discussionId, userId, "글", "본문"));
+        return postRepository.saveAndFlush(Post.of(discussionId, userId, PostCategory.QUESTION, "글", "본문"));
     }
 
     private Problem saveProblem() {

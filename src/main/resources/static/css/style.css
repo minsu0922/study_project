@@ -2331,10 +2331,22 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 @media (hover: hover) { a.post-row:hover .post-row-title { color: var(--primary); } }
 .post-row-title { font-weight: 600; overflow-wrap: anywhere; color: var(--text); text-decoration: none; }
 @media (hover: hover) { a.post-row-title:hover { color: var(--primary); } }
+/* 말머리 표시(api.js postCategoryChip). 제목 앞에 붙는다. 종류마다 색을 달리하되 글자가 종류를
+   말하므로 색을 못 가려도 읽힌다. 오류 지적만 눈에 띄게 한다 — 관리자가 훑다가 걸려야 하는 글이다. */
+.post-cat {
+  display: inline-block; margin-right: 6px; vertical-align: 1px;
+  font-size: .72rem; font-weight: 600; line-height: 1.5;
+  padding: 0 7px; border-radius: 4px; white-space: nowrap;
+  background: var(--fill); color: var(--text-2);
+}
+.post-cat[data-cat="QUESTION"] { background: var(--primary-soft); color: var(--primary-dark); }
+.post-cat[data-cat="SUMMARY"] { background: var(--correct-bg); color: var(--correct-fg); }
+.post-cat[data-cat="ERRATA"] { background: var(--review-soft); color: var(--lv2-fg); }
+
 /* 커뮤니티의 찾기 줄. 검색 칸이 주인공이라 다른 두 칸보다 넓게 잡는다. */
 .community-filters .field:first-child { flex: 2 1 220px; }
 /* 고르는 칸은 늘리지 않는다. 검색 칸이 숨는 탭(토론방·내 활동)에서 고르는 칸 하나가 줄 전체로 퍼진다. */
-.community-filters .field:not(:first-child) { flex: 0 1 190px; }
+.community-filters .field:not(:first-child) { flex: 0 1 150px; }   /* 150: 고르는 칸 셋과 버튼이 860px 한 줄에 든다 */
 /* 글이 속한 문제의 분야. 개념 문서 목록의 분야 표시(.doc-line .dm)와 같은 모양이다. */
 .post-row-domain {
   display: inline-block; margin-right: 6px;

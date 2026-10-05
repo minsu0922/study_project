@@ -506,7 +506,7 @@ async function loadRecentPosts() {
 
   document.getElementById("postList").innerHTML = posts.map(p => `
     <a class="doc-line home-post" href="/post.html?id=${p.id}">
-      <span class="ti">${escapeHtml(p.title)}</span>
+      <span class="ti">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}</span>
       <span class="home-post-meta">
         <span class="where">${escapeHtml(p.problemTitle)} · ${escapeHtml(p.nickname || "탈퇴한 사용자")}</span>${
         p.commentCount ? `<span class="count">💬 ${p.commentCount}</span>` : ""}

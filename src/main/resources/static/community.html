@@ -32,7 +32,7 @@ try {
     <button type="button" class="tab-btn" role="tab" data-tab="mine">내 활동</button>
   </div>
 
-  <!-- 찾기·정렬·분야. 조건은 주소(?tab=&q=&sort=&domain=)에 남긴다 — 글을 읽고 뒤로 돌아왔을 때
+  <!-- 찾기·정렬·분야·말머리. 조건은 주소(?tab=&q=&sort=&domain=&category=)에 남긴다 — 글을 읽고 뒤로 돌아왔을 때
        찾던 목록이 그대로 있어야 하고, 찾은 목록을 남에게 보낼 수도 있어야 한다.
        탭마다 쓰는 칸이 다르다(아래 TABS). 안 쓰는 칸은 감춘다 — 눌러도 아무 일 없는 칸을 두지 않는다. -->
   <form class="filters community-filters" id="filterForm" role="search">
@@ -45,6 +45,10 @@ try {
     <div class="field" data-control="domain">
       <label for="domainFilter">분야</label>
       <select id="domainFilter"></select>
+    </div>
+    <div class="field" data-control="category">
+      <label for="categoryFilter">말머리</label>
+      <select id="categoryFilter"></select>
     </div>
     <div class="field" data-control="sort">
       <label for="sortSelect">정렬</label>
@@ -87,19 +91,20 @@ renderShell({ active: "community", title: "커뮤니티" });
 
 const qInput = document.getElementById("q");
 const domainFilter = document.getElementById("domainFilter");
+const categoryFilter = document.getElementById("categoryFilter");
 const sortSelect = document.getElementById("sortSelect");
 const kindSelect = document.getElementById("kindSelect");
 
 /* 탭마다 쓰는 조건 칸. 여기 없는 칸은 그 탭에서 감추고, 주소에도 적지 않는다. */
 const TABS = {
-  all:        { controls: ["q", "domain", "sort"] },
-  unanswered: { controls: ["q", "domain", "sort"] },
+  all:        { controls: ["q", "domain", "category", "sort"] },
+  unanswered: { controls: ["q", "domain", "category", "sort"] },
   rooms:      { controls: ["domain"] },
   mine:       { controls: ["kind"] },
 };
 
 /* 지금 조건. 주소에서 읽어 시작하고, 바뀔 때마다 주소에 다시 적는다. */
-const state = { tab: "all", q: "", domain: "", sort: "latest", kind: "written", page: 0 };
+const state = { tab: "all", q: "", domain: "", category: "", sort: "latest", kind: "written", page: 0 };
 
 function uses(control) { return TABS[state.tab].controls.includes(control); }
 
@@ -108,6 +113,7 @@ function readStateFromUrl() {
   state.tab = TABS[p.get("tab")] ? p.get("tab") : "all";
   state.q = (p.get("q") || "").trim();
   state.domain = p.get("domain") || "";
+  state.category = POST_CATEGORIES.some(c => c[0] === p.get("category")) ? p.get("category") : "";
   state.sort = p.get("sort") === "comments" ? "comments" : "latest";
   state.kind = p.get("kind") === "commented" ? "commented" : "written";
   state.page = Math.max(Number(p.get("page")) || 0, 0);
@@ -118,6 +124,7 @@ function readStateFromUrl() {
 function syncControls() {
   qInput.value = state.q;
   domainFilter.value = state.domain;
+  categoryFilter.value = state.category;
   sortSelect.value = state.sort;
   kindSelect.value = state.kind;
   document.querySelectorAll("#tabs .tab-btn").forEach(b => {
@@ -137,6 +144,7 @@ function stateToParams() {
   if (state.tab !== "all") p.set("tab", state.tab);
   if (uses("q") && state.q) p.set("q", state.q);
   if (uses("domain") && state.domain) p.set("domain", state.domain);
+  if (uses("category") && state.category) p.set("category", state.category);
   if (uses("sort") && state.sort !== "latest") p.set("sort", state.sort);
   if (uses("kind") && state.kind !== "written") p.set("kind", state.kind);
   if (state.page > 0) p.set("page", state.page);
@@ -147,7 +155,7 @@ function stateToParams() {
  * 그래서 줄 전체를 링크로 감싸지 않는다 — 링크 안에 링크를 넣을 수 없다. */
 function postRow(p) {
   return `<div class="post-row">
-    <a class="post-row-title" href="/post.html?id=${p.id}">${escapeHtml(p.title)}${
+    <a class="post-row-title" href="/post.html?id=${p.id}">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}${
       p.commentCount ? ` <span class="post-row-count">💬 ${p.commentCount}</span>` : ""}</a>
     <span class="meta">
       <span class="post-row-domain">${escapeHtml(domainLabel(p.domain))}</span>
@@ -169,7 +177,8 @@ function roomRow(r) {
 }
 
 function filtered() {
-  return (uses("q") && !!state.q) || (uses("domain") && !!state.domain);
+  return (uses("q") && !!state.q) || (uses("domain") && !!state.domain)
+      || (uses("category") && !!state.category);
 }
 
 /* 탭마다 다른 주소를 부르고, 같은 모양({hasNext, rows, rowHtml})으로 맞춰 돌려준다. */
@@ -183,7 +192,7 @@ async function fetchTab() {
     return { hasNext: data.hasNext, rows: data.posts, rowHtml: postRow };
   }
   const data = await api("/api/quiz/posts?" + new URLSearchParams({
-    q: state.q, domain: state.domain, sort: state.sort,
+    q: state.q, domain: state.domain, category: state.category, sort: state.sort,
     unanswered: state.tab === "unanswered", page: state.page }));
   return { hasNext: data.hasNext, rows: data.posts, rowHtml: postRow };
 }
@@ -222,8 +231,11 @@ async function load() {
     const parts = [];
     if (uses("q") && state.q) parts.push(`"${state.q}"`);
     if (uses("domain") && state.domain) parts.push(domainLabel(state.domain));
+    if (uses("category") && state.category) {
+      parts.push(POST_CATEGORIES.find(c => c[0] === state.category)[1]);
+    }
     const clear = stateToParams();
-    ["q", "domain", "page"].forEach(k => clear.delete(k));
+    ["q", "domain", "category", "page"].forEach(k => clear.delete(k));
     const clearHref = clear.toString() ? "?" + clear : location.pathname;
     info.innerHTML = `${escapeHtml(parts.join(" · "))} 조건으로 걸러 본 목록입니다.
       <a href="${clearHref}">조건 지우기</a>`;
@@ -265,6 +277,7 @@ document.getElementById("filterForm").addEventListener("submit", e => {
 });
 // 고르는 것은 누르는 즉시 적용한다. 고르고 나서 "찾기"를 또 누르게 하면 한 번이 헛걸음이다.
 domainFilter.addEventListener("change", () => apply({ domain: domainFilter.value, q: qInput.value.trim(), page: 0 }));
+categoryFilter.addEventListener("change", () => apply({ category: categoryFilter.value, q: qInput.value.trim(), page: 0 }));
 sortSelect.addEventListener("change", () => apply({ sort: sortSelect.value, q: qInput.value.trim(), page: 0 }));
 kindSelect.addEventListener("change", () => apply({ kind: kindSelect.value, page: 0 }));
 document.getElementById("prevBtn").addEventListener("click", () => apply({ page: state.page - 1 }));
@@ -272,6 +285,7 @@ document.getElementById("nextBtn").addEventListener("click", () => apply({ page:
 window.addEventListener("popstate", () => { readStateFromUrl(); show(); });
 
 fillSelect(domainFilter, DOMAINS, "전체 분야");
+fillSelect(categoryFilter, POST_CATEGORIES, "전체 말머리");
 readStateFromUrl();
 show();
 </script>

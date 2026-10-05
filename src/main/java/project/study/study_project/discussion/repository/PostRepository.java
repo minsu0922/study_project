@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.global.common.DomainCode;
 
 import java.time.LocalDateTime;
@@ -49,6 +50,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             where p.status = :visible
               and (:q is null or p.title like :q escape '!' or p.body like :q escape '!')
               and (:domain is null or pr.domain = :domain)
+              and (:category is null or p.category = :category)
               and (:unanswered = false
                    or not exists (select 1 from Comment c where c.postId = p.id and c.status = :visible))
               and (:authorId is null or p.userId = :authorId)
@@ -62,6 +64,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Slice<RecentPostRow> findRecent(@Param("visible") CommentStatus visible,
                                     @Param("q") String q,
                                     @Param("domain") DomainCode domain,
+                                    @Param("category") PostCategory category,
                                     @Param("unanswered") boolean unanswered,
                                     @Param("authorId") Long authorId,
                                     @Param("commenterId") Long commenterId,
@@ -75,6 +78,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Slice<RecentPostRow> findMostCommented(@Param("visible") CommentStatus visible,
                                            @Param("q") String q,
                                            @Param("domain") DomainCode domain,
+                                           @Param("category") PostCategory category,
                                            @Param("unanswered") boolean unanswered,
                                            @Param("authorId") Long authorId,
                                            @Param("commenterId") Long commenterId,

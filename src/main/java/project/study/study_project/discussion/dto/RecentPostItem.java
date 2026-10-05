@@ -1,6 +1,7 @@
 package project.study.study_project.discussion.dto;
 
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +14,8 @@ import java.time.LocalDateTime;
  */
 public record RecentPostItem(
         Long id,
+        PostCategory category,
+        String categoryLabel,
         String title,
         String nickname,
         long commentCount,
@@ -24,7 +27,8 @@ public record RecentPostItem(
 
     public static RecentPostItem of(Post post, String nickname, long commentCount,
                                     Long problemId, String problemTitle, String domain) {
-        return new RecentPostItem(post.getId(), post.getTitle(), nickname, commentCount,
+        return new RecentPostItem(post.getId(), post.getCategory(), post.getCategory().getLabel(),
+                post.getTitle(), nickname, commentCount,
                 post.getCreatedAt(), problemId, problemTitle, domain);
     }
 }

@@ -476,6 +476,71 @@ class PostIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /* ── 말머리 ─────────────────────────────────────────── */
+
+    @Test
+    @DisplayName("글에는 말머리가 붙는다 — 쓸 때 고르고, 목록·상세·커뮤니티에 이름과 함께 실린다")
+    void categoryIsStoredAndShown() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long id = write(token, problem.getId(), "SUMMARY", word + " 정리한 글", "본문");
+
+        mockMvc.perform(get(detailPath(id)))
+                .andExpect(jsonPath("$.data.category").value("SUMMARY"))
+                .andExpect(jsonPath("$.data.categoryLabel").value("정리"));
+        mockMvc.perform(get(listPath(problem)))
+                .andExpect(jsonPath("$.data.posts[0].category").value("SUMMARY"))
+                .andExpect(jsonPath("$.data.posts[0].categoryLabel").value("정리"));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word))
+                .andExpect(jsonPath("$.data.posts[0].category").value("SUMMARY"))
+                .andExpect(jsonPath("$.data.posts[0].categoryLabel").value("정리"));
+    }
+
+    @Test
+    @DisplayName("말머리 없이는 쓸 수 없고, 모르는 말머리도 받지 않는다 — 400")
+    void categoryIsRequired() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+
+        mockMvc.perform(post(WRITE).header("Authorization", token).contentType("application/json")
+                        .content("{\"problemId\":%d,\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(WRITE).header("Authorization", token).contentType("application/json")
+                        .content(writeBody(problem.getId(), "CHAT", "제목", "본문")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("말머리는 고칠 수 있다 — 질문으로 올렸다가 정리로 바꾼다")
+    void categoryCanBeEdited() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        long id = write(token, problem.getId(), "QUESTION", "제목", "본문");
+
+        mockMvc.perform(put(WRITE + "/" + id).header("Authorization", token).contentType("application/json")
+                        .content("{\"category\":\"SUMMARY\",\"title\":\"제목\",\"body\":\"본문\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.category").value("SUMMARY"));
+    }
+
+    @Test
+    @DisplayName("커뮤니티에서 말머리로 걸러 볼 수 있다")
+    void filtersByCategory() throws Exception {
+        Problem problem = saveProblem();
+        String token = bearer(solver(problem));
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        write(token, problem.getId(), "QUESTION", word + " 질문", "본문");
+        long errata = write(token, problem.getId(), "ERRATA", word + " 해설이 틀린 것 같아요", "본문");
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("category", "ERRATA"))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(errata))
+                .andExpect(jsonPath("$.data.posts[0].categoryLabel").value("오류 지적"));
+        mockMvc.perform(get("/api/quiz/posts").param("q", word))
+                .andExpect(jsonPath("$.data.posts", hasSize(2)));
+    }
+
     /* ── 수정·삭제 ───────────────────────────────────────── */
 
     @Test
@@ -568,17 +633,27 @@ class PostIntegrationTest {
         return "/api/quiz/posts/" + postId;
     }
 
+    /** 말머리를 따지지 않는 테스트가 쓴다. 말머리는 질문으로 둔다. */
     private String writeBody(Long problemId, String title, String body) {
-        return "{\"problemId\":%d,\"title\":\"%s\",\"body\":\"%s\"}".formatted(problemId, title, body);
+        return writeBody(problemId, "QUESTION", title, body);
+    }
+
+    private String writeBody(Long problemId, String category, String title, String body) {
+        return "{\"problemId\":%d,\"category\":\"%s\",\"title\":\"%s\",\"body\":\"%s\"}"
+                .formatted(problemId, category, title, body);
     }
 
     private String editBody(String title, String body) {
-        return "{\"title\":\"%s\",\"body\":\"%s\"}".formatted(title, body);
+        return "{\"category\":\"QUESTION\",\"title\":\"%s\",\"body\":\"%s\"}".formatted(title, body);
     }
 
     private long write(String token, Long problemId, String title, String body) throws Exception {
+        return write(token, problemId, "QUESTION", title, body);
+    }
+
+    private long write(String token, Long problemId, String category, String title, String body) throws Exception {
         String response = mockMvc.perform(post(WRITE).header("Authorization", token)
-                        .contentType("application/json").content(writeBody(problemId, title, body)))
+                        .contentType("application/json").content(writeBody(problemId, category, title, body)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(response, "$.data.id")).longValue();

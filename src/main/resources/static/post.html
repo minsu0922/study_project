@@ -26,6 +26,10 @@ try {
 
   <form id="editForm" class="card" hidden>
     <div class="field">
+      <label for="editCategory">말머리</label>
+      <select id="editCategory" required></select>
+    </div>
+    <div class="field">
       <label for="editTitle">제목 (2~100자)</label>
       <input type="text" id="editTitle" required minlength="2" maxlength="100">
     </div>
@@ -77,6 +81,7 @@ function renderPost() {
   }
   document.title = `${post.title} — csquiz`;
   article.innerHTML = `
+    <div>${postCategoryChip(post.category, post.categoryLabel)}</div>
     <h1 class="post-title">${escapeHtml(post.title)}</h1>
     <div class="meta">${escapeHtml(post.nickname || "탈퇴한 사용자")} · ${formatDate(post.createdAt)}${
       post.edited ? " · 수정됨" : ""}</div>
@@ -145,6 +150,7 @@ article.addEventListener("click", async e => {
   if (e.target.id === "reportBtn") { openReportForm(); return; }
   if (e.target.id === "reportCancel") { document.getElementById("reportSlot").innerHTML = ""; return; }
   if (e.target.id === "editBtn") {
+    document.getElementById("editCategory").value = post.category;
     document.getElementById("editTitle").value = post.title;
     document.getElementById("editBody").value = post.body;
     editForm.hidden = false;
@@ -181,6 +187,7 @@ editForm.addEventListener("submit", async e => {
   msg.innerHTML = "";
   try {
     post = await api("/api/me/posts/" + post.id, { method: "PUT", body: JSON.stringify({
+      category: document.getElementById("editCategory").value,
       title: document.getElementById("editTitle").value,
       body: document.getElementById("editBody").value }) });
     editForm.hidden = true;
@@ -192,6 +199,8 @@ editForm.addEventListener("submit", async e => {
     btn.disabled = false;
   }
 });
+
+fillSelect(document.getElementById("editCategory"), POST_CATEGORIES);
 
 if (!postId) {
   showError("어느 글인지 알 수 없습니다.");

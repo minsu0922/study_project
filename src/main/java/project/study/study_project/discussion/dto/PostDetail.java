@@ -2,6 +2,7 @@ package project.study.study_project.discussion.dto;
 
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
 
 import java.time.LocalDateTime;
 
@@ -14,6 +15,8 @@ import java.time.LocalDateTime;
 public record PostDetail(
         Long id,
         Long problemId,
+        PostCategory category,
+        String categoryLabel,
         String title,
         String body,
         String nickname,
@@ -28,6 +31,8 @@ public record PostDetail(
         return new PostDetail(
                 post.getId(),
                 problemId,
+                post.getCategory(),
+                post.getCategory().getLabel(),
                 visible ? post.getTitle() : null,
                 visible ? post.getBody() : null,
                 visible ? nickname : null,

@@ -106,9 +106,9 @@ public class PostService {
         String pattern = likePattern(filter.q());
         Slice<PostRepository.RecentPostRow> rows = filter.sort() == PostSort.COMMENTS
                 ? postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, filter.domain(),
-                        filter.unanswered(), filter.authorId(), filter.commenterId(), pageable)
+                        filter.category(), filter.unanswered(), filter.authorId(), filter.commenterId(), pageable)
                 : postRepository.findRecent(CommentStatus.VISIBLE, pattern, filter.domain(),
-                        filter.unanswered(), filter.authorId(), filter.commenterId(), pageable);
+                        filter.category(), filter.unanswered(), filter.authorId(), filter.commenterId(), pageable);
         List<Post> posts = rows.getContent().stream().map(PostRepository.RecentPostRow::getPost).toList();
         Map<Long, String> nicknames = nicknamesOf(posts);
         Map<Long, Long> commentCounts = commentCountsOf(posts);
@@ -183,7 +183,7 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
 
         Post saved = postRepository.save(
-                Post.of(discussionId, userId, request.title().trim(), request.body().trim()));
+                Post.of(discussionId, userId, request.category(), request.title().trim(), request.body().trim()));
         log.info("글 작성: problemId={} postId={}", problemId, saved.getId());
         return PostDetail.of(saved, problemId, user.getNickname(), userId);
     }
@@ -198,7 +198,7 @@ public class PostService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
         SuspensionGuard.requireNotSuspended(user);
-        post.edit(request.title().trim(), request.body().trim());
+        post.edit(request.category(), request.title().trim(), request.body().trim());
         return PostDetail.of(post, problemIdOf(post), user.getNickname(), userId);
     }
 

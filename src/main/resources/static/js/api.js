@@ -241,6 +241,24 @@ const TYPES = [
   ["MATCHING", "짝짓기"], ["ORDERING", "순서 배열"],
 ];
 
+/**
+ * 글의 말머리 — 값은 서버의 PostCategory enum과 1:1이다(DOMAINS·TYPES와 같은 방식).
+ * 고르는 칸(글쓰기·수정·커뮤니티의 걸러 보기)이 이 목록으로 채워진다.
+ */
+const POST_CATEGORIES = [
+  ["QUESTION", "질문"],
+  ["SUMMARY", "정리"],
+  ["ERRATA", "오류 지적"],
+];
+
+/**
+ * 말머리 표시 한 조각. 이름은 서버가 준 label을 쓴다 — 여기서 다시 지으면 이름을 바꿀 때 두 곳을 고친다.
+ * 종류마다 색이 다르지만 색만으로 가르지 않는다. 글자가 곧 종류다.
+ */
+function postCategoryChip(category, label) {
+  return `<span class="post-cat" data-cat="${escapeHtml(category)}">${escapeHtml(label)}</span>`;
+}
+
 function domainLabel(v) { const f = DOMAINS.find(d => d[0] === v); return f ? f[1] : v; }
 function difficultyLabel(v) { const f = DIFFICULTIES.find(d => d[0] === v); return f ? f[1] : v; }
 function typeLabel(v) { const f = TYPES.find(d => d[0] === v); return f ? f[1] : v; }
