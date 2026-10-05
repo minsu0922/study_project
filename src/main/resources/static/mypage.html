@@ -180,6 +180,10 @@ async function wireNickname() {
       const { nickname } = await api("/api/me/nickname", {
         method: "PUT", body: JSON.stringify({ nickname: input.value }) });
       input.value = nickname;
+      // 헤더의 이름도 바로 바꾼다. 적어 둔 값만 고치면 다음 화면부터 바뀌어 "저장이 안 됐나" 한다.
+      localStorage.setItem(NICKNAME_KEY, nickname);
+      const shown = document.getElementById("accountName");
+      if (shown) shown.textContent = nickname;
       msg.innerHTML = `<div class="alert" style="background:var(--correct-bg); color:var(--correct-fg)">
         닉네임을 저장했습니다.</div>`;
     } catch (e2) {

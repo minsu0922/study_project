@@ -35,11 +35,14 @@ function setLogin(accessToken, refreshToken, username) {
   localStorage.setItem(TOKEN_KEY, accessToken);
   if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken); // Redis 장애 시 null일 수 있음
   localStorage.setItem(USERNAME_KEY, username);
+  // 앞 사람의 닉네임이 헤더에 남지 않게 지운다. 로그아웃 없이 다른 계정으로 로그인할 수 있다.
+  localStorage.removeItem("csquiz_nickname");
 }
 function clearLogin() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem(USERNAME_KEY);
+  localStorage.removeItem("csquiz_nickname"); // 헤더가 적어 둔 닉네임(shell.js NICKNAME_KEY)
   localStorage.removeItem("csquiz_email"); // V12 이전 키의 잔재 청소
 }
 function isLoggedIn() { return !!getToken(); }
