@@ -97,7 +97,7 @@ public class PostService {
     /**
      * 모든 토론방의 글 — 커뮤니티 화면이 읽는다. 지우거나 가린 글은 넣지 않는다.
      *
-     * <p>커뮤니티의 탭(전체·답변 기다리는 글)과 "내 활동"이 모두 이 메서드로 온다.
+     * <p>커뮤니티의 전체 탭과 "내 활동" 탭이 모두 이 메서드로 온다.
      * 무엇을 거를지는 {@link PostFilter}가 정한다.
      */
     @Transactional(readOnly = true)
@@ -106,9 +106,9 @@ public class PostService {
         String pattern = likePattern(filter.q());
         Slice<PostRepository.RecentPostRow> rows = filter.sort() == PostSort.COMMENTS
                 ? postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, filter.domain(),
-                        filter.category(), filter.unanswered(), filter.authorId(), filter.commenterId(), pageable)
+                        filter.category(), filter.authorId(), filter.commenterId(), pageable)
                 : postRepository.findRecent(CommentStatus.VISIBLE, pattern, filter.domain(),
-                        filter.category(), filter.unanswered(), filter.authorId(), filter.commenterId(), pageable);
+                        filter.category(), filter.authorId(), filter.commenterId(), pageable);
         List<Post> posts = rows.getContent().stream().map(PostRepository.RecentPostRow::getPost).toList();
         Map<Long, String> nicknames = nicknamesOf(posts);
         Map<Long, Long> commentCounts = commentCountsOf(posts);

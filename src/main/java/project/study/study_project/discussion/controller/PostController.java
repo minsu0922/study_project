@@ -49,17 +49,15 @@ public class PostController {
      * @param sort   {@code latest}(기본) 또는 {@code comments}
      * @param domain 분야 코드. 등록되지 않은 코드면 결과가 빈다
      * @param category 말머리({@code QUESTION}·{@code SUMMARY}·{@code ERRATA}). 모르는 값은 400
-     * @param unanswered {@code true}면 보이는 댓글이 없는 글만("답변 기다리는 글" 탭)
      */
     @GetMapping("/posts")
     public ApiResponse<RecentPostResponse> recent(@RequestParam(required = false) String q,
                                                   @RequestParam(required = false) String sort,
                                                   @RequestParam(required = false) DomainCode domain,
                                                   @RequestParam(required = false) PostCategory category,
-                                                  @RequestParam(defaultValue = "false") boolean unanswered,
                                                   @RequestParam(defaultValue = "0") int page) {
         return ApiResponse.ok(postService.recent(
-                PostFilter.community(q, PostSort.from(sort), domain, category, unanswered), page));
+                PostFilter.community(q, PostSort.from(sort), domain, category), page));
     }
 
     /** 토론방 목록 — 글이 있는 문제를 최근 글이 달린 방부터. 예: {@code GET /api/quiz/rooms?domain=NETWORK} */

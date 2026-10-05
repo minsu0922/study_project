@@ -31,9 +31,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * 커뮤니티 목록의 공통 부분 — 방을 가리지 않고 보이는 글을 고른다. 문제 id·제목·분야를 같이
      * 읽는다. 글마다 따로 읽으면 한 쪽에 조회가 60번 나간다.
      *
-     * <p>조건은 비어 있으면({@code null}, unanswered는 false) 걸지 않는다. 탭마다 쿼리를 따로 두지
-     * 않고 조건을 얹는 이유: "답변 기다리는 글"은 검색·분야·정렬을 그대로 쓰고, "내 활동"도
-     * 고르는 대상과 한 줄의 모양이 같다. 따로 두면 "보이는 글"의 뜻을 고칠 때 여러 군데를 고쳐야 한다.
+     * <p>조건은 비어 있으면({@code null}) 걸지 않는다. 탭마다 쿼리를 따로 두지
+     * 않고 조건을 얹는 이유: "내 활동"도 고르는 대상과 한 줄의 모양이 커뮤니티 목록과 같다.
+     * 따로 두면 "보이는 글"의 뜻을 고칠 때 여러 군데를 고쳐야 한다.
      *
      * <p>검색어는 부르는 쪽이 앞뒤에 %를 붙이고
      * 와일드카드를 '!'로 이스케이프해서 넘긴다(PostService.likePattern) — 여기서 붙이면 사용자가
@@ -51,8 +51,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
               and (:q is null or p.title like :q escape '!' or p.body like :q escape '!')
               and (:domain is null or pr.domain = :domain)
               and (:category is null or p.category = :category)
-              and (:unanswered = false
-                   or not exists (select 1 from Comment c where c.postId = p.id and c.status = :visible))
               and (:authorId is null or p.userId = :authorId)
               and (:commenterId is null
                    or exists (select 1 from Comment c
@@ -65,7 +63,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                     @Param("q") String q,
                                     @Param("domain") DomainCode domain,
                                     @Param("category") PostCategory category,
-                                    @Param("unanswered") boolean unanswered,
                                     @Param("authorId") Long authorId,
                                     @Param("commenterId") Long commenterId,
                                     Pageable pageable);
@@ -79,7 +76,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                            @Param("q") String q,
                                            @Param("domain") DomainCode domain,
                                            @Param("category") PostCategory category,
-                                           @Param("unanswered") boolean unanswered,
                                            @Param("authorId") Long authorId,
                                            @Param("commenterId") Long commenterId,
                                            Pageable pageable);
