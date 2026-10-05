@@ -528,6 +528,11 @@ body {
   padding: 24px 16px 40px;
 }
 
+/* 로그인한 첫 화면도 넓게 쓴다 — 2026-10-05
+ * 두 칸(내 것 / 새 소식)을 담으려는 것이다. 아래 .home-grid가 실제로 두 칸이 되는 폭에서만
+ * 넓어지게 같은 기준(1,280px)을 건다 — 한 칸일 때 넓히면 줄만 길어진다. */
+@media (min-width: 1280px) { .container.home-wide { max-width: 1200px; } }
+
 /* 문서 읽기 화면만 넓게 쓴다 — 2026-09-15
  *
  * [왜 이 화면만 예외인가]
@@ -1907,6 +1912,31 @@ a.stat.stat-link:hover { border-color: var(--border-strong); background: var(--f
  * 이 앱에서 <저절로 늘어나는> 유일한 것이라 첫 화면에 둔다(4일에 한 편, 배치가 만든다).
  * 제목이 길어 한 줄에 안 들어가므로 말줄임으로 자른다 — 두 줄로 흘리면 줄 높이가
  * 제목마다 달라져 목록이 들쭉날쭉해진다. */
+/* ── 첫 화면의 두 칸 (index.html) ──────────────────────────────────
+ * 좁으면 한 칸으로 쌓인다. 1,280px부터 오른쪽에 340px짜리 새 소식 칸이 선다.
+ * 1,280인 이유: 왼쪽 기둥(208)을 빼면 1,072px이 남고, 거기서 새 소식 칸과 간격을 빼도
+ * 왼쪽에 676px이 남아 분야별 진도 두 칸이 그대로 들어간다. */
+/* minmax(0, 1fr): 그냥 두면 칸의 최소 폭이 "내용 크기"라, 줄바꿈 없는 글 한 줄이 폰에서
+   화면 밖으로 칸을 밀어낸다(.container의 min-width:0과 같은 이유). */
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
+@media (min-width: 1280px) {
+  .home-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+  /* 오른쪽 칸의 첫 라벨이 왼쪽 히어로의 윗변과 줄이 맞게 위 여백을 없앤다. */
+  .home-side > .section-label:first-child { margin-top: 0; }
+  /* 좁은 칸에서는 제목 한 줄이 "전송 계층의 신…"으로 잘린다. 분야·날짜를 윗줄에 두고
+     제목을 아랫줄에 통째로 낸다. */
+  .home-side .doc-line { flex-wrap: wrap; row-gap: 6px; }
+  .home-side .doc-line .ti { order: 3; flex-basis: 100%; white-space: normal; }
+  .home-side .doc-line .dt { margin-left: auto; }
+}
+/* 커뮤니티 새 글 한 줄. 문서 줄(.doc-line)의 틀을 그대로 쓰고 안쪽만 두 줄로 쌓는다. */
+.doc-line.home-post { flex-direction: column; align-items: stretch; gap: 4px; }
+.doc-line.home-post .ti { white-space: normal; flex: none; order: 0; font-weight: 600; }
+/* 문제 이름이 길면 그쪽만 말줄임한다. 댓글 수까지 한 줄로 자르면 "💬 2"가 "…"에 먹힌다. */
+.home-post-meta { display: flex; gap: 8px; color: var(--muted); font-size: .78rem; }
+.home-post-meta .where { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-post-meta .count { flex: none; }
+
 .doc-line {
   display: flex; align-items: center; gap: 12px;
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);

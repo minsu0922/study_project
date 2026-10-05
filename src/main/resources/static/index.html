@@ -66,24 +66,43 @@ try {
   </section>
 
   <!-- ═══ 로그인: 오늘 할 일 ═══
-       세 덩이다 — 히어로(오늘 할 일) / 통계 넷 / 분야별 진도 여섯.
-       그 아래 최근 개념 문서는 "가만히 둬도 늘어나는 것"이라 새 소식 자리로 남긴다. -->
+       두 칸이다(2026-10-05). 왼쪽은 <내 것> — 히어로(오늘 할 일) / 통계 넷 / 분야별 진도.
+       오른쪽은 <가만히 둬도 늘어나는 것> — 커뮤니티 새 글과 최근 개념 문서, 곧 새 소식이다.
+
+       [왜 두 칸인가] 본문이 860px 한 칸이고 내용이 650px쯤에서 끝나, 넓은 화면에서는
+       좌우 426px씩과 아래 35%가 비어 있었다. 채울 것을 지어내지 않고, 이미 있는데 이 화면에
+       한 줄도 안 나오던 커뮤니티 글을 옆에 둔다. 좁은 화면에서는 한 칸으로 쌓인다(style.css). -->
   <section id="today" hidden>
-    <!-- 히어로가 통째로 상황을 말한다(할 일 있음 / 오늘 몫 끝 / 첫날).
-         화면 제목 <h1>도 이 안에 있다 — 상황마다 문구가 달라지기 때문이다. -->
-    <div id="hero"></div>
+    <div class="home-grid">
+      <div class="home-main">
+        <!-- 히어로가 통째로 상황을 말한다(할 일 있음 / 오늘 몫 끝 / 첫날).
+             화면 제목 <h1>도 이 안에 있다 — 상황마다 문구가 달라지기 때문이다. -->
+        <div id="hero"></div>
 
-    <!-- 첫날에는 감춘다. 0이 넷 뜨는 것보다 히어로 안의 "여기 있는 것"이 맞는 정보다. -->
-    <div class="stat-row" id="stats" hidden></div>
+        <!-- 첫날에는 감춘다. 0이 넷 뜨는 것보다 히어로 안의 "여기 있는 것"이 맞는 정보다. -->
+        <div class="stat-row" id="stats" hidden></div>
 
-    <div class="section-label" id="progLabel" hidden>
-      <span>분야별 진도</span>
-      <a href="/me.html">전체 보기 →</a>
+        <div class="section-label" id="progLabel" hidden>
+          <span>분야별 진도</span>
+          <a href="/me.html">전체 보기 →</a>
+        </div>
+        <div class="progress-grid" id="progList" hidden></div>
+      </div>
+
+      <aside class="home-side" aria-label="새 소식">
+        <div class="section-label" id="postLabel" hidden>
+          <span>커뮤니티 새 글</span>
+          <a href="/community.html">전체 보기 →</a>
+        </div>
+        <div id="postList"></div>
+
+        <div class="section-label" id="docLabel" hidden>
+          <span>최근 개념 문서</span>
+          <a href="/documents.html">전체 보기 →</a>
+        </div>
+        <div id="docList"></div>
+      </aside>
     </div>
-    <div class="progress-grid" id="progList" hidden></div>
-
-    <div class="section-label" id="docLabel" hidden><span>최근 개념 문서</span></div>
-    <div id="docList"></div>
   </section>
 </main>
 
@@ -121,7 +140,10 @@ if (!isLoggedIn()) {
   loadLanding();
 } else {
   document.getElementById("today").hidden = false;
+  // 두 칸을 담을 만큼 본문을 넓힌다. 비로그인 소개 화면은 읽는 화면이라 860px 그대로 둔다.
+  document.querySelector("main").classList.add("home-wide");
   loadHome();
+  loadRecentPosts();
   loadRecentDocs();
 }
 
@@ -467,6 +489,32 @@ function todayLabel() {
  * 뒤 거의 고쳐지지 않아 사실상 올라온 날과 같다. 그래서 "올라온 날"이라고 <단정하지 않고>
  * 날짜만 적는다 — 나중에 문서를 손보면 어긋날 표기라 문구로 약속하지 않는다.
  */
+/**
+ * 커뮤니티 새 글 다섯 줄 — 모든 토론방의 최근 글(GET /api/quiz/posts).
+ *
+ * <p>글이 하나도 없으면 자리를 비운다. "아직 글이 없습니다"를 첫 화면에 걸어 두면 빈 가게처럼
+ * 보인다 — 쓸 곳은 문제를 푼 뒤의 토론방 링크가 알려 준다.
+ */
+async function loadRecentPosts() {
+  let posts;
+  try {
+    posts = (await api("/api/quiz/posts")).posts.slice(0, 5);
+  } catch (e) {
+    return;   // 부가 정보 — 실패하면 자리를 비운다
+  }
+  if (posts.length === 0) return;
+
+  document.getElementById("postList").innerHTML = posts.map(p => `
+    <a class="doc-line home-post" href="/post.html?id=${p.id}">
+      <span class="ti">${escapeHtml(p.title)}</span>
+      <span class="home-post-meta">
+        <span class="where">${escapeHtml(p.problemTitle)} · ${escapeHtml(p.nickname || "탈퇴한 사용자")}</span>${
+        p.commentCount ? `<span class="count">💬 ${p.commentCount}</span>` : ""}
+      </span>
+    </a>`).join("");
+  document.getElementById("postLabel").hidden = false;
+}
+
 async function loadRecentDocs() {
   let docs;
   try {
