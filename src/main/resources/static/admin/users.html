@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 사용자 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-shell">
+<div id="shell"></div>
+
+<main class="container admin">
+  <h1>사용자</h1>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <!-- 정지가 무엇을 막는지를 맨 위에 적는다. "정지"라는 말만 보면 로그인까지 막는 줄 안다. -->
+    <div class="alert info" style="margin-bottom:16px">
+      <b>정지</b>는 글·댓글을 쓰고 고치는 것과 신고를 막습니다. 문제 풀이와 복습, 읽기는 그대로 됩니다.
+      기간이 끝나면 저절로 풀리고, 사유는 정지된 사람에게 그대로 보입니다. 관리자 계정은 정지할 수 없습니다.
+    </div>
+
+    <form class="filters" id="searchForm">
+      <div class="field">
+        <label for="q">아이디 또는 닉네임</label>
+        <input type="text" id="q" maxlength="20" placeholder="일부만 적어도 됩니다">
+      </div>
+      <label class="pw-reveal" style="margin:0 0 10px">
+        <input type="checkbox" id="suspendedOnly"> 정지 중인 사람만
+      </label>
+      <button type="submit">찾기</button>
+    </form>
+
+    <div id="uMessage"></div>
+    <div id="uList"></div>
+    <div class="pager-row" id="uPagerRow"></div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
+<script src="/admin/js/admin-table.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script>
+/* 사용자 찾기와 정지·해제 — V26. 신고함(comments.html)과 같은 뼈대다: 카드 목록, 그 자리에서 처리.
+ *   GET  /api/admin/users?q=&suspendedOnly=&page=
+ *   POST /api/admin/users/{id}/suspend   {days, reason}   days를 비우면 무기한
+ *   POST /api/admin/users/{id}/unsuspend */
+let page = 0;
+
+/** 고를 수 있는 기간 — 값은 서버의 AdminUserService.ALLOWED_DAYS와 같다. 빈 값이 무기한이다. */
+const SUSPEND_DAYS = [["1", "1일"], ["7", "7일"], ["30", "30일"], ["", "무기한"]];
+
+if (initAdminPage("users")) {
+  // 신고함의 "글쓴이 정지"가 ?q=닉네임 으로 넘어온다. 넘어온 값으로 바로 찾는다.
+  const params = new URLSearchParams(location.search);
+  document.getElementById("q").value = params.get("q") || "";
+  document.getElementById("suspendedOnly").checked = params.get("suspendedOnly") === "true";
+
+  document.getElementById("searchForm").addEventListener("submit", e => {
+    e.preventDefault();
+    page = 0;
+    load();
+  });
+  document.getElementById("suspendedOnly").addEventListener("change", () => { page = 0; load(); });
+  load();
+}
+
+async function load() {
+  const msg = document.getElementById("uMessage");
+  msg.innerHTML = "";
+  try {
+    const params = new URLSearchParams({ page });
+    const q = document.getElementById("q").value.trim();
+    if (q) params.set("q", q);
+    if (document.getElementById("suspendedOnly").checked) params.set("suspendedOnly", "true");
+    render(await api("/api/admin/users?" + params));
+  } catch (e) {
+    showError(msg, e);
+  }
+}
+
+function render(data) {
+  document.getElementById("uList").innerHTML = data.content.length === 0
+    ? `<div class="card">해당하는 사용자가 없습니다.</div>`
+    : data.content.map(card).join("");
+
+  const row = document.getElementById("uPagerRow");
+  row.innerHTML = `
+    <span class="meta">전체 ${data.totalElements}명</span>
+    <span class="spacer"></span>
+    ${renderAdminPager(data)}`;
+  row.querySelectorAll("[data-page]").forEach(btn => {
+    btn.addEventListener("click", () => { page = Number(btn.dataset.page); load(); });
+  });
+}
+
+/** 사용자 한 장. 정지 중이면 풀리는 날과 사유, 아니면 정지 폼을 낸다. */
+function card(u) {
+  const admin = u.role === "ADMIN";
+  return `
+    <div class="card" id="user-${u.id}">
+      <div style="margin-bottom:6px">
+        <b>${escapeHtml(u.nickname || "(닉네임 없음)")}</b>
+        <span class="meta">${escapeHtml(u.username)} · 가입 ${formatDate(u.createdAt)}</span>
+        ${admin ? `<span class="badge">관리자</span>` : ""}
+        ${u.suspended ? `<span class="badge orange">정지 중</span>` : ""}
+      </div>
+      ${u.suspended ? `
+        <div>${u.indefinite ? "무기한 정지" : `${formatDate(u.suspendedUntil)}까지 정지`}
+          · 사유: ${escapeHtml(u.suspendedReason)}</div>
+        <div class="row-actions" style="margin-top:10px">
+          <button class="btn-outline" onclick="unsuspendUser(${u.id}, this)">정지 해제</button>
+        </div>` : admin ? "" : `
+        <div class="filters" style="margin:10px 0 0">
+          <div class="field" style="flex:0 0 110px; min-width:110px">
+            <label for="days-${u.id}">기간</label>
+            <select id="days-${u.id}">
+              ${SUSPEND_DAYS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label for="reason-${u.id}">사유 (정지된 사람에게 보입니다)</label>
+            <input type="text" id="reason-${u.id}" maxlength="200" placeholder="예: 광고 글을 거듭 올림">
+          </div>
+          <button onclick="suspendUser(${u.id}, this)">정지</button>
+        </div>`}
+    </div>`;
+}
+
+/* 정지와 해제는 그 카드만 바꾼다 — 여러 명을 훑는 화면에서 매번 다시 그리면 읽던 자리를 잃는다. */
+async function suspendUser(id, btn) {
+  const reason = document.getElementById("reason-" + id).value.trim();
+  const msg = document.getElementById("uMessage");
+  if (!reason) {
+    // 서버도 거절하지만 다녀오기 전에 알린다. 사유는 정지된 사람이 읽는 유일한 설명이다.
+    msg.innerHTML = `<div class="alert error">정지 사유를 적어 주세요.</div>`;
+    document.getElementById("reason-" + id).focus();
+    return;
+  }
+  const days = document.getElementById("days-" + id).value;
+  await act(btn, () => api(`/api/admin/users/${id}/suspend`, {
+    method: "POST", body: JSON.stringify({ days: days ? Number(days) : null, reason }) }), id);
+}
+
+async function unsuspendUser(id, btn) {
+  await act(btn, () => api(`/api/admin/users/${id}/unsuspend`, { method: "POST" }), id);
+}
+
+async function act(btn, fn, id) {
+  const msg = document.getElementById("uMessage");
+  msg.innerHTML = "";
+  btn.disabled = true;
+  try {
+    document.getElementById("user-" + id).outerHTML = card(await fn());
+  } catch (e) {
+    btn.disabled = false;
+    showError(msg, e);
+  }
+}
+</script>
+</body>
+</html>
