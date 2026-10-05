@@ -7,7 +7,7 @@ package project.study.study_project.discussion.domain;
  * 화면에 보이는 이름의 주인은 이 enum 하나다 — 화면은 응답의 label을 그대로 쓴다.
  */
 public enum PostCategory {
-    /** 모르는 것을 묻는다. "답변 기다리는 글"이 주로 이쪽이다. */
+    /** 모르는 것을 묻는다. */
     QUESTION("질문"),
     /** 이해한 것을 정리해 나눈다. */
     SUMMARY("정리"),

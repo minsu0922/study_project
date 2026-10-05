@@ -393,26 +393,7 @@ class PostIntegrationTest {
                 .andExpect(jsonPath("$.data.posts[0].id").value(onNetwork));
     }
 
-    /* ── 탭: 답변 기다리는 글 · 토론방 · 내 활동 ─────────────── */
-
-    @Test
-    @DisplayName("답변 기다리는 글만 볼 수 있다 — 보이는 댓글이 하나도 없는 글이다")
-    void unansweredOnly() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
-        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
-        long answered = write(bearer(user), problem.getId(), word + " 답이 달린 글", "본문");
-        long waiting = write(bearer(user), problem.getId(), word + " 기다리는 글", "본문");
-        long onlyDeleted = write(bearer(user), problem.getId(), word + " 지운 댓글뿐인 글", "본문");
-        commentRepository.save(Comment.of(answered, user.getId(), null, "답"));
-        commentRepository.save(Comment.of(onlyDeleted, user.getId(), null, "지운 것")).delete();
-
-        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("unanswered", "true"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.posts", hasSize(2)))
-                .andExpect(jsonPath("$.data.posts[0].id").value(onlyDeleted))
-                .andExpect(jsonPath("$.data.posts[1].id").value(waiting));
-    }
+    /* ── 탭: 토론방 · 내 활동 ─────────────────────────────── */
 
     /** 개발 DB의 다른 방이 섞여도 깨지지 않게, 이 테스트만 쓰는 분야로 좁혀 본다. */
     @Test

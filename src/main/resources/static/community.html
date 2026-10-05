@@ -23,11 +23,14 @@ try {
   <p class="meta">문제마다 토론방이 있습니다. 여기에는 모든 토론방의 글이 모입니다.
     글은 문제를 푼 뒤 그 문제의 토론방에서 씁니다.</p>
 
-  <!-- 탭 넷. 분야와 글 종류는 탭이 아니라 아래 걸러 보기로 둔다 — 분야만 11개라 탭으로 두면 줄이 넘친다.
-       탭은 <무엇을 보러 왔는가>로 나눈다: 다 보기 / 답해 줄 글 찾기 / 방으로 들어가기 / 내 것 보기. -->
+  <!-- 탭 셋. 분야와 말머리는 탭이 아니라 아래 걸러 보기로 둔다 — 분야만 11개라 탭으로 두면 줄이 넘친다.
+       탭은 <무엇을 보러 왔는가>로 나눈다: 다 보기 / 방으로 들어가기 / 내 것 보기.
+
+       [뺀 탭 — 2026-10-05] "답변 기다리는 글"(댓글이 없는 글)을 뒀다가 뺐다. 글쓴이는 내 활동에서
+       자기 글을 보면 되고, 답해 줄 사람에게도 정렬과 말머리 걸러 보기로 충분했다. 같은 목록을
+       두 군데에 두는 셈이었다. -->
   <div class="tabs" id="tabs" role="tablist">
     <button type="button" class="tab-btn" role="tab" data-tab="all">전체</button>
-    <button type="button" class="tab-btn" role="tab" data-tab="unanswered">답변 기다리는 글</button>
     <button type="button" class="tab-btn" role="tab" data-tab="rooms">토론방</button>
     <button type="button" class="tab-btn" role="tab" data-tab="mine">내 활동</button>
   </div>
@@ -82,8 +85,8 @@ try {
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script>
-/* 커뮤니티 — 탭 넷이 한 화면을 나눠 쓴다.
- *   전체 · 답변 기다리는 글   GET /api/quiz/posts?q=&sort=&domain=&unanswered=&page=   (공개)
+/* 커뮤니티 — 탭 셋이 한 화면을 나눠 쓴다.
+ *   전체                     GET /api/quiz/posts?q=&sort=&domain=&category=&page=     (공개)
  *   토론방                   GET /api/quiz/rooms?domain=&page=                        (공개)
  *   내 활동                  GET /api/me/posts?kind=&page=                            (로그인)
  * 한 쪽은 20건이다. */
@@ -98,7 +101,6 @@ const kindSelect = document.getElementById("kindSelect");
 /* 탭마다 쓰는 조건 칸. 여기 없는 칸은 그 탭에서 감추고, 주소에도 적지 않는다. */
 const TABS = {
   all:        { controls: ["q", "domain", "category", "sort"] },
-  unanswered: { controls: ["q", "domain", "category", "sort"] },
   rooms:      { controls: ["domain"] },
   mine:       { controls: ["kind"] },
 };
@@ -192,8 +194,7 @@ async function fetchTab() {
     return { hasNext: data.hasNext, rows: data.posts, rowHtml: postRow };
   }
   const data = await api("/api/quiz/posts?" + new URLSearchParams({
-    q: state.q, domain: state.domain, category: state.category, sort: state.sort,
-    unanswered: state.tab === "unanswered", page: state.page }));
+    q: state.q, domain: state.domain, category: state.category, sort: state.sort, page: state.page }));
   return { hasNext: data.hasNext, rows: data.posts, rowHtml: postRow };
 }
 
@@ -201,7 +202,6 @@ async function fetchTab() {
 function emptyText() {
   if (state.page > 0) return "이 쪽에는 더 없습니다.";
   if (filtered()) return "조건에 맞는 것이 없습니다. 검색어를 줄이거나 분야를 바꿔 보세요.";
-  if (state.tab === "unanswered") return "답변을 기다리는 글이 없습니다. 모든 글에 댓글이 달려 있습니다.";
   if (state.tab === "rooms") return "아직 열린 토론방이 없습니다. 문제를 풀고 첫 글을 쓰면 그 문제의 방이 열립니다.";
   if (state.tab === "mine") {
     return state.kind === "written" ? "아직 쓴 글이 없습니다." : "아직 댓글을 단 글이 없습니다.";
@@ -267,8 +267,8 @@ function apply(changes) {
 
 document.getElementById("tabs").addEventListener("click", e => {
   const btn = e.target.closest("[data-tab]");
-  // 탭을 옮겨도 검색어와 분야는 들고 간다. "보안"으로 보다가 답변 기다리는 글로 넘어가면
-  // 보안의 답변 기다리는 글이 나오는 것이 자연스럽다. 쪽은 처음으로 돌린다.
+  // 탭을 옮겨도 분야는 들고 간다. "보안"으로 보다가 토론방으로 넘어가면 보안의 토론방이
+  // 나오는 것이 자연스럽다. 쪽은 처음으로 돌린다.
   if (btn && btn.dataset.tab !== state.tab) apply({ tab: btn.dataset.tab, page: 0 });
 });
 document.getElementById("filterForm").addEventListener("submit", e => {
