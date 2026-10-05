@@ -131,7 +131,7 @@ async function load() {
   renderPost();
   // 가린 글은 댓글도 오지 않는다. 빈 댓글 칸을 내면 "댓글이 없다"로 읽힌다.
   if (post.status === "VISIBLE") {
-    document.getElementById("comments").innerHTML = commentsBlock(post.id);
+    document.getElementById("comments").innerHTML = commentsBlock(post.id, post.problemId);
   }
 }
 

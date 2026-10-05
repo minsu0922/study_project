@@ -484,6 +484,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         ans: r.correctAnswer ?? "",
         exp: r.explanation ?? "",
         doc: r.documentSlug ?? null,   // 결과 화면 복기에서도 개념 문서로 갈 수 있게(docs/15)
+        pid: pidOf(p),                 // 결과 화면 복기에서 그 문제의 토론방으로 갈 수 있게
       });
       showFeedback(p, r);
     } catch (e) {
@@ -712,6 +713,8 @@ function startPlayer(mountEl, problems, opts = {}) {
             ${m.exp ? `<div class="exp">${escapeHtml(m.exp)}</div>` : ""}
             ${m.doc ? `<div class="exp" style="font-size:.86rem">📖 <a href="/document.html?slug=${
               encodeURIComponent(m.doc)}" target="_blank" rel="noopener">이 문제의 개념 문서 읽기</a></div>` : ""}
+            <!-- 틀린 문제를 다시 읽는 이 자리가 "왜 이게 답이지"를 묻고 싶어지는 때다. -->
+            <div>${roomLink(m.pid)}</div>
           </div>`).join("")}
         <!-- 로그인한 사람에게만 참인 문장이다 — 2026-09-08.
              비로그인 채점은 아무것도 남기지 않으므로(QuizService.check) 사다리에 올라간 것도,

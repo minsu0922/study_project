@@ -44,6 +44,9 @@ function roomLink(problemId) {
 function fillRoomLink(el) {
   const total = roomCounts.get(el.dataset.roomLink);
   if (total === undefined) return;
+  // 비로그인은 글을 쓸 수 없다. 글이 없는 방은 읽을 것도 없어 링크를 거둔다 —
+  // "첫 글 쓰기"를 눌러 들어갔다가 로그인하라는 말을 듣게 하지 않는다.
+  if (total === 0 && !isLoggedIn()) { el.hidden = true; return; }
   el.textContent = total > 0 ? `💬 토론방 · 글 ${total}개` : "💬 토론방에 첫 글 쓰기";
 }
 
