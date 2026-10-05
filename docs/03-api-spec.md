@@ -509,7 +509,7 @@ refresh 토큰을 폐기한다.
 | PUT · DELETE | `/api/me/comments/{id}` | ✓ | 내 댓글 수정 `{body}` · 삭제 |
 | POST | `/api/me/comment-reports` | ✓ | 댓글 신고 `{commentId, reason, detail}` |
 | POST | `/api/me/post-reports` | ✓ | 글 신고 `{postId, reason, detail}` |
-| GET | `/api/admin/comment-reports?status=` | 🛡️ | 신고함(글·댓글 한 목록). 한 줄의 `targetType`이 `POST`·`COMMENT`를 가른다 |
+| GET | `/api/admin/comment-reports?status=` | 🛡️ | 신고함(글·댓글 한 목록). 한 줄의 `targetType`이 `POST`·`COMMENT`를 가르고, `targetUsername`·`targetSuspended`로 글쓴이와 정지 여부를 싣는다 |
 | POST | `/api/admin/posts/{id}/hide` · `/restore` | 🛡️ | 글 가림·복구. 가리면 그 글의 대기 신고가 모두 닫힌다 |
 | POST | `/api/admin/comments/{id}/hide` · `/restore` | 🛡️ | 댓글 가림·복구 |
 | POST | `/api/admin/comment-reports/{id}/dismiss` | 🛡️ | 신고 기각 `{note}` — 대상은 그대로 두고 그 신고만 닫는다 |

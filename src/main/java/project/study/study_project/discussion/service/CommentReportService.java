@@ -207,19 +207,18 @@ public class CommentReportService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
     }
 
-    /** 신고 한 줄에 글쓴이 닉네임과 글·문제 제목을 붙인다. 한 쪽이 20건이라 건마다 읽어도 부담이 없다. */
+    /** 신고 한 줄에 글쓴이와 글·문제 제목을 붙인다. 한 쪽이 20건이라 건마다 읽어도 부담이 없다. */
     private CommentReportItem toItem(CommentReport report) {
         Comment comment = report.targetsPost() ? null : requireComment(report.getCommentId());
         Post post = requirePost(report.targetsPost() ? report.getPostId() : comment.getPostId());
         Long authorId = comment != null ? comment.getUserId() : post.getUserId();
-        String nickname = authorId == null ? null
-                : userRepository.findById(authorId).map(User::getNickname).orElse(null);
+        User author = authorId == null ? null : userRepository.findById(authorId).orElse(null);
         Long problemId = discussionRepository.findById(post.getDiscussionId())
                 .map(Discussion::getProblemId).orElse(null);
         String problemTitle = problemId == null ? null
                 : problemRepository.findById(problemId).map(Problem::getTitle).orElse(null);
         return comment != null
-                ? CommentReportItem.ofComment(report, comment, post, nickname, problemId, problemTitle)
-                : CommentReportItem.ofPost(report, post, nickname, problemId, problemTitle);
+                ? CommentReportItem.ofComment(report, comment, post, author, problemId, problemTitle)
+                : CommentReportItem.ofPost(report, post, author, problemId, problemTitle);
     }
 }

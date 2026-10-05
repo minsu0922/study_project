@@ -60,7 +60,7 @@ let page = 0;
 const SUSPEND_DAYS = [["1", "1일"], ["7", "7일"], ["30", "30일"], ["", "무기한"]];
 
 if (initAdminPage("users")) {
-  // 신고함의 "글쓴이 정지"가 ?q=닉네임 으로 넘어온다. 넘어온 값으로 바로 찾는다.
+  // 신고함의 "글쓴이 정지"가 ?q=아이디&reason=신고 사유 로 넘어온다. 넘어온 값으로 바로 찾는다.
   const params = new URLSearchParams(location.search);
   document.getElementById("q").value = params.get("q") || "";
   document.getElementById("suspendedOnly").checked = params.get("suspendedOnly") === "true";
@@ -103,6 +103,9 @@ function render(data) {
   });
 }
 
+/** 신고함이 넘겨준 신고 사유. 정지 사유 칸에 미리 넣어 두고 관리자가 고쳐 쓴다. */
+const presetReason = new URLSearchParams(location.search).get("reason") || "";
+
 /** 사용자 한 장. 정지 중이면 풀리는 날과 사유, 아니면 정지 폼을 낸다. */
 function card(u) {
   const admin = u.role === "ADMIN";
@@ -129,7 +132,8 @@ function card(u) {
           </div>
           <div class="field">
             <label for="reason-${u.id}">사유 (정지된 사람에게 보입니다)</label>
-            <input type="text" id="reason-${u.id}" maxlength="200" placeholder="예: 광고 글을 거듭 올림">
+            <input type="text" id="reason-${u.id}" maxlength="200" placeholder="예: 광고 글을 거듭 올림"
+                   value="${escapeHtml(presetReason)}">
           </div>
           <button onclick="suspendUser(${u.id}, this)">정지</button>
         </div>`}
