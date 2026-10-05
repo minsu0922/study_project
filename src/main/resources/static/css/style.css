@@ -2333,6 +2333,8 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 @media (hover: hover) { a.post-row-title:hover { color: var(--primary); } }
 /* 커뮤니티의 찾기 줄. 검색 칸이 주인공이라 다른 두 칸보다 넓게 잡는다. */
 .community-filters .field:first-child { flex: 2 1 220px; }
+/* 고르는 칸은 늘리지 않는다. 검색 칸이 숨는 탭(토론방·내 활동)에서 고르는 칸 하나가 줄 전체로 퍼진다. */
+.community-filters .field:not(:first-child) { flex: 0 1 190px; }
 /* 글이 속한 문제의 분야. 개념 문서 목록의 분야 표시(.doc-line .dm)와 같은 모양이다. */
 .post-row-domain {
   display: inline-block; margin-right: 6px;

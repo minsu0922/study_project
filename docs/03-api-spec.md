@@ -514,7 +514,9 @@ refresh 토큰을 폐기한다.
 
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
-| GET | `/api/quiz/posts?q=&sort=&domain=&page=` | ✕ | 모든 토론방의 글(한 쪽 20건, 문제 id·제목·분야 포함). 커뮤니티 화면. `q`는 제목·본문 검색(50자까지, `%`·`_`는 글자 그대로), `sort`는 `latest`(기본)·`comments`, `domain`은 분야 코드 |
+| GET | `/api/quiz/posts?q=&sort=&domain=&page=` | ✕ | 모든 토론방의 글(한 쪽 20건, 문제 id·제목·분야 포함). 커뮤니티 화면. `q`는 제목·본문 검색(50자까지, `%`·`_`는 글자 그대로), `sort`는 `latest`(기본)·`comments`, `domain`은 분야 코드, `unanswered=true`면 보이는 댓글이 없는 글만 |
+| GET | `/api/quiz/rooms?domain=&page=` | ✕ | 토론방 목록 — 보이는 글이 있는 문제를 최근 글이 달린 방부터. 한 줄에 `problemId`·`problemTitle`·`domain`·`postCount`·`lastPostAt` |
+| GET | `/api/me/posts?kind=&page=` | ✓ | 내 활동 — `kind=written`(내가 쓴 글, 기본)·`commented`(내가 댓글 단 글). 응답 모양은 `/api/quiz/posts`와 같다 |
 | GET | `/api/quiz/{problemId}/posts?page=` | ✕ | 그 문제 토론방의 글 목록(새 글부터 20건). 방이 없으면 빈 목록 |
 | GET | `/api/quiz/posts/{postId}` | ✕ | 글 한 건 |
 | GET | `/api/quiz/posts/{postId}/comments?page=` | ✕ | 그 글의 댓글(오래된 것부터 20건, 답글 포함) |

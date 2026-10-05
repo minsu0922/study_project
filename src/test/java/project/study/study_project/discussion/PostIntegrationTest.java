@@ -393,6 +393,89 @@ class PostIntegrationTest {
                 .andExpect(jsonPath("$.data.posts[0].id").value(onNetwork));
     }
 
+    /* ── 탭: 답변 기다리는 글 · 토론방 · 내 활동 ─────────────── */
+
+    @Test
+    @DisplayName("답변 기다리는 글만 볼 수 있다 — 보이는 댓글이 하나도 없는 글이다")
+    void unansweredOnly() throws Exception {
+        Problem problem = saveProblem();
+        User user = solver(problem);
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        long answered = write(bearer(user), problem.getId(), word + " 답이 달린 글", "본문");
+        long waiting = write(bearer(user), problem.getId(), word + " 기다리는 글", "본문");
+        long onlyDeleted = write(bearer(user), problem.getId(), word + " 지운 댓글뿐인 글", "본문");
+        commentRepository.save(Comment.of(answered, user.getId(), null, "답"));
+        commentRepository.save(Comment.of(onlyDeleted, user.getId(), null, "지운 것")).delete();
+
+        mockMvc.perform(get("/api/quiz/posts").param("q", word).param("unanswered", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.posts", hasSize(2)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(onlyDeleted))
+                .andExpect(jsonPath("$.data.posts[1].id").value(waiting));
+    }
+
+    /** 개발 DB의 다른 방이 섞여도 깨지지 않게, 이 테스트만 쓰는 분야로 좁혀 본다. */
+    @Test
+    @DisplayName("토론방 목록 — 보이는 글이 있는 문제만, 최근 글이 달린 방부터, 방마다 글 수와 함께")
+    void roomList() throws Exception {
+        Problem older = problemRepository.save(Problem.create(
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX, "먼저 글이 달린 방", "지문", "O", "해설", null));
+        Problem newer = problemRepository.save(Problem.create(
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX, "나중에 글이 달린 방", "지문", "O", "해설", null));
+        Problem emptied = problemRepository.save(Problem.create(
+                TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX, "글을 다 지운 방", "지문", "O", "해설", null));
+        User user = solver(older);
+        solve(user, newer);
+        solve(user, emptied);
+        String token = bearer(user);
+        write(token, older.getId(), "첫째 글", "본문");
+        write(token, older.getId(), "둘째 글", "본문");
+        write(token, newer.getId(), "셋째 글", "본문");
+        long gone = write(token, emptied.getId(), "지울 글", "본문");
+        postRepository.findById(gone).orElseThrow().delete();
+
+        String ours = "$.data.rooms[?(@.problemId == %d)]";
+        mockMvc.perform(get("/api/quiz/rooms").param("domain", "SECURITY").param("size", "200"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(ours.formatted(older.getId()) + ".postCount").value(2))
+                .andExpect(jsonPath(ours.formatted(older.getId()) + ".problemTitle").value("먼저 글이 달린 방"))
+                .andExpect(jsonPath(ours.formatted(newer.getId()) + ".postCount").value(1))
+                .andExpect(jsonPath(ours.formatted(emptied.getId())).isEmpty())
+                // 최근 글이 달린 방이 맨 위다.
+                .andExpect(jsonPath("$.data.rooms[0].problemId").value(newer.getId()))
+                .andExpect(jsonPath("$.data.rooms[0].domain").value("SECURITY"));
+    }
+
+    @Test
+    @DisplayName("내 활동 — 내가 쓴 글과 내가 댓글 단 글을 따로 본다. 남의 것은 섞이지 않는다")
+    void myActivity() throws Exception {
+        Problem problem = saveProblem();
+        User me = solver(problem);
+        User other = solver(problem);
+        long mine = write(bearer(me), problem.getId(), "내가 쓴 글", "본문");
+        long theirs = write(bearer(other), problem.getId(), "남이 쓴 글", "본문");
+        long untouched = write(bearer(other), problem.getId(), "내가 안 건드린 글", "본문");
+        commentRepository.save(Comment.of(theirs, me.getId(), null, "내 댓글"));
+        commentRepository.save(Comment.of(untouched, me.getId(), null, "지운 내 댓글")).delete();
+
+        mockMvc.perform(get("/api/me/posts").param("kind", "written").header("Authorization", bearer(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(mine));
+        mockMvc.perform(get("/api/me/posts").param("kind", "commented").header("Authorization", bearer(me)))
+                .andExpect(jsonPath("$.data.posts", hasSize(1)))
+                .andExpect(jsonPath("$.data.posts[0].id").value(theirs));
+    }
+
+    @Test
+    @DisplayName("내 활동은 로그인해야 본다 — 401. 모르는 종류는 400")
+    void myActivityRequiresLogin() throws Exception {
+        mockMvc.perform(get("/api/me/posts").param("kind", "written")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/me/posts").param("kind", "liked")
+                        .header("Authorization", bearer(saveUser(Role.USER, true))))
+                .andExpect(status().isBadRequest());
+    }
+
     /* ── 수정·삭제 ───────────────────────────────────────── */
 
     @Test

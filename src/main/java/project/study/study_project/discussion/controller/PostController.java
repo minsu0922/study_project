@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.discussion.dto.PostDetail;
+import project.study.study_project.discussion.dto.PostFilter;
 import project.study.study_project.discussion.dto.PostListResponse;
 import project.study.study_project.discussion.dto.PostSort;
 import project.study.study_project.discussion.dto.RecentPostResponse;
+import project.study.study_project.discussion.dto.RoomListResponse;
 import project.study.study_project.discussion.service.PostService;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
@@ -45,13 +47,24 @@ public class PostController {
      * @param q      제목·본문에서 찾을 말
      * @param sort   {@code latest}(기본) 또는 {@code comments}
      * @param domain 분야 코드. 등록되지 않은 코드면 결과가 빈다
+     * @param unanswered {@code true}면 보이는 댓글이 없는 글만("답변 기다리는 글" 탭)
      */
     @GetMapping("/posts")
     public ApiResponse<RecentPostResponse> recent(@RequestParam(required = false) String q,
                                                   @RequestParam(required = false) String sort,
                                                   @RequestParam(required = false) DomainCode domain,
+                                                  @RequestParam(defaultValue = "false") boolean unanswered,
                                                   @RequestParam(defaultValue = "0") int page) {
-        return ApiResponse.ok(postService.recent(q, PostSort.from(sort), domain, page));
+        return ApiResponse.ok(postService.recent(
+                PostFilter.community(q, PostSort.from(sort), domain, unanswered), page));
+    }
+
+    /** 토론방 목록 — 글이 있는 문제를 최근 글이 달린 방부터. 예: {@code GET /api/quiz/rooms?domain=NETWORK} */
+    @GetMapping("/rooms")
+    public ApiResponse<RoomListResponse> rooms(@RequestParam(required = false) DomainCode domain,
+                                               @RequestParam(defaultValue = "0") int page,
+                                               @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.ok(postService.rooms(domain, page, size));
     }
 
     /** {@code userId}는 비로그인이면 null이다. 그때 solved·canWrite는 false로 나간다. */

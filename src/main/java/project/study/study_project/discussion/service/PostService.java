@@ -11,12 +11,15 @@ import project.study.study_project.discussion.domain.Discussion;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.dto.PostDetail;
 import project.study.study_project.discussion.dto.PostEditRequest;
+import project.study.study_project.discussion.dto.PostFilter;
 import project.study.study_project.discussion.dto.PostListResponse;
 import project.study.study_project.discussion.dto.PostSort;
 import project.study.study_project.discussion.dto.PostSummary;
 import project.study.study_project.discussion.dto.PostWriteRequest;
 import project.study.study_project.discussion.dto.RecentPostItem;
 import project.study.study_project.discussion.dto.RecentPostResponse;
+import project.study.study_project.discussion.dto.RoomItem;
+import project.study.study_project.discussion.dto.RoomListResponse;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
@@ -51,6 +54,8 @@ public class PostService {
 
     private static final int PAGE_SIZE = 20;
     private static final int MAX_QUERY_LENGTH = 50;
+    /** 토론방 목록의 한 쪽 상한. 화면은 20을 쓴다 — 주소로 큰 값을 넣어 통째로 긁지 못하게 막는다. */
+    private static final int MAX_ROOM_PAGE_SIZE = 200;
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
@@ -92,16 +97,18 @@ public class PostService {
     /**
      * 모든 토론방의 글 — 커뮤니티 화면이 읽는다. 지우거나 가린 글은 넣지 않는다.
      *
-     * @param q      제목·본문에서 찾을 말. 비어 있으면 안 거른다
-     * @param domain 그 글이 속한 문제의 분야. {@code null}이면 전체
+     * <p>커뮤니티의 탭(전체·답변 기다리는 글)과 "내 활동"이 모두 이 메서드로 온다.
+     * 무엇을 거를지는 {@link PostFilter}가 정한다.
      */
     @Transactional(readOnly = true)
-    public RecentPostResponse recent(String q, PostSort sort, DomainCode domain, int page) {
+    public RecentPostResponse recent(PostFilter filter, int page) {
         PageRequest pageable = PageRequest.of(Math.max(page, 0), PAGE_SIZE);
-        String pattern = likePattern(q);
-        Slice<PostRepository.RecentPostRow> rows = sort == PostSort.COMMENTS
-                ? postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, domain, pageable)
-                : postRepository.findRecent(CommentStatus.VISIBLE, pattern, domain, pageable);
+        String pattern = likePattern(filter.q());
+        Slice<PostRepository.RecentPostRow> rows = filter.sort() == PostSort.COMMENTS
+                ? postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, filter.domain(),
+                        filter.unanswered(), filter.authorId(), filter.commenterId(), pageable)
+                : postRepository.findRecent(CommentStatus.VISIBLE, pattern, filter.domain(),
+                        filter.unanswered(), filter.authorId(), filter.commenterId(), pageable);
         List<Post> posts = rows.getContent().stream().map(PostRepository.RecentPostRow::getPost).toList();
         Map<Long, String> nicknames = nicknamesOf(posts);
         Map<Long, Long> commentCounts = commentCountsOf(posts);
@@ -112,6 +119,19 @@ public class PostService {
                         row.getProblemId(), row.getProblemTitle(), row.getDomain().value()))
                 .toList();
         return new RecentPostResponse(rows.hasNext(), items);
+    }
+
+    /** 토론방 목록 — 보이는 글이 있는 문제를 최근 글이 달린 방부터. */
+    @Transactional(readOnly = true)
+    public RoomListResponse rooms(DomainCode domain, int page, int size) {
+        int capped = Math.min(Math.max(size, 1), MAX_ROOM_PAGE_SIZE);
+        Slice<PostRepository.RoomRow> rows = postRepository.findRooms(
+                CommentStatus.VISIBLE, domain, PageRequest.of(Math.max(page, 0), capped));
+        List<RoomItem> items = rows.getContent().stream()
+                .map(r -> new RoomItem(r.getProblemId(), r.getProblemTitle(), r.getDomain().value(),
+                        r.getPostCount(), r.getLastPostAt()))
+                .toList();
+        return new RoomListResponse(rows.hasNext(), items);
     }
 
     /**
