@@ -81,6 +81,17 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false) // 생성 시각은 최초 1회만 기록
     private LocalDateTime createdAt;
 
+    /** 무기한 정지를 적는 값(V26). 칸을 따로 두지 않고 "아주 먼 날짜"로 적는다. */
+    public static final LocalDateTime INDEFINITE = LocalDateTime.of(9999, 12, 31, 0, 0);
+
+    /** 이 시각까지 쓰기가 정지된다. {@code null}이거나 지난 시각이면 정지가 아니다. */
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
+    /** 정지 사유. 정지된 사람에게 그대로 보여 준다. */
+    @Column(name = "suspended_reason", length = 200)
+    private String suspendedReason;
+
     /**
      * 회원 생성용 빌더. role을 주지 않으면 기본 {@link Role#USER}로 만든다
      * (회원가입 API가 넘기는 값은 username, passwordHash 뿐이라 편의상 기본값 제공).
@@ -109,5 +120,25 @@ public class User {
     /** 닉네임 설정·변경. 형식과 중복은 서비스가 본다. */
     public void changeNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    /** 쓰기 정지. 이미 정지 중이면 새 기간과 사유로 덮어쓴다. 무기한은 {@link #INDEFINITE}를 넘긴다. */
+    public void suspend(LocalDateTime until, String reason) {
+        this.suspendedUntil = until;
+        this.suspendedReason = reason;
+    }
+
+    public void unsuspend() {
+        this.suspendedUntil = null;
+        this.suspendedReason = null;
+    }
+
+    /** 기간이 지난 정지는 정지가 아니다 — 값이 남아 있어도 아무도 풀 필요가 없다. */
+    public boolean isSuspended(LocalDateTime now) {
+        return suspendedUntil != null && suspendedUntil.isAfter(now);
+    }
+
+    public boolean isSuspendedIndefinitely() {
+        return INDEFINITE.equals(suspendedUntil);
     }
 }

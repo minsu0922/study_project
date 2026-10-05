@@ -22,7 +22,9 @@ import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
+import project.study.study_project.user.support.SuspensionGuard;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -65,7 +67,8 @@ public class CommentService {
         if (!post.isVisible()) {
             return new CommentListResponse(solved, false, 0, false, List.of());
         }
-        boolean canWrite = solved || (viewer != null && viewer.getRole() == Role.ADMIN);
+        boolean canWrite = (solved || (viewer != null && viewer.getRole() == Role.ADMIN))
+                && !viewer.isSuspended(LocalDateTime.now());
 
         Page<Comment> threads = commentRepository.findThreads(
                 postId, CommentStatus.DELETED, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
@@ -93,6 +96,7 @@ public class CommentService {
     public CommentItem write(Long userId, CommentWriteRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        SuspensionGuard.requireNotSuspended(user);
         Post post = requirePost(request.postId());
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
@@ -130,9 +134,11 @@ public class CommentService {
         if (!comment.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        SuspensionGuard.requireNotSuspended(user);
         comment.edit(body.trim());
-        String nickname = userRepository.findById(userId).map(User::getNickname).orElse(null);
-        return CommentItem.of(comment, nickname, userId, List.of());
+        return CommentItem.of(comment, user.getNickname(), userId, List.of());
     }
 
     /** 이미 지운 글을 또 지워도 오류가 아니다 — 두 번 눌린 삭제 버튼에 실패를 보여 줄 이유가 없다. */

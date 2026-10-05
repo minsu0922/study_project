@@ -524,6 +524,24 @@ refresh 토큰을 폐기한다.
 
 ---
 
+## 사용자 정지 API  🛡️
+
+관리자가 사용자의 쓰기를 정지한다. 정지된 사용자는 글·댓글을 쓰거나 고치지 못하고 신고도 못 한다
+(`DISCUSSION_013`). 문제 풀이, 복습, 읽기, 자기 글 삭제는 그대로 된다.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/admin/users?q=&suspendedOnly=&page=` | 사용자 찾기. `q`는 아이디나 닉네임의 일부, `suspendedOnly=true`면 정지 중인 사람만 |
+| POST | `/api/admin/users/{id}/suspend` | 정지 `{days, reason}`. `days`는 1·7·30, 비우면 무기한. 이미 정지 중이면 덮어쓴다 |
+| POST | `/api/admin/users/{id}/unsuspend` | 정지 해제 |
+
+- 응답 한 줄: `{id, username, nickname, role, createdAt, suspended, indefinite, suspendedUntil, suspendedReason}`.
+  무기한이면 `suspendedUntil`은 비고 `indefinite`가 true다.
+- 기간이 지나면 아무도 풀지 않아도 풀린다. 관리자 계정은 정지할 수 없다(`USER_002`).
+- 정지 중인 사용자가 읽는 글·댓글 목록의 `canWrite`는 false로 나간다.
+
+---
+
 ## 관리자 API  🛡️
 
 문제·문서를 손으로 등록/수정/삭제한다. **AI 승인도 결국 이 서비스를 재사용한다**(단일 경로 원칙).
