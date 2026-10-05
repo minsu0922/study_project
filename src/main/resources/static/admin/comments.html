@@ -108,14 +108,16 @@ function card(r) {
         <span class="badge gray">${isPost ? "글" : "댓글"}</span>
         <span class="badge">${escapeHtml(r.reasonLabel)}</span>
         <span class="badge gray">상태: ${commentStatusLabel(r.targetStatus)}</span>
+        ${r.editedAfterReport ? `<span class="badge orange">신고 뒤 수정됨</span>` : ""}
         <span class="meta">${formatDate(r.createdAt)}</span>
       </div>
 
       <div class="meta">문제: ${escapeHtml(r.problemTitle || "(제목 없음)")}
         · 글쓴이: ${escapeHtml(r.targetNickname || "탈퇴한 사용자")}
         ${r.targetSuspended ? `<span class="badge orange">글쓴이 정지 중</span>` : ""}</div>
-      <div class="meta">${isPost ? "글 제목" : "댓글이 달린 글"}: ${escapeHtml(r.postTitle)}</div>
-      <div style="white-space:pre-wrap; overflow-wrap:anywhere; margin:8px 0">${escapeHtml(r.targetBody)}</div>
+      ${isPost && r.editedAfterReport ? "" /* 제목이 아래 "신고 당시"와 "지금"에 따로 나온다 */
+        : `<div class="meta">${isPost ? "글 제목" : "댓글이 달린 글"}: ${escapeHtml(r.postTitle)}</div>`}
+      ${bodyBlock(r, isPost)}
 
       ${r.detail ? `<div class="alert info" style="margin:8px 0">신고자 한마디: ${escapeHtml(r.detail)}</div>` : ""}
       ${r.adminNote ? `<div class="meta">처리 메모: ${escapeHtml(r.adminNote)}</div>` : ""}
@@ -134,6 +136,22 @@ function card(r) {
         ${suspendLink(r)}
       </div>
     </div>`;
+}
+
+/**
+ * 본문. 신고 뒤에 글쓴이가 고쳤으면 "신고 당시"와 "지금"을 나란히 낸다 — 판정은 신고된 내용으로 하고,
+ * 지금 내용은 "고쳐서 이미 괜찮아졌는지"를 보는 데 쓴다. 안 고쳤으면 하나만 낸다.
+ */
+function bodyBlock(r, isPost) {
+  const block = (label, title, body) => `
+    <div style="margin:8px 0">
+      ${label ? `<div class="meta">${label}</div>` : ""}
+      ${title ? `<div><b>${escapeHtml(title)}</b></div>` : ""}
+      <div style="white-space:pre-wrap; overflow-wrap:anywhere">${escapeHtml(body)}</div>
+    </div>`;
+  if (!r.editedAfterReport) return block("", "", r.targetBody);
+  return block("신고 당시", isPost ? r.reportedTitle : "", r.reportedBody)
+       + block("지금", isPost ? r.postTitle : "", r.targetBody);
 }
 
 /**
