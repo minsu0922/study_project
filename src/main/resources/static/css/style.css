@@ -1064,6 +1064,24 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus-ring)
  * 색만 쓰지 않고 테두리도 함께 바꾸는 이유는 늘 같다 — 색 구분이 어려운 사람에게
  * 빨간 글씨는 그냥 글씨다. 위치(칸 바로 아래)와 테두리가 다른 축을 하나씩 더 준다. */
 .field-error { color: var(--wrong-fg); font-size: var(--fs-1); margin-top: var(--sp-1); }
+/* ── 가입 폼 (signup.html) ────────────────────────────────────────
+   라벨은 칸 이름만 담는다. 전역 라벨(12px 회색)은 규칙을 괄호로 붙여 쓰던 때의 크기라,
+   이름만 남기면 너무 흐리다 — 칸 이름이 먼저 읽히게 본문 색과 굵기로 올린다. */
+.signup-form .field label { font-size: var(--fs-2); color: var(--text); font-weight: 600; }
+/* 칸 아래의 규칙·안내 한 줄. 오류(.field-error)와 같은 자리, 같은 크기라 서로 갈아 끼워진다. */
+.field-hint { color: var(--muted); font-size: var(--fs-1); margin-top: var(--sp-1); line-height: 1.5; }
+/* 비밀번호 규칙 셋. 색만으로 알리지 않게 앞에 기호를 붙인다: 아직(·) 채움(✓) 모자람(✕). */
+.pw-rules {
+  list-style: none; display: flex; flex-wrap: wrap; gap: 2px 14px;
+  margin: var(--sp-1) 0 0; padding: 0;
+  font-size: var(--fs-1); color: var(--muted);
+}
+.pw-rules li::before { content: "· "; }
+.pw-rules li.met { color: var(--correct); }
+.pw-rules li.met::before { content: "✓ "; }
+.pw-rules li.unmet { color: var(--wrong-fg); }
+.pw-rules li.unmet::before { content: "✕ "; }
+
 /* 가입 화면의 "쓸 수 있습니다". 색만으로 알리지 않게 글 앞에 ✓를 붙인다(signup.html). */
 .field-ok { color: var(--correct); font-size: var(--fs-1); margin-top: var(--sp-1); }
 input.invalid { border-color: var(--wrong); }
