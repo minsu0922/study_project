@@ -636,15 +636,18 @@ body {
 }
 .shell-foot-inner {
   display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4);
-  max-width: 1200px; margin: 0 auto; padding: 24px 16px;
+  padding: 24px 16px;
 }
 .shell-foot .brand { font-weight: 800; font-size: 1rem; color: var(--primary); letter-spacing: -.02em; }
 .shell-foot-links { display: flex; flex-direction: column; gap: 2px; }
 .shell-foot-label { font-weight: 700; color: var(--text-2); margin-bottom: 2px; }
 .shell-foot a { color: var(--text-2); text-decoration: none; }
 .shell-foot a:hover { color: var(--primary); text-decoration: underline; }
+/* 넓은 화면에서는 헤더와 같이 양 끝에 맞춘다 — 소개는 왼쪽 끝, 링크 두 묶음은 오른쪽 끝.
+   좌우 여백(32px)이 헤더와 같아서 브랜드끼리, 계정과 "만든 곳"끼리 세로로 줄이 맞는다. */
 @media (min-width: 768px) {
-  .shell-foot-inner { grid-template-columns: minmax(0, 1.6fr) minmax(0, .7fr) minmax(0, 1fr); gap: 40px; padding: 32px 24px; }
+  .shell-foot-inner { grid-template-columns: minmax(0, 1fr) auto auto; gap: 56px; padding: 32px; }
+  .shell-foot-about { max-width: 520px; }
 }
 
 /* ── 폰: 아래쪽 탭바 ── */
@@ -693,12 +696,13 @@ body {
     /* 화면에 붙어 있다 — 긴 문서를 읽다가도 메뉴가 손에 닿게(기둥이 하던 일이다). */
     position: sticky; top: 0; z-index: 50;
   }
-  /* 안쪽은 본문의 가장 넓은 폭(1,200px)에 맞춘다. 화면 끝까지 벌리면 브랜드와 계정이
-     양쪽 구석으로 흩어져 한 줄로 안 읽힌다. */
+  /* 화면 양 끝에 맞춘다(2026-10-05 사용자 결정). 처음에는 본문 폭(1,200px)에 맞춰 가운데로
+     모았는데, 넓은 화면에서 헤더 좌우가 본문 좌우와 똑같이 비어 "가운데 떠 있는 띠"로 보였다.
+     끝까지 벌리면 헤더가 화면의 틀이 되고, 본문은 그 안에서 가운데에 놓인다. */
   .shell-head-inner {
     display: flex; align-items: center; gap: 8px;
     height: var(--shell-top-h);
-    max-width: 1200px; margin: 0 auto; padding: 0 24px;
+    padding: 0 32px;
   }
   .shell-head .brand {
     font-size: 1.2rem; font-weight: 800; color: var(--primary);
