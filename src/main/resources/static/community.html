@@ -78,11 +78,7 @@ try {
   <p class="meta" id="resultInfo" hidden></p>
   <div id="list"></div>
 
-  <div class="pager" id="pager" hidden>
-    <button id="prevBtn" class="btn-outline">이전</button>
-    <span class="info" id="pageInfo"></span>
-    <button id="nextBtn" class="btn-outline">다음</button>
-  </div>
+  <div class="pager" id="pager" hidden></div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -214,14 +210,13 @@ function emptyText() {
 
 async function load() {
   const list = document.getElementById("list");
-  const pager = document.getElementById("pager");
   const info = document.getElementById("resultInfo");
 
   // 내 활동은 로그인해야 본다. 요청을 보내 401을 받는 대신 먼저 말한다 —
   // 401은 공용 처리에서 "세션이 끝났다"로 다뤄져 엉뚱한 안내가 된다.
   if (state.tab === "mine" && !isLoggedIn()) {
     info.hidden = true;
-    pager.hidden = true;
+    pager.hide();
     list.innerHTML = `<div class="card meta"><a href="/login.html">로그인</a>하면 내가 쓴 글과
       내가 댓글 단 글을 여기서 모아 볼 수 있습니다.</div>`;
     return;
@@ -246,10 +241,7 @@ async function load() {
 
   list.innerHTML = rows.length ? rows.map(rowHtml).join("") : `<div class="card meta">${emptyText()}</div>`;
 
-  pager.hidden = state.page === 0 && !hasNext;
-  document.getElementById("pageInfo").textContent = `${state.page + 1}쪽`;
-  document.getElementById("prevBtn").disabled = state.page === 0;
-  document.getElementById("nextBtn").disabled = !hasNext;
+  pager.update({ page: state.page, hasNext });
 }
 
 function show() {
@@ -283,8 +275,7 @@ domainFilter.addEventListener("change", () => apply({ domain: domainFilter.value
 categoryFilter.addEventListener("change", () => apply({ category: categoryFilter.value, q: qInput.value.trim(), page: 0 }));
 sortSelect.addEventListener("change", () => apply({ sort: sortSelect.value, q: qInput.value.trim(), page: 0 }));
 kindSelect.addEventListener("change", () => apply({ kind: kindSelect.value, page: 0 }));
-document.getElementById("prevBtn").addEventListener("click", () => apply({ page: state.page - 1 }));
-document.getElementById("nextBtn").addEventListener("click", () => apply({ page: state.page + 1 }));
+const pager = mountPager(document.getElementById("pager"), p => apply({ page: p }));
 window.addEventListener("popstate", () => { readStateFromUrl(); show(); });
 
 fillSelect(domainFilter, DOMAINS, "전체 분야");

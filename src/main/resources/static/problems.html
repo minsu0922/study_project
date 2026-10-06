@@ -77,11 +77,7 @@ try {
           <span class="pl-when">마지막</span>
         </div>
         <div id="list"></div>
-        <div class="pl-pager" id="pager" hidden>
-          <button id="prevBtn" class="btn-outline">이전</button>
-          <span class="info" id="pageInfo"></span>
-          <button id="nextBtn" class="btn-outline">다음</button>
-        </div>
+        <div class="pl-pager" id="pager" hidden></div>
       </div>
     </div>
   </div>
@@ -306,9 +302,6 @@ function initFilters() {
     page = 0;   // 3쪽을 보다가 검색하면 결과가 1쪽뿐인데 3쪽을 달라고 하게 된다
     loadList();
   });
-
-  document.getElementById("prevBtn").addEventListener("click", () => { page--; loadList(); });
-  document.getElementById("nextBtn").addEventListener("click", () => { page++; loadList(); });
 }
 
 /* ═══════════ 목록 ═══════════ */
@@ -376,7 +369,7 @@ async function loadList() {
   } catch (e) {
     document.getElementById("list").innerHTML =
       `<div class="pl-empty">목록을 불러오지 못했습니다.<br><span class="meta">${escapeHtml(e.message)}</span></div>`;
-    document.getElementById("pager").hidden = true;
+    pager.hide();
     return;
   }
 
@@ -526,12 +519,10 @@ document.getElementById("list")?.addEventListener("click", e => {
   loadList();
 });
 
+const pager = mountPager(document.getElementById("pager"), p => { page = p; loadList(); }, { showTotal: true });
+
 function renderPager(data) {
-  document.getElementById("pager").hidden = data.totalPages <= 1;
-  document.getElementById("pageInfo").textContent =
-    `${data.page + 1} / ${Math.max(data.totalPages, 1)} — 전체 ${data.totalElements}건`;
-  document.getElementById("prevBtn").disabled = data.page === 0;
-  document.getElementById("nextBtn").disabled = !data.hasNext;
+  pager.update(data);
 }
 </script>
 </body>

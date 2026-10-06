@@ -59,18 +59,7 @@ try {
         </div>
       </div>
       <div id="list"></div>
-      <!-- id가 pager*인 이유 — 2026-09-09.
-           이 화면은 <같은 문서에> 복습 플레이어를 얹는다. 그런데 플레이어도 채점 뒤
-           [다음 문제] 버튼을 id="nextBtn"으로 만든다(player.js). 그래서 한 문서에 같은 id가
-           둘 생겼고, document.querySelector("#nextBtn")은 <먼저 나오는> 이 페이저 버튼을
-           잡았다 — 플레이어를 조작하려는 코드가 조용히 엉뚱한 버튼을 누른다.
-           플레이어 안쪽은 mountEl 범위로 찾아 무사했지만, 유효하지 않은 HTML이고
-           다음에 이 화면을 건드리는 사람이 같은 함정에 빠진다. 화면 쪽 이름을 비켜 준다. -->
-      <div class="pager" id="pager" hidden>
-        <button id="pagerPrev" class="btn-outline">이전</button>
-        <span class="info" id="pageInfo"></span>
-        <button id="pagerNext" class="btn-outline">다음</button>
-      </div>
+      <div class="pager" id="pager" hidden></div>
     </div>
   </section>
 
@@ -274,11 +263,7 @@ async function loadStatus() {
       }).join("");
     }
 
-    const pager = document.getElementById("pager");
-    pager.hidden = data.totalPages <= 1;
-    document.getElementById("pageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
-    document.getElementById("pagerPrev").disabled = data.page === 0;
-    document.getElementById("pagerNext").disabled = !data.hasNext;
+    pager.update(data);
   } catch (e) {
     const text = e.status === 401
       ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인해 주세요.</a>`
@@ -288,8 +273,7 @@ async function loadStatus() {
 }
 
 document.getElementById("statusFilter").addEventListener("change", () => { page = 0; loadStatus(); });
-document.getElementById("pagerPrev").addEventListener("click", () => { page--; loadStatus(); });
-document.getElementById("pagerNext").addEventListener("click", () => { page++; loadStatus(); });
+const pager = mountPager(document.getElementById("pager"), p => { page = p; loadStatus(); });
 </script>
 </body>
 </html>
