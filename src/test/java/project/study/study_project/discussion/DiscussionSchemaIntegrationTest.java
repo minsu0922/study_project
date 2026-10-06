@@ -6,15 +6,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.TestDomains;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
-import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
@@ -25,6 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class DiscussionSchemaIntegrationTest {
 
+    @Autowired
+    private TestFixtures fixtures;
     @Autowired
     private DiscussionRepository discussionRepository;
     @Autowired
@@ -39,7 +39,7 @@ class DiscussionSchemaIntegrationTest {
     @Test
     @DisplayName("같은 문제에 방을 두 번 만들어도 하나만 생긴다")
     void roomIsCreatedOncePerProblem() {
-        Long problemId = saveProblem().getId();
+        Long problemId = fixtures.problem().getId();
 
         discussionRepository.insertIfAbsent(problemId);
         discussionRepository.insertIfAbsent(problemId);
@@ -51,13 +51,13 @@ class DiscussionSchemaIntegrationTest {
     @Test
     @DisplayName("방이 없는 문제는 빈 값을 돌려준다")
     void noRoomYet() {
-        assertThat(discussionRepository.findIdByProblemId(saveProblem().getId())).isEmpty();
+        assertThat(discussionRepository.findIdByProblemId(fixtures.problem().getId())).isEmpty();
     }
 
     @Test
     @DisplayName("문제를 지우면 방과 글, 댓글도 함께 지워진다")
     void deletingProblemRemovesDiscussion() {
-        Problem problem = saveProblem();
+        Problem problem = fixtures.problem();
         Long postId = savePost(problem.getId());
         Long commentId = commentRepository.saveAndFlush(Comment.of(postId, null, null, "첫 댓글")).getId();
 
@@ -73,7 +73,7 @@ class DiscussionSchemaIntegrationTest {
     @Test
     @DisplayName("댓글은 VISIBLE로 태어나고, 삭제해도 행은 남는다")
     void commentLifecycle() {
-        Long postId = savePost(saveProblem().getId());
+        Long postId = savePost(fixtures.problem().getId());
         Comment comment = commentRepository.saveAndFlush(Comment.of(postId, null, null, "첫 댓글"));
 
         assertThat(comment.getStatus()).isEqualTo(CommentStatus.VISIBLE);
@@ -90,12 +90,5 @@ class DiscussionSchemaIntegrationTest {
         discussionRepository.insertIfAbsent(problemId);
         Long discussionId = discussionRepository.findIdByProblemIdForShare(problemId).orElseThrow();
         return postRepository.saveAndFlush(Post.of(discussionId, null, PostCategory.QUESTION, "글", "본문")).getId();
-    }
-
-    private Problem saveProblem() {
-        return problemRepository.save(Problem.create(
-                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
-                "TCP 3-way handshake",
-                "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
     }
 }

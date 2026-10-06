@@ -7,22 +7,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
-import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.user.domain.Role;
-import project.study.study_project.user.domain.User;
-import project.study.study_project.user.repository.UserRepository;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -58,13 +54,9 @@ class AdminDomainSettingIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
+    private TestFixtures fixtures;
+    @Autowired
     private DomainSettingService domainSettingService;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
@@ -74,7 +66,7 @@ class AdminDomainSettingIntegrationTest {
     @DisplayName("힌트를 고치면 다음 생성부터 그 값이 실린다")
     void editHintIsStored() throws Exception {
         mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"enabled":true,"displayName":"네트워크","hint":"TCP 혼잡 제어 위주"}"""))
@@ -90,7 +82,7 @@ class AdminDomainSettingIntegrationTest {
         String tooLong = "가".repeat(501);
 
         mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("{\"enabled\":true,\"displayName\":\"네트워크\",\"hint\":\"" + tooLong + "\"}"))
                 .andExpect(status().isBadRequest());
@@ -100,7 +92,7 @@ class AdminDomainSettingIntegrationTest {
     @DisplayName("화면 이름을 비우면 400 — 목록에서 그 줄이 빈칸으로 뜨는 것을 막는다")
     void displayNameMustNotBeBlank() throws Exception {
         mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"enabled":true,"displayName":"","hint":null}"""))
@@ -111,7 +103,7 @@ class AdminDomainSettingIntegrationTest {
     @DisplayName("순서를 올리면 앞줄과 자리를 바꾼다")
     void moveUpSwapsWithPrevious() throws Exception {
         mockMvc.perform(post("/api/admin/domain-settings/OS/move")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON).content("{\"direction\":\"UP\"}"))
                 .andExpect(status().isOk());
 
@@ -122,7 +114,7 @@ class AdminDomainSettingIntegrationTest {
     @DisplayName("맨 위를 더 올려도 아무 일도 없다 — 오류로 만들면 버튼을 눌러 보기가 무서워진다")
     void moveUpAtTopIsNoop() throws Exception {
         mockMvc.perform(post("/api/admin/domain-settings/NETWORK/move")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON).content("{\"direction\":\"UP\"}"))
                 .andExpect(status().isOk());
 
@@ -149,7 +141,7 @@ class AdminDomainSettingIntegrationTest {
         topicQueueItemRepository.deleteAll();
 
         String body = mockMvc.perform(get("/api/admin/domain-settings/preview")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .param("days", "7")
                         .param("domains", "OS", "NETWORK"))
                 .andExpect(status().isOk())
@@ -179,7 +171,7 @@ class AdminDomainSettingIntegrationTest {
         // 401만 보면 "로그인만 하면 누구나 된다"는 구멍을 못 잡는다 — 비로그인은 인증 단계에서
         // 걸러질 뿐, hasRole(ADMIN)까지 가지 않는다. 일반 사용자 토큰으로 403을 따로 본다(Minor 6).
         mockMvc.perform(get("/api/admin/domain-settings")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(Role.USER)))
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.USER)))
                 .andExpect(status().isForbidden());
     }
 
@@ -199,7 +191,7 @@ class AdminDomainSettingIntegrationTest {
         leaveOnlyEnabled(TestDomains.OS);
 
         String body = mockMvc.perform(put("/api/admin/domain-settings/OS")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"enabled":false,"displayName":"운영체제","hint":null}"""))
@@ -217,14 +209,14 @@ class AdminDomainSettingIntegrationTest {
 
         // 켜진 채로 이름만 고치는 것은 막지 않는다 — 막는 것은 "변경 결과 0개"뿐이다.
         mockMvc.perform(put("/api/admin/domain-settings/OS")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"enabled":true,"displayName":"운영체제2","hint":"프로세스 위주"}"""))
                 .andExpect(status().isOk());
         // 이미 꺼진 분야를 꺼진 채로 고치는 것도 막지 않는다(켜진 OS가 남아 있다).
         mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"enabled":false,"displayName":"네트워크","hint":null}"""))
@@ -235,7 +227,7 @@ class AdminDomainSettingIntegrationTest {
     @DisplayName("화면 이름이 40자를 넘으면 400 — 전에는 DB 오류(500)로 떨어졌다")
     void displayNameHasMaxLength() throws Exception {
         mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("{\"enabled\":true,\"displayName\":\"" + "가".repeat(41) + "\",\"hint\":null}"))
                 .andExpect(status().isBadRequest());
@@ -245,7 +237,7 @@ class AdminDomainSettingIntegrationTest {
     @DisplayName("화면 이름의 앞뒤 공백은 서버가 자른다 — 힌트와 같은 취급")
     void displayNameIsTrimmed() throws Exception {
         mockMvc.perform(put("/api/admin/domain-settings/NETWORK")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"enabled":true,"displayName":"  네트워크  ","hint":null}"""))
@@ -263,12 +255,12 @@ class AdminDomainSettingIntegrationTest {
     void previewDaysIsBounded() throws Exception {
         for (String days : List.of("0", "-1", "61")) {
             mockMvc.perform(get("/api/admin/domain-settings/preview")
-                            .header(HttpHeaders.AUTHORIZATION, bearer())
+                            .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                             .param("days", days))
                     .andExpect(status().isBadRequest());
         }
         mockMvc.perform(get("/api/admin/domain-settings/preview")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .param("days", "60"))
                 .andExpect(status().isOk());
     }
@@ -287,7 +279,7 @@ class AdminDomainSettingIntegrationTest {
         topicQueueItemRepository.deleteAll(); // 대기열 분야가 넘긴 목록을 이기지 않게(위 미리보기 테스트와 같은 이유)
 
         String body = mockMvc.perform(get("/api/admin/domain-settings/preview")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .param("days", "7")
                         .param("domains", "NETWORK,,OS"))
                 .andExpect(status().isOk())
@@ -311,18 +303,5 @@ class AdminDomainSettingIntegrationTest {
                 .filter(s -> !s.getDomain().equals(keep) && s.isEnabled())
                 .forEach(s -> domainSettingService.edit(s.getDomain(),
                         new AdminDomainSettingRequest(false, s.getDisplayName(), s.getHint())));
-    }
-
-    private String bearer() {
-        return bearer(Role.ADMIN);
-    }
-
-    private String bearer(Role role) {
-        User user = userRepository.save(User.builder()
-                .username("domainsetting" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("admin-pw1"))
-                .role(role)
-                .build());
-        return "Bearer " + jwtTokenProvider.createToken(user.getId(), role);
     }
 }

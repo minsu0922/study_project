@@ -5,15 +5,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.auth.jwt.JwtTokenProvider;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.user.domain.Role;
-import project.study.study_project.user.domain.User;
-import project.study.study_project.user.repository.UserRepository;
 
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,11 +40,7 @@ class ActuatorEndpointTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    private TestFixtures fixtures;
 
     /**
      * 도커 HEALTHCHECK가 실제로 부르는 주소다. 이 한 건이 깨지면 배포된 컨테이너가
@@ -99,7 +91,7 @@ class ActuatorEndpointTest {
     @Test
     @DisplayName("관리자에게는 부품별 상태가 보인다 — 사람이 원인을 찾는 자리")
     void showsComponentsToAdmin() throws Exception {
-        mockMvc.perform(get("/actuator/health").header("Authorization", bearer(Role.ADMIN)))
+        mockMvc.perform(get("/actuator/health").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(jsonPath("$.components.db").exists());
     }
 
@@ -108,9 +100,9 @@ class ActuatorEndpointTest {
     void infoRequiresAdmin() throws Exception {
         mockMvc.perform(get("/actuator/info"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/actuator/info").header("Authorization", bearer(Role.USER)))
+        mockMvc.perform(get("/actuator/info").header("Authorization", fixtures.bearer(Role.USER)))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/actuator/info").header("Authorization", bearer(Role.ADMIN)))
+        mockMvc.perform(get("/actuator/info").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isOk());
     }
 
@@ -125,22 +117,11 @@ class ActuatorEndpointTest {
     @Test
     @DisplayName("노출 목록에 없는 엔드포인트는 관리자에게도 없다 — env로 비밀이 새지 않는다")
     void unexposedEndpointsStayOff() throws Exception {
-        mockMvc.perform(get("/actuator/env").header("Authorization", bearer(Role.ADMIN)))
+        mockMvc.perform(get("/actuator/env").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(get("/actuator/beans").header("Authorization", bearer(Role.ADMIN)))
+        mockMvc.perform(get("/actuator/beans").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isNotFound());
     }
 
     /* ── 테스트 재료 ─────────────────────────────────────────── */
-
-    /** 그 역할로 서명한 토큰의 Authorization 헤더 값. */
-    private String bearer(Role role) {
-        User user = userRepository.save(User.builder()
-                // 아이디는 30자 제한이라 UUID 앞 8자만 딴다(AdminGateIntegrationTest와 같은 방식)
-                .username("act" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("password123"))
-                .role(role)
-                .build());
-        return "Bearer " + jwtTokenProvider.createToken(user.getId(), role);
-    }
 }

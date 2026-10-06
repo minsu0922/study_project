@@ -8,18 +8,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.TestDomains;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.discussion.repository.CommentReportRepository;
 import project.study.study_project.discussion.repository.CommentRepository;
-import project.study.study_project.discussion.repository.DiscussionRepository;
-import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.ProblemType;
-import project.study.study_project.quiz.domain.Problem;
-import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.report.domain.ReportStatus;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
@@ -43,11 +38,9 @@ class CommentReportIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
+    private TestFixtures fixtures;
+    @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private ProblemRepository problemRepository;
-    @Autowired
-    private DiscussionRepository discussionRepository;
     @Autowired
     private CommentRepository commentRepository;
     @Autowired
@@ -69,7 +62,7 @@ class CommentReportIntegrationTest {
     @Test
     @DisplayName("문제를 풀지 않은 사람도 신고할 수 있다 — 읽을 수 있으면 신고도 할 수 있다")
     void anyLoggedInUserCanReport() throws Exception {
-        mockMvc.perform(post(REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(saveComment().getId(), "ABUSE")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
@@ -80,7 +73,7 @@ class CommentReportIntegrationTest {
     @DisplayName("같은 글을 두 번 신고하면 409 DISCUSSION_007")
     void rejectsDuplicate() throws Exception {
         Long commentId = saveComment().getId();
-        String token = bearer(Role.USER);
+        String token = fixtures.bearer(Role.USER);
         mockMvc.perform(post(REPORT).header("Authorization", token)
                         .contentType("application/json").content(body(commentId, "SPAM")))
                 .andExpect(status().isCreated());
@@ -94,7 +87,7 @@ class CommentReportIntegrationTest {
     @Test
     @DisplayName("없는 댓글은 404, 사유가 없으면 400")
     void validates() throws Exception {
-        String token = bearer(Role.USER);
+        String token = fixtures.bearer(Role.USER);
         mockMvc.perform(post(REPORT).header("Authorization", token)
                         .contentType("application/json").content(body(999_999_999L, "ABUSE")))
                 .andExpect(status().isNotFound())
@@ -109,9 +102,9 @@ class CommentReportIntegrationTest {
     @DisplayName("신고함은 관리자만 본다")
     void reportBoxIsAdminOnly() throws Exception {
         mockMvc.perform(get("/api/admin/comment-reports")).andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/admin/comment-reports").header("Authorization", bearer(Role.USER)))
+        mockMvc.perform(get("/api/admin/comment-reports").header("Authorization", fixtures.bearer(Role.USER)))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/admin/comment-reports").header("Authorization", bearer(Role.ADMIN)))
+        mockMvc.perform(get("/api/admin/comment-reports").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isOk());
     }
 
@@ -122,14 +115,14 @@ class CommentReportIntegrationTest {
         Comment comment = saveComment();
         long pendingBefore = reportRepository.countByStatus(ReportStatus.PENDING);
         for (int i = 0; i < 2; i++) {
-            mockMvc.perform(post(REPORT).header("Authorization", bearer(Role.USER))
+            mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
                             .contentType("application/json").content(body(comment.getId(), "ABUSE")))
                     .andExpect(status().isCreated());
         }
         assertThat(reportRepository.countByStatus(ReportStatus.PENDING)).isEqualTo(pendingBefore + 2);
 
         mockMvc.perform(post("/api/admin/comments/%d/hide".formatted(comment.getId()))
-                        .header("Authorization", bearer(Role.ADMIN)))
+                        .header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("HIDDEN"));
 
@@ -140,7 +133,7 @@ class CommentReportIntegrationTest {
     @DisplayName("가린 글을 복구하면 다시 보인다. 안 가린 글의 복구는 409")
     void restore() throws Exception {
         Comment comment = saveComment();
-        String admin = bearer(Role.ADMIN);
+        String admin = fixtures.bearer(Role.ADMIN);
 
         mockMvc.perform(post("/api/admin/comments/%d/restore".formatted(comment.getId()))
                         .header("Authorization", admin))
@@ -159,8 +152,8 @@ class CommentReportIntegrationTest {
     @DisplayName("기각하면 글은 그대로이고 신고만 닫힌다. 두 번 기각하면 409 DISCUSSION_009")
     void dismiss() throws Exception {
         Comment comment = saveComment();
-        String admin = bearer(Role.ADMIN);
-        String created = mockMvc.perform(post(REPORT).header("Authorization", bearer(Role.USER))
+        String admin = fixtures.bearer(Role.ADMIN);
+        String created = mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(comment.getId(), "OFF_TOPIC")))
                 .andReturn().getResponse().getContentAsString();
         int at = created.indexOf("\"id\":");
@@ -187,7 +180,7 @@ class CommentReportIntegrationTest {
     void reportsPost() throws Exception {
         Post post = savePost();
 
-        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(postBody(post.getId(), "SPAM")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
@@ -204,7 +197,7 @@ class CommentReportIntegrationTest {
     void commentReportCarriesItsPost() throws Exception {
         Comment comment = saveComment();
 
-        mockMvc.perform(post(REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(comment.getId(), "ABUSE")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.targetType").value("COMMENT"))
@@ -216,7 +209,7 @@ class CommentReportIntegrationTest {
     @DisplayName("같은 글을 두 번 신고하면 409 DISCUSSION_007, 없는 글은 404 DISCUSSION_011")
     void postReportRejectsDuplicateAndUnknown() throws Exception {
         Long postId = savePost().getId();
-        String token = bearer(Role.USER);
+        String token = fixtures.bearer(Role.USER);
         mockMvc.perform(post(POST_REPORT).header("Authorization", token)
                         .contentType("application/json").content(postBody(postId, "SPAM")))
                 .andExpect(status().isCreated());
@@ -235,10 +228,10 @@ class CommentReportIntegrationTest {
     @DisplayName("글을 가리면 HIDDEN이 되고 그 글의 대기 신고가 모두 인정으로 바뀐다. 복구하면 다시 보인다")
     void hideAndRestorePost() throws Exception {
         Post post = savePost();
-        String admin = bearer(Role.ADMIN);
+        String admin = fixtures.bearer(Role.ADMIN);
         long pendingBefore = reportRepository.countByStatus(ReportStatus.PENDING);
         for (int i = 0; i < 2; i++) {
-            mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+            mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
                             .contentType("application/json").content(postBody(post.getId(), "ABUSE")))
                     .andExpect(status().isCreated());
         }
@@ -262,7 +255,7 @@ class CommentReportIntegrationTest {
     @DisplayName("글 가림·복구는 관리자만 한다")
     void postModerationIsAdminOnly() throws Exception {
         Long postId = savePost().getId();
-        mockMvc.perform(post("/api/admin/posts/%d/hide".formatted(postId)).header("Authorization", bearer(Role.USER)))
+        mockMvc.perform(post("/api/admin/posts/%d/hide".formatted(postId)).header("Authorization", fixtures.bearer(Role.USER)))
                 .andExpect(status().isForbidden());
     }
 
@@ -307,19 +300,19 @@ class CommentReportIntegrationTest {
         Post seed = savePost();
         Post written = postRepository.saveAndFlush(Post.of(seed.getDiscussionId(), writer.getId(), PostCategory.QUESTION, "신고될 글", "본문"));
 
-        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(postBody(written.getId(), "SPAM")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.targetUsername").value(writer.getUsername()))
                 .andExpect(jsonPath("$.data.targetSuspended").value(false));
 
         writer.suspend(java.time.LocalDateTime.now().plusDays(7), "도배");
-        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(postBody(written.getId(), "SPAM")))
                 .andExpect(jsonPath("$.data.targetSuspended").value(true));
 
         // savePost는 글쓴이 없이(탈퇴한 사용자의 글처럼) 저장한다.
-        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(postBody(seed.getId(), "SPAM")))
                 .andExpect(jsonPath("$.data.targetUsername").doesNotExist())
                 .andExpect(jsonPath("$.data.targetSuspended").value(false));
@@ -334,7 +327,7 @@ class CommentReportIntegrationTest {
     void keepsPostAsReported() throws Exception {
         Post post = savePost();
 
-        mockMvc.perform(post(POST_REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(postBody(post.getId(), "SPAM")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.reportedTitle").value("신고될 글"))
@@ -345,7 +338,7 @@ class CommentReportIntegrationTest {
         postRepository.flush();
 
         mockMvc.perform(get("/api/admin/comment-reports").param("status", "PENDING")
-                        .param("size", "200").header("Authorization", bearer(Role.ADMIN)))
+                        .param("size", "200").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(jsonPath("$.data.content[?(@.postId == %d)].reportedTitle".formatted(post.getId()))
                         .value("신고될 글"))
                 .andExpect(jsonPath("$.data.content[?(@.postId == %d)].reportedBody".formatted(post.getId()))
@@ -361,7 +354,7 @@ class CommentReportIntegrationTest {
     void keepsCommentAsReported() throws Exception {
         Comment comment = saveComment();
 
-        mockMvc.perform(post(REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(comment.getId(), "ABUSE")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.reportedBody").value("신고될 글"))
@@ -370,7 +363,7 @@ class CommentReportIntegrationTest {
 
         comment.edit("고친 댓글");
         commentRepository.flush();
-        mockMvc.perform(post(REPORT).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(comment.getId(), "ABUSE")))
                 // 두 번째 신고는 고친 뒤에 들어왔으니 그때의 내용이 "신고 당시"다.
                 .andExpect(jsonPath("$.data.reportedBody").value("고친 댓글"))
@@ -384,36 +377,15 @@ class CommentReportIntegrationTest {
     }
 
     private Post savePost() {
-        Problem problem = problemRepository.save(Problem.create(
-                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
-                "TCP 3-way handshake",
-                "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
-        discussionRepository.insertIfAbsent(problem.getId());
-        Long discussionId = discussionRepository.findIdByProblemIdForShare(problem.getId()).orElseThrow();
-        return postRepository.saveAndFlush(Post.of(discussionId, null, PostCategory.QUESTION, "신고될 글", "본문"));
+        return fixtures.post(fixtures.problem(), null, PostCategory.QUESTION, "신고될 글", "본문");
     }
 
     private String body(Long commentId, String reason) {
         return "{\"commentId\":%d,\"reason\":\"%s\"}".formatted(commentId, reason);
     }
 
-    private String bearer(Role role) {
-        User user = userRepository.save(User.builder()
-                .username("crep" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("password123"))
-                .role(role)
-                .build());
-        return "Bearer " + jwtTokenProvider.createToken(user.getId(), role);
-    }
-
     private Comment saveComment() {
-        Problem problem = problemRepository.save(Problem.create(
-                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
-                "TCP 3-way handshake",
-                "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
-        discussionRepository.insertIfAbsent(problem.getId());
-        Long discussionId = discussionRepository.findIdByProblemIdForShare(problem.getId()).orElseThrow();
-        Long postId = postRepository.saveAndFlush(Post.of(discussionId, null, PostCategory.QUESTION, "신고될 댓글이 달린 글", "본문")).getId();
+        Long postId = fixtures.post(fixtures.problem(), null, PostCategory.QUESTION, "신고될 댓글이 달린 글", "본문").getId();
         return commentRepository.saveAndFlush(Comment.of(postId, null, null, "신고될 글"));
     }
 }

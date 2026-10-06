@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
@@ -30,6 +31,8 @@ class NicknameIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
+    private TestFixtures fixtures;
+    @Autowired
     private UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -47,7 +50,7 @@ class NicknameIntegrationTest {
     @Test
     @DisplayName("처음에는 비어 있고, 정하면 그 값이 돌아온다")
     void setsNickname() throws Exception {
-        String token = bearer();
+        String token = fixtures.bearer(Role.USER);
 
         mockMvc.perform(get(PATH).header("Authorization", token))
                 .andExpect(status().isOk())
@@ -63,11 +66,11 @@ class NicknameIntegrationTest {
     @DisplayName("남이 쓰는 이름은 409 DISCUSSION_004")
     void rejectsDuplicate() throws Exception {
         String name = "dup" + suffix();
-        mockMvc.perform(put(PATH).header("Authorization", bearer())
+        mockMvc.perform(put(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(name)))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(put(PATH).header("Authorization", bearer())
+        mockMvc.perform(put(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(name)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DISCUSSION_004"));
@@ -78,11 +81,11 @@ class NicknameIntegrationTest {
     @DisplayName("대소문자만 다른 이름도 중복이다")
     void rejectsCaseOnlyDifference() throws Exception {
         String name = "Case" + suffix();
-        mockMvc.perform(put(PATH).header("Authorization", bearer())
+        mockMvc.perform(put(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(name)))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(put(PATH).header("Authorization", bearer())
+        mockMvc.perform(put(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(name.toLowerCase())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DISCUSSION_004"));
@@ -91,7 +94,7 @@ class NicknameIntegrationTest {
     @Test
     @DisplayName("같은 이름으로 다시 저장하는 것은 중복이 아니다")
     void allowsSavingOwnNicknameAgain() throws Exception {
-        String token = bearer();
+        String token = fixtures.bearer(Role.USER);
         String name = "same" + suffix();
         mockMvc.perform(put(PATH).header("Authorization", token)
                         .contentType("application/json").content(body(name)))
@@ -104,7 +107,7 @@ class NicknameIntegrationTest {
     @Test
     @DisplayName("2~12자, 한글·영문·숫자·밑줄만 받는다")
     void validatesFormat() throws Exception {
-        String token = bearer();
+        String token = fixtures.bearer(Role.USER);
         for (String bad : new String[]{"가", "열세글자를넘기는아주긴닉네임", "공백 있음", "<b>굵게</b>", ""}) {
             mockMvc.perform(put(PATH).header("Authorization", token)
                             .contentType("application/json").content(body(bad)))
@@ -115,7 +118,7 @@ class NicknameIntegrationTest {
     @Test
     @DisplayName("운영진으로 보이는 닉네임으로는 바꿀 수 없다 — 관리자 본인은 쓸 수 있다")
     void reservedNicknameIsForAdminsOnly() throws Exception {
-        mockMvc.perform(put(PATH).header("Authorization", bearer())
+        mockMvc.perform(put(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body("운영자" + suffix().substring(0, 3))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("DISCUSSION_010"));
@@ -137,14 +140,5 @@ class NicknameIntegrationTest {
 
     private String suffix() {
         return UUID.randomUUID().toString().substring(0, 6);
-    }
-
-    private String bearer() {
-        User user = userRepository.save(User.builder()
-                .username("nick" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("password123"))
-                .role(Role.USER)
-                .build());
-        return "Bearer " + jwtTokenProvider.createToken(user.getId(), Role.USER);
     }
 }

@@ -6,25 +6,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminDomainCreateRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingRequest;
-import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.DomainSetting;
 import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.user.domain.Role;
-import project.study.study_project.user.domain.User;
-import project.study.study_project.user.repository.UserRepository;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -51,15 +47,11 @@ class AdminDomainRegistryIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
+    private TestFixtures fixtures;
+    @Autowired
     private DomainSettingService domainSettingService;
     @Autowired
     private TopicQueueItemRepository topicQueueItemRepository;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     private static final DomainCode MESSAGING = DomainCode.of("MESSAGING");
 
@@ -67,7 +59,7 @@ class AdminDomainRegistryIntegrationTest {
     @DisplayName("추가한 분야는 꺼진 채 맨 끝에 생긴다")
     void createdDomainIsOffAtTheEnd() throws Exception {
         String body = mockMvc.perform(post("/api/admin/domain-settings")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"code":"MESSAGING","displayName":"메시징·비동기","hint":"카프카·RabbitMQ 등"}"""))
@@ -88,7 +80,7 @@ class AdminDomainRegistryIntegrationTest {
     @DisplayName("이미 쓰는 코드로 또 등록하면 400(DOMAIN_004)")
     void refusesDuplicateCode() throws Exception {
         String body = mockMvc.perform(post("/api/admin/domain-settings")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"code":"NETWORK","displayName":"네트워크 둘째","hint":null}"""))
@@ -112,7 +104,7 @@ class AdminDomainRegistryIntegrationTest {
         topicQueueItemRepository.save(TopicQueueItem.fresh(MESSAGING, "카프카 컨슈머 그룹", null, nextOrder));
 
         String body = mockMvc.perform(delete("/api/admin/domain-settings/MESSAGING")
-                        .header(HttpHeaders.AUTHORIZATION, bearer()))
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isBadRequest())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
@@ -127,7 +119,7 @@ class AdminDomainRegistryIntegrationTest {
         leaveOnlyEnabled(TestDomains.OS);
 
         String body = mockMvc.perform(delete("/api/admin/domain-settings/OS")
-                        .header(HttpHeaders.AUTHORIZATION, bearer()))
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isBadRequest())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
@@ -162,14 +154,5 @@ class AdminDomainRegistryIntegrationTest {
                 .filter(s -> !s.getDomain().equals(keep) && s.isEnabled())
                 .forEach(s -> domainSettingService.edit(s.getDomain(),
                         new AdminDomainSettingRequest(false, s.getDisplayName(), s.getHint())));
-    }
-
-    private String bearer() {
-        User user = userRepository.save(User.builder()
-                .username("domainregistry" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("admin-pw1"))
-                .role(Role.ADMIN)
-                .build());
-        return "Bearer " + jwtTokenProvider.createToken(user.getId(), Role.ADMIN);
     }
 }
