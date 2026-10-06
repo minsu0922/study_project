@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.dto.CommentReportItem;
+import project.study.study_project.discussion.dto.ErrataPostItem;
 import project.study.study_project.discussion.service.CommentReportService;
+import project.study.study_project.discussion.service.PostService;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.report.domain.ReportStatus;
@@ -30,6 +32,7 @@ import java.util.Map;
 public class AdminCommentController {
 
     private final CommentReportService commentReportService;
+    private final PostService postService;
 
     @GetMapping("/comment-reports")
     public ApiResponse<PageResponse<CommentReportItem>> list(
@@ -69,5 +72,22 @@ public class AdminCommentController {
     @PostMapping("/posts/{id}/restore")
     public ApiResponse<Map<String, CommentStatus>> restorePost(@PathVariable Long id) {
         return ApiResponse.ok(Map.of("status", commentReportService.restorePost(id)));
+    }
+
+    /**
+     * 토론방의 "오류 지적" 글 — 제보 화면이 문제 제보와 나란히 보여 준다.
+     * {@code unanswered=true}(기본)면 운영진 댓글이 아직 없는 글만 온다.
+     */
+    @GetMapping("/errata-posts")
+    public ApiResponse<PageResponse<ErrataPostItem>> errataPosts(
+            @RequestParam(defaultValue = "true") boolean unanswered,
+            @RequestParam(defaultValue = "0") int page) {
+        return ApiResponse.ok(postService.errata(unanswered, page));
+    }
+
+    /** 답을 기다리는 오류 지적 글 수 — 제보 메뉴의 배지에 문제 제보 대기 수와 합쳐 보인다. */
+    @GetMapping("/errata-posts/pending-count")
+    public ApiResponse<Map<String, Long>> errataPendingCount() {
+        return ApiResponse.ok(Map.of("count", postService.errataPendingCount()));
     }
 }

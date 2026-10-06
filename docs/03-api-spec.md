@@ -531,6 +531,8 @@ refresh 토큰을 폐기한다.
 | POST | `/api/admin/posts/{id}/hide` · `/restore` | 🛡️ | 글 가림·복구. 가리면 그 글의 대기 신고가 모두 닫힌다 |
 | POST | `/api/admin/comments/{id}/hide` · `/restore` | 🛡️ | 댓글 가림·복구 |
 | POST | `/api/admin/comment-reports/{id}/dismiss` | 🛡️ | 신고 기각 `{note}` — 대상은 그대로 두고 그 신고만 닫는다 |
+| GET | `/api/admin/errata-posts?unanswered=&page=` | 🛡️ | 말머리가 "오류 지적"인 글(본문 전문, 문제 id·제목 포함). `unanswered=true`(기본)면 운영진 댓글이 없는 글만 온다. 한 줄의 `staffReplied`가 운영진이 답했는지를 싣는다 |
+| GET | `/api/admin/errata-posts/pending-count` | 🛡️ | 운영진 댓글이 없는 "오류 지적" 글 수 `{count}`. 제보 메뉴의 배지에 합친다 |
 
 - 글에는 말머리가 붙는다: `QUESTION`(질문) · `SUMMARY`(정리) · `ERRATA`(오류 지적). 쓸 때 반드시 고르고,
   응답에는 `category`와 화면에 보일 이름 `categoryLabel`이 함께 실린다.
