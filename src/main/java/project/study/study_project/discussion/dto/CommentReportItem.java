@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
  * @param reportedBody   신고가 들어온 순간의 본문. 남겨 둔 것이 없는 옛 신고는 지금 본문과 같다
  * @param editedAfterReport 신고 뒤에 글쓴이가 내용을 고쳤는지 — 화면이 "신고 당시"와 "지금"을 나란히 보여 준다
  * @param targetNickname 글쓴이 닉네임. 탈퇴했으면 {@code null}
+ * @param targetUserId   글쓴이 id. 관리 화면이 그 사람의 상세로 가는 링크를 만든다. 탈퇴했으면 {@code null}
  * @param targetUsername  글쓴이 아이디. 관리자가 사용자 화면에서 이 사람을 찾아 정지한다. 탈퇴했으면 {@code null}
  * @param targetSuspended 글쓴이가 지금 정지 중인지 — 이미 정지한 사람을 또 정지하러 가지 않게 한다
  * @param problemId      그 글이 속한 토론방의 문제. 문제가 지워지면 신고도 함께 지워지므로 늘 값이 있다
@@ -40,6 +41,7 @@ public record CommentReportItem(
         boolean editedAfterReport,
         CommentStatus targetStatus,
         String targetNickname,
+        Long targetUserId,
         String targetUsername,
         boolean targetSuspended,
         Long problemId,
@@ -59,7 +61,7 @@ public record CommentReportItem(
                 report.getId(), "COMMENT", comment.getId(), post.getId(), post.getTitle(),
                 comment.getBody(), null, reportedBody(report, comment.getBody()),
                 edited(report.getSnapshotBody(), comment.getBody()),
-                comment.getStatus(), nicknameOf(author), usernameOf(author), suspended(author),
+                comment.getStatus(), nicknameOf(author), idOf(author), usernameOf(author), suspended(author),
                 problemId, problemTitle,
                 report.getReason(), report.getReason().getLabel(), report.getDetail(),
                 report.getStatus(), report.getAdminNote(), report.getCreatedAt(), report.getResolvedAt());
@@ -72,7 +74,7 @@ public record CommentReportItem(
                 post.getBody(), report.getSnapshotBody() == null ? post.getTitle() : report.getSnapshotTitle(),
                 reportedBody(report, post.getBody()),
                 edited(report.getSnapshotBody(), post.getBody()) || edited(report.getSnapshotTitle(), post.getTitle()),
-                post.getStatus(), nicknameOf(author), usernameOf(author), suspended(author),
+                post.getStatus(), nicknameOf(author), idOf(author), usernameOf(author), suspended(author),
                 problemId, problemTitle,
                 report.getReason(), report.getReason().getLabel(), report.getDetail(),
                 report.getStatus(), report.getAdminNote(), report.getCreatedAt(), report.getResolvedAt());
@@ -92,6 +94,10 @@ public record CommentReportItem(
 
     private static String nicknameOf(User author) {
         return author == null ? null : author.getNickname();
+    }
+
+    private static Long idOf(User author) {
+        return author == null ? null : author.getId();
     }
 
     private static String usernameOf(User author) {

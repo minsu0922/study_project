@@ -36,6 +36,12 @@ public class AdminUserController {
         return ApiResponse.ok(adminUserService.search(q, suspendedOnly, pageable));
     }
 
+    /** 사용자 한 명 — 상세 화면이 읽는다. 없는 사용자는 404 USER_001. */
+    @GetMapping("/{id}")
+    public ApiResponse<AdminUserItem> detail(@PathVariable Long id) {
+        return ApiResponse.ok(adminUserService.detail(id));
+    }
+
     @PostMapping("/{id}/suspend")
     public ApiResponse<AdminUserItem> suspend(@PathVariable Long id,
                                               @Valid @RequestBody AdminSuspendRequest request) {

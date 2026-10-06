@@ -304,6 +304,7 @@ class CommentReportIntegrationTest {
                         .contentType("application/json").content(postBody(written.getId(), "SPAM")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.targetUsername").value(writer.getUsername()))
+                .andExpect(jsonPath("$.data.targetUserId").value(writer.getId()))
                 .andExpect(jsonPath("$.data.targetSuspended").value(false));
 
         writer.suspend(java.time.LocalDateTime.now().plusDays(7), "도배");
@@ -315,6 +316,7 @@ class CommentReportIntegrationTest {
         mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(postBody(seed.getId(), "SPAM")))
                 .andExpect(jsonPath("$.data.targetUsername").doesNotExist())
+                .andExpect(jsonPath("$.data.targetUserId").doesNotExist())
                 .andExpect(jsonPath("$.data.targetSuspended").value(false));
     }
 

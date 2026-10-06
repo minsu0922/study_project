@@ -46,6 +46,11 @@ public class AdminUserService {
                 .map(user -> AdminUserItem.of(user, now)));
     }
 
+    @Transactional(readOnly = true)
+    public AdminUserItem detail(Long userId) {
+        return AdminUserItem.of(requireUser(userId), LocalDateTime.now());
+    }
+
     /** 이미 정지 중이면 새 기간과 사유로 덮어쓴다 — 7일을 30일로 늘릴 때 풀었다가 다시 걸게 하지 않는다. */
     @Transactional
     public AdminUserItem suspend(Long userId, AdminSuspendRequest request) {

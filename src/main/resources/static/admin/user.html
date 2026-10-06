@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 사용자 상세 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-shell">
+<div id="shell"></div>
+
+<main class="container admin">
+  <p class="meta"><a href="/admin/users.html">← 사용자 목록</a></p>
+  <h1>사용자 상세</h1>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <div id="uMessage"></div>
+    <div class="card" id="profile" hidden></div>
+
+    <div class="card" id="suspension" hidden>
+      <h3>글쓰기 정지</h3>
+      <!-- 정지가 무엇을 막는지를 적는다. "정지"라는 말만 보면 로그인까지 막는 줄 안다. -->
+      <p class="meta">글·댓글을 쓰고 고치는 것과 신고를 막습니다. 문제 풀이와 복습, 읽기는 그대로 됩니다.
+        기간이 끝나면 저절로 풀리고, 사유는 정지된 사람에게 그대로 보입니다.</p>
+      <div id="suspensionBody"></div>
+    </div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script>
+/* 사용자 한 명 — 이 사람을 두고 하는 관리가 모두 여기 모인다.
+ *   GET  /api/admin/users/{id}
+ *   POST /api/admin/users/{id}/suspend   {days, reason}   days를 비우면 무기한
+ *   POST /api/admin/users/{id}/unsuspend
+ *
+ * 화면이 따로 있는 이유: 주소가 있어야 신고함의 "글쓴이 정지"가 이 사람에게 바로 온다. */
+const params = new URLSearchParams(location.search);
+const userId = params.get("id");
+/** 신고함이 넘겨준 신고 사유. 정지 사유 칸에 미리 넣어 두고 관리자가 고쳐 쓴다. */
+const presetReason = params.get("reason") || "";
+const message = document.getElementById("uMessage");
+
+/** 고를 수 있는 기간 — 값은 서버의 AdminUserService.ALLOWED_DAYS와 같다. 빈 값이 무기한이다. */
+const SUSPEND_DAYS = [["1", "1일"], ["7", "7일"], ["30", "30일"], ["", "무기한"]];
+
+if (initAdminPage("users")) {
+  if (!/^\d+$/.test(userId || "")) {
+    showErrorAlert(message, "어느 사용자인지 알 수 없습니다. 목록에서 다시 들어와 주세요.");
+  } else {
+    api("/api/admin/users/" + userId).then(render).catch(e => showError(message, e));
+  }
+}
+
+function render(u) {
+  document.title = `관리자 · ${u.nickname || u.username} — csquiz`;
+  const admin = u.role === "ADMIN";
+
+  const profile = document.getElementById("profile");
+  profile.innerHTML = `
+    <div style="margin-bottom:6px">
+      <b style="font-size:1.15rem">${escapeHtml(u.nickname || "(닉네임 없음)")}</b>
+      ${admin ? `<span class="badge">관리자</span>` : ""}
+      ${u.suspended ? `<span class="badge orange">정지 중</span>` : ""}
+    </div>
+    <div class="meta">아이디 ${escapeHtml(u.username)} · 가입 ${formatDate(u.createdAt)}
+      · 권한 ${admin ? "관리자" : "사용자"}</div>`;
+  profile.hidden = false;
+
+  document.getElementById("suspensionBody").innerHTML = suspensionHtml(u, admin);
+  document.getElementById("suspension").hidden = false;
+}
+
+/* 정지 중이면 풀리는 날과 사유, 아니면 정지 폼. 관리자 계정에는 폼을 내지 않고 이유를 적는다 —
+   눌러 보고 거절당하게 하지 않는다. */
+function suspensionHtml(u, admin) {
+  if (u.suspended) {
+    return `
+      <div>${u.indefinite ? "무기한 정지" : `${formatDate(u.suspendedUntil)}까지 정지`}
+        · 사유: ${escapeHtml(u.suspendedReason)}</div>
+      <div class="row-actions" style="margin-top:10px">
+        <button class="btn-outline" onclick="unsuspendUser(this)">정지 해제</button>
+      </div>`;
+  }
+  if (admin) return `<div class="meta">관리자 계정은 정지할 수 없습니다.</div>`;
+  return `
+    <div class="filters" style="margin:10px 0 0">
+      <div class="field" style="flex:0 0 110px; min-width:110px">
+        <label for="days">기간</label>
+        <select id="days">
+          ${SUSPEND_DAYS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label for="reason">사유 (정지된 사람에게 보입니다)</label>
+        <input type="text" id="reason" maxlength="200" placeholder="예: 광고 글을 거듭 올림"
+               value="${escapeHtml(presetReason)}">
+      </div>
+      <button onclick="suspendUser(this)">정지</button>
+    </div>`;
+}
+
+async function suspendUser(btn) {
+  const reasonEl = document.getElementById("reason");
+  const reason = reasonEl.value.trim();
+  if (!reason) {
+    // 서버도 거절하지만 다녀오기 전에 알린다. 사유는 정지된 사람이 읽는 유일한 설명이다.
+    showErrorAlert(message, "정지 사유를 적어 주세요.");
+    reasonEl.focus();
+    return;
+  }
+  const days = document.getElementById("days").value;
+  await act(btn, () => api(`/api/admin/users/${userId}/suspend`, {
+    method: "POST", body: JSON.stringify({ days: days ? Number(days) : null, reason }) }));
+}
+
+async function unsuspendUser(btn) {
+  await act(btn, () => api(`/api/admin/users/${userId}/unsuspend`, { method: "POST" }));
+}
+
+/* 처리 뒤에는 서버가 돌려준 상태로 화면을 다시 그린다. */
+async function act(btn, fn) {
+  message.innerHTML = "";
+  btn.disabled = true;
+  try {
+    render(await fn());
+  } catch (e) {
+    btn.disabled = false;
+    showError(message, e);
+  }
+}
+</script>
+</body>
+</html>

@@ -273,6 +273,31 @@ class UserSuspensionIntegrationTest {
     }
 
     @Test
+    @DisplayName("사용자 한 명 — 상세 화면이 읽는다. 정지 상태가 함께 오고, 없는 사용자는 404 USER_001")
+    void readsOneUser() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        User user = fixtures.user(Role.USER);
+
+        mockMvc.perform(get("/api/admin/users/" + user.getId()).header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value(user.getUsername()))
+                .andExpect(jsonPath("$.data.nickname").value(user.getNickname()))
+                .andExpect(jsonPath("$.data.suspended").value(false))
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
+
+        suspend(user, 7);
+        mockMvc.perform(get("/api/admin/users/" + user.getId()).header("Authorization", admin))
+                .andExpect(jsonPath("$.data.suspended").value(true))
+                .andExpect(jsonPath("$.data.suspendedReason").value("도배"));
+
+        mockMvc.perform(get("/api/admin/users/999999999").header("Authorization", admin))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("USER_001"));
+        mockMvc.perform(get("/api/admin/users/" + user.getId()).header("Authorization", fixtures.bearer(Role.USER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("사용자 목록 — 닉네임이나 아이디 일부로 찾고, 정지된 사람만 추릴 수 있다")
     void searchesUsers() throws Exception {
         String admin = fixtures.bearer(fixtures.user(Role.ADMIN));

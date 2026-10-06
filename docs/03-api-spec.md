@@ -556,6 +556,7 @@ refresh 토큰을 폐기한다.
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/api/admin/users?q=&suspendedOnly=&page=` | 사용자 찾기. `q`는 아이디나 닉네임의 일부, `suspendedOnly=true`면 정지 중인 사람만 |
+| GET | `/api/admin/users/{id}` | 사용자 한 명(목록의 한 줄과 같은 모양). 상세 화면이 읽는다. 없으면 404 `USER_001` |
 | POST | `/api/admin/users/{id}/suspend` | 정지 `{days, reason}`. `days`는 1·7·30, 비우면 무기한. 이미 정지 중이면 덮어쓴다 |
 | POST | `/api/admin/users/{id}/unsuspend` | 정지 해제 |
 

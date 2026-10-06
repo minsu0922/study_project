@@ -159,14 +159,14 @@ function bodyBlock(r, isPost) {
 }
 
 /**
- * 글쓴이를 정지하러 가는 링크. 정지 폼은 사용자 화면에 한 벌만 둔다 — 여기에도 두면 기간 선택지나
+ * 글쓴이를 정지하러 가는 링크. 그 사람의 상세 화면으로 바로 간다. 정지 폼은 거기에 한 벌만 둔다 — 여기에도 두면 기간 선택지나
  * 문구가 언젠가 한쪽만 고쳐진다. 새 탭으로 여는 이유: 신고를 훑던 자리를 잃지 않는다.
  * 탈퇴한 글쓴이는 정지할 사람이 없어 링크를 내지 않는다.
  */
 function suspendLink(r) {
-  if (!r.targetUsername) return "";
-  const params = new URLSearchParams({ q: r.targetUsername, reason: r.reasonLabel });
-  return `<a class="btn btn-outline" href="/admin/users.html?${params}" target="_blank" rel="noopener">${
+  if (!r.targetUserId) return "";
+  const params = new URLSearchParams({ id: r.targetUserId, reason: r.reasonLabel });
+  return `<a class="btn btn-outline" href="/admin/user.html?${params}" target="_blank" rel="noopener">${
     r.targetSuspended ? "글쓴이 정지 보기 ↗" : "글쓴이 정지 ↗"}</a>`;
 }
 
