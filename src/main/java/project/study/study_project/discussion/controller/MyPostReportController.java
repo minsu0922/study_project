@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import project.study.study_project.discussion.dto.CommentReportItem;
+import project.study.study_project.discussion.dto.ReportReceipt;
 import project.study.study_project.discussion.dto.PostReportRequest;
 import project.study.study_project.discussion.service.CommentReportService;
 import project.study.study_project.global.response.ApiResponse;
@@ -26,7 +26,7 @@ public class MyPostReportController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<CommentReportItem> report(@AuthenticationPrincipal Long userId,
+    public ApiResponse<ReportReceipt> report(@AuthenticationPrincipal Long userId,
                                                  @Valid @RequestBody PostReportRequest request) {
         return ApiResponse.ok(commentReportService.reportPost(userId, request));
     }
