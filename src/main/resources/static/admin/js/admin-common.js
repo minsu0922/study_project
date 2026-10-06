@@ -193,9 +193,9 @@ function copyByTextarea(text) {
   return ok;
 }
 
+/* 관리 화면들이 이 이름으로 부른다. 그리는 일은 사용자 화면과 같은 함수가 한다. */
 function showError(el, e) {
-  const details = (e.fieldErrors || []).map(f => `<li>${escapeHtml(f.reason)}</li>`).join("");
-  el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}${details ? `<ul style="margin:6px 0 0">${details}</ul>` : ""}</div>`;
+  showErrorAlert(el, e);
 }
 
 function showOk(el, text) {

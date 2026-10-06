@@ -378,6 +378,23 @@ function fillSelect(selectEl, pairs, allLabel) {
  * innerHTML에 넣기 전 반드시 이 함수를 거친다. (localStorage 토큰 방식의
  * 전제 조건: 파일 상단 주석 참고)
  */
+/**
+ * 오류 알림 한 장을 칸에 그린다. 글자는 모두 이스케이프한다 — 링크 같은 마크업을 넣어야 하는
+ * 알림은 이 함수를 쓰지 않고 그 화면에서 직접 조립한다.
+ *
+ * @param el      알림이 들어갈 칸
+ * @param error   문자열이거나 api()가 던진 오류. 오류면 서버가 준 칸별 사유(fieldErrors)를 목록으로 붙인다
+ * @param prefix  (선택) "문서를 불러오지 못했습니다"처럼 무엇을 하다 실패했는지
+ */
+function showErrorAlert(el, error, prefix) {
+  const isText = typeof error === "string";
+  const text = isText ? error : error.message;
+  const details = (isText ? [] : error.fieldErrors || [])
+    .map(f => `<li>${escapeHtml(f.reason)}</li>`).join("");
+  el.innerHTML = `<div class="alert error">${escapeHtml(prefix ? `${prefix}: ${text}` : text)}${
+    details ? `<ul style="margin:6px 0 0">${details}</ul>` : ""}</div>`;
+}
+
 function escapeHtml(s) {
   return String(s ?? "")
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")

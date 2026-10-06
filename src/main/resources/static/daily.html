@@ -73,8 +73,7 @@ async function load() {
     const data = await api("/api/me/daily-quiz");
     render(data);
   } catch (e) {
-    statusBody.innerHTML =
-      `<div class="alert error">오늘의 퀴즈를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+    showErrorAlert(statusBody, e, "오늘의 퀴즈를 불러오지 못했습니다");
   }
 }
 

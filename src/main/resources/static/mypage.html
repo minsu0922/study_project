@@ -187,7 +187,7 @@ async function wireNickname() {
       msg.innerHTML = `<div class="alert" style="background:var(--correct-bg); color:var(--correct-fg)">
         닉네임을 저장했습니다.</div>`;
     } catch (e2) {
-      msg.innerHTML = `<div class="alert error">${escapeHtml(e2.message)}</div>`;
+      showErrorAlert(msg, e2);
     } finally {
       btn.disabled = false;
     }
@@ -197,7 +197,7 @@ async function wireNickname() {
     const { nickname } = await api("/api/me/nickname");
     input.value = nickname || "";
   } catch (e) {
-    msg.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+    showErrorAlert(msg, e);
   }
 }
 
@@ -252,7 +252,7 @@ function wirePasswordChange() {
       msg.innerHTML = `<div class="alert" style="background:var(--correct-bg); color:var(--correct-fg)">
         비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.</div>`;
     } catch (e2) {
-      msg.innerHTML = `<div class="alert error">${escapeHtml(e2.message)}</div>`;
+      showErrorAlert(msg, e2);
     } finally {
       btn.disabled = false;
     }
@@ -302,7 +302,7 @@ function wireWithdraw() {
       clearLogin();
       location.href = "/";
     } catch (e2) {
-      msg.innerHTML = `<div class="alert error">${escapeHtml(e2.message)}</div>`;
+      showErrorAlert(msg, e2);
       btn.disabled = false;
     }
   });

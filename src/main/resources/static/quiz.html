@@ -215,7 +215,7 @@ async function start() {
       },
     });
   } catch (e) {
-    msg.innerHTML = `<div class="alert error">문제를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+    showErrorAlert(msg, e, "문제를 불러오지 못했습니다");
   }
 }
 </script>

@@ -61,7 +61,7 @@ async function renderAdminTable(mountSelector, config, opts = {}) {
     data = await api(config.url + query);
   } catch (e) {
     // 목록이 안 뜨는 것과 0건인 것은 다른 상태다. 뭉개면 "왜 비었지"를 알 수 없다.
-    mount.innerHTML = `<div class="alert error">목록을 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+    showErrorAlert(mount, e, "목록을 불러오지 못했습니다");
     return;
   }
 

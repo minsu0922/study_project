@@ -316,8 +316,7 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
       return;
     }
     // 검증 실패(VALIDATION_ERROR)면 어떤 칸이 왜 틀렸는지 필드 단위로 보여준다
-    const details = (err.fieldErrors || []).map(f => `<li>${escapeHtml(f.reason)}</li>`).join("");
-    msg.innerHTML = `<div class="alert error">${escapeHtml(err.message)}${details ? `<ul style="margin:6px 0 0">${details}</ul>` : ""}</div>`;
+    showErrorAlert(msg, err);
     btn.disabled = false;
   }
 });

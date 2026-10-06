@@ -247,7 +247,7 @@ async function load() {
 function show() {
   document.getElementById("message").innerHTML = "";
   load().catch(e => {
-    document.getElementById("message").innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+    showErrorAlert(document.getElementById("message"), e);
   });
 }
 
