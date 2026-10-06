@@ -30,10 +30,17 @@ try {
 
   <div id="adminUi" hidden>
 
+    <!-- 문제가 틀렸다는 말은 두 군데로 들어온다: 제보 버튼과 토론방의 "오류 지적" 글.
+         한 화면에 모은다 — 따로 두면 토론방 쪽은 누가 찾아가 보기 전까지 묻힌다. -->
+    <div class="tabs" id="sourceTabs">
+      <button class="tab-btn active" data-source="reports">제보 <span id="reportsCount"></span></button>
+      <button class="tab-btn" data-source="errata">토론방 오류 지적 <span id="errataCount"></span></button>
+    </div>
+
     <!-- 이 화면이 하는 일과 안 하는 일을 맨 위에 적는다. 검수함과 나란히 있어 같은 화면으로
          읽히기 쉬운데, 여기서 누르는 버튼은 <문제를 고치지 않는다>. 그 오해를 그대로 두면
          "인정했는데 왜 문제가 그대로지"가 된다. -->
-    <div class="alert info" style="margin-bottom:16px">
+    <div class="alert info" id="reportsInfo" style="margin-bottom:16px">
       학습자가 올린 문제 오류 제보입니다. <b>인정</b>하면 그 사유가 다음 문제 생성 프롬프트에
       되먹여집니다(거절 사유와 같은 통로 · docs/14). <b>문제 자체는 고쳐지지 않습니다</b> —
       수정은 각 줄의 <b>문제 고치기</b>로 넘어가서 하세요.
@@ -44,6 +51,19 @@ try {
       <button class="tab-btn" data-status="ACCEPTED">인정</button>
       <button class="tab-btn" data-status="DISMISSED">기각</button>
       <button class="tab-btn" data-status="">전체</button>
+    </div>
+
+    <!-- 토론방 글에는 인정·기각이 없다. 운영진이 댓글로 답했는지가 처리 표시다 —
+         그 답은 글쓴이도 봐야 하므로 따로 적는 메모보다 댓글이 맞다. -->
+    <div id="errataBar" hidden>
+      <div class="alert info" style="margin-bottom:12px">
+        토론방에 "오류 지적" 말머리로 올라온 글입니다. 맞는 지적이면 <b>문제 고치기</b>로 고치고,
+        <b>글 보기</b>로 들어가 댓글로 답해 주세요. 운영진 댓글이 달린 글은 "답 전" 목록에서 빠집니다.
+      </div>
+      <div class="tabs" id="errataTabs">
+        <button class="tab-btn active" data-unanswered="true">답 전</button>
+        <button class="tab-btn" data-unanswered="false">전체</button>
+      </div>
     </div>
 
     <div id="rMessage"></div>
@@ -72,8 +92,17 @@ try {
  * 이 화면을 여는 이유는 하나다 — 배지에 숫자가 떠서. 열자마자 그 숫자에 해당하는 목록이
  * 나와야 하고, 다 처리하면 빈 화면이 "오늘 할 일 없음"을 말한다(검수함과 같은 판단).
  */
+let source = "reports";      // "reports"(제보) | "errata"(토론방 오류 지적)
 let status = "PENDING";
+let unanswered = "true";
 let page = 0;
+
+/* 메뉴의 배지는 두 쪽을 합친 수다. 어느 쪽에 할 일이 있는지는 탭에 따로 적는다 —
+   합친 수만 보고 들어와 첫 탭이 비어 있으면 숫자가 틀린 것으로 읽힌다. */
+document.addEventListener("admin:counts", e => {
+  document.getElementById("reportsCount").textContent = e.detail.reports || "";
+  document.getElementById("errataCount").textContent = e.detail.errata || "";
+});
 
 if (initAdminPage("reports")) {
   document.getElementById("statusTabs").addEventListener("click", e => {
@@ -85,6 +114,25 @@ if (initAdminPage("reports")) {
     page = 0;
     load();
   });
+  document.getElementById("sourceTabs").addEventListener("click", e => {
+    const btn = e.target.closest("[data-source]");
+    if (!btn || btn.dataset.source === source) return;
+    document.querySelectorAll("#sourceTabs .tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+    source = btn.dataset.source;
+    document.getElementById("reportsInfo").hidden = source !== "reports";
+    document.getElementById("statusTabs").hidden = source !== "reports";
+    document.getElementById("errataBar").hidden = source !== "errata";
+    page = 0;
+    load();
+  });
+  document.getElementById("errataTabs").addEventListener("click", e => {
+    const btn = e.target.closest("[data-unanswered]");
+    if (!btn) return;
+    document.querySelectorAll("#errataTabs .tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+    unanswered = btn.dataset.unanswered;
+    page = 0;
+    load();
+  });
   load();
 }
 
@@ -92,6 +140,10 @@ async function load() {
   const msg = document.getElementById("rMessage");
   msg.innerHTML = "";
   try {
+    if (source === "errata") {
+      render(await api("/api/admin/errata-posts?" + new URLSearchParams({ unanswered, page })));
+      return;
+    }
     const params = new URLSearchParams({ page });
     if (status) params.set("status", status);
     const data = await api("/api/admin/reports?" + params);
@@ -104,11 +156,9 @@ async function load() {
 function render(data) {
   const list = document.getElementById("rList");
   if (data.content.length === 0) {
-    list.innerHTML = `<div class="card">${status === "PENDING"
-      ? "대기 중인 제보가 없습니다. 👍"
-      : "해당하는 제보가 없습니다."}</div>`;
+    list.innerHTML = `<div class="card">${emptyText()}</div>`;
   } else {
-    list.innerHTML = data.content.map(card).join("");
+    list.innerHTML = data.content.map(source === "errata" ? errataCard : card).join("");
   }
 
   /* 페이저는 표 목록과 <같은 것>을 쓴다. 이 화면은 카드 목록이지만(제보는 본문이 긴
@@ -127,6 +177,40 @@ function render(data) {
   row.querySelectorAll("[data-page]").forEach(btn => {
     btn.addEventListener("click", () => { page = Number(btn.dataset.page); load(); });
   });
+}
+
+function emptyText() {
+  if (source === "errata") {
+    return unanswered === "true" ? "답을 기다리는 오류 지적 글이 없습니다. 👍" : "오류 지적 글이 없습니다.";
+  }
+  return status === "PENDING" ? "대기 중인 제보가 없습니다. 👍" : "해당하는 제보가 없습니다.";
+}
+
+/**
+ * 토론방 오류 지적 글 한 장. 본문을 전문으로 싣는 이유는 제보 카드와 같다 — 맞는 지적인지를 여기서 판단한다.
+ * 글쓴이를 보여 주는 점은 제보와 다르다. 토론방 글은 이미 닉네임을 걸고 공개된 글이다.
+ */
+function errataCard(p) {
+  return `
+    <div class="card ${p.staffReplied ? "draft-done" : ""}">
+      <div style="margin-bottom:6px">
+        <span class="badge ${p.staffReplied ? "green" : "orange"}">${p.staffReplied ? "답함" : "답 전"}</span>
+        <span class="badge gray">댓글 ${p.commentCount}</span>
+        <span class="meta">${formatDate(p.createdAt)}</span>
+      </div>
+
+      <div class="meta">문제: ${escapeHtml(p.problemTitle || "(제목 없음)")}
+        · 글쓴이: ${escapeHtml(p.nickname || "탈퇴한 사용자")}</div>
+      <h3>${escapeHtml(p.title)}</h3>
+      <div style="white-space:pre-wrap; overflow-wrap:anywhere">${escapeHtml(p.body)}</div>
+
+      <div class="row-actions" style="margin-top:10px">
+        <a class="btn btn-outline" href="/admin/problems.html?edit=${p.problemId}"
+           target="_blank" rel="noopener">문제 고치기 ↗</a>
+        <a class="btn btn-outline" href="/post.html?id=${p.id}"
+           target="_blank" rel="noopener">글 보기 ↗</a>
+      </div>
+    </div>`;
 }
 
 /**

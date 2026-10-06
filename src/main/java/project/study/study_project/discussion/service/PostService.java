@@ -2,6 +2,7 @@ package project.study.study_project.discussion.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Discussion;
 import project.study.study_project.discussion.domain.Post;
+import project.study.study_project.discussion.domain.PostCategory;
+import project.study.study_project.discussion.dto.ErrataPostItem;
 import project.study.study_project.discussion.dto.PostDetail;
 import project.study.study_project.discussion.dto.PostEditRequest;
 import project.study.study_project.discussion.dto.PostFilter;
@@ -26,6 +29,7 @@ import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
@@ -132,6 +136,28 @@ public class PostService {
                         r.getPostCount(), r.getLastPostAt()))
                 .toList();
         return new RoomListResponse(rows.hasNext(), items);
+    }
+
+    /** "오류 지적" 글 — 관리 콘솔용. {@code unansweredOnly}면 운영진 댓글이 없는 글만. */
+    @Transactional(readOnly = true)
+    public PageResponse<ErrataPostItem> errata(boolean unansweredOnly, int page) {
+        Page<PostRepository.ErrataRow> rows = postRepository.findErrata(CommentStatus.VISIBLE,
+                PostCategory.ERRATA, Role.ADMIN, unansweredOnly, PageRequest.of(Math.max(page, 0), PAGE_SIZE));
+        List<Post> posts = rows.getContent().stream().map(PostRepository.ErrataRow::getPost).toList();
+        Map<Long, String> nicknames = nicknamesOf(posts);
+        Map<Long, Long> commentCounts = commentCountsOf(posts);
+        return PageResponse.from(rows.map(row -> ErrataPostItem.of(row.getPost(),
+                nicknames.get(row.getPost().getUserId()),
+                commentCounts.getOrDefault(row.getPost().getId(), 0L),
+                row.getStaffReplyCount() > 0,
+                row.getProblemId(), row.getProblemTitle(), row.getDomain().value())));
+    }
+
+    /** 운영진의 답을 기다리는 "오류 지적" 글 수 — 관리 콘솔 메뉴의 배지. */
+    @Transactional(readOnly = true)
+    public long errataPendingCount() {
+        return postRepository.findErrata(CommentStatus.VISIBLE, PostCategory.ERRATA, Role.ADMIN,
+                true, PageRequest.of(0, 1)).getTotalElements();
     }
 
     /**

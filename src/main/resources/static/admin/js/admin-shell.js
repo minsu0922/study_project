@@ -130,22 +130,24 @@ function renderAdminShell(active = "") {
  *       때문이다 — 배지가 하나여야 "저기 들어가면 할 일이 있다"가 정확해진다.
  *   <li><b>제보</b> — <b>주황</b>이다. "출제된 문제가 틀렸을지 모른다"는 신호라 하나만
  *       있어도 눈에 걸려야 한다. 검수 배지에 합치지 않은 이유이기도 하다.
+ *       문제 제보 대기 수와 토론방 "오류 지적" 글 중 답 전인 수를 합친다 — 둘 다 그 화면에서 본다.
  *   <li><b>생성</b> — <b>뜻이 반대다.</b> 주제 범위가 0이면 배치가 모델 자동 선택으로
  *       돌아가므로, <b>0일 때</b> "범위 없음"을 주황으로 띄운다. 숫자를 세는 배지가 아니다.
  * </ul>
  */
 async function refreshAdminBadges() {
-  const [problems, documents, topics, reports, commentReports] = await Promise.all([
+  const [problems, documents, topics, reports, commentReports, errata] = await Promise.all([
     countOf("/api/admin/llm-problems/pending-count"),
     countOf("/api/admin/llm-documents/pending-count"),
     countOf("/api/admin/topic-queue/count"),
     countOf("/api/admin/reports/pending-count"),
     countOf("/api/admin/comment-reports/pending-count"),
+    countOf("/api/admin/errata-posts/pending-count"),
   ]);
 
   setBadge("llm", problems + documents, false);
   setBadge("generate", topics === 0 ? "범위 없음" : null, topics === 0);
-  setBadge("reports", reports, reports > 0);
+  setBadge("reports", reports + errata, reports + errata > 0);
   setBadge("comments", commentReports, commentReports > 0);
 
   /* 센 숫자를 화면 쪽에도 흘린다.
@@ -159,7 +161,7 @@ async function refreshAdminBadges() {
    * 그 일곱 곳에 손으로 붙이면 여덟 번째를 더하는 날 하나를 빠뜨린다.
    * 여기서 한 번 알리면 듣는 쪽이 알아서 따라온다. */
   document.dispatchEvent(new CustomEvent("admin:counts", {
-    detail: { problems, documents, topics, reports, commentReports },
+    detail: { problems, documents, topics, reports, commentReports, errata },
   }));
 }
 

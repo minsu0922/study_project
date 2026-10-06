@@ -1,5 +1,6 @@
 package project.study.study_project.discussion.repository;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,7 @@ import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.user.domain.Role;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -100,6 +102,53 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Slice<RoomRow> findRooms(@Param("visible") CommentStatus visible,
                              @Param("domain") DomainCode domain,
                              Pageable pageable);
+
+    /**
+     * "오류 지적" 글 — 관리 콘솔의 제보 화면이 읽는다. 문제가 틀렸다는 지적이라 관리자가 봐야 한다.
+     *
+     * <p>처리했는지를 따로 적어 두지 않고 운영진의 댓글이 있는지로 가른다. 운영진의 답은 글쓴이도
+     * 봐야 하는 것이라 댓글이 곧 처리 기록이다. {@code unansweredOnly}가 참이면 그 댓글이 없는 글만 고른다.
+     */
+    @Query(value = """
+            select p as post, d.problemId as problemId, pr.title as problemTitle, pr.domain as domain,
+                   (select count(c) from Comment c, User u
+                     where c.postId = p.id and u.id = c.userId
+                       and u.role = :adminRole and c.status = :visible) as staffReplyCount
+            from Post p
+              join Discussion d on d.id = p.discussionId
+              join Problem pr on pr.id = d.problemId
+            where p.status = :visible and p.category = :errata
+              and (:unansweredOnly = false
+                   or not exists (select 1 from Comment c2, User u2
+                                   where c2.postId = p.id and u2.id = c2.userId
+                                     and u2.role = :adminRole and c2.status = :visible))
+            order by p.createdAt desc, p.id desc
+            """,
+            countQuery = """
+            select count(p) from Post p
+            where p.status = :visible and p.category = :errata
+              and (:unansweredOnly = false
+                   or not exists (select 1 from Comment c2, User u2
+                                   where c2.postId = p.id and u2.id = c2.userId
+                                     and u2.role = :adminRole and c2.status = :visible))
+            """)
+    Page<ErrataRow> findErrata(@Param("visible") CommentStatus visible,
+                               @Param("errata") PostCategory errata,
+                               @Param("adminRole") Role adminRole,
+                               @Param("unansweredOnly") boolean unansweredOnly,
+                               Pageable pageable);
+
+    interface ErrataRow {
+        Post getPost();
+
+        Long getProblemId();
+
+        String getProblemTitle();
+
+        DomainCode getDomain();
+
+        long getStaffReplyCount();
+    }
 
     interface RoomRow {
         Long getProblemId();
