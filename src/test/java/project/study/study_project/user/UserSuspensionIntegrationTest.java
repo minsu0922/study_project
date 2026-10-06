@@ -1,6 +1,7 @@
 package project.study.study_project.user;
 
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.quiz.domain.Problem;
+import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
@@ -44,6 +46,10 @@ class UserSuspensionIntegrationTest {
     private MockMvc mockMvc;
     @Autowired
     private TestFixtures fixtures;
+    @Autowired
+    private EntityManager entityManager;
+    @Autowired
+    private SubmissionRepository submissionRepository;
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -422,6 +428,73 @@ class UserSuspensionIntegrationTest {
                 .andExpect(jsonPath("$.error.code").value("AUTH_004"));
         // 학습 쪽은 그대로 쓴다.
         mockMvc.perform(get("/api/me/suspension").header("Authorization", oldToken)).andExpect(status().isOk());
+    }
+
+    /* ── 강제 탈퇴 ───────────────────────────────────────── */
+
+    @Test
+    @DisplayName("강제 탈퇴 — 계정과 학습 기록은 지워지고, 쓴 글은 탈퇴한 사용자의 것으로 남는다")
+    void removesUser() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        Post post = fixtures.post(problem, user.getId());
+        String oldToken = fixtures.bearer(user);
+
+        mockMvc.perform(delete("/api/admin/users/" + user.getId()).header("Authorization", admin))
+                .andExpect(status().isOk());
+        // 롤백되는 테스트라 플러시된 SQL이 제약에 걸리지 않았는지는 서비스의 flush가 확인해 준다.
+        entityManager.clear();
+
+        assertThat(userRepository.findById(user.getId())).isEmpty();
+        assertThat(submissionRepository.existsByUserIdAndProblem_Id(user.getId(), problem.getId())).isFalse();
+        mockMvc.perform(get("/api/quiz/posts/" + post.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("글"))
+                .andExpect(jsonPath("$.data.nickname").doesNotExist());
+        mockMvc.perform(get("/api/admin/users/" + user.getId()).header("Authorization", admin))
+                .andExpect(status().isNotFound());
+        // 지워진 사람의 토큰으로는 쓸 수 없다.
+        mockMvc.perform(post("/api/me/posts").header("Authorization", oldToken).contentType("application/json")
+                        .content("{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("강제 탈퇴한 아이디로 다시 가입할 수 있다")
+    void removedUsernameCanSignUpAgain() throws Exception {
+        User user = fixtures.user(Role.USER);
+        String username = user.getUsername();
+        String nickname = user.getNickname();
+
+        mockMvc.perform(delete("/api/admin/users/" + user.getId()).header("Authorization", fixtures.bearer(Role.ADMIN)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/signup").contentType("application/json")
+                        .content("{\"username\":\"%s\",\"password\":\"Password123!\",\"nickname\":\"%s\"}".formatted(username, nickname)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.username").value(username));
+    }
+
+    /** 관리자를 지우려면 먼저 내려야 한다. 두 단계를 거치게 해서 실수로 자기나 다른 관리자를 지우지 않게 한다. */
+    @Test
+    @DisplayName("관리자 계정은 탈퇴시킬 수 없다 — 400 USER_005. 없는 사용자는 404, 일반 사용자는 403")
+    void removeGuards() throws Exception {
+        User admin = fixtures.user(Role.ADMIN);
+        User otherAdmin = fixtures.user(Role.ADMIN);
+        User user = fixtures.user(Role.USER);
+
+        for (User target : new User[]{admin, otherAdmin}) {
+            mockMvc.perform(delete("/api/admin/users/" + target.getId()).header("Authorization", fixtures.bearer(admin)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("USER_005"));
+        }
+        mockMvc.perform(delete("/api/admin/users/999999999").header("Authorization", fixtures.bearer(admin)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("USER_001"));
+        mockMvc.perform(delete("/api/admin/users/" + user.getId()).header("Authorization", fixtures.bearer(user)))
+                .andExpect(status().isForbidden());
+        assertThat(userRepository.findById(user.getId())).isPresent();
     }
 
     @Test

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,6 +70,13 @@ public class AdminUserController {
                                                  @PathVariable Long id,
                                                  @Valid @RequestBody AdminRoleRequest request) {
         return ApiResponse.ok(adminUserService.changeRole(adminId, id, request.role()));
+    }
+
+    /** 강제 탈퇴 — 계정과 학습 기록을 지운다. 관리자 계정은 받지 않는다(400 USER_005). */
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> remove(@AuthenticationPrincipal Long adminId, @PathVariable Long id) {
+        adminUserService.remove(adminId, id);
+        return ApiResponse.ok(null);
     }
 
     @PostMapping("/{id}/unsuspend")

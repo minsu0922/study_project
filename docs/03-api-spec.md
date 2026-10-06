@@ -560,6 +560,7 @@ refresh 토큰을 폐기한다.
 | GET | `/api/admin/users/{id}/activity` | 그 사람의 활동. 글·댓글 수(지운 것 제외), 가려진 수, 받은 신고 수, 풀어 본·맞힌 문제 수와 최근 글 5건(`recentPosts`), 최근에 받은 신고 5건(`recentReports`) |
 | POST | `/api/admin/users/{id}/suspend` | 정지 `{days, reason}`. `days`는 1·7·30, 비우면 무기한. 이미 정지 중이면 덮어쓴다 |
 | POST | `/api/admin/users/{id}/unsuspend` | 정지 해제 |
+| DELETE | `/api/admin/users/{id}` | 강제 탈퇴. 계정과 학습 기록을 지운다(본인 탈퇴와 같은 절차). 쓴 글과 댓글은 "탈퇴한 사용자"의 것으로 남고, 같은 아이디로 다시 가입할 수 있다. 관리자 계정은 받지 않는다(400 `USER_005`) |
 | POST | `/api/admin/users/{id}/role` | 권한 변경 `{role}`(`USER`·`ADMIN`). 내 권한은 못 바꾼다(400 `USER_003`). 정지 중인 사람은 관리자로 못 올린다(409 `USER_004`). 내린 사람은 예전 토큰으로도 바로 관리 API를 못 쓴다 |
 | POST | `/api/admin/users/{id}/reset-nickname` | 닉네임 초기화. `사용자` + 번호로 바꾼다(비우면 그 사람의 글이 "탈퇴한 사용자"로 보인다). 닉네임이 없는 계정은 그대로 둔다 |
 

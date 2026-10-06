@@ -24,6 +24,7 @@ import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
+import project.study.study_project.user.service.AccountService;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -34,7 +35,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 사용자 찾기, 활동 내역, 정지·해제(V26), 닉네임 초기화, 권한 변경.
+ * 사용자 찾기, 활동 내역, 정지·해제(V26), 닉네임 초기화, 권한 변경, 강제 탈퇴.
  *
  * <p>정지는 쓰기만 막는다. 무엇이 막히는지는 {@code SuspensionGuard}를 부르는 곳이 정한다 —
  * 여기는 "누구를 언제까지"만 적는다.
@@ -60,6 +61,7 @@ public class AdminUserService {
     private final CommentRepository commentRepository;
     private final CommentReportRepository reportRepository;
     private final SubmissionRepository submissionRepository;
+    private final AccountService accountService;
 
     /**
      * @param q             아이디나 닉네임의 일부. 비우면 전체
@@ -210,6 +212,12 @@ public class AdminUserService {
             log.info("권한 변경: userId={} role={} by={}", userId, role, actorId);
         }
         return AdminUserItem.of(user, now);
+    }
+
+    /** 강제 탈퇴 — 되돌릴 수 없다. 지우는 절차는 본인 탈퇴와 한 벌이라 {@link AccountService}가 맡는다. */
+    @Transactional
+    public void remove(Long actorId, Long userId) {
+        accountService.withdrawByAdmin(actorId, userId);
     }
 
     private User requireUser(Long userId) {
