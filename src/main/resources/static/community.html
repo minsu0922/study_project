@@ -43,7 +43,11 @@ try {
       <label for="q">제목·본문에서 찾기</label>
       <!-- type="text"다. search로 두면 공용 입력 칸 스타일이 안 걸려 브라우저 기본 모양의 작은 칸이 된다.
            검색이라는 뜻은 폼의 role="search"와 enterkeyhint가 전한다. -->
-      <input type="text" id="q" maxlength="50" placeholder="예: 캐시, 502" enterkeyhint="search">
+      <!-- 버튼을 칸 바로 옆에 붙인다. 폼 끝에 두면 좁은 화면에서 줄이 접혀 정렬 칸 옆으로 떨어진다. -->
+      <div class="search-row">
+        <input type="text" id="q" maxlength="50" placeholder="예: 캐시, 502" enterkeyhint="search">
+        <button type="submit">찾기</button>
+      </div>
     </div>
     <div class="field" data-control="domain">
       <label for="domainFilter">분야</label>
@@ -67,7 +71,6 @@ try {
         <option value="commented">내가 댓글 단 글</option>
       </select>
     </div>
-    <button type="submit" data-control="q">찾기</button>
   </form>
 
   <div id="message" role="alert"></div>

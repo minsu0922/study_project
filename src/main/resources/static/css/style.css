@@ -2345,6 +2345,9 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 
 /* 커뮤니티의 찾기 줄. 검색 칸이 주인공이라 다른 두 칸보다 넓게 잡는다. */
 .community-filters .field:first-child { flex: 2 1 220px; }
+.search-row { display: flex; gap: 8px; }
+.search-row input { flex: 1; min-width: 0; }
+.search-row button { flex: none; }
 /* 고르는 칸은 늘리지 않는다. 검색 칸이 숨는 탭(토론방·내 활동)에서 고르는 칸 하나가 줄 전체로 퍼진다. */
 .community-filters .field:not(:first-child) { flex: 0 1 150px; }   /* 150: 고르는 칸 셋과 버튼이 860px 한 줄에 든다 */
 /* 글이 속한 문제의 분야. 개념 문서 목록의 분야 표시(.doc-line .dm)와 같은 모양이다. */
