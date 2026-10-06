@@ -10,6 +10,7 @@ import project.study.study_project.admin.dto.AdminProblemRequest;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -64,7 +65,7 @@ public class AdminProblemService {
     public PageResponse<AdminProblemDetail> getProblems(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                         String documentSlug, Pageable pageable) {
         // 빈 문자열은 "안 고름"이다 — 화면의 select가 빈 값을 보낼 수 있어 여기서 null로 맞춘다.
-        Page<Problem> page = problemRepository.findForAdmin(domain, difficulty, type, trimOrNull(documentSlug), pageable);
+        Page<Problem> page = problemRepository.findForAdmin(domain, difficulty, type, Texts.trimToNull(documentSlug), pageable);
         return PageResponse.from(page.map(AdminProblemDetail::from));
     }
 
@@ -88,9 +89,9 @@ public class AdminProblemService {
         requireRegisteredDomain(request.domain());
         validateByType(request);
         Problem problem = Problem.create(
-                request.domain(), request.difficulty(), request.type(), trimOrNull(request.title()),
-                request.question().trim(), normalizeAnswer(request), trimOrNull(request.explanation()),
-                trimOrNull(request.documentSlug()));
+                request.domain(), request.difficulty(), request.type(), Texts.trimToNull(request.title()),
+                request.question().trim(), normalizeAnswer(request), Texts.trimToNull(request.explanation()),
+                Texts.trimToNull(request.documentSlug()));
         problem.replaceChoices(buildChoices(problem, request));
         return AdminProblemDetail.from(problemRepository.save(problem));
     }
@@ -108,9 +109,9 @@ public class AdminProblemService {
         requireRegisteredDomain(request.domain());
         validateByType(request);
         Problem problem = findProblem(id);
-        problem.update(request.domain(), request.difficulty(), request.type(), trimOrNull(request.title()),
-                request.question().trim(), normalizeAnswer(request), trimOrNull(request.explanation()),
-                trimOrNull(request.documentSlug()));
+        problem.update(request.domain(), request.difficulty(), request.type(), Texts.trimToNull(request.title()),
+                request.question().trim(), normalizeAnswer(request), Texts.trimToNull(request.explanation()),
+                Texts.trimToNull(request.documentSlug()));
         problem.replaceChoices(buildChoices(problem, request));
         return AdminProblemDetail.from(problem); // 변경 감지(dirty checking)로 커밋 시 자동 UPDATE
     }
@@ -338,9 +339,5 @@ public class AdminProblemService {
             return null;
         }
         return item.rationale().trim();
-    }
-
-    private String trimOrNull(String s) {
-        return (s == null || s.isBlank()) ? null : s.trim();
     }
 }

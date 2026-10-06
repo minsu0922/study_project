@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -293,7 +294,7 @@ public class TopicQueueService {
         }
 
         TopicQueueItem saved = repository.save(TopicQueueItem.fresh(
-                request.domain(), topic, trimToNull(request.memo()),
+                request.domain(), topic, Texts.trimToNull(request.memo()),
                 repository.findMaxSortOrder() + 1));
 
         log.info("주제 범위 추가: [{}] {} — 커밋해야 다음 배치부터 반영됩니다",
@@ -332,7 +333,7 @@ public class TopicQueueService {
         }
 
         DomainCode before = item.getDomain();
-        item.edit(request.domain(), topic, trimToNull(request.memo()));
+        item.edit(request.domain(), topic, Texts.trimToNull(request.memo()));
 
         // 분야가 바뀐 것은 따로 남긴다. 이 값이 사흘치 문제의 분야까지 정하므로, 나중에
         // "왜 이날 문제가 딴 분야지"를 되짚을 때 이 줄 하나가 실마리가 된다.
@@ -613,7 +614,7 @@ public class TopicQueueService {
         // 사용 기록까지 함께 들여온다. 기록을 버리면 그 범위가 "새것"이 되어 곧바로 다음 차례가
         // 되고, 순환이 한쪽으로 쏠린다(엔티티 imported 주석).
         return repository.save(TopicQueueItem.imported(
-                domain, topic, trimToNull(entry.memo()), sortOrder,
+                domain, topic, Texts.trimToNull(entry.memo()), sortOrder,
                 parseDate(entry.lastUsedAt()), entry.usedCount() == null ? 0 : entry.usedCount()));
     }
 
@@ -654,9 +655,5 @@ public class TopicQueueService {
             log.warn("주제 대기열의 usedAt을 읽지 못해 무시합니다: {}", raw);
             return null;
         }
-    }
-
-    private String trimToNull(String s) {
-        return (s == null || s.isBlank()) ? null : s.trim();
     }
 }

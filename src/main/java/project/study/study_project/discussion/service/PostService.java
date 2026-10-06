@@ -27,6 +27,7 @@ import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -57,7 +58,6 @@ import java.util.Optional;
 public class PostService {
 
     private static final int PAGE_SIZE = 20;
-    private static final int MAX_QUERY_LENGTH = 50;
     /** 토론방 목록의 한 쪽 상한. 화면은 20을 쓴다 — 주소로 큰 값을 넣어 통째로 긁지 못하게 막는다. */
     private static final int MAX_ROOM_PAGE_SIZE = 200;
 
@@ -107,7 +107,7 @@ public class PostService {
     @Transactional(readOnly = true)
     public RecentPostResponse recent(PostFilter filter, int page) {
         PageRequest pageable = PageRequest.of(Math.max(page, 0), PAGE_SIZE);
-        String pattern = likePattern(filter.q());
+        String pattern = SearchKeyword.likePattern(filter.q());
         Slice<PostRepository.RecentPostRow> rows = filter.sort() == PostSort.COMMENTS
                 ? postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, filter.domain(),
                         filter.category(), filter.authorId(), filter.commenterId(), pageable)
@@ -158,24 +158,6 @@ public class PostService {
     public long errataPendingCount() {
         return postRepository.findErrata(CommentStatus.VISIBLE, PostCategory.ERRATA, Role.ADMIN,
                 true, PageRequest.of(0, 1)).getTotalElements();
-    }
-
-    /**
-     * 검색어를 LIKE 패턴으로 바꾼다. 비어 있으면 {@code null}(조건을 걸지 않는다).
-     *
-     * <p>사용자가 친 %와 _는 글자 그대로 찾는다. 그대로 넘기면 "%" 한 글자로 모든 글이 나오고
-     * "_"는 아무 글자 하나에 맞는다. 이스케이프 글자는 '!'다(PostRepository의 escape와 짝).
-     * 길이는 50자에서 자른다 — 그보다 긴 검색어는 찾으려는 말이 아니라 붙여 넣은 글이다.
-     */
-    private String likePattern(String q) {
-        if (q == null || q.isBlank()) {
-            return null;
-        }
-        String word = q.trim();
-        if (word.length() > MAX_QUERY_LENGTH) {
-            word = word.substring(0, MAX_QUERY_LENGTH);
-        }
-        return "%" + word.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
     }
 
     /** 지운 글은 없는 글로 답한다. 가린 글은 자리만 돌려준다 — 링크로 들어온 사람에게 이유를 보여 준다. */

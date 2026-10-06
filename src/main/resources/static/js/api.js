@@ -385,6 +385,46 @@ function escapeHtml(s) {
 }
 
 /** ISO 날짜 문자열 → "2026-07-05 10:06" 같은 짧은 표기 */
+/**
+ * 쪽 넘기기 한 벌(이전 · 몇 쪽 · 다음). 목록 화면이 모두 이것을 쓴다.
+ *
+ * 응답이 두 가지라 둘 다 받는다. 전체 쪽수를 아는 목록(totalPages가 있다)은 "2 / 7"로 적고
+ * 쪽이 하나면 숨긴다. 다음이 있는지만 아는 목록(토론방 쪽)은 "2쪽"으로 적고 첫 쪽에 다음이 없으면 숨긴다.
+ *
+ * 버튼에 id를 주지 않는다 — 퀴즈 플레이어가 nextBtn을 만들어, 같은 문서에 얹히면 id가 겹친다.
+ *
+ * @param el      빈 틀(<div class="pager" hidden>)
+ * @param onMove  옮겨 갈 쪽 번호(0부터)를 받는다. 쪽 번호를 어디에 두는지는 화면이 정한다
+ * @param opts    showTotal: 전체 건수도 적는다
+ * @returns       { update({page, hasNext, totalPages, totalElements}), hide() }
+ */
+function mountPager(el, onMove, opts = {}) {
+  el.innerHTML = `
+    <button type="button" class="btn-outline" data-pager="-1">이전</button>
+    <span class="info"></span>
+    <button type="button" class="btn-outline" data-pager="1">다음</button>`;
+  const [prev, next] = el.querySelectorAll("button");
+  const info = el.querySelector(".info");
+  let current = 0;
+  el.addEventListener("click", e => {
+    const btn = e.target.closest("[data-pager]");
+    if (btn && !btn.disabled) onMove(current + Number(btn.dataset.pager));
+  });
+  return {
+    update(data) {
+      current = data.page;
+      const counted = data.totalPages !== undefined;
+      el.hidden = counted ? data.totalPages <= 1 : (data.page === 0 && !data.hasNext);
+      info.textContent = counted
+        ? `${data.page + 1} / ${Math.max(data.totalPages, 1)}` + (opts.showTotal ? ` — 전체 ${data.totalElements}건` : "")
+        : `${data.page + 1}쪽`;
+      prev.disabled = data.page === 0;
+      next.disabled = !data.hasNext;
+    },
+    hide() { el.hidden = true; },
+  };
+}
+
 function formatDate(iso) {
   if (!iso) return "";
   return iso.replace("T", " ").substring(0, 16);

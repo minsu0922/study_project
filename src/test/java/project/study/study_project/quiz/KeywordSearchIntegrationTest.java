@@ -108,6 +108,30 @@ class KeywordSearchIntegrationTest {
                 .andExpect(jsonPath("$.data.totalElements").isNumber());
     }
 
+    /** 이스케이프가 없던 때에는 "%" 한 글자로 전체가 나오고 "_"가 아무 글자에나 맞았다. */
+    @Test
+    @DisplayName("문제 — %와 _는 글자 그대로 찾는다")
+    void wildcardsAreLiteral() throws Exception {
+        problemRepository.save(ox(고유어 + " 적중률 90% 이상"));
+        problemRepository.save(ox(고유어 + " max_connections 설정"));
+        problemRepository.save(ox(고유어 + " 평범한 지문"));
+
+        mockMvc.perform(get("/api/problems").param("keyword", 고유어 + " 적중률 90%")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(jsonPath("$.data.content").value(hasSize(1)));
+        // "_"가 아무 글자 하나에 맞으면 "평범한 지문"도 "평범_"에 걸린다.
+        mockMvc.perform(get("/api/problems").param("keyword", 고유어 + " 평범_")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(jsonPath("$.data.content").value(hasSize(0)));
+        mockMvc.perform(get("/api/problems").param("keyword", 고유어 + " max_conn")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(jsonPath("$.data.content").value(hasSize(1)));
+        // 대소문자는 여전히 가리지 않는다.
+        mockMvc.perform(get("/api/problems").param("keyword", 고유어.toUpperCase() + " MAX_CONN")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(jsonPath("$.data.content").value(hasSize(1)));
+    }
+
     @Test
     @DisplayName("문서 — 제목으로도 본문으로도 찾는다")
     void findsDocumentByTitleAndBody() throws Exception {

@@ -43,7 +43,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("""
             select u from User u
-            where (:q is null or u.username like concat('%', :q, '%') or u.nickname like concat('%', :q, '%'))
+            where (:q is null or u.username like :q escape '!' or u.nickname like :q escape '!')
               and (:suspendedOnly = false or u.suspendedUntil > :now)
             order by u.id desc
             """)

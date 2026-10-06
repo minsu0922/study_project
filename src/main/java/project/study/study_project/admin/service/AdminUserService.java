@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminSuspendRequest;
 import project.study.study_project.admin.dto.AdminUserItem;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -40,7 +41,7 @@ public class AdminUserService {
     @Transactional(readOnly = true)
     public PageResponse<AdminUserItem> search(String q, boolean suspendedOnly, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
-        String keyword = (q == null || q.isBlank()) ? null : q.trim();
+        String keyword = SearchKeyword.likePattern(q);
         return PageResponse.from(userRepository.search(keyword, suspendedOnly, now, pageable)
                 .map(user -> AdminUserItem.of(user, now)));
     }

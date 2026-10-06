@@ -18,6 +18,7 @@ import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -527,7 +528,7 @@ public class LlmProblemService {
         // 객관식은 is_correct에, 짝짓기는 한 행의 text↔match_text 짝 자체에 있다(V16).
         // 그 외 유형은 스키마상 빈 문자열로 오는 "값 없음"을 여기서 null로 정규화한다.
         boolean answerInRows = type == ProblemType.MULTIPLE_CHOICE || type == ProblemType.MATCHING;
-        String answer = answerInRows ? null : trimToNull(item.answer());
+        String answer = answerInRows ? null : Texts.trimToNull(item.answer());
         // 행을 쓰는 유형이면 보기 JSON을 남긴다. 예전에는 객관식만 봤는데, 그 조건을 그대로 두면
         // 짝짓기·순서 배열 초안이 <항목 없이> 저장된다 — 승인 때 "보기가 없다"로 튕기고,
         // 그때는 이미 요금을 다 낸 뒤다.
@@ -542,8 +543,8 @@ public class LlmProblemService {
         }
 
         return java.util.Optional.of(GeneratedProblemDraft.pending(
-                domain, difficulty, type, trimToNull(item.title()), trimToNull(item.question()), answer,
-                trimToNull(item.explanation()), choicesJson, model, trimToNull(documentSlug),
+                domain, difficulty, type, Texts.trimToNull(item.title()), Texts.trimToNull(item.question()), answer,
+                Texts.trimToNull(item.explanation()), choicesJson, model, Texts.trimToNull(documentSlug),
                 item.questionKind(), quoteCheck));
     }
 
@@ -560,7 +561,7 @@ public class LlmProblemService {
                                                     String documentSlug, Pageable pageable) {
         DraftStatus target = status != null ? status : DraftStatus.PENDING;
         return PageResponse.from(draftRepository
-                .findForReview(target, domain, difficulty, trimToNull(documentSlug), pageable)
+                .findForReview(target, domain, difficulty, Texts.trimToNull(documentSlug), pageable)
                 .map(this::toResponse));
     }
 
@@ -603,7 +604,7 @@ public class LlmProblemService {
 
     @Transactional
     public void reject(Long draftId, String reason) {
-        findDraft(draftId).reject(trimToNull(reason));
+        findDraft(draftId).reject(Texts.trimToNull(reason));
         events.publishEvent(ReviewCompleted.problem());
     }
 
@@ -654,7 +655,7 @@ public class LlmProblemService {
                 // AdminProblemService가 "짝이 비었나"를 isBlank로 보므로 뜻은 같지만, 저장된 JSON을
                 // 눈으로 볼 때 <짝짓기가 아닌 초안>에 빈 칸이 줄줄이 남는 것이 읽기에 나쁘다.
                 .map(c -> new AdminProblemRequest.ChoiceItem(
-                        c.text(), c.correct(), c.rationale(), trimToNull(c.matchText())))
+                        c.text(), c.correct(), c.rationale(), Texts.trimToNull(c.matchText())))
                 .toList();
         try {
             return objectMapper.writeValueAsString(items);
@@ -761,9 +762,5 @@ public class LlmProblemService {
                 .toList();
         return new GeneratedProblemItem(d.getQuestion(), d.getAnswer(), d.getExplanation(),
                 items, "", d.getTitle(), d.getQuestionKind());
-    }
-
-    private String trimToNull(String s) {
-        return (s == null || s.isBlank()) ? null : s.trim();
     }
 }

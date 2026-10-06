@@ -12,6 +12,7 @@ import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.config.CacheConfig;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -44,7 +45,7 @@ public class AdminDocumentService {
         }
         Document document = Document.create(
                 request.domain(), request.title().trim(), request.slug(),
-                request.contentMd(), trimOrNull(request.source()),
+                request.contentMd(), Texts.trimToNull(request.source()),
                 tagService.resolveTags(request.tags()));
         Document saved = documentRepository.save(document);
         // 등록에도 무효화가 필요해졌다(2026-09-03). 단건 응답이 "짝이 되는 편이 있는가"를 함께
@@ -71,7 +72,7 @@ public class AdminDocumentService {
             throw new BusinessException(ErrorCode.DOC_002);
         }
         document.update(request.domain(), request.title().trim(), request.slug(),
-                request.contentMd(), trimOrNull(request.source()),
+                request.contentMd(), Texts.trimToNull(request.source()),
                 tagService.resolveTags(request.tags()));
         evictDocumentCache(oldSlug, request.slug(),
                 DocumentEditions.counterpartSlugOf(oldSlug),
@@ -130,9 +131,5 @@ public class AdminDocumentService {
         if (!domainCatalog.exists(domain)) {
             throw new BusinessException(ErrorCode.DOMAIN_003, "등록되지 않은 분야입니다: " + domain);
         }
-    }
-
-    private String trimOrNull(String s) {
-        return (s == null || s.isBlank()) ? null : s.trim();
     }
 }

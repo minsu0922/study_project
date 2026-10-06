@@ -45,11 +45,7 @@ try {
   <div id="message"></div>
   <div id="list"></div>
 
-  <div class="pager" id="pager" hidden>
-    <button id="prevBtn" class="btn-outline">이전</button>
-    <span class="info" id="pageInfo"></span>
-    <button id="nextBtn" class="btn-outline">다음</button>
-  </div>
+  <div class="pager" id="pager" hidden></div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -172,11 +168,7 @@ async function init() {
           </div>`).join("");
       }
 
-      const pager = document.getElementById("pager");
-      pager.hidden = data.totalPages <= 1;
-      document.getElementById("pageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
-      document.getElementById("prevBtn").disabled = data.page === 0;
-      document.getElementById("nextBtn").disabled = !data.hasNext;
+      pager.update(data);
     } catch (e) {
       const text = e.status === 401
         ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인해 주세요.</a>`
@@ -186,8 +178,7 @@ async function init() {
   }
 
   domainFilter.addEventListener("change", () => { page = 0; load(); });
-  document.getElementById("prevBtn").addEventListener("click", () => { page--; load(); });
-  document.getElementById("nextBtn").addEventListener("click", () => { page++; load(); });
+  const pager = mountPager(document.getElementById("pager"), p => { page = p; load(); });
   load();   // 배지는 load() 안에서 이 페이지에 필요한 것만 이어서 받는다
 }
 </script>

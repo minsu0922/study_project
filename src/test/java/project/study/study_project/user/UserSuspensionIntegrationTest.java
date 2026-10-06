@@ -309,6 +309,11 @@ class UserSuspensionIntegrationTest {
         mockMvc.perform(get("/api/admin/users").param("q", free.getUsername()).header("Authorization", admin))
                 .andExpect(jsonPath("$.data.content", hasSize(1)))
                 .andExpect(jsonPath("$.data.content[0].nickname").value(free.getNickname()));
+        // "_"와 "%"는 글자 그대로 찾는다. 와일드카드로 읽히면 둘 다 걸린다.
+        mockMvc.perform(get("/api/admin/users").param("q", "찾" + key + "_").header("Authorization", admin))
+                .andExpect(jsonPath("$.data.content", hasSize(0)));
+        mockMvc.perform(get("/api/admin/users").param("q", "찾" + key + "%").header("Authorization", admin))
+                .andExpect(jsonPath("$.data.content", hasSize(0)));
         mockMvc.perform(get("/api/admin/users").param("q", "찾" + key).param("suspendedOnly", "true")
                         .header("Authorization", admin))
                 .andExpect(jsonPath("$.data.content", hasSize(1)))

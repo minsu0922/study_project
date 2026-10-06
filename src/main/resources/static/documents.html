@@ -50,11 +50,7 @@ try {
   <div id="docList"></div>
 
   <!-- 이전/다음 페이지 (PageResponse의 page/totalPages/hasNext 사용) -->
-  <div class="pager" id="pager" hidden>
-    <button id="prevBtn" class="btn-outline">이전</button>
-    <span class="info" id="pageInfo"></span>
-    <button id="nextBtn" class="btn-outline">다음</button>
-  </div>
+  <div class="pager" id="pager" hidden></div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -206,11 +202,7 @@ async function loadDocs() {
     }
 
     // 페이지 버튼: 전체가 1페이지면 숨긴다(불필요한 UI 제거)
-    const pager = document.getElementById("pager");
-    pager.hidden = data.totalPages <= 1;
-    document.getElementById("pageInfo").textContent = `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
-    document.getElementById("prevBtn").disabled = data.page === 0;
-    document.getElementById("nextBtn").disabled = !data.hasNext;
+    pager.update(data);
   } catch (e) {
     msg.innerHTML = `<div class="alert error">문서를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
   }
@@ -226,8 +218,7 @@ document.getElementById("searchForm").addEventListener("submit", e => {
   page = 0;
   loadDocs();
 });
-document.getElementById("prevBtn").addEventListener("click", () => { page--; loadDocs(); });
-document.getElementById("nextBtn").addEventListener("click", () => { page++; loadDocs(); });
+const pager = mountPager(document.getElementById("pager"), p => { page = p; loadDocs(); });
 
 // 분야 필터는 서버 값을 기다렸다가 채운다(domainsReady) — 이 화면을 여는 순간
 // 보여 줄 것이 그 필터뿐이라, 옛 이름으로 한 번 그렸다가 나중에 바뀌는 것보다

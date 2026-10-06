@@ -57,11 +57,7 @@ try {
 
   <div id="list"></div>
 
-  <div class="pager" id="pager" hidden>
-    <button id="prevBtn" class="btn-outline">이전</button>
-    <span class="info" id="pageInfo"></span>
-    <button id="nextBtn" class="btn-outline">다음</button>
-  </div>
+  <div class="pager" id="pager" hidden></div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -110,11 +106,7 @@ async function loadPosts() {
     list.innerHTML = data.posts.map(postRow).join("");
   }
 
-  const pager = document.getElementById("pager");
-  pager.hidden = page === 0 && !data.hasNext;
-  document.getElementById("pageInfo").textContent = `${page + 1}쪽`;
-  document.getElementById("prevBtn").disabled = page === 0;
-  document.getElementById("nextBtn").disabled = !data.hasNext;
+  pager.update({ page, hasNext: data.hasNext });
 }
 
 /* 가린 글은 줄만 남기고 링크를 걸지 않는다 — 들어가도 볼 것이 없다. */
@@ -178,8 +170,10 @@ writeForm.addEventListener("submit", async e => {
   }
 });
 
-document.getElementById("prevBtn").addEventListener("click", () => { page -= 1; loadPosts().catch(e => showError(e.message)); });
-document.getElementById("nextBtn").addEventListener("click", () => { page += 1; loadPosts().catch(e => showError(e.message)); });
+const pager = mountPager(document.getElementById("pager"), p => {
+  page = p;
+  loadPosts().catch(e => showError(e.message));
+});
 
 fillSelect(document.getElementById("postCategory"), POST_CATEGORIES, "말머리를 골라 주세요");
 
