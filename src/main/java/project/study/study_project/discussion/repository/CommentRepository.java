@@ -47,6 +47,12 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     long countByPostIdAndStatus(Long postId, CommentStatus status);
 
+    /* ── 관리자 화면의 사용자 활동 ── */
+
+    long countByUserIdAndStatusNot(Long userId, CommentStatus status);
+
+    long countByUserIdAndStatus(Long userId, CommentStatus status);
+
     /** 글별 보이는 댓글 수 — 글 목록이 한 쪽(20건)의 수를 한 번에 묻는다. 댓글이 없는 글은 결과에 없다. */
     @Query("""
             select c.postId as postId, count(c) as cnt

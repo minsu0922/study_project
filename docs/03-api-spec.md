@@ -525,8 +525,8 @@ refresh 토큰을 폐기한다.
 | PUT · DELETE | `/api/me/posts/{id}` | ✓ | 내 글 수정 `{category, title, body}` · 삭제 |
 | POST | `/api/me/comments` | ✓ | 댓글·답글 쓰기 `{postId, parentId, body}` → 201 |
 | PUT · DELETE | `/api/me/comments/{id}` | ✓ | 내 댓글 수정 `{body}` · 삭제 |
-| POST | `/api/me/comment-reports` | ✓ | 댓글 신고 `{commentId, reason, detail}` |
-| POST | `/api/me/post-reports` | ✓ | 글 신고 `{postId, reason, detail}` |
+| POST | `/api/me/comment-reports` | ✓ | 댓글 신고 `{commentId, reason, detail}` → 201, 접수증 `{id, status}`만 돌려준다 |
+| POST | `/api/me/post-reports` | ✓ | 글 신고 `{postId, reason, detail}` → 201, 접수증 `{id, status}`. 글쓴이 정보는 신고함(관리자)에만 실린다 |
 | GET | `/api/admin/comment-reports?status=` | 🛡️ | 신고함(글·댓글 한 목록). 한 줄의 `targetType`이 `POST`·`COMMENT`를 가르고, `targetUsername`·`targetSuspended`로 글쓴이와 정지 여부를 싣는다 |
 | POST | `/api/admin/posts/{id}/hide` · `/restore` | 🛡️ | 글 가림·복구. 가리면 그 글의 대기 신고가 모두 닫힌다 |
 | POST | `/api/admin/comments/{id}/hide` · `/restore` | 🛡️ | 댓글 가림·복구 |
@@ -557,6 +557,7 @@ refresh 토큰을 폐기한다.
 |---|---|---|
 | GET | `/api/admin/users?q=&suspendedOnly=&page=` | 사용자 찾기. `q`는 아이디나 닉네임의 일부, `suspendedOnly=true`면 정지 중인 사람만 |
 | GET | `/api/admin/users/{id}` | 사용자 한 명(목록의 한 줄과 같은 모양). 상세 화면이 읽는다. 없으면 404 `USER_001` |
+| GET | `/api/admin/users/{id}/activity` | 그 사람의 활동. 글·댓글 수(지운 것 제외), 가려진 수, 받은 신고 수, 풀어 본·맞힌 문제 수와 최근 글 5건(`recentPosts`), 최근에 받은 신고 5건(`recentReports`) |
 | POST | `/api/admin/users/{id}/suspend` | 정지 `{days, reason}`. `days`는 1·7·30, 비우면 무기한. 이미 정지 중이면 덮어쓴다 |
 | POST | `/api/admin/users/{id}/unsuspend` | 정지 해제 |
 

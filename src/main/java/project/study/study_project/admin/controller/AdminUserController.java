@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.admin.dto.AdminSuspendRequest;
+import project.study.study_project.admin.dto.AdminUserActivity;
 import project.study.study_project.admin.dto.AdminUserItem;
 import project.study.study_project.admin.service.AdminUserService;
 import project.study.study_project.global.response.ApiResponse;
@@ -40,6 +41,12 @@ public class AdminUserController {
     @GetMapping("/{id}")
     public ApiResponse<AdminUserItem> detail(@PathVariable Long id) {
         return ApiResponse.ok(adminUserService.detail(id));
+    }
+
+    /** 그 사람의 활동 — 글·댓글·받은 신고·푼 문제 수와 최근 글, 최근에 받은 신고. */
+    @GetMapping("/{id}/activity")
+    public ApiResponse<AdminUserActivity> activity(@PathVariable Long id) {
+        return ApiResponse.ok(adminUserService.activity(id));
     }
 
     @PostMapping("/{id}/suspend")
