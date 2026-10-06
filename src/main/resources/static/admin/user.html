@@ -35,6 +35,11 @@ try {
       <div id="recentReports"></div>
     </div>
 
+    <div class="card" id="roleCard" hidden>
+      <h3>권한</h3>
+      <div id="roleBody"></div>
+    </div>
+
     <div class="card" id="suspension" hidden>
       <h3>글쓰기 정지</h3>
       <!-- 정지가 무엇을 막는지를 적는다. "정지"라는 말만 보면 로그인까지 막는 줄 안다. -->
@@ -56,6 +61,7 @@ try {
  *   POST /api/admin/users/{id}/suspend   {days, reason}   days를 비우면 무기한
  *   POST /api/admin/users/{id}/unsuspend
  *   POST /api/admin/users/{id}/reset-nickname
+ *   POST /api/admin/users/{id}/role      {role}
  *
  * 화면이 따로 있는 이유: 주소가 있어야 신고함의 "글쓴이 정지"가 이 사람에게 바로 온다. */
 const params = new URLSearchParams(location.search);
@@ -144,8 +150,37 @@ function render(u) {
       </div>` : ""}`;
   profile.hidden = false;
 
+  document.getElementById("roleBody").innerHTML = roleHtml(u, admin);
+  document.getElementById("roleCard").hidden = false;
+
   document.getElementById("suspensionBody").innerHTML = suspensionHtml(u, admin);
   document.getElementById("suspension").hidden = false;
+}
+
+/* 못 바꾸는 경우에는 버튼 대신 이유를 적는다 — 눌러 보고 거절당하게 하지 않는다. 서버도 같은 규칙으로 막는다. */
+function roleHtml(u, admin) {
+  const now = `<div>지금 권한: <b>${admin ? "관리자" : "사용자"}</b></div>`;
+  if (u.username === localStorage.getItem(USERNAME_KEY)) {
+    return now + `<div class="meta" style="margin-top:6px">내 계정의 권한은 내가 바꿀 수 없습니다.
+      다른 관리자가 바꿔야 합니다.</div>`;
+  }
+  if (admin) {
+    return now + `
+      <p class="meta">내리면 이 사람은 그 즉시 관리 화면의 기능을 쓸 수 없습니다.</p>
+      <div class="row-actions">
+        <button class="btn-outline" onclick="changeRole('USER', this)">사용자로 내리기</button>
+      </div>`;
+  }
+  if (u.suspended) {
+    return now + `<div class="meta" style="margin-top:6px">정지 중인 사용자는 관리자로 올릴 수 없습니다.
+      정지를 먼저 풀어 주세요.</div>`;
+  }
+  return now + `
+    <p class="meta">관리자는 문제·문서를 고치고 지울 수 있고, 다른 사용자를 정지하거나 관리자로 올릴 수 있습니다.
+      올린 사람은 다시 로그인해야 관리 화면이 열립니다.</p>
+    <div class="row-actions">
+      <button class="btn-outline" onclick="changeRole('ADMIN', this)">관리자로 올리기</button>
+    </div>`;
 }
 
 /* 정지 중이면 풀리는 날과 사유, 아니면 정지 폼. 관리자 계정에는 폼을 내지 않고 이유를 적는다 —
@@ -195,6 +230,12 @@ async function suspendUser(btn) {
 function resetNickname(btn) {
   armedAction(btn, () => act(btn, () =>
     api(`/api/admin/users/${userId}/reset-nickname`, { method: "POST" })), "한 번 더 누르면 초기화");
+}
+
+function changeRole(role, btn) {
+  armedAction(btn, () => act(btn, () => api(`/api/admin/users/${userId}/role`, {
+    method: "POST", body: JSON.stringify({ role }) })),
+    role === "ADMIN" ? "한 번 더 누르면 관리자로 올림" : "한 번 더 누르면 사용자로 내림");
 }
 
 async function unsuspendUser(btn) {

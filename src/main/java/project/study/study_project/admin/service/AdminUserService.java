@@ -34,7 +34,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 사용자 찾기, 활동 내역, 정지·해제(V26), 닉네임 초기화.
+ * 사용자 찾기, 활동 내역, 정지·해제(V26), 닉네임 초기화, 권한 변경.
  *
  * <p>정지는 쓰기만 막는다. 무엇이 막히는지는 {@code SuspensionGuard}를 부르는 곳이 정한다 —
  * 여기는 "누구를 언제까지"만 적는다.
@@ -184,6 +184,32 @@ public class AdminUserService {
             candidate = PLACEHOLDER_PREFIX + ThreadLocalRandom.current().nextLong(PLACEHOLDER_MODULUS);
         }
         throw new BusinessException(ErrorCode.COMMON_001, "바꿔 줄 닉네임을 정하지 못했습니다. 다시 눌러 주세요.");
+    }
+
+    /**
+     * 권한을 바꾼다. 같은 권한으로 바꾸면 아무 일도 하지 않는다.
+     *
+     * <p>올린 사람은 다시 로그인해야 관리 화면이 열린다 — 토큰에 권한이 적혀 있다.
+     * 내린 사람은 바로 막힌다({@code AdminAuthorizationManager}가 요청마다 지금 권한을 본다).
+     *
+     * @param actorId 바꾸는 관리자
+     */
+    @Transactional
+    public AdminUserItem changeRole(Long actorId, Long userId, Role role) {
+        if (actorId.equals(userId)) {
+            throw new BusinessException(ErrorCode.USER_003);
+        }
+        User user = requireUser(userId);
+        LocalDateTime now = LocalDateTime.now();
+        // 관리자는 정지할 수 없다(USER_002). 정지된 채 올리면 그 규칙과 어긋난 계정이 생긴다.
+        if (role == Role.ADMIN && user.isSuspended(now)) {
+            throw new BusinessException(ErrorCode.USER_004);
+        }
+        if (user.getRole() != role) {
+            user.changeRole(role);
+            log.info("권한 변경: userId={} role={} by={}", userId, role, actorId);
+        }
+        return AdminUserItem.of(user, now);
     }
 
     private User requireUser(Long userId) {

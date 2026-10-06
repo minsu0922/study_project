@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.auth.AdminAuthorizationManager;
 import project.study.study_project.auth.gate.AdminGateCookie;
 import project.study.study_project.auth.gate.AdminGateFilter;
 import project.study.study_project.auth.jwt.JwtAuthenticationFilter;
@@ -44,6 +45,7 @@ public class SecurityConfig {
     private final ObjectMapper objectMapper;
     /** 관리 화면(정적 파일) 출입증 — 헤더로는 못 막는 자리를 쿠키로 막는다. */
     private final AdminGateCookie adminGateCookie;
+    private final AdminAuthorizationManager adminAuthorizationManager;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -112,14 +114,15 @@ public class SecurityConfig {
                         // 나머지 actuator(info 및 앞으로 열게 될 것들)는 관리자만. 지금 열린 것은
                         // info뿐이라 당장 감출 것이 크지 않지만, 기본을 "잠금"으로 둬야 노출 목록에
                         // 한 줄 추가하는 순간 함께 공개되는 사고가 나지 않는다.
-                        .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers("/actuator/**").access(adminAuthorizationManager)
                         // 보호: 답안 제출 / 내 정보(오답노트 등)
                         .requestMatchers(HttpMethod.POST, "/api/quiz/submit").authenticated()
                         .requestMatchers("/api/me/**").authenticated()
-                        // 관리자 전용: 콘텐츠 등록/수정/삭제·대시보드. hasRole("ADMIN")은
-                        // JWT의 role 클레임으로 만든 "ROLE_ADMIN" 권한(JwtTokenProvider)과 대응된다.
+                        // 관리자 전용: 콘텐츠 등록/수정/삭제·대시보드. 토큰의 role 클레임이 ADMIN이고
+                        // <지금 DB의 권한도> ADMIN이어야 한다(AdminAuthorizationManager) — 토큰만 보면
+                        // 관리자에서 내린 사람이 토큰이 만료될 때까지 계속 들어온다.
                         // 경로 한 곳에서 일괄 통제 — admin 컨트롤러에 API를 추가해도 권한이 자동 적용된다.
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").access(adminAuthorizationManager)
                         // 나머지는 기본적으로 인증 요구
                         .anyRequest().authenticated())
                 // 인증/인가 실패를 공통 응답 봉투로 변환

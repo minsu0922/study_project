@@ -352,6 +352,78 @@ class UserSuspensionIntegrationTest {
         assertThat(userRepository.findById(user.getId()).orElseThrow().getNickname()).isEqualTo(user.getNickname());
     }
 
+    /* ── 권한 변경 ───────────────────────────────────────── */
+
+    @Test
+    @DisplayName("권한 변경 — 사용자를 관리자로 올리고 다시 내린다. 같은 권한으로 바꾸면 그대로다")
+    void changesRole() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        User user = fixtures.user(Role.USER);
+        String path = "/api/admin/users/%d/role".formatted(user.getId());
+
+        mockMvc.perform(post(path).header("Authorization", admin)
+                        .contentType("application/json").content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value("ADMIN"));
+        mockMvc.perform(post(path).header("Authorization", admin)
+                        .contentType("application/json").content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post(path).header("Authorization", admin)
+                        .contentType("application/json").content("{\"role\":\"USER\"}"))
+                .andExpect(jsonPath("$.data.role").value("USER"));
+        assertThat(userRepository.findById(user.getId()).orElseThrow().getRole()).isEqualTo(Role.USER);
+    }
+
+    /** 실수로 자기를 내리면 관리자가 한 명도 안 남을 수 있다. */
+    @Test
+    @DisplayName("내 권한은 바꿀 수 없다 — 400 USER_003. 정지 중인 사용자는 관리자로 못 올린다 — 409 USER_004")
+    void roleChangeGuards() throws Exception {
+        User admin = fixtures.user(Role.ADMIN);
+        mockMvc.perform(post("/api/admin/users/%d/role".formatted(admin.getId())).header("Authorization", fixtures.bearer(admin))
+                        .contentType("application/json").content("{\"role\":\"USER\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("USER_003"));
+
+        User blocked = fixtures.user(Role.USER);
+        suspend(blocked, 7);
+        mockMvc.perform(post("/api/admin/users/%d/role".formatted(blocked.getId())).header("Authorization", fixtures.bearer(admin))
+                        .contentType("application/json").content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("USER_004"));
+
+        for (String bad : new String[]{"{}", "{\"role\":\"OWNER\"}"}) {
+            mockMvc.perform(post("/api/admin/users/%d/role".formatted(blocked.getId())).header("Authorization", fixtures.bearer(admin))
+                            .contentType("application/json").content(bad))
+                    .andExpect(status().isBadRequest());
+        }
+        mockMvc.perform(post("/api/admin/users/%d/role".formatted(blocked.getId())).header("Authorization", fixtures.bearer(Role.USER))
+                        .contentType("application/json").content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    /**
+     * 토큰에는 발급한 순간의 권한이 적혀 있다. 토큰만 보면 내린 사람이 만료될 때까지(1시간)
+     * 관리 API를 계속 쓴다.
+     */
+    @Test
+    @DisplayName("관리자에서 내리면 예전 관리자 토큰으로는 바로 관리 API를 못 쓴다 — 403")
+    void demotedAdminLosesAccessAtOnce() throws Exception {
+        User demoted = fixtures.user(Role.ADMIN);
+        String oldToken = fixtures.bearer(demoted);
+        mockMvc.perform(get("/api/admin/users").header("Authorization", oldToken)).andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/users/%d/role".formatted(demoted.getId()))
+                        .header("Authorization", fixtures.bearer(Role.ADMIN))
+                        .contentType("application/json").content("{\"role\":\"USER\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/admin/users").header("Authorization", oldToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("AUTH_004"));
+        // 학습 쪽은 그대로 쓴다.
+        mockMvc.perform(get("/api/me/suspension").header("Authorization", oldToken)).andExpect(status().isOk());
+    }
+
     @Test
     @DisplayName("사용자 목록 — 닉네임이나 아이디 일부로 찾고, 정지된 사람만 추릴 수 있다")
     void searchesUsers() throws Exception {

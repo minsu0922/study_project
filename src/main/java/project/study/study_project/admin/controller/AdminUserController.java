@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import project.study.study_project.admin.dto.AdminRoleRequest;
 import project.study.study_project.admin.dto.AdminSuspendRequest;
 import project.study.study_project.admin.dto.AdminUserActivity;
 import project.study.study_project.admin.dto.AdminUserItem;
@@ -59,6 +61,14 @@ public class AdminUserController {
     @PostMapping("/{id}/reset-nickname")
     public ApiResponse<AdminUserItem> resetNickname(@PathVariable Long id) {
         return ApiResponse.ok(adminUserService.resetNickname(id));
+    }
+
+    /** 권한 변경 `{role}`. 자기 권한은 못 바꾸고(400 USER_003), 정지 중인 사람은 관리자로 못 올린다(409 USER_004). */
+    @PostMapping("/{id}/role")
+    public ApiResponse<AdminUserItem> changeRole(@AuthenticationPrincipal Long adminId,
+                                                 @PathVariable Long id,
+                                                 @Valid @RequestBody AdminRoleRequest request) {
+        return ApiResponse.ok(adminUserService.changeRole(adminId, id, request.role()));
     }
 
     @PostMapping("/{id}/unsuspend")
