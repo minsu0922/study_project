@@ -19,6 +19,7 @@ import project.study.study_project.discussion.repository.CommentReportRepository
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
+import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -65,7 +66,7 @@ public class CommentReportService {
         }
         try {
             CommentReport saved = reportRepository.saveAndFlush(
-                    CommentReport.of(comment, userId, request.reason(), trimmed(request.detail())));
+                    CommentReport.of(comment, userId, request.reason(), Texts.trimToNull(request.detail())));
             log.info("댓글 신고 접수: commentId={} reason={}", comment.getId(), request.reason());
             return toItem(saved);
         } catch (DataIntegrityViolationException e) {
@@ -90,7 +91,7 @@ public class CommentReportService {
         }
         try {
             CommentReport saved = reportRepository.saveAndFlush(
-                    CommentReport.ofPost(post, userId, request.reason(), trimmed(request.detail())));
+                    CommentReport.ofPost(post, userId, request.reason(), Texts.trimToNull(request.detail())));
             log.info("글 신고 접수: postId={} reason={}", post.getId(), request.reason());
             return toItem(saved);
         } catch (DataIntegrityViolationException e) {
@@ -171,7 +172,7 @@ public class CommentReportService {
         if (!report.isPending()) {
             throw new BusinessException(ErrorCode.DISCUSSION_009);
         }
-        report.dismiss(trimmed(adminNote));
+        report.dismiss(Texts.trimToNull(adminNote));
         log.info("신고 기각: reportId={}", reportId);
         return toItem(report);
     }
@@ -190,10 +191,6 @@ public class CommentReportService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
         SuspensionGuard.requireNotSuspended(user);
-    }
-
-    private String trimmed(String text) {
-        return (text == null || text.isBlank()) ? null : text.trim();
     }
 
     private Comment requireComment(Long commentId) {

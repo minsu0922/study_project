@@ -38,7 +38,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * 따로 두면 "보이는 글"의 뜻을 고칠 때 여러 군데를 고쳐야 한다.
      *
      * <p>검색어는 부르는 쪽이 앞뒤에 %를 붙이고
-     * 와일드카드를 '!'로 이스케이프해서 넘긴다(PostService.likePattern) — 여기서 붙이면 사용자가
+     * 와일드카드를 '!'로 이스케이프해서 넘긴다(SearchKeyword.likePattern) — 여기서 붙이면 사용자가
      * 친 %와 우리가 붙인 %를 가를 수 없다.
      *
      * <p>본문 LIKE는 인덱스를 타지 않는다. 글이 수천 건일 때까지는 그대로 두고, 느려지면

@@ -8,6 +8,8 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.DomainCatalog;
 import project.study.study_project.llm.support.DomainEntry;
+import project.study.study_project.global.common.SearchKeyword;
+import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.ProblemListItem;
 import project.study.study_project.quiz.dto.StudySummaryResponse;
@@ -61,7 +63,7 @@ public class ProblemListService {
         LocalDateTime now = LocalDateTime.now();
         return PageResponse.from(problemRepository
                 .findListForUser(userId, domain, difficulty,
-                        blankToNull(keyword), blankToNull(documentSlug),
+                        SearchKeyword.likePattern(keyword), Texts.trimToNull(documentSlug),
                         state == null ? null : state.name(), onlyDue, now, pageable)
                 .map(row -> new ProblemListItem(
                         row.getId(),
@@ -73,18 +75,6 @@ public class ProblemListService {
                         row.getLastAttemptedAt(),
                         stateOf(row),
                         row.getDueCount() > 0)));
-    }
-
-    /**
-     * 빈 검색어는 <b>없는 것과 같게</b> 만든다.
-     *
-     * <p>화면의 검색 칸은 비어 있어도 파라미터를 보낸다(빈 문자열). 그대로 넘기면
-     * {@code like '%%'}가 되어 "전부 걸린다" — 우연히 맞는 것처럼 보인다. 그런데 공백만
-     * 친 경우에는 {@code like '% %'}가 되어 <b>공백 없는 제목이 통째로 사라진다.</b>
-     * 사람은 검색을 지웠다고 생각하는데 목록이 안 돌아온다.
-     */
-    private String blankToNull(String keyword) {
-        return (keyword == null || keyword.isBlank()) ? null : keyword.trim();
     }
 
     /**

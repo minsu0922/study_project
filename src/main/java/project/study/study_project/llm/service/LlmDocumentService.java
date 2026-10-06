@@ -16,6 +16,7 @@ import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -171,7 +172,7 @@ public class LlmDocumentService {
 
     @Transactional
     public void reject(Long draftId, String reason) {
-        findDraft(draftId).reject(truncate(trimToNull(reason), 500));
+        findDraft(draftId).reject(truncate(Texts.trimToNull(reason), 500));
         // 거절하면 배치의 "쓰지 마라" 목록(rejectedSlugs)이 늘어난다 — 스냅샷을 다시 찍어야
         // 그 문서를 근거로 사흘 치 문제가 만들어지는 것을 막을 수 있다.
         events.publishEvent(ReviewCompleted.document());
@@ -326,9 +327,5 @@ public class LlmDocumentService {
 
     private String trimToEmpty(String s) {
         return s == null ? "" : s.trim();
-    }
-
-    private String trimToNull(String s) {
-        return (s == null || s.isBlank()) ? null : s.trim();
     }
 }

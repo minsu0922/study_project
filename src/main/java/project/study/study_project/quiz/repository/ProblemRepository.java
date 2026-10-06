@@ -371,8 +371,8 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
                                  and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
                                  and r.nextReviewAt <= :now))
               and (:keyword is null
-                   or lower(p.question) like lower(concat('%', :keyword, '%'))
-                   or lower(p.title) like lower(concat('%', :keyword, '%')))
+                   or lower(p.question) like lower(:keyword) escape '!'
+                   or lower(p.title) like lower(:keyword) escape '!')
               and (:documentSlug is null or p.documentSlug = :documentSlug)
             order by p.domain,
                      case p.difficulty

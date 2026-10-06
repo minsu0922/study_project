@@ -9,6 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
@@ -76,7 +77,7 @@ public class ProblemReportService {
 
         // 공백뿐인 상세는 없는 것으로 본다 — 빈 문자열과 null이 섞이면 화면과 프롬프트 양쪽에서
         // "있는데 비었다"와 "없다"를 구분하는 코드가 필요해진다. 입구에서 하나로 줄인다.
-        String detail = (request.detail() == null || request.detail().isBlank()) ? null : request.detail().trim();
+        String detail = Texts.trimToNull(request.detail());
 
         try {
             ProblemReport saved = reportRepository.saveAndFlush(
@@ -127,7 +128,7 @@ public class ProblemReportService {
     @Transactional
     public ProblemReportItem accept(Long id, String adminNote) {
         ProblemReport report = findPending(id);
-        report.accept(normalize(adminNote));
+        report.accept(Texts.trimToNull(adminNote));
         eventPublisher.publishEvent(ReviewCompleted.problem());
         log.info("제보 인정: id={} problemId={}", id, report.getProblem().getId());
         return ProblemReportItem.from(report);
@@ -143,7 +144,7 @@ public class ProblemReportService {
     @Transactional
     public ProblemReportItem dismiss(Long id, String adminNote) {
         ProblemReport report = findPending(id);
-        report.dismiss(normalize(adminNote));
+        report.dismiss(Texts.trimToNull(adminNote));
         log.info("제보 기각: id={} problemId={}", id, report.getProblem().getId());
         return ProblemReportItem.from(report);
     }
@@ -182,10 +183,5 @@ public class ProblemReportService {
             throw new BusinessException(ErrorCode.REPORT_003);
         }
         return report;
-    }
-
-    /** 공백뿐인 메모는 없는 것으로(접수 쪽 detail과 같은 규칙). */
-    private String normalize(String note) {
-        return (note == null || note.isBlank()) ? null : note.trim();
     }
 }
