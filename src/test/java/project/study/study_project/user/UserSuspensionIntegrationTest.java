@@ -297,6 +297,61 @@ class UserSuspensionIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /** 닉네임을 비우면 그 사람이 쓴 글이 모두 "탈퇴한 사용자"로 보인다. 그래서 다른 이름으로 바꾼다. */
+    @Test
+    @DisplayName("닉네임 초기화 — \"사용자\" + 번호로 바뀌고, 쓴 글의 이름도 따라 바뀐다")
+    void resetsNickname() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        Post post = fixtures.post(problem, user.getId());
+        String placeholder = "사용자" + user.getId();
+
+        mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(user.getId())).header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value(placeholder));
+
+        mockMvc.perform(get("/api/quiz/posts/" + post.getId()))
+                .andExpect(jsonPath("$.data.nickname").value(placeholder));
+        // 두 번 눌러도 같은 이름이다.
+        mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(user.getId())).header("Authorization", admin))
+                .andExpect(jsonPath("$.data.nickname").value(placeholder));
+    }
+
+    @Test
+    @DisplayName("닉네임 초기화 — 그 이름을 다른 사람이 쓰고 있으면 다른 번호를 붙인다. 닉네임이 없는 계정은 그대로 둔다")
+    void resetNicknameAvoidsTakenName() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        User user = fixtures.user(Role.USER);
+        fixtures.user(Role.USER, "사용자" + user.getId());
+
+        String response = mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(user.getId()))
+                        .header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String nickname = JsonPath.read(response, "$.data.nickname");
+        assertThat(nickname).startsWith("사용자").isNotEqualTo("사용자" + user.getId()).hasSizeLessThanOrEqualTo(12);
+
+        User old = fixtures.userWithoutNickname(Role.USER);
+        mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(old.getId())).header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("닉네임 초기화는 관리자만 한다. 없는 사용자는 404 USER_001")
+    void resetNicknameAdminOnly() throws Exception {
+        User user = fixtures.user(Role.USER);
+
+        mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(user.getId()))
+                        .header("Authorization", fixtures.bearer(user)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/admin/users/999999999/reset-nickname").header("Authorization", fixtures.bearer(Role.ADMIN)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("USER_001"));
+        assertThat(userRepository.findById(user.getId()).orElseThrow().getNickname()).isEqualTo(user.getNickname());
+    }
+
     @Test
     @DisplayName("사용자 목록 — 닉네임이나 아이디 일부로 찾고, 정지된 사람만 추릴 수 있다")
     void searchesUsers() throws Exception {

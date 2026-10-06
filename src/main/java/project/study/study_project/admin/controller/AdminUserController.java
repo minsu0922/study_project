@@ -55,6 +55,12 @@ public class AdminUserController {
         return ApiResponse.ok(adminUserService.suspend(id, request));
     }
 
+    /** 부적절한 닉네임을 "사용자" + 번호로 바꾼다. 본인이 마이페이지에서 다시 정할 수 있다. */
+    @PostMapping("/{id}/reset-nickname")
+    public ApiResponse<AdminUserItem> resetNickname(@PathVariable Long id) {
+        return ApiResponse.ok(adminUserService.resetNickname(id));
+    }
+
     @PostMapping("/{id}/unsuspend")
     public ApiResponse<AdminUserItem> unsuspend(@PathVariable Long id) {
         return ApiResponse.ok(adminUserService.unsuspend(id));

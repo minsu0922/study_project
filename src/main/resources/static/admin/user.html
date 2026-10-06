@@ -55,6 +55,7 @@ try {
  *   GET  /api/admin/users/{id}/activity
  *   POST /api/admin/users/{id}/suspend   {days, reason}   days를 비우면 무기한
  *   POST /api/admin/users/{id}/unsuspend
+ *   POST /api/admin/users/{id}/reset-nickname
  *
  * 화면이 따로 있는 이유: 주소가 있어야 신고함의 "글쓴이 정지"가 이 사람에게 바로 온다. */
 const params = new URLSearchParams(location.search);
@@ -134,7 +135,13 @@ function render(u) {
       ${u.suspended ? `<span class="badge orange">정지 중</span>` : ""}
     </div>
     <div class="meta">아이디 ${escapeHtml(u.username)} · 가입 ${formatDate(u.createdAt)}
-      · 권한 ${admin ? "관리자" : "사용자"}</div>`;
+      · 권한 ${admin ? "관리자" : "사용자"}</div>
+    ${u.nickname ? `
+      <div class="row-actions" style="margin-top:10px">
+        <button class="btn-outline btn-sm" onclick="resetNickname(this)">닉네임 초기화</button>
+        <span class="meta">부적절한 닉네임을 "사용자 + 번호"로 바꿉니다. 쓴 글과 댓글의 이름도 함께 바뀌고,
+          본인이 마이페이지에서 다시 정할 수 있습니다.</span>
+      </div>` : ""}`;
   profile.hidden = false;
 
   document.getElementById("suspensionBody").innerHTML = suspensionHtml(u, admin);
@@ -182,6 +189,12 @@ async function suspendUser(btn) {
   const days = document.getElementById("days").value;
   await act(btn, () => api(`/api/admin/users/${userId}/suspend`, {
     method: "POST", body: JSON.stringify({ days: days ? Number(days) : null, reason }) }));
+}
+
+/* 되돌릴 수 없다 — 지운 닉네임은 어디에도 남지 않는다. 그래서 한 번 더 누르게 한다. */
+function resetNickname(btn) {
+  armedAction(btn, () => act(btn, () =>
+    api(`/api/admin/users/${userId}/reset-nickname`, { method: "POST" })), "한 번 더 누르면 초기화");
 }
 
 async function unsuspendUser(btn) {

@@ -31,9 +31,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 사용자 찾기, 활동 내역, 정지·해제(V26).
+ * 사용자 찾기, 활동 내역, 정지·해제(V26), 닉네임 초기화.
  *
  * <p>정지는 쓰기만 막는다. 무엇이 막히는지는 {@code SuspensionGuard}를 부르는 곳이 정한다 —
  * 여기는 "누구를 언제까지"만 적는다.
@@ -49,6 +50,10 @@ public class AdminUserService {
     /** 활동 내역에 싣는 최근 신고 건수. 최근 글도 같은 수다(저장소 메서드 이름의 Top5). */
     private static final int RECENT = 5;
     private static final int EXCERPT_LENGTH = 80;
+
+    private static final String PLACEHOLDER_PREFIX = "사용자";
+    private static final long PLACEHOLDER_MODULUS = 1_000_000_000L;
+    private static final int PLACEHOLDER_TRIES = 5;
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
@@ -150,6 +155,35 @@ public class AdminUserService {
         user.unsuspend();
         log.info("사용자 정지 해제: userId={}", userId);
         return AdminUserItem.of(user, LocalDateTime.now());
+    }
+
+    /**
+     * 부적절한 닉네임을 지운다. 비우지 않고 "사용자" + 번호로 바꾼다 — 닉네임이 비면 그 사람이 쓴
+     * 글과 댓글이 모두 "탈퇴한 사용자"로 보인다. 본인은 마이페이지에서 새 닉네임을 정할 수 있다.
+     *
+     * <p>닉네임이 없는 계정(닉네임이 필수가 되기 전에 가입)은 지울 것이 없어 그대로 둔다.
+     */
+    @Transactional
+    public AdminUserItem resetNickname(Long userId) {
+        User user = requireUser(userId);
+        if (user.getNickname() != null) {
+            user.changeNickname(placeholderNickname(user));
+            log.info("닉네임 초기화: userId={}", userId);
+        }
+        return AdminUserItem.of(user, LocalDateTime.now());
+    }
+
+    /** 번호는 사용자 id다. 누가 그 이름을 먼저 골라 썼으면 임의의 수로 바꿔 몇 번 더 찾는다. */
+    private String placeholderNickname(User user) {
+        // 닉네임은 12자까지다. "사용자"(3자) 뒤에 9자리까지 붙는다.
+        String candidate = PLACEHOLDER_PREFIX + (user.getId() % PLACEHOLDER_MODULUS);
+        for (int i = 0; i < PLACEHOLDER_TRIES; i++) {
+            if (!userRepository.existsByNicknameAndIdNot(candidate, user.getId())) {
+                return candidate;
+            }
+            candidate = PLACEHOLDER_PREFIX + ThreadLocalRandom.current().nextLong(PLACEHOLDER_MODULUS);
+        }
+        throw new BusinessException(ErrorCode.COMMON_001, "바꿔 줄 닉네임을 정하지 못했습니다. 다시 눌러 주세요.");
     }
 
     private User requireUser(Long userId) {
