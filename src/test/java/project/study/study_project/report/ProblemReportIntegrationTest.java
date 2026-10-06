@@ -5,23 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.TestDomains;
-import project.study.study_project.auth.jwt.JwtTokenProvider;
-import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.global.common.ProblemType;
-import project.study.study_project.quiz.domain.Problem;
-import project.study.study_project.quiz.repository.ProblemRepository;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.report.domain.ReportStatus;
 import project.study.study_project.report.repository.ProblemReportRepository;
 import project.study.study_project.user.domain.Role;
-import project.study.study_project.user.domain.User;
-import project.study.study_project.user.repository.UserRepository;
 
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -53,20 +43,14 @@ class ProblemReportIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private ProblemRepository problemRepository;
+    private TestFixtures fixtures;
     @Autowired
     private ProblemReportRepository reportRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("비로그인은 제보할 수 없다 — /api/me/** 규칙에 걸린다")
     void requiresLogin() throws Exception {
-        Long problemId = saveProblem().getId();
+        Long problemId = fixtures.problem().getId();
 
         mockMvc.perform(post(PATH).contentType("application/json")
                         .content(body(problemId, "TYPO", null)))
@@ -76,9 +60,9 @@ class ProblemReportIntegrationTest {
     @Test
     @DisplayName("로그인하면 접수된다 — 201, PENDING으로 시작")
     void acceptsReport() throws Exception {
-        Long problemId = saveProblem().getId();
+        Long problemId = fixtures.problem().getId();
 
-        mockMvc.perform(post(PATH).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json")
                         .content(body(problemId, "WRONG_ANSWER", "3번도 맞는 것 같습니다")))
                 .andExpect(status().isCreated())
@@ -95,8 +79,8 @@ class ProblemReportIntegrationTest {
     @Test
     @DisplayName("같은 사람이 같은 문제를 두 번 제보하면 409 REPORT_001")
     void rejectsDuplicate() throws Exception {
-        Long problemId = saveProblem().getId();
-        String token = bearer(Role.USER);
+        Long problemId = fixtures.problem().getId();
+        String token = fixtures.bearer(Role.USER);
 
         mockMvc.perform(post(PATH).header("Authorization", token)
                         .contentType("application/json").content(body(problemId, "TYPO", null)))
@@ -112,12 +96,12 @@ class ProblemReportIntegrationTest {
     @Test
     @DisplayName("다른 사람은 같은 문제를 제보할 수 있다")
     void allowsDifferentReporters() throws Exception {
-        Long problemId = saveProblem().getId();
+        Long problemId = fixtures.problem().getId();
 
-        mockMvc.perform(post(PATH).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(problemId, "TYPO", null)))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post(PATH).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(problemId, "TYPO", null)))
                 .andExpect(status().isCreated());
     }
@@ -125,9 +109,9 @@ class ProblemReportIntegrationTest {
     @Test
     @DisplayName("사유가 없으면 400 — 되먹임에 못 쓰는 제보가 쌓이지 않게")
     void requiresReason() throws Exception {
-        Long problemId = saveProblem().getId();
+        Long problemId = fixtures.problem().getId();
 
-        mockMvc.perform(post(PATH).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json")
                         .content("{\"problemId\":%d}".formatted(problemId)))
                 .andExpect(status().isBadRequest());
@@ -136,7 +120,7 @@ class ProblemReportIntegrationTest {
     @Test
     @DisplayName("없는 문제를 제보하면 404 QUIZ_001")
     void rejectsUnknownProblem() throws Exception {
-        mockMvc.perform(post(PATH).header("Authorization", bearer(Role.USER))
+        mockMvc.perform(post(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(999_999L, "TYPO", null)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("QUIZ_001"));
@@ -149,9 +133,9 @@ class ProblemReportIntegrationTest {
     void reportBoxIsAdminOnly() throws Exception {
         mockMvc.perform(get("/api/admin/reports"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/admin/reports").header("Authorization", bearer(Role.USER)))
+        mockMvc.perform(get("/api/admin/reports").header("Authorization", fixtures.bearer(Role.USER)))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/admin/reports").header("Authorization", bearer(Role.ADMIN)))
+        mockMvc.perform(get("/api/admin/reports").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isOk());
     }
 
@@ -165,11 +149,11 @@ class ProblemReportIntegrationTest {
     @Test
     @DisplayName("인정하면 상태와 처리 시각이 남고, 대기 건수가 하나 줄어든다")
     void acceptMovesOutOfPending() throws Exception {
-        Long problemId = saveProblem().getId();
-        String admin = bearer(Role.ADMIN);
+        Long problemId = fixtures.problem().getId();
+        String admin = fixtures.bearer(Role.ADMIN);
         long pendingBefore = reportRepository.countByStatus(ReportStatus.PENDING);
 
-        String created = mockMvc.perform(post(PATH).header("Authorization", bearer(Role.USER))
+        String created = mockMvc.perform(post(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(problemId, "WRONG_ANSWER", null)))
                 .andReturn().getResponse().getContentAsString();
         long reportId = idOf(created);
@@ -192,10 +176,10 @@ class ProblemReportIntegrationTest {
     @Test
     @DisplayName("이미 처리한 제보를 또 처리하면 409 REPORT_003")
     void rejectsDoubleResolve() throws Exception {
-        Long problemId = saveProblem().getId();
-        String admin = bearer(Role.ADMIN);
+        Long problemId = fixtures.problem().getId();
+        String admin = fixtures.bearer(Role.ADMIN);
 
-        String created = mockMvc.perform(post(PATH).header("Authorization", bearer(Role.USER))
+        String created = mockMvc.perform(post(PATH).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(problemId, "TYPO", null)))
                 .andReturn().getResponse().getContentAsString();
         long reportId = idOf(created);
@@ -222,22 +206,5 @@ class ProblemReportIntegrationTest {
         int at = responseBody.indexOf("\"id\":");
         int end = responseBody.indexOf(',', at);
         return Long.parseLong(responseBody.substring(at + 5, end).trim());
-    }
-
-    private String bearer(Role role) {
-        User user = userRepository.save(User.builder()
-                // 아이디는 30자 제한이라 UUID 앞 8자만 딴다(다른 통합 테스트와 같은 방식)
-                .username("rep" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("password123"))
-                .role(role)
-                .build());
-        return "Bearer " + jwtTokenProvider.createToken(user.getId(), role);
-    }
-
-    private Problem saveProblem() {
-        return problemRepository.save(Problem.create(
-                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
-                "TCP 3-way handshake",
-                "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
     }
 }

@@ -7,18 +7,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.auth.jwt.JwtTokenProvider;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.user.domain.Role;
-import project.study.study_project.user.domain.User;
-import project.study.study_project.user.repository.UserRepository;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -55,11 +51,7 @@ class AdminLlmUploadGenerateIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    private TestFixtures fixtures;
 
     /**
      * 파일도 본문도 없으면 무엇으로 만들지 알 수 없다. 조용히 진행해서 빈 문서로 요금을 내는
@@ -68,7 +60,7 @@ class AdminLlmUploadGenerateIntegrationTest {
     @Test
     @DisplayName("파일도 붙여넣기도 없으면 400 — 빈 문서로 요금을 내면 안 된다")
     void rejectsWhenNeitherFileNorTextGiven() throws Exception {
-        mockMvc.perform(withCell(multipart(URL)).header(HttpHeaders.AUTHORIZATION, bearer()))
+        mockMvc.perform(withCell(multipart(URL)).header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.message").value(
                         org.hamcrest.Matchers.containsString("올리거나")));
@@ -83,7 +75,7 @@ class AdminLlmUploadGenerateIntegrationTest {
     void rejectsWhenBothFileAndTextGiven() throws Exception {
         mockMvc.perform(withCell(multipart(URL).file(mdFile("# 제목\n\n본문")))
                         .param("text", "붙여넣은 본문")
-                        .header(HttpHeaders.AUTHORIZATION, bearer()))
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.message").value(
                         org.hamcrest.Matchers.containsString("하나만")));
@@ -100,7 +92,7 @@ class AdminLlmUploadGenerateIntegrationTest {
                         .param("difficulty", "BEGINNER")
                         .param("type", "MULTIPLE_CHOICE")
                         .param("count", "3")
-                        .header(HttpHeaders.AUTHORIZATION, bearer()))
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -110,7 +102,7 @@ class AdminLlmUploadGenerateIntegrationTest {
     void rejectsTooLongText() throws Exception {
         mockMvc.perform(withCell(multipart(URL))
                         .param("text", "가".repeat(20_001))
-                        .header(HttpHeaders.AUTHORIZATION, bearer()))
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.message").value(
                         org.hamcrest.Matchers.containsString("너무 깁니다")));
@@ -124,7 +116,7 @@ class AdminLlmUploadGenerateIntegrationTest {
 
         mockMvc.perform(withCell(multipart(URL)
                         .file(new MockMultipartFile("file", "메모장.md", "text/markdown", cp949)))
-                        .header(HttpHeaders.AUTHORIZATION, bearer()))
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.message").value(
                         org.hamcrest.Matchers.containsString("UTF-8")));
@@ -154,14 +146,5 @@ class AdminLlmUploadGenerateIntegrationTest {
 
     private MockMultipartFile mdFile(String content) {
         return new MockMultipartFile("file", "doc.md", "text/markdown", content.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private String bearer() {
-        User admin = userRepository.save(User.builder()
-                .username("llmupload" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("admin-pw1"))
-                .role(Role.ADMIN)
-                .build());
-        return "Bearer " + jwtTokenProvider.createToken(admin.getId(), Role.ADMIN);
     }
 }

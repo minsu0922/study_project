@@ -6,11 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.TestDomains;
-import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
@@ -20,11 +19,8 @@ import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.user.domain.Role;
-import project.study.study_project.user.domain.User;
-import project.study.study_project.user.repository.UserRepository;
 
 import java.util.Set;
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -55,11 +51,7 @@ class DomainRegistryWritePathIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    private TestFixtures fixtures;
     @Autowired
     private ProblemRepository problemRepository;
     @Autowired
@@ -73,7 +65,7 @@ class DomainRegistryWritePathIntegrationTest {
     @DisplayName("문제 등록 — 등록되지 않은 분야는 400(DOMAIN_003)")
     void createProblemRejectsUnregisteredDomain() throws Exception {
         mockMvc.perform(post("/api/admin/problems")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"domain":"NOPE_X","difficulty":"BEGINNER","type":"OX","question":"q","answer":"O"}"""))
@@ -90,7 +82,7 @@ class DomainRegistryWritePathIntegrationTest {
                 TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX, null, "질문", "O", null, null));
 
         mockMvc.perform(put("/api/admin/problems/" + problem.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"domain":"NOPE_X","difficulty":"BEGINNER","type":"OX","question":"질문2","answer":"X"}"""))
@@ -104,7 +96,7 @@ class DomainRegistryWritePathIntegrationTest {
     @DisplayName("문서 등록 — 등록되지 않은 분야는 400(DOMAIN_003)")
     void createDocumentRejectsUnregisteredDomain() throws Exception {
         mockMvc.perform(post("/api/admin/documents")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"domain":"NOPE_X","title":"제목","slug":"domain-fk-test-create","contentMd":"본문"}"""))
@@ -121,7 +113,7 @@ class DomainRegistryWritePathIntegrationTest {
                 TestDomains.NETWORK, "제목", "domain-fk-test-update", "본문", null, Set.of()));
 
         mockMvc.perform(put("/api/admin/documents/" + document.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"domain":"NOPE_X","title":"제목2","slug":"domain-fk-test-update","contentMd":"본문2"}"""))
@@ -135,7 +127,7 @@ class DomainRegistryWritePathIntegrationTest {
     @DisplayName("주제 범위 추가 — 등록되지 않은 분야는 400(DOMAIN_003)")
     void addTopicQueueRejectsUnregisteredDomain() throws Exception {
         mockMvc.perform(post("/api/admin/topic-queue")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"domain":"NOPE_X","topic":"주제"}"""))
@@ -152,7 +144,7 @@ class DomainRegistryWritePathIntegrationTest {
                 TopicQueueItem.fresh(TestDomains.NETWORK, "기존 주제", null, 0));
 
         mockMvc.perform(patch("/api/admin/topic-queue/" + item.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"domain":"NOPE_X","topic":"주제2"}"""))
@@ -166,7 +158,7 @@ class DomainRegistryWritePathIntegrationTest {
     @DisplayName("즉시 생성 — 등록되지 않은 분야는 400(DOMAIN_003), Claude를 부르지 않는다")
     void generateRejectsUnregisteredDomain() throws Exception {
         mockMvc.perform(post("/api/admin/llm-problems/generate")
-                        .header(HttpHeaders.AUTHORIZATION, bearer())
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN))
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"domain":"NOPE_X","difficulty":"BEGINNER","type":"MULTIPLE_CHOICE","count":1}"""))
@@ -185,7 +177,7 @@ class DomainRegistryWritePathIntegrationTest {
                         .param("type", "MULTIPLE_CHOICE")
                         .param("count", "1")
                         .param("text", "# 제목\n\n본문")
-                        .header(HttpHeaders.AUTHORIZATION, bearer()))
+                        .header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("DOMAIN_003")));
     }
@@ -194,13 +186,4 @@ class DomainRegistryWritePathIntegrationTest {
 
     private static final org.springframework.http.MediaType APPLICATION_JSON =
             org.springframework.http.MediaType.APPLICATION_JSON;
-
-    private String bearer() {
-        User admin = userRepository.save(User.builder()
-                .username("domainfk" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("admin-pw1"))
-                .role(Role.ADMIN)
-                .build());
-        return "Bearer " + jwtTokenProvider.createToken(admin.getId(), Role.ADMIN);
-    }
 }

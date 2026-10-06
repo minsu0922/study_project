@@ -146,7 +146,7 @@ async function suspendUser(id, btn) {
   const msg = document.getElementById("uMessage");
   if (!reason) {
     // 서버도 거절하지만 다녀오기 전에 알린다. 사유는 정지된 사람이 읽는 유일한 설명이다.
-    msg.innerHTML = `<div class="alert error">정지 사유를 적어 주세요.</div>`;
+    showErrorAlert(msg, "정지 사유를 적어 주세요.");
     document.getElementById("reason-" + id).focus();
     return;
   }

@@ -6,23 +6,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.TestDomains;
-import project.study.study_project.auth.jwt.JwtTokenProvider;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
-import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.discussion.repository.CommentRepository;
-import project.study.study_project.discussion.repository.DiscussionRepository;
-import project.study.study_project.discussion.repository.PostRepository;
-import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
-import project.study.study_project.quiz.domain.Submission;
-import project.study.study_project.quiz.repository.ProblemRepository;
-import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
@@ -53,33 +43,23 @@ class UserSuspensionIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
+    private TestFixtures fixtures;
+    @Autowired
     private UserRepository userRepository;
     @Autowired
-    private ProblemRepository problemRepository;
-    @Autowired
-    private SubmissionRepository submissionRepository;
-    @Autowired
-    private DiscussionRepository discussionRepository;
-    @Autowired
-    private PostRepository postRepository;
-    @Autowired
     private CommentRepository commentRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     /* ── 정지하면 막히는 것 ───────────────────────────────── */
 
     @Test
     @DisplayName("정지된 사용자는 글·댓글을 쓰지도 고치지도 못하고 신고도 못 한다 — 403 DISCUSSION_013")
     void suspendedCannotWrite() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
-        String token = bearer(user);
-        Post own = savePost(problem, user.getId());
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        String token = fixtures.bearer(user);
+        Post own = fixtures.post(problem, user.getId());
         Comment ownComment = commentRepository.saveAndFlush(Comment.of(own.getId(), user.getId(), null, "내 댓글"));
-        Post others = savePost(problem, null);
+        Post others = fixtures.post(problem, null);
         suspend(user, 7);
 
         String[][] writes = {
@@ -102,19 +82,19 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("거절 문구에 풀리는 날짜와 사유가 들어 있다. 무기한이면 날짜 대신 무기한이라고 적는다")
     void rejectionSaysWhenAndWhy() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
         String body = "{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId());
 
         suspend(user, 7);
         String until = userRepository.findById(user.getId()).orElseThrow().getSuspendedUntil().toLocalDate().toString();
-        mockMvc.perform(post("/api/me/posts").header("Authorization", bearer(user))
+        mockMvc.perform(post("/api/me/posts").header("Authorization", fixtures.bearer(user))
                         .contentType("application/json").content(body))
                 .andExpect(jsonPath("$.error.message", containsString(until)))
                 .andExpect(jsonPath("$.error.message", containsString("도배")));
 
         suspend(user, null);
-        mockMvc.perform(post("/api/me/posts").header("Authorization", bearer(user))
+        mockMvc.perform(post("/api/me/posts").header("Authorization", fixtures.bearer(user))
                         .contentType("application/json").content(body))
                 .andExpect(jsonPath("$.error.message", containsString("무기한")));
     }
@@ -122,10 +102,10 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("정지 중에도 읽기와 학습, 자기 글 삭제는 된다")
     void suspendedCanStillReadStudyAndDelete() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
-        String token = bearer(user);
-        Post own = savePost(problem, user.getId());
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        String token = fixtures.bearer(user);
+        Post own = fixtures.post(problem, user.getId());
         suspend(user, 1);
 
         mockMvc.perform(get("/api/quiz/" + problem.getId() + "/posts").header("Authorization", token))
@@ -147,19 +127,19 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("정지 중이면 글·댓글 목록에 정지 안내가 실린다. 정지가 아니면 실리지 않는다")
     void listsCarrySuspensionNotice() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
-        Post post = savePost(problem, null);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        Post post = fixtures.post(problem, null);
 
-        mockMvc.perform(get("/api/quiz/" + problem.getId() + "/posts").header("Authorization", bearer(user)))
+        mockMvc.perform(get("/api/quiz/" + problem.getId() + "/posts").header("Authorization", fixtures.bearer(user)))
                 .andExpect(jsonPath("$.data.suspensionNotice").doesNotExist());
 
         suspend(user, 7);
         String until = userRepository.findById(user.getId()).orElseThrow().getSuspendedUntil().toLocalDate().toString();
-        mockMvc.perform(get("/api/quiz/" + problem.getId() + "/posts").header("Authorization", bearer(user)))
+        mockMvc.perform(get("/api/quiz/" + problem.getId() + "/posts").header("Authorization", fixtures.bearer(user)))
                 .andExpect(jsonPath("$.data.suspensionNotice", containsString(until)))
                 .andExpect(jsonPath("$.data.suspensionNotice", containsString("도배")));
-        mockMvc.perform(get("/api/quiz/posts/" + post.getId() + "/comments").header("Authorization", bearer(user)))
+        mockMvc.perform(get("/api/quiz/posts/" + post.getId() + "/comments").header("Authorization", fixtures.bearer(user)))
                 .andExpect(jsonPath("$.data.canWrite").value(false))
                 .andExpect(jsonPath("$.data.suspensionNotice", containsString(until)));
         // 남의 정지는 보이지 않는다.
@@ -170,16 +150,16 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("내 정지 상태를 물을 수 있다 — 마이페이지가 읽는다")
     void myStatus() throws Exception {
-        User user = saveUser(Role.USER);
+        User user = fixtures.user(Role.USER);
 
         mockMvc.perform(get("/api/me/suspension")).andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/me/suspension").header("Authorization", bearer(user)))
+        mockMvc.perform(get("/api/me/suspension").header("Authorization", fixtures.bearer(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.suspended").value(false))
                 .andExpect(jsonPath("$.data.notice").doesNotExist());
 
         suspend(user, null);
-        mockMvc.perform(get("/api/me/suspension").header("Authorization", bearer(user)))
+        mockMvc.perform(get("/api/me/suspension").header("Authorization", fixtures.bearer(user)))
                 .andExpect(jsonPath("$.data.suspended").value(true))
                 .andExpect(jsonPath("$.data.notice", containsString("무기한")));
     }
@@ -189,16 +169,16 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("관리자가 풀면 다시 쓸 수 있다")
     void unsuspendRestoresWriting() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
         suspend(user, 30);
 
         mockMvc.perform(post("/api/admin/users/%d/unsuspend".formatted(user.getId()))
-                        .header("Authorization", bearer(saveUser(Role.ADMIN))))
+                        .header("Authorization", fixtures.bearer(fixtures.user(Role.ADMIN))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.suspended").value(false));
 
-        mockMvc.perform(post("/api/me/posts").header("Authorization", bearer(user)).contentType("application/json")
+        mockMvc.perform(post("/api/me/posts").header("Authorization", fixtures.bearer(user)).contentType("application/json")
                         .content("{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
                 .andExpect(status().isCreated());
     }
@@ -206,11 +186,11 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("기간이 지나면 아무도 풀지 않아도 다시 쓸 수 있다")
     void expiredSuspensionNoLongerBlocks() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
         user.suspend(LocalDateTime.now().minusMinutes(1), "지난 정지");
 
-        mockMvc.perform(post("/api/me/posts").header("Authorization", bearer(user)).contentType("application/json")
+        mockMvc.perform(post("/api/me/posts").header("Authorization", fixtures.bearer(user)).contentType("application/json")
                         .content("{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
                 .andExpect(status().isCreated());
     }
@@ -220,8 +200,8 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("정지하면 풀리는 시각과 사유가 돌아온다. 기간을 비우면 무기한이다")
     void suspendReturnsState() throws Exception {
-        User user = saveUser(Role.USER);
-        String admin = bearer(saveUser(Role.ADMIN));
+        User user = fixtures.user(Role.USER);
+        String admin = fixtures.bearer(fixtures.user(Role.ADMIN));
 
         String response = mockMvc.perform(post("/api/admin/users/%d/suspend".formatted(user.getId()))
                         .header("Authorization", admin).contentType("application/json")
@@ -246,8 +226,8 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("기간은 1·7·30일과 무기한만 받고, 사유는 비울 수 없다 — 400")
     void validatesSuspendRequest() throws Exception {
-        User user = saveUser(Role.USER);
-        String admin = bearer(saveUser(Role.ADMIN));
+        User user = fixtures.user(Role.USER);
+        String admin = fixtures.bearer(fixtures.user(Role.ADMIN));
         for (String bad : new String[]{
                 "{\"days\":3,\"reason\":\"도배\"}", "{\"days\":0,\"reason\":\"도배\"}",
                 "{\"days\":7,\"reason\":\"  \"}", "{\"days\":7}"}) {
@@ -261,8 +241,8 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("관리자 계정은 정지할 수 없다 — 400 USER_002. 없는 사용자는 404 USER_001")
     void cannotSuspendAdminOrUnknown() throws Exception {
-        String admin = bearer(saveUser(Role.ADMIN));
-        User otherAdmin = saveUser(Role.ADMIN);
+        String admin = fixtures.bearer(fixtures.user(Role.ADMIN));
+        User otherAdmin = fixtures.user(Role.ADMIN);
 
         mockMvc.perform(post("/api/admin/users/%d/suspend".formatted(otherAdmin.getId()))
                         .header("Authorization", admin).contentType("application/json")
@@ -279,8 +259,8 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("정지·해제·사용자 목록은 관리자만 쓴다")
     void adminOnly() throws Exception {
-        User target = saveUser(Role.USER);
-        String user = bearer(saveUser(Role.USER));
+        User target = fixtures.user(Role.USER);
+        String user = fixtures.bearer(fixtures.user(Role.USER));
 
         mockMvc.perform(get("/api/admin/users")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/admin/users").header("Authorization", user)).andExpect(status().isForbidden());
@@ -295,10 +275,10 @@ class UserSuspensionIntegrationTest {
     @Test
     @DisplayName("사용자 목록 — 닉네임이나 아이디 일부로 찾고, 정지된 사람만 추릴 수 있다")
     void searchesUsers() throws Exception {
-        String admin = bearer(saveUser(Role.ADMIN));
+        String admin = fixtures.bearer(fixtures.user(Role.ADMIN));
         String key = UUID.randomUUID().toString().substring(0, 8);
-        User free = saveUser(Role.USER, "찾" + key + "가");
-        User blocked = saveUser(Role.USER, "찾" + key + "나");
+        User free = fixtures.user(Role.USER, "찾" + key + "가");
+        User blocked = fixtures.user(Role.USER, "찾" + key + "나");
         suspend(blocked, 7);
 
         mockMvc.perform(get("/api/admin/users").param("q", "찾" + key).header("Authorization", admin))
@@ -326,45 +306,8 @@ class UserSuspensionIntegrationTest {
     /** 관리자 API로 정지한다. {@code days}가 null이면 무기한. */
     private void suspend(User user, Integer days) throws Exception {
         mockMvc.perform(post("/api/admin/users/%d/suspend".formatted(user.getId()))
-                        .header("Authorization", bearer(saveUser(Role.ADMIN))).contentType("application/json")
+                        .header("Authorization", fixtures.bearer(fixtures.user(Role.ADMIN))).contentType("application/json")
                         .content("{\"days\":%s,\"reason\":\"도배\"}".formatted(days)))
                 .andExpect(status().isOk());
-    }
-
-    private User solver(Problem problem) {
-        User user = saveUser(Role.USER);
-        submissionRepository.save(Submission.of(user.getId(), problem, "O", true));
-        return user;
-    }
-
-    private User saveUser(Role role) {
-        return saveUser(role, "정" + UUID.randomUUID().toString().substring(0, 8));
-    }
-
-    private User saveUser(Role role, String nickname) {
-        User user = User.builder()
-                .username("susp" + UUID.randomUUID().toString().substring(0, 8))
-                .passwordHash(passwordEncoder.encode("password123"))
-                .role(role)
-                .build();
-        user.changeNickname(nickname);
-        return userRepository.save(user);
-    }
-
-    private String bearer(User user) {
-        return "Bearer " + jwtTokenProvider.createToken(user.getId(), user.getRole());
-    }
-
-    private Post savePost(Problem problem, Long userId) {
-        discussionRepository.insertIfAbsent(problem.getId());
-        Long discussionId = discussionRepository.findIdByProblemIdForShare(problem.getId()).orElseThrow();
-        return postRepository.saveAndFlush(Post.of(discussionId, userId, PostCategory.QUESTION, "글", "본문"));
-    }
-
-    private Problem saveProblem() {
-        return problemRepository.save(Problem.create(
-                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
-                "TCP 3-way handshake",
-                "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
     }
 }

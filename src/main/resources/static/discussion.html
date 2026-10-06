@@ -76,7 +76,7 @@ const writeForm = document.getElementById("writeForm");
 let page = 0;
 
 function showError(text) {
-  message.innerHTML = `<div class="alert error">${escapeHtml(text)}</div>`;
+  showErrorAlert(message, text);
 }
 
 async function loadProblem() {
@@ -161,11 +161,12 @@ writeForm.addEventListener("submit", async e => {
     location.href = "/post.html?id=" + post.id;
   } catch (err) {
     // 닉네임은 가입할 때 받는다. 그 전에 만든 계정만 여기 걸린다 — 쓴 글은 칸에 남아 있다.
-    msg.innerHTML = err.code === "DISCUSSION_003"
-      ? `<div class="alert error">닉네임이 없는 계정입니다. <a href="/mypage.html" target="_blank"
-           rel="noopener">마이페이지</a>에서 닉네임을 정한 뒤 다시 등록해 주세요.</div>`
-      : `<div class="alert error">${escapeHtml(err.message)}${
-          (err.fieldErrors || []).map(f => `<div>${escapeHtml(f.reason)}</div>`).join("")}</div>`;
+    if (err.code === "DISCUSSION_003") {
+      msg.innerHTML = `<div class="alert error">닉네임이 없는 계정입니다. <a href="/mypage.html" target="_blank"
+           rel="noopener">마이페이지</a>에서 닉네임을 정한 뒤 다시 등록해 주세요.</div>`;
+    } else {
+      showErrorAlert(msg, err);
+    }
     btn.disabled = false;
   }
 });

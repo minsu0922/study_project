@@ -6,11 +6,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.TestFixtures;
 import project.study.study_project.TestDomains;
-import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.repository.DiscussionRepository;
@@ -18,12 +17,9 @@ import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
-import project.study.study_project.quiz.domain.Submission;
 import project.study.study_project.quiz.repository.ProblemRepository;
-import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
-import project.study.study_project.user.repository.UserRepository;
 
 import java.util.UUID;
 
@@ -51,28 +47,22 @@ class PostIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
-    private UserRepository userRepository;
+    private TestFixtures fixtures;
     @Autowired
     private ProblemRepository problemRepository;
-    @Autowired
-    private SubmissionRepository submissionRepository;
     @Autowired
     private PostRepository postRepository;
     @Autowired
     private project.study.study_project.discussion.repository.CommentRepository commentRepository;
     @Autowired
     private DiscussionRepository discussionRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     /* ── 방 ─────────────────────────────────────────────── */
 
     @Test
     @DisplayName("글이 없는 문제에는 토론방이 없다 — 목록은 빈 채로 200")
     void noRoomUntilFirstPost() throws Exception {
-        Problem problem = saveProblem();
+        Problem problem = fixtures.problem();
 
         mockMvc.perform(get(listPath(problem)))
                 .andExpect(status().isOk())
@@ -86,11 +76,11 @@ class PostIntegrationTest {
     @Test
     @DisplayName("첫 글이 방을 만들고, 둘째 글은 같은 방에 들어간다")
     void firstPostCreatesRoom() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
 
-        write(bearer(user), problem.getId(), "첫 글", "본문");
-        write(bearer(user), problem.getId(), "둘째 글", "본문");
+        write(fixtures.bearer(user), problem.getId(), "첫 글", "본문");
+        write(fixtures.bearer(user), problem.getId(), "둘째 글", "본문");
 
         assertThat(discussionRepository.countByProblemId(problem.getId())).isEqualTo(1);
         mockMvc.perform(get(listPath(problem)))
@@ -114,17 +104,17 @@ class PostIntegrationTest {
     @DisplayName("비로그인은 쓸 수 없다")
     void writeRequiresLogin() throws Exception {
         mockMvc.perform(post(WRITE).contentType("application/json")
-                        .content(writeBody(saveProblem().getId(), "제목", "본문")))
+                        .content(writeBody(fixtures.problem().getId(), "제목", "본문")))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     @DisplayName("안 푼 문제에는 쓸 수 없다 — 403 DISCUSSION_002, 방도 생기지 않는다")
     void unsolvedCannotWrite() throws Exception {
-        Problem problem = saveProblem();
-        User user = saveUser(Role.USER, true);
+        Problem problem = fixtures.problem();
+        User user = fixtures.user(Role.USER);
 
-        mockMvc.perform(post(WRITE).header("Authorization", bearer(user))
+        mockMvc.perform(post(WRITE).header("Authorization", fixtures.bearer(user))
                         .contentType("application/json").content(writeBody(problem.getId(), "제목", "본문")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("DISCUSSION_002"));
@@ -134,11 +124,11 @@ class PostIntegrationTest {
     @Test
     @DisplayName("닉네임이 없으면 409 DISCUSSION_003")
     void needsNickname() throws Exception {
-        Problem problem = saveProblem();
-        User user = saveUser(Role.USER, false);
-        solve(user, problem);
+        Problem problem = fixtures.problem();
+        User user = fixtures.userWithoutNickname(Role.USER);
+        fixtures.solve(user, problem);
 
-        mockMvc.perform(post(WRITE).header("Authorization", bearer(user))
+        mockMvc.perform(post(WRITE).header("Authorization", fixtures.bearer(user))
                         .contentType("application/json").content(writeBody(problem.getId(), "제목", "본문")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DISCUSSION_003"));
@@ -147,10 +137,10 @@ class PostIntegrationTest {
     @Test
     @DisplayName("관리자는 안 푼 문제에도 쓸 수 있다")
     void adminCanWriteWithoutSolving() throws Exception {
-        Problem problem = saveProblem();
-        User admin = saveUser(Role.ADMIN, true);
+        Problem problem = fixtures.problem();
+        User admin = fixtures.user(Role.ADMIN);
 
-        mockMvc.perform(post(WRITE).header("Authorization", bearer(admin))
+        mockMvc.perform(post(WRITE).header("Authorization", fixtures.bearer(admin))
                         .contentType("application/json").content(writeBody(problem.getId(), "제목", "본문")))
                 .andExpect(status().isCreated());
     }
@@ -158,8 +148,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("제목은 2~100자, 본문은 1~5000자 — 벗어나면 400")
     void validatesLength() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
 
         String[][] bad = {
                 {"가", "본문"}, {"   ", "본문"}, {"가".repeat(101), "본문"},
@@ -177,9 +167,9 @@ class PostIntegrationTest {
     @Test
     @DisplayName("비로그인도 글을 읽는다 — 글쓴이는 닉네임으로 보이고 mine은 false")
     void anonymousReadsDetail() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
-        long id = write(bearer(user), problem.getId(), "502와 504 차이", "첫 줄\\n둘째 줄");
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        long id = write(fixtures.bearer(user), problem.getId(), "502와 504 차이", "첫 줄\\n둘째 줄");
 
         mockMvc.perform(get(detailPath(id)))
                 .andExpect(status().isOk())
@@ -194,8 +184,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("목록은 본문을 싣지 않는다")
     void listHasNoBody() throws Exception {
-        Problem problem = saveProblem();
-        write(bearer(solver(problem)), problem.getId(), "제목", "본문");
+        Problem problem = fixtures.problem();
+        write(fixtures.bearer(fixtures.solver(problem)), problem.getId(), "제목", "본문");
 
         mockMvc.perform(get(listPath(problem)))
                 .andExpect(jsonPath("$.data.posts[0].title").value("제목"))
@@ -213,8 +203,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("한 쪽은 20건 — 넘으면 hasNext가 true이고 다음 쪽에 나머지가 온다")
     void paginates() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         for (int i = 0; i < 21; i++) {
             write(token, problem.getId(), "제목 " + i, "본문");
         }
@@ -233,10 +223,10 @@ class PostIntegrationTest {
     @Test
     @DisplayName("글 목록의 한 줄에 보이는 댓글 수가 붙는다 — 지운 댓글은 세지 않는다")
     void listCarriesCommentCount() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
-        long withComments = write(bearer(user), problem.getId(), "댓글 있는 글", "본문");
-        write(bearer(user), problem.getId(), "댓글 없는 글", "본문");
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        long withComments = write(fixtures.bearer(user), problem.getId(), "댓글 있는 글", "본문");
+        write(fixtures.bearer(user), problem.getId(), "댓글 없는 글", "본문");
         commentRepository.save(Comment.of(withComments, user.getId(), null, "하나"));
         commentRepository.save(Comment.of(withComments, user.getId(), null, "둘"));
         commentRepository.save(Comment.of(withComments, user.getId(), null, "지운 것")).delete();
@@ -250,9 +240,9 @@ class PostIntegrationTest {
     @Test
     @DisplayName("문제별 글 수 — 글이 없는 문제는 응답에 없고, 지우거나 가린 글은 세지 않는다")
     void postCounts() throws Exception {
-        Problem with = saveProblem();
-        Problem without = saveProblem();
-        String token = bearer(solver(with));
+        Problem with = fixtures.problem();
+        Problem without = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(with));
         write(token, with.getId(), "글 하나", "본문");
         write(token, with.getId(), "글 둘", "본문");
         long deleted = write(token, with.getId(), "지울 글", "본문");
@@ -271,12 +261,12 @@ class PostIntegrationTest {
     @Test
     @DisplayName("모든 토론방의 최근 글 — 새 글부터, 어느 문제의 글인지와 함께, 비로그인도 읽는다")
     void recentPostsAcrossRooms() throws Exception {
-        Problem a = saveProblem();
-        Problem b = saveProblem();
-        User user = solver(a);
-        solve(user, b);
-        long onA = write(bearer(user), a.getId(), "A 방의 글", "본문");
-        long onB = write(bearer(user), b.getId(), "B 방의 글", "본문");
+        Problem a = fixtures.problem();
+        Problem b = fixtures.problem();
+        User user = fixtures.solver(a);
+        fixtures.solve(user, b);
+        long onA = write(fixtures.bearer(user), a.getId(), "A 방의 글", "본문");
+        long onB = write(fixtures.bearer(user), b.getId(), "B 방의 글", "본문");
         commentRepository.save(Comment.of(onA, user.getId(), null, "댓글"));
 
         mockMvc.perform(get("/api/quiz/posts"))
@@ -295,8 +285,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("최근 글에는 지운 글도 가린 글도 나오지 않는다")
     void recentPostsSkipGoneOnes() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         long kept = write(token, problem.getId(), "남는 글", "본문");
         long deleted = write(token, problem.getId(), "지울 글", "본문");
         long hidden = write(token, problem.getId(), "가릴 글", "본문");
@@ -313,8 +303,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("검색어는 제목과 본문에서 찾는다 — 대소문자를 가리지 않고, 없으면 빈 목록")
     void searchesTitleAndBody() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
         long inTitle = write(token, problem.getId(), word + " 제목에 있는 글", "본문");
         long inBody = write(token, problem.getId(), "평범한 제목", "본문 안에 " + word + " 가 있다");
@@ -335,8 +325,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("검색어의 %와 _는 글자 그대로 찾는다")
     void searchTreatsWildcardsLiterally() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
         long withPercent = write(token, problem.getId(), word + " 100% 확실", "본문");
         write(token, problem.getId(), word + " 100점 확실", "본문");
@@ -351,9 +341,9 @@ class PostIntegrationTest {
     @Test
     @DisplayName("댓글 많은 순으로 정렬할 수 있다 — 같으면 새 글이 먼저, 지운 댓글은 세지 않는다")
     void sortsByCommentCount() throws Exception {
-        Problem problem = saveProblem();
-        User user = solver(problem);
-        String token = bearer(user);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        String token = fixtures.bearer(user);
         String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
         long quiet = write(token, problem.getId(), word + " 조용한 글", "본문");
         long busy = write(token, problem.getId(), word + " 붐비는 글", "본문");
@@ -374,15 +364,15 @@ class PostIntegrationTest {
     @Test
     @DisplayName("분야로 걸러 볼 수 있고, 한 줄에 그 글이 속한 문제의 분야가 실린다")
     void filtersByDomain() throws Exception {
-        Problem network = saveProblem();
+        Problem network = fixtures.problem();
         Problem security = problemRepository.save(Problem.create(
                 TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX,
                 "보안 문제", "지문", "O", "해설", null));
-        User user = solver(network);
-        solve(user, security);
+        User user = fixtures.solver(network);
+        fixtures.solve(user, security);
         String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
-        long onNetwork = write(bearer(user), network.getId(), word + " 네트워크 글", "본문");
-        long onSecurity = write(bearer(user), security.getId(), word + " 보안 글", "본문");
+        long onNetwork = write(fixtures.bearer(user), network.getId(), word + " 네트워크 글", "본문");
+        long onSecurity = write(fixtures.bearer(user), security.getId(), word + " 보안 글", "본문");
 
         mockMvc.perform(get("/api/quiz/posts").param("q", word).param("domain", "SECURITY"))
                 .andExpect(jsonPath("$.data.posts", hasSize(1)))
@@ -405,10 +395,10 @@ class PostIntegrationTest {
                 TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX, "나중에 글이 달린 방", "지문", "O", "해설", null));
         Problem emptied = problemRepository.save(Problem.create(
                 TestDomains.SECURITY, Difficulty.BEGINNER, ProblemType.OX, "글을 다 지운 방", "지문", "O", "해설", null));
-        User user = solver(older);
-        solve(user, newer);
-        solve(user, emptied);
-        String token = bearer(user);
+        User user = fixtures.solver(older);
+        fixtures.solve(user, newer);
+        fixtures.solve(user, emptied);
+        String token = fixtures.bearer(user);
         write(token, older.getId(), "첫째 글", "본문");
         write(token, older.getId(), "둘째 글", "본문");
         write(token, newer.getId(), "셋째 글", "본문");
@@ -430,20 +420,20 @@ class PostIntegrationTest {
     @Test
     @DisplayName("내 활동 — 내가 쓴 글과 내가 댓글 단 글을 따로 본다. 남의 것은 섞이지 않는다")
     void myActivity() throws Exception {
-        Problem problem = saveProblem();
-        User me = solver(problem);
-        User other = solver(problem);
-        long mine = write(bearer(me), problem.getId(), "내가 쓴 글", "본문");
-        long theirs = write(bearer(other), problem.getId(), "남이 쓴 글", "본문");
-        long untouched = write(bearer(other), problem.getId(), "내가 안 건드린 글", "본문");
+        Problem problem = fixtures.problem();
+        User me = fixtures.solver(problem);
+        User other = fixtures.solver(problem);
+        long mine = write(fixtures.bearer(me), problem.getId(), "내가 쓴 글", "본문");
+        long theirs = write(fixtures.bearer(other), problem.getId(), "남이 쓴 글", "본문");
+        long untouched = write(fixtures.bearer(other), problem.getId(), "내가 안 건드린 글", "본문");
         commentRepository.save(Comment.of(theirs, me.getId(), null, "내 댓글"));
         commentRepository.save(Comment.of(untouched, me.getId(), null, "지운 내 댓글")).delete();
 
-        mockMvc.perform(get("/api/me/posts").param("kind", "written").header("Authorization", bearer(me)))
+        mockMvc.perform(get("/api/me/posts").param("kind", "written").header("Authorization", fixtures.bearer(me)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.posts", hasSize(1)))
                 .andExpect(jsonPath("$.data.posts[0].id").value(mine));
-        mockMvc.perform(get("/api/me/posts").param("kind", "commented").header("Authorization", bearer(me)))
+        mockMvc.perform(get("/api/me/posts").param("kind", "commented").header("Authorization", fixtures.bearer(me)))
                 .andExpect(jsonPath("$.data.posts", hasSize(1)))
                 .andExpect(jsonPath("$.data.posts[0].id").value(theirs));
     }
@@ -453,7 +443,7 @@ class PostIntegrationTest {
     void myActivityRequiresLogin() throws Exception {
         mockMvc.perform(get("/api/me/posts").param("kind", "written")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/me/posts").param("kind", "liked")
-                        .header("Authorization", bearer(saveUser(Role.USER, true))))
+                        .header("Authorization", fixtures.bearer(fixtures.user(Role.USER))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -462,8 +452,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("글에는 말머리가 붙는다 — 쓸 때 고르고, 목록·상세·커뮤니티에 이름과 함께 실린다")
     void categoryIsStoredAndShown() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
         long id = write(token, problem.getId(), "SUMMARY", word + " 정리한 글", "본문");
 
@@ -481,8 +471,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("말머리 없이는 쓸 수 없고, 모르는 말머리도 받지 않는다 — 400")
     void categoryIsRequired() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
 
         mockMvc.perform(post(WRITE).header("Authorization", token).contentType("application/json")
                         .content("{\"problemId\":%d,\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
@@ -495,8 +485,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("말머리는 고칠 수 있다 — 질문으로 올렸다가 정리로 바꾼다")
     void categoryCanBeEdited() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         long id = write(token, problem.getId(), "QUESTION", "제목", "본문");
 
         mockMvc.perform(put(WRITE + "/" + id).header("Authorization", token).contentType("application/json")
@@ -508,8 +498,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("커뮤니티에서 말머리로 걸러 볼 수 있다")
     void filtersByCategory() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
         write(token, problem.getId(), "QUESTION", word + " 질문", "본문");
         long errata = write(token, problem.getId(), "ERRATA", word + " 해설이 틀린 것 같아요", "본문");
@@ -527,8 +517,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("내 글을 고치면 제목·본문이 바뀌고 edited가 true가 된다")
     void editsOwnPost() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         long id = write(token, problem.getId(), "제목", "본문");
 
         mockMvc.perform(put(WRITE + "/" + id).header("Authorization", token)
@@ -543,9 +533,9 @@ class PostIntegrationTest {
     @Test
     @DisplayName("남의 글은 고치거나 지울 수 없다 — 403 DISCUSSION_005")
     void cannotTouchOthersPost() throws Exception {
-        Problem problem = saveProblem();
-        long id = write(bearer(solver(problem)), problem.getId(), "제목", "본문");
-        String other = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        long id = write(fixtures.bearer(fixtures.solver(problem)), problem.getId(), "제목", "본문");
+        String other = fixtures.bearer(fixtures.solver(problem));
 
         mockMvc.perform(put(WRITE + "/" + id).header("Authorization", other)
                         .contentType("application/json").content(editBody("고친 제목", "고친 본문")))
@@ -559,8 +549,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("지운 글은 목록에서 빠지고 상세는 404다 — 두 번 지워도 오류가 아니다")
     void deletedPostDisappears() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         long id = write(token, problem.getId(), "제목", "본문");
 
         mockMvc.perform(delete(WRITE + "/" + id).header("Authorization", token)).andExpect(status().isOk());
@@ -581,8 +571,8 @@ class PostIntegrationTest {
     @Test
     @DisplayName("가린 글은 자리만 남는다 — 제목·본문·닉네임이 비고, 글쓴이도 고칠 수 없다")
     void hiddenPostKeepsOnlyItsPlace() throws Exception {
-        Problem problem = saveProblem();
-        String token = bearer(solver(problem));
+        Problem problem = fixtures.problem();
+        String token = fixtures.bearer(fixtures.solver(problem));
         long id = write(token, problem.getId(), "제목", "본문");
         Post saved = postRepository.findById(id).orElseThrow();
         saved.hide();
@@ -638,40 +628,5 @@ class PostIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(response, "$.data.id")).longValue();
-    }
-
-    /** 닉네임이 있고 그 문제를 푼 사용자. */
-    private User solver(Problem problem) {
-        User user = saveUser(Role.USER, true);
-        solve(user, problem);
-        return user;
-    }
-
-    private User saveUser(Role role, boolean withNickname) {
-        String key = UUID.randomUUID().toString().substring(0, 8);
-        User user = User.builder()
-                .username("post" + key)
-                .passwordHash(passwordEncoder.encode("password123"))
-                .role(role)
-                .build();
-        if (withNickname) {
-            user.changeNickname("글" + key);
-        }
-        return userRepository.save(user);
-    }
-
-    private String bearer(User user) {
-        return "Bearer " + jwtTokenProvider.createToken(user.getId(), user.getRole());
-    }
-
-    private void solve(User user, Problem problem) {
-        submissionRepository.save(Submission.of(user.getId(), problem, "O", true));
-    }
-
-    private Problem saveProblem() {
-        return problemRepository.save(Problem.create(
-                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX,
-                "TCP 3-way handshake",
-                "TCP 연결은 3번의 패킷 교환으로 시작한다.", "O", "SYN → SYN+ACK → ACK", null));
     }
 }

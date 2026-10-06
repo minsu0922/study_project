@@ -118,7 +118,7 @@ async function loadDashboard() {
     renderLlmReview(d.llmReview);
     renderLearningStats(d);
   } catch (e) {
-    document.getElementById("guard").innerHTML = `<div class="alert error">대시보드 로딩 실패: ${escapeHtml(e.message)}</div>`;
+    showErrorAlert(document.getElementById("guard"), e, "대시보드 로딩 실패");
   }
 }
 

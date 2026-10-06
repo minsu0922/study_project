@@ -204,7 +204,7 @@ async function loadDocs() {
     // 페이지 버튼: 전체가 1페이지면 숨긴다(불필요한 UI 제거)
     pager.update(data);
   } catch (e) {
-    msg.innerHTML = `<div class="alert error">문서를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+    showErrorAlert(msg, e, "문서를 불러오지 못했습니다");
   }
 }
 

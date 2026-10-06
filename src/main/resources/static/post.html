@@ -65,7 +65,7 @@ const editForm = document.getElementById("editForm");
 let post = null;
 
 function showError(text) {
-  message.innerHTML = `<div class="alert error">${escapeHtml(text)}</div>`;
+  showErrorAlert(message, text);
 }
 
 function roomHref() {
@@ -193,8 +193,7 @@ editForm.addEventListener("submit", async e => {
     editForm.hidden = true;
     renderPost();
   } catch (err) {
-    msg.innerHTML = `<div class="alert error">${escapeHtml(err.message)}${
-      (err.fieldErrors || []).map(f => `<div>${escapeHtml(f.reason)}</div>`).join("")}</div>`;
+    showErrorAlert(msg, err);
   } finally {
     btn.disabled = false;
   }
