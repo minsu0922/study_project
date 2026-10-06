@@ -167,14 +167,37 @@ public class AccountService {
             throw new BusinessException(ErrorCode.AUTH_002);
         }
 
+        deleteAccount(user);
+        log.info("탈퇴: userId={}", userId);
+    }
+
+    /**
+     * 관리자가 시키는 탈퇴. 지우는 것은 본인 탈퇴와 같다 — 계정과 학습 기록은 지워지고,
+     * 쓴 글과 댓글은 "탈퇴한 사용자"의 것으로 남는다. 같은 아이디로 다시 가입할 수 있다.
+     *
+     * <p>관리자 계정은 받지 않는다. 먼저 사용자로 내려야 한다 — 두 단계를 거치게 해서
+     * 관리자가 실수로 자기나 다른 관리자를 지우는 일을 막는다.
+     */
+    @Transactional
+    public void withdrawByAdmin(Long actorId, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_001));
+        if (user.getRole() == Role.ADMIN) {
+            throw new BusinessException(ErrorCode.USER_005);
+        }
+        deleteAccount(user);
+        log.info("강제 탈퇴: userId={} by={}", userId, actorId);
+    }
+
+    /** 지우는 순서가 곧 제약 조건이다. 이유는 {@link #withdraw} 주석에 있다. */
+    private void deleteAccount(User user) {
+        Long userId = user.getId();
         dailyQuizRepository.deleteItemsByUserId(userId);   // 손자 먼저
         dailyQuizRepository.deleteAllByUserId(userId);
         reviewItemRepository.deleteAllByUserId(userId);
         submissionRepository.deleteAllByUserId(userId);
         problemReportRepository.deleteAllByUserId(userId);
         userRepository.delete(user);
-        userRepository.flush();   // 아래 주석 참고 — 여기서 SQL을 확정한다
-
-        log.info("탈퇴: userId={}", userId);
+        userRepository.flush();   // 여기서 SQL을 확정한다 — 성공으로 돌아간 뒤에 제약 위반이 터지지 않게
     }
 }

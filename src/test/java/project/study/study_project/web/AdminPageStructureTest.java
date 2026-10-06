@@ -48,6 +48,7 @@ class AdminPageStructureTest {
             "problems.html",
             "reports.html",
             "settings.html",
+            "user.html",
             "users.html");
 
     @Test

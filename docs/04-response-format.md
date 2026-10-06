@@ -119,6 +119,9 @@ public record FieldError(String field, String reason) {}
 | `DISCUSSION_013` | 403 | 정지된 사용자의 글·댓글 쓰기와 수정, 신고. 문구에 풀리는 날짜와 사유가 실린다 |
 | `USER_001` | 404 | 사용자 없음 (관리자) |
 | `USER_002` | 400 | 관리자 계정을 정지하려 함 (관리자) |
+| `USER_003` | 400 | 관리자가 자기 권한을 바꾸려 함 (관리자) |
+| `USER_004` | 409 | 정지 중인 사용자를 관리자로 올리려 함 (관리자) |
+| `USER_005` | 400 | 관리자 계정을 탈퇴시키려 함 (관리자) |
 
 > 새 에러는 이 표에 추가하고 코드로 `enum ErrorCode`(code, httpStatus, defaultMessage) 관리.
 

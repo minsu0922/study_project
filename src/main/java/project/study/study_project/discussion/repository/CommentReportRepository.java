@@ -10,6 +10,7 @@ import project.study.study_project.discussion.domain.CommentReport;
 import project.study.study_project.report.domain.ReportStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface CommentReportRepository extends JpaRepository<CommentReport, Long> {
 
@@ -18,6 +19,22 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
     boolean existsByPostIdAndUserId(Long postId, Long userId);
 
     long countByStatus(ReportStatus status);
+
+    /**
+     * 한 사람의 글과 댓글이 받은 신고. 신고에는 글쓴이가 적혀 있지 않아 대상을 거쳐 찾는다 —
+     * 글쓴이를 신고에 따로 적어 두면 대상이 지워지거나 탈퇴로 주인이 비었을 때 두 값이 어긋난다.
+     */
+    String RECEIVED_BY = """
+            from CommentReport r
+            where r.postId in (select p.id from Post p where p.userId = :userId)
+               or r.commentId in (select c.id from Comment c where c.userId = :userId)
+            """;
+
+    @Query("select count(r) " + RECEIVED_BY)
+    long countReceivedBy(@Param("userId") Long userId);
+
+    @Query("select r " + RECEIVED_BY + " order by r.createdAt desc, r.id desc")
+    List<CommentReport> findReceivedBy(@Param("userId") Long userId, Pageable pageable);
 
     /** 대기 목록 — 오래 기다린 것부터. 방치된 신고가 맨 위에 온다(문제 제보함과 같은 규칙). */
     @Query("select r from CommentReport r where (:status is null or r.status = :status) order by r.createdAt asc")

@@ -1,5 +1,6 @@
 package project.study.study_project.discussion;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,8 @@ import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,8 +68,8 @@ class CommentReportIntegrationTest {
         mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
                         .contentType("application/json").content(body(saveComment().getId(), "ABUSE")))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.status").value("PENDING"))
-                .andExpect(jsonPath("$.data.reasonLabel").exists());
+                .andExpect(jsonPath("$.data.id").isNumber())
+                .andExpect(jsonPath("$.data.status").value("PENDING"));
     }
 
     @Test
@@ -180,15 +183,14 @@ class CommentReportIntegrationTest {
     void reportsPost() throws Exception {
         Post post = savePost();
 
-        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
-                        .contentType("application/json").content(postBody(post.getId(), "SPAM")))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.status").value("PENDING"))
-                .andExpect(jsonPath("$.data.targetType").value("POST"))
-                .andExpect(jsonPath("$.data.postId").value(post.getId()))
-                .andExpect(jsonPath("$.data.postTitle").value("신고될 글"))
-                .andExpect(jsonPath("$.data.targetBody").value("본문"))
-                .andExpect(jsonPath("$.data.commentId").doesNotExist());
+        Map<String, Object> row = reportAndRead(POST_REPORT, postBody(post.getId(), "SPAM"));
+
+        assertThat(row.get("status")).isEqualTo("PENDING");
+        assertThat(row.get("targetType")).isEqualTo("POST");
+        assertThat(id(row, "postId")).isEqualTo(post.getId());
+        assertThat(row.get("postTitle")).isEqualTo("신고될 글");
+        assertThat(row.get("targetBody")).isEqualTo("본문");
+        assertThat(row.get("commentId")).isNull();
     }
 
     /** 관리자가 신고함에서 "어느 글에 달린 댓글인지"로 건너가려면 글 id가 있어야 한다. */
@@ -197,12 +199,11 @@ class CommentReportIntegrationTest {
     void commentReportCarriesItsPost() throws Exception {
         Comment comment = saveComment();
 
-        mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
-                        .contentType("application/json").content(body(comment.getId(), "ABUSE")))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.targetType").value("COMMENT"))
-                .andExpect(jsonPath("$.data.commentId").value(comment.getId()))
-                .andExpect(jsonPath("$.data.postId").value(comment.getPostId()));
+        Map<String, Object> row = reportAndRead(REPORT, body(comment.getId(), "ABUSE"));
+
+        assertThat(row.get("targetType")).isEqualTo("COMMENT");
+        assertThat(id(row, "commentId")).isEqualTo(comment.getId());
+        assertThat(id(row, "postId")).isEqualTo(comment.getPostId());
     }
 
     @Test
@@ -300,22 +301,20 @@ class CommentReportIntegrationTest {
         Post seed = savePost();
         Post written = postRepository.saveAndFlush(Post.of(seed.getDiscussionId(), writer.getId(), PostCategory.QUESTION, "신고될 글", "본문"));
 
-        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
-                        .contentType("application/json").content(postBody(written.getId(), "SPAM")))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.targetUsername").value(writer.getUsername()))
-                .andExpect(jsonPath("$.data.targetSuspended").value(false));
+        Map<String, Object> row = reportAndRead(POST_REPORT, postBody(written.getId(), "SPAM"));
+        assertThat(row.get("targetUsername")).isEqualTo(writer.getUsername());
+        assertThat(id(row, "targetUserId")).isEqualTo(writer.getId());
+        assertThat(row.get("targetSuspended")).isEqualTo(false);
 
         writer.suspend(java.time.LocalDateTime.now().plusDays(7), "도배");
-        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
-                        .contentType("application/json").content(postBody(written.getId(), "SPAM")))
-                .andExpect(jsonPath("$.data.targetSuspended").value(true));
+        assertThat(reportAndRead(POST_REPORT, postBody(written.getId(), "SPAM")).get("targetSuspended"))
+                .isEqualTo(true);
 
         // savePost는 글쓴이 없이(탈퇴한 사용자의 글처럼) 저장한다.
-        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
-                        .contentType("application/json").content(postBody(seed.getId(), "SPAM")))
-                .andExpect(jsonPath("$.data.targetUsername").doesNotExist())
-                .andExpect(jsonPath("$.data.targetSuspended").value(false));
+        Map<String, Object> orphan = reportAndRead(POST_REPORT, postBody(seed.getId(), "SPAM"));
+        assertThat(orphan.get("targetUsername")).isNull();
+        assertThat(orphan.get("targetUserId")).isNull();
+        assertThat(orphan.get("targetSuspended")).isEqualTo(false);
     }
 
     /**
@@ -327,12 +326,10 @@ class CommentReportIntegrationTest {
     void keepsPostAsReported() throws Exception {
         Post post = savePost();
 
-        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
-                        .contentType("application/json").content(postBody(post.getId(), "SPAM")))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.reportedTitle").value("신고될 글"))
-                .andExpect(jsonPath("$.data.reportedBody").value("본문"))
-                .andExpect(jsonPath("$.data.editedAfterReport").value(false));
+        Map<String, Object> row = reportAndRead(POST_REPORT, postBody(post.getId(), "SPAM"));
+        assertThat(row.get("reportedTitle")).isEqualTo("신고될 글");
+        assertThat(row.get("reportedBody")).isEqualTo("본문");
+        assertThat(row.get("editedAfterReport")).isEqualTo(false);
 
         post.edit(PostCategory.QUESTION, "질문 있어요", "502가 뭐예요?");
         postRepository.flush();
@@ -354,23 +351,61 @@ class CommentReportIntegrationTest {
     void keepsCommentAsReported() throws Exception {
         Comment comment = saveComment();
 
-        mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
-                        .contentType("application/json").content(body(comment.getId(), "ABUSE")))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.reportedBody").value("신고될 글"))
-                .andExpect(jsonPath("$.data.reportedTitle").doesNotExist())
-                .andExpect(jsonPath("$.data.editedAfterReport").value(false));
+        Map<String, Object> row = reportAndRead(REPORT, body(comment.getId(), "ABUSE"));
+        assertThat(row.get("reportedBody")).isEqualTo("신고될 글");
+        assertThat(row.get("reportedTitle")).isNull();
+        assertThat(row.get("editedAfterReport")).isEqualTo(false);
 
         comment.edit("고친 댓글");
         commentRepository.flush();
-        mockMvc.perform(post(REPORT).header("Authorization", fixtures.bearer(Role.USER))
-                        .contentType("application/json").content(body(comment.getId(), "ABUSE")))
-                // 두 번째 신고는 고친 뒤에 들어왔으니 그때의 내용이 "신고 당시"다.
-                .andExpect(jsonPath("$.data.reportedBody").value("고친 댓글"))
-                .andExpect(jsonPath("$.data.editedAfterReport").value(false));
+        // 두 번째 신고는 고친 뒤에 들어왔으니 그때의 내용이 "신고 당시"다.
+        Map<String, Object> second = reportAndRead(REPORT, body(comment.getId(), "ABUSE"));
+        assertThat(second.get("reportedBody")).isEqualTo("고친 댓글");
+        assertThat(second.get("editedAfterReport")).isEqualTo(false);
+    }
+
+    /** 신고함의 한 줄에는 글쓴이의 로그인 아이디가 있다. 신고한 사람에게 그대로 돌려주면 안 된다. */
+    @Test
+    @DisplayName("신고한 사람은 접수증만 받는다 — 글쓴이 아이디와 정지 여부, 본문은 돌아가지 않는다")
+    void reporterGetsOnlyReceipt() throws Exception {
+        User writer = fixtures.user(Role.USER);
+        Post written = postRepository.saveAndFlush(
+                Post.of(savePost().getDiscussionId(), writer.getId(), PostCategory.QUESTION, "신고될 글", "본문"));
+
+        mockMvc.perform(post(POST_REPORT).header("Authorization", fixtures.bearer(Role.USER))
+                        .contentType("application/json").content(postBody(written.getId(), "SPAM")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").isNumber())
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.targetUsername").doesNotExist())
+                .andExpect(jsonPath("$.data.targetUserId").doesNotExist())
+                .andExpect(jsonPath("$.data.targetSuspended").doesNotExist())
+                .andExpect(jsonPath("$.data.targetBody").doesNotExist());
     }
 
     private static final String POST_REPORT = "/api/me/post-reports";
+
+    /** 새 사용자로 신고하고, 신고함에서 그 한 줄을 꺼낸다. 신고한 사람에게는 접수증만 가므로 내용은 관리자 쪽에서 본다. */
+    private Map<String, Object> reportAndRead(String path, String body) throws Exception {
+        String receipt = mockMvc.perform(post(path).header("Authorization", fixtures.bearer(Role.USER))
+                        .contentType("application/json").content(body))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long reportId = ((Number) JsonPath.read(receipt, "$.data.id")).longValue();
+
+        String box = mockMvc.perform(get("/api/admin/comment-reports").param("status", "PENDING")
+                        .param("size", "100").header("Authorization", fixtures.bearer(Role.ADMIN)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        List<Map<String, Object>> rows = JsonPath.read(box, "$.data.content[?(@.id == %d)]".formatted(reportId));
+        assertThat(rows).as("신고함에 방금 한 신고가 있다").hasSize(1);
+        return rows.get(0);
+    }
+
+    /** JSON의 수는 크기에 따라 Integer로도 Long으로도 읽힌다. id는 Long으로 맞춰 견준다. */
+    private Long id(Map<String, Object> row, String key) {
+        return ((Number) row.get(key)).longValue();
+    }
 
     private String postBody(Long postId, String reason) {
         return "{\"postId\":%d,\"reason\":\"%s\"}".formatted(postId, reason);

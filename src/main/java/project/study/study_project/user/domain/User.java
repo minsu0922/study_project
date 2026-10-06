@@ -117,6 +117,11 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
+    /** 권한 변경. 누가 누구를 바꿀 수 있는지는 서비스가 본다. */
+    public void changeRole(Role role) {
+        this.role = role;
+    }
+
     /** 닉네임 설정·변경. 형식과 중복은 서비스가 본다. */
     public void changeNickname(String nickname) {
         this.nickname = nickname;

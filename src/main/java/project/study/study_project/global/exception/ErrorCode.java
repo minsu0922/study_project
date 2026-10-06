@@ -115,7 +115,12 @@ public enum ErrorCode {
     // 사용자 관리(V26) — 관리자가 사용자를 정지하고 푼다.
     USER_001("USER_001", HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
     // 400인 이유: 지금 상태와의 충돌이 아니라 어떤 상태에서도 받지 않는 요청이다.
-    USER_002("USER_002", HttpStatus.BAD_REQUEST, "관리자 계정은 정지할 수 없습니다.");
+    USER_002("USER_002", HttpStatus.BAD_REQUEST, "관리자 계정은 정지할 수 없습니다."),
+    // 관리자가 실수로 자기를 내리면 관리자가 한 명도 안 남을 수 있다. 남이 내려야 한다.
+    USER_003("USER_003", HttpStatus.BAD_REQUEST, "내 권한은 바꿀 수 없습니다."),
+    // 409인 이유: 요청 자체는 받을 수 있는 것이고, 지금 정지 중이라는 상태와 부딪힌다.
+    USER_004("USER_004", HttpStatus.CONFLICT, "정지 중인 사용자는 관리자로 올릴 수 없습니다. 정지를 먼저 풀어 주세요."),
+    USER_005("USER_005", HttpStatus.BAD_REQUEST, "관리자 계정은 탈퇴시킬 수 없습니다. 먼저 사용자로 내려 주세요.");
 
     private final String code;
     private final HttpStatus httpStatus;

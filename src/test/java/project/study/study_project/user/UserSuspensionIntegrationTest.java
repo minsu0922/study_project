@@ -1,6 +1,7 @@
 package project.study.study_project.user;
 
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import project.study.study_project.discussion.domain.Comment;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.quiz.domain.Problem;
+import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
@@ -44,6 +46,10 @@ class UserSuspensionIntegrationTest {
     private MockMvc mockMvc;
     @Autowired
     private TestFixtures fixtures;
+    @Autowired
+    private EntityManager entityManager;
+    @Autowired
+    private SubmissionRepository submissionRepository;
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -270,6 +276,225 @@ class UserSuspensionIntegrationTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(post("/api/admin/users/%d/unsuspend".formatted(target.getId())).header("Authorization", user))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("사용자 한 명 — 상세 화면이 읽는다. 정지 상태가 함께 오고, 없는 사용자는 404 USER_001")
+    void readsOneUser() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        User user = fixtures.user(Role.USER);
+
+        mockMvc.perform(get("/api/admin/users/" + user.getId()).header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value(user.getUsername()))
+                .andExpect(jsonPath("$.data.nickname").value(user.getNickname()))
+                .andExpect(jsonPath("$.data.suspended").value(false))
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
+
+        suspend(user, 7);
+        mockMvc.perform(get("/api/admin/users/" + user.getId()).header("Authorization", admin))
+                .andExpect(jsonPath("$.data.suspended").value(true))
+                .andExpect(jsonPath("$.data.suspendedReason").value("도배"));
+
+        mockMvc.perform(get("/api/admin/users/999999999").header("Authorization", admin))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("USER_001"));
+        mockMvc.perform(get("/api/admin/users/" + user.getId()).header("Authorization", fixtures.bearer(Role.USER)))
+                .andExpect(status().isForbidden());
+    }
+
+    /** 닉네임을 비우면 그 사람이 쓴 글이 모두 "탈퇴한 사용자"로 보인다. 그래서 다른 이름으로 바꾼다. */
+    @Test
+    @DisplayName("닉네임 초기화 — \"사용자\" + 번호로 바뀌고, 쓴 글의 이름도 따라 바뀐다")
+    void resetsNickname() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        Post post = fixtures.post(problem, user.getId());
+        String placeholder = "사용자" + user.getId();
+
+        mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(user.getId())).header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value(placeholder));
+
+        mockMvc.perform(get("/api/quiz/posts/" + post.getId()))
+                .andExpect(jsonPath("$.data.nickname").value(placeholder));
+        // 두 번 눌러도 같은 이름이다.
+        mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(user.getId())).header("Authorization", admin))
+                .andExpect(jsonPath("$.data.nickname").value(placeholder));
+    }
+
+    @Test
+    @DisplayName("닉네임 초기화 — 그 이름을 다른 사람이 쓰고 있으면 다른 번호를 붙인다. 닉네임이 없는 계정은 그대로 둔다")
+    void resetNicknameAvoidsTakenName() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        User user = fixtures.user(Role.USER);
+        fixtures.user(Role.USER, "사용자" + user.getId());
+
+        String response = mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(user.getId()))
+                        .header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String nickname = JsonPath.read(response, "$.data.nickname");
+        assertThat(nickname).startsWith("사용자").isNotEqualTo("사용자" + user.getId()).hasSizeLessThanOrEqualTo(12);
+
+        User old = fixtures.userWithoutNickname(Role.USER);
+        mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(old.getId())).header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("닉네임 초기화는 관리자만 한다. 없는 사용자는 404 USER_001")
+    void resetNicknameAdminOnly() throws Exception {
+        User user = fixtures.user(Role.USER);
+
+        mockMvc.perform(post("/api/admin/users/%d/reset-nickname".formatted(user.getId()))
+                        .header("Authorization", fixtures.bearer(user)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/admin/users/999999999/reset-nickname").header("Authorization", fixtures.bearer(Role.ADMIN)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("USER_001"));
+        assertThat(userRepository.findById(user.getId()).orElseThrow().getNickname()).isEqualTo(user.getNickname());
+    }
+
+    /* ── 권한 변경 ───────────────────────────────────────── */
+
+    @Test
+    @DisplayName("권한 변경 — 사용자를 관리자로 올리고 다시 내린다. 같은 권한으로 바꾸면 그대로다")
+    void changesRole() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        User user = fixtures.user(Role.USER);
+        String path = "/api/admin/users/%d/role".formatted(user.getId());
+
+        mockMvc.perform(post(path).header("Authorization", admin)
+                        .contentType("application/json").content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value("ADMIN"));
+        mockMvc.perform(post(path).header("Authorization", admin)
+                        .contentType("application/json").content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post(path).header("Authorization", admin)
+                        .contentType("application/json").content("{\"role\":\"USER\"}"))
+                .andExpect(jsonPath("$.data.role").value("USER"));
+        assertThat(userRepository.findById(user.getId()).orElseThrow().getRole()).isEqualTo(Role.USER);
+    }
+
+    /** 실수로 자기를 내리면 관리자가 한 명도 안 남을 수 있다. */
+    @Test
+    @DisplayName("내 권한은 바꿀 수 없다 — 400 USER_003. 정지 중인 사용자는 관리자로 못 올린다 — 409 USER_004")
+    void roleChangeGuards() throws Exception {
+        User admin = fixtures.user(Role.ADMIN);
+        mockMvc.perform(post("/api/admin/users/%d/role".formatted(admin.getId())).header("Authorization", fixtures.bearer(admin))
+                        .contentType("application/json").content("{\"role\":\"USER\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("USER_003"));
+
+        User blocked = fixtures.user(Role.USER);
+        suspend(blocked, 7);
+        mockMvc.perform(post("/api/admin/users/%d/role".formatted(blocked.getId())).header("Authorization", fixtures.bearer(admin))
+                        .contentType("application/json").content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("USER_004"));
+
+        for (String bad : new String[]{"{}", "{\"role\":\"OWNER\"}"}) {
+            mockMvc.perform(post("/api/admin/users/%d/role".formatted(blocked.getId())).header("Authorization", fixtures.bearer(admin))
+                            .contentType("application/json").content(bad))
+                    .andExpect(status().isBadRequest());
+        }
+        mockMvc.perform(post("/api/admin/users/%d/role".formatted(blocked.getId())).header("Authorization", fixtures.bearer(Role.USER))
+                        .contentType("application/json").content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    /**
+     * 토큰에는 발급한 순간의 권한이 적혀 있다. 토큰만 보면 내린 사람이 만료될 때까지(1시간)
+     * 관리 API를 계속 쓴다.
+     */
+    @Test
+    @DisplayName("관리자에서 내리면 예전 관리자 토큰으로는 바로 관리 API를 못 쓴다 — 403")
+    void demotedAdminLosesAccessAtOnce() throws Exception {
+        User demoted = fixtures.user(Role.ADMIN);
+        String oldToken = fixtures.bearer(demoted);
+        mockMvc.perform(get("/api/admin/users").header("Authorization", oldToken)).andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/users/%d/role".formatted(demoted.getId()))
+                        .header("Authorization", fixtures.bearer(Role.ADMIN))
+                        .contentType("application/json").content("{\"role\":\"USER\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/admin/users").header("Authorization", oldToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("AUTH_004"));
+        // 학습 쪽은 그대로 쓴다.
+        mockMvc.perform(get("/api/me/suspension").header("Authorization", oldToken)).andExpect(status().isOk());
+    }
+
+    /* ── 강제 탈퇴 ───────────────────────────────────────── */
+
+    @Test
+    @DisplayName("강제 탈퇴 — 계정과 학습 기록은 지워지고, 쓴 글은 탈퇴한 사용자의 것으로 남는다")
+    void removesUser() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        Problem problem = fixtures.problem();
+        User user = fixtures.solver(problem);
+        Post post = fixtures.post(problem, user.getId());
+        String oldToken = fixtures.bearer(user);
+
+        mockMvc.perform(delete("/api/admin/users/" + user.getId()).header("Authorization", admin))
+                .andExpect(status().isOk());
+        // 롤백되는 테스트라 플러시된 SQL이 제약에 걸리지 않았는지는 서비스의 flush가 확인해 준다.
+        entityManager.clear();
+
+        assertThat(userRepository.findById(user.getId())).isEmpty();
+        assertThat(submissionRepository.existsByUserIdAndProblem_Id(user.getId(), problem.getId())).isFalse();
+        mockMvc.perform(get("/api/quiz/posts/" + post.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("글"))
+                .andExpect(jsonPath("$.data.nickname").doesNotExist());
+        mockMvc.perform(get("/api/admin/users/" + user.getId()).header("Authorization", admin))
+                .andExpect(status().isNotFound());
+        // 지워진 사람의 토큰으로는 쓸 수 없다.
+        mockMvc.perform(post("/api/me/posts").header("Authorization", oldToken).contentType("application/json")
+                        .content("{\"problemId\":%d,\"category\":\"QUESTION\",\"title\":\"제목\",\"body\":\"본문\"}".formatted(problem.getId())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("강제 탈퇴한 아이디로 다시 가입할 수 있다")
+    void removedUsernameCanSignUpAgain() throws Exception {
+        User user = fixtures.user(Role.USER);
+        String username = user.getUsername();
+        String nickname = user.getNickname();
+
+        mockMvc.perform(delete("/api/admin/users/" + user.getId()).header("Authorization", fixtures.bearer(Role.ADMIN)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/signup").contentType("application/json")
+                        .content("{\"username\":\"%s\",\"password\":\"Password123!\",\"nickname\":\"%s\"}".formatted(username, nickname)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.username").value(username));
+    }
+
+    /** 관리자를 지우려면 먼저 내려야 한다. 두 단계를 거치게 해서 실수로 자기나 다른 관리자를 지우지 않게 한다. */
+    @Test
+    @DisplayName("관리자 계정은 탈퇴시킬 수 없다 — 400 USER_005. 없는 사용자는 404, 일반 사용자는 403")
+    void removeGuards() throws Exception {
+        User admin = fixtures.user(Role.ADMIN);
+        User otherAdmin = fixtures.user(Role.ADMIN);
+        User user = fixtures.user(Role.USER);
+
+        for (User target : new User[]{admin, otherAdmin}) {
+            mockMvc.perform(delete("/api/admin/users/" + target.getId()).header("Authorization", fixtures.bearer(admin)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("USER_005"));
+        }
+        mockMvc.perform(delete("/api/admin/users/999999999").header("Authorization", fixtures.bearer(admin)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("USER_001"));
+        mockMvc.perform(delete("/api/admin/users/" + user.getId()).header("Authorization", fixtures.bearer(user)))
+                .andExpect(status().isForbidden());
+        assertThat(userRepository.findById(user.getId())).isPresent();
     }
 
     @Test

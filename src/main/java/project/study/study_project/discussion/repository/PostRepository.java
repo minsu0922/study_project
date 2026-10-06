@@ -29,6 +29,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     long countByDiscussionIdAndStatus(Long discussionId, CommentStatus status);
 
+    /* ── 관리자 화면의 사용자 활동 ── */
+
+    long countByUserIdAndStatusNot(Long userId, CommentStatus status);
+
+    long countByUserIdAndStatus(Long userId, CommentStatus status);
+
+    List<Post> findTop5ByUserIdAndStatusNotOrderByCreatedAtDescIdDesc(Long userId, CommentStatus status);
+
     /**
      * 커뮤니티 목록의 공통 부분 — 방을 가리지 않고 보이는 글을 고른다. 문제 id·제목·분야를 같이
      * 읽는다. 글마다 따로 읽으면 한 쪽에 조회가 60번 나간다.

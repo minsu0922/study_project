@@ -15,6 +15,7 @@ import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.dto.CommentReportItem;
 import project.study.study_project.discussion.dto.CommentReportRequest;
 import project.study.study_project.discussion.dto.PostReportRequest;
+import project.study.study_project.discussion.dto.ReportReceipt;
 import project.study.study_project.discussion.repository.CommentReportRepository;
 import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
@@ -54,7 +55,7 @@ public class CommentReportService {
 
     /** 중복은 두 겹으로 막는다 — 미리 세어 안내하고, 끼어든 요청은 유일 제약이 막는다(문제 제보와 같은 방식). */
     @Transactional
-    public CommentReportItem report(Long userId, CommentReportRequest request) {
+    public ReportReceipt report(Long userId, CommentReportRequest request) {
         requireNotSuspended(userId);
         Comment comment = requireComment(request.commentId());
         if (!comment.isVisible()) {
@@ -68,7 +69,7 @@ public class CommentReportService {
             CommentReport saved = reportRepository.saveAndFlush(
                     CommentReport.of(comment, userId, request.reason(), Texts.trimToNull(request.detail())));
             log.info("댓글 신고 접수: commentId={} reason={}", comment.getId(), request.reason());
-            return toItem(saved);
+            return ReportReceipt.of(saved);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.DISCUSSION_007);
         }
@@ -76,7 +77,7 @@ public class CommentReportService {
 
     /** 글 신고. 지운 글은 없는 글로, 이미 가린 글은 처리된 것으로 답한다. */
     @Transactional
-    public CommentReportItem reportPost(Long userId, PostReportRequest request) {
+    public ReportReceipt reportPost(Long userId, PostReportRequest request) {
         requireNotSuspended(userId);
         Post post = requirePost(request.postId());
         if (post.isDeleted()) {
@@ -93,7 +94,7 @@ public class CommentReportService {
             CommentReport saved = reportRepository.saveAndFlush(
                     CommentReport.ofPost(post, userId, request.reason(), Texts.trimToNull(request.detail())));
             log.info("글 신고 접수: postId={} reason={}", post.getId(), request.reason());
-            return toItem(saved);
+            return ReportReceipt.of(saved);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.DISCUSSION_007);
         }
