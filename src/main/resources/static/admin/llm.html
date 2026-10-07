@@ -64,6 +64,9 @@ try {
          카드마다 붙이면 다섯 장에 같은 말이 다섯 번 뜬다. -->
     <div id="kindBalance" hidden style="margin-bottom:12px"></div>
 
+    <!-- AI 검수 요약 표(2026-10-07) — 어느 문제에 어떤 지적이 달렸는지 카드를 다 펼치기 전에 본다. -->
+    <div id="aiSummary" hidden style="margin-bottom:12px"></div>
+
     <!-- ═══ 일괄 승인 바 ═══
          검수 대기 목록에서만 나타난다. 승인됨·거절됨 목록에는 체크박스 자체가 없다 —
          이미 처리된 것을 다시 승인할 길은 없어서(서버가 409로 막는다) 있어 봐야 오해만 준다. -->
@@ -331,13 +334,76 @@ function aiFindingsBoxOf(d) {
   if (findings.length === 0) {
     return `<div class="meta" style="margin-top:6px">AI 검수: 지적 없음</div>`;
   }
+  // 지적 하나는 [종류] 결론 한 줄 + 근거 줄들이다. 결론은 서버가 정한 문장이라 훑어 읽히고,
+  // AI가 쓴 긴 글은 근거로 내려 들여 쓴다. 한 문장에 다 넣으면 어디까지가 결론인지 안 보인다.
+  // 근거 속 "2번"은 아래 보기의 번호다(서버가 원래 순서로 바꿔 준다 — Shown.inOriginalNumbers).
+  const items = findings.map(f => `
+      <div class="ai-finding">
+        <div><span class="badge gray">${escapeHtml(f.label)}</span> <b>${escapeHtml(f.message)}</b></div>
+        ${(f.details ?? []).length ? `<ul>${f.details.map(l => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}
+      </div>`).join("");
   return `
-    <div class="alert info" style="margin:10px 0">
-      <div style="margin-bottom:6px"><b>AI 검수 지적 ${findings.length}건</b> — 틀릴 수 있으니 직접 확인하세요</div>
-      ${findings.map(f => `<div style="margin-top:4px"><span class="badge gray">${escapeHtml(f.label)}</span> ${escapeHtml(f.message)}</div>`).join("")}
-      <!-- 검수기는 보기를 섞어서 보여 준다(ClaudeProblemReviewer — 정답이 늘 첫 보기라서).
-           문구 속 번호는 그 섞인 순서라, 적어 두지 않으면 검수자가 엉뚱한 보기를 본다. -->
-      <div style="margin-top:8px; font-size:.82rem">문구 속 보기 번호는 검수 때 섞은 순서라 아래 보기 순서와 다릅니다. 내용으로 찾으세요.</div>
+    <div class="alert info ai-findings" style="margin:10px 0">
+      <div class="ai-findings-head"><b>AI 검수 지적 ${findings.length}건</b> · 틀릴 수 있으니 직접 확인하세요</div>
+      ${items}
+    </div>`;
+}
+
+/** 요약 표의 열. 순서와 이름은 서버의 ProblemReview.FindingType과 맞춘다 — 이름은 좁은 열에 맞게 줄였다. */
+const AI_FINDING_COLUMNS = [
+  ["ANSWER_MISMATCH", "정답 의심"],
+  ["OTHER_CORRECT", "정답 둘"],
+  ["CHOICE_CUE_LEAK", "보기 단서"],
+  ["QUESTION_REVEALS", "질문 누설"],
+  ["NO_SUPPORT", "근거 없음"],
+  ["DIFFICULTY_MISMATCH", "난이도"],
+];
+
+/**
+ * AI 검수 요약 표 — 지금 목록의 초안을 문제 × 지적 종류로 편다. 제목을 누르면 그 카드로 간다.
+ *
+ * 화면에서 세는 이유는 renderKindBalance와 같다. 목록을 통째로 쥔 것이 화면뿐이다.
+ * 승인·거절 탭에서도 그린다. 처리 결과와 지적을 견줘 봐야 지적이 맞았는지 알 수 있다.
+ * 검수를 안 돌린 초안(aiFindings가 null)은 행으로 넣지 않고 건수만 적는다 — 빈 행과
+ * "지적 없음" 행이 같아 보이면 안 된다.
+ */
+function renderAiSummary(drafts) {
+  const box = document.getElementById("aiSummary");
+  const reviewed = drafts.filter(d => d.aiFindings != null);
+  if (reviewed.length === 0) {
+    box.hidden = true;
+    return;
+  }
+  const has = (d, type) => d.aiFindings.some(f => f.type === type);
+  const total = reviewed.reduce((n, d) => n + d.aiFindings.length, 0);
+  const skipped = drafts.length - reviewed.length;
+  const rows = reviewed.map(d => `
+        <tr>
+          <td class="wrap"><a href="#draft-${d.id}">#${d.id} ${escapeHtml(d.title ?? d.question.slice(0, 30))}</a></td>
+          ${AI_FINDING_COLUMNS.map(([type]) => `<td style="text-align:center">${has(d, type) ? "●" : ""}</td>`).join("")}
+          <td style="text-align:center"${d.aiFindings.length ? "" : ` class="zero"`}>${d.aiFindings.length || "없음"}</td>
+        </tr>`).join("");
+  const sums = AI_FINDING_COLUMNS.map(([type]) => reviewed.filter(d => has(d, type)).length);
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="meta" style="margin-bottom:6px">
+      <b>AI 검수 요약</b> · 이 목록 ${drafts.length}건 중 검수한 ${reviewed.length}건에 지적 ${total}건${
+        skipped ? ` · 검수 안 돌린 ${skipped}건은 표에 없습니다` : ""}
+    </div>
+    <div class="table-wrap" style="margin-bottom:0">
+      <table class="grid">
+        <thead><tr>
+          <th>문제</th>
+          ${AI_FINDING_COLUMNS.map(([, label]) => `<th style="text-align:center">${label}</th>`).join("")}
+          <th style="text-align:center">지적</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <th>합계</th>
+          ${sums.map(n => `<th style="text-align:center">${n || ""}</th>`).join("")}
+          <th style="text-align:center">${total}</th>
+        </tr></tfoot>
+      </table>
     </div>`;
 }
 
@@ -532,10 +598,12 @@ async function loadDrafts(jumpToLast = false) {
     // 같은 간격으로 흘러서, 어디까지가 한 보기인지 눈으로 끊어 읽어야 했다. 두 화면은
     // 같은 물건을 이어서 보는 자리라(여기서 읽고 → 폼에서 고친다) 생김새가 달라야 할 이유가 없다.
     const ordering = d.type === "ORDERING";
+    // AI 지적이 달린 초안에도 번호를 찍는다 — 근거가 "2번만 길다"처럼 보기를 번호로 가리킨다.
+    const numbered = ordering || (d.aiFindings ?? []).length > 0;
     const choices = (d.choices ?? []).map((c, i) =>
       `<li class="draft-choice${c.correct ? " is-correct" : ""}">
         <div class="draft-choice-main">
-          ${ordering ? `<span class="draft-choice-no">${i + 1}.</span>` : ""}
+          ${numbered ? `<span class="draft-choice-no">${i + 1}.</span>` : ""}
           ${c.correct ? `<span class="draft-choice-mark">정답</span>` : ""}
           <span>${escapeHtml(c.text)}</span>
         </div>${
@@ -585,7 +653,7 @@ async function loadDrafts(jumpToLast = false) {
          </label>`
       : `<span class="badge gray">#${d.id}</span>`;
     return `
-      <div class="card" style="margin-bottom:12px">
+      <div class="card draft-card" id="draft-${d.id}" style="margin-bottom:12px">
         <div>
           ${pick}
           <span class="badge gray">${escapeHtml(d.domainLabel)}</span>
@@ -623,6 +691,7 @@ async function loadDrafts(jumpToLast = false) {
   }).join("");
 
   renderKindBalance(data.content, status);
+  renderAiSummary(data.content);
   renderPager("d", data);
 
   // 목록을 다시 그리면 체크 상태는 사라진다(카드가 통째로 새로 만들어지므로).
