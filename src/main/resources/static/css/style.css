@@ -1357,6 +1357,18 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
   color: var(--muted); font-size: var(--fs-1); line-height: 1.5;
 }
 
+/* ── 검수 화면의 AI 검수 지적 상자 ──
+ * 지적 하나가 [종류] 결론 한 줄과 들여쓴 근거 줄들이다. 지적 사이에 선을 그어 끊는다 —
+ * 한 문제에 지적이 둘 이상 달리면 근거가 길어 어디서 다음 지적이 시작하는지 안 보였다. */
+.ai-findings-head { font-size: var(--fs-1); margin-bottom: 2px; }
+.ai-finding { padding: 8px 0 2px; }
+.ai-finding + .ai-finding { border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); margin-top: 6px; }
+.ai-finding ul { margin: 6px 0 0; padding-left: 22px; line-height: 1.6; }
+.ai-finding li { margin-bottom: 2px; }
+/* 요약 표에서 넘어왔을 때 카드 윗부분이 고정 머리줄에 가리지 않게 띄운다 */
+.draft-card { scroll-margin-top: 72px; }
+.draft-card:target { outline: 2px solid var(--primary); outline-offset: 2px; }
+
 /* (구)라디오형 보기 — admin 미리보기 등 호환용으로 유지 */
 .choice { display: block; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
 .choice:hover { border-color: var(--primary); }

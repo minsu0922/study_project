@@ -51,7 +51,10 @@ class AiFindingsWiringTest {
     @DisplayName("파일의 검수 지적이 검수 응답에 한글 이름과 함께 실리고, 지적 없는 문제는 빈 목록이다")
     void findingsInFileReachReviewResponse() throws Exception {
         Path file = writeFile(List.of(
-                new ProblemReview.Finding(1, ProblemReview.FindingType.CHOICE_CUE_LEAK, "4번만 길다")));
+                new ProblemReview.Finding(1, ProblemReview.FindingType.CHOICE_CUE_LEAK, "보기만 봐도 고른다",
+                        "4번만 길다\n나머지는 짧다"),
+                // 근거 칸이 생기기 전의 지적 — 결론만 있어도 그대로 실려야 한다
+                new ProblemReview.Finding(1, ProblemReview.FindingType.NO_SUPPORT, "근거 없음")));
 
         draftImportService.importFile(file);
 
@@ -59,7 +62,9 @@ class AiFindingsWiringTest {
         assertThat(drafts).extracting(LlmDraftResponse::question).containsExactly("지적 없는 문제", "지적 있는 문제");
         assertThat(drafts.get(0).aiFindings()).isEmpty();
         assertThat(drafts.get(1).aiFindings()).containsExactly(
-                new LlmDraftResponse.AiFinding("CHOICE_CUE_LEAK", "보기 단서 누설", "4번만 길다"));
+                new LlmDraftResponse.AiFinding("CHOICE_CUE_LEAK", "보기 단서 누설", "보기만 봐도 고른다",
+                        List.of("4번만 길다", "나머지는 짧다")),
+                new LlmDraftResponse.AiFinding("NO_SUPPORT", "문서에 근거 없음", "근거 없음", List.of()));
     }
 
     @Test

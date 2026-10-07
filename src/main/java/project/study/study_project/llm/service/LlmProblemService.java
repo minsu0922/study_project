@@ -737,12 +737,19 @@ public class LlmProblemService {
             List<DraftAiFinding> stored = objectMapper.readValue(d.getAiFindingsJson(), new TypeReference<>() {
             });
             return stored.stream()
-                    .map(f -> new LlmDraftResponse.AiFinding(f.type().name(), f.type().label(), f.message()))
+                    .map(f -> new LlmDraftResponse.AiFinding(
+                            f.type().name(), f.type().label(), f.message(), detailLinesOf(f.detail())))
                     .toList();
         } catch (JsonProcessingException | RuntimeException e) {
             log.warn("초안 #{}의 AI 검수 지적을 읽지 못함: {}", d.getId(), e.getMessage());
             return null;
         }
+    }
+
+    /** 근거를 줄 목록으로 나눠 내린다 — 화면이 줄바꿈 문자를 다시 쪼개지 않게 한다. 없으면 빈 목록. */
+    private static List<String> detailLinesOf(String detail) {
+        return detail == null ? List.of()
+                : detail.lines().map(String::strip).filter(line -> !line.isEmpty()).toList();
     }
 
     /**

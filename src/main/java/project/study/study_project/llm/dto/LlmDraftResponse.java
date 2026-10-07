@@ -76,7 +76,11 @@ public record LlmDraftResponse(
         LocalDateTime createdAt,
         LocalDateTime reviewedAt
 ) {
-    /** @param label 화면 표기용 한글 이름(예: 보기 단서 누설) */
-    public record AiFinding(String type, String label, String message) {
+    /**
+     * @param label   화면 표기용 한글 이름(예: 보기 단서 누설)
+     * @param message 결론 한 문장
+     * @param details 그렇게 본 근거, 한 줄씩. 없으면 빈 목록
+     */
+    public record AiFinding(String type, String label, String message, List<String> details) {
     }
 }

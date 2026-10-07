@@ -7,6 +7,8 @@ import project.study.study_project.llm.client.ProblemReview;
  *
  * <p>배치 파일의 {@link ProblemReview.Finding}에서 {@code problemIndex}만 뺀 모양이다.
  * 그 번호는 파일 안 위치라, 초안 한 건에 붙은 뒤에는 뜻이 없다.
+ *
+ * @param detail 근거(여러 줄). 없으면 {@code null}
  */
-public record DraftAiFinding(ProblemReview.FindingType type, String message) {
+public record DraftAiFinding(ProblemReview.FindingType type, String message, String detail) {
 }
