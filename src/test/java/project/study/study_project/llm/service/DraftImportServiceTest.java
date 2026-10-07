@@ -17,6 +17,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemGenerator;
+import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
@@ -260,7 +261,77 @@ class DraftImportServiceTest {
         verify(importedFileRepository, never()).save(any());
     }
 
+    /* ── AI 검수 지적 (docs/22 §6 2단계) ─────────────────────── */
+
+    /**
+     * 지적의 번호는 파일 안 위치다. 가운데 문제가 규약 위반으로 빠지면 초안 목록의 위치가 밀리므로,
+     * 번호로 붙이면 3번의 지적이 엉뚱한 초안에 달린다.
+     */
+    @Test
+    @DisplayName("규약 위반으로 문제가 빠져도 AI 검수 지적은 제 문제의 초안에 붙는다")
+    void attachesAiFindingsToTheRightDraftWhenItemsAreSkipped() throws Exception {
+        GeneratedProblemItem twoCorrect = new GeneratedProblemItem(
+                "정답이 두 개인 잘못된 문제", "", "해설",
+                List.of(new GeneratedProblemItem.GeneratedChoice("보기1", true),
+                        new GeneratedProblemItem.GeneratedChoice("보기2", true),
+                        new GeneratedProblemItem.GeneratedChoice("보기3", false),
+                        new GeneratedProblemItem.GeneratedChoice("보기4", false)));
+        Path file = writeBatchFileWithFindings("2026-10-08.json",
+                List.of(new ProblemReview.Finding(1, ProblemReview.FindingType.ANSWER_MISMATCH, "빠질 문제의 지적"),
+                        new ProblemReview.Finding(2, ProblemReview.FindingType.CHOICE_CUE_LEAK, "4번만 길다"),
+                        new ProblemReview.Finding(2, ProblemReview.FindingType.DIFFICULTY_MISMATCH, "초급으로 보인다")),
+                validItem("정상 문제 1"), twoCorrect, validItem("정상 문제 2"));
+
+        service.importFile(file);
+
+        List<GeneratedProblemDraft> drafts = capturedDrafts();
+        assertThat(drafts).extracting(GeneratedProblemDraft::getQuestion)
+                .containsExactly("정상 문제 1", "정상 문제 2");
+        // 검수를 돌린 파일이면 지적 없는 초안도 빈 목록이다 — null(검수 안 함)과 다르다
+        assertThat(drafts.get(0).getAiFindingsJson()).isEqualTo("[]");
+        assertThat(objectMapper.readTree(drafts.get(1).getAiFindingsJson()))
+                .isEqualTo(objectMapper.readTree("""
+                        [{"type":"CHOICE_CUE_LEAK","message":"4번만 길다"},
+                         {"type":"DIFFICULTY_MISMATCH","message":"초급으로 보인다"}]
+                        """));
+    }
+
+    @Test
+    @DisplayName("검수 지적 칸이 없는 파일의 초안은 지적이 null이다 — 옛 파일과 검수 실패가 여기 든다")
+    void leavesAiFindingsNullWhenFileHasNone() throws Exception {
+        Path file = writeBatchFile("2026-08-14.json", "claude-opus-5", validItem("지적 칸이 없는 문제"));
+
+        service.importFile(file);
+
+        assertThat(capturedDrafts()).singleElement()
+                .extracting(GeneratedProblemDraft::getAiFindingsJson)
+                .isNull();
+    }
+
+    @Test
+    @DisplayName("번호가 범위를 벗어난 지적은 그것만 버리고 문제는 들여온다")
+    void dropsFindingWithOutOfRangeIndex() throws Exception {
+        Path file = writeBatchFileWithFindings("2026-10-09.json",
+                List.of(new ProblemReview.Finding(7, ProblemReview.FindingType.NO_SUPPORT, "없는 문제의 지적")),
+                validItem("하나뿐인 문제"));
+
+        int saved = service.importFile(file);
+
+        assertThat(saved).isEqualTo(1);
+        assertThat(capturedDrafts()).singleElement()
+                .extracting(GeneratedProblemDraft::getAiFindingsJson)
+                .isEqualTo("[]");
+    }
+
     /* ── 도우미 ──────────────────────────────────────────────── */
+
+    private Path writeBatchFileWithFindings(String filename, List<ProblemReview.Finding> findings,
+                                            GeneratedProblemItem... items) throws Exception {
+        Path file = writeBatchFile(filename, "claude-opus-5", items);
+        GeneratedBatchFile batch = objectMapper.readValue(file.toFile(), GeneratedBatchFile.class);
+        objectMapper.writeValue(file.toFile(), batch.withReviewFindings(findings));
+        return file;
+    }
 
     /** 저장된 초안 목록을 잡아낸다(saveAll 인자). */
     @SuppressWarnings("unchecked")
