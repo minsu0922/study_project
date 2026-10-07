@@ -315,6 +315,33 @@ function warningBoxOf(d) {
 }
 
 /**
+ * 초안 하나의 AI 검수 지적 상자(docs/22 §6 2단계). 검수를 안 돌린 초안이면 빈 문자열.
+ *
+ * 규칙 경고(warningBoxOf)와 상자를 나눈다. 규칙은 같은 입력에 늘 같은 답을 내지만
+ * AI 지적은 틀릴 수 있어서, 한 상자에 섞으면 검수자가 둘을 같은 무게로 읽는다.
+ *
+ * aiFindings가 null(검수 안 돌림)이면 아무것도 안 그리고, 빈 배열(돌렸는데 지적 없음)이면
+ * 한 줄로 알린다. 둘을 똑같이 비워 두면 "AI가 보고 통과시킨 문제"를 알 수 없다.
+ *
+ * 처리가 끝난 초안에도 그린다. 승인·거절 결과와 지적을 나란히 봐야 지적이 맞았는지 알 수 있다.
+ */
+function aiFindingsBoxOf(d) {
+  const findings = d.aiFindings;
+  if (findings == null) return "";
+  if (findings.length === 0) {
+    return `<div class="meta" style="margin-top:6px">AI 검수: 지적 없음</div>`;
+  }
+  return `
+    <div class="alert info" style="margin:10px 0">
+      <div style="margin-bottom:6px"><b>AI 검수 지적 ${findings.length}건</b> — 틀릴 수 있으니 직접 확인하세요</div>
+      ${findings.map(f => `<div style="margin-top:4px"><span class="badge gray">${escapeHtml(f.label)}</span> ${escapeHtml(f.message)}</div>`).join("")}
+      <!-- 검수기는 보기를 섞어서 보여 준다(ClaudeProblemReviewer — 정답이 늘 첫 보기라서).
+           문구 속 번호는 그 섞인 순서라, 적어 두지 않으면 검수자가 엉뚱한 보기를 본다. -->
+      <div style="margin-top:8px; font-size:.82rem">문구 속 보기 번호는 검수 때 섞은 순서라 아래 보기 순서와 다릅니다. 내용으로 찾으세요.</div>
+    </div>`;
+}
+
+/**
  * 유형 쏠림 알림 — 2026-08-25 신설. 목록 맨 위에 한 줄.
  *
  * [왜 서버가 아니라 화면에서 세나]
@@ -568,6 +595,7 @@ async function loadDrafts(jumpToLast = false) {
           <span class="meta">${escapeHtml(d.model)}</span>
         </div>
         ${warningBoxOf(d)}
+        ${aiFindingsBoxOf(d)}
         ${d.documentSlug ? `
         <!-- 근거 문서 링크(2단계) — 검수자가 "이 문제가 문서와 맞나"를 바로 대조할 수 있게 한다.
              문서가 아직 승인 전이면 링크가 404가 되는데, 그건 정상 상황이라 막지 않는다:

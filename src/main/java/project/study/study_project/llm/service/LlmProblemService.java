@@ -28,6 +28,7 @@ import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
+import project.study.study_project.llm.dto.DraftAiFinding;
 import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
@@ -719,7 +720,29 @@ public class LlmProblemService {
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedProblemId(),
                 d.getDocumentSlug(), d.getQuestionKind(),
                 d.getQuestionKind() == null ? null : d.getQuestionKind().getLabel(),
-                checks, d.getCreatedAt(), d.getReviewedAt());
+                checks, readAiFindings(d), d.getCreatedAt(), d.getReviewedAt());
+    }
+
+    /**
+     * 저장된 AI 검수 지적을 화면용으로 읽는다. 검수를 안 돌린 초안이면 {@code null}.
+     *
+     * <p>읽다 실패해도 {@code null}로 넘긴다. 지적 한 칸이 깨졌다고 예외를 던지면 검수 목록
+     * 전체가 안 열린다 — 지적은 참고 정보이고, 목록은 검수자가 일하는 자리다.
+     */
+    private List<LlmDraftResponse.AiFinding> readAiFindings(GeneratedProblemDraft d) {
+        if (d.getAiFindingsJson() == null) {
+            return null;
+        }
+        try {
+            List<DraftAiFinding> stored = objectMapper.readValue(d.getAiFindingsJson(), new TypeReference<>() {
+            });
+            return stored.stream()
+                    .map(f -> new LlmDraftResponse.AiFinding(f.type().name(), f.type().label(), f.message()))
+                    .toList();
+        } catch (JsonProcessingException | RuntimeException e) {
+            log.warn("초안 #{}의 AI 검수 지적을 읽지 못함: {}", d.getId(), e.getMessage());
+            return null;
+        }
     }
 
     /**

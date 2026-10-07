@@ -1950,17 +1950,55 @@ class DraftGeneratorCliTest {
                 List.of(), "", "스키마의 뜻");
         var source = new project.study.study_project.llm.client.SourceDocument("s", "제목", "본문");
 
-        String rendered = BatchReports.reportProblemReview((p, d, s) -> List.of(
-                        new project.study.study_project.llm.client.ProblemReview.Finding(0,
-                                project.study.study_project.llm.client.ProblemReview.FindingType.ANSWER_MISMATCH,
-                                "검수 AI는 테이블을 골랐다")),
+        var finding = new project.study.study_project.llm.client.ProblemReview.Finding(0,
+                project.study.study_project.llm.client.ProblemReview.FindingType.ANSWER_MISMATCH,
+                "검수 AI는 테이블을 골랐다");
+
+        var reported = BatchReports.reportProblemReview((p, d, s) -> List.of(finding),
                 List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
-        String failed = BatchReports.reportProblemReview((p, d, s) -> {
+        var failed = BatchReports.reportProblemReview((p, d, s) -> {
             throw new IllegalStateException("API 오류");
         }, List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
 
-        assertThat(rendered).contains("문제 검수: 1건", "1번 「스키마의 뜻」 [정답 의심]");
-        assertThat(failed).contains("문제 검수 실패", "API 오류");
+        assertThat(reported.rendered()).contains("문제 검수: 1건", "1번 「스키마의 뜻」 [정답 의심]");
+        assertThat(reported.findings()).containsExactly(finding);
+        assertThat(failed.rendered()).contains("문제 검수 실패", "API 오류");
+        // 실패는 "지적 없음"(빈 목록)과 달라야 한다 — 파일에 싣지 않는 신호다
+        assertThat(failed.findings()).isNull();
+    }
+
+    @Test
+    @DisplayName("검수 지적을 붙여 다시 쓴 파일은 문제를 그대로 두고 지적만 더한다")
+    void attachesReviewFindingsToBatchFile(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        writeBatchFile(dir, "2026-09-20.json", "NETWORK", "첫 문제", "둘째 문제");
+        java.nio.file.Path file = dir.resolve("2026-09-20.json");
+        GeneratedBatchFile before = DraftGeneratorCli.MAPPER.readValue(file.toFile(), GeneratedBatchFile.class);
+        var finding = new project.study.study_project.llm.client.ProblemReview.Finding(1,
+                project.study.study_project.llm.client.ProblemReview.FindingType.CHOICE_CUE_LEAK,
+                "4번만 길다");
+
+        DraftGeneratorCli.attachReviewFindings(file, before, List.of(finding));
+
+        GeneratedBatchFile after = DraftGeneratorCli.MAPPER.readValue(file.toFile(), GeneratedBatchFile.class);
+        // 옛 파일(칸이 없음)은 null로 읽혀야 흡수가 그대로 돈다
+        assertThat(before.reviewFindings()).isNull();
+        assertThat(after.reviewFindings()).containsExactly(finding);
+        assertThat(after.problems()).isEqualTo(before.problems());
+        assertThat(dir.resolve("2026-09-20.json.tmp")).doesNotExist();
+    }
+
+    @Test
+    @DisplayName("지적을 싣다 실패해도 예외를 던지지 않고 원래 파일을 남긴다")
+    void keepsBatchFileWhenAttachingFails(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        writeBatchFile(dir, "2026-09-20.json", "NETWORK", "첫 문제");
+        java.nio.file.Path file = dir.resolve("2026-09-20.json");
+        GeneratedBatchFile batch = DraftGeneratorCli.MAPPER.readValue(file.toFile(), GeneratedBatchFile.class);
+        // 임시 파일 자리를 폴더가 막고 있으면 쓰기가 실패한다
+        java.nio.file.Files.createDirectory(dir.resolve("2026-09-20.json.tmp"));
+
+        DraftGeneratorCli.attachReviewFindings(file, batch, List.of());
+
+        assertThat(DraftGeneratorCli.MAPPER.readValue(file.toFile(), GeneratedBatchFile.class)).isEqualTo(batch);
     }
 
     @Test

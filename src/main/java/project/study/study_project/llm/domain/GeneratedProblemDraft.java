@@ -114,6 +114,14 @@ public class GeneratedProblemDraft {
     @Column(name = "source_quote_check", length = 500)
     private String sourceQuoteCheck;
 
+    /**
+     * AI 문제 검수 지적 JSON — {@code DraftAiFinding} 목록(V29).
+     * {@code null}은 검수를 안 돌린 초안이고, 빈 목록({@code []})은 돌렸는데 지적이 없는 것이다.
+     */
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    @Column(name = "ai_findings_json")
+    private String aiFindingsJson;
+
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
@@ -192,6 +200,14 @@ public class GeneratedProblemDraft {
         return new GeneratedProblemDraft(domain, difficulty, type, title,
                 question, answer, explanation, choicesJson, model, documentSlug, questionKind,
                 sourceQuoteCheck);
+    }
+
+    /**
+     * AI 검수 지적을 붙인다. 팩터리 인자로 받지 않는 이유: 지적은 배치 파일로 들어온 초안에만
+     * 있고, 화면에서 만든 초안은 검수를 돌리지 않는다.
+     */
+    public void recordAiFindings(String aiFindingsJson) {
+        this.aiFindingsJson = aiFindingsJson;
     }
 
     /** 승인 처리 — 생성된 problem.id를 이력으로 남긴다. 이미 처리된 초안이면 LLM_002. */

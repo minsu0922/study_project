@@ -64,7 +64,19 @@ public record LlmDraftResponse(
          */
         List<DraftCheck> checks,
 
+        /**
+         * AI 문제 검수 지적(docs/22 §6 2단계). {@code null}이면 검수를 안 돌린 초안이고,
+         * 빈 목록이면 돌렸는데 지적이 없는 것이다.
+         *
+         * <p>{@code checks}에 섞지 않는다. 규칙 경고는 같은 입력에 늘 같은 답을 내지만
+         * AI 지적은 틀릴 수 있어, 화면이 둘을 다르게 보여 줘야 한다.
+         */
+        List<AiFinding> aiFindings,
+
         LocalDateTime createdAt,
         LocalDateTime reviewedAt
 ) {
+    /** @param label 화면 표기용 한글 이름(예: 보기 단서 누설) */
+    public record AiFinding(String type, String label, String message) {
+    }
 }

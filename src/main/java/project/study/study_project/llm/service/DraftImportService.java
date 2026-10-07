@@ -5,15 +5,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.global.common.Texts;
+import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
+import project.study.study_project.llm.dto.DraftAiFinding;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 import project.study.study_project.llm.support.DomainCatalog;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 생성 결과 파일 한 개를 검수 대기 초안으로 흡수한다 — docs/14.
@@ -94,6 +100,10 @@ public class DraftImportService {
                 batch.domain(), batch.difficulty(), batch.type(), batch.problems(), model,
                 batch.documentSlug());
 
+        if (batch.reviewFindings() != null) {
+            attachAiFindings(batch, drafts);
+        }
+
         String filename = file.getFileName().toString();
         importedFileRepository.save(ImportedDraftFile.of(filename, drafts.size()));
 
@@ -106,5 +116,35 @@ public class DraftImportService {
                     filename, drafts.size(), batch.domain(), batch.difficulty());
         }
         return drafts.size();
+    }
+
+    /**
+     * 파일의 AI 검수 지적을 초안마다 나눠 붙인다(docs/22 §6 2단계).
+     *
+     * <p><b>번호가 아니라 지문으로 짝짓는다.</b> 지적의 {@code problemIndex}는 파일 안 위치인데,
+     * {@code saveDrafts}가 규약을 어긴 문제를 빼면 초안 목록의 위치가 밀린다. 번호로 붙이면
+     * 3번의 지적이 4번 초안에 달린다.
+     *
+     * <p>검수를 돌린 파일이면 지적이 없는 초안에도 빈 목록을 적는다 — "AI가 봤고 지적이 없다"를
+     * "검수를 안 돌렸다"(null)와 가르기 위해서다. 범위를 벗어난 번호는 손으로 고친 파일에서만
+     * 나오므로 그 지적만 버린다. 지적 때문에 문제까지 못 들여오면 손해가 더 크다.
+     */
+    private void attachAiFindings(GeneratedBatchFile batch, List<GeneratedProblemDraft> drafts)
+            throws IOException {
+        Map<String, List<DraftAiFinding>> byQuestion = new HashMap<>();
+        for (ProblemReview.Finding finding : batch.reviewFindings()) {
+            if (finding == null || finding.type() == null
+                    || finding.problemIndex() < 0 || finding.problemIndex() >= batch.problems().size()) {
+                log.warn("초안 흡수: 짝을 찾을 수 없는 AI 검수 지적을 버림 — {}", finding);
+                continue;
+            }
+            String question = Texts.trimToNull(batch.problems().get(finding.problemIndex()).question());
+            byQuestion.computeIfAbsent(question, q -> new ArrayList<>())
+                    .add(new DraftAiFinding(finding.type(), finding.message()));
+        }
+        for (GeneratedProblemDraft draft : drafts) {
+            draft.recordAiFindings(objectMapper.writeValueAsString(
+                    byQuestion.getOrDefault(draft.getQuestion(), List.of())));
+        }
     }
 }

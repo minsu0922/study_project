@@ -8,14 +8,17 @@ import project.study.study_project.llm.client.ClaudeCalls;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
 import project.study.study_project.llm.client.ClaudeProblemReviewer;
 import project.study.study_project.llm.client.GeneratedProblemItem;
+import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -271,7 +274,9 @@ public final class DraftGeneratorCli {
                 domain, difficulty, type, model,
                 source == null ? null : source.slug(), kept,
                 // 걷어내기 <전> 목록에서 뽑는다 — kept에는 이미 껍데기가 없다.
-                YieldReporter.shortfallReasons(problems));
+                YieldReporter.shortfallReasons(problems),
+                // 검수는 저장 뒤에 돈다 — 아래 attachReviewFindings가 채운다
+                null);
 
         Files.createDirectories(outDir);
         Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
@@ -287,7 +292,35 @@ public final class DraftGeneratorCli {
 
         // 문제 검수(docs/22 §3.2~3.4). 객관식이고 근거 문서가 있을 때만 — 근거 대조에 문서가 필요하다
         if (type == ProblemType.MULTIPLE_CHOICE && source != null) {
-            BatchReports.reportProblemReview(new ClaudeProblemReviewer(model), kept, difficulty, source, date);
+            List<ProblemReview.Finding> findings = BatchReports.reportProblemReview(
+                    new ClaudeProblemReviewer(model), kept, difficulty, source, date).findings();
+            if (findings != null) {
+                attachReviewFindings(outFile, batch, findings);
+            }
+        }
+    }
+
+    /**
+     * 검수 지적을 넣어 결과 파일을 다시 쓴다 — 검수함이 지적을 보여 주려면 파일에 실려야 한다(docs/22 §6).
+     *
+     * <p>실패해도 예외를 던지지 않는다. 지적 없는 파일이 이미 저장돼 있고, 여기서 죽으면
+     * 커밋 스텝이 돌지 않아 요금을 낸 문제까지 버려진다. 임시 파일에 쓰고 바꿔치는 이유도 같다 —
+     * 쓰다 끊기면 멀쩡하던 파일이 반쪽이 된다.
+     */
+    static void attachReviewFindings(Path outFile, GeneratedBatchFile batch, List<ProblemReview.Finding> findings) {
+        Path temp = outFile.resolveSibling(outFile.getFileName() + ".tmp");
+        try {
+            Files.writeString(temp, MAPPER.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(batch.withReviewFindings(findings)));
+            Files.move(temp, outFile, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            BatchReports.announce("⚠️ 검수 지적을 파일에 싣지 못했습니다 — 문제는 저장했고, 지적은 위 요약에만 있습니다 (%s)"
+                    .formatted(e.getMessage()));
+            try {
+                Files.deleteIfExists(temp);
+            } catch (IOException ignored) {
+                // 임시 파일이 남으면 커밋에 딸려 가지만 흡수 대상(*.json)이 아니라 해가 없다
+            }
         }
     }
 

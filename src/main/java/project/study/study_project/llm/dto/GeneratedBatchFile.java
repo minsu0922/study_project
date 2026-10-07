@@ -4,6 +4,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.GeneratedProblemItem;
+import project.study.study_project.llm.client.ProblemReview;
 
 import java.util.List;
 
@@ -40,6 +41,9 @@ import java.util.List;
  *                     (DraftGeneratorCli.dropBlankQuestions) 이유를 따로 옮겨 두지 않으면 함께 사라진다.
  *                     Actions 요약에만 두지 않는 이유: 그 화면은 90일 뒤 지워지고, 이유가 쌓여야
  *                     "재료 절을 넓힐지, 요청 수를 낮출지"를 정할 수 있다. 옛 파일은 {@code null}로 읽힌다
+ * @param reviewFindings AI 문제 검수 지적(docs/22 §6 2단계). {@code problemIndex}는 이 파일의
+ *                     {@code problems} 안 위치다. {@code null}은 검수를 안 돌렸거나 실패한 것이고,
+ *                     빈 목록은 돌렸는데 지적이 없는 것이다. 옛 파일은 {@code null}로 읽힌다
  */
 public record GeneratedBatchFile(
         String note,
@@ -51,12 +55,19 @@ public record GeneratedBatchFile(
         String model,
         String documentSlug,
         List<GeneratedProblemItem> problems,
-        List<String> shortfallReasons
+        List<String> shortfallReasons,
+        List<ProblemReview.Finding> reviewFindings
 ) {
     /** 사유 없이 만드는 편의 생성자 — 필드를 붙이기 전 호출부(테스트)가 그대로 컴파일되게 한다. */
     public GeneratedBatchFile(String note, String date, String generatedAt, DomainCode domain,
                               Difficulty difficulty, ProblemType type, String model,
                               String documentSlug, List<GeneratedProblemItem> problems) {
-        this(note, date, generatedAt, domain, difficulty, type, model, documentSlug, problems, null);
+        this(note, date, generatedAt, domain, difficulty, type, model, documentSlug, problems, null, null);
+    }
+
+    /** 검수 지적만 바꾼 사본. 검수는 파일을 저장한 뒤에 돌기 때문에 나중에 붙인다. */
+    public GeneratedBatchFile withReviewFindings(List<ProblemReview.Finding> findings) {
+        return new GeneratedBatchFile(note, date, generatedAt, domain, difficulty, type, model,
+                documentSlug, problems, shortfallReasons, findings);
     }
 }
