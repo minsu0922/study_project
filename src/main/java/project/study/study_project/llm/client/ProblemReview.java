@@ -107,7 +107,16 @@ public final class ProblemReview {
         }
     }
 
-    /** @param problemIndex 검수에 넘긴 목록 안의 위치(0부터) */
-    public record Finding(int problemIndex, FindingType type, String message) {
+    /**
+     * @param problemIndex 검수에 넘긴 목록 안의 위치(0부터)
+     * @param message      결론 한 문장. 종류마다 코드가 정한 문장이라 목록에서 훑어 읽힌다
+     * @param detail       그렇게 본 근거. 줄바꿈으로 나눈 여러 줄이고 AI가 쓴 글이 섞인다.
+     *                     댈 근거가 없는 종류와 이 칸이 생기기 전(2026-10-07)의 지적은 {@code null}
+     */
+    public record Finding(int problemIndex, FindingType type, String message, String detail) {
+
+        public Finding(int problemIndex, FindingType type, String message) {
+            this(problemIndex, type, message, null);
+        }
     }
 }

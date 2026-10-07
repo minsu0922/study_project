@@ -106,8 +106,11 @@ final class BatchReports {
                 .map(f -> {
                     GeneratedProblemItem p = problems.get(f.problemIndex());
                     String name = p.title() == null || p.title().isBlank() ? p.question() : p.title();
-                    return "- %d번 「%s」 [%s] %s".formatted(f.problemIndex() + 1,
+                    String head = "- %d번 「%s」 [%s] %s".formatted(f.problemIndex() + 1,
                             name.length() > 40 ? name.substring(0, 40) + "…" : name, f.type().label(), f.message());
+                    // 근거는 줄마다 하위 항목으로 단다. 한 줄에 이어 붙이면 요약 화면에서 못 읽는다
+                    return f.detail() == null || f.detail().isBlank() ? head
+                            : head + f.detail().lines().map(l -> "\n  - " + l).collect(java.util.stream.Collectors.joining());
                 })
                 .collect(java.util.stream.Collectors.joining("\n"));
         return "🔎 **%s 문제 검수: %d건** — 승인 전에 확인하세요. AI 지적이라 틀릴 수 있습니다%n%s%n"

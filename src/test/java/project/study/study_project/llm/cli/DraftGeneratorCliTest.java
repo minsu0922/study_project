@@ -1952,7 +1952,7 @@ class DraftGeneratorCliTest {
 
         var finding = new project.study.study_project.llm.client.ProblemReview.Finding(0,
                 project.study.study_project.llm.client.ProblemReview.FindingType.ANSWER_MISMATCH,
-                "검수 AI는 테이블을 골랐다");
+                "검수 AI는 다른 보기를 골랐습니다", "AI가 고른 보기: 「테이블」\n고른 이유: 표라서");
 
         var reported = BatchReports.reportProblemReview((p, d, s) -> List.of(finding),
                 List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
@@ -1960,7 +1960,10 @@ class DraftGeneratorCliTest {
             throw new IllegalStateException("API 오류");
         }, List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
 
-        assertThat(reported.rendered()).contains("문제 검수: 1건", "1번 「스키마의 뜻」 [정답 의심]");
+        assertThat(reported.rendered()).contains("문제 검수: 1건",
+                "1번 「스키마의 뜻」 [정답 의심] 검수 AI는 다른 보기를 골랐습니다",
+                // 근거는 줄마다 하위 항목이다
+                "\n  - AI가 고른 보기: 「테이블」\n  - 고른 이유: 표라서");
         assertThat(reported.findings()).containsExactly(finding);
         assertThat(failed.rendered()).contains("문제 검수 실패", "API 오류");
         // 실패는 "지적 없음"(빈 목록)과 달라야 한다 — 파일에 싣지 않는 신호다

@@ -184,7 +184,43 @@ class ClaudeProblemReviewerTest {
 
         assertThat(findings).singleElement().satisfies(f -> {
             assertThat(f.type()).isEqualTo(FindingType.DIFFICULTY_MISMATCH);
-            assertThat(f.message()).contains("중급", "고급", "원본은 훼손 없이", "2개");
+            // 결론은 한 문장이고 조사가 맞아야 한다("중급로"로 나간 적이 있다)
+            assertThat(f.message()).isEqualTo("중급으로 냈지만 고급으로 보입니다");
+            assertThat(f.detail().lines()).hasSize(3);
+            assertThat(f.detail()).contains("「원본은 훼손 없이 남아야 한다」", "2개", "서식 요구가 없으면 맞다");
+        });
+    }
+
+    /* ── 지적 문구: 결론과 근거, 보기 번호 ── */
+
+    /**
+     * AI는 섞인 순서로 보기를 본다. 그 번호를 그대로 내보내면 검수함에서 엉뚱한 보기를 가리킨다.
+     */
+    @Test
+    @DisplayName("근거 속 보기 번호를 원래 보기 순서로 바꾼다")
+    void rewritesChoiceNumbersToOriginalOrder() {
+        var s = new ClaudeProblemReviewer.Shown(0, mc("스키마란?"), List.of(2, 0, 3, 1));
+
+        assertThat(s.inOriginalNumbers("1번만 길고 4번은 2번과 겹친다")).isEqualTo("3번만 길고 2번은 1번과 겹친다");
+        assertThat(s.inOriginalNumbers("12번 호출하고 5번은 그대로")).as("보기 번호가 아닌 것은 그대로 둔다")
+                .isEqualTo("12번 호출하고 5번은 그대로");
+        assertThat(s.inOriginalNumbers(null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("보기 단서 누설은 결론을 고정 문장으로, AI가 든 단서를 근거로 나눠 적는다")
+    void cueLeakSplitsConclusionAndDetail() {
+        var shown = ClaudeProblemReviewer.showable(List.of(mc("스키마란?")));
+        int correct = shown.get(0).correctNo();
+
+        List<Finding> findings = ClaudeProblemReviewer.compare(shown,
+                new ChoiceOnlyBatch(List.of(new ChoiceOnlyAnswer(1, correct + "번만 짧다", correct))),
+                new JudgementBatch(List.of(fine(1, correct))), Difficulty.BEGINNER, DOC);
+
+        assertThat(findings).singleElement().satisfies(f -> {
+            assertThat(f.message()).isEqualTo("질문을 가리고 보기만 봐도 정답을 고를 수 있습니다");
+            // mc()는 정답을 첫 보기에 둔다 — 섞인 번호가 무엇이든 원래 번호는 1번이다
+            assertThat(f.detail()).isEqualTo("1번만 짧다");
         });
     }
 

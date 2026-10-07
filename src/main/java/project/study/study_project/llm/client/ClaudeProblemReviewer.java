@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -130,7 +131,26 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
         String choiceText(int no) {
             return no >= 1 && no <= order.size() ? item.choices().get(order.get(no - 1)).text() : "";
         }
+
+        /**
+         * AI가 쓴 글 속 "N번"을 원래 보기 순서의 번호로 바꾼다.
+         *
+         * <p>AI는 섞인 순서로 보기를 봤으므로 "4번만 길다"의 4번은 검수함에 보이는 4번이 아니다.
+         * 프롬프트로 번호를 못 쓰게 하지 않는 이유: 프롬프트를 바꾸면 적발률을 다시 재야 한다(docs/22 §4).
+         *
+         * <p>횟수를 뜻하는 "3번 재전송"도 바뀐다. 보기 번호와 가를 방법이 없어 감수한다.
+         * 숫자가 이어지는 "12번"과 보기 범위 밖 "5번"은 건드리지 않는다.
+         */
+        String inOriginalNumbers(String text) {
+            if (text == null) {
+                return "";
+            }
+            return CHOICE_NO.matcher(text.strip()).replaceAll(
+                    m -> (order.get(Integer.parseInt(m.group(1)) - 1) + 1) + "번");
+        }
     }
+
+    private static final Pattern CHOICE_NO = Pattern.compile("(?<![0-9])([1-4])번");
 
     static List<Shown> showable(List<GeneratedProblemItem> problems) {
         List<Shown> shown = new ArrayList<>();
@@ -203,10 +223,13 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
             Shown s = shown.get(k);
             int correct = s.correctNo();
 
+            // 지적은 결론(message)과 근거(detail)로 나눈다. 결론은 코드가 정한 문장이라 검수함에서
+            // 훑어 읽히고, AI가 쓴 긴 글은 근거로 내린다. 근거 속 보기 번호는 원래 순서로 바꾼다(inOriginalNumbers)
             ChoiceOnlyAnswer a = answers.get(k + 1);
             if (a != null && a.choiceNo() == correct && !isBlank(a.cue())) {
                 findings.add(new Finding(s.index(), FindingType.CHOICE_CUE_LEAK,
-                        "질문 없이 보기만 보고 정답을 골랐다: " + a.cue()));
+                        "질문을 가리고 보기만 봐도 정답을 고를 수 있습니다",
+                        s.inOriginalNumbers(a.cue())));
             }
 
             Judgement j = judgements.get(k + 1);
@@ -215,30 +238,39 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
             }
             if (j.chosenNo() != correct) {
                 findings.add(new Finding(s.index(), FindingType.ANSWER_MISMATCH,
-                        "검수 AI는 \"%s\"를 골랐다: %s".formatted(s.choiceText(j.chosenNo()), j.answerReason())));
+                        "검수 AI는 표시된 정답이 아닌 보기를 골랐습니다",
+                        "AI가 고른 보기: 「%s」\n고른 이유: %s".formatted(
+                                s.choiceText(j.chosenNo()), s.inOriginalNumbers(j.answerReason()))));
             } else if (j.otherCorrectNo() >= 1 && j.otherCorrectNo() <= 4 && j.otherCorrectNo() != correct) {
                 findings.add(new Finding(s.index(), FindingType.OTHER_CORRECT,
-                        "\"%s\"도 정답일 수 있다: %s".formatted(s.choiceText(j.otherCorrectNo()), j.otherCorrectReason())));
+                        "정답으로 볼 수 있는 보기가 하나 더 있습니다",
+                        "그 보기: 「%s」\n맞다고 본 이유: %s".formatted(
+                                s.choiceText(j.otherCorrectNo()), s.inOriginalNumbers(j.otherCorrectReason()))));
             }
             if (!isBlank(j.revealReason())) {
-                findings.add(new Finding(s.index(), FindingType.QUESTION_REVEALS, j.revealReason()));
+                findings.add(new Finding(s.index(), FindingType.QUESTION_REVEALS,
+                        "내용을 몰라도 질문과 보기의 문장만 견줘 답을 좁힐 수 있습니다",
+                        s.inOriginalNumbers(j.revealReason())));
             }
             String quote = ClaudeDocumentFactChecker.normalize(j.supportQuote());
             if (quote.isEmpty() || !doc.contains(quote)) {
                 findings.add(new Finding(s.index(), FindingType.NO_SUPPORT,
-                        quote.isEmpty() ? "정답을 뒷받침하는 문장을 문서에서 찾지 못했다"
-                                : "검수 AI가 든 근거 문장이 문서에 없다(지어낸 인용)"));
+                        quote.isEmpty() ? "정답을 뒷받침하는 문장을 근거 문서에서 찾지 못했습니다"
+                                : "검수 AI가 든 근거 문장이 문서에 없습니다(지어낸 인용)",
+                        quote.isEmpty() ? null : "AI가 든 문장: 「%s」".formatted(j.supportQuote().strip())));
             }
             // 중급 지문에 조건(장면)만 있는 것은 지적하지 않는다. 진짜 중급 16개 중 약 6개가 배경 장면으로
             // 시작해 헛경보가 된다(docs/22 §9). 급은 오답 성격과 함께 볼 때만 갈린다
             Difficulty judgedLevel = levelOf(s.item().question(), j);
             if (judgedLevel != labeled) {
                 boolean condition = hasCondition(s.item().question(), j);
+                // 급 이름(초급·중급·고급)은 모두 받침으로 끝나 조사가 늘 "으로"다
                 findings.add(new Finding(s.index(), FindingType.DIFFICULTY_MISMATCH,
-                        "%s로 냈지만 %s로 보인다: 지문 조건 %s, 다른 조건에서 맞는 오답 %d개. %s".formatted(
-                                labeled.getDisplayName(), judgedLevel.getDisplayName(),
-                                condition ? "「" + j.conditionQuote() + "」" : "없음",
-                                elsewhereCountOf(j), j.elsewhereReason())));
+                        "%s으로 냈지만 %s으로 보입니다".formatted(
+                                labeled.getDisplayName(), judgedLevel.getDisplayName()),
+                        "지문에 답을 가르는 조건: %s\n조건이 달랐다면 정답이 되는 오답: %d개\n보기별 판단: %s".formatted(
+                                condition ? "「" + j.conditionQuote().strip() + "」" : "없음",
+                                elsewhereCountOf(j), s.inOriginalNumbers(j.elsewhereReason()))));
             }
         }
         return findings;

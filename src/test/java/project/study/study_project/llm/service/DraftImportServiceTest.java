@@ -278,7 +278,8 @@ class DraftImportServiceTest {
                         new GeneratedProblemItem.GeneratedChoice("보기4", false)));
         Path file = writeBatchFileWithFindings("2026-10-08.json",
                 List.of(new ProblemReview.Finding(1, ProblemReview.FindingType.ANSWER_MISMATCH, "빠질 문제의 지적"),
-                        new ProblemReview.Finding(2, ProblemReview.FindingType.CHOICE_CUE_LEAK, "4번만 길다"),
+                        new ProblemReview.Finding(2, ProblemReview.FindingType.CHOICE_CUE_LEAK, "보기만 봐도 고른다",
+                                "4번만 길다"),
                         new ProblemReview.Finding(2, ProblemReview.FindingType.DIFFICULTY_MISMATCH, "초급으로 보인다")),
                 validItem("정상 문제 1"), twoCorrect, validItem("정상 문제 2"));
 
@@ -291,8 +292,8 @@ class DraftImportServiceTest {
         assertThat(drafts.get(0).getAiFindingsJson()).isEqualTo("[]");
         assertThat(objectMapper.readTree(drafts.get(1).getAiFindingsJson()))
                 .isEqualTo(objectMapper.readTree("""
-                        [{"type":"CHOICE_CUE_LEAK","message":"4번만 길다"},
-                         {"type":"DIFFICULTY_MISMATCH","message":"초급으로 보인다"}]
+                        [{"type":"CHOICE_CUE_LEAK","message":"보기만 봐도 고른다","detail":"4번만 길다"},
+                         {"type":"DIFFICULTY_MISMATCH","message":"초급으로 보인다","detail":null}]
                         """));
     }
 
