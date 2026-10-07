@@ -6,13 +6,18 @@
 
 ## Git
 
-- push와 삭제만 먼저 묻는다. 나머지 git 명령은 바로 실행한다.
-- 삭제로 치는 것: `git rm`, `branch -D`, `tag -d`, `reset --hard`, `clean -fd`, `checkout --`로 변경 버리기
+- 아래 넷만 먼저 묻는다. push를 포함한 나머지 git 명령은 바로 실행한다.
+- 커밋 안 된 변경을 버리는 명령: `reset --hard`, `clean -fd`, `checkout --`, `restore`, `stash drop`, `stash clear`
+- 강제 push: `push --force`, `push --force-with-lease`
+- 머지
+- 브랜치 삭제: `branch -d`, `branch -D`, 원격 브랜치 삭제
 
 ## 셸 명령
 
 - 빌드·테스트·조회·앱 실행은 바로 한다. PowerShell도 같다.
-- 먼저 묻는 것: 파일·DB 대량 삭제(`Remove-Item -Recurse`, `DROP`), 시스템 설정 변경, 외부 전송
+- 이번 작업에서 내가 만든 파일·DB 행은 묻지 않고 지운다.
+- 먼저 묻는 것: 내가 만들지 않은 파일·DB 행 삭제, 시스템 설정 변경, 외부 전송
+- 먼저 묻는 SQL: `DROP`, `TRUNCATE`, WHERE 없는 `DELETE`·`UPDATE`, 내가 만들지 않은 여러 행을 한꺼번에 바꾸는 문장
 
 ## 문서 위치
 
