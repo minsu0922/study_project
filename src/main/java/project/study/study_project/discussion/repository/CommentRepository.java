@@ -1,5 +1,7 @@
 package project.study.study_project.discussion.repository;
 
+import org.springframework.data.domain.Slice;
+import project.study.study_project.discussion.dto.MyCommentItem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -46,6 +48,28 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
                               @Param("deleted") CommentStatus deleted);
 
     long countByPostIdAndStatus(Long postId, CommentStatus status);
+
+    /**
+     * 내가 쓴 댓글을 글 제목과 함께 최신순으로. 지운 댓글과 지워진 글의 댓글은 뺀다.
+     *
+     * <p>댓글과 글 사이에 매핑된 연관이 없어({@code postId}는 Long 칸) 조인 대신 세타 조인으로 잇는다.
+     */
+    @Query("""
+            select new project.study.study_project.discussion.dto.MyCommentItem(
+                       c.id, c.postId, p.title, c.body,
+                       case when c.status = project.study.study_project.discussion.domain.CommentStatus.HIDDEN
+                            then true else false end,
+                       c.createdAt)
+            from Comment c, Post p
+            where p.id = c.postId
+              and c.userId = :userId
+              and c.status <> :deleted
+              and p.status <> :deleted
+            order by c.id desc
+            """)
+    Slice<MyCommentItem> findMine(@Param("userId") Long userId,
+                                  @Param("deleted") CommentStatus deleted,
+                                  Pageable pageable);
 
     /* ── 관리자 화면의 사용자 활동 ── */
 

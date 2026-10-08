@@ -69,6 +69,7 @@ try {
       <select id="kindSelect">
         <option value="written">내가 쓴 글</option>
         <option value="commented">내가 댓글 단 글</option>
+        <option value="comments">내가 쓴 댓글</option>
       </select>
     </div>
   </form>
@@ -88,6 +89,7 @@ try {
  *   전체                     GET /api/quiz/posts?q=&sort=&domain=&category=&page=     (공개)
  *   토론방                   GET /api/quiz/rooms?domain=&page=                        (공개)
  *   내 활동                  GET /api/me/posts?kind=&page=                            (로그인)
+ *                            GET /api/me/comments?page=   (보기가 "내가 쓴 댓글"일 때)
  * 한 쪽은 20건이다. */
 renderShell({ active: "community", title: "커뮤니티" });
 
@@ -116,7 +118,7 @@ function readStateFromUrl() {
   state.domain = p.get("domain") || "";
   state.category = POST_CATEGORIES.some(c => c[0] === p.get("category")) ? p.get("category") : "";
   state.sort = p.get("sort") === "comments" ? "comments" : "latest";
-  state.kind = p.get("kind") === "commented" ? "commented" : "written";
+  state.kind = ["commented", "comments"].includes(p.get("kind")) ? p.get("kind") : "written";
   state.page = Math.max(Number(p.get("page")) || 0, 0);
   syncControls();
 }
@@ -166,6 +168,16 @@ function postRow(p) {
   </div>`;
 }
 
+/* 내가 쓴 댓글 한 줄. 댓글 본문이 주인공이고, 어느 글에 쓴 것인지는 아래 작은 글씨로 둔다.
+ * 줄 전체가 그 글로 가는 링크다. */
+function myCommentRow(c) {
+  const body = c.body.length > 120 ? c.body.slice(0, 120) + "…" : c.body;
+  return `<a class="post-row" href="/post.html?id=${c.postId}">
+    <span class="post-row-title">${c.hidden ? `<span class="badge gray">가려짐</span> ` : ""}${escapeHtml(body)}</span>
+    <span class="meta">${escapeHtml(c.postTitle)} · ${formatDate(c.createdAt)}</span>
+  </a>`;
+}
+
 /* 토론방 한 줄. 줄 전체가 그 방으로 가는 링크다. */
 function roomRow(r) {
   return `<a class="post-row" href="/discussion.html?problemId=${r.problemId}">
@@ -188,6 +200,10 @@ async function fetchTab() {
     const data = await api("/api/quiz/rooms?" + new URLSearchParams({ domain: state.domain, page: state.page }));
     return { hasNext: data.hasNext, rows: data.rooms, rowHtml: roomRow };
   }
+  if (state.tab === "mine" && state.kind === "comments") {
+    const data = await api("/api/me/comments?" + new URLSearchParams({ page: state.page }));
+    return { hasNext: data.hasNext, rows: data.comments, rowHtml: myCommentRow };
+  }
   if (state.tab === "mine") {
     const data = await api("/api/me/posts?" + new URLSearchParams({ kind: state.kind, page: state.page }));
     return { hasNext: data.hasNext, rows: data.posts, rowHtml: postRow };
@@ -203,6 +219,7 @@ function emptyText() {
   if (filtered()) return "조건에 맞는 것이 없습니다. 검색어를 줄이거나 분야를 바꿔 보세요.";
   if (state.tab === "rooms") return "아직 열린 토론방이 없습니다. 문제를 풀고 첫 글을 쓰면 그 문제의 방이 열립니다.";
   if (state.tab === "mine") {
+    if (state.kind === "comments") return "아직 쓴 댓글이 없습니다.";
     return state.kind === "written" ? "아직 쓴 글이 없습니다." : "아직 댓글을 단 글이 없습니다.";
   }
   return `아직 글이 없습니다. <a href="/problems.html">문제</a>를 풀고 첫 글을 남겨 보세요.`;

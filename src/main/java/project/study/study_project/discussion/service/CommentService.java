@@ -1,5 +1,8 @@
 package project.study.study_project.discussion.service;
 
+import org.springframework.data.domain.Slice;
+import project.study.study_project.discussion.dto.MyCommentItem;
+import project.study.study_project.discussion.dto.MyCommentListResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -57,6 +60,9 @@ public class CommentService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
+    /** 커뮤니티의 다른 목록과 같은 쪽 크기다. */
+    private static final int MY_PAGE_SIZE = 20;
+
     /**
      * @param viewerId 보는 사람. 비로그인이면 {@code null}
      */
@@ -94,6 +100,14 @@ public class CommentService {
         long total = commentRepository.countByPostIdAndStatus(postId, CommentStatus.VISIBLE);
         return new CommentListResponse(solved, canWrite, total, threads.hasNext(),
                 SuspensionGuard.noticeFor(viewer), items);
+    }
+
+    /** 내가 쓴 댓글 — 한 쪽은 {@value #MY_PAGE_SIZE}건. */
+    @Transactional(readOnly = true)
+    public MyCommentListResponse mine(Long userId, int page) {
+        Slice<MyCommentItem> slice = commentRepository.findMine(userId, CommentStatus.DELETED,
+                PageRequest.of(Math.max(page, 0), MY_PAGE_SIZE));
+        return new MyCommentListResponse(slice.hasNext(), slice.getContent());
     }
 
     @Transactional
