@@ -8,7 +8,8 @@ public enum PostSort {
     /** 새 글부터. 기본값이다. */
     LATEST,
     /** 보이는 댓글이 많은 글부터. */
-    COMMENTS;
+    COMMENTS,
+    LIKES;
 
     /**
      * 모르는 값은 400으로 답한다. 조용히 기본값으로 바꾸면 화면이 고른 정렬과 결과가 어긋나도
@@ -23,6 +24,6 @@ public enum PostSort {
                 return sort;
             }
         }
-        throw new BusinessException(ErrorCode.COMMON_001, "정렬은 latest와 comments 가운데 하나입니다.");
+        throw new BusinessException(ErrorCode.COMMON_001, "정렬은 latest, comments, likes 가운데 하나입니다.");
     }
 }

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>알림 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지(wrong-answers.html의 같은 주석 참고). */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container">
+  <h1>알림</h1>
+  <p class="meta">내 글에 댓글이 달리거나, 보낸 문제 오류 제보가 판정되면 여기에 쌓입니다.</p>
+
+  <div style="margin-bottom:12px">
+    <button id="readAllBtn" class="btn-outline" hidden>모두 읽음으로</button>
+  </div>
+
+  <div id="message"></div>
+  <div id="list"></div>
+  <div class="pager" id="pager" hidden></div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+renderShell({ title: "알림" });
+
+const ICONS = { POST_COMMENT: "💬", COMMENT_REPLY: "↩️", REPORT_ACCEPTED: "✅", REPORT_DISMISSED: "📝" };
+
+if (!isLoggedIn()) {
+  document.getElementById("message").innerHTML =
+    `<div class="alert info">알림은 <b>내 계정의 기록</b>이라 로그인이 필요합니다.
+     <a href="/login.html">로그인하기</a></div>`;
+} else {
+  init();
+}
+
+function init() {
+  let page = 0;
+  const list = document.getElementById("list");
+  const readAllBtn = document.getElementById("readAllBtn");
+
+  async function load() {
+    const msg = document.getElementById("message");
+    msg.innerHTML = "";
+    try {
+      const data = await api("/api/me/notifications?page=" + page);
+      readAllBtn.hidden = !data.content.some(n => !n.read);
+      list.innerHTML = data.content.length === 0
+        ? `<div class="card">아직 알림이 없습니다.</div>`
+        : data.content.map(n => `
+          <a class="card noti-item${n.read ? "" : " unread"}" href="${escapeHtml(n.link ?? "#")}"
+             data-id="${n.id}" data-read="${n.read}">
+            <span aria-hidden="true">${ICONS[n.type] ?? "🔔"}</span>
+            ${escapeHtml(n.message)}
+            <div class="meta" style="margin-top:4px">${formatDate(n.createdAt)}${n.read ? "" : " · 안 읽음"}</div>
+          </a>`).join("");
+      pager.update(data);
+    } catch (e) {
+      const text = e.status === 401
+        ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인해 주세요.</a>`
+        : `불러오지 못했습니다: ${escapeHtml(e.message)}`;
+      msg.innerHTML = `<div class="alert error">${text}</div>`;
+    }
+  }
+
+  // 읽음 표시를 보내고 나서 이동한다. 기다리지 않으면 화면이 넘어가며 요청이 끊길 수 있다.
+  // 표시가 실패해도 이동은 한다 — 알림을 누른 목적은 그 글을 보는 것이다.
+  list.addEventListener("click", async e => {
+    const item = e.target.closest(".noti-item");
+    if (!item || item.dataset.read === "true") return;
+    e.preventDefault();
+    try {
+      await api(`/api/me/notifications/${item.dataset.id}/read`, { method: "POST" });
+    } catch (err) { /* 위 주석 */ }
+    const href = item.getAttribute("href");
+    if (href && href !== "#") location.href = href; else load();
+  });
+
+  readAllBtn.addEventListener("click", async () => {
+    try {
+      await api("/api/me/notifications/read-all", { method: "POST" });
+      location.reload();   // 헤더의 종 배지까지 함께 지운다
+    } catch (e) {
+      document.getElementById("message").innerHTML =
+        `<div class="alert error">처리하지 못했습니다: ${escapeHtml(e.message)}</div>`;
+    }
+  });
+
+  const pager = mountPager(document.getElementById("pager"), p => { page = p; load(); });
+  load();
+}
+</script>
+</body>
+</html>

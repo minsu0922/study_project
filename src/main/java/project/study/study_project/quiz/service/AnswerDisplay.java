@@ -46,7 +46,7 @@ final class AnswerDisplay {
         // 인스턴스화 방지 — 규칙(순수 함수)만 담는 유틸리티
     }
 
-    /** 문제의 정답을 표시용 문자열로. (ESSAY는 MVP 채점 대상이 아니므로 null) */
+    /** 문제의 정답을 표시용 문자열로. 서술형은 한 줄 정답이 없어 null이다 — 모범 답안은 해설 칸에 있다. */
     static String correctAnswerOf(Problem problem) {
         return switch (problem.getType()) {
             case MULTIPLE_CHOICE -> problem.getChoices().stream()

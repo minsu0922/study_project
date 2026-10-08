@@ -235,10 +235,10 @@ async function fetchDomains() {
 const domainsReady = fetchDomains();
 
 const DIFFICULTIES = [["BEGINNER", "초급"], ["INTERMEDIATE", "중급"], ["ADVANCED", "고급"]];
-// ESSAY는 자동채점 미지원이라 화면에서도 제외한다(ProblemType.isAutoScored와 같은 기준).
+// 서술형은 서버가 채점하지 않고, 모범 답안을 보고 스스로 맞음·틀림을 고른다(player.js).
 const TYPES = [
   ["MULTIPLE_CHOICE", "객관식"], ["OX", "OX"], ["SHORT_ANSWER", "단답형"],
-  ["MATCHING", "짝짓기"], ["ORDERING", "순서 배열"],
+  ["MATCHING", "짝짓기"], ["ORDERING", "순서 배열"], ["ESSAY", "서술형"],
 ];
 
 /**

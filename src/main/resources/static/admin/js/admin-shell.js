@@ -65,6 +65,8 @@ const ADMIN_MENUS = [
   // 대개 토론 신고의 "글쓴이 정지"로 넘어온다.
   { group: "운영", items: [
     { key: "users",     label: "사용자",    href: "/admin/users.html",     icon: "👤" },
+    // 관리자가 한 쓰기 요청의 기록. 사람을 다루는 일의 뒤를 확인하러 오는 자리라 사용자 아래에 둔다.
+    { key: "audit",     label: "처리 기록", href: "/admin/audit.html",     icon: "🧾" },
   ]},
 ];
 

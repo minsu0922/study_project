@@ -23,8 +23,17 @@ public record PostDetail(
         CommentStatus status,
         boolean mine,
         boolean edited,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        long likeCount,
+        /** 지금 보는 사람이 추천을 눌렀는가. 비로그인은 늘 false다. */
+        boolean liked
 ) {
+    /** 추천 수를 채운 사본. 글을 만드는 자리는 추천을 모르므로 서비스가 나중에 붙인다. */
+    public PostDetail withLikes(long likeCount, boolean liked) {
+        return new PostDetail(id, problemId, category, categoryLabel, title, body, nickname, status,
+                mine, edited, createdAt, likeCount, liked);
+    }
+
 
     public static PostDetail of(Post post, Long problemId, String nickname, Long viewerId) {
         boolean visible = post.isVisible();
@@ -39,6 +48,7 @@ public record PostDetail(
                 post.getStatus(),
                 visible && viewerId != null && viewerId.equals(post.getUserId()),
                 post.getEditedAt() != null,
-                post.getCreatedAt());
+                post.getCreatedAt(),
+                0, false);
     }
 }

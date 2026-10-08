@@ -74,7 +74,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, Docum
      * <p>빈 목록으로 호출하면 {@code IN ()}이 되어 DB에 따라 문법 오류가 난다 — 호출부가
      * 비었을 때 아예 부르지 않도록 막아야 한다(그래서 이 메서드에는 방어를 두지 않았다).
      */
-    @Query("select d.slug from Document d where d.slug in :slugs")
+    @Query("select d.slug from Document d where d.slug in :slugs and d.hidden = false")
     List<String> findExistingSlugs(@Param("slugs") Collection<String> slugs);
 
     /**
@@ -82,4 +82,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, Docum
      * 이 분야를 쓰는 문서가 몇 건인지. {@link ProblemRepository#countByDomain}과 같은 이유.
      */
     long countByDomain(DomainCode domain);
+
+    /** 랜딩 화면의 문서 수 — 내려 둔 문서는 읽을 수 없으므로 세지 않는다. */
+    long countByHiddenFalse();
 }

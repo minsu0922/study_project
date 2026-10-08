@@ -51,6 +51,7 @@ try {
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script src="/js/report.js"></script>
+<script src="/js/bookmark.js"></script>
 <script src="/js/room-link.js"></script>
 <script>
 /* 오답노트 페이지 — GET /api/me/wrong-answers (로그인 필수).
@@ -146,7 +147,8 @@ async function init() {
             </div>
             <h3>${escapeHtml(w.question)}</h3>
             <div style="color:var(--wrong)">내 답: ${escapeHtml(w.myAnswer)}</div>
-            <div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer ?? "")}</div>
+            <!-- 서술형은 한 줄 정답이 없다. 모범 답안은 아래 해설 줄에 나온다. -->
+            ${w.correctAnswer ? `<div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer)}</div>` : ""}
             <!-- 내가 고른 그 보기가 왜 틀렸는지(V15). 보기 넷을 다 늘어놓지 않는 이유는
                  이 화면이 보기를 아예 그리지 않기 때문이다 — 복습 카드에서 알고 싶은 것은
                  "내가 왜 틀렸나" 하나다(AnswerDisplay.userAnswerRationaleOf).
@@ -163,9 +165,11 @@ async function init() {
             <!-- 제보 입구(V17). 플레이어의 채점 결과와 <같은 함수>를 쓴다(js/report.js).
                  이 화면에 함께 두는 이유: "왜 틀렸지" 하고 다시 읽다가 문제 쪽이 틀렸다는 것을
                  깨닫는 자리가 대개 여기다. 채점 직후에는 아직 자기 답을 의심하고 있다. -->
+            <div>${bookmarkButton("PROBLEM", w.problemId)}</div>
             ${reportBlock(w.problemId)}
             <div>${roomLink(w.problemId)}</div>
           </div>`).join("");
+        hydrateBookmarks(list);
       }
 
       pager.update(data);

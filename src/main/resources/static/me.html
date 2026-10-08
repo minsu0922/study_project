@@ -27,6 +27,10 @@ try {
 
   <div class="stat-row" id="stats"></div>
 
+  <!-- 날짜별 추이. 위 숫자 넷은 "지금 얼마"만 말하고 늘고 있는지 줄고 있는지는 말하지 못한다. -->
+  <div class="section-label"><span>최근 30일</span></div>
+  <div id="trend"></div>
+
   <div class="section-label">
     <span>분야별</span>
     <span class="seg" id="sortSeg">
@@ -46,6 +50,20 @@ try {
       <div class="meta">틀린 문제와 내가 쓴 답을 다시 읽습니다</div>
     </div>
     <a class="btn btn-outline" href="/wrong-answers.html">열기</a>
+  </div>
+  <div class="setting-row">
+    <div>
+      <b>북마크</b>
+      <div class="meta">다시 보려고 담아 둔 문제와 문서</div>
+    </div>
+    <a class="btn btn-outline" href="/bookmarks.html">열기</a>
+  </div>
+  <div class="setting-row">
+    <div>
+      <b>풀이 이력</b>
+      <div class="meta">맞힌 것까지 포함해 내가 낸 답을 최근 순으로</div>
+    </div>
+    <a class="btn btn-outline" href="/history.html">열기</a>
   </div>
 
 </main>
@@ -128,6 +146,48 @@ async function loadMe() {
 
   drawProgress("solved");
   drawWeakSpot();
+  drawTrend();
+}
+
+/**
+ * 최근 30일의 날짜별 막대 — 높이는 그날 낸 제출 수, 짙은 부분은 그중 정답.
+ *
+ * 요약과 따로 부른다. 추이가 실패해도 위의 숫자와 진도는 그대로 보여야 한다.
+ * 막대만으로는 값을 읽을 수 없어(색·높이뿐이다) 아래에 같은 내용을 글로 한 줄 적는다.
+ */
+async function drawTrend() {
+  const el = document.getElementById("trend");
+  let days;
+  try {
+    days = await api("/api/me/study-trend?days=30");
+  } catch (e) {
+    el.innerHTML = `<p class="meta">추이를 불러오지 못했어요.</p>`;
+    return;
+  }
+  const total = days.reduce((a, d) => a + d.attempts, 0);
+  if (total === 0) {
+    el.innerHTML = `<p class="meta">최근 30일 동안 푼 기록이 없어요.</p>`;
+    return;
+  }
+  const correct = days.reduce((a, d) => a + d.correct, 0);
+  const activeDays = days.filter(d => d.attempts > 0).length;
+  const max = Math.max(...days.map(d => d.attempts));
+  const md = iso => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
+
+  el.innerHTML = `
+    <div class="trend" role="img"
+         aria-label="최근 30일 동안 ${activeDays}일 풀었고, ${total}번 제출해 ${correct}번 맞혔습니다">
+      ${days.map(d => {
+        const h = Math.round(d.attempts / max * 100);
+        const ok = d.attempts > 0 ? Math.round(d.correct / d.attempts * 100) : 0;
+        return `<div class="trend-day" title="${md(d.date)} — ${d.attempts}번 제출, ${d.correct}번 정답">
+          <div class="trend-bar" style="height:${h}%"><i style="height:${ok}%"></i></div>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="trend-axis"><span>${md(days[0].date)}</span><span>오늘</span></div>
+    <p class="meta">30일 중 <b>${activeDays}일</b> 풀었어요 · 제출 ${total}번 · 정답률
+      ${Math.round(correct / total * 100)}% <span class="trend-key"><i></i>정답 <i class="all"></i>제출</span></p>`;
 }
 
 /**

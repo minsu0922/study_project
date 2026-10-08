@@ -1,5 +1,6 @@
 package project.study.study_project.admin.controller;
 
+import project.study.study_project.admin.revision.RevisionItem;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -92,6 +93,32 @@ public class AdminProblemController {
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         adminProblemService.delete(id);
+        return ApiResponse.ok();
+    }
+
+    /** 수정 이력 — 고치기 직전 모습들을 최근 것부터. */
+    @GetMapping("/{id}/revisions")
+    public ApiResponse<List<RevisionItem>> revisions(@PathVariable Long id) {
+        return ApiResponse.ok(adminProblemService.revisions(id));
+    }
+
+    /** 그 모습으로 되돌린다. 지금 모습은 이력에 남는다. */
+    @PostMapping("/{id}/revisions/{revisionId}/restore")
+    public ApiResponse<AdminProblemDetail> restoreRevision(@PathVariable Long id, @PathVariable Long revisionId) {
+        return ApiResponse.ok(adminProblemService.restore(id, revisionId));
+    }
+
+    /** 내리기 — 출제·목록·채점에서 빠진다. 제출 이력이 있어도 된다. */
+    @PostMapping("/{id}/hide")
+    public ApiResponse<Void> hide(@PathVariable Long id) {
+        adminProblemService.setHidden(id, true);
+        return ApiResponse.ok();
+    }
+
+    /** 다시 올리기. */
+    @PostMapping("/{id}/show")
+    public ApiResponse<Void> show(@PathVariable Long id) {
+        adminProblemService.setHidden(id, false);
         return ApiResponse.ok();
     }
 

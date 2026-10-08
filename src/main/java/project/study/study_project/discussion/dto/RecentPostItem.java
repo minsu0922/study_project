@@ -19,16 +19,17 @@ public record RecentPostItem(
         String title,
         String nickname,
         long commentCount,
+        long likeCount,
         LocalDateTime createdAt,
         Long problemId,
         String problemTitle,
         String domain
 ) {
 
-    public static RecentPostItem of(Post post, String nickname, long commentCount,
+    public static RecentPostItem of(Post post, String nickname, long commentCount, long likeCount,
                                     Long problemId, String problemTitle, String domain) {
         return new RecentPostItem(post.getId(), post.getCategory(), post.getCategory().getLabel(),
-                post.getTitle(), nickname, commentCount,
+                post.getTitle(), nickname, commentCount, likeCount,
                 post.getCreatedAt(), problemId, problemTitle, domain);
     }
 }

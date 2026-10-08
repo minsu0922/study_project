@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 처리 기록 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지.
+   자세한 이유는 사용자 화면의 같은 주석 참고. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-shell">
+<div id="shell"></div>
+
+<main class="container admin">
+  <h1>처리 기록</h1>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <p class="meta">관리자가 한 등록·수정·삭제·정지·승인이 최근 것부터 쌓입니다. 조회는 적지 않습니다.
+      기록은 고치거나 지울 수 없습니다.</p>
+    <!-- 표·페이저·빈 상태는 admin-table.js가 통째로 그린다. 여기는 자리만 둔다. -->
+    <div id="auditList"></div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
+<script src="/admin/js/admin-table.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script>
+/* 처리 기록 — 읽기 전용이다. 기록은 서버의 AdminAuditInterceptor가 관리 API의 쓰기 요청마다 남긴다.
+ *
+ * "한 일" 칸은 서버가 붙인 이름이고, 이름표가 없는 요청은 주소 그대로 온다.
+ * 대상 칸에는 실제로 불린 주소를 둔다 — 어느 사용자·문제였는지가 그 안의 번호다. */
+if (initAdminPage("audit")) {
+  renderAdminTable("#auditList", {
+    url: "/api/admin/audit-logs",
+    columns: [
+      { head: "때", width: "150px", className: "meta", cell: a => escapeHtml(formatDate(a.createdAt)) },
+      { head: "누가", width: "130px", cell: a => escapeHtml(a.actorUsername) },
+      { head: "한 일", width: "200px", wrap: true, cell: a => escapeHtml(a.action) },
+      { head: "대상", wrap: true, className: "meta", cell: a => escapeHtml(a.path.replace("/api/admin/", "")) },
+    ],
+    emptyText: "아직 기록이 없습니다. 관리 화면에서 무언가를 고치면 여기에 남습니다.",
+  });
+}
+</script>
+</body>
+</html>

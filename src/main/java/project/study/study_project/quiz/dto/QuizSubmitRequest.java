@@ -30,6 +30,16 @@ public record QuizSubmitRequest(
 
         @NotBlank(message = "userAnswer는 필수입니다.")
         @Size(max = 500, message = "답안은 500자 이하여야 합니다.") // DB 컬럼(VARCHAR 500) 초과 방지
-        String userAnswer
+        String userAnswer,
+
+        /**
+         * 서술형 전용 — 모범 답안을 보고 학습자가 스스로 매긴 결과.
+         * 다른 유형은 서버가 채점하므로 보내도 무시한다.
+         */
+        Boolean selfCorrect
 ) {
+    /** 서버가 채점하는 유형의 제출. */
+    public QuizSubmitRequest(Long problemId, String userAnswer) {
+        this(problemId, userAnswer, null);
+    }
 }

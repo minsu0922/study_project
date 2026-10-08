@@ -30,6 +30,7 @@ try {
     <h1 id="title"></h1>
     <p class="doc-sub" id="edition" hidden></p>
     <div id="badges" style="margin-bottom:12px"></div>
+    <div id="bookmarkSlot"></div>
 
     <!-- 목차 — 좁은 화면에서는 본문 위에 접힌 채로, 넓은 화면에서는 오른쪽에 고정된 기둥으로
          선다(style.css의 "문서 목차" 절). 자세한 판단은 buildToc 주석. -->
@@ -49,6 +50,7 @@ try {
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
+<script src="/js/bookmark.js"></script>
 <script>
 /* 문서 상세 페이지 — URL의 ?slug=... 로 문서 하나를 불러온다.
  * slug는 사람이 읽는 영문 식별자(예 osi-7-layer)라 URL 공유가 쉽다(docs/01). */
@@ -121,6 +123,10 @@ async function loadDoc() {
         return `<a class="badge gray tag-link" href="/documents.html?tag=${q}"
                    title="#${escapeHtml(t)} 태그가 달린 문서 모아 보기">#${escapeHtml(t)}</a>`;
       }).join("");
+
+    const bookmarkSlot = document.getElementById("bookmarkSlot");
+    bookmarkSlot.innerHTML = bookmarkButton("DOCUMENT", d.id);
+    hydrateBookmarks(bookmarkSlot);
 
     const bodyEl = document.getElementById("body");
     if (window.marked) {

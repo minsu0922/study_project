@@ -46,7 +46,7 @@ public class PostController {
      * 예: {@code GET /api/quiz/posts?q=캐시&sort=comments&domain=SYSTEM_DESIGN&page=0}
      *
      * @param q      제목·본문에서 찾을 말
-     * @param sort   {@code latest}(기본) 또는 {@code comments}
+     * @param sort   {@code latest}(기본), {@code comments}, {@code likes}
      * @param domain 분야 코드. 등록되지 않은 코드면 결과가 빈다
      * @param category 말머리({@code QUESTION}·{@code SUMMARY}·{@code ERRATA}). 모르는 값은 400
      */

@@ -1,5 +1,8 @@
 package project.study.study_project.discussion.controller;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import project.study.study_project.discussion.dto.MyCommentListResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +32,13 @@ import project.study.study_project.global.response.ApiResponse;
 public class MyCommentController {
 
     private final CommentService commentService;
+
+    /** 내가 쓴 댓글 — 커뮤니티 "내 활동"의 세 번째 보기. */
+    @GetMapping
+    public ApiResponse<MyCommentListResponse> mine(@AuthenticationPrincipal Long userId,
+                                                   @RequestParam(defaultValue = "0") int page) {
+        return ApiResponse.ok(commentService.mine(userId, page));
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

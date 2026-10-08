@@ -661,7 +661,7 @@ class LlmProblemServiceTest {
             when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
             AdminProblemDetail created = new AdminProblemDetail(99L, TestDomains.BACKEND_FRAMEWORK,
                     Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, "트랜잭션 전파의 기본값",
-                    "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.", LocalDateTime.now(), List.of());
+                    "@Transactional 전파 문제", null, "REQUIRED가 기본값이다.", LocalDateTime.now(), List.of(), false);
             when(adminProblemService.create(any())).thenReturn(created);
 
             service.approve(1L);
@@ -786,7 +786,7 @@ class LlmProblemServiceTest {
             when(adminProblemService.create(any())).thenReturn(new AdminProblemDetail(
                     99L, TestDomains.BACKEND_FRAMEWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE,
                     "트랜잭션 전파의 기본값",
-                    "@Transactional 전파 문제", null, "해설", LocalDateTime.now(), List.of()));
+                    "@Transactional 전파 문제", null, "해설", LocalDateTime.now(), List.of(), false));
 
             service.restore(7L);
             service.approve(7L);

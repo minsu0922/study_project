@@ -29,7 +29,9 @@ public record AdminProblemDetail(
         String answer,
         String explanation,
         LocalDateTime createdAt,
-        List<ChoiceDetail> choices
+        List<ChoiceDetail> choices,
+        /** 내려 둔 문제인가(V30). */
+        boolean hidden
 ) {
     /**
      * @param rationale 이 오답이 왜 틀렸는지 한 줄(V15). 정답 보기와 옛 문제는 {@code null}.
@@ -52,7 +54,8 @@ public record AdminProblemDetail(
         return new AdminProblemDetail(
                 p.getId(), p.getDomain(), p.getDifficulty(), p.getType(), p.getTitle(),
                 p.getQuestion(), p.getAnswer(), p.getExplanation(), p.getCreatedAt(),
-                p.getChoices().stream().map(ChoiceDetail::from).toList()
+                p.getChoices().stream().map(ChoiceDetail::from).toList(),
+                p.isHidden()
         );
     }
 }

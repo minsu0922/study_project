@@ -49,8 +49,8 @@ public class PublicStatsController {
     @GetMapping("/api/stats")
     public ApiResponse<PublicStatsResponse> stats() {
         return ApiResponse.ok(new PublicStatsResponse(
-                problemRepository.count(),
-                documentRepository.count(),
+                problemRepository.countByHiddenFalse(),
+                documentRepository.countByHiddenFalse(),
                 domainCatalog.all().size()));
     }
 }

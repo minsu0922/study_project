@@ -73,7 +73,8 @@ public class SecurityConfig {
                         // 가진 사용자가 쓰는 기능이라 인증을 요구하면 모순이다(자격 증명은 바디의 refresh 토큰)
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/signup", "/api/auth/login",
-                                "/api/auth/refresh", "/api/auth/logout").permitAll()
+                                "/api/auth/refresh", "/api/auth/logout",
+                                "/api/auth/password-reset").permitAll()
                         // 공개: 가입 화면이 아이디·닉네임을 쓸 수 있는지 묻는다. 아직 계정이 없는 사람이
                         // 부르는 주소라 인증을 요구할 수 없다.
                         .requestMatchers(HttpMethod.GET, "/api/auth/availability").permitAll()
@@ -102,7 +103,8 @@ public class SecurityConfig {
                         // <submit과 경로를 나눈 것이 이 규칙의 핵심>이다. 한 경로에 "저장할까요"
                         // 플래그를 뒀다면 인증 여부를 바디로 갈라야 하는데, 여기 적힌 규칙은
                         // 바디를 읽지 못한다. 경로가 다르면 그 사고가 있을 자리가 없다.
-                        .requestMatchers(HttpMethod.POST, "/api/quiz/*/check").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/quiz/*/check",
+                                "/api/quiz/*/model-answer").permitAll()
                         // 공개: API 문서(Swagger)
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // 공개: 상태 점검. 오케스트레이터(도커 HEALTHCHECK 등)가 부르는 자리라

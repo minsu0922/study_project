@@ -44,7 +44,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * 로그아웃은 맞혀서 얻을 게 없으므로 일반 api 정책으로 충분하다.
      */
     private static final Set<String> AUTH_PATHS =
-            Set.of("/api/auth/login", "/api/auth/signup", "/api/auth/refresh");
+            Set.of("/api/auth/login", "/api/auth/signup", "/api/auth/refresh",
+                    // 복구 코드 대입도 로그인 대입과 같은 공격이라 같은 정책(IP당 분당 5회)을 건다
+                    "/api/auth/password-reset");
 
     /**
      * 글·댓글·답글 작성 경로. 수정·삭제는 넣지 않는다 — 도배는 새 글을 쓰는 데서만 난다.

@@ -1,5 +1,7 @@
 package project.study.study_project.report.service;
 
+import project.study.study_project.notification.domain.NotificationType;
+import project.study.study_project.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -53,6 +55,7 @@ public class ProblemReportService {
     private final ProblemRepository problemRepository;
     /** 인정 시 스냅샷을 다시 찍게 하는 신호(ReviewCompleted 주석) — 파일 존재를 여기가 몰라도 되게. */
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     /* ── 학습자 ───────────────────────────────────────────── */
 
@@ -131,6 +134,7 @@ public class ProblemReportService {
         report.accept(Texts.trimToNull(adminNote));
         eventPublisher.publishEvent(ReviewCompleted.problem());
         log.info("제보 인정: id={} problemId={}", id, report.getProblem().getId());
+        notifyResolved(report, NotificationType.REPORT_ACCEPTED, "제보한 문제 오류가 인정됐습니다.");
         return ProblemReportItem.from(report);
     }
 
@@ -146,7 +150,16 @@ public class ProblemReportService {
         ProblemReport report = findPending(id);
         report.dismiss(Texts.trimToNull(adminNote));
         log.info("제보 기각: id={} problemId={}", id, report.getProblem().getId());
+        notifyResolved(report, NotificationType.REPORT_DISMISSED, "제보한 문제 오류가 받아들여지지 않았습니다.");
         return ProblemReportItem.from(report);
+    }
+
+    /** 제보한 사람에게 판정을 알린다. 관리자가 적은 답이 있으면 문구 뒤에 붙인다. */
+    private void notifyResolved(ProblemReport report, NotificationType type, String message) {
+        String note = report.getAdminNote();
+        notificationService.notify(report.getUserId(), null, type,
+                note == null ? message : message + " 관리자 답: " + note,
+                "/quiz.html?problemId=" + report.getProblem().getId());
     }
 
     /* ── 되먹임 ───────────────────────────────────────────── */

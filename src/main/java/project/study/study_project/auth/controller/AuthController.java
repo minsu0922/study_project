@@ -1,5 +1,7 @@
 package project.study.study_project.auth.controller;
 
+import project.study.study_project.auth.dto.PasswordResetRequest;
+import project.study.study_project.auth.dto.RecoveryCodeResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -111,6 +113,15 @@ public class AuthController {
         // 404가 되는데, 정작 API는 재발급으로 멀쩡히 돈다 — 원인을 짐작하기 어려운 상태다.
         adminGateCookie.issue(httpRequest, httpResponse, response.accessToken());
         return ApiResponse.ok(response);
+    }
+
+    /**
+     * 복구 코드로 비밀번호 재설정(V32). 로그인하지 못하는 사람이 부르는 경로라 공개다.
+     * 응답의 새 복구 코드는 이때 한 번만 볼 수 있다.
+     */
+    @PostMapping("/password-reset")
+    public ApiResponse<RecoveryCodeResponse> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+        return ApiResponse.ok(authService.resetPassword(request));
     }
 
     /**

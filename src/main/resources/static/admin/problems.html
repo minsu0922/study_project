@@ -67,9 +67,11 @@ try {
         <button type="button" class="btn-outline" id="addChoiceBtn" style="margin-top:6px">+ 보기 추가</button>
       </div>
 
-      <div class="field" style="margin-top:14px"><label>해설 (선택)</label><textarea id="pExplanation" rows="2" style="width:100%"></textarea></div>
+      <div class="field" style="margin-top:14px"><label id="pExplanationLabel">해설 (선택)</label><textarea id="pExplanation" rows="2" style="width:100%"></textarea></div>
       <button id="pSubmitBtn">등록</button>
       <button id="pCancelBtn" class="btn-outline" hidden>수정 취소</button>
+      <!-- 수정 이력(V36) — 수정으로 들어왔고 이력이 있을 때만 그린다. -->
+      <div id="pRevisions"></div>
     </details>
 
     <!-- 제목 백필(V13) — 제목 없는 문제가 있을 때만 나타난다.
@@ -227,14 +229,18 @@ async function loadProblemDocumentFilter() {
 function renderTypeFields() {
   const type = document.getElementById("pType").value;
   const usesRows = ["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(type);
-  const usesAnswer = ["OX", "SHORT_ANSWER", "ORDERING"].includes(type);
+  const usesAnswer = ["OX", "SHORT_ANSWER", "ORDERING", "ESSAY"].includes(type);
 
   document.getElementById("pChoicesField").hidden = !usesRows;
   document.getElementById("pAnswerField").hidden = !usesAnswer;
   document.getElementById("pAnswerLabel").textContent = {
     OX: "정답 (O 또는 X)",
     ORDERING: "정답 순서 (아래 항목의 번호를 | 로, 예: 3|2|1|4)",
+    ESSAY: "답에 들어가야 할 요점 (선택 · | 로 구분, 예: 3번 교환|양쪽 순서 번호 확인)",
   }[type] ?? "정답 (복수 정답은 | 구분, 예: arp|address resolution protocol)";
+  // 서술형은 학습자가 자기 답과 견줄 기준이 해설 칸이라 필수다(서버도 QUIZ_004로 막는다).
+  document.getElementById("pExplanationLabel").textContent =
+    type === "ESSAY" ? "모범 답안 (필수 — 학습자가 자기 답과 견줍니다)" : "해설 (선택)";
   document.getElementById("pChoicesLabel").textContent = {
     MATCHING: "쌍 (왼쪽=용어, 오른쪽=그 용어에서만 참인 설명)",
     ORDERING: "배열할 항목 (여기 적은 순서가 위 정답 순서의 번호가 됩니다)",
@@ -392,6 +398,7 @@ function resetProblemForm() {
   document.getElementById("pAnswer").value = "";
   document.getElementById("pExplanation").value = "";
   document.getElementById("pChoices").innerHTML = "";
+  document.getElementById("pRevisions").innerHTML = "";
   renderTypeFields();
 }
 
@@ -413,16 +420,22 @@ function loadProblems(opts) {
     }),
     columns: [
       { head: "ID", width: "60px", cell: p => p.id },
-      { head: "제목 / 지문", wrap: true, cell: p => problemLabel(p) },
+      { head: "제목 / 지문", wrap: true,
+        cell: p => (p.hidden ? `<span class="badge gray">내림</span> ` : "") + problemLabel(p) },
       { head: "도메인", width: "90px", cell: p => escapeHtml(domainLabel(p.domain)) },
       { head: "난이도", width: "70px", cell: p => difficultyBadge(p.difficulty) },
       { head: "유형", width: "80px", cell: p => escapeHtml(typeLabel(p.type)) },
       { head: "정답", width: "140px", cell: p => escapeHtml(cut(displayAnswer(p), 20)) },
-      { head: "", width: "80px", className: "row-actions",
-        cell: () => `<button class="danger" data-action="delete">삭제</button>` },
+      // 내리기는 삭제와 달리 되돌릴 수 있어 한 번 눌러 바로 한다(armedAction을 안 건다).
+      { head: "", width: "170px", className: "row-actions",
+        cell: p => `
+          <button class="btn-outline" data-action="toggle-hidden"
+                  title="${p.hidden ? "다시 출제합니다" : "출제와 목록에서 뺍니다. 기록은 남습니다"}">${p.hidden ? "올리기" : "내리기"}</button>
+          <button class="danger" data-action="delete">삭제</button>` },
     ],
     onRowClick: (p, action, btn) => {
       if (action === "delete") { deleteProblem(btn, p.id); return; }
+      if (action === "toggle-hidden") { toggleProblemHidden(p); return; }
       editProblem(p.id);
     },
     emptyText: "조건에 맞는 문제가 없습니다 — 필터를 지우면 전체가 보입니다.",
@@ -607,7 +620,17 @@ async function editProblem(id) {
   // 통째로 빠진 채 제출되어 QUIZ_004로 막힌다(AdminProblemDetail.ChoiceDetail 주석).
   p.choices.forEach(c => addChoiceRow(c.text, c.correct, c.rationale ?? "", c.matchText ?? ""));
   renderTypeFields();
+  renderRevisions("#pRevisions", "/api/admin/problems/" + id, () => { editProblem(id); loadProblems(); });
   window.scrollTo({ top: 0, behavior: "smooth" }); // 폼이 위에 있으니 올려 보낸다
+}
+
+async function toggleProblemHidden(p) {
+  try {
+    await api(`/api/admin/problems/${p.id}/${p.hidden ? "show" : "hide"}`, { method: "POST" });
+    adminTableReload("#problemList");
+  } catch (e) {
+    showError(document.getElementById("pMessage"), e);
+  }
 }
 
 async function deleteProblem(btn, id) {
@@ -618,7 +641,8 @@ async function deleteProblem(btn, id) {
       // 안 그러면 "3 / 3"에서 마지막을 지운 사람이 빈 화면을 보고 목록이 사라진 줄 안다.
       adminTableReload("#problemList");
     } catch (e) {
-      // QUIZ_003: 제출 이력이 있는 문제 — 이력 보존 정책(ADR-0002·FK RESTRICT)이라 삭제 불가
+      // QUIZ_003: 제출 이력이 있는 문제 — 이력 보존 정책(ADR-0002·FK RESTRICT)이라 삭제 불가.
+      // 그런 문제는 "내리기"로 출제에서만 뺀다.
       showError(document.getElementById("pMessage"), e);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }

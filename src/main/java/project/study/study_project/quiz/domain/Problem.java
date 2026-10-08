@@ -124,6 +124,10 @@ public class Problem {
     @Column(name = "document_slug", length = 150)
     private String documentSlug;
 
+    /** 비공개 여부(V30). 내려 둔 문제는 출제·목록·채점에서 빠지고 관리 화면에만 남는다. */
+    @Column(nullable = false)
+    private boolean hidden;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -187,6 +191,14 @@ public class Problem {
         }
         this.title = newTitle.trim();
         return true;
+    }
+
+    public void hide() {
+        this.hidden = true;
+    }
+
+    public void show() {
+        this.hidden = false;
     }
 
     /**

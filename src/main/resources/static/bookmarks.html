@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>북마크 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지(wrong-answers.html의 같은 주석 참고). */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container">
+  <h1>북마크</h1>
+  <p class="meta">다시 보려고 담아 둔 문제와 문서입니다. 최근에 담은 것이 위에 옵니다.</p>
+
+  <!-- 문제와 문서를 한 목록에 섞지 않는다. 누르면 가는 곳이 다르고(풀이 화면 / 읽는 화면),
+       한쪽만 찾으러 온 사람이 다른 쪽을 건너뛰며 훑어야 한다. -->
+  <div class="tabs" id="typeTabs">
+    <button class="tab-btn active" data-type="PROBLEM">문제</button>
+    <button class="tab-btn" data-type="DOCUMENT">문서</button>
+  </div>
+
+  <div id="message"></div>
+  <div id="list"></div>
+  <div class="pager" id="pager" hidden></div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/js/bookmark.js"></script>
+<script>
+renderShell({ active: "me", title: "북마크" });
+
+if (!isLoggedIn()) {
+  document.getElementById("message").innerHTML =
+    `<div class="alert info">북마크는 <b>내 계정의 기록</b>이라 로그인이 필요합니다.
+     <a href="/login.html">로그인하기</a></div>`;
+} else {
+  init();
+}
+
+async function init() {
+  await domainsReady;   // 분야 표기 이름을 쓰려면 목록이 먼저 와야 한다(api.js)
+  let type = "PROBLEM";
+  let page = 0;
+  const list = document.getElementById("list");
+
+  // 제목이 없는 문제는 지문이 통째로 온다 — 목록 한 줄에 맞게 자른다.
+  const short = s => s.length > 80 ? s.slice(0, 80) + "…" : s;
+
+  function row(b) {
+    const href = b.type === "PROBLEM"
+      ? `/quiz.html?problemId=${b.targetId}`
+      : `/document.html?slug=${encodeURIComponent(b.slug)}`;
+    return `
+      <div class="card">
+        <div style="margin-bottom:6px">
+          <span class="badge">${escapeHtml(domainLabel(b.domain))}</span>
+          ${b.difficulty ? difficultyBadge(b.difficulty) : ""}
+        </div>
+        <h3><a href="${href}">${escapeHtml(short(b.title))}</a></h3>
+        <div class="meta" style="margin-top:6px">담은 날: ${formatDate(b.createdAt)}</div>
+        <div>${bookmarkButton(b.type, b.targetId)}</div>
+      </div>`;
+  }
+
+  async function load() {
+    const msg = document.getElementById("message");
+    msg.innerHTML = "";
+    try {
+      const data = await api(`/api/me/bookmarks?type=${type}&page=${page}`);
+      list.innerHTML = data.content.length === 0
+        ? `<div class="card">${type === "PROBLEM"
+            ? "담아 둔 문제가 없습니다. 문제를 풀고 채점 결과 아래의 ☆ 북마크를 눌러 보세요."
+            : "담아 둔 문서가 없습니다. 문서 제목 아래의 ☆ 북마크를 눌러 보세요."}</div>`
+        : data.content.map(row).join("");
+      // 이 목록에 있는 것은 전부 담긴 것이라 서버에 다시 묻지 않고 바로 채운다.
+      list.querySelectorAll("[data-bookmark]").forEach(b => paintBookmark(b, true));
+      pager.update(data);
+    } catch (e) {
+      const text = e.status === 401
+        ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인해 주세요.</a>`
+        : `불러오지 못했습니다: ${escapeHtml(e.message)}`;
+      msg.innerHTML = `<div class="alert error">${text}</div>`;
+    }
+  }
+
+  document.getElementById("typeTabs").addEventListener("click", e => {
+    const btn = e.target.closest("[data-type]");
+    if (!btn || btn.dataset.type === type) return;
+    type = btn.dataset.type;
+    page = 0;
+    document.querySelectorAll("#typeTabs .tab-btn")
+      .forEach(b => b.classList.toggle("active", b === btn));
+    load();
+  });
+
+  const pager = mountPager(document.getElementById("pager"), p => { page = p; load(); });
+  load();
+}
+</script>
+</body>
+</html>

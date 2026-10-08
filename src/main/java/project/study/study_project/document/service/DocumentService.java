@@ -48,7 +48,14 @@ public class DocumentService {
     public PageResponse<DocumentListItem> getDocuments(DomainCode domain, List<String> tags,
                                                       String keyword, Pageable pageable) {
         return PageResponse.from(withEditions(withDomainLabels(
-                documentRepository.searchListItems(domain, tags, keyword, pageable))));
+                documentRepository.searchListItems(domain, tags, keyword, false, pageable))));
+    }
+
+    /** 관리 화면 목록 — 내려 둔 문서까지 싣는다. 공개 목록과 갈라 둬야 내린 문서를 다시 올릴 수 있다. */
+    @Transactional(readOnly = true)
+    public PageResponse<DocumentListItem> getDocumentsIncludingHidden(Pageable pageable) {
+        return PageResponse.from(withEditions(withDomainLabels(
+                documentRepository.searchListItems(null, null, null, true, pageable))));
     }
 
     /**
@@ -112,6 +119,7 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public DocumentDetailResponse getDocument(String slug) {
         Document document = documentRepository.findBySlug(slug)
+                .filter(d -> !d.isHidden()) // 내려 둔 문서(V30)는 없는 문서와 똑같이 404
                 .orElseThrow(() -> new BusinessException(ErrorCode.DOC_001));
         return DocumentDetailResponse.withEdition(document,
                 domainCatalog.displayName(document.getDomain()), existingCounterpartOf(slug));
@@ -127,6 +135,8 @@ public class DocumentService {
      */
     private String existingCounterpartOf(String slug) {
         String counterpart = DocumentEditions.counterpartSlugOf(slug);
-        return counterpart != null && documentRepository.existsBySlug(counterpart) ? counterpart : null;
+        // findExistingSlugs는 내려 둔 문서를 빼고 준다 — 짝이 내려가 있으면 링크도 안 건다
+        return counterpart != null && !documentRepository.findExistingSlugs(List.of(counterpart)).isEmpty()
+                ? counterpart : null;
     }
 }

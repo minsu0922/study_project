@@ -21,5 +21,5 @@ public interface DocumentRepositoryCustom {
      * <b>목록에 필요한 컬럼만</b> 뽑아 DTO로 바로 만든다(본문 content_md는 읽지 않음 — 구현 주석 참고).
      */
     Page<DocumentListItem> searchListItems(DomainCode domain, List<String> tagNames,
-                                           String keyword, Pageable pageable);
+                                           String keyword, boolean includeHidden, Pageable pageable);
 }

@@ -120,7 +120,8 @@ public class DailyQuiz {
             return false;
         }
         target.connect(submission);
-        if (items.stream().allMatch(DailyQuizItem::isSolved)) {
+        // 세트를 만든 뒤 내려간 문제(V30)는 풀 길이 없다 — 그 칸을 기다리면 오늘 세트가 영영 안 끝난다
+        if (items.stream().allMatch(item -> item.isSolved() || item.getProblem().isHidden())) {
             this.completedAt = now; // 마지막 문제였다 — 오늘 완료 🎉
         }
         return true;

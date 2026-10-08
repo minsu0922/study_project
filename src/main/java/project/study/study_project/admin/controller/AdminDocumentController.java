@@ -1,5 +1,12 @@
 package project.study.study_project.admin.controller;
 
+import project.study.study_project.admin.revision.RevisionItem;
+import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.GetMapping;
+import project.study.study_project.document.dto.DocumentListItem;
+import project.study.study_project.global.response.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,6 +33,45 @@ import project.study.study_project.global.response.ApiResponse;
 public class AdminDocumentController {
 
     private final AdminDocumentService adminDocumentService;
+
+    /** 목록 — 내려 둔 문서 포함. 최신 등록 순. */
+    @GetMapping
+    public ApiResponse<PageResponse<DocumentListItem>> list(@PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(adminDocumentService.list(pageable));
+    }
+
+    /** 단건(수정 폼·본문 복사용). */
+    @GetMapping("/{id}")
+    public ApiResponse<DocumentDetailResponse> get(@PathVariable Long id) {
+        return ApiResponse.ok(adminDocumentService.get(id));
+    }
+
+    /** 수정 이력 — 고치기 직전 모습들을 최근 것부터. */
+    @GetMapping("/{id}/revisions")
+    public ApiResponse<List<RevisionItem>> revisions(@PathVariable Long id) {
+        return ApiResponse.ok(adminDocumentService.revisions(id));
+    }
+
+    /** 그 모습으로 되돌린다. 지금 모습은 이력에 남는다. */
+    @PostMapping("/{id}/revisions/{revisionId}/restore")
+    public ApiResponse<DocumentDetailResponse> restoreRevision(@PathVariable Long id,
+                                                               @PathVariable Long revisionId) {
+        return ApiResponse.ok(adminDocumentService.restore(id, revisionId));
+    }
+
+    /** 내리기 — 목록·단건·근거 링크에서 빠진다. */
+    @PostMapping("/{id}/hide")
+    public ApiResponse<Void> hide(@PathVariable Long id) {
+        adminDocumentService.setHidden(id, true);
+        return ApiResponse.ok();
+    }
+
+    /** 다시 올리기. */
+    @PostMapping("/{id}/show")
+    public ApiResponse<Void> show(@PathVariable Long id) {
+        adminDocumentService.setHidden(id, false);
+        return ApiResponse.ok();
+    }
 
     /** 등록. slug 중복이면 409(DOC_002). */
     @PostMapping

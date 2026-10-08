@@ -58,6 +58,8 @@ function startPlayer(mountEl, problems, opts = {}) {
     // 짝짓기 — 이어진 쌍 [{left: 보기id, token: 오른쪽 토큰}]과 지금 고른 왼쪽.
     pairs: [],
     matchLeft: null,
+    // 서술형 — 받아 온 모범 답안. 있으면 "스스로 채점" 단계다(revealModelAnswer).
+    essayModel: null,
   };
 
   // 퀴즈 API는 id, 복습 API는 problemId — 어느 쪽이 와도 동작하게 여기서 흡수한다.
@@ -76,6 +78,8 @@ function startPlayer(mountEl, problems, opts = {}) {
   }
   const keyHandler = e => {
     if (state.finished) return;
+    // 서술형 칸에서는 Enter가 줄바꿈이고 숫자도 글자다. 하나라도 가로채면 글을 쓸 수 없다.
+    if (e.target.tagName === "TEXTAREA") return;
     if (e.target.tagName === "INPUT") {          // 단답형 입력 중에는 숫자 키를 가로채면 안 된다
       if (e.key === "Enter") { e.preventDefault(); primaryAction(); }
       return;
@@ -161,7 +165,8 @@ function startPlayer(mountEl, problems, opts = {}) {
              할 일이 없는 버튼을 남겨 두면 "이걸 눌러야 하나"를 매번 묻게 된다.
              채점 뒤에는 이 자리가 [다음 문제]로 바뀌므로 칸 자체는 유형과 무관하게 있어야 한다. -->
         <div class="player-actions">
-          ${autoSubmits(p.type) ? "" : `<button id="submitBtn" disabled>제출</button>`}
+          ${autoSubmits(p.type) ? "" : `<button id="submitBtn" disabled>${
+            p.type === "ESSAY" ? "모범 답안 보기" : "제출"}</button>`}
         </div>
         ${keyHint(shortcutHint(p.type))}
       </div>`;
@@ -175,6 +180,14 @@ function startPlayer(mountEl, problems, opts = {}) {
         state.selected = input.value.trim();
         // 단답형에는 제출 버튼이 반드시 있다(autoSubmits가 false) — 그래도 null 검사를 두는 것은
         // 이 줄이 유형 규칙을 <다시> 알고 있게 만들지 않기 위해서다.
+        const btn = mountEl.querySelector("#submitBtn");
+        if (btn) btn.disabled = !state.selected;
+      });
+    } else if (p.type === "ESSAY") {
+      const input = mountEl.querySelector("#essayInput");
+      input.focus();
+      input.addEventListener("input", () => {
+        state.selected = input.value.trim();
         const btn = mountEl.querySelector("#submitBtn");
         if (btn) btn.disabled = !state.selected;
       });
@@ -203,6 +216,8 @@ function startPlayer(mountEl, problems, opts = {}) {
   function shortcutHint(type) {
     // 객관식·OX는 숫자키가 곧 제출이다. "선택"이라고 적으면 한 번 더 눌러야 하는 줄 안다.
     if (autoSubmits(type)) return `<kbd>1</kbd>~<kbd>9</kbd> 보기 고르면 바로 채점 · <kbd>Enter</kbd> 다음`;
+    // 서술형은 Enter가 줄바꿈이라 단축키가 없다. 없는 기능을 안내하지 않는다.
+    if (type === "ESSAY") return `답을 적고 모범 답안과 견줘 스스로 채점합니다`;
     const enter = `<kbd>Enter</kbd> 제출/다음`;
     if (type === "MATCHING" || type === "SHORT_ANSWER") return enter;
     return `<kbd>1</kbd>~<kbd>9</kbd> 보기 선택 · ${enter}`;
@@ -275,6 +290,11 @@ function startPlayer(mountEl, problems, opts = {}) {
     }
     if (p.type === "ORDERING") return renderOrdering(p);
     if (p.type === "MATCHING") return renderMatching(p);
+    // 500자는 서버의 답안 칸 길이다(QuizSubmitRequest). 넘는 글은 저장되지 않으므로 여기서 막는다.
+    if (p.type === "ESSAY") {
+      return `<textarea id="essayInput" rows="6" maxlength="500" style="width:100%"
+                placeholder="내 말로 설명해 보세요 (500자까지)" aria-label="서술형 답"></textarea>`;
+    }
     // SHORT_ANSWER — Enter 제출은 전역 키 핸들러가 처리
     return `<input type="text" id="shortInput" placeholder="답을 입력하세요" autocomplete="off">`;
   }
@@ -446,6 +466,9 @@ function startPlayer(mountEl, problems, opts = {}) {
     if (state.answered || state.submitting || !state.selected) return;
     const p = problems[state.idx];
     const feedbackEl = mountEl.querySelector("#feedback");
+    // 서술형은 두 걸음이다: 모범 답안을 받고(여기), 스스로 매긴 결과를 낸다(gradeEssay).
+    // 모범 답안을 이미 받았으면 다시 받지 않는다 — 그 뒤의 Enter는 맞음·틀림 버튼이 받는다.
+    if (p.type === "ESSAY") { if (!state.essayModel) revealModelAnswer(p); return; }
 
     state.submitting = true;
     // 객관식·OX에는 이 버튼이 아예 없다(autoSubmits). 있으면 잠그고, 없으면 잠글 것이 없다 —
@@ -473,20 +496,7 @@ function startPlayer(mountEl, problems, opts = {}) {
             method: "POST",
             body: JSON.stringify({ userAnswer: state.selected }),
           });
-      state.answered = true;
-      if (r.correct) state.score++;
-      else state.misses.push({
-        q: p.question,
-        my: displayAnswer(p, state.selected),
-        // 내가 고른 그 보기가 왜 틀렸는지(V15). 결과 화면 복기는 보기를 다시 그리지 않으므로
-        // 오답 분석 전체가 아니라 <내가 고른 것> 하나만 가져온다 — 오답노트와 같은 판단이다.
-        why: myRationale(r, state.selected),
-        ans: r.correctAnswer ?? "",
-        exp: r.explanation ?? "",
-        doc: r.documentSlug ?? null,   // 결과 화면 복기에서도 개념 문서로 갈 수 있게(docs/15)
-        pid: pidOf(p),                 // 결과 화면 복기에서 그 문제의 토론방으로 갈 수 있게
-      });
-      showFeedback(p, r);
+      applyResult(p, r);
     } catch (e) {
       // 실패하면 다시 제출할 수 있게 잠금을 되돌린다(answered로 만들지 않음)
       const text = e.status === 401
@@ -494,6 +504,88 @@ function startPlayer(mountEl, problems, opts = {}) {
         : escapeHtml(e.message);
       feedbackEl.innerHTML = `<div class="alert error">${text}</div>`;
       if (submitBtn) submitBtn.disabled = false;
+    } finally {
+      state.submitting = false;
+    }
+  }
+
+  /** 채점 결과를 점수·복기 목록·화면에 반영한다. 서버가 채점한 것과 스스로 채점한 것이 같은 길로 온다. */
+  function applyResult(p, r) {
+    state.answered = true;
+    if (r.correct) state.score++;
+    else state.misses.push({
+      q: p.question,
+      my: displayAnswer(p, state.selected),
+      // 내가 고른 그 보기가 왜 틀렸는지(V15). 결과 화면 복기는 보기를 다시 그리지 않으므로
+      // 오답 분석 전체가 아니라 <내가 고른 것> 하나만 가져온다 — 오답노트와 같은 판단이다.
+      why: myRationale(r, state.selected),
+      ans: r.correctAnswer ?? "",
+      exp: r.explanation ?? "",
+      doc: r.documentSlug ?? null,   // 결과 화면 복기에서도 개념 문서로 갈 수 있게(docs/15)
+      pid: pidOf(p),                 // 결과 화면 복기에서 그 문제의 토론방으로 갈 수 있게
+    });
+    showFeedback(p, r);
+  }
+
+  /* ── 서술형: 모범 답안 보기 → 스스로 채점 ──
+   * 서버는 서술형의 정오를 가릴 수 없다. 그래서 답을 적은 사람에게 모범 답안을 보여 주고
+   * 맞음·틀림을 스스로 고르게 한다. 고른 결과가 다른 유형의 채점 결과와 똑같이 기록된다. */
+  async function revealModelAnswer(p) {
+    const feedbackEl = mountEl.querySelector("#feedback");
+    const btn = mountEl.querySelector("#submitBtn");
+    state.submitting = true;
+    if (btn) btn.disabled = true;
+    try {
+      state.essayModel = await api(`/api/quiz/${pidOf(p)}/model-answer`, {
+        method: "POST",
+        body: JSON.stringify({ userAnswer: state.selected }),
+      });
+      // 모범 답안을 본 뒤에 답을 고치면 스스로 채점하는 뜻이 없어진다.
+      mountEl.querySelector("#essayInput").disabled = true;
+      const m = state.essayModel;
+      feedbackEl.innerHTML = `
+        <div class="feedback fade-in">
+          <span class="verdict">모범 답안</span>
+          <div class="explain">${escapeHtml(m.modelAnswer ?? "")}</div>
+          ${m.checkpoints.length ? `<div class="explain">들어가야 할 요점<ul>${
+            m.checkpoints.map(c => `<li>${escapeHtml(c)}</li>`).join("")}</ul></div>` : ""}
+          <div class="explain">내 답이 모범 답안의 뜻을 담았나요?</div>
+        </div>`;
+      mountEl.querySelector(".player-actions").innerHTML = `
+        <button id="essayRight">맞게 썼다</button>
+        <button id="essayWrong" class="btn-outline">틀렸거나 빠뜨렸다</button>`;
+      mountEl.querySelector("#essayRight").addEventListener("click", () => gradeEssay(p, true));
+      mountEl.querySelector("#essayWrong").addEventListener("click", () => gradeEssay(p, false));
+    } catch (e) {
+      feedbackEl.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+      if (btn) btn.disabled = false;
+    } finally {
+      state.submitting = false;
+    }
+  }
+
+  async function gradeEssay(p, correct) {
+    if (state.answered || state.submitting) return;
+    state.submitting = true;
+    const buttons = mountEl.querySelectorAll(".player-actions button");
+    buttons.forEach(b => { b.disabled = true; });
+    try {
+      // 비로그인은 남길 계정이 없어 서버에 내지 않는다. 다른 유형의 "기록 없는 채점"과 같은 자리다.
+      const r = isLoggedIn()
+        ? await api("/api/quiz/submit", {
+            method: "POST",
+            body: JSON.stringify({ problemId: pidOf(p), userAnswer: state.selected, selfCorrect: correct }),
+          })
+        : { correct, correctAnswer: null, explanation: state.essayModel.modelAnswer,
+            documentSlug: state.essayModel.documentSlug, choices: [] };
+      state.essayModel = null;
+      applyResult(p, r);
+    } catch (e) {
+      const text = e.status === 401
+        ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인</a> 후 제출해 주세요.`
+        : escapeHtml(e.message);
+      mountEl.querySelector("#feedback").insertAdjacentHTML("beforeend", `<div class="alert error">${text}</div>`);
+      buttons.forEach(b => { b.disabled = false; });
     } finally {
       state.submitting = false;
     }
@@ -632,12 +724,16 @@ function startPlayer(mountEl, problems, opts = {}) {
     });
     const shortInput = mountEl.querySelector("#shortInput");
     if (shortInput) shortInput.disabled = true;
+    const essayInput = mountEl.querySelector("#essayInput");
+    if (essayInput) essayInput.disabled = true;
 
     // 2) 피드백 박스: 판정 + 정답 + 해설 + 오답 분석
     mountEl.querySelector("#feedback").innerHTML = `
       <div class="feedback ${r.correct ? "correct" : "wrong"} fade-in">
-        <span class="verdict">${r.correct ? "🎉 정답입니다!" : "😅 아쉬워요, 오답입니다"}</span>
-        ${r.correct ? "" : `<div class="answer-line">정답: <b>${escapeHtml(r.correctAnswer ?? "")}</b></div>`}
+        <span class="verdict">${p.type === "ESSAY"
+          ? (r.correct ? "🎉 맞게 썼다고 기록했어요" : "📝 다시 볼 문제로 기록했어요")
+          : (r.correct ? "🎉 정답입니다!" : "😅 아쉬워요, 오답입니다")}</span>
+        ${r.correct || !r.correctAnswer ? "" : `<div class="answer-line">정답: <b>${escapeHtml(r.correctAnswer)}</b></div>`}
         ${r.explanation ? `<div class="explain">${escapeHtml(r.explanation)}</div>` : ""}
         ${wrongAnalysis(p, r)}
         ${docLink(r)}
@@ -645,10 +741,14 @@ function startPlayer(mountEl, problems, opts = {}) {
         ${opts.reviewMode ? `<div class="explain" style="font-size:.82rem">${
           r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요 👋"
                     : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요 📅"}</div>` : ""}
+        <!-- 북마크(V33). 채점 뒤에 둔다 — "다시 봐야겠다"는 판단이 서는 때가 해설을 읽은 직후다. -->
+        <div>${bookmarkButton("PROBLEM", pidOf(p))}</div>
         ${reportBlock(p.id)}
         <!-- 토론방 링크. 채점 뒤에만 낸다 — 토론에는 정답 이야기가 나오고, 풀던 사람을 밖으로 보내지 않는다. -->
         <div>${roomLink(pidOf(p))}</div>
       </div>`;
+
+    hydrateBookmarks(mountEl.querySelector("#feedback"));
 
     // 3) 제출 버튼 → 다음/결과 버튼으로 교체
     const isLast = state.idx === problems.length - 1;
@@ -671,6 +771,7 @@ function startPlayer(mountEl, problems, opts = {}) {
     state.order = [];
     state.pairs = [];
     state.matchLeft = null;
+    state.essayModel = null;
     render();
     window.scrollTo({ top: 0 });   // 긴 해설을 읽고 내려간 스크롤을 문제 위치로 되돌린다
   }

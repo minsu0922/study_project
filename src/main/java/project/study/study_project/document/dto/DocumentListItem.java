@@ -25,11 +25,13 @@ public record DocumentListItem(
         String slug,
         List<String> tags,
         LocalDateTime updatedAt,
-        String edition
+        String edition,
+        /** 내려 둔 문서인가(V30). 공개 목록은 내려 둔 문서를 싣지 않으므로 늘 false다. */
+        boolean hidden
 ) {
     /** 편 정보를 채운 사본 — 리포지토리는 짝을 모르므로 서비스가 나중에 붙인다. */
     public DocumentListItem withEdition(String edition) {
-        return new DocumentListItem(id, domain, domainLabel, title, slug, tags, updatedAt, edition);
+        return new DocumentListItem(id, domain, domainLabel, title, slug, tags, updatedAt, edition, hidden);
     }
 
     /**
@@ -49,6 +51,6 @@ public record DocumentListItem(
      * 것과 같은 자리, 같은 방식).
      */
     public DocumentListItem withDomainLabel(String domainLabel) {
-        return new DocumentListItem(id, domain, domainLabel, title, slug, tags, updatedAt, edition);
+        return new DocumentListItem(id, domain, domainLabel, title, slug, tags, updatedAt, edition, hidden);
     }
 }

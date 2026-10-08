@@ -96,8 +96,10 @@ try {
            노란 띠를 두른 세 줄이 버튼 바로 위에 있어서 화면에서 가장 눈에 띄는 것이 경고였고,
            누르기 직전에 읽는 말이 불안한 내용이었다. 이 말이 쓸모 있는 때는 비밀번호를
            <정하는> 순간이라, 그 칸 아래에 도움말 한 줄로 둔다. -->
-      <div class="field-hint" id="pwLostNote">잊으면 되찾을 수 없습니다. 이메일을 받지 않아 재설정할 방법이 없으니,
-        브라우저에 저장하거나 적어 두세요.</div>
+      <!-- 2026-10-08: 복구 코드(V32)가 생겨 "되찾을 수 없다"는 말은 틀린 말이 됐다.
+           위 주석의 판단(정하는 순간에 말한다)은 그대로라 자리는 두고 문구만 바꾼다. -->
+      <div class="field-hint" id="pwLostNote">잊으면 가입 직후 받는 복구 코드로만 다시 정할 수 있습니다.
+        이메일을 받지 않아 재설정 메일은 보내지 않습니다.</div>
     </div>
     <div class="field">
       <label for="password2">비밀번호 확인</label>
@@ -127,6 +129,17 @@ try {
   </form>
 
   <p class="meta" id="signupHelp">이미 계정이 있으신가요? <a href="/login.html">로그인</a></p>
+
+  <!-- 가입 직후 한 번만 뜬다. 서버는 해시만 가지므로 이 화면이 코드를 볼 수 있는 유일한 기회다.
+       바로 첫 화면으로 넘기지 않는 이유가 그것이다 — 넘기면 코드를 본 적도 없이 가입이 끝난다. -->
+  <div class="card" id="recoveryPanel" hidden>
+    <b>가입했습니다. 복구 코드를 적어 두세요.</b>
+    <p class="meta" style="margin-top:8px">비밀번호를 잊었을 때 이 코드로 다시 정합니다.
+      이메일을 받지 않아 <b>이 코드가 유일한 방법</b>이고, 이 화면을 떠나면 다시 볼 수 없습니다.
+      잃어버렸다면 로그인한 동안 마이페이지에서 새로 받을 수 있습니다.</p>
+    <div class="recovery-code" id="recoveryCode"></div>
+    <a class="btn" href="/" style="margin-top:12px; display:inline-block">적어 뒀습니다 — 시작하기</a>
+  </div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -307,7 +320,10 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
     // 닉네임이 겹쳐 몇 번 실패한 사람은 가입에 성공하고도 로그인이 막혔다.
     const data = await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ username, password, nickname }) });
     setLogin(data.tokens.accessToken, data.tokens.refreshToken, username);
-    location.href = "/";
+    ["signupForm", "signupIntro", "signupHelp"].forEach(id => document.getElementById(id).hidden = true);
+    document.getElementById("recoveryCode").textContent = data.recoveryCode;
+    document.getElementById("recoveryPanel").hidden = false;
+    window.scrollTo({ top: 0 });
   } catch (err) {
     const fieldId = FIELD_OF_ERROR[err.code];
     if (fieldId) {

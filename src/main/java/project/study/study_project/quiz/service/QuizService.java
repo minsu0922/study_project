@@ -1,5 +1,6 @@
 package project.study.study_project.quiz.service;
 
+import project.study.study_project.quiz.dto.EssayModelAnswer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,17 +56,13 @@ public class QuizService {
     /**
      * 필터로 문제 N개 무작위 조회(풀이용 — 정답/해설 미포함).
      *
-     * @param type ESSAY(서술형)를 요청하면 {@link ErrorCode#QUIZ_002}(400).
-     *             서술형은 MVP 자동채점 대상이 아니라 풀 수 없는 문제를 내려주면 안 되기 때문.
+     * @param type 안 고르면 서술형을 뺀 나머지에서 뽑는다(ProblemRepository 주석).
      * @param size 요청 개수. 1~50으로 보정(clamp) — 범위 밖이면 에러 대신 조용히 경계값으로 맞춘다.
      *             조회 API에서 "51개 요청"은 악의보다 실수에 가까워, 굳이 400으로 튕겨
      *             클라이언트 재시도를 강제할 이유가 없다고 판단(트레이드오프: 명시성 ↓, 편의성 ↑).
      */
     @Transactional(readOnly = true)
     public QuizResponse getQuiz(DomainCode domain, Difficulty level, ProblemType type, int size) {
-        if (type != null && !type.isAutoScored()) {
-            throw new BusinessException(ErrorCode.QUIZ_002);
-        }
         int limit = Math.min(Math.max(size, 1), MAX_SIZE);
 
         // 네이티브 쿼리는 enum을 자동 변환하지 못하므로 name() 문자열로 넘긴다(리포지토리 주석 참고).
@@ -89,18 +86,11 @@ public class QuizService {
      * 받아 도는 구조라, 한 건짜리 전용 형태를 새로 만들면 화면에 분기가 하나 생긴다.
      * 한 칸짜리 세트로 주면 기존 흐름을 그대로 탄다.
      *
-     * <p>ESSAY는 거절한다. 자동 채점 대상이 아니라 풀이 화면이 채점을 못 하는데, 목록에는
-     * 관리자가 손으로 넣은 서술형이 섞일 수 있다(관리 화면에는 유형 제한이 없다).
-     *
-     * @throws BusinessException 없는 id면 QUIZ_001, 서술형이면 QUIZ_002
+     * @throws BusinessException 없는 id면 QUIZ_001
      */
     @Transactional(readOnly = true)
     public QuizResponse getOne(Long problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
-        if (!problem.getType().isAutoScored()) {
-            throw new BusinessException(ErrorCode.QUIZ_002);
-        }
+        Problem problem = findVisible(problemId);
         return new QuizResponse(List.of(QuizProblemItem.from(problem)));
     }
 
@@ -112,19 +102,14 @@ public class QuizService {
      * 같다 — <b>고를 수 있는 것만 보여 주는 목록이 고르고 나서 실망하지 않는 목록이다</b>
      * ({@code GeneratedProblemDraftRepository.findDocumentSlugsByStatus}).
      *
-     * <p>서술형은 뺀다. 자동 채점이 안 되는 유형이라 {@link #getQuiz}가 400으로 막는 쪽이다.
-     * 지금은 관리 등록도 ESSAY를 거절하므로 앱을 거쳐서는 생길 수 없지만, DB에 손으로 넣은
-     * 옛 데이터까지 믿을 수는 없다 — 한 줄이면 "고를 수 있는 것만"이라는 이 메서드의 약속을
-     * 그런 경우에도 지킬 수 있다.
+     * <p>서술형도 문제가 있으면 넣는다. 고르면 모범 답안을 보고 스스로 채점하는 흐름으로 풀린다.
      *
      * <p>차례를 여기서 정하지 않는 이유: 화면의 TYPES 배열이 이미 객관식 → OX → 단답형 →
      * 짝짓기 → 순서라는 <b>뜻이 있는 차례</b>를 갖는다. 서버가 또 정하면 두 곳이 언젠가 어긋난다.
      */
     @Transactional(readOnly = true)
     public List<ProblemType> availableTypes() {
-        return problemRepository.findDistinctTypes().stream()
-                .filter(ProblemType::isAutoScored)
-                .toList();
+        return problemRepository.findDistinctTypes();
     }
 
     /**
@@ -140,15 +125,19 @@ public class QuizService {
      */
     @Transactional
     public QuizSubmitResponse submit(Long userId, QuizSubmitRequest request) {
-        Problem problem = problemRepository.findById(request.problemId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
-        // ESSAY 등 자동채점 불가 타입 방어. GET /api/quiz가 ESSAY를 안 내려주지만,
-        // problemId는 클라이언트가 임의로 보낼 수 있으므로 제출 쪽에서도 반드시 다시 검사한다.
-        if (!problem.getType().isAutoScored()) {
-            throw new BusinessException(ErrorCode.QUIZ_002);
-        }
+        Problem problem = findVisible(request.problemId());
 
-        GradingResult result = grade(problem, request.userAnswer());
+        // 서술형은 서버가 정오를 가릴 수 없어 학습자가 매긴 결과를 받는다. 그 값이 빠진 제출은
+        // 오답으로 치지 않고 400으로 돌려보낸다 — 조용히 오답 처리하면 복습 사다리가 오염된다.
+        GradingResult result;
+        if (problem.getType() == ProblemType.ESSAY) {
+            if (request.selfCorrect() == null) {
+                throw new BusinessException(ErrorCode.COMMON_001, "서술형은 스스로 매긴 결과(selfCorrect)가 필요합니다.");
+            }
+            result = new GradingResult(request.selfCorrect(), null);
+        } else {
+            result = grade(problem, request.userAnswer());
+        }
 
         Submission submission = submissionRepository.save(
                 Submission.of(userId, problem, request.userAnswer(), result.correct()));
@@ -202,8 +191,7 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public QuizSubmitResponse check(Long problemId, String userAnswer) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+        Problem problem = findVisible(problemId);
         if (!problem.getType().isAutoScored()) {
             throw new BusinessException(ErrorCode.QUIZ_002);
         }
@@ -221,6 +209,34 @@ public class QuizService {
                 problem.getId(), result.correct(), result.correctAnswer(),
                 problem.getExplanation(), null,
                 existingDocumentSlug(problem.getDocumentSlug()), choiceResults);
+    }
+
+    /**
+     * 서술형의 모범 답안 — 답을 적어 낸 사람에게만 준다. 기록은 남기지 않는다.
+     *
+     * <p>답을 받는 이유: 빈손으로 모범 답안부터 볼 수 있으면 "설명해 보기"가 "읽기"가 된다.
+     * 받은 답은 저장하지 않는다. 저장은 스스로 매긴 결과와 함께 {@link #submit}이 한다.
+     *
+     * @throws BusinessException 서술형이 아니면 QUIZ_002 — 다른 유형의 해설이 채점 전에 새면 안 된다
+     */
+    @Transactional(readOnly = true)
+    public EssayModelAnswer modelAnswer(Long problemId) {
+        Problem problem = findVisible(problemId);
+        if (problem.getType() != ProblemType.ESSAY) {
+            throw new BusinessException(ErrorCode.QUIZ_002);
+        }
+        List<String> checkpoints = problem.getAnswer() == null ? List.of()
+                : Arrays.stream(problem.getAnswer().split("\\|"))
+                        .map(String::trim).filter(s -> !s.isEmpty()).toList();
+        return new EssayModelAnswer(problem.getExplanation(), checkpoints,
+                existingDocumentSlug(problem.getDocumentSlug()));
+    }
+
+    /** 내려 둔 문제(V30)는 없는 문제와 똑같이 404다 — id를 직접 넣어도 풀거나 채점받을 수 없다. */
+    private Problem findVisible(Long problemId) {
+        return problemRepository.findById(problemId)
+                .filter(p -> !p.isHidden())
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
     }
 
     /**
@@ -250,7 +266,8 @@ public class QuizService {
      *
      * <p>switch식에 default가 없는 이유: enum 전체(ESSAY 포함)를 나열하면 컴파일러가
      * 누락을 잡아준다. 나중에 타입이 추가되면 여기서 컴파일 에러가 나서 채점 규칙을
-     * 빠뜨린 채 배포하는 사고를 막는다. (ESSAY는 위에서 이미 걸러졌으므로 도달 불가)
+     * 빠뜨린 채 배포하는 사고를 막는다. 서술형은 서버가 채점하지 않는다 — submit은 여기 오기 전에
+     * 갈라지고, 기록 없는 채점(check)은 위에서 막는다.
      */
     private GradingResult grade(Problem problem, String userAnswer) {
         return switch (problem.getType()) {

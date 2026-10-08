@@ -90,6 +90,19 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                            @Param("commenterId") Long commenterId,
                                            Pageable pageable);
 
+    /** 추천이 많은 글부터(V34). 수가 같으면 새 글이 먼저다 — 위 댓글순과 같은 이유. */
+    @Query(RECENT_FROM_WHERE + """
+            order by (select count(l) from PostLike l where l.postId = p.id) desc,
+                     p.createdAt desc, p.id desc
+            """)
+    Slice<RecentPostRow> findMostLiked(@Param("visible") CommentStatus visible,
+                                       @Param("q") String q,
+                                       @Param("domain") DomainCode domain,
+                                       @Param("category") PostCategory category,
+                                       @Param("authorId") Long authorId,
+                                       @Param("commenterId") Long commenterId,
+                                       Pageable pageable);
+
     /**
      * 토론방 목록 — 보이는 글이 하나라도 있는 문제를, 최근 글이 달린 방부터.
      *

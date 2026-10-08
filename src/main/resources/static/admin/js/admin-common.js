@@ -212,3 +212,51 @@ function cut(s, n) {
 function shortDate(iso) {
   return iso ? iso.slice(5, 10) : "";
 }
+
+/**
+ * 수정 이력(V36) 한 벌 — 문제 화면과 문서 화면이 함께 쓴다.
+ *
+ * <p>이력이 없으면 아무것도 안 그린다. 한 번도 안 고친 것에 빈 표를 붙이면 수정 폼만 길어진다.
+ *
+ * <p>되돌리기는 두 번 눌러야 한다(armedAction). 되돌려도 지금 모습이 이력에 남아 다시 돌아올 수
+ * 있지만, 폼에 적어 둔 저장 전 글은 되돌린 내용으로 덮인다.
+ *
+ * @param baseUrl 예 {@code "/api/admin/problems/12"} — 뒤에 /revisions를 붙여 부른다
+ * @param onRestored 되돌린 뒤 할 일(폼과 목록을 다시 읽는다)
+ */
+async function renderRevisions(mountSelector, baseUrl, onRestored) {
+  const mount = document.querySelector(mountSelector);
+  if (!mount) return;
+  mount.innerHTML = "";
+  let revisions;
+  try {
+    revisions = await api(baseUrl + "/revisions");
+  } catch (e) {
+    return;   // 이력을 못 읽어도 수정은 할 수 있어야 한다
+  }
+  if (revisions.length === 0) return;
+  mount.innerHTML = `
+    <h4 style="margin:18px 0 6px">수정 이력
+      <span class="meta">(고치기 직전 모습 · 최근 ${revisions.length}건)</span></h4>
+    <div class="table-wrap"><table class="grid">
+      <thead><tr><th style="width:150px">바뀐 때</th><th>그때 제목</th>
+        <th style="width:110px">고친 사람</th><th style="width:100px"></th></tr></thead>
+      <tbody>${revisions.map(r => `
+        <tr>
+          <td class="meta">${escapeHtml(formatDate(r.createdAt))}</td>
+          <td class="wrap">${r.title ? escapeHtml(r.title) : `<span class="meta">(제목 없음)</span>`}</td>
+          <td class="meta">${escapeHtml(r.editorUsername ?? "—")}</td>
+          <td><button type="button" class="btn-outline" data-revision="${r.id}">되돌리기</button></td>
+        </tr>`).join("")}</tbody>
+    </table></div>`;
+  mount.querySelectorAll("[data-revision]").forEach(btn => {
+    btn.addEventListener("click", () => armedAction(btn, async () => {
+      try {
+        await api(`${baseUrl}/revisions/${btn.dataset.revision}/restore`, { method: "POST" });
+        onRestored();
+      } catch (e) {
+        showErrorAlert(mount, e, "되돌리지 못했습니다");
+      }
+    }, "정말 되돌리기?"));
+  });
+}

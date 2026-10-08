@@ -25,6 +25,8 @@ public enum ErrorCode {
     AUTH_004("AUTH_004", HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
     // 로드맵 2(refresh 토큰): 만료·이미 사용(회전됨)·위조된 refresh — 클라이언트는 재로그인 유도
     AUTH_005("AUTH_005", HttpStatus.UNAUTHORIZED, "리프레시 토큰이 유효하지 않습니다. 다시 로그인해 주세요."),
+    // 없는 아이디와 틀린 코드를 한 문구로 답한다 — 갈라 답하면 아이디가 있는지 알려 주게 된다
+    AUTH_006("AUTH_006", HttpStatus.UNAUTHORIZED, "아이디 또는 복구 코드가 올바르지 않습니다."),
 
     // 퀴즈
     QUIZ_001("QUIZ_001", HttpStatus.NOT_FOUND, "문제를 찾을 수 없습니다."),
@@ -111,6 +113,7 @@ public enum ErrorCode {
     DISCUSSION_012("DISCUSSION_012", HttpStatus.BAD_REQUEST, "내가 쓴 글은 신고할 수 없습니다."),
     // 실제 문구는 풀리는 날짜와 사유를 실어 SuspensionGuard가 만든다. 이 문장은 그 안전망이다.
     DISCUSSION_013("DISCUSSION_013", HttpStatus.FORBIDDEN, "글쓰기가 정지된 계정입니다."),
+    DISCUSSION_014("DISCUSSION_014", HttpStatus.BAD_REQUEST, "내가 쓴 글은 추천할 수 없습니다."),
 
     // 사용자 관리(V26) — 관리자가 사용자를 정지하고 푼다.
     USER_001("USER_001", HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
