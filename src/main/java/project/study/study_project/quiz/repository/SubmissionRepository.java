@@ -70,6 +70,50 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             Pageable pageable
     );
 
+    /**
+     * 날짜별 제출 수·정답 수 — 내 기록의 추이 막대.
+     *
+     * <p>네이티브인 이유: JPQL 표준에는 시각에서 날짜만 떼는 함수가 없다.
+     * {@code user_id}가 선두인 {@code idx_submission_user_correct}가 사용자 조건을 받는다.
+     */
+    @Query(value = """
+            SELECT DATE(s.submitted_at)            AS day,
+                   COUNT(*)                        AS attempts,
+                   COALESCE(SUM(s.is_correct), 0)  AS correctCount
+            FROM submission s
+            WHERE s.user_id = :userId AND s.submitted_at >= :from
+            GROUP BY DATE(s.submitted_at)
+            """, nativeQuery = true)
+    java.util.List<DailyStat> aggregateDaily(@Param("userId") Long userId, @Param("from") LocalDateTime from);
+
+    /** {@link #aggregateDaily} 결과 행. */
+    interface DailyStat {
+        java.sql.Date getDay();
+        long getAttempts();
+        long getCorrectCount();
+    }
+
+    /**
+     * 풀이 이력 — 맞힌 것까지 포함한 내 제출을 최신순으로.
+     * 내려 둔 문제(V30)는 뺀다. 눌러도 다시 풀 수 없다.
+     */
+    @Query(value = """
+            select s from Submission s
+            join fetch s.problem p
+            where s.userId = :userId
+              and p.hidden = false
+              and (:correct is null or s.correct = :correct)
+            order by s.id desc
+            """,
+            countQuery = """
+            select count(s) from Submission s
+            where s.userId = :userId
+              and s.problem.hidden = false
+              and (:correct is null or s.correct = :correct)
+            """)
+    Page<Submission> findHistory(@Param("userId") Long userId, @Param("correct") Boolean correct,
+                                 Pageable pageable);
+
     /** 관리자 문제 삭제 전 검사용 — 제출 이력이 있으면 삭제 불가(QUIZ_003, FK RESTRICT 정책과 일치). */
     boolean existsByProblemId(Long problemId);
 
