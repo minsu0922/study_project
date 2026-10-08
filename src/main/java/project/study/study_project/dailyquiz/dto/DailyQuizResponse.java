@@ -29,7 +29,9 @@ public record DailyQuizResponse(
     }
 
     public static DailyQuizResponse from(DailyQuiz quiz) {
+        // 세트를 만든 뒤 내려간 문제(V30)는 뺀다. 이미 푼 칸은 기록이라 남긴다
         List<DailyQuizItemResponse> items = quiz.getItems().stream()
+                .filter(item -> item.isSolved() || !item.getProblem().isHidden())
                 .map(DailyQuizItemResponse::from)
                 .toList();
         int solved = (int) items.stream().filter(DailyQuizItemResponse::solved).count();

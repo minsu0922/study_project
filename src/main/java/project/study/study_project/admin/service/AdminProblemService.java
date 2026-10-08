@@ -131,6 +131,20 @@ public class AdminProblemService {
         problemRepository.delete(problem); // 보기(choice)는 cascade + DDL CASCADE로 함께 삭제
     }
 
+    /**
+     * 문제를 내리거나 다시 올린다(V30). 삭제와 달리 제출 이력이 있어도 된다 —
+     * 이력·오답노트 행은 그대로 두고 출제와 목록에서만 뺀다.
+     */
+    @Transactional
+    public void setHidden(Long id, boolean hidden) {
+        Problem problem = findProblem(id);
+        if (hidden) {
+            problem.hide();
+        } else {
+            problem.show();
+        }
+    }
+
     /* ── 내부 도우미 ─────────────────────────────────────────────── */
 
     private Problem findProblem(Long id) {

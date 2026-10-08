@@ -48,10 +48,11 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
      */
     @Query(value = """
             select r from ReviewItem r
-            join fetch r.problem
+            join fetch r.problem p
             where r.userId = :userId
               and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
               and r.nextReviewAt <= :now
+              and p.hidden = false
             order by r.nextReviewAt asc
             """,
             countQuery = """
@@ -59,6 +60,7 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
             where r.userId = :userId
               and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
               and r.nextReviewAt <= :now
+              and r.problem.hidden = false
             """)
     Page<ReviewItem> findDue(@Param("userId") Long userId,
                              @Param("now") LocalDateTime now,
@@ -76,6 +78,7 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
             where r.userId = :userId
               and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
               and r.nextReviewAt <= :now
+              and r.problem.hidden = false
             """)
     long countDue(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 
@@ -85,15 +88,17 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
      */
     @Query(value = """
             select r from ReviewItem r
-            join fetch r.problem
+            join fetch r.problem p
             where r.userId = :userId
               and (:status is null or r.status = :status)
+              and p.hidden = false
             order by r.nextReviewAt asc
             """,
             countQuery = """
             select count(r) from ReviewItem r
             where r.userId = :userId
               and (:status is null or r.status = :status)
+              and r.problem.hidden = false
             """)
     Page<ReviewItem> findAllOfUser(@Param("userId") Long userId,
                                    @Param("status") ReviewStatus status,

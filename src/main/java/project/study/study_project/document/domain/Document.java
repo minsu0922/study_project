@@ -76,6 +76,10 @@ public class Document {
     )
     private Set<Tag> tags = new LinkedHashSet<>();
 
+    /** 비공개 여부(V30). 내려 둔 문서는 목록·단건·문제의 근거 링크에서 빠진다. */
+    @Column(nullable = false)
+    private boolean hidden;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -114,5 +118,13 @@ public class Document {
         this.source = source;
         this.tags.clear();
         this.tags.addAll(tags);
+    }
+
+    public void hide() {
+        this.hidden = true;
+    }
+
+    public void show() {
+        this.hidden = false;
     }
 }

@@ -9,6 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminDocumentRequest;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.dto.DocumentDetailResponse;
+import project.study.study_project.document.dto.DocumentListItem;
+import project.study.study_project.document.service.DocumentService;
+import project.study.study_project.global.response.PageResponse;
+import org.springframework.data.domain.Pageable;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.DomainCode;
@@ -35,6 +39,34 @@ public class AdminDocumentService {
     private final TagService tagService;
     private final CacheManager cacheManager; // 문서 캐시 무효화용 (로드맵 2, CacheConfig 참고)
     private final DomainCatalog domainCatalog; // 응답의 분야 표기 이름 — 관리자가 화면에서 고친 이름을 그대로(Task 4)
+    private final DocumentService documentService;
+
+    /** 관리 화면 목록 — 내려 둔 문서 포함. */
+    public PageResponse<DocumentListItem> list(Pageable pageable) {
+        return documentService.getDocumentsIncludingHidden(pageable);
+    }
+
+    /** 수정 폼 채우기용 단건. 공개 단건 API는 내려 둔 문서를 404로 막으므로 id로 따로 읽는다. */
+    @Transactional(readOnly = true)
+    public DocumentDetailResponse get(Long id) {
+        Document document = findDocument(id);
+        return DocumentDetailResponse.from(document, domainCatalog.displayName(document.getDomain()));
+    }
+
+    /**
+     * 문서를 내리거나 다시 올린다. 짝 편의 캐시도 함께 비운다 —
+     * 짝의 응답에 "이 문서로 가는 링크"가 실려 있어 한쪽만 비우면 죽은 링크가 10분 남는다.
+     */
+    @Transactional
+    public void setHidden(Long id, boolean hidden) {
+        Document document = findDocument(id);
+        if (hidden) {
+            document.hide();
+        } else {
+            document.show();
+        }
+        evictDocumentCache(document.getSlug(), DocumentEditions.counterpartSlugOf(document.getSlug()));
+    }
 
     /** 문서 등록. slug는 URL 식별자라 중복이면 409(DOC_002). 태그는 find-or-create. */
     @Transactional

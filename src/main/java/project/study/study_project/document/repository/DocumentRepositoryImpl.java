@@ -63,15 +63,19 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
      * <b>public인 이유</b>: Projections.constructor가 리플렉션으로 생성자를 찾는데,
      * private record는 생성자도 private이라 "No constructor found" 예외가 난다(실제 겪음).
      */
-    public record DocRow(Long id, DomainCode domain, String title, String slug, LocalDateTime updatedAt) {
+    public record DocRow(Long id, DomainCode domain, String title, String slug, LocalDateTime updatedAt,
+                         boolean hidden) {
     }
 
     @Override
     public Page<DocumentListItem> searchListItems(DomainCode domain, List<String> tagNames,
-                                                 String keyword, Pageable pageable) {
+                                                 String keyword, boolean includeHidden, Pageable pageable) {
         QDocument d = QDocument.document;
 
         BooleanBuilder where = new BooleanBuilder();
+        if (!includeHidden) {
+            where.and(d.hidden.isFalse());
+        }
         if (domain != null) {
             where.and(d.domain.eq(domain));
         }
@@ -100,7 +104,7 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
         // ① 목록 페이지: 필요한 컬럼만 DTO로 (content_md는 select 자체에 없음)
         List<DocRow> rows = queryFactory
                 .select(Projections.constructor(DocRow.class,
-                        d.id, d.domain, d.title, d.slug, d.updatedAt))
+                        d.id, d.domain, d.title, d.slug, d.updatedAt, d.hidden))
                 .from(d)
                 .where(where)
                 .orderBy(toOrderSpecifiers(pageable.getSort(), d))
@@ -120,7 +124,7 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
                         r.id(), r.domain(), null, r.title(), r.slug(),
                         // 편(입문/심화)도 여기서 채우지 않는다 — 짝이 실제로 있는지 알아야 하는데
                         // 그건 이 페이지 밖의 문서를 봐야 하는 질문이라 서비스가 한 번에 처리한다.
-                        tagsByDocId.getOrDefault(r.id(), List.of()), r.updatedAt(), null))
+                        tagsByDocId.getOrDefault(r.id(), List.of()), r.updatedAt(), null, r.hidden()))
                 .toList();
 
         // count는 PageableExecutionUtils에 위임 — 첫 페이지가 꽉 차지 않는 등

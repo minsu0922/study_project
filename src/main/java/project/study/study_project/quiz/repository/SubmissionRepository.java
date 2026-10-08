@@ -41,6 +41,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             join fetch s.problem p
             where s.userId = :userId
               and s.correct = false
+              and p.hidden = false
               and (:domain is null or p.domain = :domain)
               and s.id = (
                   select max(s2.id) from Submission s2
@@ -54,6 +55,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             select count(s) from Submission s
             where s.userId = :userId
               and s.correct = false
+              and s.problem.hidden = false
               and (:domain is null or s.problem.domain = :domain)
               and s.id = (
                   select max(s2.id) from Submission s2
@@ -234,7 +236,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             select p.domain as domain, count(distinct p.id) as solved
             from Submission s
             join s.problem p
-            where s.userId = :userId and s.correct = true
+            where s.userId = :userId and s.correct = true and p.hidden = false
             group by p.domain
             """)
     java.util.List<DomainSolvedCount> countSolvedByDomain(@Param("userId") Long userId);

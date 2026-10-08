@@ -41,6 +41,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
               AND (:difficulty IS NULL OR p.difficulty = :difficulty)
               AND (:type       IS NULL OR p.type       = :type)
               AND p.type <> 'ESSAY'
+              AND p.hidden = 0
             ORDER BY RAND()
             LIMIT :size
             """, nativeQuery = true)
@@ -91,6 +92,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     @Query(value = """
             SELECT * FROM problem p
             WHERE p.type <> 'ESSAY'
+              AND p.hidden = 0
               AND p.id NOT IN (:excludeIds)
               AND NOT EXISTS (SELECT 1 FROM submission s
                               WHERE s.user_id = :userId AND s.problem_id = p.id)
@@ -110,6 +112,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     @Query(value = """
             SELECT * FROM problem p
             WHERE p.type <> 'ESSAY'
+              AND p.hidden = 0
               AND (:domain IS NULL OR p.domain = :domain)
               AND p.id NOT IN (:excludeIds)
             ORDER BY RAND()
@@ -144,15 +147,12 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      * 들고 있어야 하고, 그 코드가 화면 둘(홈·내 기록)에 각각 생긴다. 합치는 방법이 두 벌이
      * 되는 순간 한쪽만 고치는 사고가 가능해진다. 쿼리 한 줄이 그보다 싸다.
      *
-     * <p><b>왜 상태 조건이 없나.</b> {@code Problem} 테이블에는 <b>승인된 문제만</b> 있다 —
-     * AI 초안은 {@code GeneratedProblemDraft}라는 다른 테이블에 산다. 그래서 조건 없이 세어도
-     * "지금 풀 수 있는 문제"만 세어진다. 언젠가 이 테이블에 상태 컬럼이 생기면
-     * <b>여기부터</b> 고쳐야 한다 — 검수 대기 중인 문제가 분모에 잡히면 사용자는
-     * 풀 수 없는 문제 때문에 진도가 안 오르는 것으로 보인다.
+     * <p>내려 둔 문제(V30)는 뺀다. 분모에 잡히면 풀 수 없는 문제 때문에 진도가 다 차지 않는다.
      */
     @Query("""
             select p.domain as domain, count(p) as cnt
             from Problem p
+            where p.hidden = false
             group by p.domain
             """)
     List<DomainCount> countGroupByDomain();
@@ -201,7 +201,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      * <p>정렬은 화면이 한다. 여기서 {@code order by p.type}을 걸면 enum 이름의 알파벳 순서가 되어
      * "객관식 → OX → 단답형"이라는 <b>뜻이 있는 차례</b>가 깨진다(그 차례는 api.js의 TYPES가 갖는다).
      */
-    @Query("select distinct p.type from Problem p")
+    @Query("select distinct p.type from Problem p where p.hidden = false")
     List<ProblemType> findDistinctTypes();
 
     /**
@@ -248,6 +248,9 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      * 저장을 시도하기 전에 먼저 세어 400 메시지에 건수를 실어 준다.
      */
     long countByDomain(DomainCode domain);
+
+    /** 랜딩 화면의 문제 수 — 내려 둔 문제는 풀 수 없으므로 세지 않는다. */
+    long countByHiddenFalse();
 
     /**
      * 오답 설명이 빠진 객관식 문제 — 오답 설명 채우기(V15)가 채울 대상.
@@ -351,7 +354,8 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
                        and r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
                        and r.nextReviewAt <= :now) as dueCount
             from Problem p
-            where (:domain is null or p.domain = :domain)
+            where p.hidden = false
+              and (:domain is null or p.domain = :domain)
               and (:difficulty is null or p.difficulty = :difficulty)
               and (:state is null
                    or (:state = 'CORRECT'

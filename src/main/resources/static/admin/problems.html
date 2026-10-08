@@ -413,16 +413,22 @@ function loadProblems(opts) {
     }),
     columns: [
       { head: "ID", width: "60px", cell: p => p.id },
-      { head: "제목 / 지문", wrap: true, cell: p => problemLabel(p) },
+      { head: "제목 / 지문", wrap: true,
+        cell: p => (p.hidden ? `<span class="badge gray">내림</span> ` : "") + problemLabel(p) },
       { head: "도메인", width: "90px", cell: p => escapeHtml(domainLabel(p.domain)) },
       { head: "난이도", width: "70px", cell: p => difficultyBadge(p.difficulty) },
       { head: "유형", width: "80px", cell: p => escapeHtml(typeLabel(p.type)) },
       { head: "정답", width: "140px", cell: p => escapeHtml(cut(displayAnswer(p), 20)) },
-      { head: "", width: "80px", className: "row-actions",
-        cell: () => `<button class="danger" data-action="delete">삭제</button>` },
+      // 내리기는 삭제와 달리 되돌릴 수 있어 한 번 눌러 바로 한다(armedAction을 안 건다).
+      { head: "", width: "170px", className: "row-actions",
+        cell: p => `
+          <button class="btn-outline" data-action="toggle-hidden"
+                  title="${p.hidden ? "다시 출제합니다" : "출제와 목록에서 뺍니다. 기록은 남습니다"}">${p.hidden ? "올리기" : "내리기"}</button>
+          <button class="danger" data-action="delete">삭제</button>` },
     ],
     onRowClick: (p, action, btn) => {
       if (action === "delete") { deleteProblem(btn, p.id); return; }
+      if (action === "toggle-hidden") { toggleProblemHidden(p); return; }
       editProblem(p.id);
     },
     emptyText: "조건에 맞는 문제가 없습니다 — 필터를 지우면 전체가 보입니다.",
@@ -610,6 +616,15 @@ async function editProblem(id) {
   window.scrollTo({ top: 0, behavior: "smooth" }); // 폼이 위에 있으니 올려 보낸다
 }
 
+async function toggleProblemHidden(p) {
+  try {
+    await api(`/api/admin/problems/${p.id}/${p.hidden ? "show" : "hide"}`, { method: "POST" });
+    adminTableReload("#problemList");
+  } catch (e) {
+    showError(document.getElementById("pMessage"), e);
+  }
+}
+
 async function deleteProblem(btn, id) {
   armedAction(btn, async () => {
     try {
@@ -618,7 +633,8 @@ async function deleteProblem(btn, id) {
       // 안 그러면 "3 / 3"에서 마지막을 지운 사람이 빈 화면을 보고 목록이 사라진 줄 안다.
       adminTableReload("#problemList");
     } catch (e) {
-      // QUIZ_003: 제출 이력이 있는 문제 — 이력 보존 정책(ADR-0002·FK RESTRICT)이라 삭제 불가
+      // QUIZ_003: 제출 이력이 있는 문제 — 이력 보존 정책(ADR-0002·FK RESTRICT)이라 삭제 불가.
+      // 그런 문제는 "내리기"로 출제에서만 뺀다.
       showError(document.getElementById("pMessage"), e);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }

@@ -96,8 +96,7 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public QuizResponse getOne(Long problemId) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+        Problem problem = findVisible(problemId);
         if (!problem.getType().isAutoScored()) {
             throw new BusinessException(ErrorCode.QUIZ_002);
         }
@@ -140,8 +139,7 @@ public class QuizService {
      */
     @Transactional
     public QuizSubmitResponse submit(Long userId, QuizSubmitRequest request) {
-        Problem problem = problemRepository.findById(request.problemId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+        Problem problem = findVisible(request.problemId());
         // ESSAY 등 자동채점 불가 타입 방어. GET /api/quiz가 ESSAY를 안 내려주지만,
         // problemId는 클라이언트가 임의로 보낼 수 있으므로 제출 쪽에서도 반드시 다시 검사한다.
         if (!problem.getType().isAutoScored()) {
@@ -202,8 +200,7 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public QuizSubmitResponse check(Long problemId, String userAnswer) {
-        Problem problem = problemRepository.findById(problemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+        Problem problem = findVisible(problemId);
         if (!problem.getType().isAutoScored()) {
             throw new BusinessException(ErrorCode.QUIZ_002);
         }
@@ -221,6 +218,13 @@ public class QuizService {
                 problem.getId(), result.correct(), result.correctAnswer(),
                 problem.getExplanation(), null,
                 existingDocumentSlug(problem.getDocumentSlug()), choiceResults);
+    }
+
+    /** 내려 둔 문제(V30)는 없는 문제와 똑같이 404다 — id를 직접 넣어도 풀거나 채점받을 수 없다. */
+    private Problem findVisible(Long problemId) {
+        return problemRepository.findById(problemId)
+                .filter(p -> !p.isHidden())
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
     }
 
     /**

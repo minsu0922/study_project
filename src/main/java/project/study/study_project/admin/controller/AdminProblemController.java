@@ -95,6 +95,20 @@ public class AdminProblemController {
         return ApiResponse.ok();
     }
 
+    /** 내리기 — 출제·목록·채점에서 빠진다. 제출 이력이 있어도 된다. */
+    @PostMapping("/{id}/hide")
+    public ApiResponse<Void> hide(@PathVariable Long id) {
+        adminProblemService.setHidden(id, true);
+        return ApiResponse.ok();
+    }
+
+    /** 다시 올리기. */
+    @PostMapping("/{id}/show")
+    public ApiResponse<Void> show(@PathVariable Long id) {
+        adminProblemService.setHidden(id, false);
+        return ApiResponse.ok();
+    }
+
     /** 제목 없는 문제 수 — 화면이 백필 버튼을 보여 줄지 정하는 데 쓴다. */
     @GetMapping("/untitled-count")
     public ApiResponse<Long> untitledCount() {

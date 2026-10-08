@@ -165,7 +165,8 @@ function resetDocumentForm() {
  */
 function loadDocuments() {
   return renderAdminTable("#documentList", {
-    url: "/api/documents",
+    // 내려 둔 문서까지 봐야 다시 올릴 수 있어 관리 전용 목록을 쓴다(공개 목록은 그 문서를 뺀다).
+    url: "/api/admin/documents",
     columns: [
       { head: "ID", width: "60px", cell: d => d.id },
       { head: "제목", wrap: true, cell: d => `
@@ -173,6 +174,7 @@ function loadDocuments() {
                같은 줄이 둘 있는 것으로 보이고, 그 둘을 가르는 것이 이 배지다. slug 줄에
                붙여 봤더니 좁은 칸에서 slug가 세 줄로 접히며 배지가 맨 아래로 밀려,
                정작 가리키는 제목에서 멀어졌다. -->
+          ${d.hidden ? `<span class="badge gray">내림</span>` : ""}
           ${escapeHtml(d.title)} ${editionBadge(d.edition)}
           <div class="meta">/${escapeHtml(d.slug)}</div>` },
       { head: "도메인", width: "90px", cell: d => escapeHtml(d.domainLabel) },
@@ -185,18 +187,21 @@ function loadDocuments() {
       { head: "태그", width: "180px", wrap: true,
         cell: d => d.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join(" ") },
       { head: "수정", width: "100px", className: "meta", cell: d => escapeHtml(shortDate(d.updatedAt)) },
-      { head: "", width: "220px", className: "row-actions", cell: () => `
+      { head: "", width: "290px", className: "row-actions", cell: d => `
           <button class="btn-outline" data-action="copy-md" title="본문 마크다운을 클립보드에 복사">MD 복사</button>
-          <button class="btn-outline" data-action="view">보기</button>
+          <button class="btn-outline" data-action="view" ${d.hidden ? "disabled title=\"내려 둔 문서는 문서 화면에서 열리지 않습니다\"" : ""}>보기</button>
+          <button class="btn-outline" data-action="toggle-hidden"
+                  title="${d.hidden ? "다시 공개합니다" : "목록과 문제의 근거 링크에서 뺍니다"}">${d.hidden ? "올리기" : "내리기"}</button>
           <button class="danger" data-action="delete">삭제</button>` },
     ],
     // 행 전체가 "수정"이고, 버튼이 눌리면 그쪽이 이긴다(렌더러가 버튼을 먼저 판별한다).
     onRowClick: (d, action, btn) => {
       // 보기는 새 탭으로 — 편집 중에 관리 화면을 잃지 않게 한다(돌아올 자리가 폼 상태를 들고 있다)
       if (action === "view") { window.open("/document.html?slug=" + encodeURIComponent(d.slug), "_blank"); return; }
-      if (action === "copy-md") { copyMarkdown(btn, d.slug); return; }
+      if (action === "copy-md") { copyMarkdown(btn, d.id); return; }
+      if (action === "toggle-hidden") { toggleDocumentHidden(d); return; }
       if (action === "delete") { deleteDocument(btn, d.id); return; }
-      editDocument(d.slug, d.id);
+      editDocument(d.id);
     },
     emptyText: "등록된 문서가 없습니다. 위 폼으로 직접 쓰거나, AI 검수 화면에서 초안을 승인하세요.",
   });
@@ -215,9 +220,9 @@ function loadDocuments() {
  * 최신본은 DB에만 있다. 화면이 보여 주는 것이 곧 DB의 값이므로 여기서 복사하면
  * "어느 쪽이 최신이지"를 따질 일이 없어진다.
  */
-async function copyMarkdown(btn, slug) {
+async function copyMarkdown(btn, id) {
   try {
-    const d = await api("/api/documents/" + encodeURIComponent(slug));
+    const d = await api("/api/admin/documents/" + id);
     await copyToClipboard(btn, d.contentMd);
   } catch (e) {
     // 복사 자체의 실패는 copyToClipboard가 버튼 문구로 알린다. 여기 오는 것은 조회 실패다 —
@@ -226,10 +231,19 @@ async function copyMarkdown(btn, slug) {
   }
 }
 
-async function editDocument(slug, id) {
+async function toggleDocumentHidden(d) {
+  try {
+    await api(`/api/admin/documents/${d.id}/${d.hidden ? "show" : "hide"}`, { method: "POST" });
+    loadDocuments();
+  } catch (e) {
+    showError(document.getElementById("dMessage"), e);
+  }
+}
+
+async function editDocument(id) {
   // 고치러 들어온 사람에게 "폼을 펼치라"는 한 걸음을 시키지 않는다.
   document.getElementById("dFormPanel").open = true;
-  const d = await api("/api/documents/" + encodeURIComponent(slug)); // 본문은 단건 API에만 있다
+  const d = await api("/api/admin/documents/" + id); // 본문은 단건 API에만 있다
   editingDocumentId = id;
   document.getElementById("dFormTitle").textContent = `문서 수정 (ID ${id})`;
   document.getElementById("dSubmitBtn").textContent = "수정 저장";
