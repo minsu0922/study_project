@@ -498,6 +498,17 @@ body {
 /* "복습 N" 알림 배지 — 오늘 복습할 게 있으면 주황으로 눈에 띄게.
    자리를 선택자에 넣지 않는다: 같은 배지가 사이드바와 하단 탭바 두 곳에 뜨는데,
    자리마다 규칙을 두면 한 곳을 고칠 때 나머지를 잊는다. 배지는 어디에 놓이든 배지다. */
+/* 북마크 버튼(js/bookmark.js) — 제보 입구(.report-open)처럼 곁문이라 글자만 둔다.
+   담긴 상태는 색과 글자("★ 북마크됨") 둘 다로 알린다. */
+.bookmark-btn {
+  background: none; border: none; padding: 10px 0; min-height: 0;
+  color: var(--muted); font-size: .82rem; cursor: pointer;
+}
+.bookmark-btn[aria-pressed="true"] { color: var(--review); font-weight: 600; }
+@media (hover: hover) {
+  .bookmark-btn:hover { background: none; color: var(--text-2); }
+}
+
 /* 복구 코드 — 사람이 옮겨 적는 값이라 고정폭으로 크게, 글자 사이를 벌려 보여 준다. */
 .recovery-code {
   margin-top: 10px; padding: 12px 14px; border-radius: var(--radius);

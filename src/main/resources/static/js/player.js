@@ -645,10 +645,14 @@ function startPlayer(mountEl, problems, opts = {}) {
         ${opts.reviewMode ? `<div class="explain" style="font-size:.82rem">${
           r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요 👋"
                     : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요 📅"}</div>` : ""}
+        <!-- 북마크(V33). 채점 뒤에 둔다 — "다시 봐야겠다"는 판단이 서는 때가 해설을 읽은 직후다. -->
+        <div>${bookmarkButton("PROBLEM", pidOf(p))}</div>
         ${reportBlock(p.id)}
         <!-- 토론방 링크. 채점 뒤에만 낸다 — 토론에는 정답 이야기가 나오고, 풀던 사람을 밖으로 보내지 않는다. -->
         <div>${roomLink(pidOf(p))}</div>
       </div>`;
+
+    hydrateBookmarks(mountEl.querySelector("#feedback"));
 
     // 3) 제출 버튼 → 다음/결과 버튼으로 교체
     const isLast = state.idx === problems.length - 1;
