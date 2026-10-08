@@ -4,7 +4,9 @@
     "id" : 23,
     "domain" : "DATABASE",
     "topic" : "트랜잭션 ACID와 격리 수준 — 팬텀 리드가 실제로 보이는 자리",
-    "memo" : "정보처리기사 3단계. 실기 빈출이고 실무 장애와도 닿는다"
+    "memo" : "정보처리기사 3단계. 실기 빈출이고 실무 장애와도 닿는다",
+    "lastUsedAt" : "2026-10-09",
+    "usedCount" : 1
   }, {
     "id" : 31,
     "domain" : "DATABASE",
