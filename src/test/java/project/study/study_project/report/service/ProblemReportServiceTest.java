@@ -49,6 +49,8 @@ class ProblemReportServiceTest {
     private ProblemRepository problemRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private project.study.study_project.notification.service.NotificationService notificationService;
 
     @InjectMocks
     private ProblemReportService service;

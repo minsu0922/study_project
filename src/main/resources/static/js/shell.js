@@ -236,6 +236,8 @@ function renderShell({ active = "", title = "" } = {}) {
       ${[...study, ...personal].filter(m => !m.tab).map(m =>
         `<a class="shell-icon" href="${m.href}" title="${escapeHtml(m.label)}"
             aria-label="${escapeHtml(m.label)}">${m.icon || m.tab || "•"}</a>`).join("")}
+      ${anon ? "" : `<a class="shell-icon" href="/notifications.html" title="알림"
+            aria-label="알림">🔔<span id="notiBadge-top"></span></a>`}
       ${authAreaHtml()}
     </header>
 
@@ -249,6 +251,9 @@ function renderShell({ active = "", title = "" } = {}) {
         <nav class="shell-nav" aria-label="주 메뉴">${headLinks(study, active)}</nav>
         <span class="spacer"></span>
         ${console_.length ? `<a class="shell-door" href="/admin/index.html">🛠 관리 콘솔<span id="adminBadge"></span></a>` : ""}
+        <!-- 알림 종은 계정 메뉴 밖에 둔다. 메뉴 안에 넣으면 펴 보기 전에는 새 알림이 있는지 모른다. -->
+        ${anon ? "" : `<a class="shell-bell" href="/notifications.html" title="알림"
+              aria-label="알림">🔔<span id="notiBadge"></span></a>`}
         ${anon ? `<div class="shell-head-auth">${authAreaHtml()}</div>` : accountMenuHtml(personal, active)}
       </div>
     </header>
@@ -280,6 +285,7 @@ function renderShell({ active = "", title = "" } = {}) {
   }
 
   loadReviewBadge();
+  loadNotificationBadge();
   loadAdminBadge();
   loadFooterStats();
   loadNickname();
@@ -518,6 +524,21 @@ async function loadReviewBadge() {
       });
     }
   } catch (e) { /* 배지 실패는 무시(위 주석) */ }
+}
+
+/** 알림 종의 안 읽은 수. 복습 배지와 같은 규칙 — 0이면 안 그리고, 실패는 조용히 넘긴다. */
+async function loadNotificationBadge() {
+  if (!isLoggedIn()) return;
+  try {
+    const { count } = await api("/api/me/notifications/unread-count");
+    if (count > 0) {
+      const html = `<span class="nav-badge">${count > 99 ? "99+" : count}</span>`;
+      ["notiBadge", "notiBadge-top"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+      });
+    }
+  } catch (e) { /* 배지 실패는 무시 */ }
 }
 
 /**

@@ -18,6 +18,8 @@ import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.notification.domain.NotificationType;
+import project.study.study_project.notification.service.NotificationService;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
@@ -53,6 +55,7 @@ public class CommentService {
     private final PostRepository postRepository;
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * @param viewerId 보는 사람. 비로그인이면 {@code null}
@@ -113,6 +116,7 @@ public class CommentService {
         }
 
         Long rootId = null;
+        Long parentAuthorId = null;
         if (request.parentId() != null) {
             // 다른 글의 댓글은 "없는 댓글"로 답한다 — 받아 주면 답글이 다른 글의 댓글에 매달린다.
             Comment parent = commentRepository.findById(request.parentId())
@@ -122,10 +126,12 @@ public class CommentService {
                 throw new BusinessException(ErrorCode.DISCUSSION_006);
             }
             rootId = parent.getParentId() != null ? parent.getParentId() : parent.getId();
+            parentAuthorId = parent.getUserId();
         }
 
         Comment saved = commentRepository.save(Comment.of(postId, userId, rootId, request.body().trim()));
         log.info("댓글 작성: postId={} commentId={} reply={}", postId, saved.getId(), rootId != null);
+        notifyWritten(post, parentAuthorId, user);
         return CommentItem.of(saved, user.getNickname(), userId, List.of());
     }
 
@@ -146,6 +152,22 @@ public class CommentService {
     @Transactional
     public void delete(Long userId, Long commentId) {
         requireOwn(userId, commentId).delete();
+    }
+
+    /**
+     * 글쓴이와 답글 대상에게 알린다. 둘이 같은 사람이면 답글 알림 하나만 보낸다 —
+     * 같은 댓글로 알림이 두 줄 오면 하나는 소음이다.
+     */
+    private void notifyWritten(Post post, Long parentAuthorId, User writer) {
+        String link = "/post.html?id=" + post.getId();
+        if (parentAuthorId != null) {
+            notificationService.notify(parentAuthorId, writer.getId(), NotificationType.COMMENT_REPLY,
+                    writer.getNickname() + "님이 내 댓글에 답글을 달았습니다: " + post.getTitle(), link);
+        }
+        if (post.getUserId() != null && !post.getUserId().equals(parentAuthorId)) {
+            notificationService.notify(post.getUserId(), writer.getId(), NotificationType.POST_COMMENT,
+                    writer.getNickname() + "님이 내 글에 댓글을 달았습니다: " + post.getTitle(), link);
+        }
     }
 
     /** 지운 글은 없는 글로 답한다({@link PostService}와 같은 판단). */
