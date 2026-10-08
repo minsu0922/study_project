@@ -15,9 +15,11 @@ import project.study.study_project.user.domain.User;
  *               따로 부르면 인증 요청 제한(분당 5회)을 하나 더 써서, 닉네임이 겹쳐 몇 번 실패한
  *               사람은 가입에 성공하고도 로그인이 막힌다
  */
-public record SignupResponse(Long id, String username, Role role, LoginResponse tokens) {
+public record SignupResponse(Long id, String username, Role role, LoginResponse tokens,
+                             String recoveryCode) {
 
-    public static SignupResponse of(User user, LoginResponse tokens) {
-        return new SignupResponse(user.getId(), user.getUsername(), user.getRole(), tokens);
+    /** @param recoveryCode 복구 코드 원문(V32). 가입 화면이 이때 한 번만 보여 준다 */
+    public static SignupResponse of(User user, LoginResponse tokens, String recoveryCode) {
+        return new SignupResponse(user.getId(), user.getUsername(), user.getRole(), tokens, recoveryCode);
     }
 }

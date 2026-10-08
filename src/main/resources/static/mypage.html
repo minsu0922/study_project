@@ -82,14 +82,23 @@ try {
       <button type="submit" id="pwSubmit">비밀번호 바꾸기</button>
     </form>
 
-    <!-- 못 하는 것을 숨기지 않는다. 이 앱은 이메일을 안 받으므로 재설정 메일을 보낼
-         곳이 없다 — 구현을 미룬 것이 아니라 지금 구조에서 불가능하다.
-         모르면 잊은 뒤에야 알게 되고, 그때는 늦다. -->
-    <p class="meta warn-note" style="margin-top:12px">
-      비밀번호를 <b>잊었을 때 되찾는 방법은 아직 없습니다</b> —
-      이 앱은 이메일을 받지 않아 재설정 메일을 보낼 곳이 없습니다.
-      바꾸려면 지금 비밀번호를 알고 있어야 합니다.
-    </p>
+  </div>
+
+  <!-- 복구 코드(V32). 비밀번호를 잊으면 이 코드로만 다시 정할 수 있다. -->
+  <div class="setting-row stacked" id="recoveryPanel">
+    <b class="setting-head">복구 코드</b>
+    <div class="meta">비밀번호를 잊었을 때 로그인 화면에서 이 코드로 다시 정합니다.
+      코드는 서버에 원문이 남지 않아 다시 보여 드릴 수 없습니다 — 잃어버렸다면 새로 받으세요.</div>
+    <div class="meta" id="recoveryStatus" style="margin-top:6px"></div>
+    <div id="recoveryMessage" role="alert" aria-live="assertive"></div>
+    <form id="recoveryForm" style="margin-top:10px; max-width:420px">
+      <div class="field">
+        <label for="recoveryPw">지금 비밀번호</label>
+        <input type="password" id="recoveryPw" required autocomplete="current-password">
+      </div>
+      <button type="submit" id="recoverySubmit">복구 코드 새로 받기</button>
+    </form>
+    <div class="recovery-code" id="recoveryCode" hidden></div>
   </div>
 
   <div class="section-label"><span>위험한 일</span></div>
@@ -151,7 +160,41 @@ if (!isLoggedIn()) {
   showSuspension();
   wireNickname();
   wirePasswordChange();
+  wireRecoveryCode();
   wireWithdraw();
+}
+
+/** 복구 코드(V32) — 발급 여부를 보여 주고, 새로 받으면 그 자리에서 한 번 보여 준다. */
+async function wireRecoveryCode() {
+  const status = document.getElementById("recoveryStatus");
+  const msg = document.getElementById("recoveryMessage");
+  const out = document.getElementById("recoveryCode");
+  const pw = document.getElementById("recoveryPw");
+  const btn = document.getElementById("recoverySubmit");
+  try {
+    const { issued } = await api("/api/me/recovery-code");
+    status.innerHTML = issued
+      ? "지금 쓸 수 있는 코드가 있습니다. 새로 받으면 전 코드는 통하지 않습니다."
+      : `<b>아직 복구 코드가 없습니다.</b> 이 기능이 생기기 전에 가입한 계정입니다 — 지금 받아 두세요.`;
+  } catch (e) { /* 상태 문구는 없어도 발급은 할 수 있다 */ }
+
+  document.getElementById("recoveryForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    btn.disabled = true;
+    msg.innerHTML = "";
+    try {
+      const data = await api("/api/me/recovery-code", { method: "POST",
+        body: JSON.stringify({ currentPassword: pw.value }) });
+      pw.value = "";
+      out.textContent = data.recoveryCode;
+      out.hidden = false;
+      status.textContent = "새 코드입니다. 지금 적어 두세요 — 이 화면을 떠나면 다시 볼 수 없습니다.";
+    } catch (e2) {
+      showErrorAlert(msg, e2);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 }
 
 /** 닉네임(V21) — 지금 값을 채워 두고, 저장하면 그 자리에서 알린다. */

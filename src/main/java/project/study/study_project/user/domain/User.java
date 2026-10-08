@@ -73,6 +73,10 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    /** 복구 코드의 해시(V32). 아직 발급받지 않은 옛 계정은 {@code null}이다. */
+    @Column(name = "recovery_code_hash", length = 255)
+    private String recoveryCodeHash;
+
     @Enumerated(EnumType.STRING) // enum 이름(USER/ADMIN)을 문자열로 저장 — 순서 변경에 안전
     @Column(nullable = false, length = 20)
     private Role role;
@@ -115,6 +119,11 @@ public class User {
      */
     public void changePassword(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    /** 복구 코드 교체 — 비밀번호와 같이 <b>이미 해시된 값</b>만 받는다. */
+    public void changeRecoveryCodeHash(String recoveryCodeHash) {
+        this.recoveryCodeHash = recoveryCodeHash;
     }
 
     /** 권한 변경. 누가 누구를 바꿀 수 있는지는 서비스가 본다. */

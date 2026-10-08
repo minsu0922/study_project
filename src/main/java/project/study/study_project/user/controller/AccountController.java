@@ -1,5 +1,9 @@
 package project.study.study_project.user.controller;
 
+import java.util.Map;
+import org.springframework.web.bind.annotation.PostMapping;
+import project.study.study_project.auth.dto.RecoveryCodeResponse;
+import project.study.study_project.user.dto.RecoveryCodeIssueRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -66,5 +70,20 @@ public class AccountController {
                                       @Valid @RequestBody WithdrawRequest request) {
         accountService.withdraw(userId, request);
         return ApiResponse.ok(null);
+    }
+
+    /** 복구 코드를 발급받은 적이 있는지. 코드 자체는 해시뿐이라 다시 보여 줄 수 없다. */
+    @GetMapping("/recovery-code")
+    public ApiResponse<Map<String, Boolean>> recoveryCodeStatus(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(Map.of("issued", accountService.hasRecoveryCode(userId)));
+    }
+
+    /** 복구 코드 (재)발급 — 원문은 이 응답에서 한 번만 나간다. */
+    @PostMapping("/recovery-code")
+    public ApiResponse<RecoveryCodeResponse> issueRecoveryCode(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody RecoveryCodeIssueRequest request) {
+        return ApiResponse.ok(new RecoveryCodeResponse(
+                accountService.issueRecoveryCode(userId, request.currentPassword())));
     }
 }

@@ -1,5 +1,6 @@
 package project.study.study_project.user.service;
 
+import project.study.study_project.user.support.RecoveryCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -187,6 +188,31 @@ public class AccountService {
         }
         deleteAccount(user);
         log.info("강제 탈퇴: userId={} by={}", userId, actorId);
+    }
+
+    /** 복구 코드를 발급받은 적이 있는가 — 마이페이지가 "아직 없음"을 알리는 데 쓴다. */
+    @Transactional(readOnly = true)
+    public boolean hasRecoveryCode(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003))
+                .getRecoveryCodeHash() != null;
+    }
+
+    /**
+     * 복구 코드를 새로 발급한다. 전에 받은 코드는 이 순간부터 통하지 않는다.
+     * 지금 비밀번호를 받는 이유는 {@link #changePassword}와 같다.
+     */
+    @Transactional
+    public String issueRecoveryCode(Long userId, String currentPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_002));
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.AUTH_002);
+        }
+        String code = RecoveryCode.generate();
+        user.changeRecoveryCodeHash(passwordEncoder.encode(RecoveryCode.normalize(code)));
+        log.info("복구 코드 재발급: userId={}", userId);
+        return code;
     }
 
     /** 지우는 순서가 곧 제약 조건이다. 이유는 {@link #withdraw} 주석에 있다. */

@@ -25,6 +25,8 @@ public enum ErrorCode {
     AUTH_004("AUTH_004", HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
     // 로드맵 2(refresh 토큰): 만료·이미 사용(회전됨)·위조된 refresh — 클라이언트는 재로그인 유도
     AUTH_005("AUTH_005", HttpStatus.UNAUTHORIZED, "리프레시 토큰이 유효하지 않습니다. 다시 로그인해 주세요."),
+    // 없는 아이디와 틀린 코드를 한 문구로 답한다 — 갈라 답하면 아이디가 있는지 알려 주게 된다
+    AUTH_006("AUTH_006", HttpStatus.UNAUTHORIZED, "아이디 또는 복구 코드가 올바르지 않습니다."),
 
     // 퀴즈
     QUIZ_001("QUIZ_001", HttpStatus.NOT_FOUND, "문제를 찾을 수 없습니다."),

@@ -83,6 +83,7 @@ class StaticPageStructureTest {
             "post.html",
             "problems.html",
             "quiz.html",
+            "reset-password.html",
             "review.html",
             "settings.html",
             "signup.html",

@@ -1,6 +1,10 @@
 package project.study.study_project.auth.service;
 
+import project.study.study_project.auth.dto.PasswordResetRequest;
+import project.study.study_project.auth.dto.RecoveryCodeResponse;
+import project.study.study_project.user.support.RecoveryCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +36,7 @@ import java.time.Duration;
  * </ul>
  * 왜 이렇게 나누는지·왜 refresh는 JWT가 아닌지는 RefreshTokenStore 주석 참고.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -103,6 +108,8 @@ public class AuthService {
                 .role(Role.USER)
                 .build();
         user.changeNickname(request.nickname());
+        String recoveryCode = RecoveryCode.generate();
+        user.changeRecoveryCodeHash(passwordEncoder.encode(RecoveryCode.normalize(recoveryCode)));
 
         User saved;
         try {
@@ -116,7 +123,31 @@ public class AuthService {
             throw new BusinessException(cause.contains("uk_user_username")
                     ? ErrorCode.AUTH_001 : ErrorCode.DISCUSSION_004);
         }
-        return SignupResponse.of(saved, issueTokens(saved));
+        return SignupResponse.of(saved, issueTokens(saved), recoveryCode);
+    }
+
+    /**
+     * 복구 코드로 비밀번호를 다시 정한다(V32).
+     *
+     * <p>쓴 코드는 버리고 새 코드를 내준다. 한 번 쓴 코드가 계속 통하면,
+     * 재설정 화면을 어깨 너머로 본 사람이 나중에 다시 계정을 가져갈 수 있다.
+     *
+     * @return 새 복구 코드 원문
+     * @throws BusinessException 아이디가 없거나, 코드를 발급받은 적이 없거나, 코드가 틀리면 AUTH_006
+     */
+    @Transactional
+    public RecoveryCodeResponse resetPassword(PasswordResetRequest request) {
+        User user = userRepository.findByUsername(normalize(request.username()))
+                .filter(u -> u.getRecoveryCodeHash() != null)
+                .filter(u -> passwordEncoder.matches(
+                        RecoveryCode.normalize(request.recoveryCode()), u.getRecoveryCodeHash()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_006));
+
+        user.changePassword(passwordEncoder.encode(request.newPassword()));
+        String next = RecoveryCode.generate();
+        user.changeRecoveryCodeHash(passwordEncoder.encode(RecoveryCode.normalize(next)));
+        log.info("복구 코드로 비밀번호 재설정: userId={}", user.getId());   // 값은 남기지 않는다
+        return new RecoveryCodeResponse(next);
     }
 
     /**
