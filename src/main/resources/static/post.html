@@ -55,6 +55,7 @@ try {
  *   GET    /api/quiz/posts/{id}   글(공개). 지운 글은 404, 가린 글은 제목·본문 없이 온다
  *   PUT    /api/me/posts/{id}     수정(글쓴이만)
  *   DELETE /api/me/posts/{id}     삭제(글쓴이만)
+ *   PUT·DELETE /api/me/post-likes/{id}  추천·거두기(글쓴이는 못 누른다)
  * 댓글은 discussion.js가 맡는다. 여기서는 붙일 자리만 낸다. */
 renderShell({ active: "community", title: "토론 글" });
 
@@ -86,6 +87,7 @@ function renderPost() {
     <div class="meta">${escapeHtml(post.nickname || "탈퇴한 사용자")} · ${formatDate(post.createdAt)}${
       post.edited ? " · 수정됨" : ""}</div>
     <div class="post-body">${escapeHtml(post.body)}</div>
+    <div>${likeButtonHtml()}</div>
     ${post.mine ? `<div class="disc-tools">
       <button type="button" id="editBtn">수정</button>
       <button type="button" id="deleteBtn">삭제</button>
@@ -93,6 +95,30 @@ function renderPost() {
     ${!post.mine && isLoggedIn() ? `<div class="disc-tools">
       <button type="button" id="reportBtn">신고</button>
     </div><div id="reportSlot"></div>` : ""}`;
+}
+
+/* 추천 버튼(V34). 내 글에는 누를 수 없어 숫자만 보여 준다. 비로그인은 누르면 로그인으로 보낸다.
+ * 눌렀는지를 색과 글자("추천함") 둘 다로 알린다. */
+function likeButtonHtml() {
+  if (post.mine) {
+    return post.likeCount ? `<span class="meta">👍 추천 ${post.likeCount}</span>` : "";
+  }
+  return `<button type="button" class="like-btn" id="likeBtn" aria-pressed="${post.liked}">
+    👍 ${post.liked ? "추천함" : "추천"} <b>${post.likeCount}</b></button>`;
+}
+
+async function toggleLike(btn) {
+  if (!isLoggedIn()) { location.href = "/login.html"; return; }
+  btn.disabled = true;   // 응답 전에 또 누르면 누르기와 거두기가 엇갈려 나간다
+  try {
+    const state = await api("/api/me/post-likes/" + post.id, { method: post.liked ? "DELETE" : "PUT" });
+    post.likeCount = state.likeCount;
+    post.liked = state.liked;
+    btn.outerHTML = likeButtonHtml();
+  } catch (err) {
+    btn.disabled = false;
+    showError(err.message);
+  }
 }
 
 /* 글 신고. 사유 목록은 댓글 신고와 같은 것을 쓴다(discussion.js의 COMMENT_REPORT_REASONS). */
@@ -147,6 +173,8 @@ article.addEventListener("submit", e => {
 });
 
 article.addEventListener("click", async e => {
+  const likeBtn = e.target.closest("#likeBtn");
+  if (likeBtn) { toggleLike(likeBtn); return; }
   if (e.target.id === "reportBtn") { openReportForm(); return; }
   if (e.target.id === "reportCancel") { document.getElementById("reportSlot").innerHTML = ""; return; }
   if (e.target.id === "editBtn") {

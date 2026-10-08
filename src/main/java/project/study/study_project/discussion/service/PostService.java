@@ -1,5 +1,6 @@
 package project.study.study_project.discussion.service;
 
+import project.study.study_project.discussion.repository.PostLikeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -67,6 +68,7 @@ public class PostService {
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
+    private final PostLikeRepository postLikeRepository;
 
     /**
      * @param viewerId 보는 사람. 비로그인이면 {@code null}
@@ -108,18 +110,23 @@ public class PostService {
     public RecentPostResponse recent(PostFilter filter, int page) {
         PageRequest pageable = PageRequest.of(Math.max(page, 0), PAGE_SIZE);
         String pattern = SearchKeyword.likePattern(filter.q());
-        Slice<PostRepository.RecentPostRow> rows = filter.sort() == PostSort.COMMENTS
-                ? postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, filter.domain(),
-                        filter.category(), filter.authorId(), filter.commenterId(), pageable)
-                : postRepository.findRecent(CommentStatus.VISIBLE, pattern, filter.domain(),
-                        filter.category(), filter.authorId(), filter.commenterId(), pageable);
+        Slice<PostRepository.RecentPostRow> rows = switch (filter.sort()) {
+            case COMMENTS -> postRepository.findMostCommented(CommentStatus.VISIBLE, pattern, filter.domain(),
+                    filter.category(), filter.authorId(), filter.commenterId(), pageable);
+            case LIKES -> postRepository.findMostLiked(CommentStatus.VISIBLE, pattern, filter.domain(),
+                    filter.category(), filter.authorId(), filter.commenterId(), pageable);
+            case LATEST -> postRepository.findRecent(CommentStatus.VISIBLE, pattern, filter.domain(),
+                    filter.category(), filter.authorId(), filter.commenterId(), pageable);
+        };
         List<Post> posts = rows.getContent().stream().map(PostRepository.RecentPostRow::getPost).toList();
         Map<Long, String> nicknames = nicknamesOf(posts);
         Map<Long, Long> commentCounts = commentCountsOf(posts);
+        Map<Long, Long> likeCounts = likeCountsOf(posts);
         List<RecentPostItem> items = rows.getContent().stream()
                 .map(row -> RecentPostItem.of(row.getPost(),
                         nicknames.get(row.getPost().getUserId()),
                         commentCounts.getOrDefault(row.getPost().getId(), 0L),
+                        likeCounts.getOrDefault(row.getPost().getId(), 0L),
                         row.getProblemId(), row.getProblemTitle(), row.getDomain().value()))
                 .toList();
         return new RecentPostResponse(rows.hasNext(), items);
@@ -167,7 +174,13 @@ public class PostService {
         String nickname = post.getUserId() == null
                 ? null
                 : userRepository.findById(post.getUserId()).map(User::getNickname).orElse(null);
-        return PostDetail.of(post, problemIdOf(post), nickname, viewerId);
+        return withLikes(PostDetail.of(post, problemIdOf(post), nickname, viewerId), viewerId);
+    }
+
+    /** 추천 수와 "내가 눌렀는가"를 붙인다. 비로그인이면 눌렀는지 물을 사람이 없다. */
+    private PostDetail withLikes(PostDetail detail, Long viewerId) {
+        return detail.withLikes(postLikeRepository.countByPostId(detail.id()),
+                viewerId != null && postLikeRepository.existsByPostIdAndUserId(detail.id(), viewerId));
     }
 
     @Transactional
@@ -207,7 +220,8 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
         SuspensionGuard.requireNotSuspended(user);
         post.edit(request.category(), request.title().trim(), request.body().trim());
-        return PostDetail.of(post, problemIdOf(post), user.getNickname(), userId);
+        // 수정 응답으로 화면을 다시 그리므로 추천 수도 실어 보낸다 — 빠지면 고칠 때마다 0으로 보인다
+        return withLikes(PostDetail.of(post, problemIdOf(post), user.getNickname(), userId), userId);
     }
 
     /** 이미 지운 글을 또 지워도 오류가 아니다 — 두 번 눌린 삭제 버튼에 실패를 보여 줄 이유가 없다. */
@@ -237,6 +251,17 @@ public class PostService {
             return counts;
         }
         commentRepository.countByPostIds(posts.stream().map(Post::getId).toList(), CommentStatus.VISIBLE)
+                .forEach(row -> counts.put(row.getPostId(), row.getCnt()));
+        return counts;
+    }
+
+    /** 글 id → 추천 수. 한 쪽의 글을 한 번에 센다. */
+    private Map<Long, Long> likeCountsOf(List<Post> posts) {
+        Map<Long, Long> counts = new HashMap<>();
+        if (posts.isEmpty()) {
+            return counts;
+        }
+        postLikeRepository.countByPostIds(posts.stream().map(Post::getId).toList())
                 .forEach(row -> counts.put(row.getPostId(), row.getCnt()));
         return counts;
     }
