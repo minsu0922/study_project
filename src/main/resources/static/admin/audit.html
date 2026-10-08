@@ -46,7 +46,9 @@ if (initAdminPage("audit")) {
       { head: "때", width: "150px", className: "meta", cell: a => escapeHtml(formatDate(a.createdAt)) },
       { head: "누가", width: "130px", cell: a => escapeHtml(a.actorUsername) },
       { head: "한 일", width: "200px", wrap: true, cell: a => escapeHtml(a.action) },
-      { head: "대상", wrap: true, className: "meta", cell: a => escapeHtml(a.path.replace("/api/admin/", "")) },
+      // 등록은 주소에 번호가 없어 서버가 새로 만든 번호를 따로 준다(V37).
+      { head: "대상", wrap: true, className: "meta", cell: a => escapeHtml(a.path.replace("/api/admin/", ""))
+          + (a.createdId ? ` → 새 번호 ${a.createdId}` : "") },
     ],
     emptyText: "아직 기록이 없습니다. 관리 화면에서 무언가를 고치면 여기에 남습니다.",
   });

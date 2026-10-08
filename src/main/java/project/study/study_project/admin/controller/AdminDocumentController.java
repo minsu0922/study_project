@@ -1,5 +1,6 @@
 package project.study.study_project.admin.controller;
 
+import project.study.study_project.admin.audit.AdminAuditInterceptor;
 import project.study.study_project.admin.revision.RevisionItem;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -77,7 +78,9 @@ public class AdminDocumentController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<DocumentDetailResponse> create(@Valid @RequestBody AdminDocumentRequest request) {
-        return ApiResponse.ok(adminDocumentService.create(request));
+        DocumentDetailResponse created = adminDocumentService.create(request);
+        AdminAuditInterceptor.markCreated(created.id());   // 처리 기록에 새 번호를 남긴다(V37)
+        return ApiResponse.ok(created);
     }
 
     /** 수정(전체 교체 방식). */

@@ -113,6 +113,32 @@ class AdminAuditAndRevisionIntegrationTest {
                         .value("/api/admin/problems/" + problem.getId() + "/hide"));
     }
 
+    @Test
+    @DisplayName("등록 기록에는 새로 만든 번호가 남고, 등록이 아닌 기록에는 남지 않는다")
+    void createLogCarriesNewId() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        String body = """
+                {"domain":"NETWORK","difficulty":"BEGINNER","type":"OX","title":"등록 기록 테스트",
+                 "question":"TCP는 연결 지향이다.","answer":"O","explanation":"해설","choices":[],"documentSlug":null}
+                """;
+
+        String response = mockMvc.perform(post("/api/admin/problems").header("Authorization", admin)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Long createdId = Long.valueOf(response.replaceAll("(?s).*?\"id\":(\\d+).*", "$1"));
+
+        assertThat(latestLog().getCreatedId()).isEqualTo(createdId);
+
+        mockMvc.perform(post("/api/admin/problems/" + createdId + "/hide").header("Authorization", admin))
+                .andExpect(status().isOk());
+
+        assertThat(latestLog().getCreatedId()).isNull();
+        mockMvc.perform(get("/api/admin/audit-logs").header("Authorization", admin))
+                .andExpect(jsonPath("$.data.content[1].action").value("문제 등록"))
+                .andExpect(jsonPath("$.data.content[1].createdId").value(createdId));
+    }
+
     /* ── 수정 이력 ── */
 
     @Test

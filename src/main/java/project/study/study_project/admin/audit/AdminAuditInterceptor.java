@@ -1,5 +1,7 @@
 package project.study.study_project.admin.audit;
 
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +27,8 @@ import org.springframework.web.servlet.HandlerMapping;
 @Component
 public class AdminAuditInterceptor implements HandlerInterceptor {
 
+    private static final String CREATED_ID_ATTRIBUTE = AdminAuditInterceptor.class.getName() + ".createdId";
+
     private final AdminAuditService auditService;
     /**
      * 테스트에서 끄는 스위치. 롤백되지 않는 테스트가 관리 API를 부르면 개발 DB에 기록이 쌓인다 —
@@ -36,6 +40,19 @@ public class AdminAuditInterceptor implements HandlerInterceptor {
                                  @Value("${admin.audit.enabled:true}") boolean enabled) {
         this.auditService = auditService;
         this.enabled = enabled;
+    }
+
+    /**
+     * 등록 요청이 새로 만든 것의 번호를 기록에 실어 달라고 알린다(V37). 등록 컨트롤러가 부른다.
+     *
+     * <p>등록은 주소에 번호가 없어 인터셉터가 스스로 알 길이 없다. 그래서 이것만은 컨트롤러가
+     * 알려 줘야 한다. 부르는 것을 잊어도 기록 자체는 남고 번호 칸만 빈다.
+     */
+    public static void markCreated(Long id) {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes != null && id != null) {
+            attributes.setAttribute(CREATED_ID_ATTRIBUTE, id, RequestAttributes.SCOPE_REQUEST);
+        }
     }
 
     @Override
@@ -50,7 +67,8 @@ public class AdminAuditInterceptor implements HandlerInterceptor {
             return;
         }
         try {
-            auditService.record(currentUserId(), request.getMethod(), pattern.toString(), request.getRequestURI());
+            auditService.record(currentUserId(), request.getMethod(), pattern.toString(),
+                    request.getRequestURI(), (Long) request.getAttribute(CREATED_ID_ATTRIBUTE));
         } catch (RuntimeException e) {
             log.warn("처리 기록을 남기지 못했습니다: {} {} — {}", request.getMethod(), request.getRequestURI(),
                     e.getMessage());

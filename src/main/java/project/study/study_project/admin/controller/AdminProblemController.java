@@ -1,5 +1,6 @@
 package project.study.study_project.admin.controller;
 
+import project.study.study_project.admin.audit.AdminAuditInterceptor;
 import project.study.study_project.admin.revision.RevisionItem;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -79,7 +80,9 @@ public class AdminProblemController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<AdminProblemDetail> create(@Valid @RequestBody AdminProblemRequest request) {
-        return ApiResponse.ok(adminProblemService.create(request));
+        AdminProblemDetail created = adminProblemService.create(request);
+        AdminAuditInterceptor.markCreated(created.id());   // 처리 기록에 새 번호를 남긴다(V37)
+        return ApiResponse.ok(created);
     }
 
     /** 수정(전체 교체 방식 — 서비스 주석 참고). */
