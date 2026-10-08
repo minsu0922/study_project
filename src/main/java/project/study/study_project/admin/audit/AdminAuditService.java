@@ -22,10 +22,11 @@ public class AdminAuditService {
 
     /** 아이디를 그때 값으로 굳혀 적는다 — 그 관리자 계정이 나중에 지워져도 누가 했는지 남는다. */
     @Transactional
-    public void record(Long actorId, String method, String pattern, String path) {
+    public void record(Long actorId, String method, String pattern, String path, Long createdId) {
         String username = actorId == null ? UNKNOWN_ACTOR
                 : userRepository.findById(actorId).map(User::getUsername).orElse(UNKNOWN_ACTOR);
-        auditLogRepository.save(AdminAuditLog.of(actorId, username, method, pattern, path, LocalDateTime.now()));
+        auditLogRepository.save(AdminAuditLog.of(actorId, username, method, pattern, path, createdId,
+                LocalDateTime.now()));
     }
 
     @Transactional(readOnly = true)

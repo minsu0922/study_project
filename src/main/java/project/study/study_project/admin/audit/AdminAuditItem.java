@@ -12,10 +12,13 @@ public record AdminAuditItem(
         String actorUsername,
         String action,
         String path,
+        /** 등록 요청이 새로 만든 것의 번호. 등록이 아니면 {@code null}. */
+        Long createdId,
         LocalDateTime createdAt
 ) {
     static AdminAuditItem from(AdminAuditLog log) {
         return new AdminAuditItem(log.getId(), log.getActorUsername(),
-                AdminActionLabels.of(log.getMethod(), log.getPattern()), log.getPath(), log.getCreatedAt());
+                AdminActionLabels.of(log.getMethod(), log.getPattern()), log.getPath(), log.getCreatedId(),
+                log.getCreatedAt());
     }
 }

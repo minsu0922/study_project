@@ -40,21 +40,26 @@ public class AdminAuditLog {
     @Column(nullable = false, length = 300)
     private String path;
 
+    /** 등록 요청이 새로 만든 것의 번호(V37). 등록이 아니면 {@code null} — 대상은 path에 있다. */
+    @Column(name = "created_id")
+    private Long createdId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     private AdminAuditLog(Long actorId, String actorUsername, String method, String pattern, String path,
-                          LocalDateTime now) {
+                          Long createdId, LocalDateTime now) {
         this.actorId = actorId;
         this.actorUsername = actorUsername;
         this.method = method;
         this.pattern = pattern;
         this.path = path;
+        this.createdId = createdId;
         this.createdAt = now;
     }
 
     public static AdminAuditLog of(Long actorId, String actorUsername, String method, String pattern,
-                                   String path, LocalDateTime now) {
-        return new AdminAuditLog(actorId, actorUsername, method, pattern, path, now);
+                                   String path, Long createdId, LocalDateTime now) {
+        return new AdminAuditLog(actorId, actorUsername, method, pattern, path, createdId, now);
     }
 }
