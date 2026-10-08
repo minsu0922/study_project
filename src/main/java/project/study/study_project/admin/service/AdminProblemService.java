@@ -1,5 +1,8 @@
 package project.study.study_project.admin.service;
 
+import project.study.study_project.admin.revision.ContentRevisionService;
+import project.study.study_project.admin.revision.RevisionItem;
+import project.study.study_project.admin.revision.RevisionTarget;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +62,7 @@ public class AdminProblemService {
      * 400(DOMAIN_003)으로 바꾼다.
      */
     private final DomainCatalog domainCatalog;
+    private final ContentRevisionService revisionService;
 
     /** 관리 화면 목록 — 최신순, 필터(선택), 정답·해설 포함(ADMIN 전용 경로라 노출 가능). */
     @Transactional(readOnly = true)
@@ -109,6 +113,8 @@ public class AdminProblemService {
         requireRegisteredDomain(request.domain());
         validateByType(request);
         Problem problem = findProblem(id);
+        // 고치기 전 모습을 먼저 적는다(V36). 검증이 끝난 뒤라 실패할 수정은 이력을 남기지 않는다.
+        revisionService.snapshot(RevisionTarget.PROBLEM, id, toRequest(problem));
         problem.update(request.domain(), request.difficulty(), request.type(), Texts.trimToNull(request.title()),
                 request.question().trim(), normalizeAnswer(request), Texts.trimToNull(request.explanation()),
                 Texts.trimToNull(request.documentSlug()));
@@ -129,6 +135,37 @@ public class AdminProblemService {
             throw new BusinessException(ErrorCode.QUIZ_003);
         }
         problemRepository.delete(problem); // 보기(choice)는 cascade + DDL CASCADE로 함께 삭제
+        revisionService.deleteAll(RevisionTarget.PROBLEM, id); // 외래 키가 없어 여기서 함께 지운다(V36)
+    }
+
+    /* ── 수정 이력(V36) ─────────────────────────────────────────── */
+
+    @Transactional(readOnly = true)
+    public List<RevisionItem> revisions(Long id) {
+        findProblem(id);
+        return revisionService.list(RevisionTarget.PROBLEM, id);
+    }
+
+    /**
+     * 옛 모습으로 되돌린다. 수정과 같은 길({@link #update})로 넣으므로 지금 모습이 다시 이력에 남는다 —
+     * 되돌린 것을 또 되돌릴 수 있다.
+     */
+    @Transactional
+    public AdminProblemDetail restore(Long id, Long revisionId) {
+        AdminProblemRequest old = revisionService.read(RevisionTarget.PROBLEM, id, revisionId,
+                AdminProblemRequest.class);
+        return update(id, old);
+    }
+
+    /** 지금 문제를 등록 요청과 같은 모양으로 — 이력에 적는 모양이자 되돌릴 때 다시 넣는 모양이다. */
+    private AdminProblemRequest toRequest(Problem p) {
+        return new AdminProblemRequest(p.getDomain(), p.getDifficulty(), p.getType(), p.getTitle(),
+                p.getQuestion(), p.getAnswer(), p.getExplanation(),
+                p.getChoices().stream()
+                        .map(c -> new AdminProblemRequest.ChoiceItem(c.getText(), c.isCorrect(),
+                                c.getRationale(), c.getMatchText()))
+                        .toList(),
+                p.getDocumentSlug());
     }
 
     /**

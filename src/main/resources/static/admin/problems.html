@@ -70,6 +70,8 @@ try {
       <div class="field" style="margin-top:14px"><label id="pExplanationLabel">해설 (선택)</label><textarea id="pExplanation" rows="2" style="width:100%"></textarea></div>
       <button id="pSubmitBtn">등록</button>
       <button id="pCancelBtn" class="btn-outline" hidden>수정 취소</button>
+      <!-- 수정 이력(V36) — 수정으로 들어왔고 이력이 있을 때만 그린다. -->
+      <div id="pRevisions"></div>
     </details>
 
     <!-- 제목 백필(V13) — 제목 없는 문제가 있을 때만 나타난다.
@@ -396,6 +398,7 @@ function resetProblemForm() {
   document.getElementById("pAnswer").value = "";
   document.getElementById("pExplanation").value = "";
   document.getElementById("pChoices").innerHTML = "";
+  document.getElementById("pRevisions").innerHTML = "";
   renderTypeFields();
 }
 
@@ -617,6 +620,7 @@ async function editProblem(id) {
   // 통째로 빠진 채 제출되어 QUIZ_004로 막힌다(AdminProblemDetail.ChoiceDetail 주석).
   p.choices.forEach(c => addChoiceRow(c.text, c.correct, c.rationale ?? "", c.matchText ?? ""));
   renderTypeFields();
+  renderRevisions("#pRevisions", "/api/admin/problems/" + id, () => { editProblem(id); loadProblems(); });
   window.scrollTo({ top: 0, behavior: "smooth" }); // 폼이 위에 있으니 올려 보낸다
 }
 

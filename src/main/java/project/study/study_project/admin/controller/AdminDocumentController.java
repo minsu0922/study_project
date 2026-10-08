@@ -1,5 +1,7 @@
 package project.study.study_project.admin.controller;
 
+import project.study.study_project.admin.revision.RevisionItem;
+import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,6 +44,19 @@ public class AdminDocumentController {
     @GetMapping("/{id}")
     public ApiResponse<DocumentDetailResponse> get(@PathVariable Long id) {
         return ApiResponse.ok(adminDocumentService.get(id));
+    }
+
+    /** 수정 이력 — 고치기 직전 모습들을 최근 것부터. */
+    @GetMapping("/{id}/revisions")
+    public ApiResponse<List<RevisionItem>> revisions(@PathVariable Long id) {
+        return ApiResponse.ok(adminDocumentService.revisions(id));
+    }
+
+    /** 그 모습으로 되돌린다. 지금 모습은 이력에 남는다. */
+    @PostMapping("/{id}/revisions/{revisionId}/restore")
+    public ApiResponse<DocumentDetailResponse> restoreRevision(@PathVariable Long id,
+                                                               @PathVariable Long revisionId) {
+        return ApiResponse.ok(adminDocumentService.restore(id, revisionId));
     }
 
     /** 내리기 — 목록·단건·근거 링크에서 빠진다. */

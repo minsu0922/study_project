@@ -56,6 +56,8 @@ try {
         <button id="dSubmitBtn">등록</button>
         <button id="dCancelBtn" class="btn-outline" hidden>수정 취소</button>
       </div>
+      <!-- 수정 이력(V36) — 수정으로 들어왔고 이력이 있을 때만 그린다. -->
+      <div id="dRevisions"></div>
     </details>
 
     <h3>문서 목록 <span class="meta">(행을 누르면 위 폼에서 수정 · [보기]는 실제 문서 화면 · [MD 복사]는 본문 마크다운을 클립보드로)</span></h3>
@@ -147,6 +149,7 @@ function resetDocumentForm() {
   document.getElementById("dCancelBtn").hidden = true;
   ["dTitle", "dSlug", "dContent", "dTags", "dSource"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("dContent").style.height = "";   // 늘려 둔 높이도 되돌린다
+  document.getElementById("dRevisions").innerHTML = "";
 }
 
 /**
@@ -255,6 +258,7 @@ async function editDocument(id) {
   autoGrow(document.getElementById("dContent"));   // 불러온 본문 길이에 맞춰 칸을 편다
   document.getElementById("dTags").value = d.tags.join(", ");
   document.getElementById("dSource").value = d.source ?? "";
+  renderRevisions("#dRevisions", "/api/admin/documents/" + id, () => { editDocument(id); loadDocuments(); });
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 

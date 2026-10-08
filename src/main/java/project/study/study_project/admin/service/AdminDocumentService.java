@@ -1,5 +1,10 @@
 package project.study.study_project.admin.service;
 
+import project.study.study_project.admin.revision.ContentRevisionService;
+import project.study.study_project.admin.revision.RevisionItem;
+import project.study.study_project.admin.revision.RevisionTarget;
+import project.study.study_project.tag.domain.Tag;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
@@ -40,6 +45,7 @@ public class AdminDocumentService {
     private final CacheManager cacheManager; // 문서 캐시 무효화용 (로드맵 2, CacheConfig 참고)
     private final DomainCatalog domainCatalog; // 응답의 분야 표기 이름 — 관리자가 화면에서 고친 이름을 그대로(Task 4)
     private final DocumentService documentService;
+    private final ContentRevisionService revisionService;
 
     /** 관리 화면 목록 — 내려 둔 문서 포함. */
     public PageResponse<DocumentListItem> list(Pageable pageable) {
@@ -103,6 +109,8 @@ public class AdminDocumentService {
         if (!oldSlug.equals(request.slug()) && documentRepository.existsBySlug(request.slug())) {
             throw new BusinessException(ErrorCode.DOC_002);
         }
+        // 고치기 전 모습을 먼저 적는다(V36). 중복 검사를 지난 뒤라 실패할 수정은 이력을 남기지 않는다.
+        revisionService.snapshot(RevisionTarget.DOCUMENT, id, toRequest(document));
         document.update(request.domain(), request.title().trim(), request.slug(),
                 request.contentMd(), Texts.trimToNull(request.source()),
                 tagService.resolveTags(request.tags()));
@@ -120,8 +128,30 @@ public class AdminDocumentService {
     public void delete(Long id) {
         Document document = findDocument(id);
         documentRepository.delete(document);
+        revisionService.deleteAll(RevisionTarget.DOCUMENT, id); // 외래 키가 없어 여기서 함께 지운다(V36)
         evictDocumentCache(document.getSlug(),
                 DocumentEditions.counterpartSlugOf(document.getSlug()));
+    }
+
+    /* ── 수정 이력(V36) ─────────────────────────────────────────── */
+
+    @Transactional(readOnly = true)
+    public List<RevisionItem> revisions(Long id) {
+        findDocument(id);
+        return revisionService.list(RevisionTarget.DOCUMENT, id);
+    }
+
+    /** 옛 모습으로 되돌린다. {@link #update}로 넣으므로 캐시도 비워지고 지금 모습도 이력에 남는다. */
+    @Transactional
+    public DocumentDetailResponse restore(Long id, Long revisionId) {
+        AdminDocumentRequest old = revisionService.read(RevisionTarget.DOCUMENT, id, revisionId,
+                AdminDocumentRequest.class);
+        return update(id, old);
+    }
+
+    private AdminDocumentRequest toRequest(Document d) {
+        return new AdminDocumentRequest(d.getDomain(), d.getTitle(), d.getSlug(), d.getContentMd(),
+                d.getSource(), d.getTags().stream().map(Tag::getName).toList());
     }
 
     /**
