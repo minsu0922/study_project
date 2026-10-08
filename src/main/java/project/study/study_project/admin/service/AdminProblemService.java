@@ -201,9 +201,14 @@ public class AdminProblemService {
             }
             case MATCHING -> validateMatching(r, hasChoices, hasAnswer);
             case ORDERING -> validateOrdering(r, hasChoices, hasAnswer);
-            // 서술형은 자동채점 미지원(MVP) — 등록을 허용하면 풀 수 없는 문제가 생긴다
-            case ESSAY -> throw new BusinessException(ErrorCode.QUIZ_002,
-                    "서술형(ESSAY)은 자동채점 미지원이라 아직 등록할 수 없습니다.");
+            // 서술형은 학습자가 모범 답안을 보고 스스로 채점한다. 그래서 견줄 모범 답안이 반드시 있어야 한다.
+            case ESSAY -> {
+                requireNoChoices(hasChoices, "서술형");
+                if (r.explanation() == null || r.explanation().isBlank()) {
+                    throw new BusinessException(ErrorCode.QUIZ_004,
+                            "서술형은 해설 칸에 모범 답안을 적어야 합니다. 학습자가 자기 답과 견줄 기준입니다.");
+                }
+            }
         }
     }
 
@@ -310,7 +315,8 @@ public class AdminProblemService {
             // 채점 쪽도 공백을 지우고 비교하지만(gradeOrdering), 저장 시점에 눕혀 두면
             // DB를 눈으로 볼 때도 형식이 하나다.
             case ORDERING -> r.answer().replaceAll("\\s", "");
-            case ESSAY -> null; // validateByType에서 이미 차단 — 도달 불가
+            // 서술형의 answer는 답에 들어가야 할 요점(선택, |로 구분)이다. 채점에는 쓰지 않고 화면에 보여 준다.
+            case ESSAY -> Texts.trimToNull(r.answer());
         };
     }
 

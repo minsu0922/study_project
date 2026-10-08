@@ -1,5 +1,6 @@
 package project.study.study_project.quiz.controller;
 
+import project.study.study_project.quiz.dto.EssayModelAnswer;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -113,5 +114,17 @@ public class QuizController {
             @Valid @RequestBody QuizCheckRequest request
     ) {
         return ApiResponse.ok(quizService.check(problemId, request.userAnswer()));
+    }
+
+    /**
+     * 서술형의 모범 답안 — 답을 적어 보낸 뒤에 받는다. 기록은 남기지 않는다(QuizService.modelAnswer).
+     * 비로그인도 풀어 볼 수 있게 공개다(SecurityConfig).
+     */
+    @PostMapping("/{problemId}/model-answer")
+    public ApiResponse<EssayModelAnswer> modelAnswer(
+            @PathVariable Long problemId,
+            @Valid @RequestBody QuizCheckRequest request
+    ) {
+        return ApiResponse.ok(quizService.modelAnswer(problemId));
     }
 }

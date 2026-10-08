@@ -43,7 +43,11 @@ public enum ProblemType {
         return displayName;
     }
 
-    /** MVP 자동채점 지원 여부. false면 채점 요청 시 QUIZ_002. */
+    /**
+     * 서버가 정오를 판정할 수 있는 유형인가. 서술형만 false다 —
+     * 서술형은 모범 답안을 보고 학습자가 스스로 맞음·틀림을 고른다(QuizService.submit).
+     * AI 생성과 기록 없는 채점(check)은 false인 유형을 받지 않는다.
+     */
     public boolean isAutoScored() {
         return autoScored;
     }

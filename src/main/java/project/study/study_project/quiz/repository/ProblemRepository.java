@@ -28,8 +28,9 @@ import java.util.List;
  *       바꾼다(로드맵 1에서 인덱스·쿼리 최적화와 함께 측정). MVP의 수백 문제 규모에선 충분히 빠르다.
  *   <li><b>동적 필터</b>: {@code (:x IS NULL OR col = :x)} 패턴 — 파라미터가 없으면 조건 자체가
  *       항상 참이 되어 무시된다. 필터가 3개뿐이라 이 정도 반복은 Specification 도입보다 싸다.
- *   <li><b>ESSAY 제외 고정</b>: 서술형은 MVP 채점 대상이 아니라서(문서 03) 필터와 무관하게
- *       퀴즈에 나오면 안 된다 → WHERE에 상수로 박아 실수 여지를 없앤다.
+ *   <li><b>서술형은 고른 사람에게만</b>: 유형을 안 고른 무작위 세트에는 서술형을 섞지 않는다.
+ *       누르면 바로 채점되는 문제 사이에 글을 써야 하는 문제가 끼면 푸는 흐름이 끊긴다.
+ *       유형을 서술형으로 고르면 나온다.
  * </ul>
  * enum 파라미터는 네이티브 쿼리라 자동 변환이 안 되므로 서비스에서 {@code name()} 문자열로 넘긴다.
  */
@@ -40,7 +41,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             WHERE (:domain     IS NULL OR p.domain     = :domain)
               AND (:difficulty IS NULL OR p.difficulty = :difficulty)
               AND (:type       IS NULL OR p.type       = :type)
-              AND p.type <> 'ESSAY'
+              AND (:type IS NOT NULL OR p.type <> 'ESSAY')
               AND p.hidden = 0
             ORDER BY RAND()
             LIMIT :size

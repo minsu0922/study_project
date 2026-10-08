@@ -103,7 +103,8 @@ public class SecurityConfig {
                         // <submit과 경로를 나눈 것이 이 규칙의 핵심>이다. 한 경로에 "저장할까요"
                         // 플래그를 뒀다면 인증 여부를 바디로 갈라야 하는데, 여기 적힌 규칙은
                         // 바디를 읽지 못한다. 경로가 다르면 그 사고가 있을 자리가 없다.
-                        .requestMatchers(HttpMethod.POST, "/api/quiz/*/check").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/quiz/*/check",
+                                "/api/quiz/*/model-answer").permitAll()
                         // 공개: API 문서(Swagger)
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // 공개: 상태 점검. 오케스트레이터(도커 HEALTHCHECK 등)가 부르는 자리라

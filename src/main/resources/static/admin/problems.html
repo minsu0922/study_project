@@ -67,7 +67,7 @@ try {
         <button type="button" class="btn-outline" id="addChoiceBtn" style="margin-top:6px">+ 보기 추가</button>
       </div>
 
-      <div class="field" style="margin-top:14px"><label>해설 (선택)</label><textarea id="pExplanation" rows="2" style="width:100%"></textarea></div>
+      <div class="field" style="margin-top:14px"><label id="pExplanationLabel">해설 (선택)</label><textarea id="pExplanation" rows="2" style="width:100%"></textarea></div>
       <button id="pSubmitBtn">등록</button>
       <button id="pCancelBtn" class="btn-outline" hidden>수정 취소</button>
     </details>
@@ -227,14 +227,18 @@ async function loadProblemDocumentFilter() {
 function renderTypeFields() {
   const type = document.getElementById("pType").value;
   const usesRows = ["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(type);
-  const usesAnswer = ["OX", "SHORT_ANSWER", "ORDERING"].includes(type);
+  const usesAnswer = ["OX", "SHORT_ANSWER", "ORDERING", "ESSAY"].includes(type);
 
   document.getElementById("pChoicesField").hidden = !usesRows;
   document.getElementById("pAnswerField").hidden = !usesAnswer;
   document.getElementById("pAnswerLabel").textContent = {
     OX: "정답 (O 또는 X)",
     ORDERING: "정답 순서 (아래 항목의 번호를 | 로, 예: 3|2|1|4)",
+    ESSAY: "답에 들어가야 할 요점 (선택 · | 로 구분, 예: 3번 교환|양쪽 순서 번호 확인)",
   }[type] ?? "정답 (복수 정답은 | 구분, 예: arp|address resolution protocol)";
+  // 서술형은 학습자가 자기 답과 견줄 기준이 해설 칸이라 필수다(서버도 QUIZ_004로 막는다).
+  document.getElementById("pExplanationLabel").textContent =
+    type === "ESSAY" ? "모범 답안 (필수 — 학습자가 자기 답과 견줍니다)" : "해설 (선택)";
   document.getElementById("pChoicesLabel").textContent = {
     MATCHING: "쌍 (왼쪽=용어, 오른쪽=그 용어에서만 참인 설명)",
     ORDERING: "배열할 항목 (여기 적은 순서가 위 정답 순서의 번호가 됩니다)",

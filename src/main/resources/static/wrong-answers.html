@@ -147,7 +147,8 @@ async function init() {
             </div>
             <h3>${escapeHtml(w.question)}</h3>
             <div style="color:var(--wrong)">내 답: ${escapeHtml(w.myAnswer)}</div>
-            <div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer ?? "")}</div>
+            <!-- 서술형은 한 줄 정답이 없다. 모범 답안은 아래 해설 줄에 나온다. -->
+            ${w.correctAnswer ? `<div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer)}</div>` : ""}
             <!-- 내가 고른 그 보기가 왜 틀렸는지(V15). 보기 넷을 다 늘어놓지 않는 이유는
                  이 화면이 보기를 아예 그리지 않기 때문이다 — 복습 카드에서 알고 싶은 것은
                  "내가 왜 틀렸나" 하나다(AnswerDisplay.userAnswerRationaleOf).

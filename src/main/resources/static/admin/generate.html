@@ -316,7 +316,8 @@ function selectedSource() {
 }
 
 function initGenerateForm() {
-  fillSelect(document.getElementById("gType"), TYPES);
+  // 서술형은 AI가 만들지 않는다(서버가 QUIZ_002로 거절한다) — 고를 수 없는 것은 목록에서 뺀다.
+  fillSelect(document.getElementById("gType"), TYPES.filter(([v]) => v !== "ESSAY"));
   syncSourceFields();
   syncKindOptions();
 
