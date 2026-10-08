@@ -525,6 +525,11 @@ body {
   border-top: 1px solid var(--border); padding-top: 4px;
   color: var(--muted); font-size: .75rem;
 }
+/* 관리 대시보드의 이용 추이는 한 가지 값만 그려 막대를 통째로 칠한다. 줄 높이도 낮춘다. */
+.trend-bar.solid { background: var(--primary); }
+.usage-row + .usage-row { margin-top: 14px; }
+.usage-row .trend { height: 56px; }
+.usage-head { margin-bottom: 4px; }
 .trend-key { margin-left: 8px; white-space: nowrap; }
 .trend-key i {
   display: inline-block; width: 10px; height: 10px; border-radius: 2px;

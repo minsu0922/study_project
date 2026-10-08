@@ -1,5 +1,9 @@
 package project.study.study_project.admin.controller;
 
+import java.util.List;
+import org.springframework.web.bind.annotation.RequestParam;
+import project.study.study_project.admin.dto.AdminUsageDay;
+import project.study.study_project.admin.service.AdminUsageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,10 +21,18 @@ import project.study.study_project.global.response.ApiResponse;
 public class AdminStatsController {
 
     private final AdminStatsService adminStatsService;
+    private final AdminUsageService adminUsageService;
 
     /** 예: {@code GET /api/admin/dashboard} */
     @GetMapping("/dashboard")
     public ApiResponse<AdminDashboardResponse> dashboard() {
         return ApiResponse.ok(adminStatsService.getDashboard());
+    }
+
+    /** 날짜별 가입·푼 사람·제출. 예: {@code GET /api/admin/usage-trend?days=30} */
+    @GetMapping("/usage-trend")
+    public ApiResponse<List<AdminUsageDay>> usageTrend(
+            @RequestParam(defaultValue = "" + AdminUsageService.DEFAULT_DAYS) int days) {
+        return ApiResponse.ok(adminUsageService.trend(days));
     }
 }
