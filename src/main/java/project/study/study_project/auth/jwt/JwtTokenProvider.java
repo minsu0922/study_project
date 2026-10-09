@@ -14,6 +14,7 @@ import project.study.study_project.user.domain.Role;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
@@ -88,6 +89,12 @@ public class JwtTokenProvider {
      * 이후 컨트롤러가 "요청 본문의 값"이 아니라 "토큰에서 꺼낸 id"를 신뢰하도록 한다.
      * 권한은 Spring Security 관례에 따라 {@code ROLE_} 접두어를 붙인다.
      */
+    /** 검증된 토큰의 발급 시각({@code iat}, 초 단위). 일괄 폐기 기준 시각과 견주는 데 쓴다. */
+    public Instant getIssuedAt(String token) {
+        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload()
+                .getIssuedAt().toInstant();
+    }
+
     public Authentication getAuthentication(String token) {
         Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
         Long userId = Long.valueOf(claims.getSubject());

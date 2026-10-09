@@ -19,6 +19,7 @@ import project.study.study_project.auth.gate.AdminGateCookie;
 import project.study.study_project.auth.gate.AdminGateFilter;
 import project.study.study_project.auth.jwt.JwtAuthenticationFilter;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
+import project.study.study_project.auth.service.RefreshTokenStore;
 import project.study.study_project.global.ratelimit.RateLimitFilter;
 import project.study.study_project.global.ratelimit.RateLimitProperties;
 import project.study.study_project.global.ratelimit.TokenBucketRateLimiter;
@@ -40,6 +41,8 @@ import project.study.study_project.global.ratelimit.TokenBucketRateLimiter;
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    /** 비밀번호 변경·탈퇴로 끊긴 토큰인지 JWT 필터가 묻는다. */
+    private final RefreshTokenStore refreshTokenStore;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint; // 미인증 → AUTH_003
     private final JwtAccessDeniedHandler accessDeniedHandler;           // 권한부족 → AUTH_004
     // 요청 제한(로드맵 3) — RateLimitFilter 조립 재료
@@ -160,7 +163,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 // JWT 필터를 아이디/비번 인증 필터 자리 앞에 끼워 넣는다(토큰을 먼저 해석).
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, refreshTokenStore),
                         UsernamePasswordAuthenticationFilter.class)
                 // 요청 제한 필터(로드맵 3)는 JWT 필터 "뒤" — 로그인 사용자를 IP가 아니라
                 // 사용자 id로 세기 위해 토큰 해석이 먼저 필요하다(상세: RateLimitFilter 주석).

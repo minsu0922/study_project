@@ -30,6 +30,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -119,6 +120,43 @@ class AccountIntegrationTest {
         assertThat(refreshTokenStore.consume(옛토큰)).isNull();
         assertThat(refreshTokenStore.consume(새토큰)).isEqualTo(user.getId());
         assertThat(refreshTokenStore.consume(남의토큰)).isEqualTo(user.getId() + 1);
+    }
+
+    @Test
+    @DisplayName("비밀번호를 바꾸면 그 전에 받은 access 토큰도 통하지 않는다")
+    void changePasswordCutsOffEarlierAccessTokens() throws Exception {
+        Thread.sleep(1100);   // 발급 시각은 초 단위라, 같은 초에 바꾸면 새 토큰으로 본다
+
+        mockMvc.perform(patch("/api/me/password")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("currentPassword", 지금비밀번호, "newPassword", 새비밀번호))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/me/nickname").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTH_003"));
+
+        // 다시 로그인해 받은 토큰은 통한다
+        String fresh = jwtTokenProvider.createToken(user.getId(), Role.USER);
+        mockMvc.perform(get("/api/me/nickname").header(HttpHeaders.AUTHORIZATION, "Bearer " + fresh))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("탈퇴하면 그 전에 받은 access 토큰은 통하지 않는다 — 500이 아니라 401이다")
+    void withdrawCutsOffAccessToken() throws Exception {
+        Thread.sleep(1100);
+
+        mockMvc.perform(delete("/api/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("password", 지금비밀번호))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/me/nickname").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTH_003"));
     }
 
     @Test

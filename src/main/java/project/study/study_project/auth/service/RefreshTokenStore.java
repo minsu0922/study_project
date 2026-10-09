@@ -6,9 +6,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import project.study.study_project.user.service.AccountDeleted;
 import project.study.study_project.user.service.PasswordChanged;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -27,7 +29,8 @@ import java.util.UUID;
  * 사용자당 여러 기기 로그인(토큰 여러 개)도 자연스럽게 허용된다.
  *
  * <p>사용자의 토큰을 한꺼번에 끊을 때는 토큰을 찾아 지우지 않고 {@code refresh-cutoff:{userId}}에
- * 시각을 적는다. 그 시각 이전에 발급된 토큰은 소비할 때 무효로 본다 — 사용자별 토큰 목록을
+ * 시각을 적는다. 그 시각 이전에 발급된 토큰은 소비할 때 무효로 본다. access 토큰도 같은 시각을
+ * 본다({@link #isCutOff}) — JWT는 회수할 수 없으니 "언제 이전 것은 안 받는다"만 적어 둔다 — 사용자별 토큰 목록을
  * 따로 들고 있으면 발급·소비마다 두 키를 맞춰야 하고, 어긋난 목록은 끊기지 않는 토큰을 남긴다.
  */
 @Slf4j
@@ -107,7 +110,8 @@ public class RefreshTokenStore {
     }
 
     /**
-     * 그 사용자에게 지금까지 발급된 토큰을 전부 무효로 만든다 — 비밀번호가 바뀐 순간에 부른다.
+     * 그 사용자에게 지금까지 발급된 토큰(refresh·access)을 전부 무효로 만든다 — 비밀번호가 바뀌거나
+     * 계정이 지워진 순간에 부른다.
      * 비밀번호를 바꾸는 이유가 "누가 내 계정을 쓰는 것 같다"인데 그 사람의 토큰이 14일 더 통하면 안 된다.
      *
      * <p>Redis 장애 시에는 경고만 남긴다. 여기서 예외를 올리면 비밀번호 변경이 통째로 실패하는데,
@@ -116,6 +120,30 @@ public class RefreshTokenStore {
     @EventListener
     public void onPasswordChanged(PasswordChanged event) {
         revokeAll(event.userId());
+    }
+
+    @EventListener
+    public void onAccountDeleted(AccountDeleted event) {
+        revokeAll(event.userId());
+    }
+
+    /**
+     * 그 시각에 발급된 access 토큰이 끊긴 것인가. 인증 필터가 요청마다 묻는다.
+     *
+     * <p>JWT의 발급 시각은 초 단위라 초로 견준다. 기준 시각과 같은 초에 발급된 토큰은 받는다 —
+     * 비밀번호를 바꾸고 곧바로 다시 로그인한 사람의 새 토큰을 막지 않기 위해서다.
+     *
+     * <p>Redis 장애 시에는 끊기지 않은 것으로 본다. 여기서 막으면 Redis가 죽은 동안 아무도 로그인 상태로
+     * 쓸 수 없다(다른 Redis 의존과 같은 fail-open).
+     */
+    public boolean isCutOff(Long userId, Instant issuedAt) {
+        try {
+            String cutoff = redisTemplate.opsForValue().get(CUTOFF_PREFIX + userId);
+            return cutoff != null && issuedAt.getEpochSecond() < Long.parseLong(cutoff) / 1000;
+        } catch (DataAccessException e) {
+            log.warn("Redis 장애로 access 토큰 폐기 여부 확인 생략: userId={} — {}", userId, e.getMessage());
+            return false;
+        }
     }
 
     public void revokeAll(Long userId) {

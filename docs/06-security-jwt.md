@@ -175,8 +175,11 @@ refresh 토큰은 응답 본문이 아니라 `refresh_token` 쿠키로 나간다
 access 토큰(1시간)은 `localStorage`에 남는다. 화면이 여러 HTML이라 메모리에만 두면 이동할 때마다
 재발급을 불러야 하고, 재발급은 분당 5회로 묶여 있다.
 
-비밀번호를 바꾸거나 복구 코드로 재설정하면 그 전에 받은 refresh 토큰은 전부 무효가 된다
-(`RefreshTokenStore.revokeAll`).
+비밀번호를 바꾸거나 복구 코드로 재설정하면, 또는 탈퇴하면 그 전에 받은 토큰은 전부 무효가 된다
+(`RefreshTokenStore.revokeAll`). refresh 토큰뿐 아니라 access 토큰도 막힌다 — JWT 필터가 요청마다
+Redis에서 그 사용자의 기준 시각을 읽어, 그보다 먼저 발급된 토큰은 인증하지 않는다(`isCutOff`).
+무상태 검증에 Redis 조회 한 번이 붙는 값을 치렀다. 로그아웃은 여기 들지 않는다 —
+로그아웃한 기기의 access 토큰은 만료(1시간)까지 유효하다.
 
 ### Redis가 죽으면 — fail-open
 

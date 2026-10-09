@@ -221,6 +221,7 @@ public class AccountService {
         Long userId = user.getId();
         dataCleaners.forEach(cleaner -> cleaner.deleteFor(userId));
         userRepository.delete(user);
-        userRepository.flush();   // 여기서 SQL을 확정한다 — 성공으로 돌아간 뒤에 제약 위반이 터지지 않게
+        userRepository.flush();
+        eventPublisher.publishEvent(new AccountDeleted(userId));   // 여기서 SQL을 확정한다 — 성공으로 돌아간 뒤에 제약 위반이 터지지 않게
     }
 }

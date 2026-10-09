@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import project.study.study_project.auth.service.RefreshTokenStore;
 
 import java.io.IOException;
 
@@ -30,9 +31,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenStore refreshTokenStore;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, RefreshTokenStore refreshTokenStore) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.refreshTokenStore = refreshTokenStore;
     }
 
     @Override
@@ -42,7 +45,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (token != null && jwtTokenProvider.validateToken(token)) {
             Authentication authentication = jwtTokenProvider.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // 서명이 맞아도 비밀번호 변경·탈퇴 이전에 발급된 토큰은 받지 않는다. 요청마다 Redis를 한 번
+            // 읽는 값을 치른다 — 안 읽으면 빼앗긴 토큰이 비밀번호를 바꾼 뒤에도 만료까지 통한다.
+            if (!(authentication.getPrincipal() instanceof Long userId)
+                    || !refreshTokenStore.isCutOff(userId, jwtTokenProvider.getIssuedAt(token))) {
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
         filterChain.doFilter(request, response);
     }
