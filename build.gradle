@@ -97,6 +97,9 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // JDBC URL이 serverTimezone=Asia/Seoul이라 JVM도 같은 시간대여야 한다. CI 러너는 UTC여서
+    // 한국 시각 00~09시에는 LocalDate.now()와 DB의 DATE()가 하루 어긋난다.
+    systemProperty 'user.timezone', 'Asia/Seoul'
 }
 
 // ── 빌드 정보 파일 (actuator /actuator/info) ──────────────────────
