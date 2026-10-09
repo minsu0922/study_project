@@ -1,6 +1,6 @@
 package project.study.study_project.quiz.dto;
 
-import project.study.study_project.llm.domain.DomainSetting;
+import project.study.study_project.domainsetting.domain.DomainSetting;
 
 /**
  * {@code GET /api/domains} 한 줄 — 화면이 필요로 하는 최소한만 담는다.

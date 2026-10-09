@@ -3,7 +3,7 @@ package project.study.study_project.llm.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import project.study.study_project.admin.dto.AdminProblemDetail;
+import project.study.study_project.quiz.dto.AdminProblemDetail;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.llm.dto.LlmBulkApproveResponse;
 

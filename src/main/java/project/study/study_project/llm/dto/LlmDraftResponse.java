@@ -1,6 +1,6 @@
 package project.study.study_project.llm.dto;
 
-import project.study.study_project.admin.dto.AdminProblemRequest;
+import project.study.study_project.quiz.dto.AdminProblemRequest;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;

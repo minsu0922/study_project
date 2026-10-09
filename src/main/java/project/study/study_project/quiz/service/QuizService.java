@@ -4,7 +4,6 @@ import project.study.study_project.quiz.dto.EssayModelAnswer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.dailyquiz.service.DailyQuizService;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
@@ -22,7 +21,6 @@ import project.study.study_project.quiz.dto.QuizSubmitResponse;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.quiz.support.MatchToken;
-import project.study.study_project.review.service.ReviewService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,8 +46,8 @@ public class QuizService {
 
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
-    private final ReviewService reviewService;
-    private final DailyQuizService dailyQuizService;
+    /** 복습 사다리(docs/10)와 오늘의 퀴즈(docs/12). 서로 순서에 기대지 않는다. */
+    private final List<SubmissionListener> submissionListeners;
     /** 근거 문서 링크의 실재 확인용(docs/15 3단계) — 죽은 링크를 학습자에게 보여주지 않기 위해. */
     private final DocumentRepository documentRepository;
 
@@ -142,14 +140,11 @@ public class QuizService {
         Submission submission = submissionRepository.save(
                 Submission.of(userId, problem, request.userAnswer(), result.correct()));
 
-        // 복습 사다리 반영(로드맵 4, docs/10) — 같은 트랜잭션에 합류시켜 "이력은 남았는데
+        // 복습 사다리와 오늘의 퀴즈 세트에 반영 — 같은 트랜잭션에 합류시켜 "이력은 남았는데
         // 복습 상태만 안 바뀐" 상태를 원천 차단. 별도 복습 제출 API 없이 이 한 곳이
         // ReviewItem의 유일한 쓰기 경로다(갱신 규칙의 정합성 관리 지점 최소화).
-        reviewService.onSubmission(userId, problem, result.correct());
-
-        // 오늘의 퀴즈 세트 반영(로드맵 6, docs/12) — 같은 이유로 같은 트랜잭션에 합류.
-        // 세트에 없는 문제면 서비스가 조용히 무시하므로 일반 풀이 경로에 영향 없다.
-        dailyQuizService.onSubmission(userId, submission);
+        // 세트에 없는 문제면 데일리 쪽이 조용히 무시하므로 일반 풀이 경로에 영향 없다.
+        submissionListeners.forEach(listener -> listener.onSubmission(userId, submission));
 
         // 보기별 결과는 객관식에만 있다. OX·단답형에서 빈 목록을 내리는 것은 null보다 낫다 —
         // 화면이 유형마다 다른 검사를 하지 않고 "비었으면 안 그린다" 하나로 끝난다.

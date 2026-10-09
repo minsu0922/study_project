@@ -16,7 +16,7 @@ import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
 import project.study.study_project.review.repository.ReviewItemRepository;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DefaultDomains;
 
 import java.time.LocalDateTime;
 import java.util.Optional;

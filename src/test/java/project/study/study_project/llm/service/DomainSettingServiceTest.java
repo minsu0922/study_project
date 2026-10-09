@@ -9,8 +9,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.domain.DomainSetting;
-import project.study.study_project.llm.repository.DomainSettingRepository;
+import project.study.study_project.domainsetting.domain.DomainSetting;
+import project.study.study_project.domainsetting.repository.DomainSettingRepository;
 
 import java.util.List;
 

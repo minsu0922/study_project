@@ -13,7 +13,7 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.repository.DomainSettingRepository;
+import project.study.study_project.domainsetting.repository.DomainSettingRepository;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;

@@ -2,7 +2,7 @@ package project.study.study_project.user.controller;
 
 import java.util.Map;
 import org.springframework.web.bind.annotation.PostMapping;
-import project.study.study_project.auth.dto.RecoveryCodeResponse;
+import project.study.study_project.user.dto.RecoveryCodeResponse;
 import project.study.study_project.user.dto.RecoveryCodeIssueRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

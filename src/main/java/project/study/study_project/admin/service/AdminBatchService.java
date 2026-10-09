@@ -20,7 +20,7 @@ import project.study.study_project.llm.service.BatchDomainForecast;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.llm.support.BatchCountRule;
 import project.study.study_project.llm.support.DocumentEditionRule;
-import project.study.study_project.llm.support.DomainEntry;
+import project.study.study_project.domainsetting.support.DomainEntry;
 import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.ProblemItemRule;
 

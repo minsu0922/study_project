@@ -1,7 +1,7 @@
 package project.study.study_project.admin.dto;
 
-import project.study.study_project.llm.domain.DomainSetting;
-import project.study.study_project.llm.support.DomainHints;
+import project.study.study_project.domainsetting.domain.DomainSetting;
+import project.study.study_project.domainsetting.support.DomainHints;
 
 /**
  * 분야 설정 관리 화면 한 줄.

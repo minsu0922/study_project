@@ -8,12 +8,12 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
-import project.study.study_project.admin.dto.AdminDocumentRequest;
-import project.study.study_project.admin.service.AdminDocumentService;
+import project.study.study_project.document.dto.AdminDocumentRequest;
+import project.study.study_project.document.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.service.DocumentService;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.global.config.CacheConfig;
+import project.study.study_project.document.config.DocumentCacheConfig;
 import project.study.study_project.global.exception.BusinessException;
 
 import java.util.List;
@@ -137,7 +137,7 @@ class DocumentReadIntegrationTest {
 
     /** 캐시에 실제로 올라간 값. Redis가 없거나 캐시가 꺼져 있으면 {@code null}. */
     private Object cachedEntryOf(String slug) {
-        Cache cache = cacheManager.getCache(CacheConfig.DOCUMENT_CACHE);
+        Cache cache = cacheManager.getCache(DocumentCacheConfig.DOCUMENT_CACHE);
         if (cache == null) {
             return null;
         }

@@ -1,7 +1,7 @@
 package project.study.study_project.auth.service;
 
 import project.study.study_project.auth.dto.PasswordResetRequest;
-import project.study.study_project.auth.dto.RecoveryCodeResponse;
+import project.study.study_project.user.dto.RecoveryCodeResponse;
 import project.study.study_project.user.support.RecoveryCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

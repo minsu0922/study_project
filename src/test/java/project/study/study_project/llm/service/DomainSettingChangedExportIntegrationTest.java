@@ -8,10 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import project.study.study_project.TestDomains;
-import project.study.study_project.admin.dto.AdminDomainSettingRequest;
+import project.study.study_project.llm.dto.AdminDomainSettingRequest;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.domain.DomainSetting;
-import project.study.study_project.llm.repository.DomainSettingRepository;
+import project.study.study_project.domainsetting.domain.DomainSetting;
+import project.study.study_project.domainsetting.repository.DomainSettingRepository;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;

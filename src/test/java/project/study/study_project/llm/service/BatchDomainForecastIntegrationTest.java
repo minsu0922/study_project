@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
-import project.study.study_project.admin.dto.AdminTopicQueueRequest;
+import project.study.study_project.llm.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;

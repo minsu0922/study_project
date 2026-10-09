@@ -1,7 +1,7 @@
 package project.study.study_project.admin.controller;
 
 import project.study.study_project.admin.audit.AdminAuditInterceptor;
-import project.study.study_project.admin.revision.RevisionItem;
+import project.study.study_project.revision.RevisionItem;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import project.study.study_project.admin.dto.AdminProblemDetail;
-import project.study.study_project.admin.dto.AdminProblemRequest;
-import project.study.study_project.admin.service.AdminProblemService;
+import project.study.study_project.quiz.dto.AdminProblemDetail;
+import project.study.study_project.quiz.dto.AdminProblemRequest;
+import project.study.study_project.quiz.service.AdminProblemService;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;

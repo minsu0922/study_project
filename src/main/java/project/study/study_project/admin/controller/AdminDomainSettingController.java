@@ -13,18 +13,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import project.study.study_project.admin.dto.AdminDomainCreateRequest;
+import project.study.study_project.llm.dto.AdminDomainCreateRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingMoveRequest;
-import project.study.study_project.admin.dto.AdminDomainSettingRequest;
+import project.study.study_project.llm.dto.AdminDomainSettingRequest;
 import project.study.study_project.admin.dto.AdminDomainSettingResponse;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.ApiResponse;
-import project.study.study_project.llm.domain.DomainSetting;
+import project.study.study_project.domainsetting.domain.DomainSetting;
 import project.study.study_project.llm.service.BatchDomainForecast;
 import project.study.study_project.llm.service.DomainSettingService;
-import project.study.study_project.llm.support.DomainHints;
+import project.study.study_project.domainsetting.support.DomainHints;
 
 import java.util.List;
 

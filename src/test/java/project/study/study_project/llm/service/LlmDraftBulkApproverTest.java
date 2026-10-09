@@ -7,7 +7,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.study.study_project.TestDomains;
-import project.study.study_project.admin.dto.AdminProblemDetail;
+import project.study.study_project.quiz.dto.AdminProblemDetail;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;

@@ -9,7 +9,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.admin.dto.AdminBatchStatus;
-import project.study.study_project.admin.dto.AdminDomainSettingRequest;
+import project.study.study_project.llm.dto.AdminDomainSettingRequest;
 import project.study.study_project.llm.service.DomainSettingService;
 import project.study.study_project.admin.service.AdminBatchService;
 import project.study.study_project.global.common.Difficulty;
@@ -537,7 +537,7 @@ class AdminBatchStatusIntegrationTest {
         // 순환에 없는(꺼진) 분야를 고른다 — 순환이 우연히 같은 분야를 내면 테스트가 헛돈다.
         DomainCode off = domainSettingService.findAll().stream()
                 .filter(s -> !s.isEnabled()).findFirst().orElseThrow().getDomain();
-        topicQueueService.add(new project.study.study_project.admin.dto.AdminTopicQueueRequest(off, "앞날 주제", null));
+        topicQueueService.add(new project.study.study_project.llm.dto.AdminTopicQueueRequest(off, "앞날 주제", null));
 
         AdminBatchStatus status = adminBatchService.getStatus();
 

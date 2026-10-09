@@ -1,5 +1,7 @@
 package project.study.study_project.llm.support;
 
+import project.study.study_project.domainsetting.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DomainHints;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import project.study.study_project.TestDomains;

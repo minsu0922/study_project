@@ -2,9 +2,11 @@ package project.study.study_project.auth.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import project.study.study_project.user.service.PasswordChanged;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -111,6 +113,11 @@ public class RefreshTokenStore {
      * <p>Redis 장애 시에는 경고만 남긴다. 여기서 예외를 올리면 비밀번호 변경이 통째로 실패하는데,
      * 바뀐 비밀번호라도 남는 쪽이 낫다.
      */
+    @EventListener
+    public void onPasswordChanged(PasswordChanged event) {
+        revokeAll(event.userId());
+    }
+
     public void revokeAll(Long userId) {
         try {
             redisTemplate.opsForValue().set(CUTOFF_PREFIX + userId,

@@ -1,5 +1,7 @@
 package project.study.study_project.llm.service;
 
+import project.study.study_project.global.event.ReviewCompleted;
+
 /**
  * 주제 대기열이 바뀌었다는 신호 — 파일 내보내기({@code TopicQueueExporter})를 깨운다.
  *

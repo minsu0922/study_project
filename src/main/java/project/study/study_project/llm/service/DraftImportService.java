@@ -12,7 +12,7 @@ import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.DraftAiFinding;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
-import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.domainsetting.support.DomainCatalog;
 
 import java.io.IOException;
 import java.nio.file.Path;

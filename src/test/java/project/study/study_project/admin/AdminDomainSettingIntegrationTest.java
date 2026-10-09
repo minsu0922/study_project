@@ -11,7 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestFixtures;
 import project.study.study_project.TestDomains;
-import project.study.study_project.admin.dto.AdminDomainSettingRequest;
+import project.study.study_project.llm.dto.AdminDomainSettingRequest;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.llm.service.DomainSettingService;

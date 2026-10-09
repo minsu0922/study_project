@@ -1,5 +1,6 @@
 package project.study.study_project.global.config;
 
+import project.study.study_project.auth.config.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

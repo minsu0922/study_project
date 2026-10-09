@@ -6,11 +6,11 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DefaultDomains;
 import project.study.study_project.llm.support.DocumentEditionRule;
-import project.study.study_project.llm.support.DomainCatalog;
-import project.study.study_project.llm.support.DomainEntry;
-import project.study.study_project.llm.support.DomainHints;
+import project.study.study_project.domainsetting.support.DomainCatalog;
+import project.study.study_project.domainsetting.support.DomainEntry;
+import project.study.study_project.domainsetting.support.DomainHints;
 import project.study.study_project.llm.support.ProblemItemRule;
 
 import java.util.ArrayList;

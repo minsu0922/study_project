@@ -1,7 +1,7 @@
 package project.study.study_project.auth.controller;
 
 import project.study.study_project.auth.dto.PasswordResetRequest;
-import project.study.study_project.auth.dto.RecoveryCodeResponse;
+import project.study.study_project.user.dto.RecoveryCodeResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;

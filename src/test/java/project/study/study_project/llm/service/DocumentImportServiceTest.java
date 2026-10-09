@@ -10,7 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.study.study_project.TestDomains;
-import project.study.study_project.admin.service.AdminDocumentService;
+import project.study.study_project.document.service.AdminDocumentService;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
@@ -20,7 +20,7 @@ import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DefaultDomains;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

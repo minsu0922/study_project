@@ -14,6 +14,7 @@ import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.domain.Submission;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
+import project.study.study_project.quiz.service.SubmissionListener;
 import project.study.study_project.review.repository.ReviewItemRepository;
 
 import java.time.LocalDate;
@@ -39,7 +40,7 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
-public class DailyQuizService {
+public class DailyQuizService implements SubmissionListener {
 
     /** 세트 크기와 배합 목표(복습/취약/새 문제). 값 튜닝은 상수 수정으로 끝난다(ReviewService.INTERVAL_DAYS와 같은 판단). */
     public static final int SET_SIZE = 10;
@@ -86,6 +87,7 @@ public class DailyQuizService {
      * 반대로 세트 문제를 세트 밖(일반 퀴즈·복습 페이지)에서 풀어도 반영된다 — 사용자 입장에서
      * "아까 풀었는데 왜 미완료지?"가 더 이상하다(docs/12).
      */
+    @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void onSubmission(Long userId, Submission submission) {
         dailyQuizRepository.findByUserIdAndQuizDate(userId, LocalDate.now())

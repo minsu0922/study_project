@@ -7,9 +7,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import project.study.study_project.llm.domain.DomainSetting;
+import project.study.study_project.domainsetting.domain.DomainSetting;
 import project.study.study_project.llm.dto.DomainSettingsFile;
-import project.study.study_project.llm.repository.DomainSettingRepository;
+import project.study.study_project.domainsetting.repository.DomainSettingRepository;
 import project.study.study_project.llm.support.DomainSettings;
 
 import java.util.List;

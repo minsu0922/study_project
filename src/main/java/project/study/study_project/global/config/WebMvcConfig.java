@@ -1,8 +1,5 @@
 package project.study.study_project.global.config;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import project.study.study_project.admin.audit.AdminAuditInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
@@ -24,16 +21,7 @@ import project.study.study_project.global.common.StringToDomainCodeConverter;
  * 인증 없이도 "뭔가 있다"는 신호가 새어 나갔을 것이다.
  */
 @Configuration
-@RequiredArgsConstructor
 public class WebMvcConfig implements WebMvcConfigurer {
-
-    private final AdminAuditInterceptor adminAuditInterceptor;
-
-    /** 관리 API 전체에 건다 — 새 관리 API를 만들어도 처리 기록에서 빠지지 않는다(AdminAuditInterceptor). */
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(adminAuditInterceptor).addPathPatterns("/api/admin/**");
-    }
 
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {

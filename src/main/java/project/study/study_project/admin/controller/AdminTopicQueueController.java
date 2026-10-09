@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.admin.dto.AdminTopicQueueMoveRequest;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.admin.dto.AdminTopicQueueRequest;
+import project.study.study_project.llm.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;

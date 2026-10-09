@@ -1,5 +1,6 @@
 package project.study.study_project.llm.service;
 
+import project.study.study_project.global.event.ReviewCompleted;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -9,9 +10,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.llm.dto.ExistingDocumentsFile;
-import project.study.study_project.llm.dto.DomainTitle;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
-import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.domainsetting.support.DomainCatalog;
 import project.study.study_project.tag.domain.Tag;
 import project.study.study_project.tag.repository.TagRepository;
 

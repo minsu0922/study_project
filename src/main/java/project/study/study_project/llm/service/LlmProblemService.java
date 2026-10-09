@@ -1,5 +1,6 @@
 package project.study.study_project.llm.service;
 
+import project.study.study_project.global.event.ReviewCompleted;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,9 +10,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.admin.dto.AdminProblemDetail;
-import project.study.study_project.admin.dto.AdminProblemRequest;
-import project.study.study_project.admin.service.AdminProblemService;
+import project.study.study_project.quiz.dto.AdminProblemDetail;
+import project.study.study_project.quiz.dto.AdminProblemRequest;
+import project.study.study_project.quiz.service.AdminProblemService;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
@@ -34,7 +35,7 @@ import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.llm.support.DifficultyMaterialRule;
-import project.study.study_project.llm.support.DomainEntry;
+import project.study.study_project.domainsetting.support.DomainEntry;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.SourceEditionRule;

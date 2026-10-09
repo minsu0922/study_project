@@ -6,8 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DomainCatalog;
-import project.study.study_project.llm.support.DomainEntry;
+import project.study.study_project.domainsetting.support.DomainCatalog;
 import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.response.PageResponse;
@@ -15,7 +14,6 @@ import project.study.study_project.quiz.dto.ProblemListItem;
 import project.study.study_project.quiz.dto.StudySummaryResponse;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.quiz.repository.SubmissionRepository;
-import project.study.study_project.review.repository.ReviewItemRepository;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -41,7 +39,7 @@ public class ProblemListService {
 
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
-    private final ReviewItemRepository reviewItemRepository;
+    private final DueReviewCounter dueReviewCounter;
 
     /** 목록·진척 카드의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로 싣는다(Task 4). */
     private final DomainCatalog domainCatalog;
@@ -117,7 +115,7 @@ public class ProblemListService {
                 submissionRepository.countSolvedProblems(userId),
                 correctRate,
                 submissionRepository.countAttemptedProblemsSince(userId, weekStart),
-                reviewItemRepository.countDue(userId, now));
+                dueReviewCounter.countDue(userId, now));
 
         return new StudySummaryResponse(stats, domainProgress(userId));
     }

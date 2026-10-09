@@ -9,7 +9,7 @@ import project.study.study_project.llm.client.ClaudeProblemGenerator;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DefaultDomains;
 import project.study.study_project.llm.support.ProblemItemRule;
 import project.study.study_project.llm.support.SourceQuoteRule;
 

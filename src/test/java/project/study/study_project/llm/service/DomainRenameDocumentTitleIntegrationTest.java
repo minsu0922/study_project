@@ -8,11 +8,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
-import project.study.study_project.admin.dto.AdminDocumentRequest;
-import project.study.study_project.admin.dto.AdminDomainSettingRequest;
-import project.study.study_project.admin.service.AdminDocumentService;
+import project.study.study_project.document.dto.AdminDocumentRequest;
+import project.study.study_project.llm.dto.AdminDomainSettingRequest;
+import project.study.study_project.document.service.AdminDocumentService;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.domain.DomainSetting;
+import project.study.study_project.domainsetting.domain.DomainSetting;
 import project.study.study_project.llm.dto.ExistingDocumentsFile;
 
 import java.nio.file.Path;

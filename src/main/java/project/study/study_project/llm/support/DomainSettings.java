@@ -1,5 +1,9 @@
 package project.study.study_project.llm.support;
 
+import project.study.study_project.domainsetting.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DomainHints;
+import project.study.study_project.domainsetting.support.DomainEntry;
+import project.study.study_project.domainsetting.support.DomainCatalog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.dto.DomainSettingsFile;

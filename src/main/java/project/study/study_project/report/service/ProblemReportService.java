@@ -15,7 +15,7 @@ import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
-import project.study.study_project.llm.service.ReviewCompleted;
+import project.study.study_project.global.event.ReviewCompleted;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.report.domain.ProblemReport;

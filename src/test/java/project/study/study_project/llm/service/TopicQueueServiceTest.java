@@ -11,14 +11,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 import project.study.study_project.TestDomains;
-import project.study.study_project.admin.dto.AdminTopicQueueRequest;
+import project.study.study_project.llm.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DefaultDomains;
 
 import java.time.LocalDate;
 import java.util.List;

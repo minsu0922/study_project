@@ -16,7 +16,7 @@ import java.util.List;
  * @param ids 승인할 초안 ID. 상한 50은 {@code LlmGenerateRequest.count}의 상한 10과 같은 이유 —
  *            실패 단위를 예측 가능하게 묶는다. 여기서는 이유가 하나 더 있다: 승인 한 건마다
  *            트랜잭션이 커밋되고 그때마다 스냅샷 내보내기가 깨어난다
- *            ({@link project.study.study_project.llm.service.ReviewCompleted}).
+ *            ({@link project.study.study_project.global.event.ReviewCompleted}).
  *            수백 건을 한 요청에 넣으면 파일 쓰기가 그만큼 반복돼 응답이 하염없이 늘어진다.
  *            한 번 검수에 50건을 넘길 일도 실제로는 없다(일일 배치가 하루 5~10건을 만든다).
  */

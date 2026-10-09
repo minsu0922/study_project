@@ -7,7 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestFixtures;
-import project.study.study_project.admin.service.AdminProblemService;
+import project.study.study_project.quiz.service.AdminProblemService;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.dto.QuizSubmitRequest;
 import project.study.study_project.quiz.dto.StudyTrendDay;

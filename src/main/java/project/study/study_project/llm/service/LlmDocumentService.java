@@ -1,5 +1,6 @@
 package project.study.study_project.llm.service;
 
+import project.study.study_project.global.event.ReviewCompleted;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,13 +10,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.admin.dto.AdminDocumentRequest;
-import project.study.study_project.admin.service.AdminDocumentService;
+import project.study.study_project.document.dto.AdminDocumentRequest;
+import project.study.study_project.document.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.domainsetting.support.DomainCatalog;
 import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;

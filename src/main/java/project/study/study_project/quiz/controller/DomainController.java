@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.global.response.ApiResponse;
-import project.study.study_project.llm.service.DomainSettingService;
+import project.study.study_project.domainsetting.repository.DomainSettingRepository;
 import project.study.study_project.quiz.dto.DomainResponse;
 
 import java.util.List;
@@ -35,12 +35,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DomainController {
 
-    private final DomainSettingService domainSettingService;
+    private final DomainSettingRepository domainSettingRepository;
 
     /** 화면이 부팅 시 한 번 불러 분야 필터를 채우는 자리. 순환 순서(sortOrder) 그대로 준다. */
     @GetMapping("/api/domains")
     public ApiResponse<List<DomainResponse>> domains() {
-        return ApiResponse.ok(domainSettingService.findAll().stream()
+        return ApiResponse.ok(domainSettingRepository.findAllByOrderBySortOrderAsc().stream()
                 .map(DomainResponse::from)
                 .toList());
     }

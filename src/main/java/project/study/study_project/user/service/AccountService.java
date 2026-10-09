@@ -3,17 +3,13 @@ package project.study.study_project.user.service;
 import project.study.study_project.user.support.RecoveryCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.auth.service.RefreshTokenStore;
-import project.study.study_project.dailyquiz.repository.DailyQuizRepository;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
-import project.study.study_project.quiz.repository.SubmissionRepository;
-import project.study.study_project.report.repository.ProblemReportRepository;
-import project.study.study_project.review.repository.ReviewItemRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.support.NicknameRule;
@@ -22,6 +18,8 @@ import project.study.study_project.user.dto.SuspensionResponse;
 import project.study.study_project.user.support.SuspensionGuard;
 import project.study.study_project.user.dto.WithdrawRequest;
 import project.study.study_project.user.repository.UserRepository;
+
+import java.util.List;
 
 /**
  * 내 계정 관리 — 비밀번호 변경과 탈퇴 (2026-09-08).
@@ -50,12 +48,10 @@ public class AccountService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final RefreshTokenStore refreshTokenStore;
+    private final ApplicationEventPublisher eventPublisher;
 
-    private final SubmissionRepository submissionRepository;
-    private final ReviewItemRepository reviewItemRepository;
-    private final DailyQuizRepository dailyQuizRepository;
-    private final ProblemReportRepository problemReportRepository;
+    /** 학습 기록을 지우는 쪽들. {@code @Order} 순으로 들어온다(AccountDataCleaner 주석). */
+    private final List<AccountDataCleaner> dataCleaners;
 
     @Transactional(readOnly = true)
     public String getNickname(Long userId) {
@@ -114,8 +110,9 @@ public class AccountService {
             throw new BusinessException(ErrorCode.AUTH_002);
         }
         user.changePassword(passwordEncoder.encode(request.newPassword()));
-        // 이 기기의 토큰도 함께 끊긴다 — 화면이 다시 로그인하게 한다(mypage.html).
-        refreshTokenStore.revokeAll(userId);
+        // 인증 쪽이 듣고 refresh 토큰을 전부 끊는다. 이 기기의 토큰도 함께 끊긴다 —
+        // 화면이 다시 로그인하게 한다(mypage.html).
+        eventPublisher.publishEvent(new PasswordChanged(userId));
         log.info("비밀번호 변경: userId={}", userId);   // 값은 절대 남기지 않는다
     }
 
@@ -222,11 +219,7 @@ public class AccountService {
     /** 지우는 순서가 곧 제약 조건이다. 이유는 {@link #withdraw} 주석에 있다. */
     private void deleteAccount(User user) {
         Long userId = user.getId();
-        dailyQuizRepository.deleteItemsByUserId(userId);   // 손자 먼저
-        dailyQuizRepository.deleteAllByUserId(userId);
-        reviewItemRepository.deleteAllByUserId(userId);
-        submissionRepository.deleteAllByUserId(userId);
-        problemReportRepository.deleteAllByUserId(userId);
+        dataCleaners.forEach(cleaner -> cleaner.deleteFor(userId));
         userRepository.delete(user);
         userRepository.flush();   // 여기서 SQL을 확정한다 — 성공으로 돌아간 뒤에 제약 위반이 터지지 않게
     }

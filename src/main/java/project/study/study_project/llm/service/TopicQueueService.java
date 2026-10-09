@@ -7,7 +7,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import project.study.study_project.admin.dto.AdminTopicQueueRequest;
+import project.study.study_project.llm.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
@@ -17,7 +17,7 @@ import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
-import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.domainsetting.support.DomainCatalog;
 import project.study.study_project.llm.support.TopicQueue;
 
 import java.time.LocalDate;

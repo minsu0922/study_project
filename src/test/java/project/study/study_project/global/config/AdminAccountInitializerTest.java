@@ -1,5 +1,6 @@
 package project.study.study_project.global.config;
 
+import project.study.study_project.user.config.AdminAccountInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

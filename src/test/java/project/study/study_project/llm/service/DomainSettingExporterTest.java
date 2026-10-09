@@ -11,9 +11,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.domain.DomainSetting;
+import project.study.study_project.domainsetting.domain.DomainSetting;
 import project.study.study_project.llm.dto.DomainSettingsFile;
-import project.study.study_project.llm.repository.DomainSettingRepository;
+import project.study.study_project.domainsetting.repository.DomainSettingRepository;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

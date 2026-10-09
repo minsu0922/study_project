@@ -8,8 +8,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.global.response.PageResponse;
-import project.study.study_project.llm.support.DomainCatalog;
+import project.study.study_project.domainsetting.support.DomainCatalog;
 import project.study.study_project.quiz.domain.Problem;
+import project.study.study_project.quiz.domain.Submission;
+import project.study.study_project.quiz.service.DueReviewCounter;
+import project.study.study_project.quiz.service.SubmissionListener;
 import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
 import project.study.study_project.review.dto.ReviewListItem;
@@ -35,7 +38,7 @@ import java.util.Optional;
  */
 @Service
 @RequiredArgsConstructor
-public class ReviewService {
+public class ReviewService implements SubmissionListener, DueReviewCounter {
 
     /**
      * 간격 사다리 — index가 stage, 값이 "그 칸에서 다음 복습까지 며칠"인지다(docs/10, ADR-0004).
@@ -145,6 +148,18 @@ public class ReviewService {
      * 그대로 살아난 셈인데, "미리 푼 보람이 없다"보다 "5초 만에 졸업해 복습이 사라진다" 쪽이
      * 이 기능을 더 크게 망가뜨린다고 판단했다(docs/10).
      */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void onSubmission(Long userId, Submission submission) {
+        onSubmission(userId, submission.getProblem(), submission.isCorrect());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countDue(Long userId, LocalDateTime now) {
+        return reviewItemRepository.countDue(userId, now);
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void onSubmission(Long userId, Problem problem, boolean correct) {
         Optional<ReviewItem> found = reviewItemRepository.findByUserIdAndProblemId(userId, problem.getId());

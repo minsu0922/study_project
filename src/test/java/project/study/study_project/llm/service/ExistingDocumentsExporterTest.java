@@ -2,7 +2,7 @@ package project.study.study_project.llm.service;
 
 import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.DomainCode;
-import project.study.study_project.llm.dto.DomainTitle;
+import project.study.study_project.domainsetting.dto.DomainTitle;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,7 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.llm.dto.ExistingDocumentsFile;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
-import project.study.study_project.llm.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DefaultDomains;
 import project.study.study_project.tag.domain.Tag;
 import project.study.study_project.tag.repository.TagRepository;
 

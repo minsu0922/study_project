@@ -5,8 +5,8 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.support.BatchCountRule;
-import project.study.study_project.llm.support.DefaultDomains;
-import project.study.study_project.llm.support.DomainEntry;
+import project.study.study_project.domainsetting.support.DefaultDomains;
+import project.study.study_project.domainsetting.support.DomainEntry;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
 

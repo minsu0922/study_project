@@ -1,6 +1,6 @@
 package project.study.study_project.llm.repository;
 
-import project.study.study_project.llm.dto.DomainTitle;
+import project.study.study_project.domainsetting.dto.DomainTitle;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -63,7 +63,7 @@ public interface GeneratedDocumentDraftRepository extends JpaRepository<Generate
      * 목록은 여전히 전 분야가 통째로 실린다.
      */
     @Query("""
-            select new project.study.study_project.llm.dto.DomainTitle(d.domain, d.title)
+            select new project.study.study_project.domainsetting.dto.DomainTitle(d.domain, d.title)
             from GeneratedDocumentDraft d
             where d.status = 'PENDING'
             """)

@@ -1,7 +1,7 @@
 package project.study.study_project.admin.controller;
 
 import project.study.study_project.admin.audit.AdminAuditInterceptor;
-import project.study.study_project.admin.revision.RevisionItem;
+import project.study.study_project.revision.RevisionItem;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import project.study.study_project.admin.dto.AdminDocumentRequest;
-import project.study.study_project.admin.service.AdminDocumentService;
+import project.study.study_project.document.dto.AdminDocumentRequest;
+import project.study.study_project.document.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.global.response.ApiResponse;
 
