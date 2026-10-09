@@ -14,11 +14,13 @@ public record AdminAuditItem(
         String path,
         /** 등록 요청이 새로 만든 것의 번호. 등록이 아니면 {@code null}. */
         Long createdId,
+        /** 응답 상태. 200대가 아니면 실패했거나 거부된 시도다. */
+        int status,
         LocalDateTime createdAt
 ) {
     static AdminAuditItem from(AdminAuditLog log) {
         return new AdminAuditItem(log.getId(), log.getActorUsername(),
                 AdminActionLabels.of(log.getMethod(), log.getPattern()), log.getPath(), log.getCreatedId(),
-                log.getCreatedAt());
+                log.getStatus(), log.getCreatedAt());
     }
 }

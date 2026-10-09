@@ -13,7 +13,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 
 /**
- * 관리 API의 쓰기 요청이 성공하면 처리 기록을 남긴다(V35).
+ * 관리 API의 쓰기 요청마다 처리 기록을 남긴다(V35). 실패한 요청도 응답 상태와 함께 적는다(V38) —
+ * 성공만 적으면 누가 무엇을 하려다 막혔는지 알 길이 없다.
  *
  * <p><b>서비스마다 적지 않고 여기 한 곳에서 적는 이유</b>: 메서드마다 "기록 남기기" 한 줄을 넣는
  * 방식은 새 API를 만들 때 그 한 줄을 빠뜨리면 조용히 기록이 비고, 빠진 줄은 아무도 못 본다.
@@ -59,7 +60,7 @@ public class AdminAuditInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                 Object handler, Exception ex) {
         // 조회는 적지 않는다. 목록을 열 때마다 한 줄씩 쌓이면 정작 봐야 할 줄이 묻힌다.
-        if (!enabled || "GET".equals(request.getMethod()) || response.getStatus() >= 300) {
+        if (!enabled || "GET".equals(request.getMethod())) {
             return;
         }
         Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
@@ -68,7 +69,8 @@ public class AdminAuditInterceptor implements HandlerInterceptor {
         }
         try {
             auditService.record(currentUserId(), request.getMethod(), pattern.toString(),
-                    request.getRequestURI(), (Long) request.getAttribute(CREATED_ID_ATTRIBUTE));
+                    request.getRequestURI(), (Long) request.getAttribute(CREATED_ID_ATTRIBUTE),
+                    response.getStatus());
         } catch (RuntimeException e) {
             log.warn("처리 기록을 남기지 못했습니다: {} {} — {}", request.getMethod(), request.getRequestURI(),
                     e.getMessage());

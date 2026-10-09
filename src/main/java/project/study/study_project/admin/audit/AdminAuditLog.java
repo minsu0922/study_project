@@ -9,10 +9,12 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
-/** 관리자가 한 쓰기 요청 한 건(V35). 한 번 적으면 고치지 않는다 — 수정 메서드가 없다. */
+/** 관리 API에 온 쓰기 요청이나 거부된 접근 한 건(V35). 한 번 적으면 고치지 않는다 — 수정 메서드가 없다. */
 @Entity
 @Table(name = "admin_audit_log")
 @Getter
@@ -44,22 +46,28 @@ public class AdminAuditLog {
     @Column(name = "created_id")
     private Long createdId;
 
+    /** 응답 상태(V38). 200대가 아니면 실패했거나 거부된 시도다. */
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    @Column(nullable = false)
+    private int status;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     private AdminAuditLog(Long actorId, String actorUsername, String method, String pattern, String path,
-                          Long createdId, LocalDateTime now) {
+                          Long createdId, int status, LocalDateTime now) {
         this.actorId = actorId;
         this.actorUsername = actorUsername;
         this.method = method;
         this.pattern = pattern;
         this.path = path;
         this.createdId = createdId;
+        this.status = status;
         this.createdAt = now;
     }
 
     public static AdminAuditLog of(Long actorId, String actorUsername, String method, String pattern,
-                                   String path, Long createdId, LocalDateTime now) {
-        return new AdminAuditLog(actorId, actorUsername, method, pattern, path, createdId, now);
+                                   String path, Long createdId, int status, LocalDateTime now) {
+        return new AdminAuditLog(actorId, actorUsername, method, pattern, path, createdId, status, now);
     }
 }

@@ -83,17 +83,53 @@ class AdminAuditAndRevisionIntegrationTest {
     }
 
     @Test
-    @DisplayName("조회와 실패한 요청, 관리자가 아닌 사람의 요청은 남지 않는다")
-    void readsAndFailuresAreNotLogged() throws Exception {
-        String admin = fixtures.bearer(Role.ADMIN);
+    @DisplayName("관리자의 조회는 남지 않는다")
+    void adminReadsAreNotLogged() throws Exception {
         long before = auditLogRepository.count();
 
-        mockMvc.perform(get("/api/admin/problems").header("Authorization", admin))
+        mockMvc.perform(get("/api/admin/problems").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isOk());
-        mockMvc.perform(post("/api/admin/problems/-1/hide").header("Authorization", admin))
+
+        assertThat(auditLogRepository.count()).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("실패한 쓰기 요청은 응답 상태와 함께 남는다")
+    void failedAdminWriteIsLoggedWithStatus() throws Exception {
+        long before = auditLogRepository.count();
+
+        mockMvc.perform(post("/api/admin/problems/-1/hide").header("Authorization", fixtures.bearer(Role.ADMIN)))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(post("/api/admin/problems/1/hide").header("Authorization", fixtures.bearer(Role.USER)))
+
+        assertThat(auditLogRepository.count()).isEqualTo(before + 1);
+        assertThat(latestLog().getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    @DisplayName("관리자가 아닌 사람이 관리 API를 부르면 조회든 쓰기든 403으로 남는다")
+    void deniedAccessIsLogged() throws Exception {
+        User user = fixtures.user(Role.USER);
+        long before = auditLogRepository.count();
+
+        mockMvc.perform(post("/api/admin/problems/1/hide").header("Authorization", fixtures.bearer(user)))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/users").header("Authorization", fixtures.bearer(user)))
+                .andExpect(status().isForbidden());
+
+        assertThat(auditLogRepository.count()).isEqualTo(before + 2);
+        AdminAuditLog log = latestLog();
+        assertThat(log.getActorId()).isEqualTo(user.getId());
+        assertThat(log.getMethod()).isEqualTo("GET");
+        assertThat(log.getPath()).isEqualTo("/api/admin/users");
+        assertThat(log.getStatus()).isEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("토큰 없이 관리 API를 부른 요청은 남지 않는다 — 401은 누구인지 적을 것이 없다")
+    void anonymousAccessIsNotLogged() throws Exception {
+        long before = auditLogRepository.count();
+
+        mockMvc.perform(get("/api/admin/users")).andExpect(status().isUnauthorized());
 
         assertThat(auditLogRepository.count()).isEqualTo(before);
     }

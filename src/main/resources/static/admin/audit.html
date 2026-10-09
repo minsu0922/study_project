@@ -22,7 +22,8 @@ try {
   <div id="guard"></div>
 
   <div id="adminUi" hidden>
-    <p class="meta">관리자가 한 등록·수정·삭제·정지·승인이 최근 것부터 쌓입니다. 조회는 적지 않습니다.
+    <p class="meta">관리자가 한 등록·수정·삭제·정지·승인이 최근 것부터 쌓입니다. 실패한 처리와
+      권한 없이 관리 기능을 부른 시도도 남습니다. 관리자의 조회는 적지 않습니다.
       기록은 고치거나 지울 수 없습니다.</p>
     <!-- 표·페이저·빈 상태는 admin-table.js가 통째로 그린다. 여기는 자리만 둔다. -->
     <div id="auditList"></div>
@@ -46,6 +47,8 @@ if (initAdminPage("audit")) {
       { head: "때", width: "150px", className: "meta", cell: a => escapeHtml(formatDate(a.createdAt)) },
       { head: "누가", width: "130px", cell: a => escapeHtml(a.actorUsername) },
       { head: "한 일", width: "200px", wrap: true, cell: a => escapeHtml(a.action) },
+      { head: "결과", width: "90px", cell: a => a.status < 300 ? "성공"
+          : a.status === 403 ? "거부(403)" : `실패(${a.status})` },
       // 등록은 주소에 번호가 없어 서버가 새로 만든 번호를 따로 준다(V37).
       { head: "대상", wrap: true, className: "meta", cell: a => escapeHtml(a.path.replace("/api/admin/", ""))
           + (a.createdId ? ` → 새 번호 ${a.createdId}` : "") },
