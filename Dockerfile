@@ -37,7 +37,13 @@ RUN apt-get update \
 # 따로 박으면 자바만 한국 시간이고 컨테이너 로그·cron은 UTC라 둘이 어긋난다.
 ENV TZ=Asia/Seoul
 
-COPY --from=build /app/build/libs/*.jar app.jar
+# 앱은 root가 아닌 전용 계정으로 돈다. 앱이 뚫려도 컨테이너 안에서 패키지를 깔거나
+# 시스템 파일을 고치지 못한다. /app은 그 계정의 것으로 둔다 — 앱이 뜰 때 스냅샷 파일을
+# 작업 디렉터리 아래(generated/)에 쓴다.
+RUN useradd --system --no-create-home --shell /usr/sbin/nologin app \
+    && chown app:app /app
+
+COPY --from=build --chown=app:app /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 
@@ -54,5 +60,7 @@ EXPOSE 8080
 # 실패는 재시도 횟수에 세지 않는다 — 부팅 중인 앱을 죽이지 않기 위한 유예다.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8080/actuator/health/essential || exit 1
+
+USER app
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

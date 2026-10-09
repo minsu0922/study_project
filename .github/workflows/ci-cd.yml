@@ -73,11 +73,14 @@ jobs:
           --health-retries=5
 
     steps:
+      # 서드파티 액션은 태그가 아니라 커밋 SHA로 고정한다(llm-daily.yml과 같은 기준).
+      # 태그는 다른 커밋을 가리키게 바뀔 수 있고, 아래 job은 GHCR에 쓸 수 있는 토큰을 쥔다.
+      # 버전을 올릴 때는 SHA와 옆의 주석을 함께 바꾼다.
       - name: 저장소 코드 받기
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: JDK 21 설치
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -89,7 +92,7 @@ jobs:
       # 캐시를 끄면 v6도 그 컴포넌트를 안 불러오지만, 캐시를 끄려고 버전을 올릴 이유는 없다.
       # v5도 Node 24로 돌아서 이번 목적(Node 20 이탈)은 v5로 충분하다.
       - name: Gradle 설정 (캐시 포함)
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
 
       # 리포에 커밋된 gradlew는 실행 권한 비트가 없어(윈도우에서 생성됨) 리눅스 러너에서
       # "Permission denied"가 난다. 커밋 자체를 건드리는 대신 CI에서만 권한을 부여한다.
@@ -102,7 +105,7 @@ jobs:
       # 테스트 실패 시에도 리포트는 남겨서 Actions 탭에서 바로 원인을 볼 수 있게 한다.
       - name: 테스트 리포트 업로드 (실패 시에도)
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results
           path: build/reports/tests/test
@@ -119,17 +122,17 @@ jobs:
 
     steps:
       - name: 저장소 코드 받기
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: GHCR 로그인
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}   # 별도 발급 불필요 — 실행마다 자동 생성되는 임시 토큰
 
       - name: 이미지 빌드 + GHCR에 push
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: true
