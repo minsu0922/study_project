@@ -84,7 +84,8 @@ ratelimit:
   enabled: true                  # 부하 테스트·디버깅 시 false로 임시 해제 가능
   # X-Forwarded-For를 믿을 프록시 IP(쉼표로 구분). 비워 두면 그 헤더를 읽지 않고 접속한 IP로 센다.
   # 프록시 뒤에 배포하면 반드시 채운다 — 비우면 모든 사용자가 프록시 IP 하나로 묶여 한도를 나눠 쓴다.
-  trusted-proxies: ${RATELIMIT_TRUSTED_PROXIES:}  auth:                          # 로그인/회원가입/재발급 — IP당. 무차별 대입 방어가 목적
+  trusted-proxies: ${RATELIMIT_TRUSTED_PROXIES:}
+  auth:                          # 로그인/회원가입/재발급 — IP당. 무차별 대입 방어가 목적
     capacity: 5
     refill-tokens: 5
     refill-period-seconds: 60    # = 분당 5회
