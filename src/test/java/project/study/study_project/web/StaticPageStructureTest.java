@@ -71,6 +71,7 @@ class StaticPageStructureTest {
      */
     private static final List<String> USER_PAGES = List.of(
             "index.html",
+            "404.html",
             "bookmarks.html",
             "community.html",
             "daily.html",

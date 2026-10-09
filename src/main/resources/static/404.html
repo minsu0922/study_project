@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>없는 주소 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지(wrong-answers.html의 같은 주석 참고). */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<!-- 이 파일은 없는 주소를 열었을 때 그 주소 그대로 404로 나간다(GlobalExceptionHandler).
+     주소가 /a/b/c일 수 있으므로 링크와 스크립트 경로는 전부 /로 시작해야 한다. -->
+<main class="container">
+  <h1>없는 주소입니다</h1>
+  <div class="empty-state">
+    <p>주소가 바뀌었거나 잘못 입력됐습니다. 지워진 화면일 수도 있습니다.</p>
+    <p class="meta" id="askedPath"></p>
+    <p>
+      <a class="btn" href="/">첫 화면으로</a>
+      <a class="btn btn-outline" href="/documents.html">개념 문서 보기</a>
+    </p>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+renderShell({ title: "없는 주소" });
+
+// /404.html을 직접 연 경우에는 적지 않는다 — 그 주소는 실제로 있다.
+if (location.pathname !== "/404.html") {
+  document.getElementById("askedPath").textContent = "요청한 주소: " + location.pathname;
+}
+</script>
+</body>
+</html>

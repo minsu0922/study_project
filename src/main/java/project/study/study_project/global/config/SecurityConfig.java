@@ -125,8 +125,12 @@ public class SecurityConfig {
                         // 관리자에서 내린 사람이 토큰이 만료될 때까지 계속 들어온다.
                         // 경로 한 곳에서 일괄 통제 — admin 컨트롤러에 API를 추가해도 권한이 자동 적용된다.
                         .requestMatchers("/api/admin/**").access(adminAuthorizationManager)
-                        // 나머지는 기본적으로 인증 요구
-                        .anyRequest().authenticated())
+                        // 나머지 API는 기본적으로 인증 요구
+                        .requestMatchers("/api/**").authenticated()
+                        // /api/ 밖은 연다. 거기 있는 것은 정적 파일뿐이고(컨트롤러는 전부 /api/ 아래),
+                        // 잠가 두면 없는 주소를 친 사람이 404 화면 대신 401 JSON 원문을 본다.
+                        // /api/ 밖에 컨트롤러를 만들면 기본이 공개다 — 그때는 위에 규칙을 따로 적는다.
+                        .anyRequest().permitAll())
                 // 인증/인가 실패를 공통 응답 봉투로 변환
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)

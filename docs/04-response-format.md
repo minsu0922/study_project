@@ -83,6 +83,9 @@ public record FieldError(String field, String reason) {}
 | `COMMON_001` | 400 | 잘못된 요청(파싱 실패 등) |
 | `VALIDATION_ERROR` | 400 | 입력 검증 실패 (fieldErrors 포함) |
 | `COMMON_404` | 404 | 리소스 없음 |
+| `COMMON_405` | 405 | 그 주소가 받지 않는 메서드(GET 전용에 POST 등) |
+| `COMMON_413` | 413 | 업로드가 multipart 상한(파일 1MB)을 넘음 |
+| `COMMON_415` | 415 | 받지 않는 Content-Type(JSON 자리에 text/plain 등) |
 | `COMMON_429` | 429 | 요청 횟수 초과(rate limit) — `Retry-After` 헤더 동반, [09](09-rate-limiting.md) |
 | `COMMON_500` | 500 | 서버 내부 오류 |
 | `AUTH_001` | 409 | 아이디 중복 |
@@ -144,6 +147,11 @@ public record FieldError(String field, String reason) {}
   - `MethodArgumentNotValidException` / `ConstraintViolationException` → `VALIDATION_ERROR` + fieldErrors
   - 커스텀 `BusinessException(ErrorCode)` → 해당 code/status
   - `HttpMessageNotReadableException` → `COMMON_001`
-  - `NoResourceFoundException` / 미매핑 → `COMMON_404`
+  - `MissingServletRequestParameterException` → `VALIDATION_ERROR` + fieldErrors(빠진 파라미터 이름)
+  - `HttpRequestMethodNotSupportedException` → `COMMON_405`
+  - `HttpMediaTypeNotSupportedException` → `COMMON_415`
+  - `MaxUploadSizeExceededException` → `COMMON_413`
+  - `NoResourceFoundException` / 미매핑 → `COMMON_404`.
+    단 `/api/` 밖 주소를 브라우저가 열면(`GET` + `Accept: text/html`) 같은 404로 `404.html`을 준다
   - 그 외 `Exception` → `COMMON_500` (스택트레이스는 로깅만, 응답엔 미노출)
 - Spring Security 인증/인가 실패(`AuthenticationEntryPoint`/`AccessDeniedHandler`)도 동일 envelope로 변환 → `AUTH_003`/`AUTH_004`.

@@ -103,7 +103,8 @@ eyJhbGciOiJIUzI1NiJ9 . eyJzdWIiOiIxIiwicm9sZSI6IlVTRVIi...} . 3f8a...(서명)
 | `POST /api/quiz/submit` | 🔒 로그인 필요 |
 | `GET /api/me/**` | 🔒 로그인 필요 |
 | **`/api/admin/**`** | 🛡️ **`hasRole("ADMIN")`** |
-| 그 외 | 🔒 기본은 인증 요구 |
+| 그 외 `/api/**` | 🔒 기본은 인증 요구 |
+| `/api/` 밖(정적 파일·없는 주소) | 🔓 누구나. 없는 주소는 404 화면으로 답한다. `/admin/**`만 `AdminGateFilter`가 따로 막는다 |
 
 **관리자 경로를 한 줄로 묶은 것이 의도다.** 컨트롤러마다 `@PreAuthorize`를 붙이는 방법도 있지만,
 **하나만 빠뜨리면 그 API가 뚫린다.** 지금은 관리자 API가 21개인데(문제·문서 CRUD, AI 검수, 통계)

@@ -14,6 +14,11 @@ public enum ErrorCode {
     COMMON_001("COMMON_001", HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
     VALIDATION_ERROR("VALIDATION_ERROR", HttpStatus.BAD_REQUEST, "입력값 검증에 실패했습니다."),
     COMMON_404("COMMON_404", HttpStatus.NOT_FOUND, "요청한 리소스를 찾을 수 없습니다."),
+    // 아래 셋은 스프링이 컨트롤러에 닿기 전에 던지는 예외다. 따로 받지 않으면 COMMON_500으로
+    // 뭉쳐, 부르는 쪽 실수가 서버 장애로 기록된다.
+    COMMON_405("COMMON_405", HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 방식입니다."),
+    COMMON_413("COMMON_413", HttpStatus.PAYLOAD_TOO_LARGE, "보낸 파일이 너무 큽니다."),
+    COMMON_415("COMMON_415", HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 형식입니다."),
     // 로드맵 3(요청 제한): RateLimitFilter가 사용. 응답에 Retry-After 헤더(재시도 가능 시점) 동반
     COMMON_429("COMMON_429", HttpStatus.TOO_MANY_REQUESTS, "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."),
     COMMON_500("COMMON_500", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
