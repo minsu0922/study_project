@@ -364,6 +364,7 @@ async function loadList() {
   if (fromDocument) params.set("documentSlug", fromDocument);
 
   let data;
+  showLoading(document.getElementById("list"));
   try {
     data = await api("/api/problems?" + params.toString());
   } catch (e) {
@@ -371,6 +372,8 @@ async function loadList() {
       `<div class="pl-empty">목록을 불러오지 못했습니다.<br><span class="meta">${escapeHtml(e.message)}</span></div>`;
     pager.hide();
     return;
+  } finally {
+    clearLoading(document.getElementById("list"));
   }
 
   // 난이도를 둘 이상 골랐을 때만 화면에서 한 번 더 거른다(levelParam 주석).

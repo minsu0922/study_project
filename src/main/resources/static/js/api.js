@@ -430,6 +430,45 @@ function showErrorAlert(el, error, prefix) {
     details ? `<ul style="margin:6px 0 0">${details}</ul>` : ""}</div>`;
 }
 
+/**
+ * 빈 목록 한 장. 문구는 부르는 쪽이 정한다 — 왜 비었는지와 다음에 할 일이 화면마다 다르다.
+ * 여기서 맞추는 것은 상자 모양 하나다(.empty-state: 점선 테두리라 오류·로딩과 구분된다).
+ *
+ * @param html 이미 이스케이프한 마크업. 링크를 넣는 화면이 있어 글자로 받지 않는다
+ */
+function showEmpty(el, html) {
+  el.innerHTML = `<div class="empty-state">${html}</div>`;
+}
+
+/** 응답이 이보다 빨리 오면 "불러오는 중"을 아예 띄우지 않는다. 곧장 띄우면 글자가 번쩍였다 사라진다. */
+const LOADING_DELAY_MS = 300;
+
+/**
+ * 목록을 부르기 직전에 건다. 칸이 <비어 있을 때만> 잠시 뒤 "불러오는 중…"을 넣는다.
+ *
+ * 칸에 이전 목록이 있으면 아무것도 하지 않는다 — 쪽을 넘길 때 목록을 지우고 글자를 띄우면
+ * 화면 높이가 줄었다 늘며 덜컥거린다. 이전 목록을 둔 채 새 목록으로 바꾸는 쪽이 낫다.
+ *
+ * 끝나면 clearLoading을 부른다. 성공하면 목록이 덮어써서 저절로 사라지지만, 오류 알림을
+ * <다른 칸>에 그리는 화면에서는 이 줄이 남아 영영 불러오는 것처럼 보인다. finally에 둔다.
+ */
+function showLoading(el) {
+  clearLoading(el);
+  if (el.childElementCount > 0) return;
+  el._loadingTimer = setTimeout(() => {
+    el._loadingTimer = null;
+    if (el.childElementCount === 0) {
+      el.innerHTML = `<div class="meta loading-line" role="status">불러오는 중…</div>`;
+    }
+  }, LOADING_DELAY_MS);
+}
+
+function clearLoading(el) {
+  clearTimeout(el._loadingTimer);
+  el._loadingTimer = null;
+  el.querySelector(":scope > .loading-line")?.remove();
+}
+
 function escapeHtml(s) {
   return String(s ?? "")
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")

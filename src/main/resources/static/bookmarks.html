@@ -74,18 +74,23 @@ async function init() {
   async function load() {
     const msg = document.getElementById("message");
     msg.innerHTML = "";
+    showLoading(list);
     try {
       const data = await api(`/api/me/bookmarks?type=${type}&page=${page}`);
-      list.innerHTML = data.content.length === 0
-        ? `<div class="card">${type === "PROBLEM"
-            ? "담아 둔 문제가 없습니다. 문제를 풀고 채점 결과 아래의 ☆ 북마크를 눌러 보세요."
-            : "담아 둔 문서가 없습니다. 문서 제목 아래의 ☆ 북마크를 눌러 보세요."}</div>`
-        : data.content.map(row).join("");
+      if (data.content.length === 0) {
+        showEmpty(list, type === "PROBLEM"
+          ? "담아 둔 문제가 없습니다. 문제를 풀고 채점 결과 아래의 ☆ 북마크를 눌러 보세요."
+          : "담아 둔 문서가 없습니다. 문서 제목 아래의 ☆ 북마크를 눌러 보세요.");
+      } else {
+        list.innerHTML = data.content.map(row).join("");
+      }
       // 이 목록에 있는 것은 전부 담긴 것이라 서버에 다시 묻지 않고 바로 채운다.
       list.querySelectorAll("[data-bookmark]").forEach(b => paintBookmark(b, true));
       pager.update(data);
     } catch (e) {
       showErrorAlert(msg, e, "불러오지 못했습니다");
+    } finally {
+      clearLoading(list);
     }
   }
 

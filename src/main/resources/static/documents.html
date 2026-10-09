@@ -89,6 +89,8 @@ function renderTagFilter() {
 async function loadDocs() {
   const msg = document.getElementById("message");
   msg.innerHTML = "";
+  const list = document.getElementById("docList");
+  showLoading(list);
   try {
     const params = new URLSearchParams({ page });
     if (domainFilter.value) params.set("domain", domainFilter.value);
@@ -108,15 +110,13 @@ async function loadDocs() {
       ? `<p class="doc-sub"><span class="edition${isAdvancedEdition(edition) ? " advanced" : ""}">${escapeHtml(edition)}</span></p>`
       : "";
 
-    const list = document.getElementById("docList");
     if (data.content.length === 0) {
       // 왜 없는지를 상황마다 다르게 말한다 — 검색어가 먼저다(방금 친 것이므로).
-      list.innerHTML = keyword
-        ? `<div class="empty-state">'${escapeHtml(keyword)}'로 찾은 문서가 없습니다.</div>`
+      showEmpty(list, keyword
+        ? `'${escapeHtml(keyword)}'로 찾은 문서가 없습니다.`
         : activeTag
-        ? `<div class="empty-state">#${escapeHtml(activeTag)} 태그가 달린 문서가 없습니다.
-           <a href="/documents.html">전체 문서 보기</a></div>`
-        : `<p class="meta">문서가 없습니다.</p>`;
+        ? `#${escapeHtml(activeTag)} 태그가 달린 문서가 없습니다. <a href="/documents.html">전체 문서 보기</a>`
+        : "문서가 없습니다.");
     } else {
       // 목록은 본문(contentMd) 없이 요약만 온다 — 본문은 클릭해서 상세에서 읽는다(docs/03)
       //
@@ -205,6 +205,8 @@ async function loadDocs() {
     pager.update(data);
   } catch (e) {
     showErrorAlert(msg, e, "문서를 불러오지 못했습니다");
+  } finally {
+    clearLoading(list);
   }
 }
 

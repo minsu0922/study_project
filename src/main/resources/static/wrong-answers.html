@@ -120,6 +120,8 @@ async function init() {
   async function load() {
     const msg = document.getElementById("message");
     msg.innerHTML = "";
+    const list = document.getElementById("list");
+    showLoading(list);
     try {
       const params = new URLSearchParams({ page });
       if (domainFilter.value) params.set("domain", domainFilter.value);
@@ -131,10 +133,8 @@ async function init() {
       // 한 번에 그리므로 배지가 나중에 나타나며 덜컥거리는 일도 없다.
       await loadReviewMap(data.content.map(w => w.problemId));
 
-      const list = document.getElementById("list");
       if (data.content.length === 0) {
-        list.innerHTML = `<div class="card">아직 오답이 없습니다. 🎉
-          <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a></div>`;
+        showEmpty(list, `아직 오답이 없습니다. 🎉 <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a>`);
       } else {
         // 오답노트는 "복습"이 목적이라 내 답·정답·해설을 한 번에 다 보여준다
         list.innerHTML = data.content.map(w => `
@@ -175,6 +175,8 @@ async function init() {
       pager.update(data);
     } catch (e) {
       showErrorAlert(msg, e, "불러오지 못했습니다");
+    } finally {
+      clearLoading(list);
     }
   }
 

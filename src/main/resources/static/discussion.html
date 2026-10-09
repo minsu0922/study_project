@@ -92,16 +92,22 @@ async function loadProblem() {
 }
 
 async function loadPosts() {
-  const data = await api(`/api/quiz/${encodeURIComponent(problemId)}/posts?page=${page}`);
+  const list = document.getElementById("list");
+  showLoading(list);
+  let data;
+  try {
+    data = await api(`/api/quiz/${encodeURIComponent(problemId)}/posts?page=${page}`);
+  } finally {
+    clearLoading(list);   // 실패하면 알림은 부른 쪽이 다른 칸에 그린다. 이 줄이 남으면 안 된다
+  }
   document.getElementById("roomBar").hidden = false;
   document.getElementById("totalInfo").textContent = `글 ${data.total}개`;
   renderWriteEntry(data);
 
-  const list = document.getElementById("list");
   if (data.posts.length === 0) {
-    list.innerHTML = `<div class="card meta">${page === 0
+    showEmpty(list, page === 0
       ? "아직 글이 없습니다. 첫 글이 쓰이면 이 문제의 토론방이 열립니다."
-      : "이 쪽에는 글이 없습니다."}</div>`;
+      : "이 쪽에는 글이 없습니다.");
   } else {
     list.innerHTML = data.posts.map(postRow).join("");
   }

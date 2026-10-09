@@ -241,7 +241,14 @@ async function load() {
     return;
   }
 
-  const { hasNext, rows, rowHtml } = await fetchTab();
+  showLoading(list);
+  let tab;
+  try {
+    tab = await fetchTab();
+  } finally {
+    clearLoading(list);   // 실패하면 알림은 show()가 다른 칸에 그린다. 이 줄이 남으면 안 된다
+  }
+  const { hasNext, rows, rowHtml } = tab;
 
   info.hidden = !filtered();
   if (filtered()) {
@@ -258,7 +265,8 @@ async function load() {
       <a href="${clearHref}">조건 지우기</a>`;
   }
 
-  list.innerHTML = rows.length ? rows.map(rowHtml).join("") : `<div class="card meta">${emptyText()}</div>`;
+  if (rows.length) list.innerHTML = rows.map(rowHtml).join("");
+  else showEmpty(list, emptyText());
 
   pager.update({ page: state.page, hasNext });
 }

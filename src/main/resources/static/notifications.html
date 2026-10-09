@@ -52,12 +52,13 @@ function init() {
   async function load() {
     const msg = document.getElementById("message");
     msg.innerHTML = "";
+    showLoading(list);
     try {
       const data = await api("/api/me/notifications?page=" + page);
       readAllBtn.hidden = !data.content.some(n => !n.read);
-      list.innerHTML = data.content.length === 0
-        ? `<div class="card">아직 알림이 없습니다.</div>`
-        : data.content.map(n => `
+      if (data.content.length === 0) {
+        showEmpty(list, "아직 알림이 없습니다.");
+      } else list.innerHTML = data.content.map(n => `
           <a class="card noti-item${n.read ? "" : " unread"}" href="${escapeHtml(n.link ?? "#")}"
              data-id="${n.id}" data-read="${n.read}">
             <span aria-hidden="true">${ICONS[n.type] ?? "🔔"}</span>
@@ -67,6 +68,8 @@ function init() {
       pager.update(data);
     } catch (e) {
       showErrorAlert(msg, e, "불러오지 못했습니다");
+    } finally {
+      clearLoading(list);
     }
   }
 
