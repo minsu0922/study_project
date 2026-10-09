@@ -14,6 +14,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,7 +35,11 @@ class RateLimitFilterTest {
 
     // 운영 기본값과 같은 정책: auth 5/분, api 60/분, comment 5/분, enabled=true
     private RateLimitProperties props(boolean enabled) {
-        return new RateLimitProperties(enabled, 5, 5, 60, 60, 60, 60, 5, 5, 60);
+        return props(enabled, Set.of());
+    }
+
+    private RateLimitProperties props(boolean enabled, Set<String> trustedProxies) {
+        return new RateLimitProperties(enabled, 5, 5, 60, 60, 60, 60, 5, 5, 60, trustedProxies);
     }
 
     @Test
@@ -157,11 +162,36 @@ class RateLimitFilterTest {
     }
 
     @Test
-    @DisplayName("프록시 경유 시 X-Forwarded-For의 첫 IP(원 클라이언트)를 쓴다")
-    void forwardedForTakesPrecedence() throws Exception {
+    @DisplayName("믿는 프록시를 거친 요청은 X-Forwarded-For에서 프록시가 본 IP를 쓴다")
+    void forwardedForFromTrustedProxy() throws Exception {
+        filter = new RateLimitFilter(limiter, props(true, Set.of("172.17.0.1")), new ObjectMapper());
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
         request.setRemoteAddr("172.17.0.1"); // 프록시 IP
-        request.addHeader("X-Forwarded-For", "203.0.113.9, 172.17.0.1");
+        request.addHeader("X-Forwarded-For", "203.0.113.9");
+        doFilter(request);
+
+        verify(limiter).tryConsume(eq("ip:203.0.113.9"), any());
+    }
+
+    @Test
+    @DisplayName("믿는 프록시가 아니면 X-Forwarded-For를 읽지 않는다 — 헤더를 바꿔 한도를 새로 받지 못한다")
+    void forwardedForFromUntrustedPeerIsIgnored() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+        request.setRemoteAddr("198.51.100.4");
+        request.addHeader("X-Forwarded-For", "203.0.113.9");
+        doFilter(request);
+
+        verify(limiter).tryConsume(eq("ip:198.51.100.4"), any());
+    }
+
+    @Test
+    @DisplayName("프록시 뒤에서도 클라이언트가 미리 적어 보낸 왼쪽 값은 쓰지 않는다")
+    void forgedLeftmostValueIsSkipped() throws Exception {
+        filter = new RateLimitFilter(limiter, props(true, Set.of("172.17.0.1")), new ObjectMapper());
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+        request.setRemoteAddr("172.17.0.1");
+        // 클라이언트가 "1.2.3.4"를 적어 보냈고, 프록시가 실제로 본 IP를 오른쪽에 덧붙였다
+        request.addHeader("X-Forwarded-For", "1.2.3.4, 203.0.113.9");
         doFilter(request);
 
         verify(limiter).tryConsume(eq("ip:203.0.113.9"), any());

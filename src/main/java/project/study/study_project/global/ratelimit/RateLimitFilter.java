@@ -121,18 +121,25 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 클라이언트 IP. 리버스 프록시(nginx 등) 뒤에 배포되면 remoteAddr은 프록시 IP가 되므로
-     * 프록시가 넣어 주는 X-Forwarded-For의 첫 값(원 클라이언트)을 우선한다.
+     * 클라이언트 IP. X-Forwarded-For는 <b>직접 붙은 상대가 믿는 프록시일 때만</b> 읽는다
+     * ({@code ratelimit.trusted-proxies}). 그 밖에는 클라이언트가 마음대로 적어 보낼 수 있는 값이다.
      *
-     * <p>한계(알고 쓰기): 프록시 없이 직접 노출된 서버라면 이 헤더는 클라이언트가 마음대로
-     * 위조할 수 있다. 실 배포에서는 "신뢰하는 프록시가 덮어쓴 값만 믿는" 구성이 전제다
-     * (docs/09에 기록). 지금은 로컬/단일 서버라 실질 영향 없음.
+     * <p>헤더는 오른쪽부터 읽어 믿는 프록시가 아닌 첫 값을 고른다. 프록시는 자기가 본 상대를
+     * 오른쪽 끝에 덧붙이므로, 왼쪽 값들은 클라이언트가 미리 적어 보낸 것일 수 있다.
      */
     private String clientIp(HttpServletRequest request) {
+        String remote = request.getRemoteAddr();
         String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        if (forwarded == null || !properties.getTrustedProxies().contains(remote)) {
+            return remote;
         }
-        return request.getRemoteAddr();
+        String[] hops = forwarded.split(",");
+        for (int i = hops.length - 1; i >= 0; i--) {
+            String hop = hops[i].trim();
+            if (!hop.isEmpty() && !properties.getTrustedProxies().contains(hop)) {
+                return hop;
+            }
+        }
+        return remote;
     }
 }

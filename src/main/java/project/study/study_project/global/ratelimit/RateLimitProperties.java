@@ -3,6 +3,8 @@ package project.study.study_project.global.ratelimit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+
 /**
  * 요청 제한 설정값 바인딩 — application.yml의 {@code ratelimit.*}.
  * (이 프로젝트는 설정 주입을 {@code @Value}로 통일하고 있어 그 관례를 따른다 — JwtTokenProvider 등)
@@ -27,6 +29,11 @@ public class RateLimitProperties {
     private final RateLimitPolicy apiPolicy;
     /** 댓글·답글 작성(V21). 불특정 다수가 쓰는 자리라 api(분당 60회)로는 도배를 못 막는다. */
     private final RateLimitPolicy commentPolicy;
+    /**
+     * X-Forwarded-For를 믿어도 되는 프록시의 IP. 비어 있으면 그 헤더를 아예 읽지 않는다.
+     * 누구의 헤더든 믿으면 값만 바꿔 보내 IP당 한도를 매번 새로 받는다.
+     */
+    private final Set<String> trustedProxies;
 
     public RateLimitProperties(
             @Value("${ratelimit.enabled:true}") boolean enabled,
@@ -38,8 +45,10 @@ public class RateLimitProperties {
             @Value("${ratelimit.api.refill-period-seconds:60}") int apiRefillPeriodSeconds,
             @Value("${ratelimit.comment.capacity:5}") int commentCapacity,
             @Value("${ratelimit.comment.refill-tokens:5}") int commentRefillTokens,
-            @Value("${ratelimit.comment.refill-period-seconds:60}") int commentRefillPeriodSeconds
+            @Value("${ratelimit.comment.refill-period-seconds:60}") int commentRefillPeriodSeconds,
+            @Value("${ratelimit.trusted-proxies:}") Set<String> trustedProxies
     ) {
+        this.trustedProxies = Set.copyOf(trustedProxies);
         this.enabled = enabled;
         this.authPolicy = new RateLimitPolicy("auth", authCapacity, authRefillTokens, authRefillPeriodSeconds);
         this.apiPolicy = new RateLimitPolicy("api", apiCapacity, apiRefillTokens, apiRefillPeriodSeconds);
@@ -49,6 +58,10 @@ public class RateLimitProperties {
 
     public RateLimitPolicy getCommentPolicy() {
         return commentPolicy;
+    }
+
+    public Set<String> getTrustedProxies() {
+        return trustedProxies;
     }
 
     public boolean isEnabled() {
