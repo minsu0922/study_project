@@ -96,7 +96,7 @@ DB 접속·JPA·Flyway·JWT·로깅을 담는다. 값마다 "왜 이 값인지"�
 | image | `mysql:8.0` | |
 | ports | `3306:3306` | 호스트 3306 ↔ 컨테이너 3306. |
 | MYSQL_DATABASE | `csquiz` | 초기 DB 자동 생성. |
-| MYSQL_USER / PASSWORD | `csquiz` / `csquiz1234` | 앱 접속 계정. application.yml 기본값과 일치. |
+| MYSQL_USER / PASSWORD | `csquiz` / `csquiz1234` | 앱 접속 계정. 비밀번호는 bootRun(build.gradle)과 테스트 설정이 넣는 값과 일치. |
 | MYSQL_ROOT_PASSWORD | `rootpw` | 관리자용. |
 | command | `--character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci` | 한글·이모지 저장. 데이터 모델(01)과 동일 콜레이션. |
 | volumes | `mysql-data:/var/lib/mysql` | 컨테이너를 지워도 데이터 유지. |

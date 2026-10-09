@@ -185,6 +185,10 @@ tasks.named('bootRun') {
     environment 'ADMIN_PASSWORD', project.findProperty('adminPassword')
             ?: System.getenv('ADMIN_PASSWORD')
             ?: 'admin1234'
+    // docker-compose.yml의 로컬 MySQL 비밀번호와 같은 값이다.
+    environment 'DB_PASSWORD', project.findProperty('dbPassword')
+            ?: System.getenv('DB_PASSWORD')
+            ?: 'csquiz1234'
 }
 
 // ── 일일 문제 생성 배치 (docs/14) ─────────────────────────────────
