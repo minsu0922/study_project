@@ -1,6 +1,7 @@
 package project.study.study_project.auth;
 
 import com.jayway.jsonpath.JsonPath;
+import jakarta.servlet.http.Cookie;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.auth.cookie.RefreshTokenCookie;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
@@ -346,50 +348,86 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("refresh 토큰은 HttpOnly 쿠키로만 나가고 응답 본문에는 없다")
+    void refreshTokenIsCookieOnly() throws Exception {
+        String username = freshUsername();
+        signup(username, "password1");
+        MvcResult login = login(username, "password1");
+
+        Cookie cookie = login.getResponse().getCookie(RefreshTokenCookie.NAME);
+        assertThat(cookie).isNotNull();
+        assertThat(cookie.isHttpOnly()).isTrue();
+        assertThat(cookie.getPath()).isEqualTo(RefreshTokenCookie.PATH);
+        assertThat(cookie.getAttribute("SameSite")).isEqualTo("Strict");
+        assertThat(login.getResponse().getContentAsString()).doesNotContain("refreshToken", cookie.getValue());
+    }
+
+    @Test
     @DisplayName("refresh 토큰은 1회용이다 — 재발급에 쓰고 나면 같은 토큰으로 또 재발급받을 수 없다(회전)")
     void refreshTokenRotatesAndOldOneIsRejected() throws Exception {
         String username = freshUsername();
         signup(username, "password1");
-        String oldRefreshToken = field(login(username, "password1"), "$.data.refreshToken");
+        Cookie oldCookie = refreshCookie(login(username, "password1"));
 
-        // 1차 재발급 — 새 토큰 세트를 받는다
-        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":"%s"}""".formatted(oldRefreshToken)))
+        // 1차 재발급 — 새 access 토큰과 새 쿠키를 받는다
+        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh").cookie(oldCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
                 .andReturn();
-        String newRefreshToken = field(refreshResult, "$.data.refreshToken");
-        Assertions.assertThat(newRefreshToken).isNotEqualTo(oldRefreshToken);
+        assertThat(refreshCookie(refreshResult).getValue()).isNotEqualTo(oldCookie.getValue());
 
         // 옛 refresh를 다시 쓰면 이미 소비돼서(GETDEL) 401 AUTH_005
-        mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":"%s"}""".formatted(oldRefreshToken)))
+        mockMvc.perform(post("/api/auth/refresh").cookie(oldCookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("AUTH_005"));
     }
 
     @Test
-    @DisplayName("로그아웃하면 그 refresh 토큰으로는 더 이상 재발급받을 수 없다")
+    @DisplayName("쿠키도 바디도 없는 재발급은 401 AUTH_005다")
+    void refreshWithoutCredentialIsRejected() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTH_005"));
+    }
+
+    @Test
+    @DisplayName("쿠키로 옮기기 전에 로그인한 브라우저는 바디의 토큰으로 한 번 재발급받고 쿠키를 얻는다")
+    void legacyBodyTokenStillRefreshesOnce() throws Exception {
+        String username = freshUsername();
+        signup(username, "password1");
+        String legacyToken = refreshCookie(login(username, "password1")).getValue();
+
+        MvcResult result = mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"%s"}""".formatted(legacyToken)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(refreshCookie(result).getValue()).isNotEqualTo(legacyToken);
+    }
+
+    @Test
+    @DisplayName("로그아웃하면 그 refresh 토큰으로는 더 이상 재발급받을 수 없고 쿠키도 지워진다")
     void logoutRevokesRefreshToken() throws Exception {
         String username = freshUsername();
         signup(username, "password1");
-        String refreshToken = field(login(username, "password1"), "$.data.refreshToken");
+        Cookie cookie = refreshCookie(login(username, "password1"));
 
-        mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":"%s"}""".formatted(refreshToken)))
-                .andExpect(status().isOk());
+        MvcResult logout = mockMvc.perform(post("/api/auth/logout").cookie(cookie))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(logout.getResponse().getCookie(RefreshTokenCookie.NAME).getMaxAge()).isZero();
 
-        mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":"%s"}""".formatted(refreshToken)))
+        mockMvc.perform(post("/api/auth/refresh").cookie(cookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("AUTH_005"));
+    }
+
+    private Cookie refreshCookie(MvcResult result) {
+        Cookie cookie = result.getResponse().getCookie(RefreshTokenCookie.NAME);
+        assertThat(cookie).isNotNull();
+        return cookie;
     }
 }

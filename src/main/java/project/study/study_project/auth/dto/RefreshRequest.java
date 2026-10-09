@@ -1,13 +1,11 @@
 package project.study.study_project.auth.dto;
 
-import jakarta.validation.constraints.NotBlank;
-
 /**
- * 토큰 재발급/로그아웃 요청 바디 — refresh 토큰이 곧 자격 증명이다.
- * (Authorization 헤더의 access 토큰은 만료됐을 수 있으므로 여기에 의존하지 않는다)
+ * 토큰 재발급/로그아웃 요청 바디 — 쿠키가 없을 때만 본다.
+ *
+ * <p>refresh 토큰은 쿠키로 온다(RefreshTokenCookie). 이 바디는 쿠키로 옮기기 전에 로그인해
+ * 토큰을 localStorage에 들고 있는 브라우저를 한 번 받아 주는 자리다. 그 브라우저도 첫 재발급에서
+ * 쿠키를 받는다.
  */
-public record RefreshRequest(
-        @NotBlank(message = "refreshToken은 필수입니다.")
-        String refreshToken
-) {
+public record RefreshRequest(String refreshToken) {
 }

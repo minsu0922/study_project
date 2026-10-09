@@ -131,7 +131,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
       method: "POST",
       body: JSON.stringify({ username, password: document.getElementById("password").value }),
     });
-    setLogin(data.accessToken, data.refreshToken, username); // refresh는 자동 재발급용(로드맵 2)
+    setLogin(data.accessToken, username); // refresh 토큰은 HttpOnly 쿠키로 온다
     // 관리 화면에서 왔는데 관리자가 아니면 돌려보내지 않는다 — 출입증이 없어 빈 404가 뜬다.
     location.href = cameFrom.startsWith("/admin") && !isAdmin() ? "/" : cameFrom;
   } catch (err) {

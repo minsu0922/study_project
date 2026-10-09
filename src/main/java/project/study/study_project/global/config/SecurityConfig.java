@@ -27,8 +27,9 @@ import project.study.study_project.global.ratelimit.TokenBucketRateLimiter;
  * <p>핵심 결정:
  * <ul>
  *   <li><b>Stateless</b>: 서버가 세션을 만들지 않는다. 매 요청의 JWT만으로 인증을 판단한다.
- *   <li><b>CSRF 비활성화</b>: CSRF는 브라우저가 쿠키/세션을 자동 전송해서 생기는 공격인데,
- *       우리는 세션 쿠키가 아니라 Authorization 헤더의 토큰을 쓰므로 공격 표면 자체가 없다.
+ *   <li><b>CSRF 비활성화</b>: CSRF는 브라우저가 쿠키를 자동 전송해서 생기는 공격이다. API는
+ *       Authorization 헤더의 토큰만 본다. 쿠키를 자격으로 받는 곳은 재발급·로그아웃뿐이고
+ *       그 쿠키는 SameSite=Strict라 다른 사이트의 요청에 실리지 않는다(RefreshTokenCookie).
  *   <li><b>폼로그인/httpBasic 비활성화</b>: 로그인은 JSON API(/api/auth/login)로만 한다.
  * </ul>
  */

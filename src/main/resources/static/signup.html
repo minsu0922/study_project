@@ -319,7 +319,7 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
     // 가입 응답이 토큰을 함께 준다. 로그인을 따로 부르면 인증 요청 제한(분당 5회)을 하나 더 써서,
     // 닉네임이 겹쳐 몇 번 실패한 사람은 가입에 성공하고도 로그인이 막혔다.
     const data = await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ username, password, nickname }) });
-    setLogin(data.tokens.accessToken, data.tokens.refreshToken, username);
+    setLogin(data.tokens.accessToken, username);
     ["signupForm", "signupIntro", "signupHelp"].forEach(id => document.getElementById(id).hidden = true);
     document.getElementById("recoveryCode").textContent = data.recoveryCode;
     document.getElementById("recoveryPanel").hidden = false;

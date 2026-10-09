@@ -3,7 +3,7 @@
  * ---------------------------------------------------------------------
  * 모든 페이지가 이 파일을 <먼저> 불러온다. 역할 세 가지:
  *   1) api()      : 백엔드 호출을 한 곳으로 통일 (토큰 부착 + 공통 봉투 해석)
- *   2) 토큰 보관   : localStorage에 저장 (아래 "왜 localStorage인가" 참고)
+ *   2) 토큰 보관   : access 토큰만 localStorage에 저장 (아래 "토큰을 어디에 두나" 참고)
  *   3) 라벨/포맷   : 분야·난이도·유형 이름표와 날짜 표기
  *
  * 화면을 그리는 일은 <b>여기 없다</b> — js/shell.js가 맡는다(2026-09-06에 분리).
@@ -11,19 +11,17 @@
  * 셸이 다른 곳에서도 그대로 쓰이고, 인증을 고치러 들어와 메뉴 배열을 지나치는
  * 일이 없다. 자세한 이유는 shell.js 상단 주석에 있다.
  *
- * [왜 localStorage인가]
- * 브라우저에 토큰을 두는 곳은 크게 localStorage vs 쿠키(HttpOnly) 두 가지다.
- * - localStorage: 구현이 단순하고 JS로 꺼내 Authorization 헤더에 실어 보낸다.
- *   단점: XSS(악성 스크립트 주입)에 뚫리면 토큰을 읽힐 수 있다.
- * - HttpOnly 쿠키: JS가 못 읽어 XSS에 강하지만, CSRF 방어가 다시 필요해지고
- *   백엔드 설계(지금은 Authorization 헤더 기반)를 바꿔야 한다.
- * MVP는 학습용 로컬 사이트라 단순한 localStorage를 쓰고, 우리가 렌더링하는
- * 모든 외부 텍스트를 escapeHtml()로 이스케이프해 XSS 자체를 막는다.
- * (보안 강화는 로드맵 — refresh 토큰 도입 시 재검토)
+ * [토큰을 어디에 두나]
+ * - refresh 토큰(14일): HttpOnly 쿠키. 이 파일은 값을 읽지도 저장하지도 않는다.
+ *   스크립트가 주입돼도 14일짜리 토큰은 빼 갈 수 없다.
+ * - access 토큰(1시간): localStorage. Authorization 헤더에 실어야 해서 JS가 읽어야 한다.
+ *   메모리에만 두지 않는 이유: 화면이 여러 HTML이라 이동할 때마다 재발급을 불러야 하고,
+ *   재발급은 분당 5회로 묶여 있어 몇 번 이동하면 로그아웃된다.
  * ===================================================================== */
 
 const TOKEN_KEY = "csquiz_token";
-const REFRESH_KEY = "csquiz_refresh"; // 로드맵 2: access 만료 시 재발급용
+// 쿠키로 옮기기 전에 refresh 토큰을 두던 자리. 남아 있으면 한 번 서버에 보내고 지운다.
+const LEGACY_REFRESH_KEY = "csquiz_refresh";
 // 내비게이션에 "누구로 로그인했는지" 표시용. V12에서 이메일 → 아이디로 바뀌었다.
 // 키 이름까지 바꾼 이유: 옛 키에 이메일이 남아 있으면 로그인하지 않은 화면에
 // 옛 주소가 그대로 떠 있게 된다(값의 뜻이 달라졌으니 그릇도 새로 쓴다).
@@ -31,21 +29,27 @@ const USERNAME_KEY = "csquiz_username";
 
 /* ── 토큰 보관 ── */
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
-function setLogin(accessToken, refreshToken, username) {
+function setLogin(accessToken, username) {
   localStorage.setItem(TOKEN_KEY, accessToken);
-  if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken); // Redis 장애 시 null일 수 있음
+  localStorage.removeItem(LEGACY_REFRESH_KEY);
   localStorage.setItem(USERNAME_KEY, username);
   // 앞 사람의 닉네임이 헤더에 남지 않게 지운다. 로그아웃 없이 다른 계정으로 로그인할 수 있다.
   localStorage.removeItem("csquiz_nickname");
 }
 function clearLogin() {
   localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
+  localStorage.removeItem(LEGACY_REFRESH_KEY);
   localStorage.removeItem(USERNAME_KEY);
   localStorage.removeItem("csquiz_nickname"); // 헤더가 적어 둔 닉네임(shell.js NICKNAME_KEY)
   localStorage.removeItem("csquiz_email"); // V12 이전 키의 잔재 청소
 }
 function isLoggedIn() { return !!getToken(); }
+
+/** 재발급·로그아웃 요청 바디. 옛 자리에 토큰이 남은 브라우저만 값을 싣는다. */
+function legacyRefreshBody() {
+  const legacy = localStorage.getItem(LEGACY_REFRESH_KEY);
+  return legacy ? { refreshToken: legacy } : {};
+}
 
 /**
  * JWT payload에서 role(USER/ADMIN)을 읽는다 — 관리자 메뉴 표시 여부 판단용.
@@ -172,20 +176,21 @@ function tryRefresh() {
   return refreshPromise;
 }
 
-/** 재발급 실제 수행. 성공 시 새 토큰 쌍 저장(회전) 후 true. tryRefresh()를 통해서만 호출할 것. */
+/** 재발급 실제 수행. 성공 시 새 access 토큰 저장 후 true. tryRefresh()를 통해서만 호출할 것. */
 async function doRefresh() {
-  const refreshToken = localStorage.getItem(REFRESH_KEY);
-  if (!refreshToken) return false;
+  // 로그인한 적 없는 방문자는 부르지 않는다 — 쿠키가 없어 반드시 실패하고,
+  // 그 실패가 로그인과 같은 요청 제한(분당 5회)을 깎는다.
+  if (!isLoggedIn()) return false;
   try {
     const res = await fetch("/api/auth/refresh", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify(legacyRefreshBody()),
     });
     const body = await res.json();
     if (!res.ok || !body.success) return false; // 만료·이미 사용(AUTH_005) → 재로그인 필요
     localStorage.setItem(TOKEN_KEY, body.data.accessToken);
-    if (body.data.refreshToken) localStorage.setItem(REFRESH_KEY, body.data.refreshToken);
+    localStorage.removeItem(LEGACY_REFRESH_KEY); // 새 refresh 토큰은 쿠키로 왔다
     return true;
   } catch (e) {
     return false; // 네트워크 오류 등 — 호출부가 로그인 만료로 처리

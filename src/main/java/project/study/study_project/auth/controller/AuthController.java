@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import project.study.study_project.auth.cookie.RefreshTokenCookie;
 import project.study.study_project.auth.dto.AvailabilityResponse;
 import project.study.study_project.auth.dto.LoginRequest;
 import project.study.study_project.auth.dto.LoginResponse;
@@ -49,6 +50,9 @@ public class AuthController {
      */
     private final AdminGateCookie adminGateCookie;
 
+    /** refresh 토큰은 응답 본문이 아니라 이 쿠키로 나간다. 다루는 자리가 컨트롤러인 이유는 위와 같다. */
+    private final RefreshTokenCookie refreshTokenCookie;
+
     /**
      * 아이디나 닉네임을 쓸 수 있는지 — 가입 화면이 입력 도중에 묻는다.
      * 예: {@code GET /api/auth/availability?username=minsu_01}. 둘 중 하나만 준다.
@@ -80,11 +84,12 @@ public class AuthController {
                                               HttpServletResponse httpResponse) {
         SignupResponse response = authService.signup(request);
         adminGateCookie.issue(httpRequest, httpResponse, response.tokens().accessToken());
+        refreshTokenCookie.issue(httpRequest, httpResponse, response.tokens().refreshToken());
         return ApiResponse.ok(response);
     }
 
     /**
-     * 로그인. 성공 시 200 + access/refresh 토큰 묶음(로드맵 2).
+     * 로그인. 성공 시 200 + access 토큰. refresh 토큰은 HttpOnly 쿠키로 나간다.
      *
      * <p>관리자면 <b>출입증 쿠키가 함께 내려간다</b>. 화면 코드는 이 쿠키를 몰라도 되고
      * (HttpOnly라 읽을 수도 없다), 브라우저가 {@code /admin/**} 요청에 알아서 실어 보낸다.
@@ -97,18 +102,24 @@ public class AuthController {
                                             HttpServletResponse httpResponse) {
         LoginResponse response = authService.login(request);
         adminGateCookie.issue(httpRequest, httpResponse, response.accessToken());
+        refreshTokenCookie.issue(httpRequest, httpResponse, response.refreshToken());
         return ApiResponse.ok(response);
     }
 
     /**
-     * access 토큰 재발급(로드맵 2). refresh 토큰이 자격 증명이며 응답에서 <b>새 refresh로
-     * 교체(회전)</b>된다 — 이전 refresh는 이 순간부터 무효. 무효 토큰이면 401 AUTH_005.
+     * access 토큰 재발급(로드맵 2). 쿠키의 refresh 토큰이 자격 증명이며 응답에서 <b>새 refresh로
+     * 교체(회전)</b>된다 — 이전 refresh는 이 순간부터 무효. 없거나 무효면 401 AUTH_005.
      */
     @PostMapping("/refresh")
-    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshRequest request,
+    public ApiResponse<LoginResponse> refresh(@RequestBody(required = false) RefreshRequest request,
                                               HttpServletRequest httpRequest,
                                               HttpServletResponse httpResponse) {
-        LoginResponse response = authService.refresh(request.refreshToken());
+        String refreshToken = refreshTokenOf(httpRequest, request);
+        if (refreshToken == null) {
+            throw new BusinessException(ErrorCode.AUTH_005);
+        }
+        LoginResponse response = authService.refresh(refreshToken);
+        refreshTokenCookie.issue(httpRequest, httpResponse, response.refreshToken());
         // 출입증도 함께 갱신한다. 안 하면 access 토큰 수명(1시간)이 지나는 순간 관리 화면이
         // 404가 되는데, 정작 API는 재발급으로 멀쩡히 돈다 — 원인을 짐작하기 어려운 상태다.
         adminGateCookie.issue(httpRequest, httpResponse, response.accessToken());
@@ -131,11 +142,22 @@ public class AuthController {
      * API는 401이라 데이터는 안 보이지만, 감추려던 화면 구성이 노출된 채로 남는다.
      */
     @PostMapping("/logout")
-    public ApiResponse<Void> logout(@Valid @RequestBody RefreshRequest request,
+    public ApiResponse<Void> logout(@RequestBody(required = false) RefreshRequest request,
                                     HttpServletRequest httpRequest,
                                     HttpServletResponse httpResponse) {
-        authService.logout(request.refreshToken());
+        String refreshToken = refreshTokenOf(httpRequest, request);
+        if (refreshToken != null) {
+            authService.logout(refreshToken);
+        }
         adminGateCookie.clear(httpRequest, httpResponse);
+        refreshTokenCookie.clear(httpRequest, httpResponse);
         return ApiResponse.ok();
+    }
+
+    /** 쿠키가 먼저다. 바디는 쿠키로 옮기기 전에 로그인한 브라우저만 쓴다(RefreshRequest 주석). */
+    private String refreshTokenOf(HttpServletRequest httpRequest, RefreshRequest body) {
+        return refreshTokenCookie.read(httpRequest)
+                .orElseGet(() -> body == null || body.refreshToken() == null || body.refreshToken().isBlank()
+                        ? null : body.refreshToken());
     }
 }

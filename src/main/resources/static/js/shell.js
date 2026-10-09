@@ -487,16 +487,14 @@ async function onLogout(e) {
   // 서버의 refresh 토큰을 먼저 폐기(로드맵 2) — 브라우저만 지우면 서버엔 14일짜리
   // 출입증이 살아 있는 셈이라, "로그아웃 = 서버에서도 회수"가 올바른 순서다.
   // 관리 화면 출입증 쿠키도 이 응답에서 함께 지워진다(AdminGateCookie).
-  const refreshToken = localStorage.getItem(REFRESH_KEY);
-  if (refreshToken) {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-      });
-    } catch (err) { /* 서버 폐기 실패해도 로컬 로그아웃은 진행(TTL이 안전망) */ }
-  }
+  // refresh 토큰은 HttpOnly 쿠키라 여기서 읽을 수 없다 — 브라우저가 실어 보낸다.
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(legacyRefreshBody()),
+    });
+  } catch (err) { /* 서버 폐기 실패해도 로컬 로그아웃은 진행(TTL이 안전망) */ }
   clearLogin();
   location.href = "/"; // 로그아웃 후 첫 화면으로
 }
