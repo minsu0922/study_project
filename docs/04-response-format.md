@@ -154,4 +154,6 @@ public record FieldError(String field, String reason) {}
   - `NoResourceFoundException` / 미매핑 → `COMMON_404`.
     단 `/api/` 밖 주소를 브라우저가 열면(`GET` + `Accept: text/html`) 같은 404로 `404.html`을 준다
   - 그 외 `Exception` → `COMMON_500` (스택트레이스는 로깅만, 응답엔 미노출)
+- 전역 예외처리가 못 받는 오류(톰캣이 직접 거절한 요청, `/error` 직접 열기)는 `GlobalErrorController`가 받는다.
+  상태는 그대로 두고 같은 envelope로 답하며, 스프링 기본 오류 화면(Whitelabel)은 나가지 않는다.
 - Spring Security 인증/인가 실패(`AuthenticationEntryPoint`/`AccessDeniedHandler`)도 동일 envelope로 변환 → `AUTH_003`/`AUTH_004`.

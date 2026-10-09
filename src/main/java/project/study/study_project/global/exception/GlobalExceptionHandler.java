@@ -123,23 +123,30 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<?> handleNoResource(NoResourceFoundException e, HttpServletRequest request) {
-        if (isPageRequest(request)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .contentType(HTML_UTF8)
-                    .body(NOT_FOUND_PAGE);
+        if (isPageRequest(request, request.getRequestURI())) {
+            return notFoundPage();
         }
         return build(ErrorCode.COMMON_404, ApiError.of(
                 ErrorCode.COMMON_404.getCode(), ErrorCode.COMMON_404.getDefaultMessage()));
     }
 
+    /** 404 안내 화면. GlobalErrorController도 같은 것을 쓴다. */
+    static ResponseEntity<Resource> notFoundPage() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .contentType(HTML_UTF8)
+                .body(NOT_FOUND_PAGE);
+    }
+
     /**
      * 주소창에 친 요청인가. fetch는 Accept에 text/html을 싣지 않아 여기 걸리지 않는다.
      * /api/ 아래는 Accept와 상관없이 JSON이다 — 봉투 계약을 헤더 하나로 깨지 않는다.
+     *
+     * @param path 사람이 친 주소. ERROR 디스패치 안에서는 getRequestURI()가 /error라 따로 받는다
      */
-    private boolean isPageRequest(HttpServletRequest request) {
+    static boolean isPageRequest(HttpServletRequest request, String path) {
         String accept = request.getHeader(HttpHeaders.ACCEPT);
         return "GET".equals(request.getMethod())
-                && !request.getRequestURI().startsWith("/api/")
+                && !path.startsWith("/api/")
                 && accept != null && accept.contains(MediaType.TEXT_HTML_VALUE);
     }
 

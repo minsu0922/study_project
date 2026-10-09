@@ -1,5 +1,6 @@
 package project.study.study_project.global;
 
+import jakarta.servlet.RequestDispatcher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,6 +140,35 @@ class GlobalExceptionHandlerIntegrationTest {
     void actuatorStaysLocked() throws Exception {
         mockMvc.perform(get("/actuator/info"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    /* ── /error ─────────────────────────────────────────────── */
+
+    @Test
+    @DisplayName("/error를 직접 열면 Whitelabel이 아니라 404 안내 화면이다")
+    void errorPathOpenedDirectly() throws Exception {
+        mockMvc.perform(get("/error").accept("text/html"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString("없는 주소입니다")));
+    }
+
+    /** MockMvc는 ERROR 디스패치를 재현하지 않으므로, 컨테이너가 넣어 주는 속성을 손으로 넣는다. */
+    @Test
+    @DisplayName("컨테이너가 넘긴 오류는 상태를 그대로 두고 공통 봉투로 나간다")
+    void errorDispatchKeepsStatusInEnvelope() throws Exception {
+        mockMvc.perform(post("/error")
+                        .requestAttr(RequestDispatcher.ERROR_STATUS_CODE, 413)
+                        .requestAttr(RequestDispatcher.ERROR_REQUEST_URI, "/api/admin/llm-problems/generate-from-document"))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("COMMON_413"));
+
+        mockMvc.perform(get("/error")
+                        .requestAttr(RequestDispatcher.ERROR_STATUS_CODE, 500)
+                        .requestAttr(RequestDispatcher.ERROR_REQUEST_URI, "/login.html")
+                        .accept("text/html"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error.code").value("COMMON_500"));
     }
 
     private String bearer() {
