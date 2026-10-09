@@ -10,6 +10,8 @@ import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Redis Lua 스크립트 기반 토큰 버킷 실행기 — 로드맵 3. 설계는 docs/09, 결정 배경은 ADR-0003.
@@ -33,7 +35,12 @@ public class TokenBucketRateLimiter {
     /** 버킷 키 공통 접두어. Redis에서 rl:* 로 요청 제한 키만 골라 볼 수 있게 한다. */
     private static final String KEY_PREFIX = "rl:";
 
+    private static final int LOCAL_BUCKET_LIMIT = 10_000;
+
     private final StringRedisTemplate redisTemplate;
+
+    /** Redis 장애 동안만 쓰는 버킷({@link #consumeLocally}). */
+    private final Map<String, LocalBucket> localBuckets = new ConcurrentHashMap<>();
 
     /**
      * Lua 스크립트는 부팅 시 한 번 로드해 재사용한다. Spring이 내부적으로 EVALSHA
@@ -74,9 +81,40 @@ public class TokenBucketRateLimiter {
             }
             return new RateLimitResult(allowed, result.get(1));
         } catch (DataAccessException e) {
+            if (policy.limitsLocallyOnFailure()) {
+                log.warn("Redis 장애 — 이 서버 안에서 세어 제한 key={}: {}", key, e.getMessage());
+                return consumeLocally(key, policy);
+            }
             // fail-open: 제한기 장애가 서비스 장애로 번지지 않게 한다(RateLimitResult.failOpen 참고).
             log.warn("Redis 장애로 요청 제한 생략(fail-open) key={}: {}", key, e.getMessage());
             return RateLimitResult.failOpen();
         }
+    }
+
+    /**
+     * Redis 없이 이 JVM의 메모리로 세는 토큰 버킷. 서버가 여러 대면 한도가 대수만큼 늘지만,
+     * Redis가 죽은 동안 비밀번호 대입이 무제한이 되는 것보다 낫다.
+     */
+    private RateLimitResult consumeLocally(String key, RateLimitPolicy policy) {
+        // 키를 바꿔 가며 두드리면 맵이 끝없이 자란다. 넘치면 비운다 — 그 순간 한도가 한 번 새로 차는 값을 치른다.
+        if (localBuckets.size() >= LOCAL_BUCKET_LIMIT) {
+            localBuckets.clear();
+        }
+        long now = System.currentTimeMillis();
+        double refillPerMs = policy.refillTokens() / (policy.refillPeriodSeconds() * 1000.0);
+        long[] retryAfter = {0};
+        localBuckets.compute(key, (k, bucket) -> {
+            double tokens = bucket == null ? policy.capacity()
+                    : Math.min(policy.capacity(), bucket.tokens() + (now - bucket.updatedAt()) * refillPerMs);
+            if (tokens >= 1) {
+                return new LocalBucket(tokens - 1, now);
+            }
+            retryAfter[0] = Math.max(1, (long) Math.ceil((1 - tokens) / refillPerMs / 1000));
+            return new LocalBucket(tokens, now);
+        });
+        return new RateLimitResult(retryAfter[0] == 0, retryAfter[0]);
+    }
+
+    private record LocalBucket(double tokens, long updatedAt) {
     }
 }

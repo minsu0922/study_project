@@ -17,4 +17,15 @@ package project.study.study_project.global.ratelimit;
  * @param refillPeriodSeconds 충전 주기(초)
  */
 public record RateLimitPolicy(String name, int capacity, int refillTokens, int refillPeriodSeconds) {
+
+    /** 로그인·가입·재발급·비밀번호 재설정에 거는 정책의 이름. */
+    public static final String AUTH = "auth";
+
+    /**
+     * Redis가 죽었을 때도 이 서버 안에서 세어 막을 정책인가. 자격 증명을 맞혀 볼 수 있는 경로만 그렇다 —
+     * 나머지는 제한이 풀려도 잃는 것이 서버 자원뿐이라 통과시킨다(fail-open).
+     */
+    public boolean limitsLocallyOnFailure() {
+        return AUTH.equals(name);
+    }
 }

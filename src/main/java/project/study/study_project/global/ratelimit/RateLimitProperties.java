@@ -50,7 +50,7 @@ public class RateLimitProperties {
     ) {
         this.trustedProxies = Set.copyOf(trustedProxies);
         this.enabled = enabled;
-        this.authPolicy = new RateLimitPolicy("auth", authCapacity, authRefillTokens, authRefillPeriodSeconds);
+        this.authPolicy = new RateLimitPolicy(RateLimitPolicy.AUTH, authCapacity, authRefillTokens, authRefillPeriodSeconds);
         this.apiPolicy = new RateLimitPolicy("api", apiCapacity, apiRefillTokens, apiRefillPeriodSeconds);
         this.commentPolicy = new RateLimitPolicy("comment", commentCapacity, commentRefillTokens,
                 commentRefillPeriodSeconds);
