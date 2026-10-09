@@ -48,6 +48,26 @@ public class SecurityConfig {
     private final AdminGateCookie adminGateCookie;
     private final AdminAuthorizationManager adminAuthorizationManager;
 
+    /**
+     * 브라우저가 이 사이트에서 불러도 되는 곳의 목록(CSP).
+     *
+     * <p>화면이 인라인 스크립트로 짜여 있어 {@code 'unsafe-inline'}을 뺄 수 없다. 그래서 주입된 스크립트의
+     * 실행 자체는 막지 못한다. 막는 것은 그 다음이다 — 바깥 서버로 요청을 보내거나({@code connect-src},
+     * {@code img-src}, {@code form-action}) 바깥 스크립트를 끌어오는 일.
+     * jsdelivr는 marked·DOMPurify(document.html)와 글꼴(style.css)을 받는 곳이다.
+     */
+    private static final String CONTENT_SECURITY_POLICY = String.join("; ",
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+            "font-src 'self' data: https://cdn.jsdelivr.net",
+            "img-src 'self' data:",
+            "connect-src 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'");
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -57,6 +77,7 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 // 세션을 아예 만들지 않는다(토큰만으로 판단).
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers.contentSecurityPolicy(csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY)))
                 // 경로별 접근 권한 (docs/06 표와 일치)
                 .authorizeHttpRequests(auth -> auth
                         // 공개: 프론트 정적 파일(HTML/CSS/JS). "화면은 누구나 열 수 있고,
