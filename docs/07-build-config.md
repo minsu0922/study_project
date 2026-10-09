@@ -96,6 +96,7 @@ DB 접속·JPA·Flyway·JWT·로깅을 담는다. 값마다 "왜 이 값인지"�
 | image | `mysql:8.0` | |
 | ports | `3306:3306` | 호스트 3306 ↔ 컨테이너 3306. |
 | MYSQL_DATABASE | `csquiz` | 초기 DB 자동 생성. |
+| 초기화 스크립트 | `docker/mysql-init/01-test-db.sql` | 테스트 전용 DB `csquiz_test`를 만든다. 빈 볼륨으로 처음 뜰 때만 실행된다. |
 | MYSQL_USER / PASSWORD | `csquiz` / `csquiz1234` | 앱 접속 계정. 비밀번호는 bootRun(build.gradle)과 테스트 설정이 넣는 값과 일치. |
 | MYSQL_ROOT_PASSWORD | `rootpw` | 관리자용. |
 | command | `--character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci` | 한글·이모지 저장. 데이터 모델(01)과 동일 콜레이션. |
@@ -104,6 +105,9 @@ DB 접속·JPA·Flyway·JWT·로깅을 담는다. 값마다 "왜 이 값인지"�
 | TZ | `Asia/Seoul` | 시간대. |
 
 - Redis(로드맵2)는 주석으로 준비돼 있고, 캐싱 레이어 진입 시 해제한다.
+- 테스트는 `csquiz_test`에 붙는다(2026-10-09). 개발 DB와 같이 쓰면 롤백되지 않는 테스트가 개발 데이터에
+  행을 남긴다. 이미 쓰던 볼륨이나 직접 설치한 MySQL에는 이 DB가 없으니 root로 `db/local-init.sql`을 실행한다.
+  DB가 없으면 테스트는 `Unknown database 'csquiz_test'`로 전부 실패한다.
 - Docker를 쓰지 않고 로컬 MySQL을 직접 설치했다면 `db/local-init.sql`로 동일한 DB·계정을 만들 수 있다(값이 docker-compose와 같게 맞춰져 있어 application.yml을 그대로 쓴다).
 
 ---

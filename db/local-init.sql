@@ -18,4 +18,12 @@ CREATE USER IF NOT EXISTS 'csquiz'@'%' IDENTIFIED BY 'csquiz1234';
 GRANT ALL PRIVILEGES ON csquiz.* TO 'csquiz'@'localhost';
 GRANT ALL PRIVILEGES ON csquiz.* TO 'csquiz'@'%';
 
+-- 테스트 전용 DB. 테스트가 개발 데이터에 행을 남기지 않게 따로 둔다.
+CREATE DATABASE IF NOT EXISTS csquiz_test
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_0900_ai_ci;
+
+GRANT ALL PRIVILEGES ON csquiz_test.* TO 'csquiz'@'localhost';
+GRANT ALL PRIVILEGES ON csquiz_test.* TO 'csquiz'@'%';
+
 FLUSH PRIVILEGES;

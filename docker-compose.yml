@@ -17,6 +17,8 @@ services:
       - --collation-server=utf8mb4_0900_ai_ci
     volumes:
       - mysql-data:/var/lib/mysql
+      # 테스트 전용 DB(csquiz_test)를 만든다. 빈 볼륨으로 처음 뜰 때만 실행된다.
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpw"]
       interval: 10s

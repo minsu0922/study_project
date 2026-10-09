@@ -6,7 +6,7 @@ description: csquiz(Spring Boot + 정적 프론트) 변경을 실제로 띄워 �
 # csquiz 검증 레시피
 
 ## 전제
-- MySQL: docker-compose로 localhost:3306/csquiz 가동 중이어야 함(테스트·앱 공용).
+- MySQL: localhost:3306에 csquiz(앱)와 csquiz_test(테스트)가 있어야 함. 테스트는 개발 DB를 건드리지 않는다.
 - Redis(WSL): 꺼져 있어도 됨 — 로그인은 되고 refresh 쿠키만 안 나간다(fail-open 설계).
 
 ## 기동
