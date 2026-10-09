@@ -71,12 +71,13 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
   "success": true,
   "data": {
     "id": 1, "username": "minsu_01", "role": "USER",
-    "tokens": { "accessToken": "...", "refreshToken": "...", "tokenType": "Bearer", "expiresIn": 3600 }
+    "tokens": { "accessToken": "...", "tokenType": "Bearer", "expiresIn": 3600 }
   },
   "error": null
 }
 ```
 - `tokens`: 로그인 응답과 같은 묶음. 화면은 이 토큰으로 바로 로그인 상태가 되고 로그인 API를 다시 부르지 않는다
+- refresh 토큰은 로그인과 같이 `Set-Cookie`로 나간다
 
 **에러**: `VALIDATION_ERROR`(400), `AUTH_001` 아이디 중복(409), `DISCUSSION_004` 닉네임 중복(409), `DISCUSSION_010` 쓸 수 없는 닉네임(400)
 
@@ -99,7 +100,7 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
 ---
 
 ## POST /api/auth/login
-로그인 → access + refresh 토큰 발급.
+로그인 → access 토큰은 응답 본문으로, refresh 토큰은 쿠키로 발급.
 
 **Request**
 ```json
@@ -111,7 +112,6 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
   "success": true,
   "data": {
     "accessToken": "eyJhbGciOi...",
-    "refreshToken": "b3f1c8e2-...",
     "tokenType": "Bearer",
     "expiresIn": 3600
   },
@@ -119,7 +119,9 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
 }
 ```
 - `expiresIn`: 초 단위(예 3600 = 1시간).
-- **`refreshToken`은 Redis가 죽어 있으면 `null`로 나간다**(fail-open). 로그인 자체는 성공시킨다 —
+- **refresh 토큰은 본문에 없다**(2026-10-09). `Set-Cookie: refresh_token=...; Path=/api/auth; HttpOnly; SameSite=Strict`로
+  나간다. 화면 코드가 읽을 수 없어 스크립트가 주입돼도 14일짜리 토큰은 빼 가지 못한다.
+- **Redis가 죽어 있으면 그 쿠키가 나가지 않는다**(fail-open). 로그인 자체는 성공시킨다 —
   자동 재로그인이 안 되는 불편과 아예 못 쓰는 장애는 무게가 다르다. 자세히는 [06](06-security-jwt.md).
 
 **에러**: `AUTH_002` 인증 실패(401)
@@ -129,11 +131,12 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
 ## POST /api/auth/refresh
 access 토큰 재발급. **refresh 토큰은 1회용**이라 쓰는 순간 새것으로 교체된다(회전).
 
-**Request**
-```json
-{ "refreshToken": "b3f1c8e2-..." }
-```
-**Response 200** — `login`과 같은 모양(새 access + **새 refresh**)
+**Request** — 본문 없음. 브라우저가 `refresh_token` 쿠키를 실어 보낸다.
+
+**Response 200** — `login`과 같은 모양(새 access). **새 refresh는 쿠키로 다시 내려간다.**
+
+- 쿠키가 없을 때만 본문 `{ "refreshToken": "..." }`을 본다. 쿠키로 옮기기 전에 로그인한 브라우저를
+  한 번 받아 주는 자리다.
 
 - 옛 refresh를 다시 쓰면 `AUTH_005`(401). Redis에서 `GETDEL`로 **읽으면서 지우기** 때문이다.
   탈취된 토큰이 재사용되면 그 시점에 막힌다.
@@ -143,7 +146,7 @@ access 토큰 재발급. **refresh 토큰은 1회용**이라 쓰는 순간 새�
 ---
 
 ## POST /api/auth/logout
-refresh 토큰을 폐기한다.
+쿠키의 refresh 토큰을 폐기하고 쿠키를 지운다. 본문은 없다.
 
 - access 토큰은 **서버가 취소할 수 없다**(JWT는 서명만 보고 검증하므로). 만료까지는 유효하다.
   그래서 로그아웃은 "다음 재발급을 막는 것"까지가 최선이고, 그 대신 access 수명을 짧게 둔다.

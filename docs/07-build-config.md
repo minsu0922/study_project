@@ -115,7 +115,7 @@ DB 접속·JPA·Flyway·JWT·로깅을 담는다. 값마다 "왜 이 값인지"�
 docker compose up -d          # MySQL 8 기동 (healthy 될 때까지 몇 초)
 
 # 2. (선택) Redis — 없어도 앱은 뜬다
-#    없으면: refreshToken이 null로 나가고, 요청 제한은 통과시킨다(둘 다 fail-open).
+#    없으면: refresh 쿠키가 나가지 않고, 요청 제한은 통과시킨다(둘 다 fail-open).
 #    WSL에서: redis-server --daemonize yes
 
 # 3. 빌드 & 실행

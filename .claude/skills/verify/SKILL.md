@@ -7,7 +7,7 @@ description: csquiz(Spring Boot + 정적 프론트) 변경을 실제로 띄워 �
 
 ## 전제
 - MySQL: docker-compose로 localhost:3306/csquiz 가동 중이어야 함(테스트·앱 공용).
-- Redis(WSL): 꺼져 있어도 됨 — 로그인은 되고 refreshToken만 null(fail-open 설계).
+- Redis(WSL): 꺼져 있어도 됨 — 로그인은 되고 refresh 쿠키만 안 나간다(fail-open 설계).
 
 ## 기동
 ```bash
