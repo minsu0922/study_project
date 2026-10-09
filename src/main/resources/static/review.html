@@ -266,10 +266,7 @@ async function loadStatus() {
 
     pager.update(data);
   } catch (e) {
-    const text = e.status === 401
-      ? `로그인이 만료됐습니다. <a href="/login.html">다시 로그인해 주세요.</a>`
-      : `불러오지 못했습니다: ${escapeHtml(e.message)}`;
-    list.innerHTML = `<div class="alert error">${text}</div>`;
+    showErrorAlert(list, e, "불러오지 못했습니다");
   }
 }
 

@@ -77,6 +77,7 @@ function isAdmin() { return getRole() === "ADMIN"; }
  *   → 각 페이지는 try/catch 한 번으로 성공·실패를 처리하면 된다.
  * - 401(토큰 만료 등)이면 저장된 토큰을 지운다. 1시간짜리 access 토큰이
  *   만료된 채 남아 있으면 "로그인했는데 계속 실패"하는 혼란이 생기기 때문.
+ *   그때 던지는 오류에는 err.needLogin이 서고 문구가 로그인 안내로 바뀐다.
  */
 async function api(path, options = {}) {
   const headers = Object.assign({}, options.headers);
@@ -92,18 +93,33 @@ async function api(path, options = {}) {
   // 로드맵 2: access 만료(401) → refresh 토큰으로 조용히 재발급 후 원래 요청을 1번 재시도.
   // 사용자는 1시간마다 로그아웃당하는 대신 아무것도 못 느낀다. _retried 플래그로
   // 무한 재시도를 막고, 인증 API 자신(로그인/재발급)의 401은 재시도 대상이 아니다.
-  if (res.status === 401 && !options._retried && !path.startsWith("/api/auth/")) {
+  //
+  // AUTH_003(토큰 없음·만료·위조)일 때만이다. 같은 401이라도 AUTH_002는 "현재 비밀번호가
+  // 틀렸다"(/api/me/password 등)는 뜻이라 토큰과 무관하다 — 그걸로 재발급을 돌리면 멀쩡한
+  // refresh 토큰을 한 번 태우고, 재발급이 안 되는 상황(Redis 장애)에서는 로그아웃까지 시킨다.
+  const tokenRejected = res.status === 401 && !path.startsWith("/api/auth/")
+    && (!body || !body.error || body.error.code === "AUTH_003");
+  let needLogin = false;
+  if (tokenRejected && !options._retried) {
     if (await tryRefresh()) {
       return api(path, Object.assign({}, options, { _retried: true }));
     }
     clearLogin(); // 재발급도 실패 = 진짜 세션 종료 → 재로그인 필요
+    needLogin = true;
   }
   if (!res.ok || !body || body.success === false) {
     const errInfo = (body && body.error) || { code: "HTTP_" + res.status, message: "요청에 실패했습니다." };
-    const err = new Error(errInfo.message);
+    // 서버 문구("인증 정보가 유효하지 않습니다")는 무엇을 하라는 말이 없다. 여기서 바꿔 두면
+    // 오류를 e.message로 띄우는 화면 전부가 고치지 않아도 같은 안내를 한다.
+    // 토큰을 들고 있었으면 만료, 처음부터 없었으면 로그인한 적이 없는 것이다.
+    const message = !needLogin ? errInfo.message
+      : token ? "로그인이 만료됐습니다. 다시 로그인해 주세요." : "로그인이 필요합니다.";
+    const err = new Error(message);
     err.code = errInfo.code;
     err.status = res.status;
     err.fieldErrors = errInfo.fieldErrors || [];
+    err.needLogin = needLogin;              // showErrorAlert가 로그인 링크를 붙인다
+    err.sessionExpired = needLogin && !!token;
     throw err;
   }
   return body.data;
@@ -388,6 +404,12 @@ function fillSelect(selectEl, pairs, allLabel) {
  */
 function showErrorAlert(el, error, prefix) {
   const isText = typeof error === "string";
+  // 로그인이 필요한 실패는 prefix를 붙이지 않는다 — "불러오지 못했습니다: 로그인이 만료됐습니다"는
+  // 원인이 아니라 결과를 앞세운 문장이다. 할 일(로그인)로 가는 링크를 대신 붙인다.
+  if (!isText && error.needLogin) {
+    el.innerHTML = `<div class="alert error">${escapeHtml(error.message)} <a href="/login.html">로그인하기</a></div>`;
+    return;
+  }
   const text = isText ? error : error.message;
   const details = (isText ? [] : error.fieldErrors || [])
     .map(f => `<li>${escapeHtml(f.reason)}</li>`).join("");
