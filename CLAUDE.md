@@ -6,10 +6,12 @@
 
 ## Git
 
-- 아래 셋만 먼저 묻는다. 셋 다 무언가를 지우는 명령이다. 머지와 push를 포함한 나머지 git 명령은 바로 실행한다.
-- 커밋 안 된 변경을 버리는 명령: `reset --hard`, `clean -fd`, `checkout --`, `restore`, `stash drop`, `stash clear`
-- 강제 push: `push --force`, `push --force-with-lease`
-- 브랜치 삭제: `branch -d`, `branch -D`, 원격 브랜치 삭제
+- git 명령은 전부 묻지 않고 실행한다. 한 일은 보고에 적는다.
+- 지우는 명령도 여기 든다. 전역 CLAUDE.md의 "지우는 일"보다 이 절이 앞선다.
+  - 커밋 안 된 변경을 버리는 명령: `reset --hard`, `clean -fd`, `checkout --`, `restore`, `stash drop`, `stash clear`
+  - 강제 push: `push --force`, `push --force-with-lease`
+  - 브랜치 삭제: `branch -d`, `branch -D`, 원격 브랜치 삭제
+- 작업용 브랜치는 `main`에 병합하고 push한 뒤 바로 지운다.
 
 ## 셸 명령
 
