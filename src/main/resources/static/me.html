@@ -101,7 +101,9 @@ try {
  * 새 API를 만들지 않았다. */
 if (!isLoggedIn()) {
   // 남의 기록을 볼 화면이 아니다. 비로그인으로 오면 로그인부터.
-  location.href = "/login.html";
+  // href가 아니라 replace다. 이 화면이 방문 기록에 남으면 로그인 화면에서 뒤로 가기를
+  // 눌렀을 때 여기로 돌아와 다시 로그인으로 튕긴다.
+  location.replace("/login.html");
 } else {
   renderShell({ active: "me", title: "내 기록" });
   loadMe();
