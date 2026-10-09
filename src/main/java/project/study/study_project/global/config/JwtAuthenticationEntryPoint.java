@@ -4,13 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 import project.study.study_project.global.exception.ErrorCode;
-import project.study.study_project.global.response.ApiError;
-import project.study.study_project.global.response.ApiResponse;
+import project.study.study_project.global.response.ErrorResponseWriter;
 
 import java.io.IOException;
 
@@ -31,11 +29,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        ErrorCode code = ErrorCode.AUTH_003;
-        response.setStatus(code.getHttpStatus().value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        ApiResponse<Void> body = ApiResponse.fail(ApiError.of(code.getCode(), code.getDefaultMessage()));
-        objectMapper.writeValue(response.getWriter(), body);
+        ErrorResponseWriter.write(response, objectMapper, ErrorCode.AUTH_003);
     }
 }

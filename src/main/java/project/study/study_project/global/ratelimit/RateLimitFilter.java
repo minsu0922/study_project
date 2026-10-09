@@ -6,13 +6,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import project.study.study_project.global.exception.ErrorCode;
-import project.study.study_project.global.response.ApiError;
-import project.study.study_project.global.response.ApiResponse;
+import project.study.study_project.global.response.ErrorResponseWriter;
 
 import java.io.IOException;
 import java.util.Set;
@@ -107,13 +105,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         // 429 + Retry-After: "언제 다시 와도 되는지"까지 알려 주는 게 표준 매너다.
         // 잘 만든 클라이언트는 이 값을 보고 백오프(대기 후 재시도)한다.
-        ErrorCode code = ErrorCode.COMMON_429;
-        response.setStatus(code.getHttpStatus().value());
         response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(result.retryAfterSeconds()));
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        ApiResponse<Void> body = ApiResponse.fail(ApiError.of(code.getCode(), code.getDefaultMessage()));
-        objectMapper.writeValue(response.getWriter(), body);
+        ErrorResponseWriter.write(response, objectMapper, ErrorCode.COMMON_429);
     }
 
     /** 인증된 사용자 id. JwtAuthenticationFilter가 principal에 심어 둔 값(Long). 미인증이면 null. */
