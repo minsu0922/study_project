@@ -78,14 +78,27 @@ function isAdmin() { return getRole() === "ADMIN"; }
  * - 401(토큰 만료 등)이면 저장된 토큰을 지운다. 1시간짜리 access 토큰이
  *   만료된 채 남아 있으면 "로그인했는데 계속 실패"하는 혼란이 생기기 때문.
  *   그때 던지는 오류에는 err.needLogin이 서고 문구가 로그인 안내로 바뀐다.
+ * - 서버에 닿지 못하면 err.code가 "NETWORK", err.status가 0이다.
  */
 async function api(path, options = {}) {
   const headers = Object.assign({}, options.headers);
-  if (options.body) headers["Content-Type"] = "application/json";
+  // FormData(파일 올리기)는 비워 둔다 — boundary가 든 Content-Type을 브라우저가 직접 정해야 한다.
+  if (options.body && !(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
   const token = getToken();
   if (token) headers["Authorization"] = "Bearer " + token;
 
-  const res = await fetch(path, Object.assign({}, options, { headers }));
+  let res;
+  try {
+    res = await fetch(path, Object.assign({}, options, { headers }));
+  } catch (e) {
+    // 응답이 아예 없다(연결 끊김·서버 꺼짐). fetch가 던지는 것은 "Failed to fetch" 같은
+    // 브라우저 문구라, 그대로 두면 e.message를 띄우는 화면에 영어가 뜬다.
+    const err = new Error("서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.");
+    err.code = "NETWORK";
+    err.status = 0;
+    err.fieldErrors = [];
+    throw err;
+  }
 
   let body = null;
   try { body = await res.json(); } catch (e) { /* 본문 없는 응답(이론상 없음) */ }

@@ -591,10 +591,8 @@ async function generateWithoutSource() {
 }
 
 /**
- * 문서를 근거로 생성. 위 generateProblems와 달리 api() 헬퍼를 쓰지 않는다 —
- * 그 헬퍼는 body가 있으면 Content-Type을 application/json으로 박는데, multipart는
- * 브라우저가 boundary까지 포함해 직접 정해야 한다. 헬퍼를 고쳐 분기를 넣는 대신
- * 이 한 곳만 fetch를 직접 쓴다(호출부 하나 때문에 공용 헬퍼를 복잡하게 만들지 않는다).
+ * 문서를 근거로 생성. 파일을 함께 보내야 해서 JSON이 아니라 multipart(FormData)로 보낸다.
+ * api()는 FormData를 받으면 Content-Type을 비워 두므로 그대로 넘기면 된다.
  */
 async function generateWithSource(source, text, file) {
   const form = new FormData();
@@ -615,19 +613,10 @@ async function generateWithSource(source, text, file) {
   const kind = document.getElementById("gKind").value;
   if (kind) form.append("questionKind", kind);
 
-  // api() 헬퍼를 쓰지 않는다 — 그 헬퍼는 body가 있으면 Content-Type을 application/json으로
-  // 박는데, multipart는 브라우저가 boundary까지 포함해 직접 정해야 한다.
-  const headers = {};
-  const token = getToken();
-  if (token) headers["Authorization"] = "Bearer " + token;
-  const res = await fetch("/api/admin/llm-problems/generate-from-document", {
-    method: "POST", headers, body: form,
+  const drafts = await api("/api/admin/llm-problems/generate-from-document", {
+    method: "POST", body: form,
   });
-  const json = await res.json();
-  if (!res.ok || !json.success) {
-    throw new Error(json?.error?.message || "생성에 실패했습니다.");
-  }
-  return json.data.length;
+  return drafts.length;
 }
 
 /**
