@@ -1,0 +1,12 @@
+# 개발 프로필 — bootRun이 켠다(build.gradle). jar 실행(운영)에는 적용되지 않는다.
+#
+# 바인딩 값 로그를 기본 설정에 두면 운영 로그에 비밀번호 해시·복구 코드 해시가 그대로 찍힌다.
+# 비밀값은 여기 두지 않는다 — 이 파일은 저장소에 올라간다.
+spring:
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace   # 바인딩 파라미터 값 출력

@@ -163,6 +163,11 @@ springBoot {
 //
 // 환경변수나 Gradle 속성이 있으면 그쪽을 존중한다 — 운영 값으로 로컬 재현을 해 볼 수 있게.
 tasks.named('bootRun') {
+    // SQL·바인딩 값 로그는 개발 프로필에만 있다(application-dev.yml). 다른 프로필을 주면 그쪽을 따른다.
+    if (!System.getenv('SPRING_PROFILES_ACTIVE') && !System.getProperty('spring.profiles.active')) {
+        systemProperty 'spring.profiles.active', 'dev'
+    }
+
     String apiKey = project.findProperty('anthropicApiKey') ?: System.getenv('ANTHROPIC_API_KEY')
     if (apiKey) {
         environment 'ANTHROPIC_API_KEY', apiKey

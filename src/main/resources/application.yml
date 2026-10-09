@@ -17,7 +17,7 @@ spring:
         format_sql: true
         default_batch_fetch_size: 100   # N+1 완화 (로드맵1에서 QueryDSL로 본격 처리)
     open-in-view: false                  # 지연로딩 경계를 서비스 계층으로 명확히
-    show-sql: true
+    # SQL 로그는 여기서 켜지 않는다 — application-dev.yml(개발 프로필)에만 있다.
 
   # 관리자 문서 업로드(문제 생성 근거)용 상한. 기본값(파일 1MB)에 기대지 않고 명시한다 —
   # 기본값은 조용히 바뀔 수 있고, 이 값은 "요금이 걸린 입구"라 눈에 보이는 곳에 있어야 한다.
@@ -81,8 +81,7 @@ jwt:
 # 요청 제한 (로드맵 3) — 토큰 버킷. 설계는 docs/09, 결정 배경은 ADR-0003.
 # capacity = 순간 버스트 허용량, refill-tokens/refill-period-seconds = 장기 평균 속도.
 ratelimit:
-  enabled: true                  # 부하 테스트·디버깅 시 false로 임시 해제 가능
-  auth:                          # 로그인/회원가입/재발급 — IP당. 무차별 대입 방어가 목적
+  enabled: true                  # 부하 테스트·디버깅 시 false로 임시 해제 가능  auth:                          # 로그인/회원가입/재발급 — IP당. 무차별 대입 방어가 목적
     capacity: 5
     refill-tokens: 5
     refill-period-seconds: 60    # = 분당 5회
@@ -285,8 +284,3 @@ management:
     # 자라는 것을 아무도 감시하지 않는다.
     env:
       enabled: false
-
-logging:
-  level:
-    org.hibernate.SQL: debug
-    org.hibernate.orm.jdbc.bind: trace   # 바인딩 파라미터 값 출력 (개발용)
