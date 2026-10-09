@@ -1,0 +1,221 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-10-10",
+  "generatedAt" : "2026-10-09T21:38:27.712232347Z",
+  "domain" : "DATABASE",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5",
+  "documentSlug" : "phantom-read-isolation-levels",
+  "problems" : [ {
+    "question" : "한 트랜잭션 안에서 같은 조건으로 두 번 조회했을 때, 두 번째 결과에만 처음에는 없던 행이 들어오는 현상을 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "한 트랜잭션 안에서 같은 조건으로 두 번 조회했을 때 두 번째 결과에 처음에는 없던 행이 들어오는 현상을 팬텀 리드라 한다. 다른 트랜잭션이 그 사이 조건에 맞는 행을 넣고 커밋했기 때문에 생기며, 없던 것이 나타난다고 해서 유령이라는 이름이 붙었다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "팬텀 리드",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "반복 불가능 읽기",
+      "correct" : false,
+      "rationale" : "이미 읽은 행의 값이 수정되어 달라지는 현상으로, 행 목록이 아니라 값이 변한다는 점에서 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "더티 리드",
+      "correct" : false,
+      "rationale" : "아직 커밋되지 않은 값을 읽는 현상이라, 커밋된 새 행이 끼어드는 경우와는 다른 문제다.",
+      "matchText" : ""
+    }, {
+      "text" : "스냅샷 읽기",
+      "correct" : false,
+      "rationale" : "시점의 모습을 고정해 두고 읽는 읽기 방식의 이름이지, 이상 현상의 이름이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**팬텀 리드(phantom read, 유령 읽기)** 는 한 트랜잭션 안에서 같은 조건으로 두 번 조회했을 때, 두 번째 결과에 처음에는 없던 행이 들어오는 현상이다.",
+    "title" : "반복 조회에서 없던 행이 등장하는 현상의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "커밋(commit)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "커밋은 트랜잭션 안에서 한 변경을 확정해 다른 트랜잭션에게도 보이게 만드는 선언이다. 확정 전과 확정 후가 구분된다는 사실이 더티 리드·팬텀 리드 같은 현상을 설명하는 출발점이 된다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "트랜잭션 안에서 한 변경을 확정해 다른 트랜잭션에게도 보이게 만드는 선언",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "트랜잭션 안의 변경을 전부 취소해 시작 전 상태로 되돌리는 선언",
+      "correct" : false,
+      "rationale" : "변경을 전부 취소해 시작 전 상태로 되돌리는 선언은 롤백이다.",
+      "matchText" : ""
+    }, {
+      "text" : "여러 조회·삽입·수정 문장을 하나의 작업 단위로 묶는 선언",
+      "correct" : false,
+      "rationale" : "여러 문장을 하나의 작업 단위로 묶은 것은 트랜잭션 자체의 정의다.",
+      "matchText" : ""
+    }, {
+      "text" : "남의 변경이 내 작업에 얼마나 비치게 할지 정하는 단계 설정",
+      "correct" : false,
+      "rationale" : "남의 변경이 얼마나 비치게 할지 정하는 것은 격리 수준이지 확정 선언이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**커밋(commit)** — 트랜잭션 안에서 한 변경을 확정해 다른 트랜잭션에게도 보이게 만드는 선언이다.",
+    "title" : "트랜잭션에서 커밋이 뜻하는 것",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "ACID 네 가지 가운데, 동시에 돌아가는 다른 트랜잭션의 중간 상태가 내 작업에 끼어들지 않는 성질을 가리키는 용어는?",
+    "answer" : "",
+    "explanation" : "ACID 가운데 동시에 돌아가는 다른 트랜잭션의 중간 상태가 내 작업에 끼어들지 않는 성질이 격리성이다. 앞의 세 성질은 트랜잭션 하나만 봐도 설명되지만, 격리성은 상대가 있어야 격리할 대상이 생기므로 유독 다루기가 까다롭다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "격리성(isolation)",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "원자성(atomicity)",
+      "correct" : false,
+      "rationale" : "묶음 안의 모든 문장이 다 되거나 하나도 안 된 상태로 끝나는 성질이라, 동시 실행과는 다른 보장이다.",
+      "matchText" : ""
+    }, {
+      "text" : "지속성(durability)",
+      "correct" : false,
+      "rationale" : "커밋한 변경이 서버가 꺼져도 남는 성질이므로 장애 이후의 보존에 관한 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "일관성(consistency)",
+      "correct" : false,
+      "rationale" : "트랜잭션이 끝난 뒤에도 정해 둔 규칙을 어긴 자료가 남지 않는 성질을 가리킨다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "격리성(isolation) | 동시에 돌아가는 다른 트랜잭션의 중간 상태가 내 작업에 끼어들지 않는다 | 칸막이가 있는 열람실에서 옆자리 답안이 보이지 않는다",
+    "title" : "ACID 중 동시 실행과 관련된 성질",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "더티 리드(dirty read)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "더티 리드는 다른 트랜잭션이 아직 커밋하지 않은 변경을 읽는 현상이다. 그 트랜잭션이 롤백하면 내가 읽은 값은 존재한 적 없는 값이 되어 버린다는 점이 이 현상의 핵심 위험이다. (입문편의 '세 가지 읽기 이상 현상이 갈라지는 지점' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "다른 트랜잭션이 아직 커밋하지 않은 변경을 읽는 현상",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "이미 읽은 행의 값이 다시 읽었을 때 달라져 있는 현상",
+      "correct" : false,
+      "rationale" : "커밋된 수정 때문에 이미 읽은 행의 값이 달라지는 것은 반복 불가능 읽기다.",
+      "matchText" : ""
+    }, {
+      "text" : "같은 조건의 조회 결과에 없던 행이 끼어드는 현상",
+      "correct" : false,
+      "rationale" : "조건에 맞는 행의 목록이 달라지는 것은 팬텀 리드이며, 끼어든 행은 정상 커밋된 행이다.",
+      "matchText" : ""
+    }, {
+      "text" : "트랜잭션 시작 시점의 모습을 고정해 그 뒤 변경을 보지 않는 현상",
+      "correct" : false,
+      "rationale" : "트랜잭션 시작 시점의 모습을 고정해 읽는 것은 스냅샷 읽기라는 읽기 방식이지 이상 현상이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**더티 리드(dirty read, 오염 읽기)** — 다른 트랜잭션이 아직 커밋하지 않은 변경을 읽는 현상이다.",
+    "title" : "더티 리드가 가리키는 읽기 이상 현상",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "행 하나가 아니라 조건에 맞는 자리 전체를 잠가, 그 조건에 맞는 새 행을 남이 끼워 넣지 못하게 하는 잠금을 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "행 하나가 아니라 조건에 맞는 자리 전체를 잠가, 그 조건에 맞는 새 행을 남이 끼워 넣지 못하게 하는 잠금을 범위 잠금이라 한다. 행 단위 잠금은 조회 시점에 존재하는 행에만 걸리므로 아직 없는 행의 삽입은 막지 못한다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "범위 잠금",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "스냅샷 읽기",
+      "correct" : false,
+      "rationale" : "특정 시점의 모습을 고정해 두고 읽는 방식의 이름이지, 새 행의 삽입을 막는 잠금이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "유일성 제약",
+      "correct" : false,
+      "rationale" : "지정한 열 조합의 값이 겹치지 않게 막는 규칙이며, 조건에 맞는 자리 전체를 잠그는 잠금은 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "격리 수준",
+      "correct" : false,
+      "rationale" : "남의 변경이 얼마나 비치게 할지 정해 둔 단계의 이름이고, 잠금 자체를 가리키는 말이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**범위 잠금** — 행 하나가 아니라 \"조건에 맞는 자리 전체\"를 잠가, 그 조건에 맞는 새 행을 남이 끼워 넣지 못하게 하는 잠금이다.",
+    "title" : "조건에 맞는 자리 전체를 잠그는 잠금의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "조건에 맞는 행을 모아 돌려준 묶음을 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "조건에 맞는 행을 모아 돌려준 묶음을 결과 집합이라 한다. 결과 집합은 미리 만들어져 있는 물건이 아니라 요청이 올 때마다 그 순간의 테이블을 보고 새로 만들어 내는 것이어서, 같은 요청을 두 번 보내도 같다는 보장이 없다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "결과 집합",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "테이블",
+      "correct" : false,
+      "rationale" : "자료를 담아 둔 표 전체를 가리키는 말이라, 조건에 맞춰 돌려받은 묶음과는 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "행",
+      "correct" : false,
+      "rationale" : "표의 가로 한 줄 하나를 가리키는 단위이므로 여러 줄을 모은 묶음의 이름이 될 수 없다.",
+      "matchText" : ""
+    }, {
+      "text" : "세션",
+      "correct" : false,
+      "rationale" : "프로그램이 데이터베이스에 접속해 문장을 주고받는 연결 하나를 가리키는 말이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "돌려받은 그 묶음을 결과 집합이라 부른다.",
+    "title" : "조회로 돌려받은 행 묶음을 부르는 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "스냅샷 읽기(snapshot read)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "스냅샷 읽기는 트랜잭션이 시작한 시점의 모습을 사진처럼 고정해 두고, 그 뒤 남이 커밋한 변경은 보지 않는 읽기 방식이다. 읽은 값이 트랜잭션 내내 같아야 할 때 쓰인다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "트랜잭션이 시작한 시점의 모습을 고정해 두고, 그 뒤 남이 커밋한 변경은 보지 않는 읽기 방식",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "조회할 때마다 그 시점에 커밋이 끝난 최신 값을 다시 읽어 오는 방식",
+      "correct" : false,
+      "rationale" : "조회할 때마다 그 시점의 최신 커밋 상태를 보는 것은 고정과 반대되는 동작이다.",
+      "matchText" : ""
+    }, {
+      "text" : "조건에 맞는 범위를 잠가 새 행의 삽입을 기다리게 만드는 방식",
+      "correct" : false,
+      "rationale" : "조건에 맞는 범위를 잠가 삽입을 막는 것은 범위 잠금이 하는 일이다.",
+      "matchText" : ""
+    }, {
+      "text" : "다른 트랜잭션이 커밋하지 않은 값까지 걸러 내지 않고 돌려주는 방식",
+      "correct" : false,
+      "rationale" : "커밋 전 값까지 걸러 내지 않고 돌려주는 것은 가장 낮은 격리 수준의 동작에 해당한다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**스냅샷 읽기(snapshot read)** — 트랜잭션이 시작한 시점의 모습을 사진처럼 고정해 두고, 그 뒤 남이 커밋한 변경은 보지 않는 읽기 방식이다.",
+    "title" : "스냅샷 읽기가 가리키는 읽기 방식",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 6,
+    "type" : "CHOICE_CUE_LEAK",
+    "message" : "질문을 가리고 보기만 봐도 정답을 고를 수 있습니다",
+    "detail" : "1번만 유독 길고 쉼표로 절을 덧붙여 설명조로 구체적이다(나머지는 한 문장 단정형)"
+  } ]
+}
