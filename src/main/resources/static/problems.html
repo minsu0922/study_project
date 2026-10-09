@@ -102,7 +102,6 @@ try {
 
 renderShell({ active: "problems", title: "문제" });
 
-const DOMAIN_PREVIEW = 5;   // 사이드바 기본 노출 수 — 12개를 다 펴면 사이드바가 본문보다 길어진다
 const PAGE_SIZE = 20;
 
 /* 상태 필터 넷. 값이 null이면 서버에 안 보낸다(= 전체). */
@@ -127,10 +126,6 @@ let selectedDomain = incomingDomain();
 let selectedLevels = new Set();
 let selectedState = "";
 let page = 0;
-/* 들어올 때 분야가 지정됐으면 사이드바를 펼친 채로 연다. 11개 중 앞 5개만 보이는 상태에서
- * 뒤쪽 분야(예: 통합시나리오)로 들어오면 목록은 걸러졌는데 <걸린 필터가 화면에 없어>
- * 문제가 몇 개 없는 것처럼 보인다. */
-let domainsExpanded = selectedDomain !== null;
 let summary = null;
 
 /**
@@ -231,9 +226,9 @@ function renderStats() {
 function renderDomains() {
   const rows = summary?.domains ?? [];
   const max = rows.reduce((m, d) => Math.max(m, d.solved), 0);
-  const shown = domainsExpanded ? rows : rows.slice(0, DOMAIN_PREVIEW);
 
-  const html = shown.map(d => `
+  // 분야를 전부 펴서 보여 준다. 일부만 보이면 걸린 필터가 화면 밖에 숨는 일이 생긴다.
+  const html = rows.map(d => `
     <button class="pl-domain" data-domain="${d.domain}"
             aria-pressed="${selectedDomain === d.domain}"
             aria-label="${escapeHtml(d.label)}, 맞힌 문제 ${d.solved}개">
@@ -241,11 +236,7 @@ function renderDomains() {
       <span class="pl-bar"><i style="width:${max === 0 ? 0 : Math.round(d.solved / max * 100)}%"></i></span>
     </button>`).join("");
 
-  const more = rows.length > DOMAIN_PREVIEW
-    ? `<button class="pl-more" id="moreBtn">${domainsExpanded ? "접기" : `+ ${rows.length - DOMAIN_PREVIEW}개 더 보기`}</button>`
-    : "";
-
-  document.getElementById("domains").innerHTML = html + more;
+  document.getElementById("domains").innerHTML = html;
 }
 
 function initFilters() {
@@ -258,8 +249,6 @@ function initFilters() {
 
   // 이벤트 위임 — 사이드바는 다시 그려지므로 버튼마다 붙이면 그릴 때마다 다시 붙여야 한다.
   document.getElementById("domains").addEventListener("click", e => {
-    const more = e.target.closest("#moreBtn");
-    if (more) { domainsExpanded = !domainsExpanded; renderDomains(); return; }
     const btn = e.target.closest(".pl-domain");
     if (!btn) return;
     // 같은 분야를 다시 누르면 해제 — 필터를 지우는 별도 버튼 없이 되돌릴 수 있다.
