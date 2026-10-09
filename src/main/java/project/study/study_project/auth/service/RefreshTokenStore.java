@@ -1,7 +1,7 @@
 package project.study.study_project.auth.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -21,17 +21,29 @@ import java.util.UUID;
  * <p><b>왜 Redis인가</b>: TTL을 키에 붙이면 만료 청소가 공짜(RDB면 만료 행 배치 삭제 필요),
  * 조회가 메모리 속도, 그리고 인증 상태가 앱 서버 밖에 있으니 서버를 여러 대로 늘려도 공유된다.
  *
- * <p>키 구조: {@code refresh:{token}} → 값: userId. 토큰 자체가 키라 조회가 O(1)이고,
+ * <p>키 구조: {@code refresh:{token}} → 값: {@code userId:발급시각}. 토큰 자체가 키라 조회가 O(1)이고,
  * 사용자당 여러 기기 로그인(토큰 여러 개)도 자연스럽게 허용된다.
+ *
+ * <p>사용자의 토큰을 한꺼번에 끊을 때는 토큰을 찾아 지우지 않고 {@code refresh-cutoff:{userId}}에
+ * 시각을 적는다. 그 시각 이전에 발급된 토큰은 소비할 때 무효로 본다 — 사용자별 토큰 목록을
+ * 따로 들고 있으면 발급·소비마다 두 키를 맞춰야 하고, 어긋난 목록은 끊기지 않는 토큰을 남긴다.
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class RefreshTokenStore {
 
     private static final String KEY_PREFIX = "refresh:";
+    private static final String CUTOFF_PREFIX = "refresh-cutoff:";
 
     private final StringRedisTemplate redisTemplate;
+    /** 기준 시각의 수명. 가장 오래 사는 토큰만큼만 남기면 된다 — 그 뒤에는 끊을 토큰이 없다. */
+    private final Duration cutoffTtl;
+
+    public RefreshTokenStore(StringRedisTemplate redisTemplate,
+                             @Value("${jwt.refresh-token-validity-seconds}") long refreshValiditySeconds) {
+        this.redisTemplate = redisTemplate;
+        this.cutoffTtl = Duration.ofSeconds(refreshValiditySeconds);
+    }
 
     /**
      * 새 refresh 토큰 발급. UUID 2개를 이어 붙여 추측 불가능한 256비트급 랜덤 값을 만든다.
@@ -42,7 +54,8 @@ public class RefreshTokenStore {
     public String issue(Long userId, Duration validity) {
         String token = UUID.randomUUID().toString() + UUID.randomUUID().toString();
         try {
-            redisTemplate.opsForValue().set(KEY_PREFIX + token, String.valueOf(userId), validity);
+            redisTemplate.opsForValue().set(KEY_PREFIX + token,
+                    userId + ":" + System.currentTimeMillis(), validity);
             return token;
         } catch (DataAccessException e) {
             log.warn("Redis 장애로 refresh 토큰 발급 생략(access 전용 로그인): {}", e.getMessage());
@@ -65,8 +78,17 @@ public class RefreshTokenStore {
      */
     public Long consume(String token) {
         try {
-            String userId = redisTemplate.opsForValue().getAndDelete(KEY_PREFIX + token);
-            return userId == null ? null : Long.valueOf(userId);
+            String value = redisTemplate.opsForValue().getAndDelete(KEY_PREFIX + token);
+            if (value == null) {
+                return null;
+            }
+            // 발급시각이 없는 값은 이 형식이 생기기 전에 발급된 토큰이다. 0으로 보면
+            // 기준 시각이 한 번이라도 적힌 사용자에게서는 무효가 된다.
+            int colon = value.indexOf(':');
+            Long userId = Long.valueOf(colon < 0 ? value : value.substring(0, colon));
+            long issuedAt = colon < 0 ? 0L : Long.parseLong(value.substring(colon + 1));
+            String cutoff = redisTemplate.opsForValue().get(CUTOFF_PREFIX + userId);
+            return cutoff != null && issuedAt <= Long.parseLong(cutoff) ? null : userId;
         } catch (DataAccessException e) {
             log.warn("Redis 장애로 refresh 토큰 검증 불가 — 무효 토큰과 동일하게 취급(재로그인 유도): {}", e.getMessage());
             return null;
@@ -79,6 +101,22 @@ public class RefreshTokenStore {
             redisTemplate.delete(KEY_PREFIX + token);
         } catch (DataAccessException e) {
             log.warn("Redis 장애로 refresh 토큰 폐기 실패(TTL 만료에 맡김): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 그 사용자에게 지금까지 발급된 토큰을 전부 무효로 만든다 — 비밀번호가 바뀐 순간에 부른다.
+     * 비밀번호를 바꾸는 이유가 "누가 내 계정을 쓰는 것 같다"인데 그 사람의 토큰이 14일 더 통하면 안 된다.
+     *
+     * <p>Redis 장애 시에는 경고만 남긴다. 여기서 예외를 올리면 비밀번호 변경이 통째로 실패하는데,
+     * 바뀐 비밀번호라도 남는 쪽이 낫다.
+     */
+    public void revokeAll(Long userId) {
+        try {
+            redisTemplate.opsForValue().set(CUTOFF_PREFIX + userId,
+                    String.valueOf(System.currentTimeMillis()), cutoffTtl);
+        } catch (DataAccessException e) {
+            log.warn("Redis 장애로 사용자 refresh 토큰 일괄 폐기 실패: userId={} — {}", userId, e.getMessage());
         }
     }
 }

@@ -295,7 +295,10 @@ function wirePasswordChange() {
       [cur, pw, pw2].forEach(el => { el.value = ""; el.classList.remove("invalid"); });
       err.hidden = true;
       msg.innerHTML = `<div class="alert" style="background:var(--correct-bg); color:var(--correct-fg)">
-        비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.</div>`;
+        비밀번호를 바꿨습니다. 새 비밀번호로 다시 로그인해 주세요.</div>`;
+      // 서버가 이 계정의 refresh 토큰을 전부 끊었다. 그대로 두면 한 시간 안에 까닭 없이 로그아웃된다.
+      clearLogin();
+      setTimeout(() => { location.href = "login.html"; }, 1500);
     } catch (e2) {
       showErrorAlert(msg, e2);
     } finally {

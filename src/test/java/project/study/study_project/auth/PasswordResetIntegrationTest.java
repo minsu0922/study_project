@@ -49,6 +49,19 @@ class PasswordResetIntegrationTest {
     }
 
     @Test
+    @DisplayName("재설정 전에 받은 refresh 토큰으로는 재발급이 안 된다")
+    void resetRevokesEarlierRefreshTokens() {
+        SignupResponse signup = signup();
+        String before = authService.login(new LoginRequest(signup.username(), TestFixtures.PASSWORD)).refreshToken();
+
+        authService.resetPassword(new PasswordResetRequest(signup.username(), signup.recoveryCode(), NEW_PASSWORD));
+
+        assertThatThrownBy(() -> authService.refresh(before))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.AUTH_005));
+    }
+
+    @Test
     @DisplayName("줄표를 빼거나 소문자로 쳐도 같은 코드로 본다")
     void codeIsNormalized() {
         SignupResponse signup = signup();

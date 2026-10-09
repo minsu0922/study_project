@@ -144,6 +144,7 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_006));
 
         user.changePassword(passwordEncoder.encode(request.newPassword()));
+        refreshTokenStore.revokeAll(user.getId());
         String next = RecoveryCode.generate();
         user.changeRecoveryCodeHash(passwordEncoder.encode(RecoveryCode.normalize(next)));
         log.info("복구 코드로 비밀번호 재설정: userId={}", user.getId());   // 값은 남기지 않는다

@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.auth.jwt.JwtTokenProvider;
+import project.study.study_project.auth.service.RefreshTokenStore;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
@@ -23,6 +24,7 @@ import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -63,6 +65,7 @@ class AccountIntegrationTest {
     @Autowired JwtTokenProvider jwtTokenProvider;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired ObjectMapper objectMapper;
+    @Autowired RefreshTokenStore refreshTokenStore;
 
     private static final String 지금비밀번호 = "OldPass12345";
     private static final String 새비밀번호 = "NewPass67890";
@@ -96,6 +99,40 @@ class AccountIntegrationTest {
         assertThat(바뀐.getPasswordHash()).isNotEqualTo(새비밀번호);
         assertThat(passwordEncoder.matches(새비밀번호, 바뀐.getPasswordHash())).isTrue();
         assertThat(passwordEncoder.matches(지금비밀번호, 바뀐.getPasswordHash())).isFalse();
+    }
+
+    @Test
+    @DisplayName("비밀번호를 바꾸면 그 전에 받은 refresh 토큰은 못 쓰고, 그 뒤에 받은 것은 쓴다")
+    void changePasswordRevokesEarlierRefreshTokens() throws Exception {
+        String 옛토큰 = refreshTokenStore.issue(user.getId(), Duration.ofMinutes(1));
+        String 남의토큰 = refreshTokenStore.issue(user.getId() + 1, Duration.ofMinutes(1));
+
+        mockMvc.perform(patch("/api/me/password")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("currentPassword", 지금비밀번호, "newPassword", 새비밀번호))))
+                .andExpect(status().isOk());
+
+        Thread.sleep(5);   // 기준 시각과 같은 밀리초에 발급되면 옛 토큰으로 본다
+        String 새토큰 = refreshTokenStore.issue(user.getId(), Duration.ofMinutes(1));
+
+        assertThat(refreshTokenStore.consume(옛토큰)).isNull();
+        assertThat(refreshTokenStore.consume(새토큰)).isEqualTo(user.getId());
+        assertThat(refreshTokenStore.consume(남의토큰)).isEqualTo(user.getId() + 1);
+    }
+
+    @Test
+    @DisplayName("지금 비밀번호가 틀리면 refresh 토큰도 그대로다")
+    void wrongCurrentPasswordKeepsRefreshTokens() throws Exception {
+        String refresh = refreshTokenStore.issue(user.getId(), Duration.ofMinutes(1));
+
+        mockMvc.perform(patch("/api/me/password")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("currentPassword", "틀린비밀번호1", "newPassword", 새비밀번호))))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(refreshTokenStore.consume(refresh)).isEqualTo(user.getId());
     }
 
     @Test

@@ -7,6 +7,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.auth.service.RefreshTokenStore;
 import project.study.study_project.dailyquiz.repository.DailyQuizRepository;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -49,6 +50,7 @@ public class AccountService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenStore refreshTokenStore;
 
     private final SubmissionRepository submissionRepository;
     private final ReviewItemRepository reviewItemRepository;
@@ -112,6 +114,8 @@ public class AccountService {
             throw new BusinessException(ErrorCode.AUTH_002);
         }
         user.changePassword(passwordEncoder.encode(request.newPassword()));
+        // 이 기기의 토큰도 함께 끊긴다 — 화면이 다시 로그인하게 한다(mypage.html).
+        refreshTokenStore.revokeAll(userId);
         log.info("비밀번호 변경: userId={}", userId);   // 값은 절대 남기지 않는다
     }
 
