@@ -162,6 +162,7 @@ async function loadDoc() {
 
     buildToc(bodyEl);
     renderPracticeLink(d);
+    renderDiagrams(bodyEl);   // 기다리지 않는다 — 그림은 늦게 와도 글은 먼저 읽힌다
 
     if (d.source) {
       document.getElementById("source").innerHTML =
@@ -351,6 +352,112 @@ function markCurrentSection(절) {
   // pick()은 절이 그대로면 일찍 돌아오므로, 자리 맞추기는 따로 한 번 더 부른다.
   window.addEventListener("resize", () => { if (표시중) keepInView(표시중); }, { passive: true });
   pick();
+}
+
+/**
+ * 그림 — 본문의 ```mermaid 코드블록을 그림으로 바꿔 그린다(2026-10-10).
+ *
+ * <h2>왜 필요했나</h2>
+ *
+ * <p>문서 30편에 그림이 한 장도 없었다. 연결을 맺는 순서나 요청이 갈라지는 길 같은 것을
+ * 1만 자짜리 글로만 따라가야 했다. 생성 프롬프트가 이제 입문편마다 그림 하나를 mermaid
+ * 문법으로 쓴다({@code ClaudeDocumentGenerator}의 [그림] 절).
+ *
+ * <h2>라이브러리는 그림이 있는 문서에서만 받는다</h2>
+ *
+ * <p>mermaid는 2.5MB다. 지금 있는 30편에는 그림이 없으므로 head에 걸어 두면 그 문서들이
+ * 쓰지도 않을 파일을 매번 받는다. 그래서 블록을 먼저 찾고, 있을 때만 스크립트를 붙인다.
+ * integrity를 함께 붙이는 이유는 위 marked·DOMPurify와 같다 — 버전을 올리면 해시도 바꾼다.
+ *
+ * <h2>못 그리면 원문을 그대로 둔다</h2>
+ *
+ * <p>모델이 쓴 문법이 한 군데만 틀려도 그림이 통째로 안 나온다. 그때 오류 그림을 띄우는 대신
+ * 코드블록을 손대지 않고 남긴다 — 화살표가 적힌 원문은 읽을 수라도 있다. CDN이 막힌 경우도 같다.
+ * 그래서 <b>그리기에 성공한 뒤에야</b> 코드블록을 그림으로 갈아 끼운다.
+ *
+ * <p>securityLevel은 strict다. 본문은 모델이 쓴 초안에서 오므로, 그림 안의 글에 든 태그나
+ * 클릭 동작이 그대로 살아나면 안 된다.
+ */
+const MERMAID_SRC = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
+const MERMAID_INTEGRITY = "sha384-rbtjAdnIQE/aQJGEgXrVUlMibdfTSa4PQju4HDhN3sR2PmaKFzhEafuePsl9H/9I";
+
+let 그림순번 = 0;   // mermaid.render가 요구하는 id — 다시 그릴 때도 겹치면 안 된다
+
+function loadMermaid() {
+  if (window.mermaid) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = MERMAID_SRC;
+    s.integrity = MERMAID_INTEGRITY;
+    s.crossOrigin = "anonymous";
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+/** 지금 화면이 다크인가 — 사용자가 고른 값이 먼저고, 안 골랐으면 기기 설정을 따른다(shell.js와 같은 순서). */
+function isDarkTheme() {
+  const t = document.documentElement.dataset.theme;
+  return t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+
+async function renderDiagrams(bodyEl) {
+  const blocks = [...bodyEl.querySelectorAll("pre > code.language-mermaid")];
+  if (blocks.length === 0) return;
+  try {
+    await loadMermaid();
+  } catch (e) {
+    return;   // 못 받으면 코드블록이 그대로 남는다
+  }
+
+  // 그린 그림과 그 원문. 테마가 바뀌면 같은 원문으로 다시 그린다.
+  const drawn = [];
+
+  async function draw(source, holder) {
+    // 문법부터 본다. render에 바로 넘기면 틀렸을 때 mermaid가 오류 그림을 body에 붙여 놓는다.
+    if (!(await mermaid.parse(source, { suppressErrors: true }))) return false;
+    const id = "doc-diagram-" + (++그림순번);
+    try {
+      const { svg } = await mermaid.render(id, source);
+      holder.innerHTML = svg;
+      return true;
+    } catch (e) {
+      document.getElementById("d" + id)?.remove();   // 실패하면 남는 임시 상자
+      return false;
+    }
+  }
+
+  function configure() {
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: isDarkTheme() ? "dark" : "neutral",
+      fontFamily: getComputedStyle(document.body).fontFamily,
+    });
+  }
+
+  configure();
+  for (const code of blocks) {
+    const source = code.textContent;
+    const figure = document.createElement("figure");
+    figure.className = "doc-diagram";
+    if (await draw(source, figure)) {
+      code.parentElement.replaceWith(figure);
+      drawn.push({ source, figure });
+    }
+  }
+  if (drawn.length === 0) return;
+
+  // 테마를 바꾸면 그림도 다시 그린다. 안 그러면 어두운 바탕에 밝은 그림이 남는다.
+  // shell.js는 테마를 바꿀 때 <html>의 data-theme만 고치고 따로 알리지 않으므로 그 속성을 지켜본다.
+  const redraw = async () => {
+    configure();
+    for (const d of drawn) await draw(d.source, d.figure);
+  };
+  new MutationObserver(redraw).observe(document.documentElement,
+    { attributes: true, attributeFilter: ["data-theme"] });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
 }
 
 /**

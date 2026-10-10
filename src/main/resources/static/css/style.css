@@ -1907,6 +1907,10 @@ body.admin-shell {
 .doc-body code { background: var(--fill); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
 .doc-body pre code { background: none; padding: 0; }   /* 코드블록 안에서 배경이 두 겹으로 깔리는 것 방지 */
 .doc-body img { max-width: 100%; }
+/* 그림(mermaid) — document.html의 renderDiagrams가 코드블록을 이 상자로 갈아 끼운다.
+   넓은 그림은 상자 안에서만 옆으로 굴린다. 표와 같은 처리다(본문 전체가 옆으로 밀리지 않게). */
+.doc-body .doc-diagram { margin: 16px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; text-align: center; }
+.doc-body .doc-diagram svg { max-width: 100%; height: auto; }
 
 /* 제목 위계 — 생성 프롬프트가 "### 왜 이렇게 설계됐는가"를 쓰게 바뀌면서 필요해졌다.
  * 전에는 그 자리를 **굵은 글씨** 한 줄로 썼는데, 마크다운에서 그건 그냥 문단이라
