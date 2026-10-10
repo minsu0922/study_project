@@ -1,0 +1,226 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-10-10",
+  "generatedAt" : "2026-10-10T08:45:57.478400400Z",
+  "domain" : "DS_ALGORITHM",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5",
+  "documentSlug" : "time-complexity-big-o-for-beginners",
+  "problems" : [ {
+    "question" : "시간 복잡도(time complexity)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "시간 복잡도는 입력 크기 n이 커질 때 알고리즘이 수행하는 기본 연산 횟수가 어떤 증가율로 늘어나는지를 나타낸 것이다. 기계가 달라져도 변하지 않는 것이 시킨 일의 개수이므로, 그 개수가 n에 따라 몇 배로 느는지만 남겨 환경과 무관하게 빠르기를 말할 수 있다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "입력 크기가 커질 때 기본 연산 횟수가 늘어나는 증가율로 나타낸 값",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "코드를 여러 번 실행해 평균을 낸 실제 소요 시간",
+      "correct" : false,
+      "rationale" : "스톱워치로 잰 실제 시간을 복잡도로 착각한 설명이다. 시간 복잡도는 기계 차이를 일부러 버린 값이라 초 단위를 말하지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "알고리즘이 추가로 사용하는 메모리 양의 증가율",
+      "correct" : false,
+      "rationale" : "추가로 쓰는 메모리 양의 증가율을 뜻하는 공간 복잡도와 뒤섞은 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "기본 연산 한 번을 처리하는 데 걸리는 기계별 시간",
+      "correct" : false,
+      "rationale" : "기본 연산 한 번의 소요 시간은 기계·언어마다 달라지는 값이고, 복잡도는 그런 차이를 떼어낸 뒤에 남는 것이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**시간 복잡도(time complexity)** 는 입력 크기 n이 커질 때 알고리즘이 수행하는 기본 연산 횟수가 어떤 증가율로 늘어나는지를 나타낸 것이다.",
+    "title" : "시간 복잡도가 나타내는 대상",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "O(n²)처럼 적는 빅오 표기법(big-O notation)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "빅오 표기법은 시간 복잡도를 적는 약속된 표기다. O(n²)라고 쓰면 n이 충분히 커지면 연산 횟수가 n²의 몇 배 안쪽에 머문다는 뜻이며, 그 몇 배가 얼마인지는 따지지 않는다. 즉 넘지 않는 선을 적는 표기다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "n이 충분히 커졌을 때 연산 횟수가 머무는 상한을 적는 약속이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "상수 계수까지 그대로 살려 적어 기계 차이를 함께 표현한다",
+      "correct" : false,
+      "rationale" : "상수 계수는 기계와 언어에 따라 달라지는 값이라 빅오에서는 떼어 버린다. 그 값을 남기면 스톱워치를 버린 이유가 사라진다.",
+      "matchText" : ""
+    }, {
+      "text" : "최악의 경우만을 가리키는 표기라 최선의 경우에는 쓸 수 없다",
+      "correct" : false,
+      "rationale" : "빅오는 상한을 적는 표기이고 최악·평균·최선은 어떤 입력을 놓고 따지느냐의 구분이라, 최선의 경우에도 빅오를 쓸 수 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "입력이 작을 때의 연산 횟수를 기준으로 알고리즘 순위를 매긴다",
+      "correct" : false,
+      "rationale" : "빅오는 n이 작을 때가 아니라 충분히 커진 상황을 놓고 비교하는 표기다. 작은 입력에서는 순위가 뒤집히기도 한다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **빅오 표기법(big-O notation)** — 시간 복잡도를 적는 약속된 표기다. `O(n²)`라고 쓰면 \"n이 충분히 커지면 연산 횟수가 n²의 몇 배 안쪽에 머문다\"는 뜻이며, 그 몇 배가 얼마인지는 따지지 않는다.",
+    "title" : "빅오 표기법이 적는 값의 성격",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "점근적 분석(asymptotic analysis)이 가리키는 것은?",
+    "answer" : "",
+    "explanation" : "점근적 분석은 n이 작을 때가 아니라 n이 충분히 커진 상황만 놓고 비교하는 방식이며, 시간 복잡도는 이 방식 위에서 정의된다. 그래서 작은 입력에서 순위가 뒤집히는 예외는 논외로 두고 증가율만으로 알고리즘을 견준다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "n이 충분히 커진 상황만 놓고 알고리즘을 비교하는 방식",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "같은 코드를 여러 기계에서 돌려 평균 시간을 내는 방식",
+      "correct" : false,
+      "rationale" : "여러 기계에서 재어 평균을 내는 것은 스톱워치로 재는 방식이며, 환경 차이가 그대로 섞여 들어 재현되지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "연산마다 걸리는 시간을 재어 가중치를 매기는 방식",
+      "correct" : false,
+      "rationale" : "연산마다 걸리는 시간 차이는 고정된 배수인 상수 계수로 보고 버리는 것이 이 방식의 전제다.",
+      "matchText" : ""
+    }, {
+      "text" : "입력 분포를 가정해 평균 연산 횟수를 구하는 방식",
+      "correct" : false,
+      "rationale" : "입력 분포를 가정해 횟수를 구하는 것은 평균의 경우를 따지는 일이지, 입력이 커진 구간만 본다는 뜻은 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **점근적 분석(asymptotic analysis)** — n이 작을 때가 아니라 n이 충분히 커진 상황만 놓고 비교하는 방식이다. 시간 복잡도는 이 방식 위에서 정의한다.",
+    "title" : "점근적 분석이 비교하는 구간",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "입력 크기가 커져도 변하지 않고 곱해지기만 하는 고정된 배수를 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "덧셈 한 번과 나눗셈 한 번의 실제 소요 시간은 다르지만 그 차이는 어느 기계에서나 비슷한 몇 배 안쪽이다. 이렇게 입력이 커져도 변하지 않고 곱해지기만 하는 고정된 배수를 상수 계수라 부르며, 기계 차이를 떼어낼 때 이 값을 버린다. (입문편의 '2단계 — 시간 대신 일의 개수를 센다' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "상수 계수",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "최고차항",
+      "correct" : false,
+      "rationale" : "식에서 n이 커질 때 가장 빨리 커지는 항을 가리키는 말이라, 곱해지는 배수를 가리키지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "입력 크기 n",
+      "correct" : false,
+      "rationale" : "처리할 데이터의 양을 하나의 숫자로 나타낸 값이므로, 곱해지는 배수가 아니라 횟수를 세는 기준이다.",
+      "matchText" : ""
+    }, {
+      "text" : "기본 연산",
+      "correct" : false,
+      "rationale" : "비교나 덧셈처럼 한 번으로 세는 일의 단위를 뜻하는 말이어서, 배수를 가리키는 용어가 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "이런 고정된 배수를 **상수 계수(constant factor)** 라 부른다 — 입력이 커져도 변하지 않고 곱해지기만 하는 배수다.",
+    "title" : "연산 횟수 식에서 떼어내는 배수의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "값 하나를 비교하거나 배열에서 한 칸을 읽는 것처럼, 더 쪼개지 않고 한 번으로 세는 일의 단위를 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "연산 횟수를 세려면 무엇을 한 번으로 셀지 정해야 한다. 값 하나를 비교하거나 더하거나 배열에서 한 칸을 읽어 오는 것처럼 더 쪼개지 않고 한 번으로 세는 일의 단위가 기본 연산이며, 복잡도 계산은 이 단위를 고르는 데서 시작한다. (입문편의 '2단계 — 시간 대신 일의 개수를 센다' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "기본 연산",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "공간 복잡도",
+      "correct" : false,
+      "rationale" : "추가로 쓰는 메모리 양의 증가율을 뜻하는 말이라, 세는 일의 단위와는 다른 축의 개념이다.",
+      "matchText" : ""
+    }, {
+      "text" : "점근적 분석",
+      "correct" : false,
+      "rationale" : "n이 충분히 커진 상황만 놓고 비교하는 방식의 이름이어서, 무엇을 한 번으로 셀지를 가리키지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "최고차항",
+      "correct" : false,
+      "rationale" : "연산 횟수 식에서 가장 빨리 커지는 항을 뜻하는 말이므로, 세는 대상의 단위가 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **기본 연산(basic operation)** — 값 하나를 비교하거나, 더하거나, 배열에서 한 칸을 읽어 오는 것처럼 더 쪼개지 않고 \"한 번\"으로 세는 일의 단위다.",
+    "title" : "연산 횟수를 셀 때의 단위 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "연산 횟수를 식으로 적을 때 기준이 되는 입력 크기 n에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "연산 횟수를 식으로 적으려면 무엇을 기준으로 세는지부터 정해야 한다. 입력 크기 n은 알고리즘이 처리해야 할 데이터의 양을 하나의 숫자로 나타낸 값으로, 배열이면 원소 개수, 문자열이면 글자 수, 회원 목록이면 회원 수가 n이 된다. (입문편의 '3단계 — 입력 크기라는 자' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "처리해야 할 데이터의 양을 하나의 숫자로 나타낸 값이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "반복문이 몇 겹으로 중첩되어 있는지를 나타낸 값이다",
+      "correct" : false,
+      "rationale" : "중첩 깊이는 세는 대상이 아니다. 안쪽 반복이 정해진 횟수만 돌면 두 겹이어도 전체는 n에 비례한다.",
+      "matchText" : ""
+    }, {
+      "text" : "식에서 상수 계수를 떼고 남은 최고차항을 가리킨다",
+      "correct" : false,
+      "rationale" : "상수 계수를 떼고 남는 항은 최고차항이며, n은 그 식을 적기 전에 기준으로 삼는 데이터 양이다.",
+      "matchText" : ""
+    }, {
+      "text" : "기본 연산 하나가 실행되는 데 걸리는 시간을 뜻한다",
+      "correct" : false,
+      "rationale" : "연산 하나에 걸리는 시간은 기계마다 달라지는 값이라, 개수를 세는 기준으로 삼은 n과는 다른 것이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **입력 크기(input size), 보통 n으로 쓴다** — 알고리즘이 처리해야 할 데이터의 양을 하나의 숫자로 나타낸 값이다.",
+    "title" : "입력 크기 n이 가리키는 값",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "입력 크기가 2배가 될 때 연산 횟수가 4배가 되는 것처럼, 입력이 커질 때 횟수가 몇 배로 느는지를 나타내는 관계를 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "입력 크기가 커질 때 연산 횟수가 몇 배로 늘어나는지를 나타내는 관계가 증가율이다. n이 2배일 때 횟수도 2배면 n에 비례하고 4배가 되면 n²에 비례한다. 빠른 컴퓨터로 바꾸면 곱해지는 배수만 줄 뿐 이 관계 자체는 그대로여서 비교 기준이 된다. (입문편의 '4단계 — 남는 것은 증가율' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "증가율",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "공간 복잡도",
+      "correct" : false,
+      "rationale" : "추가로 쓰는 메모리 양이 커지는 정도를 뜻하는 말이라, 연산 횟수가 느는 관계를 가리키지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "최고차항",
+      "correct" : false,
+      "rationale" : "식에서 n이 커질 때 가장 빨리 커지는 항 하나를 가리키는 말이지, 몇 배로 느는지의 관계 자체는 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "점근적 분석",
+      "correct" : false,
+      "rationale" : "n이 충분히 커진 구간만 놓고 비교한다는 방식의 이름이어서, 늘어나는 비율을 가리키는 말이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **증가율(growth rate)** — 입력 크기가 커질 때 연산 횟수가 몇 배로 늘어나는지를 나타내는 관계다.",
+    "title" : "입력이 커질 때 횟수가 느는 관계의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "CHOICE_CUE_LEAK",
+    "message" : "질문을 가리고 보기만 봐도 정답을 고를 수 있습니다",
+    "detail" : "1번만 '입력 크기가 커질 때 ~ 증가율로 나타낸 값'처럼 조건과 설명을 모두 담아 유독 길고 구체적이다"
+  }, {
+    "problemIndex" : 1,
+    "type" : "CHOICE_CUE_LEAK",
+    "message" : "질문을 가리고 보기만 봐도 정답을 고를 수 있습니다",
+    "detail" : "1번만 '~을 적는 약속이다'라는 정의형 서술이고 나머지는 한계·제약을 지적하는 단정문이다"
+  } ]
+}
