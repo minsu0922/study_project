@@ -65,6 +65,11 @@
       <env name="JWT_SECRET" value="csquiz-local-development-only-signing-key-not-used-in-production-0123456789" />
       <!-- AdminAccountInitializer가 ADMIN 계정이 하나도 없을 때 이 비밀번호로 admin을 만든다. -->
       <env name="ADMIN_PASSWORD" value="admin1234" />
+      <!--
+        없으면 "값이 없다"가 아니라 Access denied (using password: YES)로 터진다.
+        설정 바인딩은 못 푼 자리표시자를 글자 그대로 넘겨서, ${DB_PASSWORD}라는 문자열이 비밀번호로 간다.
+      -->
+      <env name="DB_PASSWORD" value="csquiz1234" />
     </envs>
     <method v="2">
       <option name="Make" enabled="true" />
