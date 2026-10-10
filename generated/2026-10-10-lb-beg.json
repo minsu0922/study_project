@@ -1,0 +1,216 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-10-10",
+  "generatedAt" : "2026-10-10T08:49:56.056230600Z",
+  "domain" : "SYSTEM_DESIGN",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5",
+  "documentSlug" : "how-a-request-is-routed-to-one-of-many-servers",
+  "problems" : [ {
+    "question" : "손님이 보낸 요청을 받아 뒤에 있는 여러 서버 중 한 대로 넘기고, 그 서버가 만든 응답을 손님에게 돌려주는 중간 서버를 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "도착한 요청을 뒤에 있는 여러 서버 중 한 대로 넘기고 그 응답을 손님에게 되돌려 주는 중간 서버가 로드 밸런서다. 손님은 이 한 곳의 주소만 알고, 뒤쪽 서버가 몇 대인지는 드러나지 않는다. (입문편의 '바탕이 되는 개념' 3단계 표를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "로드 밸런서",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "DNS",
+      "correct" : false,
+      "rationale" : "도메인 이름을 IP 주소로 바꿔 알려 주는 안내 역할과 혼동한 것으로, 요청을 받아 서버에 넘기는 일은 하지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "애플리케이션 서버",
+      "correct" : false,
+      "rationale" : "요청을 실제로 처리해 응답을 만들어 내는 쪽이며, 어느 서버가 처리할지를 정하는 자리가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "데이터베이스",
+      "correct" : false,
+      "rationale" : "회원·주문 같은 데이터를 저장하고 꺼내 주는 공용 저장소로, 요청 분배와는 역할이 다르다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**로드 밸런서(load balancer, 부하 분산기)** — 손님이 보낸 요청을 받아서 뒤에 있는 여러 서버 중 한 대로 넘기고, 그 서버가 만든 응답을 손님에게 돌려주는 중간 서버다.",
+    "title" : "요청을 여러 서버로 넘기는 중간 서버의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "스케일 업(scale up, 수직 확장)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "스케일 업은 서버 한 대의 성능 자체를 끌어올리는 수직 확장이다. 구조를 바꾸지 않아 간단하지만 살 수 있는 부품에 끝이 있고, 그 한 대가 고장 나면 서비스 전체가 멈춘다는 한계가 있다. (입문편의 '바탕이 되는 개념' 4단계를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "서버 대수를 늘려 요청을 여러 대로 나눠 받게 하는 방법이다",
+      "correct" : false,
+      "rationale" : "같은 성능의 서버를 여러 대로 늘려 일을 나누는 방법과 뒤바꾼 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "서버 한 대의 CPU와 메모리를 더 좋은 것으로 올리는 방법이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "요청을 순서대로 돌려 가며 서버에 배정하는 방법이다",
+      "correct" : false,
+      "rationale" : "요청을 어느 서버로 보낼지 정하는 분배 규칙에 관한 설명으로, 성능을 올리는 확장 방법과는 다른 이야기다.",
+      "matchText" : ""
+    }, {
+      "text" : "응답이 없는 서버를 후보 목록에서 빼 두는 방법이다",
+      "correct" : false,
+      "rationale" : "서버 상태를 주기적으로 물어 죽은 서버를 후보에서 빼는 절차와 섞인 설명이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**스케일 업(scale up, 수직 확장)** — 서버 한 대의 성능을 올리는 방법이다. CPU를 더 좋은 것으로 바꾸고 메모리를 늘린다.",
+    "title" : "수직 확장의 정의",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "로드 밸런서가 주기적으로 각 서버에 '살아 있나'를 묻는 요청을 보내, 정상 응답이 오는 서버만 후보 목록에 남겨 두는 절차의 이름은?",
+    "answer" : "",
+    "explanation" : "로드 밸런서가 몇 초에 한 번씩 각 서버에 확인용 요청을 보내 정상 응답이 오는 서버만 후보 목록에 남기는 절차를 헬스 체크라 한다. 프로세스가 떠 있는지가 아니라 지금 일을 해낼 수 있는지를 묻는다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "헬스 체크",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "서버 풀",
+      "correct" : false,
+      "rationale" : "요청을 넘길 수 있는 후보 서버들의 목록 자체를 가리키는 말이며, 상태를 묻는 절차의 이름이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "스티키 세션",
+      "correct" : false,
+      "rationale" : "같은 손님의 요청을 처음 배정된 서버로 계속 보내는 설정으로, 서버의 생사 확인과는 무관하다.",
+      "matchText" : ""
+    }, {
+      "text" : "리버스 프록시",
+      "correct" : false,
+      "rationale" : "손님 대신 뒤쪽 서버에 요청을 전달해 주는 중간 서버를 가리키는 말이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**헬스 체크(health check, 상태 확인)** — 로드 밸런서가 주기적으로 각 서버에 \"살아 있나\"를 묻는 요청을 보내, 정상 응답이 오는 서버만 후보 목록에 남겨 두는 절차다.",
+    "title" : "서버 생사를 주기적으로 확인하는 절차의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "분배 규칙 중 라운드 로빈(round robin)이 서버를 고르는 방식에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "라운드 로빈은 후보 서버를 순서대로 한 번씩 돌아가며 배정하는 규칙이다. 로드 밸런서가 순번 하나만 기억하면 되고, 끝에 닿으면 다시 처음으로 돌아간다. 헬스 체크에서 빠진 서버는 차례를 건너뛴다. (입문편의 '어느 한 대를 고를 것인가 — 네 가지 방식' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "지금 붙어 있는 연결 수가 가장 적은 서버를 고른다",
+      "correct" : false,
+      "rationale" : "현재 처리 중인 연결 수가 가장 적은 서버를 고르는 규칙의 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "서버마다 매긴 숫자 비율만큼 요청을 더 주거나 덜 준다",
+      "correct" : false,
+      "rationale" : "서버마다 매긴 숫자 비율만큼 요청을 더 주거나 덜 주는 규칙과 뒤섞인 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "후보 목록의 순번을 기억했다가 한 번씩 돌아가며 배정한다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "출발지 주소를 계산한 값으로 갈 서버를 고정한다",
+      "correct" : false,
+      "rationale" : "출발지 IP를 계산해 같은 손님을 같은 서버로 고정하는 규칙의 설명이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**라운드 로빈(round robin)** 은 후보 서버를 순서대로 한 번씩 돌아가며 배정하는 방식이다.",
+    "title" : "라운드 로빈의 서버 선택 기준",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "L7 로드 밸런싱(계층 7 부하 분산)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "L7 부하 분산은 HTTP 요청의 내용까지 읽고 어디로 보낼지 정하는 방식이다. 경로가 /api인지 /images인지, 쿠키에 무엇이 들었는지를 보고 서버를 나눌 수 있다. 봉투만 보는 대신 편지를 열어 읽는 셈이라 더 똑똑하게 나눌 수 있지만 읽는 일 자체에 시간이 든다. (입문편의 '무엇을 보고 고르는가 — 두 가지 층' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "요청 내용물은 읽지 않고 주소와 포트 번호만 보고 넘긴다",
+      "correct" : false,
+      "rationale" : "출발지와 목적지의 IP 주소, 포트 번호만 보고 내용물은 읽지 않는 방식과 뒤바뀐 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "요청한 경로나 쿠키에 담긴 값까지 읽고 서버를 나눌 수 있다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "도메인 이름을 받아 해당하는 IP 주소를 찾아 알려 준다",
+      "correct" : false,
+      "rationale" : "도메인 이름을 IP 주소로 바꿔 주는 안내소의 역할과 혼동한 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "몇 초마다 서버에 확인 요청을 보내 후보를 추려 둔다",
+      "correct" : false,
+      "rationale" : "상태 확인 주기마다 서버의 생사를 묻는 절차에 대한 설명으로, 분배 기준의 깊이와는 다른 이야기다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**L7 로드 밸런싱(계층 7 부하 분산)** — HTTP 요청의 내용까지 읽고 정하는 방식이다.",
+    "title" : "L7 부하 분산이 보는 정보의 범위",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "같은 손님의 요청을 처음 배정된 서버로 계속 보내 주는 설정을 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "스티키 세션은 같은 손님의 요청을 처음 배정된 서버로 계속 보내 주는 설정이다. 애플리케이션 코드를 고치지 않아도 되지만, 묶인 서버가 죽으면 그 서버에 붙어 있던 손님들의 로그인 정보가 함께 사라진다. (입문편의 '두 번째 요청이 다른 서버로 갈 때 생기는 일' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "IP 해시",
+      "correct" : false,
+      "rationale" : "손님 IP를 계산해 서버를 고정하는 분배 규칙의 이름이며, 손님을 서버에 묶어 두는 설정 전체를 가리키는 말은 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "스티키 세션",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "서버 풀",
+      "correct" : false,
+      "rationale" : "요청을 넘길 수 있는 후보 서버들의 목록을 뜻하는 말이다.",
+      "matchText" : ""
+    }, {
+      "text" : "스케일 아웃",
+      "correct" : false,
+      "rationale" : "같은 성능의 서버를 여러 대로 늘려 일을 나누는 확장 방법의 이름이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**스티키 세션(sticky session, 고정 세션)** 은 같은 손님의 요청을 처음 배정된 서버로 계속 보내 주는 설정이다.",
+    "title" : "손님을 한 서버에 묶어 두는 설정의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "shop.example.com 같은 이름을 물어보면 그에 해당하는 IP 주소를 알려 주는, 인터넷의 전화번호부 역할을 하는 것의 이름은?",
+    "answer" : "",
+    "explanation" : "DNS는 shop.example.com 같은 도메인 이름을 물어보면 그에 해당하는 IP 주소를 알려 주는 인터넷의 전화번호부다. 브라우저는 주소창의 이름을 여기에 물어 번호를 받고, 그 번호로 연결한다. (입문편의 '바탕이 되는 개념' 2단계를 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "IP 주소",
+      "correct" : false,
+      "rationale" : "인터넷상의 컴퓨터 한 대를 가리키는 번호 자체를 뜻하는 말로, 번호를 찾아 주는 쪽과는 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "포트 번호",
+      "correct" : false,
+      "rationale" : "같은 컴퓨터 안에서 어느 프로그램인지까지 지정하는 번호이며, 이름을 번호로 바꾸는 일과는 무관하다.",
+      "matchText" : ""
+    }, {
+      "text" : "HTTP",
+      "correct" : false,
+      "rationale" : "요청과 응답이 오가는 약속된 형식을 가리키는 말이다.",
+      "matchText" : ""
+    }, {
+      "text" : "DNS",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**DNS(domain name system, 도메인 이름 시스템)** — `shop.example.com` 같은 이름을 물어보면 그에 해당하는 IP 주소를 알려 주는 인터넷의 전화번호부다.",
+    "title" : "도메인 이름을 IP 주소로 바꿔 주는 체계",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ ]
+}
