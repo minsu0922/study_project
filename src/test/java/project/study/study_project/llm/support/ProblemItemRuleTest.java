@@ -992,4 +992,97 @@ class ProblemItemRuleTest {
                     .noneSatisfy(w -> assertThat(w).contains("제목"));
         }
     }
+
+    /**
+     * 정답 최장 쏠림 — 2026-10-10 신설.
+     *
+     * <p>항목별 경고({@code "정답이 가장 긴 보기"})는 편차가 1.5배를 넘을 때만 울린다. 승인된
+     * 객관식 170문제를 재 보니 정답이 최장인 것이 95개(56%)였는데 그 경고가 잡은 것은 27개뿐이었다 —
+     * 나머지는 1.5배 안에서 <b>조금씩만</b> 길었다. 한 문제만 봐서는 우연과 구별이 안 되고,
+     * 여럿을 모아야 보이는 쏠림이라 배치 단위로 잰다.
+     */
+    @Nested
+    @DisplayName("정답이 가장 긴 보기인 문항이 배치의 과반이면 알린다")
+    class CorrectLongestSkew {
+
+        /** 정답이 오답보다 {@code margin}글자 길다(음수면 짧다). 편차는 1.5배에 한참 못 미친다. */
+        private static GeneratedProblemItem lengthItem(int index, int margin) {
+            return new GeneratedProblemItem("물음 " + index + "은 무엇인가?", "", goodExplanation(), List.of(
+                    new GeneratedProblemItem.GeneratedChoice("가".repeat(40 + margin), true),
+                    new GeneratedProblemItem.GeneratedChoice("나".repeat(40), false),
+                    new GeneratedProblemItem.GeneratedChoice("다".repeat(38), false),
+                    new GeneratedProblemItem.GeneratedChoice("라".repeat(39), false)),
+                    "", "제목 " + index, null);
+        }
+
+        private static List<GeneratedProblemItem> batchOf(int... margins) {
+            List<GeneratedProblemItem> out = new ArrayList<>();
+            for (int i = 0; i < margins.length; i++) {
+                out.add(lengthItem(i, margins[i]));
+            }
+            return out;
+        }
+
+        @Test
+        @DisplayName("다섯 중 셋이 정답 최장이면 알린다 — 항목별 경고는 하나도 안 울리는 상태다")
+        void warnsWhenMostCorrectChoicesAreTheLongest() {
+            List<GeneratedProblemItem> batch = batchOf(5, 5, 5, -3, -3);
+
+            assertThat(batch).allSatisfy(i -> assertThat(
+                    ProblemItemRule.qualityWarningsOf(i, Difficulty.INTERMEDIATE, true))
+                    .as("1.5배 안이라 항목별 검사는 조용하다 — 그래서 배치 검사가 따로 있다")
+                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 보기")));
+
+            assertThat(ProblemItemRule.batchWarningsOf(batch, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE))
+                    .anySatisfy(w -> assertThat(w)
+                            .contains("정답이 가장 긴 문항이 5개 중 3개")
+                            .as("몇 번째인지 보여야 어느 정답을 줄일지 정해진다")
+                            .contains("1·2·3번"));
+        }
+
+        @Test
+        @DisplayName("고급 세 문제는 셋이 전부 최장일 때만 알린다 — 둘은 우연으로 흔하다")
+        void needsAllThreeInABatchOfThree() {
+            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, -3), Difficulty.ADVANCED,
+                    ProblemType.MULTIPLE_CHOICE))
+                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
+
+            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, 5), Difficulty.ADVANCED,
+                    ProblemType.MULTIPLE_CHOICE))
+                    .anySatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항이 3개 중 3개"));
+        }
+
+        @Test
+        @DisplayName("일곱 중 셋은 조용하다 — 과반이 아니면 우연과 구별되지 않는다")
+        void staysQuietBelowHalf() {
+            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, 5, -3, -3, -3, -3), Difficulty.BEGINNER,
+                    ProblemType.MULTIPLE_CHOICE))
+                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
+        }
+
+        /** 길이가 같은 오답이 있으면 "제일 긴 것을 고른다"가 답 하나로 좁혀지지 않는다. */
+        @Test
+        @DisplayName("오답과 길이가 같으면 최장으로 세지 않는다 — 긴 것만 골라서는 못 맞힌다")
+        void tiesDoNotCount() {
+            assertThat(ProblemItemRule.batchWarningsOf(batchOf(0, 0, 0, 0, 0), Difficulty.INTERMEDIATE,
+                    ProblemType.MULTIPLE_CHOICE))
+                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
+        }
+
+        /** 유형을 모르는 호출(옛 초안을 다시 재는 경로)도 객관식 모양이면 잰다. */
+        @Test
+        @DisplayName("유형을 안 넘겨도 잰다 — 정답 보기가 하나인 항목만 센다")
+        void worksWithoutType() {
+            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, 5), Difficulty.ADVANCED))
+                    .anySatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항이 3개 중 3개"));
+        }
+
+        /** 짝짓기·순서 배열의 보기에는 정답 표시가 없거나 전부라서, 최장을 물을 대상이 없다. */
+        @Test
+        @DisplayName("객관식이 아닌 유형에는 재지 않는다")
+        void skipsOtherTypes() {
+            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, 5), Difficulty.BEGINNER, ProblemType.MATCHING))
+                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
+        }
+    }
 }

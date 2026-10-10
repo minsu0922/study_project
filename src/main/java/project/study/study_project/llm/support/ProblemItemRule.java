@@ -728,6 +728,20 @@ public final class ProblemItemRule {
     public static final double CHOICE_LENGTH_RATIO = 1.5;
 
     /**
+     * 한 배치에서 정답이 <b>가장 긴 보기</b>인 문항이 이만큼 모여야 쏠림으로 본다 — 2026-10-10 신설.
+     * 과반이라는 조건이 함께 붙는다({@link #correctLongestSkewOf}).
+     *
+     * <p><b>왜 항목별 검사로는 부족했나.</b> 승인된 객관식 170문제를 재니 정답이 최장인 것이
+     * 95개(56%)였는데, 위 {@link #CHOICE_LENGTH_RATIO} 경고가 잡은 것은 27개뿐이었다. 나머지는
+     * 1.5배 안에서 조금씩만 길었다 — 정답 평균이 오답 평균의 1.16배다. 한 문제만 보면 우연
+     * (넷 중 하나)과 구별이 안 되므로, 여럿을 모아 세는 수밖에 없다.
+     *
+     * <p><b>3인 이유.</b> 우연이면 문항마다 1/4이다. 고급은 한 번에 셋을 만드는데 그중 둘이
+     * 최장일 확률은 16%라 자주 헛울리고, 셋 다일 확률은 2%다. 다섯 중 셋은 10%, 일곱 중 넷은 7%.
+     */
+    static final int CORRECT_LONGEST_MIN = 3;
+
+    /**
      * <b>모든 보기</b>가 공유하는 구절이 이만큼(공백 뺀 글자 수)을 넘으면 되풀이로 본다 — 2026-09-08 신설.
      *
      * <p><b>10인 근거는 실측이다.</b> 지금까지 만든 객관식 초안 128개에서 "네 보기 전부에 들어 있는
@@ -1179,6 +1193,14 @@ public final class ProblemItemRule {
             }
         }
 
+        // 정답 최장 쏠림 — 항목별 경고가 못 잡는 "조금씩만 긴" 정답을 배치로 모아 센다.
+        if (type == null || type == ProblemType.MULTIPLE_CHOICE) {
+            String skew = correctLongestSkewOf(items);
+            if (skew != null) {
+                warnings.add(skew);
+            }
+        }
+
         // 마지막 물음이 겹치는가 — 난이도와 무관하다(초급도 "~은?"이 반복될 수 있다).
         String repeated = repeatedQuestionTailOf(items);
         if (repeated != null) {
@@ -1186,6 +1208,46 @@ public final class ProblemItemRule {
                     .formatted(repeated));
         }
         return warnings;
+    }
+
+    /**
+     * 정답이 <b>혼자 가장 긴</b> 문항이 배치의 과반이면서 {@link #CORRECT_LONGEST_MIN}개 이상이면
+     * 그 사실을, 아니면 {@code null}.
+     *
+     * <p>정답 보기가 정확히 하나인 항목만 센다 — 유형을 모르고 부른 경우에도 짝짓기·순서 배열이
+     * 섞여 들지 않게 한다. 오답과 길이가 같으면 세지 않는다. 그때는 "제일 긴 것"이 둘이라
+     * 길이만으로는 답이 하나로 좁혀지지 않는다.
+     */
+    private static String correctLongestSkewOf(List<GeneratedProblemItem> items) {
+        int measured = 0;
+        List<Integer> skewed = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            List<GeneratedProblemItem.GeneratedChoice> choices = safeChoices(items.get(i));
+            if (choices.size() < MIN_CHOICES
+                    || choices.stream().filter(GeneratedProblemItem.GeneratedChoice::correct).count() != 1) {
+                continue;
+            }
+            measured++;
+            int correct = 0;
+            int longestWrong = 0;
+            for (GeneratedProblemItem.GeneratedChoice choice : choices) {
+                int length = choice.text() == null ? 0 : choice.text().trim().length();
+                if (choice.correct()) {
+                    correct = length;
+                } else {
+                    longestWrong = Math.max(longestWrong, length);
+                }
+            }
+            if (correct > longestWrong) {
+                skewed.add(i + 1);
+            }
+        }
+        if (skewed.size() < CORRECT_LONGEST_MIN || skewed.size() * 2 <= measured) {
+            return null;
+        }
+        String positions = String.join("·", skewed.stream().map(String::valueOf).toList());
+        return "정답이 가장 긴 문항이 %d개 중 %d개 (%s번 — 우연이면 넷 중 하나다. 긴 보기만 골라도 맞는다)"
+                .formatted(measured, skewed.size(), positions);
     }
 
     /**
