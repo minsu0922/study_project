@@ -1,0 +1,163 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-10-10",
+  "generatedAt" : "2026-10-10T13:06:13.127967200Z",
+  "domain" : "BACKEND_FRAMEWORK",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : "querydsl-compile-time-query-typos-advanced",
+  "problems" : [ {
+    "question" : "DTO를 꺼낼 때 값을 생성자에 순서대로 넣는 Projections.constructor와, 생성자에 붙여 전용 Q 타입을 만들게 하는 @QueryProjection 중 하나를 고르는 기준으로 가장 적절한 것은?",
+    "answer" : "",
+    "explanation" : "Projections.constructor는 생성자 매칭을 실행 시점에 하므로 DTO를 라이브러리와 무관한 순수 객체로 둘 수 있지만, 시그니처가 어긋나거나 같은 타입 인자의 순서가 바뀌어도 빌드가 잡지 못한다. @QueryProjection은 생성자 인자의 순서와 타입을 Q 타입으로 고정해 컴파일 시점에 검사를 끌어오는 대신, DTO가 QueryDSL 애노테이션에 의존하게 된다. 그래서 둘을 가르는 기준은 DTO가 라이브러리에 묶여도 되는지, 그리고 검사를 컴파일로 당길 가치가 있는지다. (심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "DTO가 QueryDSL에 묶여도 되는지와 검사를 컴파일로 당길지",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "조회 컬럼 수가 많아 실행되는 SQL의 성능이 문제 되는지",
+      "correct" : false,
+      "rationale" : "두 방식의 차이는 생성자 매칭을 언제 검사하느냐와 DTO의 라이브러리 의존이다. 실행되는 SQL의 성능을 가르는 선택이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "엔티티 전체를 꺼내는지, 아니면 화면에 필요한 컬럼만 고르는지",
+      "correct" : false,
+      "rationale" : "두 방식은 모두 필요한 컬럼만 골라 DTO에 담는 프로젝션이다. 엔티티를 통째로 꺼내는 조회와 비교하는 기준이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "데이터베이스 전용 함수를 조회 표현식 안에서 쓰는지",
+      "correct" : false,
+      "rationale" : "전용 함수는 SQL 조각을 문자열로 끼워 넣는 탈출구에서 생기는 문제다. DTO에 값을 넣는 방식의 선택과는 관련이 없다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "DTO가 QueryDSL 애노테이션에 묶여도 되면 `@QueryProjection`으로 컴파일 검사까지 가져오고, DTO를 순수하게 두어야 하면 `Projections.constructor`로 검사를 실행 시점에 넘긴다.",
+    "title" : "DTO 프로젝션 조립 방식을 고르는 기준",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "문자열 질의문의 따옴표 안을 편집기 플러그인이 검사하게 하는 방식과, 엔티티로 Q 타입을 생성해 컴파일러가 검사하게 하는 방식을 가르는 결정적 차이는?",
+    "answer" : "",
+    "explanation" : "편집기 검사는 검사하는 주체가 빌드 바깥에 있다. 개발자마다 쓰는 도구가 다르고 통합 빌드 서버는 편집기를 띄우지 않으므로, 빌드에서 막히지 않는 규칙은 결국 누군가 어기고 지나간다. 코드 생성 방식은 필드가 실제 자바 필드가 되어 검사 주체가 컴파일러 자신이 되고, 빌드가 곧 검증이 된다. 두 방식을 가르는 결정적 차이는 이 검사 주체의 위치다. (입문편의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "규칙 위반이 개발자 도구와 무관하게 빌드 단계에서 막히는지 여부",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "질의문이 실행될 때 만들어지는 SQL의 실행 속도가 다른지 여부",
+      "correct" : false,
+      "rationale" : "두 방식은 오타를 언제 누가 잡느냐의 차이일 뿐, 실제로 나가는 SQL은 같다. 실행 속도를 가르는 선택으로 착각한 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "실제 테이블 컬럼과 질의문을 대조해 줄 수 있는지 여부",
+      "correct" : false,
+      "rationale" : "Q 타입은 데이터베이스가 아니라 엔티티 클래스를 읽어 만들어진다. 코드 생성 방식도 실제 테이블과의 대조는 해 주지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "동적 조건을 조합할 때 null 조건을 자동으로 걸러 주는지 여부",
+      "correct" : false,
+      "rationale" : "null 조건을 무시하는 것은 where() 가변인자의 동작이다. 오타를 어디서 검사하느냐는 비교와는 다른 이야기를 섞은 것이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "편집기 검사는 검사하는 주체가 빌드 바깥에 있다는 점이 결정적이다.",
+    "title" : "편집기 검사와 코드 생성 방식의 검사 주체 차이",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "선택 입력 필터마다 값이 없으면 null을 돌려주는 조건 메서드를 만들어 where()에 쉼표로 나열하는 방식을, 조건을 한 객체에 이어 붙이는 BooleanBuilder 대신 고르는 이유로 가장 적절한 것은?",
+    "answer" : "",
+    "explanation" : "필터마다 조건 메서드를 따로 두면 조건이 하나의 빌더 객체 안에 갇히지 않고 독립된 메서드로 떨어진다. 그래서 상품 목록 화면과 통계 집계 쿼리처럼 '판매 중인 상품' 같은 같은 조건을 쓰는 여러 질의가 그 메서드를 그대로 호출해 공유할 수 있다. 조건을 하나 더할 때도 메서드 하나와 where() 인자 하나만 손대면 된다. 가변인자 방식을 고른 핵심 이유는 이 재사용이다. (입문편의 '실무에서는 이렇게 쓴다' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "조건을 메서드로 떼어 두면 목록·통계 질의가 같은 조건을 함께 호출해서",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "null을 돌려준 조건이 거짓으로 처리되어 빈 결과가 안전하게 나와서",
+      "correct" : false,
+      "rationale" : "where()에 넘긴 null은 거짓 조건이 아니라 조건 없음으로 처리된다. 빈 결과가 나온다는 생각은 null 처리 방식을 오해한 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "조건이 여러 개 붙은 질의문도 항상 인덱스를 타도록 SQL이 만들어져서",
+      "correct" : false,
+      "rationale" : "조건을 조립하는 방식은 인덱스 사용 여부를 정하지 않는다. 다섯 조건이 붙은 질의문이 인덱스를 타는지는 여전히 실행해 봐야 안다.",
+      "matchText" : ""
+    }, {
+      "text" : "필터 조합을 하나하나 테스트하지 않아도 결과가 맞음을 컴파일러가 보장해서",
+      "correct" : false,
+      "rationale" : "컴파일이 책임지는 범위는 이름과 타입뿐이다. 필터 조합의 결과가 논리적으로 맞는지는 컴파일 검사와 무관하다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "`BooleanBuilder` 대신 가변인자 방식을 고른 이유는 재사용이다.",
+    "title" : "조건 메서드를 where 가변인자로 나열하는 이유",
+    "questionKind" : "CAUSE",
+    "skipReason" : ""
+  }, {
+    "question" : "QueryDSL의 컴파일 검사가 실무 작업에서 하는 역할에 관한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "Q 타입은 엔티티 필드를 실제 자바 필드로 옮겨 만들어지므로, 엔티티 필드 이름을 바꾸면 그 필드를 쓰던 모든 질의문이 컴파일 에러가 된다. 고칠 곳을 찾는 일이 문자열 검색이 아니라 컴파일러가 내놓는 에러 목록으로 바뀌어, 빠뜨린 질의문이 남지 않는다. 이것이 컴파일 검사가 리팩터링 자리에서 실제로 일하는 방식이다. (심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "엔티티 필드 이름을 바꾸면 고칠 질의문이 컴파일 에러 목록으로 드러난다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "요청으로 받은 정렬 키 문자열을 그대로 경로로 만들면 오타가 빌드에서 잡힌다",
+      "correct" : false,
+      "rationale" : "정렬 키는 클라이언트가 보내는 값이라 컴파일 시점에 존재하지 않는다. 문자열을 그대로 경로로 만들면 오타는 실행 시점 예외가 된다.",
+      "matchText" : ""
+    }, {
+      "text" : "생성된 Q 타입을 저장소에 커밋해 두면 동료 코드와 엔티티가 어긋날 일이 준다",
+      "correct" : false,
+      "rationale" : "Q 타입은 빌드 산출물이라 커밋하면 오히려 엔티티와 어긋날 여지가 생긴다. 생성 디렉터리는 형상 관리에서 빼고 clean 대상에 넣는다.",
+      "matchText" : ""
+    }, {
+      "text" : "무한 스크롤 목록도 다음 페이지 유무를 알려면 카운트 쿼리를 따로 짜야 한다",
+      "correct" : false,
+      "rationale" : "무한 스크롤은 전체 건수 없이 limit을 하나 더 조회해 다음 페이지 유무만 판단한다. 카운트 쿼리는 페이지 번호를 보여 줄 때 필요하다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "고칠 곳을 찾는 일이 검색이 아니라 컴파일 에러 목록으로 바뀌어, 빠뜨린 질의문이 남지 않는다.",
+    "title" : "실무 작업에서 컴파일 검사가 하는 역할",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "요청 파라미터로 받은 정렬 키를 컴파일 검사를 거친 정렬로만 처리하려 한다. 단계를 올바른 순서로 배열하시오.",
+    "answer" : "3|1|4|2",
+    "explanation" : "정렬 키는 클라이언트가 보내는 문자열이라 컴파일 시점에 존재하지 않는다. 그래서 허용할 정렬을 컴파일러가 검사한 자바 코드로 먼저 만들어 두고, 외부 입력은 그중 하나를 고르는 데만 쓴다. 목록을 먼저 만들지 않으면 결국 받은 문자열을 그대로 경로로 바꾸는 방식으로 돌아간다. 흔히 뒤바꾸는 것은 기본 정렬 대체와 정렬 절 전달이다. 모르는 키를 걸러 내기 전에 정렬 절에 넘기면 찾지 못한 빈 값이 그대로 질의에 들어가 실행 시점에 실패한다. (심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "요청에서 받은 정렬 키로 미리 만든 목록에서 정렬 객체를 찾는다",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "고른 정렬 객체를 질의의 정렬 절에 넘겨 조회를 실행한다",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "허용할 정렬마다 경로와 방향을 담은 정렬 객체를 코드로 만들어 둔다",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "목록에 없는 키라면 기본 정렬 객체로 대체한다",
+      "correct" : false,
+      "rationale" : "",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "허용할 정렬을 `OrderSpecifier`로 미리 정의해 두고 키로 골라 쓸지, `PathBuilder`로 이름을 그대로 경로로 만들지를 여기서 정한다.",
+    "title" : "요청 정렬 키를 허용 목록으로 처리하는 절차",
+    "questionKind" : "SEQUENCE",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 3,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "중급으로 냈지만 초급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 없음\n조건이 달랐다면 정답이 되는 오답: 1개\n보기별 판단: 보기 2: 없음. 보기 3: 없음. 보기 4: 페이지 번호를 노출하는 목록이라는 조건이면 카운트 쿼리를 따로 짜야 하므로 정답이 된다."
+  } ]
+}
