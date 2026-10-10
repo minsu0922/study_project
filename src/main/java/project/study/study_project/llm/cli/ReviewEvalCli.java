@@ -334,10 +334,11 @@ public final class ReviewEvalCli {
     }
 
     /**
-     * 100만 토큰당 달러 단가(2026-06 기준). 사고 토큰은 출력 단가로 나간다.
+     * 100만 토큰당 달러 단가(2026-10 기준). 사고 토큰은 출력 단가로 나간다.
      * 표에 없는 모델은 토큰 수만 적는다. 틀린 단가로 계산한 금액이 더 위험하다.
      */
     private static final Map<String, double[]> PRICE_PER_MTOK = Map.of(
+            "claude-opus-5-5", new double[]{4.0, 20.0},
             "claude-opus-5", new double[]{5.0, 25.0},
             "claude-fable-5-1", new double[]{10.0, 50.0},
             "claude-sonnet-5", new double[]{2.0, 10.0});

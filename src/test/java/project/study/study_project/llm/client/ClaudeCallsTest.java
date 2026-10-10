@@ -90,6 +90,27 @@ class ClaudeCallsTest {
                 .satisfies(u -> assertThat(u.batch()).isFalse());
     }
 
+    /**
+     * 사고 요약은 배치 결과에서도 따라와야 한다(2026-10-10). 새벽 배치가 배치 모드로 도는데,
+     * 그쪽에서 요약이 빠지면 "왜 3개 중 1개만 만들었나"를 정작 필요한 날에 못 본다.
+     */
+    @Test
+    @DisplayName("사고 요약을 결과에 실어 준다 — 배치로 받은 응답에서도")
+    void carriesThinkingSummary() {
+        FakeTransport fake = new FakeTransport();
+        fake.batchResult = new Raw(JSON, 1000, 200, 0, false, "재료가 둘뿐이라 셋째는 비운다");
+        ClaudeCalls.useTransport(fake, ms -> { });
+        ClaudeCalls.useBatch(true);
+
+        assertThat(ClaudeCalls.create("제목 생성", params()).thinking())
+                .isEqualTo("재료가 둘뿐이라 셋째는 비운다");
+
+        ClaudeCalls.useBatch(false);
+        assertThat(ClaudeCalls.create("제목 생성", params()).thinking())
+                .as("요약을 켜지 않은 요청은 빈 문자열이다 — null이면 부르는 쪽마다 검사해야 한다")
+                .isEmpty();
+    }
+
     @Test
     @DisplayName("배치 모드면 제출하고 끝날 때까지 기다린 뒤 결과를 읽고, 반값으로 기록한다")
     void batchSubmitsPollsAndReads() {

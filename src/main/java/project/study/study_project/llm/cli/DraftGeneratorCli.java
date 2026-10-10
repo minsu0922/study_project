@@ -83,7 +83,9 @@ public final class DraftGeneratorCli {
 
     public static void main(String[] args) throws Exception {
         Map<String, String> opts = BatchOptions.parseArgs(args);
-        ClaudeCalls.useBatch("true".equalsIgnoreCase(opts.getOrDefault(BatchOptions.BATCH_API_OPT, "false")));
+        // 기본이 Batch API다(2026-10-10). 손으로 채울 때 옵션을 빠뜨려 정가를 낸 날이 있었다 —
+        // 급해서 바로 받아야 할 때만 --batch-api=false를 준다.
+        ClaudeCalls.useBatch(!"false".equalsIgnoreCase(opts.getOrDefault(BatchOptions.BATCH_API_OPT, "true")));
         try {
             run(opts);
         } finally {

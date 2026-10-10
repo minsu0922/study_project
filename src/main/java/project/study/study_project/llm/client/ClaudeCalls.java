@@ -58,8 +58,10 @@ public final class ClaudeCalls {
     /**
      * @param value      응답 JSON을 읽은 값. 텍스트 블록이 없으면 null
      * @param pauseTurn  서버 도구(웹 검색)가 길어져 중간에 멈췄는지
+     * @param thinking   모델이 남긴 사고 요약. 요청이 요약을 켜지 않았거나 남긴 것이 없으면 빈 문자열
      */
-    public record Result<T>(T value, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn) {
+    public record Result<T>(T value, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn,
+                            String thinking) {
     }
 
     /** 호출 한 건의 사용량. {@code batch}는 실제로 배치 요금이 적용됐는지다(시간 초과로 바로 부르면 false). */
@@ -68,7 +70,11 @@ public final class ClaudeCalls {
     }
 
     /** 전송 결과 중 우리가 쓰는 것만. SDK의 Message를 테스트에서 만들 수 있게 얇게 옮겨 둔다. */
-    record Raw(String lastText, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn) {
+    record Raw(String lastText, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn,
+               String thinking) {
+        Raw(String lastText, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn) {
+            this(lastText, inputTokens, outputTokens, webSearches, pauseTurn, "");
+        }
     }
 
     enum BatchState { IN_PROGRESS, ENDED }
@@ -137,7 +143,8 @@ public final class ClaudeCalls {
         record(new Usage(label, raw.model().asString(), response.inputTokens(), response.outputTokens(),
                 response.webSearches(), batched));
         return new Result<>(parse(response.lastText(), params.outputType()),
-                response.inputTokens(), response.outputTokens(), response.webSearches(), response.pauseTurn());
+                response.inputTokens(), response.outputTokens(), response.webSearches(), response.pauseTurn(),
+                response.thinking());
     }
 
     /** @return 배치 결과. 시간 초과·실패면 null — 호출부가 바로 호출로 대신한다 */
@@ -256,9 +263,15 @@ public final class ClaudeCalls {
                     .reduce((first, second) -> second)
                     .map(t -> t.text())
                     .orElse(null);
+            // 사고 요약은 요청이 display를 켰을 때만 글이 온다. 안 켰으면 블록은 와도 글이 비어 있다
+            String thinking = m.content().stream()
+                    .flatMap(block -> block.thinking().stream())
+                    .map(t -> t.thinking())
+                    .filter(text -> !text.isBlank())
+                    .collect(java.util.stream.Collectors.joining("\n"));
             return new Raw(lastText, m.usage().inputTokens(), m.usage().outputTokens(),
                     m.usage().serverToolUse().map(u -> u.webSearchRequests()).orElse(0L),
-                    m.stopReason().filter(r -> r.equals(StopReason.PAUSE_TURN)).isPresent());
+                    m.stopReason().filter(r -> r.equals(StopReason.PAUSE_TURN)).isPresent(), thinking);
         }
     }
 }

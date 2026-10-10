@@ -161,7 +161,9 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         StructuredMessageCreateParams<GeneratedProblemItem.Batch> params = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(16000L)
-                .thinking(ThinkingConfigAdaptive.builder().build())
+                // 사고 요약을 받는다. 요금은 같고 보이는 것만 달라진다 — 아래 logThinkingWhenShort가 쓴다.
+                .thinking(ThinkingConfigAdaptive.builder()
+                        .display(ThinkingConfigAdaptive.Display.SUMMARIZED).build())
                 .system(SYSTEM_PROMPT)
                 .outputConfig(GeneratedProblemItem.Batch.class)
                 .addUserMessage(buildPrompt(domain, difficulty, type, count, avoidQuestions,
@@ -169,9 +171,12 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                 .build();
 
         try {
-            return java.util.Optional.ofNullable(ClaudeCalls.create("문제 생성", params).value())
+            ClaudeCalls.Result<GeneratedProblemItem.Batch> result = ClaudeCalls.create("문제 생성", params);
+            List<GeneratedProblemItem> problems = java.util.Optional.ofNullable(result.value())
                     .map(GeneratedProblemItem.Batch::problems)
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 문제 목록이 없습니다."));
+            logThinkingWhenShort(problems, count, result.thinking());
+            return problems;
         } catch (AnthropicServiceException e) {
             // API 쪽 오류(429 한도 초과, 529 과부하 등) — 우리 코드 문제가 아니므로 502로 안내
             log.warn("Claude API 호출 실패: status={}, message={}", e.statusCode(), e.getMessage());
@@ -181,6 +186,22 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             log.warn("Claude API 네트워크 오류: {}", e.getMessage());
             throw new BusinessException(ErrorCode.LLM_003, "네트워크 오류로 생성에 실패했습니다.");
         }
+    }
+
+    /**
+     * 요청한 개수를 못 채운 날, 모델이 남긴 사고 요약을 로그에 찍는다.
+     *
+     * <p>빈 자리의 사유는 {@code skipReason}에 적게 했지만 모델이 그 칸까지 비운다 —
+     * 2026-10에 고급이 3개 중 1개만 나온 세 번 모두 사유가 없었다. 왜 멈췄는지는 사고 안에만
+     * 남아 있어서, 모자란 날에만 꺼내 본다. 다 채운 날에는 찍지 않는다(로그가 매일 길어진다).
+     */
+    private static void logThinkingWhenShort(List<GeneratedProblemItem> problems, int requested, String thinking) {
+        long made = problems.stream().filter(p -> p.question() != null && !p.question().isBlank()).count();
+        if (made >= requested || thinking == null || thinking.isBlank()) {
+            return;
+        }
+        // 배치 CLI는 표준 출력이 곧 Actions 로그다. 로거 설정에 기대지 않고 그대로 찍는다.
+        System.out.printf("%n[문제 %d개 요청에 %d개 — 모델의 사고 요약]%n%s%n%n", requested, made, thinking);
     }
 
     /* ── 프롬프트 ─────────────────────────────────────────────── */

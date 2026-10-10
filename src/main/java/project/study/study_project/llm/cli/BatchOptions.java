@@ -69,7 +69,7 @@ final class BatchOptions {
     /** 한국 날짜 기준 — 워크플로는 UTC로 도니까 변환하지 않으면 하루 어긋난다. */
     static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
-    /** Batch API 옵션 — 워크플로가 켠다. 로컬 실행은 기본이 바로 호출이라 결과를 곧장 본다. */
+    /** Batch API 옵션 — 생략하면 켜진다(반값, 답이 늦다). {@code false}를 줄 때만 정가로 바로 부른다. */
     static final String BATCH_API_OPT = "batch-api";
 
     /** 오늘 배치가 할 일. {@link #decideAction}이 결정한다. */
