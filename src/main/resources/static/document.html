@@ -111,7 +111,8 @@ async function loadDoc() {
   }
   try {
     const d = await api("/api/documents/" + encodeURIComponent(slug));
-    document.title = d.title + " — csquiz";
+    // 서버가 채워 준 제목(DocumentPageMeta.titleOf)과 같은 꼴이어야 한다 — 다르면 탭 제목이 한 번 바뀐다.
+    document.title = d.title + (d.edition ? " · " + d.edition : "") + " — csquiz";
     document.getElementById("title").textContent = d.title;
     renderEdition(d);
     /* 태그 배지는 <링크>다 — 2026-09-08.
