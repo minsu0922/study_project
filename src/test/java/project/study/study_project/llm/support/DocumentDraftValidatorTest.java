@@ -265,7 +265,8 @@ class DocumentDraftValidatorTest {
         // 7개로 줄면서(셋이 심화편으로 감, 둘이 새로 옴) 다시 13이 됐다. 개수를 세는 이 단언을
         // 그대로 두는 이유는 <검사를 늘릴 때 한 번은 여기서 멈추게> 하기 위해서다. 경고가 는 것을
         // 아무도 모르는 채 지나가면, 검수 화면이 어느새 읽히지 않는 목록이 된다.
-        assertThat(checks).hasSize(13);
+        // 2026-10-10에 그림 없음 경고가 늘어 14가 됐다.
+        assertThat(checks).hasSize(14);
         assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
@@ -701,6 +702,75 @@ class DocumentDraftValidatorTest {
                 .isFalse();
     }
 
+    /* ── 2026-10-10: 그림(```mermaid) ─────────────────────────────
+     * 그날까지 나온 문서 30편에 그림이 한 장도 없었다. 프롬프트가 입문편에 그림 1개를 요구하게
+     * 되면서 세는 곳을 함께 둔다 — 코드 예제 때와 같이, 허용만으로는 나오지 않는다. */
+
+    /** 도우미 문서의 그림 블록 — 테스트마다 이 조각을 지우거나 바꿔 쓴다. */
+    private static final String DIAGRAM =
+            "```mermaid\nsequenceDiagram\n  participant C as 클라이언트\n  participant S as 서버\n  C->>S: 요청한다\n```";
+
+    @Test
+    @DisplayName("입문편에 그림이 없으면 알린다 — 30편에 그림이 한 장도 없었다")
+    void warnsWhenBeginnerHasNoDiagram() {
+        String noDiagram = body(TITLE, "본문").replace(DIAGRAM, "그림 없이 글로 설명한다.");
+
+        List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noDiagram);
+
+        assertThat(checks).extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("그림(```mermaid)이 없습니다"));
+        assertThat(DocumentDraftValidator.hasBlocking(checks))
+                .as("그림 하나 때문에 나흘치 문서를 버리지 않는다")
+                .isFalse();
+    }
+
+    /** 심화편의 그림은 프롬프트가 선택으로 뒀다 — 없다고 울리면 매번 헛울린다. */
+    @Test
+    @DisplayName("심화편은 그림이 없어도 조용하다 — 프롬프트가 선택으로 뒀다")
+    void advancedNeedsNoDiagram() {
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy-advanced", advancedBody(TITLE)))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("그림"));
+    }
+
+    /**
+     * 같은 펜스 문법이라 그림이 코드 예제로 세어질 수 있다. 그러면 모델이 코드 하나를 그림으로
+     * 바꿔치기해도 개수 검사가 통과한다.
+     */
+    @Test
+    @DisplayName("그림은 코드 예제 개수에 세지 않는다 — 코드를 그림으로 바꿔치기해도 걸린다")
+    void diagramIsNotACodeExample() {
+        String swapped = body(TITLE, "본문").replace("```bash\necho done\n```", "설명으로 대신한다.");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", swapped))
+                .extracting(DraftCheck::message)
+                .as("코드 2개 + 그림 1개 — 펜스는 셋이지만 코드 예제는 둘이다")
+                .anyMatch(m -> m.contains("코드 예제가 2개입니다"));
+    }
+
+    /** 종류 선언이 틀리면 그림이 통째로 안 그려지고, 읽는 사람은 원문을 코드로 본다. */
+    @Test
+    @DisplayName("화면이 못 그리는 종류면 알린다 — 그림 대신 원문이 코드로 보인다")
+    void warnsOnUnsupportedDiagramType() {
+        String pie = body(TITLE, "본문").replace("sequenceDiagram", "pie title 비율");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", pie))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("1번째 그림의 첫 줄이 \"pie title 비율\"입니다"));
+    }
+
+    @Test
+    @DisplayName("허용한 세 종류는 조용하다 — flowchart·sequenceDiagram·stateDiagram-v2")
+    void acceptsAllowedDiagramTypes() {
+        for (String header : List.of("flowchart TD", "flowchart LR", "sequenceDiagram", "stateDiagram-v2")) {
+            String doc = body(TITLE, "본문").replace("sequenceDiagram", header);
+
+            assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", doc))
+                    .as(header)
+                    .isEmpty();
+        }
+    }
+
     /* ── 2026-08-23: 셸 주석이 마크다운 제목과 똑같이 생겼다 ────────
      * 코드 예제를 허용한 그날 첫 실물(TIME_WAIT 문서)에 이런 줄이 들어 있었다.
      *
@@ -926,7 +996,16 @@ class DocumentDraftValidatorTest {
                 var result = compute();
                 ```
 
-                그래서 결과가 이렇게 나온다.
+                그래서 결과가 이렇게 나온다. 두 쪽이 주고받는 순서는 아래 그림과 같다.
+
+                ```mermaid
+                sequenceDiagram
+                  participant C as 클라이언트
+                  participant S as 서버
+                  C->>S: 요청한다
+                ```
+
+                그림에서 화살표의 방향을 본다.
 
                 ### 왜 이렇게 설계됐는가
                 - 다른 선택지를 두고 이렇게 판단했다.

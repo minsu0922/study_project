@@ -671,6 +671,31 @@ class ClaudeDocumentGeneratorTest {
     }
 
     /**
+     * 2026-10-10까지 나온 문서 30편에 그림이 한 장도 없었다. "예외로 허용한다"는 말로는
+     * 나오지 않았다 — 코드 예제 금지를 풀었을 때와 같다. 개수를 박고, 화면이 그릴 수 있는
+     * 문법(mermaid)과 종류를 정해 준다. 종류는 검증기의 {@code MERMAID_HEADER}와 같아야 한다.
+     */
+    @Test
+    @DisplayName("입문편은 그림 1개를 mermaid로 쓴다 — 허용만으로는 30편에 한 장도 안 나왔다")
+    void asksForOneMermaidDiagram() {
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .contains("[그림] — 1개를 넣어라")
+                .as("화면이 그리는 것은 이 펜스뿐이다")
+                .contains("```mermaid 펜스 안에 쓴다")
+                .as("검증기가 첫 줄로 세 종류만 통과시킨다")
+                .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2")
+                .as("ASCII 그림으로 돌아가면 한글 폭 때문에 다시 어긋난다")
+                .contains("ASCII 그림은 쓰지 마라")
+                .as("같은 펜스라 코드 예제를 그림으로 바꿔치기할 수 있다")
+                .contains("그림은 [코드 예제] 개수에 세지 않는다");
+
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("심화편은 선택이다 — 검증기도 심화편에는 없다고 울리지 않는다")
+                .contains("[그림] — 필요할 때만, 많아도 1개")
+                .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2");
+    }
+
+    /**
      * <b>설계 근거가 통째로 사라지는 것을 막는다.</b> "### 왜 이렇게 설계됐는가"를 문서 전체
      * 1개로 제한한 것은 가독성 결정이다(8/15 실물은 세 섹션 모두에 달려 있어 의례가 됐다).
      * 그런데 그 블록은 {@code [난이도 재료]}가 정의한 <b>중급 재료 그 자체</b>이기도 하다 —

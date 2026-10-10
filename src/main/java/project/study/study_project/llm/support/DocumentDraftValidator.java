@@ -128,6 +128,24 @@ public final class DocumentDraftValidator {
     /** 펜스 코드블록. {@code (?s)}로 줄바꿈까지 포함하고, 최소 일치({@code *?})로 블록을 하나씩 끊는다. */
     private static final Pattern FENCED_CODE = Pattern.compile("(?s)```.*?```");
 
+    /**
+     * 그림 블록 — {@code ```mermaid} 펜스. 1번 그룹이 그림 원문이다(2026-10-10).
+     *
+     * <p>문서 화면({@code document.html})이 이 펜스만 그림으로 바꿔 그린다. 코드 예제와 같은
+     * 펜스 문법이라 {@link #FENCED_CODE}에도 걸리므로, 코드 예제를 셀 때는 이 개수를 뺀다 —
+     * 안 빼면 모델이 코드 하나를 그림으로 바꿔치기해도 개수 검사가 통과한다.
+     */
+    private static final Pattern MERMAID_BLOCK = Pattern.compile("(?s)```mermaid[ \\t]*\\R(.*?)```");
+
+    /**
+     * 프롬프트가 허용한 그림 종류의 첫 줄 — {@code ClaudeDocumentGenerator}의 {@code [그림]} 절과 같아야 한다.
+     *
+     * <p>mermaid 문법 전체를 자바에서 검사할 방법은 없다. 첫 줄만 본다 — 종류 선언이 틀리면
+     * 그림이 통째로 안 그려지고, 화면에는 그림 대신 원문이 코드로 남는다.
+     */
+    private static final Pattern MERMAID_HEADER =
+            Pattern.compile("^(flowchart\\s+(TD|TB|LR)|sequenceDiagram|stateDiagram-v2)\\s*$");
+
     /** 인라인 코드. 줄바꿈을 포함하지 않게 막아 두어 백틱 하나가 문서 절반을 삼키는 일을 방지. */
     private static final Pattern INLINE_CODE = Pattern.compile("`[^`\\n]*`");
 
@@ -335,6 +353,7 @@ public final class DocumentDraftValidator {
         checkUndefinedTerms(body, checks);
         checkBodySections(body, structure, edition, checks);
         checkCodeExamples(body, edition, checks);
+        checkDiagrams(body, edition, checks);
         checkHtmlTags(body, checks);
         checkLength(body, edition, checks);
         checkSectionOpeners(structure, checks);
@@ -738,11 +757,44 @@ public final class DocumentDraftValidator {
         // 정작 제목이 약속한 주장을 보여 주는 예제가 없었다. 개수를 하나 올린 것은 그 자체가
         // 목적이 아니라 "서로 다른 절을 받쳐라"는 프롬프트 지시가 지켜졌는지 보는 대리 지표다.
         int min = edition == DocumentEdition.ADVANCED ? MIN_CODE_BLOCKS : BEGINNER_MIN_CODE_BLOCKS;
-        int blocks = count(FENCED_CODE, body);
+        // 그림 블록은 코드 예제가 아니다 — 같은 펜스 문법이라 따로 빼야 한다(MERMAID_BLOCK 주석).
+        int blocks = count(FENCED_CODE, body) - count(MERMAID_BLOCK, body);
         if (blocks < min) {
             checks.add(DraftCheck.warning(
                     "코드 예제가 %d개입니다(기준 %d개 이상). 코드가 없으면 블로그로 옮겼을 때 밀도가 확 떨어집니다."
                             .formatted(blocks, min)));
+        }
+    }
+
+    /**
+     * 그림({@code ```mermaid})이 있는지, 있으면 화면이 그릴 수 있는 종류인지 — 2026-10-10 신설.
+     *
+     * <p>그날까지 나온 문서 30편에 그림이 한 장도 없었다. 프롬프트가 "표로도 목록으로도 담기지
+     * 않는 구조만 예외로 그림을 허용한다"고 했는데, 허용만으로는 나오지 않는다 — 코드 예제에서
+     * 이미 겪은 일이다({@link #checkCodeExamples}). 그래서 입문편에는 한 장을 요구하고 여기서 센다.
+     *
+     * <p><b>심화편은 없어도 조용하다.</b> 프롬프트가 심화편의 그림을 선택으로 뒀다.
+     * 대신 종류 검사는 두 편 모두에 건다 — 틀린 그림은 어느 편에서든 원문이 코드로 보인다.
+     *
+     * <p>전부 경고다. 그림 하나 때문에 나흘치 문서를 버리는 것보다 검수자가 지우거나
+     * 고치는 편이 싸다(코드 예제 검사와 같은 판단).
+     */
+    private static void checkDiagrams(String body, DocumentEdition edition, List<DraftCheck> checks) {
+        Matcher m = MERMAID_BLOCK.matcher(body);
+        int diagrams = 0;
+        while (m.find()) {
+            diagrams++;
+            String header = m.group(1).lines().map(String::strip).filter(l -> !l.isEmpty())
+                    .findFirst().orElse("");
+            if (!MERMAID_HEADER.matcher(header).matches()) {
+                checks.add(DraftCheck.warning(
+                        "%d번째 그림의 첫 줄이 \"%s\"입니다(flowchart TD·LR, sequenceDiagram, stateDiagram-v2만). 화면에 그림 대신 원문이 코드로 보입니다."
+                                .formatted(diagrams, header.length() <= 30 ? header : header.substring(0, 30) + "…")));
+            }
+        }
+        if (diagrams == 0 && edition == DocumentEdition.BEGINNER) {
+            checks.add(DraftCheck.warning(
+                    "그림(```mermaid)이 없습니다(입문편 기준 1개). 구조나 흐름을 글로만 따라가야 합니다."));
         }
     }
 
