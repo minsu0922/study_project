@@ -1171,6 +1171,22 @@ class ClaudeProblemGeneratorPromptTest {
     }
 
     /**
+     * <b>객관식 순서형의 모양을 적었는지</b>(2026-10-11).
+     *
+     * <p>opus-5-5로 올린 뒤 객관식 배치의 순서형 5개 중 3개가 순서 배열 유형의 모양으로 왔다
+     * (보기 넷이 단계, correct 전부 false, answer "2|4|1|3"). 정답 보기가 없어 들여올 때 버려진다.
+     */
+    @Test
+    @DisplayName("객관식 순서형은 보기 하나가 순서 하나다 — 단계를 보기로 쪼개면 버려진다")
+    void tellsHowASequenceQuestionLooksInMultipleChoice() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("객관식이면 <보기 하나가 순서 하나>다")
+                .as("어긋난 모양이 어느 유형의 것인지와 그 대가를 함께 적는다")
+                .contains("<순서 배열> 유형의 형식이다")
+                .contains("정답 보기가 없어 그 문제는 버려진다");
+    }
+
+    /**
      * <b>2026-08-25 신설 — 사람이 형태를 지목했을 때.</b>
      *
      * <p>중급에 다섯 형태를 열었더니 실물이 세 번 연속 상황형으로만 나왔다. 모델이 게을러서가
