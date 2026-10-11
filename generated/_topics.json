@@ -35,6 +35,11 @@
     "topic" : "요청 제한 — 한 사용자가 서버를 독차지하지 못하게 막는 방식들",
     "memo" : "면접 단골 보강(2026-10-10). 실물은 docs/09의 토큰 버킷. 고정 윈도우 경계에서 두 배가 통과하는 장면에서 출발할 것."
   }, {
+    "id" : 75,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "두 요청이 같은 순간 같은 값을 읽을 때 — 읽고·더하고·저장하기를 한 덩어리로 묶는 법",
+    "memo" : "프로젝트 기술 6/12. 분당 5회 제한이 6회·7회로 새는 장면에서 출발. Lua는 해법으로만 등장시키고(‘Redis가 안에서 대신 실행해 주는 작은 언어’), 남길 것은 문법이 아니라 경쟁 상태 개념. 실물은 scripts/rate-limit.lua."
+  }, {
     "id" : 3,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "JVM 힙의 세대 구분과 G1 GC가 영역을 나누는 이유"
@@ -69,6 +74,11 @@
     "topic" : "검색창에 한 글자 칠 때마다 자동완성이 뜨는데, 그때마다 서버에 묻는가",
     "memo" : "흐름 2단 1/3. 대기열에 SYSTEM_DESIGN이 0개여서 신설한 갈래다. 셋을 붙여 읽으면 '미리 계산해 둔다'가 세 각도로 들어온다. 여기는 요청을 줄이는 쪽(디바운스·캐시)."
   }, {
+    "id" : 78,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "도커 — \"제 컴퓨터에서는 되는데요\"가 안 통하게 만드는 상자(이미지와 컨테이너)",
+    "memo" : "프로젝트 기술 9/12. 실물은 Dockerfile과 docker-compose(MySQL·Redis를 명령 한 줄로 띄우는 자리)."
+  }, {
     "id" : 5,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "synchronized와 volatile의 차이 — 가시성과 원자성은 다른 문제다"
@@ -102,6 +112,11 @@
     "domain" : "SYSTEM_DESIGN",
     "topic" : "연관 검색어는 언제 만들어지나 — 검색하는 순간 계산하는가, 미리 만들어 두는가",
     "memo" : "흐름 2단 2/3. 사용자가 직접 물어본 주제다. 로그 수집 → 배치 집계 → 미리 계산 → 캐시 → 응답이 한 줄로 꿰이는 자리."
+  }, {
+    "id" : 80,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "CI/CD와 헬스체크 — 사람이 안 눌러도 빌드·배포가 돌게 하고, 올린 게 진짜 떴는지 물어보는 창구",
+    "memo" : "프로젝트 기술 11/12. 실물은 GitHub Actions·GHCR 이미지 push와 Actuator 헬스체크(Dockerfile의 HEALTHCHECK가 쓴다)."
   }, {
     "id" : 1075,
     "domain" : "OS",
@@ -153,25 +168,10 @@
     "topic" : "토큰 만료 — 짧게 두면 자꾸 로그아웃되고, 길게 두면 훔친 출입증을 오래 쓴다",
     "memo" : "프로젝트 기술 8/12. 실물은 ADR-0001(MVP를 access 토큰 하나로 시작한 선택)과 그 대가."
   }, {
-    "id" : 75,
-    "domain" : "CLOUD_INFRA",
-    "topic" : "두 요청이 같은 순간 같은 값을 읽을 때 — 읽고·더하고·저장하기를 한 덩어리로 묶는 법",
-    "memo" : "프로젝트 기술 6/12. 분당 5회 제한이 6회·7회로 새는 장면에서 출발. Lua는 해법으로만 등장시키고(‘Redis가 안에서 대신 실행해 주는 작은 언어’), 남길 것은 문법이 아니라 경쟁 상태 개념. 실물은 scripts/rate-limit.lua."
-  }, {
     "id" : 76,
     "domain" : "SOFTWARE_ENGINEERING",
     "topic" : "테스트 — 내 컴퓨터에서는 통과하는데 CI에서만 깨지는 이유",
     "memo" : "프로젝트 기술 7/12. 실물은 로컬에서 안 보이고 CI에서만 재현된 버그 둘(Redis 장애 미처리·요청 제한 429). 테스트가 자기 데이터를 직접 만들어야 하는 이유까지."
-  }, {
-    "id" : 78,
-    "domain" : "CLOUD_INFRA",
-    "topic" : "도커 — \"제 컴퓨터에서는 되는데요\"가 안 통하게 만드는 상자(이미지와 컨테이너)",
-    "memo" : "프로젝트 기술 9/12. 실물은 Dockerfile과 docker-compose(MySQL·Redis를 명령 한 줄로 띄우는 자리)."
-  }, {
-    "id" : 80,
-    "domain" : "CLOUD_INFRA",
-    "topic" : "CI/CD와 헬스체크 — 사람이 안 눌러도 빌드·배포가 돌게 하고, 올린 게 진짜 떴는지 물어보는 창구",
-    "memo" : "프로젝트 기술 11/12. 실물은 GitHub Actions·GHCR 이미지 push와 Actuator 헬스체크(Dockerfile의 HEALTHCHECK가 쓴다)."
   }, {
     "id" : 19,
     "domain" : "SOFTWARE_ENGINEERING",
