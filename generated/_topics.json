@@ -4,7 +4,9 @@
     "id" : 47,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "스택과 힙 — OutOfMemory와 StackOverflow가 갈리는 자리",
-    "memo" : "자바 2단계. 메모리 구조 그림 나열이 되지 않게, 두 오류가 각각 어떤 코드에서 나는지로 꿸 것."
+    "memo" : "자바 2단계. 메모리 구조 그림 나열이 되지 않게, 두 오류가 각각 어떤 코드에서 나는지로 꿸 것.",
+    "lastUsedAt" : "2026-10-13",
+    "usedCount" : 1
   }, {
     "id" : 8,
     "domain" : "OS",
