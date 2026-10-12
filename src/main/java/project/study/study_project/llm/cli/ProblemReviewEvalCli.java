@@ -173,7 +173,10 @@ public final class ProblemReviewEvalCli {
         for (int i = 0; i < g.problems().size(); i++) {
             ProblemRef ref = g.problems().get(i);
             int index = i;
-            List<Finding> mine = findings.stream().filter(f -> f.problemIndex() == index).toList();
+            // 의견은 적발도 헛경보도 아니다
+            List<Finding> mine = findings.stream().filter(f -> f.problemIndex() == index)
+                    .filter(f -> f.type().grade() != project.study.study_project.llm.client.ProblemReview.Grade.OPINION)
+                    .toList();
             if (ref.expectOrEmpty().isEmpty()) {
                 falseAlarms.addAll(mine);
             } else if (mine.stream().anyMatch(f -> ref.expectOrEmpty().contains(f.type()))) {

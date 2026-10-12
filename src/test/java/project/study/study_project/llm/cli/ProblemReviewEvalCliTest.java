@@ -63,6 +63,19 @@ class ProblemReviewEvalCliTest {
     }
 
     @Test
+    @DisplayName("의견은 헛경보로 세지 않고, Actions 요약에도 싣지 않는다 — 문제마다 달려 지적이 묻힌다")
+    void opinionsAreNotCounted() {
+        Group g = new Group("g", "doc.json", "BEGINNER", Difficulty.BEGINNER, List.of(
+                new ProblemRef("b.json", 0, null, null, null)));
+        List<Finding> onlyOpinions = List.of(
+                new Finding(0, FindingType.SOLUTION, "풀이"), new Finding(0, FindingType.OVERALL, "총평"));
+
+        assertThat(ProblemReviewEvalCli.score(g, onlyOpinions).falseAlarms()).isEmpty();
+        assertThat(BatchReports.renderProblemReview(java.time.LocalDate.of(2026, 10, 13), List.of(), onlyOpinions))
+                .contains("지적 없음");
+    }
+
+    @Test
     @DisplayName("규칙 경고를 같은 뜻의 AI 지적 종류로 옮기고, 대응이 없는 경고는 버린다")
     void mapsRuleWarningsToFindingTypes() {
         assertThat(ProblemReviewEvalCli.ruleTypeOf("정답이 가장 긴 보기 (60자 vs 최단 30자, 2.00배 — 기준 1.5배 이하)"))
