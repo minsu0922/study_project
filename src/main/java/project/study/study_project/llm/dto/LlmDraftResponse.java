@@ -77,10 +77,21 @@ public record LlmDraftResponse(
         LocalDateTime reviewedAt
 ) {
     /**
-     * @param label   화면 표기용 한글 이름(예: 보기 단서 누설)
-     * @param message 결론 한 문장
-     * @param details 그렇게 본 근거, 한 줄씩. 없으면 빈 목록
+     * @param label      화면 표기용 한글 이름(예: 보기 단서 누설)
+     * @param grade      DEFECT(결함)·POLISH(다듬기)·OPINION(의견). 화면은 의견을 지적 수에 세지 않는다
+     * @param message    결론 한 문장
+     * @param details    그렇게 본 근거, 한 줄씩. 없으면 빈 목록
+     * @param suggestion 고친 문장 제안. 없으면 {@code null}
      */
-    public record AiFinding(String type, String label, String message, List<String> details) {
+    public record AiFinding(String type, String label, String grade, String message, List<String> details,
+                            AiSuggestion suggestion) {
+    }
+
+    /**
+     * @param target      QUESTION(질문) 또는 CHOICE(보기)
+     * @param choiceIndex 보기를 고칠 때 그 보기의 위치(0부터). 질문이면 {@code null}
+     * @param text        고쳐 쓴 문장 전체
+     */
+    public record AiSuggestion(String target, Integer choiceIndex, String text) {
     }
 }

@@ -329,24 +329,72 @@ function warningBoxOf(d) {
  * 처리가 끝난 초안에도 그린다. 승인·거절 결과와 지적을 나란히 봐야 지적이 맞았는지 알 수 있다.
  */
 function aiFindingsBoxOf(d) {
-  const findings = d.aiFindings;
-  if (findings == null) return "";
+  if (d.aiFindings == null) return "";
+  // 적용 버튼이 서버에 보낼 번호는 전체 목록 안의 위치라, 가르기 전에 먼저 매긴다.
+  const all = d.aiFindings.map((f, index) => ({ ...f, index }));
+  const findings = all.filter(f => !isOpinion(f));
+  const opinions = all.filter(isOpinion);
+  // 의견(풀이·총평 등)은 문제마다 달린다. 지적과 한 상자에 두면 지적이 묻혀서 접어 둔다.
+  const opinionBox = opinions.length === 0 ? "" : `
+    <details class="ai-opinions">
+      <summary>AI 의견 ${opinions.length}건 · 풀이와 총평 (지적 수에 세지 않습니다)</summary>
+      ${opinions.map(f => aiFindingItemOf(d, f)).join("")}
+    </details>`;
   if (findings.length === 0) {
-    return `<div class="meta" style="margin-top:6px">AI 검수: 지적 없음</div>`;
+    return `<div class="meta" style="margin-top:6px">AI 검수: 지적 없음</div>${opinionBox}`;
   }
   // 지적 하나는 [종류] 결론 한 줄 + 근거 줄들이다. 결론은 서버가 정한 문장이라 훑어 읽히고,
   // AI가 쓴 긴 글은 근거로 내려 들여 쓴다. 한 문장에 다 넣으면 어디까지가 결론인지 안 보인다.
   // 근거 속 "2번"은 아래 보기의 번호다(서버가 원래 순서로 바꿔 준다 — Shown.inOriginalNumbers).
-  const items = findings.map(f => `
-      <div class="ai-finding">
-        <div><span class="badge gray">${escapeHtml(f.label)}</span> <b>${escapeHtml(f.message)}</b></div>
-        ${(f.details ?? []).length ? `<ul>${f.details.map(l => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}
-      </div>`).join("");
   return `
     <div class="alert info ai-findings" style="margin:10px 0">
       <div class="ai-findings-head"><b>AI 검수 지적 ${findings.length}건</b> · 틀릴 수 있으니 직접 확인하세요</div>
-      ${items}
-    </div>`;
+      ${findings.map(f => aiFindingItemOf(d, f)).join("")}
+    </div>${opinionBox}`;
+}
+
+const isOpinion = f => f.grade === "OPINION";
+
+function aiFindingItemOf(d, f) {
+  return `
+      <div class="ai-finding">
+        <div><span class="badge gray">${escapeHtml(f.label)}</span> <b>${escapeHtml(f.message)}</b></div>
+        ${(f.details ?? []).length ? `<ul>${f.details.map(l => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}
+        ${aiSuggestionOf(d, f)}
+      </div>`;
+}
+
+/**
+ * 지적에 붙은 고친 문장 제안. 지금 문장과 나란히 보여 주고, 대기 중인 초안에만 적용 버튼을 단다.
+ * 적용하면 서버가 그 질문·보기만 바꾸고 지적에서 제안을 뗀다 — 같은 제안을 두 번 누를 수 없다.
+ */
+function aiSuggestionOf(d, f) {
+  const s = f.suggestion;
+  if (!s) return "";
+  const onQuestion = s.target === "QUESTION";
+  const now = onQuestion ? d.question : (d.choices?.[s.choiceIndex]?.text ?? "");
+  const where = onQuestion ? "질문" : `${s.choiceIndex + 1}번 보기`;
+  return `
+        <div class="ai-suggestion">
+          <div><span class="choice-tag">지금</span><span>${escapeHtml(now)}</span></div>
+          <div><span class="choice-tag">제안</span><span>${escapeHtml(s.text)}</span></div>
+          ${d.status === "PENDING"
+            ? `<button class="btn-outline" onclick="applyAiSuggestion(this, ${d.id}, ${f.index})">${where}에 제안 적용</button>`
+            : ""}
+        </div>`;
+}
+
+async function applyAiSuggestion(btn, id, index) {
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/llm-problems/${id}/ai-findings/${index}/apply-suggestion`, { method: "POST" });
+    await loadDrafts();
+    document.getElementById(`draft-${id}`)?.scrollIntoView({ block: "start" });
+  } catch (e) {
+    btn.disabled = false;
+    showError(document.getElementById("reviewMessage"), e);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 }
 
 /** 요약 표의 열. 순서와 이름은 서버의 ProblemReview.FindingType과 맞춘다 — 이름은 좁은 열에 맞게 줄였다. */
@@ -357,6 +405,7 @@ const AI_FINDING_COLUMNS = [
   ["QUESTION_REVEALS", "질문 누설"],
   ["NO_SUPPORT", "근거 없음"],
   ["SOURCE_FLAGGED", "문서 지적"],
+  ["EXPLANATION_MISMATCH", "해설"],
   ["DIFFICULTY_MISMATCH", "난이도"],
 ];
 
@@ -376,13 +425,15 @@ function renderAiSummary(drafts) {
     return;
   }
   const has = (d, type) => d.aiFindings.some(f => f.type === type);
-  const total = reviewed.reduce((n, d) => n + d.aiFindings.length, 0);
+  // 의견은 세지 않는다. 문제마다 풀이와 총평이 달려, 세면 모든 행이 "지적 있음"이 된다.
+  const countOf = d => d.aiFindings.filter(f => !isOpinion(f)).length;
+  const total = reviewed.reduce((n, d) => n + countOf(d), 0);
   const skipped = drafts.length - reviewed.length;
   const rows = reviewed.map(d => `
         <tr>
           <td class="wrap"><a href="#draft-${d.id}">#${d.id} ${escapeHtml(d.title ?? d.question.slice(0, 30))}</a></td>
           ${AI_FINDING_COLUMNS.map(([type]) => `<td style="text-align:center">${has(d, type) ? "●" : ""}</td>`).join("")}
-          <td style="text-align:center"${d.aiFindings.length ? "" : ` class="zero"`}>${d.aiFindings.length || "없음"}</td>
+          <td style="text-align:center"${countOf(d) ? "" : ` class="zero"`}>${countOf(d) || "없음"}</td>
         </tr>`).join("");
   const sums = AI_FINDING_COLUMNS.map(([type]) => reviewed.filter(d => has(d, type)).length);
   box.hidden = false;

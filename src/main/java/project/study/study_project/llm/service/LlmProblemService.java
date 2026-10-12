@@ -29,6 +29,7 @@ import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
+import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.dto.DraftAiFinding;
 import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmDraftResponse;
@@ -626,6 +627,76 @@ public class LlmProblemService {
         events.publishEvent(ReviewCompleted.problem());
     }
 
+    /**
+     * AI 검수 지적에 붙은 고친 문장을 초안에 적용한다(docs/22 §6).
+     *
+     * <p>적용한 지적은 제안을 떼고 근거에 바꾼 내용을 남긴다. 같은 제안을 두 번 누를 수 없고,
+     * 옛 문장이 남아 있어 손으로 되돌릴 수 있다. 원본은 {@code generated/} 파일에도 있다.
+     *
+     * @param findingIndex 초안의 지적 목록 안 위치(0부터)
+     */
+    @Transactional
+    public LlmDraftResponse applyAiSuggestion(Long draftId, int findingIndex) {
+        GeneratedProblemDraft draft = findDraft(draftId);
+        if (draft.getStatus() != DraftStatus.PENDING) {
+            throw new BusinessException(ErrorCode.LLM_002);
+        }
+        List<DraftAiFinding> findings = readStoredFindings(draft);
+        if (findingIndex < 0 || findingIndex >= findings.size() || findings.get(findingIndex).suggestion() == null) {
+            throw new BusinessException(ErrorCode.COMMON_001, "적용할 제안이 없습니다.");
+        }
+        DraftAiFinding finding = findings.get(findingIndex);
+        ProblemReview.Suggestion suggestion = finding.suggestion();
+
+        String question = draft.getQuestion();
+        String choicesJson = draft.getChoicesJson();
+        String before;
+        if (suggestion.target() == ProblemReview.FixTarget.QUESTION) {
+            before = question;
+            question = suggestion.text();
+        } else {
+            List<AdminProblemRequest.ChoiceItem> choices = new ArrayList<>(readChoices(choicesJson));
+            Integer index = suggestion.choiceIndex();
+            if (index == null || index < 0 || index >= choices.size()) {
+                throw new BusinessException(ErrorCode.COMMON_001, "제안이 가리키는 보기가 없습니다.");
+            }
+            AdminProblemRequest.ChoiceItem c = choices.get(index);
+            before = c.text();
+            choices.set(index, new AdminProblemRequest.ChoiceItem(
+                    suggestion.text(), c.correct(), c.rationale(), c.matchText()));
+            choicesJson = writeJson(choices);
+        }
+
+        List<DraftAiFinding> updated = new ArrayList<>(findings);
+        String applied = "제안 적용: 「%s」 → 「%s」".formatted(before, suggestion.text());
+        updated.set(findingIndex, new DraftAiFinding(finding.type(), finding.message(),
+                finding.detail() == null ? applied : finding.detail() + "\n" + applied, null));
+        draft.applyAiSuggestion(question, choicesJson, writeJson(updated));
+        log.info("문제 초안 #{}: AI 제안 적용({})", draft.getId(), finding.type());
+        return toResponse(draft);
+    }
+
+    private List<DraftAiFinding> readStoredFindings(GeneratedProblemDraft draft) {
+        if (draft.getAiFindingsJson() == null) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(draft.getAiFindingsJson(), new TypeReference<>() {
+            });
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(ErrorCode.COMMON_001, "AI 검수 지적을 읽지 못했습니다.");
+        }
+    }
+
+    private String writeJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            // record 직렬화는 실패할 수 없는 경로지만 검사 예외라 형식상 변환 — 발생하면 버그다
+            throw new IllegalStateException("JSON 직렬화 실패", e);
+        }
+    }
+
     private GeneratedProblemDraft findDraft(Long id) {
         return draftRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LLM_001));
@@ -739,7 +810,11 @@ public class LlmProblemService {
             });
             return stored.stream()
                     .map(f -> new LlmDraftResponse.AiFinding(
-                            f.type().name(), f.type().label(), f.message(), detailLinesOf(f.detail())))
+                            f.type().name(), f.type().label(), f.type().grade().name(), f.message(),
+                            detailLinesOf(f.detail()),
+                            f.suggestion() == null ? null : new LlmDraftResponse.AiSuggestion(
+                                    f.suggestion().target().name(), f.suggestion().choiceIndex(),
+                                    f.suggestion().text())))
                     .toList();
         } catch (JsonProcessingException | RuntimeException e) {
             log.warn("초안 #{}의 AI 검수 지적을 읽지 못함: {}", d.getId(), e.getMessage());
