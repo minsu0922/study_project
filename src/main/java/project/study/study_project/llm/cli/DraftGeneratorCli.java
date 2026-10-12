@@ -12,6 +12,7 @@ import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
+import project.study.study_project.llm.support.FlaggedSourceRule;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
 
@@ -21,6 +22,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -296,8 +298,14 @@ public final class DraftGeneratorCli {
         if (type == ProblemType.MULTIPLE_CHOICE && source != null) {
             List<ProblemReview.Finding> findings = BatchReports.reportProblemReview(
                     new ClaudeProblemReviewer(model), kept, difficulty, source, date).findings();
+            List<ProblemReview.Finding> flagged = BatchReports.reportFlaggedSources(
+                    kept, FlaggedSourceRule.link(kept, source.contentMd(), resolved.factFindings()), date);
+            // 검수가 실패한 날은 문서 지적만 따로 싣지 않는다. 목록이 있으면 검수함이
+            // "AI 검수를 돌렸다"로 읽는다(null과 빈 목록의 구별, docs/22 §6)
             if (findings != null) {
-                attachReviewFindings(outFile, batch, findings);
+                List<ProblemReview.Finding> all = new ArrayList<>(findings);
+                all.addAll(flagged);
+                attachReviewFindings(outFile, batch, all);
             }
         }
     }

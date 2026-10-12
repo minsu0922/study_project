@@ -159,6 +159,24 @@ final class BatchReports {
         appendToStepSummary(rendered);
     }
 
+    /** 문서 사실 검수가 지적한 문단에서 나온 문제를 요약 화면에 남긴다. 없으면 아무것도 적지 않는다. */
+    static List<ProblemReview.Finding> reportFlaggedSources(List<GeneratedProblemItem> problems,
+                                                           List<ProblemReview.Finding> flagged, LocalDate date) {
+        if (!flagged.isEmpty()) {
+            announce("🔎 **%s 문서 지적 문단에서 나온 문제: %d건** — 문서를 먼저 확인하세요%n%s".formatted(
+                    date, flagged.size(), bullets(flagged.stream()
+                            .map(f -> "%d번 「%s」 %s".formatted(f.problemIndex() + 1,
+                                    nameOf(problems.get(f.problemIndex())), f.detail().lines().findFirst().orElse("")))
+                            .toList())));
+        }
+        return flagged;
+    }
+
+    private static String nameOf(GeneratedProblemItem p) {
+        String name = p.title() == null || p.title().isBlank() ? p.question() : p.title();
+        return name.length() > 40 ? name.substring(0, 40) + "…" : name;
+    }
+
     /**
      * 사실 검수를 돌려 지적을 요약 화면에 남긴다. 실패해도 job을 죽이지 않는다.
      * 검수는 덧붙이는 단계라, 여기서 죽으면 이미 요금을 낸 문서까지 커밋되지 않는다.
@@ -166,19 +184,33 @@ final class BatchReports {
      * @return 요약 화면에 쓴 글(테스트용)
      */
     static String reportFactCheck(DocumentFactChecker checker, GeneratedDocumentItem document, LocalDate date) {
+        return checkFacts(checker, document, date).rendered();
+    }
+
+    /**
+     * @param rendered 요약 화면에 쓴 글
+     * @param findings 지적 목록. 검수가 실패했으면 {@code null} — "지적 없음"과 구별한다
+     */
+    record FactCheckReport(String rendered, List<FactCheckFinding> findings) {
+    }
+
+    /** {@link #reportFactCheck}와 같은 일을 하고 지적 목록까지 돌려준다 — 문서 파일에 실으려고 쓴다. */
+    static FactCheckReport checkFacts(DocumentFactChecker checker, GeneratedDocumentItem document, LocalDate date) {
         var documentEdition = ClaudeDocumentGenerator.editionOf(document.contentMd());
         String edition = documentEdition.getDisplayName();
         String rendered;
+        List<FactCheckFinding> findings = null;
         try {
-            rendered = renderFactCheck(date, edition,
-                    checker.check(document.title(), document.contentMd(), documentEdition));
+            findings = checker.check(document.title(), document.contentMd(), documentEdition);
+            rendered = renderFactCheck(date, edition, findings);
         } catch (RuntimeException e) {
+            findings = null;
             rendered = "⚠️ **%s %s 사실 검수 실패** — 문서는 저장했습니다. 승인 전에 사람이 읽어 주세요 (%s)%n"
                     .formatted(date, edition, e.getMessage());
         }
         System.out.println(rendered);
         appendToStepSummary(rendered);
-        return rendered;
+        return new FactCheckReport(rendered, findings);
     }
 
     static String renderFactCheck(LocalDate date, String edition, List<FactCheckFinding> findings) {

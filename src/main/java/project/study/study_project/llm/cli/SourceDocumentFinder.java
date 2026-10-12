@@ -4,6 +4,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
+import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
@@ -16,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 문제의 근거가 될 개념 문서를 찾고, 그 문서에 이 난이도의 재료가 있는지 본다.
@@ -128,7 +130,7 @@ final class SourceDocumentFinder {
             // slug·제목은 심화편 것을 그대로 쓴다. 붙인 부분은 <같은 주제 같은 제목>의 입문편이고,
             // 초안이 "어느 문서로 만들었나"를 가리킬 때 답은 여전히 그 문서 한 편이다.
             return new ResolvedSource(parsed.domain(),
-                    new SourceDocument(doc.slug(), doc.title(), body));
+                    new SourceDocument(doc.slug(), doc.title(), body), parsed.factFindings());
         } catch (Exception e) {
             // 문서를 못 읽는 것이 그날 문제 생성을 막을 이유는 없다 — 근거 없이라도 만든다
             System.out.println("근거 문서를 읽지 못해 폴백으로 생성합니다: " + e.getMessage());
@@ -218,6 +220,10 @@ final class SourceDocumentFinder {
      * 그 record가 <b>프롬프트에 실릴 내용</b>만 담는 그릇이기 때문이다 — 분야는 프롬프트의
      * 다른 자리(조건 줄)에 이미 들어가므로 문서 블록에 또 넣으면 중복이다.
      */
-    record ResolvedSource(DomainCode domain, SourceDocument document) {
+    record ResolvedSource(DomainCode domain, SourceDocument document, List<FactCheckFinding> factFindings) {
+
+        ResolvedSource(DomainCode domain, SourceDocument document) {
+            this(domain, document, null);
+        }
     }
 }

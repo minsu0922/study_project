@@ -1,7 +1,10 @@
 package project.study.study_project.llm.dto;
 
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
+
+import java.util.List;
 
 /**
  * 생성된 개념 문서 파일({@code generated/documents/YYYY-MM-DD.json})의 형태 — docs/15.
@@ -37,6 +40,8 @@ import project.study.study_project.llm.client.GeneratedDocumentItem;
  * @param document         입문편(검증 전 원본). 초급·중급 문제의 근거
  * @param advancedDocument 심화편(검증 전 원본). 고급 문제의 근거.
  *                         2026-09-03 이전 파일과 심화편 생성이 실패한 날에는 {@code null}
+ * @param factFindings     두 편의 사실 검수 지적(docs/22 §6). 문제를 만드는 날 근거 문장과 대조한다.
+ *                         2026-10-13 이전 파일과 검수가 두 편 다 실패한 날에는 {@code null}
  */
 public record GeneratedDocumentFile(
         String note,
@@ -45,6 +50,16 @@ public record GeneratedDocumentFile(
         DomainCode domain,
         String model,
         GeneratedDocumentItem document,
-        GeneratedDocumentItem advancedDocument
+        GeneratedDocumentItem advancedDocument,
+        List<FactCheckFinding> factFindings
 ) {
+
+    public GeneratedDocumentFile(String note, String date, String generatedAt, DomainCode domain, String model,
+                                 GeneratedDocumentItem document, GeneratedDocumentItem advancedDocument) {
+        this(note, date, generatedAt, domain, model, document, advancedDocument, null);
+    }
+
+    public GeneratedDocumentFile withFactFindings(List<FactCheckFinding> findings) {
+        return new GeneratedDocumentFile(note, date, generatedAt, domain, model, document, advancedDocument, findings);
+    }
 }

@@ -4,6 +4,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.DocumentFactChecker;
+import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.support.DomainSettings;
@@ -12,10 +13,13 @@ import project.study.study_project.llm.support.TopicQueue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -151,9 +155,12 @@ final class DocumentBatch {
 
         // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다
         DocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
-        BatchReports.reportFactCheck(factChecker, document, date);
-        if (advanced != null) {
-            BatchReports.reportFactCheck(factChecker, advanced, date);
+        List<FactCheckFinding> beginnerFacts = BatchReports.checkFacts(factChecker, document, date).findings();
+        List<FactCheckFinding> advancedFacts = advanced == null ? null
+                : BatchReports.checkFacts(factChecker, advanced, date).findings();
+        List<FactCheckFinding> facts = mergeFactFindings(beginnerFacts, advancedFacts);
+        if (facts != null) {
+            attachFactFindings(outFile, file, facts);
         }
 
         // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
@@ -164,6 +171,43 @@ final class DocumentBatch {
                     + picked.topic());
             BatchReports.appendToStepSummary("⚠️ `%s`에 사용 기록을 못 남겼습니다 — \"%s\" 범위가 다음 문서일에 또 걸릴 수 있습니다.%n"
                     .formatted(TopicQueue.FILE_NAME, picked.topic()));
+        }
+    }
+
+    /** 두 편의 지적을 한 목록으로 합친다. 두 편 다 검수하지 못했으면 {@code null}이다. */
+    static List<FactCheckFinding> mergeFactFindings(List<FactCheckFinding> beginner, List<FactCheckFinding> advanced) {
+        if (beginner == null && advanced == null) {
+            return null;
+        }
+        List<FactCheckFinding> merged = new ArrayList<>();
+        if (beginner != null) {
+            merged.addAll(beginner);
+        }
+        if (advanced != null) {
+            merged.addAll(advanced);
+        }
+        return merged;
+    }
+
+    /**
+     * 사실 검수 지적을 넣어 문서 파일을 다시 쓴다 — 문제를 만드는 날 근거 문장과 대조하려면
+     * 파일에 실려야 한다(docs/22 §6). 실패해도 예외를 던지지 않는 이유와 임시 파일을 쓰는 이유는
+     * {@code DraftGeneratorCli.attachReviewFindings}와 같다.
+     */
+    static void attachFactFindings(Path outFile, GeneratedDocumentFile file, List<FactCheckFinding> findings) {
+        Path temp = outFile.resolveSibling(outFile.getFileName() + ".tmp");
+        try {
+            Files.writeString(temp, MAPPER.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(file.withFactFindings(findings)));
+            Files.move(temp, outFile, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            BatchReports.announce("⚠️ 사실 검수 지적을 파일에 싣지 못했습니다 — 문서는 저장했고, 지적은 위 요약에만 있습니다 (%s)"
+                    .formatted(e.getMessage()));
+            try {
+                Files.deleteIfExists(temp);
+            } catch (IOException ignored) {
+                // 임시 파일이 남아도 들여오기 대상(*.json)이 아니라 해가 없다
+            }
         }
     }
 
