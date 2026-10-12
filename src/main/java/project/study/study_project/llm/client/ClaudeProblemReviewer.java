@@ -262,15 +262,18 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
             }
             // 중급 지문에 조건(장면)만 있는 것은 지적하지 않는다. 진짜 중급 16개 중 약 6개가 배경 장면으로
             // 시작해 헛경보가 된다(docs/22 §9). 급은 오답 성격과 함께 볼 때만 갈린다
-            Difficulty judgedLevel = levelOf(s.item().question(), j);
-            if (judgedLevel != labeled) {
-                boolean condition = hasCondition(s.item().question(), j);
+            boolean condition = hasCondition(s.item().question(), j);
+            Difficulty judgedLevel = levelOf(condition, j);
+            // 물음 문장을 조건으로 옮겨 온 경우는 조건인지 아닌지 가를 수 없다. 조건이 아니라고 봤을 때
+            // 낸 급과 같아지면 지적하지 않는다(2026-10-10 #7325: 물음을 조건으로 쳐 중급을 고급으로 봤다)
+            boolean unsure = condition && quotesQuestionSentence(j) && levelOf(false, j) == labeled;
+            if (judgedLevel != labeled && !unsure) {
                 // 급 이름(초급·중급·고급)은 모두 받침으로 끝나 조사가 늘 "으로"다
                 findings.add(new Finding(s.index(), FindingType.DIFFICULTY_MISMATCH,
                         "%s으로 냈지만 %s으로 보입니다".formatted(
                                 labeled.getDisplayName(), judgedLevel.getDisplayName()),
                         "지문에 답을 가르는 조건: %s\n조건이 달랐다면 정답이 되는 오답: %d개\n보기별 판단: %s".formatted(
-                                condition ? "「" + j.conditionQuote().strip() + "」" : "없음",
+                                conditionLine(condition, j),
                                 elsewhereCountOf(j), s.inOriginalNumbers(j.elsewhereReason()))));
             }
         }
@@ -304,7 +307,10 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
      * 오답 셋 중 둘이면 고급으로 본다. 셋 다를 요구하면 오답 하나를 약하게 쓴 고급을 놓친다.
      */
     static Difficulty levelOf(String question, Judgement j) {
-        boolean condition = hasCondition(question, j);
+        return levelOf(hasCondition(question, j), j);
+    }
+
+    static Difficulty levelOf(boolean condition, Judgement j) {
         if (condition && elsewhereCountOf(j) >= 2) {
             return Difficulty.ADVANCED;
         }
@@ -317,12 +323,29 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
     /**
      * 옮겨 적은 조건 문장이 지문에 실제로 있어야 조건으로 친다. 지어낸 조건으로 고급이 되지 않게 한다.
      * 8자 미만은 버린다. "이때", "이 조건에서" 같은 조각도 지문에는 있기 때문이다.
-     * 물음 문장 통째("이 조건에서 옳은 판단은?")는 길이로 못 거르고 프롬프트 지시에 맡긴다.
+     * 물음 문장 통째("이 조건에서 옳은 판단은?")는 길이로 못 거른다. 그 경우는 compare가 따로 본다.
      */
     static boolean hasCondition(String question, Judgement j) {
         String quote = ClaudeDocumentFactChecker.normalize(j.conditionQuote());
         return quote.length() >= CONDITION_QUOTE_MIN
                 && ClaudeDocumentFactChecker.normalize(question).contains(quote);
+    }
+
+    static boolean quotesQuestionSentence(Judgement j) {
+        return ClaudeDocumentFactChecker.normalize(j.conditionQuote()).endsWith("?");
+    }
+
+    /**
+     * 지적 근거의 조건 줄. AI가 조건 문장을 댔는데 지문에 없어 버린 경우는 그 문장을 남긴다.
+     * 상황 지문인데 "조건 없음"으로 나온 지적(2026-10-08 고급 3건)이 AI가 비운 탓인지
+     * 옮겨 적으며 바꾼 탓인지 가르려면 버린 문장이 보여야 한다.
+     */
+    static String conditionLine(boolean condition, Judgement j) {
+        if (condition) {
+            return "「" + j.conditionQuote().strip() + "」";
+        }
+        return isBlank(j.conditionQuote()) ? "없음"
+                : "없음 (AI가 든 문장 「%s」은 지문에 그대로 없거나 너무 짧아 버림)".formatted(j.conditionQuote().strip());
     }
 
     /** 오답은 셋뿐이다. 정답까지 세어 4를 적는 응답이 있어도 급이 흔들리지 않게 자른다. */

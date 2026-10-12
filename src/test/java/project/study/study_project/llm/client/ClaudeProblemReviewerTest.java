@@ -222,6 +222,41 @@ class ClaudeProblemReviewerTest {
         });
     }
 
+    private static List<Finding> difficultyFindings(String question, Difficulty labeled, boolean asksDefinition,
+                                                    String conditionQuote, int elsewhereCount) {
+        GeneratedProblemItem item = new GeneratedProblemItem(question, "", "해설", List.of(
+                new GeneratedChoice("살균기", true), new GeneratedChoice("정규식", false),
+                new GeneratedChoice("innerHTML", false), new GeneratedChoice("이스케이프", false)));
+        var shown = ClaudeProblemReviewer.showable(List.of(item));
+        Judgement j = new Judgement(1, "이유", shown.get(0).correctNo(), 0, "", "스키마는 표의 모양과 배치를 가리킨다.", "",
+                asksDefinition, "요건", conditionQuote, "오답별 상황", elsewhereCount);
+        return ClaudeProblemReviewer.compare(shown, null, new JudgementBatch(List.of(j)), labeled, DOC);
+    }
+
+    @Test
+    @DisplayName("물음 문장을 조건으로 옮겨 와 급이 올라간 경우, 조건이 아니라고 보면 낸 급과 같으니 지적하지 않는다")
+    void questionSentenceAsConditionDoesNotPromote() {
+        // 2026-10-10 #7325 — 중급으로 낸 문제를 물음 문장 때문에 고급으로 봤다
+        assertThat(difficultyFindings(SCENE, Difficulty.INTERMEDIATE, false, "이 조건에서 옳은 판단은?", 3)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("물음 문장을 조건으로 쳐도 안 쳐도 낸 급과 다르면 그대로 지적한다")
+    void questionSentenceStillFlaggedWhenBothReadingsDisagree() {
+        assertThat(difficultyFindings(SCENE, Difficulty.ADVANCED, false, "이 조건에서 옳은 판단은?", 0))
+                .singleElement().satisfies(f -> assertThat(f.message()).isEqualTo("고급으로 냈지만 중급으로 보입니다"));
+    }
+
+    @Test
+    @DisplayName("AI가 든 조건 문장이 지문에 없어 버렸으면 그 문장을 근거에 남긴다")
+    void droppedConditionQuoteIsShown() {
+        assertThat(difficultyFindings(SCENE, Difficulty.ADVANCED, false, "초당 요청이 1만 건이다", 3))
+                .singleElement().satisfies(f -> assertThat(f.detail().lines().findFirst().orElseThrow())
+                        .isEqualTo("지문에 답을 가르는 조건: 없음 (AI가 든 문장 「초당 요청이 1만 건이다」은 지문에 그대로 없거나 너무 짧아 버림)"));
+        assertThat(difficultyFindings("스키마란?", Difficulty.INTERMEDIATE, true, "", 0))
+                .singleElement().satisfies(f -> assertThat(f.detail()).startsWith("지문에 답을 가르는 조건: 없음\n"));
+    }
+
     /* ── 지적 문구: 결론과 근거, 보기 번호 ── */
 
     /**
