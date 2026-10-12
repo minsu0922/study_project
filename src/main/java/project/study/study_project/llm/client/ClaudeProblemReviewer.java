@@ -36,6 +36,7 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
 
     private static final long MAX_TOKENS = 32_000L;
     static final int CONDITION_QUOTE_MIN = 8;
+    static final double CUE_LENGTH_RATIO = 1.3;
 
     static final String CHOICE_ONLY_PROMPT = """
             너는 객관식 문제의 보기에 정답 단서가 새어 있는지 보는 검수자다.
@@ -226,7 +227,7 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
             // 지적은 결론(message)과 근거(detail)로 나눈다. 결론은 코드가 정한 문장이라 검수함에서
             // 훑어 읽히고, AI가 쓴 긴 글은 근거로 내린다. 근거 속 보기 번호는 원래 순서로 바꾼다(inOriginalNumbers)
             ChoiceOnlyAnswer a = answers.get(k + 1);
-            if (a != null && a.choiceNo() == correct && !isBlank(a.cue())) {
+            if (a != null && a.choiceNo() == correct && !isBlank(a.cue()) && answerStandsOutByLength(s.item())) {
                 findings.add(new Finding(s.index(), FindingType.CHOICE_CUE_LEAK,
                         "질문을 가리고 보기만 봐도 정답을 고를 수 있습니다",
                         s.inOriginalNumbers(a.cue())));
@@ -274,6 +275,26 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
             }
         }
         return findings;
+    }
+
+    /**
+     * 정답이 오답 평균보다 {@link #CUE_LENGTH_RATIO}배 이상 길 때만 보기 단서 누설로 친다.
+     * 2026-10-07~12 지적 21건을 문제와 견줘 보니 수긍되는 12건은 모두 1.3배 이상이었고,
+     * 그 아래 9건은 "결이 다르다" 같은 이유뿐이라 검수자가 그대로 승인했다(docs/22 §6).
+     * 프롬프트는 그대로 두고 코드에서 거른다. 프롬프트를 바꾸면 적발률을 다시 재야 한다.
+     */
+    static boolean answerStandsOutByLength(GeneratedProblemItem item) {
+        int answer = 0;
+        int others = 0;
+        for (GeneratedProblemItem.GeneratedChoice c : item.choices()) {
+            if (c.correct()) {
+                answer = c.text().length();
+            } else {
+                others += c.text().length();
+            }
+        }
+        // 오답은 셋이다(showable이 보기 4개·정답 1개만 통과시킨다)
+        return answer >= CUE_LENGTH_RATIO * others / 3.0;
     }
 
     /**

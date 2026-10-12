@@ -105,6 +105,37 @@ class ClaudeProblemReviewerTest {
         assertThat(findings).isEmpty();
     }
 
+    private static GeneratedProblemItem withLengths(int answer, int o1, int o2, int o3) {
+        return new GeneratedProblemItem("스키마란?", "", "해설", List.of(
+                new GeneratedChoice("가".repeat(answer), true),
+                new GeneratedChoice("나".repeat(o1), false),
+                new GeneratedChoice("다".repeat(o2), false),
+                new GeneratedChoice("라".repeat(o3), false)));
+    }
+
+    @Test
+    @DisplayName("AI가 단서를 대도 정답이 오답 평균의 1.3배보다 짧으면 누설로 치지 않는다")
+    void cueWithoutLengthGapIsNotLeak() {
+        // 2026-10-10 초안의 실제 길이: 정답 53자, 오답 45·46·43자(1.19배) — "15분 수치를 담았다"는 지적이었다
+        var shown = ClaudeProblemReviewer.showable(List.of(withLengths(53, 45, 46, 43)));
+        int correct = shown.get(0).correctNo();
+
+        List<Finding> findings = ClaudeProblemReviewer.compare(shown,
+                new ChoiceOnlyBatch(List.of(new ChoiceOnlyAnswer(1, "하나만 구체적이다", correct))),
+                new JudgementBatch(List.of(fine(1, correct))), Difficulty.BEGINNER, DOC);
+
+        assertThat(findings).isEmpty();
+    }
+
+    @Test
+    @DisplayName("길이 문턱은 오답 평균의 1.3배이고, 딱 1.3배는 지적한다")
+    void lengthThresholdIsInclusive() {
+        assertThat(ClaudeProblemReviewer.answerStandsOutByLength(withLengths(39, 30, 30, 30))).isTrue();
+        assertThat(ClaudeProblemReviewer.answerStandsOutByLength(withLengths(38, 30, 30, 30))).isFalse();
+        assertThat(ClaudeProblemReviewer.answerStandsOutByLength(withLengths(39, 10, 30, 50)))
+                .as("가장 긴 오답이 정답보다 길어도 평균으로 잰다").isTrue();
+    }
+
     /* ── 난이도: 관찰 셋으로 코드가 정한다 ── */
 
     private static final String SCENE = "사내 위키에서 사용자가 HTML 서식을 직접 써야 하고, 원본은 훼손 없이 남아야 한다. 이 조건에서 옳은 판단은?";
