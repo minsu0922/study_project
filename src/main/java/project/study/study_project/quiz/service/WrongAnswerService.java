@@ -98,7 +98,8 @@ public class WrongAnswerService {
                 // 내가 고른 그 보기가 왜 틀렸는지(V15). 보기 로딩은 위 표기 변환이 이미
                 // 일으키므로 쿼리가 더 나가지 않는다 — 같은 컬렉션을 한 번 더 훑을 뿐이다.
                 AnswerDisplay.userAnswerRationaleOf(p, s.getUserAnswer()),
-                p.getCode()
+                p.getCode(),
+                p.getCodeFocusLine()
         );
     }
 }

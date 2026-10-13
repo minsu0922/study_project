@@ -110,6 +110,24 @@ class CodeProblemWiringTest {
     }
 
     @Test
+    @DisplayName("한 줄 고치기는 바꿀 줄이 강조할 줄로 들어오고, 승인하면 '보기가 코드' 표시와 함께 문제로 넘어간다")
+    void focusLineAndCodeChoicesFollowTheKind() throws Exception {
+        draftImportService.importFile(writeFile(List.of(
+                new CodeProblem.Part(0, CodeProblem.Kind.CODE_FIX, "java", CODE_A, "2", 3, ""),
+                new CodeProblem.Part(1, CodeProblem.Kind.CODE_ERROR, "java", CODE_B, "", 3, "NullPointerException"))));
+
+        List<LlmDraftResponse> drafts = myDrafts();
+        assertThat(drafts.get(0).codeFocusLine()).isEqualTo(3);
+        assertThat(drafts.get(0).codeChoices()).isTrue();
+        assertThat(drafts.get(1).codeFocusLine()).as("예외가 나는 줄은 정답이다").isNull();
+        assertThat(drafts.get(1).codeChoices()).isFalse();
+
+        AdminProblemDetail problem = llmProblemService.approve(drafts.get(0).id());
+        assertThat(problem.codeFocusLine()).isEqualTo(3);
+        assertThat(problem.codeChoices()).isTrue();
+    }
+
+    @Test
     @DisplayName("코드가 딸리지 않은 코드 문제는 들여오지 않는다 — 코드 없이는 풀 수 없다")
     void dropsProblemWithoutCode() throws Exception {
         draftImportService.importFile(writeFile(List.of(

@@ -96,7 +96,8 @@ public class AdminProblemService {
                 request.domain(), request.difficulty(), request.type(), Texts.trimToNull(request.title()),
                 request.question().trim(), normalizeAnswer(request), Texts.trimToNull(request.explanation()),
                 Texts.trimToNull(request.documentSlug()));
-        problem.attachCode(codeOf(request), codeLanguageOf(request));
+        problem.attachCode(codeOf(request), codeLanguageOf(request), codeFocusLineOf(request),
+                Boolean.TRUE.equals(request.codeChoices()));
         problem.replaceChoices(buildChoices(problem, request));
         return AdminProblemDetail.from(problemRepository.save(problem));
     }
@@ -119,7 +120,8 @@ public class AdminProblemService {
         problem.update(request.domain(), request.difficulty(), request.type(), Texts.trimToNull(request.title()),
                 request.question().trim(), normalizeAnswer(request), Texts.trimToNull(request.explanation()),
                 Texts.trimToNull(request.documentSlug()));
-        problem.attachCode(codeOf(request), codeLanguageOf(request));
+        problem.attachCode(codeOf(request), codeLanguageOf(request), codeFocusLineOf(request),
+                Boolean.TRUE.equals(request.codeChoices()));
         problem.replaceChoices(buildChoices(problem, request));
         return AdminProblemDetail.from(problem); // 변경 감지(dirty checking)로 커밋 시 자동 UPDATE
     }
@@ -169,7 +171,17 @@ public class AdminProblemService {
                         .map(c -> new AdminProblemRequest.ChoiceItem(c.getText(), c.isCorrect(),
                                 c.getRationale(), c.getMatchText()))
                         .toList(),
-                p.getDocumentSlug(), p.getCode(), p.getCodeLanguage());
+                p.getDocumentSlug(), p.getCode(), p.getCodeLanguage(), p.getCodeFocusLine(), p.isCodeChoices());
+    }
+
+    /** 코드에 없는 줄을 가리키면 강조하지 않는다. 틀린 줄이 강조되느니 없는 편이 낫다. */
+    private static Integer codeFocusLineOf(AdminProblemRequest request) {
+        String code = codeOf(request);
+        Integer line = request.codeFocusLine();
+        if (code == null || line == null || line < 1 || line > code.lines().count()) {
+            return null;
+        }
+        return line;
     }
 
     /** 코드는 앞뒤 빈 줄만 걷는다. 줄 안의 들여쓰기는 코드의 일부라 건드리지 않는다. */

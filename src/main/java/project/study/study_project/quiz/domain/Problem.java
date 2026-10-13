@@ -135,6 +135,17 @@ public class Problem {
     @Column(name = "code_language", length = 20)
     private String codeLanguage;
 
+    /**
+     * 화면이 강조할 줄(V42). 빈칸 코드는 빈칸이 있는 줄, 한 줄 고치기는 바꿀 줄이다.
+     * 오류 지점·컴파일 여부는 그 줄이 곧 정답이라 {@code null}로 둔다.
+     */
+    @Column(name = "code_focus_line")
+    private Integer codeFocusLine;
+
+    /** 보기가 코드인가(V42). 그렇다면 화면이 보기를 고정폭으로 그린다. */
+    @Column(name = "code_choices", nullable = false)
+    private boolean codeChoices;
+
     /** 비공개 여부(V30). 내려 둔 문제는 출제·목록·채점에서 빠지고 관리 화면에만 남는다. */
     @Column(nullable = false)
     private boolean hidden;
@@ -175,8 +186,18 @@ public class Problem {
      * 인자를 늘리면 코드가 없는 호출부 전부가 null 둘을 넘기게 된다.
      */
     public void attachCode(String code, String codeLanguage) {
+        attachCode(code, codeLanguage, null, false);
+    }
+
+    /**
+     * @param focusLine   화면이 강조할 줄(1부터). 문제가 가리키는 줄이 없으면 {@code null}
+     * @param codeChoices 보기가 코드인가
+     */
+    public void attachCode(String code, String codeLanguage, Integer focusLine, boolean codeChoices) {
         this.code = code;
         this.codeLanguage = code == null ? null : codeLanguage;
+        this.codeFocusLine = code == null ? null : focusLine;
+        this.codeChoices = code != null && codeChoices;
     }
 
     public void update(DomainCode domain, Difficulty difficulty, ProblemType type, String title,

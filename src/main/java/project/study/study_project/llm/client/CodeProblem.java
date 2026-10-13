@@ -141,6 +141,25 @@ public final class CodeProblem {
     public record Part(int problemIndex, Kind kind, String language, String code, String expectedOutput,
                        int targetLine, String errorType) {
 
+        /**
+         * 화면이 강조할 줄. 빈칸 코드는 빈칸이 있는 줄, 한 줄 고치기는 바꿀 줄이다.
+         * 오류 지점·컴파일 여부의 {@code targetLine}은 그 자체가 정답이라 강조하면 답을 알려 주게 된다.
+         */
+        public Integer focusLine() {
+            if (kind == Kind.CODE_FIX) {
+                return targetLine > 0 ? targetLine : null;
+            }
+            if (kind == Kind.CODE_BLANK && code != null) {
+                List<String> lines = code.strip().lines().toList();
+                for (int i = 0; i < lines.size(); i++) {
+                    if (lines.get(i).contains(BLANK)) {
+                        return i + 1;
+                    }
+                }
+            }
+            return null;
+        }
+
         public static Part of(int problemIndex, Item item) {
             return new Part(problemIndex, item.kind(), LANGUAGE_JAVA, item.code(), item.expectedOutput(),
                     item.targetLine(), item.errorType());

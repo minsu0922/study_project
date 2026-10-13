@@ -118,6 +118,18 @@ class CodeProblemRuleTest {
     }
 
     @Test
+    @DisplayName("강조할 줄은 빈칸이 있는 줄과 바꿀 줄뿐이다 — 오류 지점의 줄은 정답이라 강조하지 않는다")
+    void focusLineNeverRevealsTheAnswer() {
+        String withBlank = CODE.replace("a == b", CodeProblem.BLANK);
+
+        assertThat(CodeProblem.Part.of(0, item(Kind.CODE_BLANK, withBlank, "true", 0, "")).focusLine()).isEqualTo(4);
+        assertThat(CodeProblem.Part.of(0, item(Kind.CODE_FIX, CODE, "true", 3, "")).focusLine()).isEqualTo(3);
+        assertThat(CodeProblem.Part.of(0, item(Kind.CODE_ERROR, CODE, "", 3, "NullPointerException")).focusLine()).isNull();
+        assertThat(CodeProblem.Part.of(0, item(Kind.CODE_COMPILE, CODE, "", 3, "")).focusLine()).isNull();
+        assertThat(CodeProblem.Part.of(0, output(CODE)).focusLine()).isNull();
+    }
+
+    @Test
     @DisplayName("요청 글에 주제, 난이도 배분, 전에 낸 코드를 싣는다")
     void promptCarriesTopicPlanAndPreviousCodes() {
         Map<Difficulty, Integer> plan = new LinkedHashMap<>();

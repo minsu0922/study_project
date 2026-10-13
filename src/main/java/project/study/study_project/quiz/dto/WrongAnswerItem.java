@@ -39,6 +39,7 @@ public record WrongAnswerItem(
         String documentSlug,
         String myAnswerRationale,
         /** 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}. */
-        String code
+        String code,
+        Integer codeFocusLine
 ) {
 }

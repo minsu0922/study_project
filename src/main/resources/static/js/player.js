@@ -158,7 +158,7 @@ function startPlayer(mountEl, problems, opts = {}) {
 
       <div class="card player-card fade-in">
         <div class="q-text">${escapeHtml(p.question)}</div>
-        ${codeBlockHtml(p.code)}
+        ${codeBlockHtml(p.code, p.codeFocusLine)}
         <div id="optArea">${renderInput(p)}</div>
         <div id="feedback"></div>
         <!-- 제출 버튼은 <답을 여러 번에 걸쳐 만드는> 유형에만 그린다 — 2026-09-08.
@@ -277,9 +277,11 @@ function startPlayer(mountEl, problems, opts = {}) {
      *
      * 묶음에는 이름을 준다. 그래야 "보기, 4개 중 1번" 같은 안내가 나온다. */
     if (p.type === "MULTIPLE_CHOICE") {
-      const opts = p.choices.map(c => `
+      // 보기가 코드면 고정폭으로 그리고 서로 다른 부분을 진하게 한다(codeChoicesHtml)
+      const texts = p.codeChoices ? codeChoicesHtml(p.choices.map(c => c.text)) : null;
+      const opts = p.choices.map((c, i) => `
         <button class="opt" data-value="${c.id}" aria-pressed="false">
-          <span class="key">${c.seq}</span><span>${escapeHtml(c.text)}</span>
+          <span class="key">${c.seq}</span>${texts ? texts[i] : `<span>${escapeHtml(c.text)}</span>`}
         </button>`).join("");
       return `<div role="group" aria-label="보기 ${p.choices.length}개">${opts}</div>`;
     }

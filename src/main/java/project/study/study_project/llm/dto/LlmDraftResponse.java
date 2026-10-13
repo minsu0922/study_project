@@ -84,7 +84,11 @@ public record LlmDraftResponse(
         String codeKindLabel,
 
         /** 배치가 실제로 돌려 확인한 출력. 검수자가 정답 보기와 한 번 더 견준다. */
-        String expectedOutput
+        String expectedOutput,
+
+        /** 화면이 강조할 줄과 "보기가 코드"인지(V42). 유형에서 정해진다. */
+        Integer codeFocusLine,
+        boolean codeChoices
 ) {
     /**
      * @param label      화면 표기용 한글 이름(예: 보기 단서 누설)

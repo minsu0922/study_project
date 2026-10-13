@@ -652,12 +652,13 @@ async function loadDrafts(jumpToLast = false) {
     const ordering = d.type === "ORDERING";
     // AI 지적이 달린 초안에도 번호를 찍는다 — 근거가 "2번만 길다"처럼 보기를 번호로 가리킨다.
     const numbered = ordering || (d.aiFindings ?? []).length > 0;
+    const codeTexts = d.codeChoices ? codeChoicesHtml((d.choices ?? []).map(c => c.text)) : null;
     const choices = (d.choices ?? []).map((c, i) =>
       `<li class="draft-choice${c.correct ? " is-correct" : ""}">
         <div class="draft-choice-main">
           ${numbered ? `<span class="draft-choice-no">${i + 1}.</span>` : ""}
           ${c.correct ? `<span class="draft-choice-mark">정답</span>` : ""}
-          <span>${escapeHtml(c.text)}</span>
+          ${codeTexts ? codeTexts[i] : `<span>${escapeHtml(c.text)}</span>`}
         </div>${
         c.matchText ? `<div class="draft-choice-sub"><span class="choice-tag">↔ 짝</span><span>${escapeHtml(c.matchText)}</span></div>` : ""
       }${
@@ -736,7 +737,7 @@ async function loadDrafts(jumpToLast = false) {
             : (d.status === "PENDING" ? "<i>(없음 — 승인 전에 붙이는 편이 낫다)</i>" : "<i>(없음)</i>")}
         </div>
         <p style="margin:6px 0 6px; white-space:pre-wrap"><b>${escapeHtml(d.question)}</b></p>
-        ${codeBlockHtml(d.code)}
+        ${codeBlockHtml(d.code, d.codeFocusLine)}
         ${d.expectedOutput ? `<div class="meta" style="margin:-8px 0 10px">배치가 실행해 확인한 출력:
           <code>${escapeHtml(d.expectedOutput.trim().split(/\r?\n/).join(" / "))}</code>
           <!-- 줄바꿈을 " / "로 잇는다. 출력 보기가 여러 줄을 그렇게 적으므로 정답 보기와 바로 견줘진다. --></div>` : ""}

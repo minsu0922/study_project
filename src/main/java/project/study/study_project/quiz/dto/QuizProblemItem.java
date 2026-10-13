@@ -29,7 +29,10 @@ public record QuizProblemItem(
         List<QuizMatchOption> matchOptions,
         /** 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}. */
         String code,
-        String codeLanguage
+        String codeLanguage,
+        /** 화면이 강조할 줄과 "보기가 코드"인지(V42). */
+        Integer codeFocusLine,
+        boolean codeChoices
 ) {
     public static QuizProblemItem from(Problem p) {
         // 행을 쓰는 유형일 때만 LAZY 보기 컬렉션에 접근한다(불필요한 쿼리 방지).
@@ -43,6 +46,7 @@ public record QuizProblemItem(
                 ? QuizMatchOption.shuffledFrom(p.getId(), p.getChoices())
                 : List.of();
         return new QuizProblemItem(p.getId(), p.getDomain(), p.getDifficulty(), p.getType(),
-                p.getQuestion(), choices, matchOptions, p.getCode(), p.getCodeLanguage());
+                p.getQuestion(), choices, matchOptions, p.getCode(), p.getCodeLanguage(),
+                p.getCodeFocusLine(), p.isCodeChoices());
     }
 }

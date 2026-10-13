@@ -146,7 +146,7 @@ async function init() {
               ${reviewBadge(w.problemId)}
             </div>
             <h3>${escapeHtml(w.question)}</h3>
-            ${codeBlockHtml(w.code)}
+            ${codeBlockHtml(w.code, w.codeFocusLine)}
             <div style="color:var(--wrong)">내 답: ${escapeHtml(w.myAnswer)}</div>
             <!-- 서술형은 한 줄 정답이 없다. 모범 답안은 아래 해설 줄에 나온다. -->
             ${w.correctAnswer ? `<div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer)}</div>` : ""}

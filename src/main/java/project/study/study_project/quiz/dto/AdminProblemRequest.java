@@ -67,14 +67,29 @@ public record AdminProblemRequest(
         String code,
 
         @Size(max = 20, message = "codeLanguage는 20자 이하여야 합니다.") // DB VARCHAR(20)
-        String codeLanguage
+        String codeLanguage,
+
+        // 화면이 강조할 줄(V42). 코드 범위를 벗어난 값은 서비스가 버린다
+        Integer codeFocusLine,
+
+        // 보기가 코드인가(V42). 비우면 아니다
+        Boolean codeChoices
 ) {
+
+    /** 강조할 줄이 없는 코드 문제 — 강조 칸(V42)이 생기기 전의 호출부와 테스트가 쓴다. */
+    public AdminProblemRequest(DomainCode domain, Difficulty difficulty, ProblemType type, String title,
+                               String question, String answer, String explanation, List<ChoiceItem> choices,
+                               String documentSlug, String code, String codeLanguage) {
+        this(domain, difficulty, type, title, question, answer, explanation, choices, documentSlug,
+                code, codeLanguage, null, null);
+    }
 
     /** 코드가 없는 보통 문제 — 코드 칸(V39)이 생기기 전의 호출부와 테스트가 쓴다. */
     public AdminProblemRequest(DomainCode domain, Difficulty difficulty, ProblemType type, String title,
                                String question, String answer, String explanation, List<ChoiceItem> choices,
                                String documentSlug) {
-        this(domain, difficulty, type, title, question, answer, explanation, choices, documentSlug, null, null);
+        this(domain, difficulty, type, title, question, answer, explanation, choices, documentSlug,
+                null, null, null, null);
     }
 
     /** 보기 입력 항목 — 객관식의 보기, 짝짓기의 한 쌍, 순서 배열의 한 항목이 모두 이 모양이다. */

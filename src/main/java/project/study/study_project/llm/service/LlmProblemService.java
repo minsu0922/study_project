@@ -708,7 +708,8 @@ public class LlmProblemService {
                 draft.getDomain(), draft.getDifficulty(), draft.getType(), draft.getTitle(),
                 draft.getQuestion(), draft.getAnswer(), draft.getExplanation(),
                 readChoices(draft.getChoicesJson()), draft.getDocumentSlug(),
-                draft.getCode(), draft.getCodeLanguage());
+                draft.getCode(), draft.getCodeLanguage(), draft.getCodeFocusLine(),
+                draft.getCodeKind() != null && draft.getCodeKind().substitutesChoice());
     }
 
     /* ── JSON 직렬화 도우미 ───────────────────────────────── */
@@ -790,7 +791,8 @@ public class LlmProblemService {
                 d.getQuestionKind() == null ? null : d.getQuestionKind().getLabel(),
                 checks, readAiFindings(d), d.getCreatedAt(), d.getReviewedAt(),
                 d.getCode(), d.getCodeKind() == null ? null : d.getCodeKind().name(),
-                d.getCodeKind() == null ? null : d.getCodeKind().label(), d.getExpectedOutput());
+                d.getCodeKind() == null ? null : d.getCodeKind().label(), d.getExpectedOutput(),
+                d.getCodeFocusLine(), d.getCodeKind() != null && d.getCodeKind().substitutesChoice());
     }
 
     /**

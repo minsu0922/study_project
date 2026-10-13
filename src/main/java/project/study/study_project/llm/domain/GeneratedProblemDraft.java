@@ -141,6 +141,10 @@ public class GeneratedProblemDraft {
     @Column(name = "expected_output")
     private String expectedOutput;
 
+    /** 화면이 강조할 줄(V42). 빈칸이 있는 줄이나 바꿀 줄. 없으면 {@code null}. */
+    @Column(name = "code_focus_line")
+    private Integer codeFocusLine;
+
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
@@ -231,6 +235,7 @@ public class GeneratedProblemDraft {
         this.codeLanguage = part.language();
         this.codeKind = part.kind();
         this.expectedOutput = part.expectedOutput();
+        this.codeFocusLine = part.focusLine();
     }
 
     public void recordAiFindings(String aiFindingsJson) {

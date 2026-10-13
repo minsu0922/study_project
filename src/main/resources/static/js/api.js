@@ -486,12 +486,41 @@ function escapeHtml(s) {
  * 색칠 라이브러리를 쓰지 않는다. 문제의 코드는 5~15줄이라 고정폭과 줄 번호면 읽히고,
  * 해설이 "3행"처럼 줄을 가리키므로 번호가 색보다 먼저다.
  */
-function codeBlockHtml(code) {
+function codeBlockHtml(code, focusLine) {
   if (!code) return "";
   const lines = String(code).replaceAll("\r\n", "\n").split("\n");
   return `<pre class="q-code"><code>${lines.map((line, i) =>
-    `<span class="q-code-line"><span class="q-code-no">${i + 1}</span>${escapeHtml(line) || " "}</span>`
+    `<span class="q-code-line${i + 1 === focusLine ? " is-focus" : ""}"><span class="q-code-no">${i + 1}</span>${
+      escapeHtml(line) || " "}</span>`
   ).join("\n")}</code></pre>`;
+}
+
+/**
+ * 코드로 된 보기들을 그린다. 네 보기에 똑같이 들어 있는 앞·뒤 부분은 흐리게, 서로 다른 부분은 진하게.
+ *
+ * 한 줄 고치기의 보기는 `if (` … `) {`처럼 앞뒤가 같고 가운데만 다르다. 그대로 두면 학습자가
+ * 긴 네 줄을 글자 단위로 견줘야 한다. 다른 부분이 보이면 견줄 것이 그 조각뿐이다.
+ *
+ * @returns 보기와 같은 순서의 HTML 문자열 배열
+ */
+function codeChoicesHtml(texts) {
+  const list = texts.map(t => String(t ?? ""));
+  if (list.length < 2) return list.map(t => `<code class="code-choice">${escapeHtml(t)}</code>`);
+  const shortest = Math.min(...list.map(t => t.length));
+  let head = 0;
+  while (head < shortest && list.every(t => t[head] === list[0][head])) head++;
+  let tail = 0;
+  while (tail < shortest - head
+      && list.every(t => t[t.length - 1 - tail] === list[0][list[0].length - 1 - tail])) tail++;
+  // 같은 부분이 두세 글자뿐이면 나누지 않는다. 괄호 하나를 흐리게 해 봐야 읽기만 어지럽다
+  if (head < 3) head = 0;
+  if (tail < 3) tail = 0;
+  return list.map(t => {
+    const mid = t.slice(head, t.length - tail);
+    return `<code class="code-choice">${head ? `<span class="code-same">${escapeHtml(t.slice(0, head))}</span>` : ""}${
+      head || tail ? `<b>${escapeHtml(mid)}</b>` : escapeHtml(mid)}${
+      tail ? `<span class="code-same">${escapeHtml(t.slice(t.length - tail))}</span>` : ""}</code>`;
+  });
 }
 
 /** ISO 날짜 문자열 → "2026-07-05 10:06" 같은 짧은 표기 */

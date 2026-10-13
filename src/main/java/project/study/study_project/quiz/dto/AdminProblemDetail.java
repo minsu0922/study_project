@@ -34,14 +34,17 @@ public record AdminProblemDetail(
         boolean hidden,
         /** 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}. */
         String code,
-        String codeLanguage
+        String codeLanguage,
+        /** 화면이 강조할 줄과 "보기가 코드"인지(V42). */
+        Integer codeFocusLine,
+        boolean codeChoices
 ) {
     /** 코드가 없는 보통 문제 — 코드 칸(V39)이 생기기 전의 테스트가 쓴다. */
     public AdminProblemDetail(Long id, DomainCode domain, Difficulty difficulty, ProblemType type, String title,
                               String question, String answer, String explanation, LocalDateTime createdAt,
                               List<ChoiceDetail> choices, boolean hidden) {
         this(id, domain, difficulty, type, title, question, answer, explanation, createdAt, choices, hidden,
-                null, null);
+                null, null, null, false);
     }
 
     /**
@@ -66,7 +69,7 @@ public record AdminProblemDetail(
                 p.getId(), p.getDomain(), p.getDifficulty(), p.getType(), p.getTitle(),
                 p.getQuestion(), p.getAnswer(), p.getExplanation(), p.getCreatedAt(),
                 p.getChoices().stream().map(ChoiceDetail::from).toList(),
-                p.isHidden(), p.getCode(), p.getCodeLanguage()
+                p.isHidden(), p.getCode(), p.getCodeLanguage(), p.getCodeFocusLine(), p.isCodeChoices()
         );
     }
 }

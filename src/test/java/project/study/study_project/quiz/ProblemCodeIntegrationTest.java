@@ -106,6 +106,27 @@ class ProblemCodeIntegrationTest {
     }
 
     @Test
+    @DisplayName("강조할 줄과 '보기가 코드' 표시를 저장해 출제 응답에 싣고, 코드에 없는 줄은 버린다")
+    void storesFocusLineAndCodeChoices() {
+        AdminProblemRequest base = request(CODE, null);
+        AdminProblemDetail created = adminProblemService.create(new AdminProblemRequest(
+                base.domain(), base.difficulty(), base.type(), base.title(), base.question(), base.answer(),
+                base.explanation(), base.choices(), null, CODE, null, 2, true));
+
+        assertThat(created.codeFocusLine()).isEqualTo(2);
+        assertThat(created.codeChoices()).isTrue();
+        QuizProblemItem quiz = QuizProblemItem.from(problemRepository.findById(created.id()).orElseThrow());
+        assertThat(quiz.codeFocusLine()).isEqualTo(2);
+        assertThat(quiz.codeChoices()).isTrue();
+
+        AdminProblemDetail updated = adminProblemService.update(created.id(), new AdminProblemRequest(
+                base.domain(), base.difficulty(), base.type(), base.title(), base.question(), base.answer(),
+                base.explanation(), base.choices(), null, CODE, null, 99, null));
+        assertThat(updated.codeFocusLine()).as("코드는 2줄이다").isNull();
+        assertThat(updated.codeChoices()).isFalse();
+    }
+
+    @Test
     @DisplayName("코드가 없는 보통 문제는 두 칸이 모두 null이다")
     void plainProblemHasNoCode() {
         AdminProblemDetail created = adminProblemService.create(request(null, null));
