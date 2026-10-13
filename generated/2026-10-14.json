@@ -1,0 +1,322 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 문제 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/14). 손으로 고쳐도 되지만, 흡수 시 규약 검증을 다시 거칩니다.",
+  "date" : "2026-10-14",
+  "generatedAt" : "2026-10-13T21:16:44.848109328Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : "jvm-stack-heap-memory-error-distinction",
+  "problems" : [ {
+    "question" : "메서드가 한 번 호출될 때 JVM 스택 맨 위에 하나 올라가고, 메서드가 끝나면 통째로 빠지는 칸을 부르는 용어는?",
+    "answer" : "",
+    "explanation" : "메서드가 호출되면 JVM은 그 스레드의 JVM 스택 맨 위에 칸을 하나 올리고, 그 호출의 지역 변수와 계산 중간값, 끝나고 돌아갈 자리를 거기에 담는다. 메서드가 끝나면 이 칸이 통째로 걷혀 아래 칸으로 돌아간다. 이 칸이 스택 프레임(stack frame)이다. 호출이 깊어질수록 프레임이 한 장씩 더 쌓이는 구조다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "스택 프레임",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "메서드 영역",
+      "correct" : false,
+      "rationale" : "메서드 영역은 모든 스레드가 함께 쓰며 클래스 설계도와 명령 내용을 담는 곳이다. 호출마다 쌓였다 빠지는 칸이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "PC 레지스터",
+      "correct" : false,
+      "rationale" : "PC 레지스터는 스레드가 지금 실행 중인 명령의 위치만 적어 두는 곳이다. 호출 한 번의 지역 변수를 담는 칸과 혼동했다.",
+      "matchText" : ""
+    }, {
+      "text" : "지역 변수",
+      "correct" : false,
+      "rationale" : "지역 변수는 그 칸 안에 적히는 값이다. 값을 담는 그릇인 칸 자체와 그 안의 내용물을 혼동했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "메서드가 한 번 호출될 때 JVM 스택 맨 위에 하나 쌓이는 칸이다.",
+    "title" : "메서드 호출마다 스택에 쌓이는 칸의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "자바에서 말하는 참조(reference)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "참조(reference)는 힙에 놓인 객체의 위치를 가리키는 값이다. 객체를 변수에 담으면 변수에는 객체 자체가 아니라 이 위치 값만 적힌다. 그래서 두 메서드가 같은 참조를 넘겨받으면 같은 힙 객체를 함께 고치게 되고, 메서드가 끝나 변수가 사라져도 다른 곳이 참조를 쥐고 있으면 객체는 남는다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "힙에 있는 객체가 어디 있는지 가리키는 위치 값이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "변수에 담을 때 스택에 복사해 둔 객체의 사본이다",
+      "correct" : false,
+      "rationale" : "객체를 변수에 담으면 객체가 스택에 복사된다는 오해다. 변수에는 위치 값만 적히고 객체는 힙에 하나만 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "메서드가 끝난 뒤 돌아갈 자리를 적은 호출 기록이다",
+      "correct" : false,
+      "rationale" : "돌아갈 자리는 스택 프레임이 담는 정보다. 객체 위치를 가리키는 값과 호출 기록을 혼동했다.",
+      "matchText" : ""
+    }, {
+      "text" : "코드에 적힌 고정값과 이름표를 모은 클래스별 목록이다",
+      "correct" : false,
+      "rationale" : "고정값과 이름표를 모아 둔 목록은 런타임 상수 풀이다. 이름에 든 '가리킨다'는 인상으로 이름표와 혼동했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "객체를 변수에 담으면 변수에는 객체 자체가 아니라 이 위치 값만 적힌다.",
+    "title" : "변수에 담기는 참조의 뜻",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "JVM의 GC(garbage collection)가 하는 일로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "GC(garbage collection, 쓰레기 수거)는 어떤 참조로도 닿을 수 없게 된 객체를 찾아 힙에서 지우고 그 자리를 되찾는 기능이다. 닿을 수 있는지는 각 스레드 스택의 지역 변수 같은 출발점에서 참조를 따라가 판단한다. 도달하는 객체는 살아 있는 것으로 보고 남기며, 도달하지 못하는 객체만 지운다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "어떤 참조로도 닿지 않는 객체를 힙에서 지워 자리를 되찾는다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "메서드가 끝날 때 그 호출의 지역 변수를 스택에서 지운다",
+      "correct" : false,
+      "rationale" : "지역 변수는 메서드가 끝날 때 프레임째 걷혀 사라진다. 스택 정리에는 GC가 끼어들지 않는다는 점을 놓쳤다.",
+      "matchText" : ""
+    }, {
+      "text" : "참조가 남아 있어도 오래 쓰지 않은 객체부터 지운다",
+      "correct" : false,
+      "rationale" : "GC는 사용 시점이 아니라 닿을 수 있는지로 판단한다. 참조가 남아 있으면 오래 안 쓴 객체라도 치우지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "힙이 모자라면 힙의 최대 크기를 늘려 자리를 만든다",
+      "correct" : false,
+      "rationale" : "힙 최대 크기는 실행 옵션으로 정하는 값이다. 크기 설정과 빈자리를 되찾는 청소 기능을 혼동했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "어떤 참조로도 닿을 수 없게 된 객체를 JVM이 찾아 힙에서 지우고 자리를 되찾는 기능이다.",
+    "title" : "GC가 힙에서 하는 일",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "JVM 메모리 영역 가운데 힙(heap)에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "힙(heap)은 JVM의 런타임 데이터 영역 가운데 모든 스레드가 함께 쓰는 곳으로, new로 만든 객체와 배열이 여기에 놓인다. 객체는 언제 필요 없어질지 만든 순간에 알 수 없고 다른 메서드·스레드도 읽기 때문에, 호출이 끝나도 남는 공용 영역에 둔다. 사무실 비유로는 전체가 함께 쓰는 공용 창고다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "모든 스레드가 함께 쓰며 new로 만든 객체와 배열을 담는다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "스레드마다 하나씩 있으며 호출 기록과 지역 변수를 쌓는다",
+      "correct" : false,
+      "rationale" : "스레드마다 하나씩 있으며 호출 기록과 지역 변수를 쌓는 곳은 JVM 스택이다. 두 영역의 역할을 뒤바꿨다.",
+      "matchText" : ""
+    }, {
+      "text" : "모든 스레드가 함께 쓰며 클래스 설계도 정보를 담는다",
+      "correct" : false,
+      "rationale" : "클래스 설계도와 메서드 명령 내용을 담는 공용 영역은 메서드 영역이다. 공용이라는 점만 보고 혼동했다.",
+      "matchText" : ""
+    }, {
+      "text" : "스레드마다 하나씩 있으며 C 등으로 짠 호출을 쌓는다",
+      "correct" : false,
+      "rationale" : "자바가 아닌 언어로 짠 메서드의 호출을 쌓는 곳은 네이티브 메서드 스택이다. 객체를 담는 영역이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "모든 스레드가 함께 쓰며, `new`로 만든 객체와 배열을 담는다.",
+    "title" : "힙 영역이 담는 것과 공유 범위",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "스레드마다 하나씩 생기며, 그 스레드가 지금 실행 중인 명령의 위치를 적어 두는 JVM 메모리 영역은?",
+    "answer" : "",
+    "explanation" : "PC 레지스터(program counter register)는 스레드마다 하나씩 생기는 영역으로, 그 스레드가 지금 실행 중인 명령의 위치를 적어 둔다. 여러 스레드가 동시에 돌기 때문에 각자 어디까지 실행했는지를 따로 기억해야 한다. 사무실 비유로는 직원이 읽던 업무 지침서에 끼워 둔 책갈피에 해당한다. (입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "PC 레지스터",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "JVM 스택",
+      "correct" : false,
+      "rationale" : "JVM 스택도 스레드마다 있지만 담는 것은 메서드 호출 기록과 지역 변수다. 실행 위치 하나를 적는 곳이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "런타임 상수 풀",
+      "correct" : false,
+      "rationale" : "런타임 상수 풀은 메서드 영역 안에 클래스마다 있는 고정값·이름표 목록이다. 스레드별 영역이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "스택 프레임",
+      "correct" : false,
+      "rationale" : "스택 프레임은 호출 한 번의 지역 변수와 돌아갈 자리를 담는 칸이다. 지금 실행 중인 명령 위치 기록과 혼동했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "스레드마다 하나씩 있으며, 지금 실행 중인 명령의 위치를 적어 둔다.",
+    "title" : "스레드별 실행 위치를 적는 영역의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "StackOverflowError가 발생하는 조건으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "StackOverflowError는 한 스레드가 자기 JVM 스택에 허용된 크기보다 많은 스택 프레임을 쌓으려 할 때 JVM이 던지는 오류다. 메서드가 끝나지 않은 채 다른 메서드를 계속 부르면 프레임이 걷히지 않고 쌓이기만 해 한도를 넘는다. 넘친 곳은 그 스레드 하나의 스택이라, 힙이 얼마나 비어 있든 상관없이 난다. (입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "한 스레드가 자기 스택 한도보다 많은 프레임을 쌓으려 할 때",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "GC를 돌린 뒤에도 힙에 새 객체를 놓을 자리가 없을 때",
+      "correct" : false,
+      "rationale" : "GC 뒤에도 힙에 자리를 얻지 못하는 경우는 OutOfMemoryError다. 메모리 부족을 모두 같은 오류로 본 오해다.",
+      "matchText" : ""
+    }, {
+      "text" : "새 스레드를 시작하며 새 스택용 메모리를 얻지 못할 때",
+      "correct" : false,
+      "rationale" : "새 스택을 만들 메모리를 못 얻으면 OutOfMemoryError가 난다. 스택 관련이면 모두 이 오류라고 착각했다.",
+      "matchText" : ""
+    }, {
+      "text" : "모든 스레드 스택을 합친 크기가 힙 최대 크기를 넘을 때",
+      "correct" : false,
+      "rationale" : "스택 크기는 스레드별 한도로 따로 정하며 힙 크기와 견주지 않는다. 두 영역 크기가 묶여 있다는 오해다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "한 스레드가 자기 JVM 스택에 허용된 크기보다 많은 프레임을 쌓으려 할 때 JVM이 던지는 오류다.",
+    "title" : "StackOverflowError가 나는 조건",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "자바에서 말하는 메모리 누수에 대한 설명으로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "힙이 바닥나는 원인 중 하나는 더는 쓰지 않는 객체를 코드가 실수로 계속 쥐고 있는 경우이며, 이를 메모리 누수라 부른다. GC는 어떤 참조로도 닿지 않는 객체만 지우므로, 리스트나 공용 변수가 참조를 놓지 않으면 그 객체는 쓰레기로 보이지 않아 쌓여 간다. 결국 자리를 얻지 못하면 OutOfMemoryError로 이어진다. (입문편의 'GC를 돌려도 모자라면 OutOfMemoryError가 난다' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "안 쓰는 객체의 참조를 코드가 계속 쥐어 GC가 못 치우는 경우",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "실제로 필요한 데이터 자체가 힙 최대 크기보다 큰 경우",
+      "correct" : false,
+      "rationale" : "필요한 데이터 자체가 힙보다 큰 것은 힙이 바닥나는 또 다른 갈래다. 실수로 쥐고 있는 경우와는 구분된다.",
+      "matchText" : ""
+    }, {
+      "text" : "멈추는 조건 없는 재귀로 스택 프레임이 계속 쌓이는 경우",
+      "correct" : false,
+      "rationale" : "멈추지 않는 재귀로 프레임이 쌓이는 것은 스택이 넘치는 문제다. 힙에 객체가 남는 누수와 영역을 혼동했다.",
+      "matchText" : ""
+    }, {
+      "text" : "닿을 수 없게 된 객체가 GC 전까지 잠시 힙에 남은 상태",
+      "correct" : false,
+      "rationale" : "닿을 수 없는 객체는 GC가 돌면 치워지므로 정상 동작이다. 잠시 남아 있는 것과 영영 못 치우는 것을 혼동했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "뒤의 경우를 메모리 누수라 부른다.",
+    "title" : "메모리 누수의 뜻",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "QUESTION_REVEALS",
+    "message" : "내용을 몰라도 질문과 보기의 문장만 견줘 답을 좁힐 수 있습니다",
+    "detail" : "질문에 'JVM 스택'이 나오는데, 보기 중 '스택'이라는 글자를 담은 것은 '스택 프레임' 하나뿐이다. 그래서 글자 비교만으로도 답이 다소 좁혀진다.",
+    "suggestion" : {
+      "target" : "QUESTION",
+      "choiceIndex" : null,
+      "text" : "메서드가 한 번 호출될 때마다 맨 위에 하나씩 쌓이고, 메서드가 끝나면 통째로 빠지는 칸을 부르는 용어는?"
+    }
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "메서드 호출 한 번마다 JVM 스택 맨 위에 쌓이고, 메서드가 끝나면 통째로 빠지는 칸은 스택 프레임이다. 지역 변수는 그 프레임 안에 담기는 값이다. PC 레지스터는 실행 위치를 기록하는 영역이고, 메서드 영역은 클래스 정보를 담는 공용 영역이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "정의를 그대로 묻는 초급 문제로 무난하다. 다만 '스택'이라는 글자가 겹쳐서 단서가 될 수 있다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 참조를 '힙에 있는 객체가 어디 있는지 가리키는 값'으로 정의한다. 2는 스택 프레임의 일부 내용이고, 3은 참조를 객체 사본으로 보는 오해이며, 4는 런타임 상수 풀의 설명이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "오답들이 다른 개념의 설명이거나 흔한 오해로 구성되어 있어 깔끔하게 갈린다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "GC는 어떤 참조로도 닿을 수 없는 객체를 힙에서 지우고 자리를 되찾는 기능이다. 1은 참조가 남은 객체도 지운다고 해서 틀리다. 2는 스택 프레임이 사라질 때 저절로 일어나는 정리를 GC로 착각한 것이다. 4는 GC가 하는 일이 아니다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "GC의 정의와 이에 대한 흔한 오해를 잘 대비시킨 문제다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "힙은 모든 스레드가 함께 쓰며 new로 만든 객체와 배열을 담는다. 1은 네이티브 메서드 스택, 2는 메서드 영역, 3은 JVM 스택의 설명이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「스레드마다 하나씩 있으며 C 등으로 짠 호출을 쌓는다」\n고치면: 스레드마다 하나씩 있으며 C 등으로 짠 메서드의 호출 기록을 쌓는다",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "4번 보기의 'C 등으로 짠 호출'은 무엇을 쌓는다는 것인지 잠깐 다시 읽게 된다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "영역별 설명을 오답으로 배치해서 영역을 구분할 줄 아는지 확인하기에 좋다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "스레드마다 하나씩 있으면서 지금 실행 중인 명령의 위치를 적어 두는 영역은 PC 레지스터다. JVM 스택은 호출 기록을 쌓는 영역이고, 스택 프레임은 그 안에 쌓이는 칸이다. 런타임 상수 풀은 고정값을 모아 두는 곳이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "용어와 정의를 짝짓는 단순한 문제로 무난하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 5,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "StackOverflowError는 한 스레드가 자기 스택 한도보다 많은 프레임을 쌓으려 할 때 난다. 1과 3은 OutOfMemoryError가 나는 조건이고, 2는 문서에 없는 잘못된 조건이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 5,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "3번 보기에 '스택' 관련 OOM을 넣어서 흔한 오해를 잘 걸러 낸다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 6,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 더 쓰지 않는 객체를 코드가 실수로 계속 쥐고 있는 경우를 메모리 누수라 부른다. 1은 힙이 바닥나는 또 다른 원인일 뿐 누수가 아니다. 3은 스택 넘침이고, 4는 GC를 기다리는 정상 상태다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 6,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "누수와 실제 데이터 과다를 구분하게 하는 좋은 문제다.",
+    "suggestion" : null
+  } ]
+}
