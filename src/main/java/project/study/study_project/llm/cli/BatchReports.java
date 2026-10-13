@@ -88,7 +88,6 @@ final class BatchReports {
             findings = reviewer.review(problems, difficulty, source);
             rendered = renderProblemReview(date, problems, findings);
         } catch (RuntimeException e) {
-            findings = null;
             rendered = "⚠️ **%s 문제 검수 실패** — 문제는 저장했습니다. 승인 전에 사람이 풀어 보세요 (%s)%n"
                     .formatted(date, e.getMessage());
         }
@@ -186,10 +185,6 @@ final class BatchReports {
      *
      * @return 요약 화면에 쓴 글(테스트용)
      */
-    static String reportFactCheck(DocumentFactChecker checker, GeneratedDocumentItem document, LocalDate date) {
-        return checkFacts(checker, document, date).rendered();
-    }
-
     /**
      * @param rendered 요약 화면에 쓴 글
      * @param findings 지적 목록. 검수가 실패했으면 {@code null} — "지적 없음"과 구별한다
@@ -197,7 +192,6 @@ final class BatchReports {
     record FactCheckReport(String rendered, List<FactCheckFinding> findings) {
     }
 
-    /** {@link #reportFactCheck}와 같은 일을 하고 지적 목록까지 돌려준다 — 문서 파일에 실으려고 쓴다. */
     static FactCheckReport checkFacts(DocumentFactChecker checker, GeneratedDocumentItem document, LocalDate date) {
         var documentEdition = ClaudeDocumentGenerator.editionOf(document.contentMd());
         String edition = documentEdition.getDisplayName();
@@ -207,7 +201,6 @@ final class BatchReports {
             findings = checker.check(document.title(), document.contentMd(), documentEdition);
             rendered = renderFactCheck(date, edition, findings);
         } catch (RuntimeException e) {
-            findings = null;
             rendered = "⚠️ **%s %s 사실 검수 실패** — 문서는 저장했습니다. 승인 전에 사람이 읽어 주세요 (%s)%n"
                     .formatted(date, edition, e.getMessage());
         }

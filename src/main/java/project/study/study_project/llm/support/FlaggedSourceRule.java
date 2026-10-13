@@ -57,6 +57,8 @@ public final class FlaggedSourceRule {
                                 "근거로 삼은 문단을 문서 사실 검수가 지적했습니다", detailOf(fact)));
                     }
                 }
+                // 중급 본문은 두 편을 이어 붙여 같은 문장이 두 번 나올 수 있다. 첫 문단만 본다
+                break;
             }
         }
         return findings;

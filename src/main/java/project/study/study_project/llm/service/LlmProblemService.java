@@ -641,8 +641,13 @@ public class LlmProblemService {
         if (draft.getStatus() != DraftStatus.PENDING) {
             throw new BusinessException(ErrorCode.LLM_002);
         }
-        List<DraftAiFinding> findings = readStoredFindings(draft);
-        if (findingIndex < 0 || findingIndex >= findings.size() || findings.get(findingIndex).suggestion() == null) {
+        List<DraftAiFinding> findings;
+        try {
+            findings = storedFindingsOf(draft);
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(ErrorCode.COMMON_001, "AI 검수 지적을 읽지 못했습니다.");
+        }
+        if (findings == null || findingIndex < 0 || findingIndex >= findings.size() || findings.get(findingIndex).suggestion() == null) {
             throw new BusinessException(ErrorCode.COMMON_001, "적용할 제안이 없습니다.");
         }
         DraftAiFinding finding = findings.get(findingIndex);
@@ -676,16 +681,11 @@ public class LlmProblemService {
         return toResponse(draft);
     }
 
-    private List<DraftAiFinding> readStoredFindings(GeneratedProblemDraft draft) {
-        if (draft.getAiFindingsJson() == null) {
-            return List.of();
-        }
-        try {
-            return objectMapper.readValue(draft.getAiFindingsJson(), new TypeReference<>() {
-            });
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCode.COMMON_001, "AI 검수 지적을 읽지 못했습니다.");
-        }
+    /** 저장된 지적 목록. 검수를 안 돌린 초안이면 {@code null}. */
+    private List<DraftAiFinding> storedFindingsOf(GeneratedProblemDraft draft) throws JsonProcessingException {
+        return draft.getAiFindingsJson() == null ? null
+                : objectMapper.readValue(draft.getAiFindingsJson(), new TypeReference<>() {
+                });
     }
 
     private String writeJson(Object value) {
@@ -730,12 +730,7 @@ public class LlmProblemService {
                 .map(c -> new AdminProblemRequest.ChoiceItem(
                         c.text(), c.correct(), c.rationale(), Texts.trimToNull(c.matchText())))
                 .toList();
-        try {
-            return objectMapper.writeValueAsString(items);
-        } catch (JsonProcessingException e) {
-            // record 직렬화는 실패할 수 없는 경로지만 검사 예외라 형식상 변환 — 발생하면 버그다
-            throw new IllegalStateException("보기 JSON 직렬화 실패", e);
-        }
+        return writeJson(items);
     }
 
     private List<AdminProblemRequest.ChoiceItem> readChoices(String json) {
@@ -802,12 +797,11 @@ public class LlmProblemService {
      * 전체가 안 열린다 — 지적은 참고 정보이고, 목록은 검수자가 일하는 자리다.
      */
     private List<LlmDraftResponse.AiFinding> readAiFindings(GeneratedProblemDraft d) {
-        if (d.getAiFindingsJson() == null) {
-            return null;
-        }
         try {
-            List<DraftAiFinding> stored = objectMapper.readValue(d.getAiFindingsJson(), new TypeReference<>() {
-            });
+            List<DraftAiFinding> stored = storedFindingsOf(d);
+            if (stored == null) {
+                return null;
+            }
             return stored.stream()
                     .map(f -> new LlmDraftResponse.AiFinding(
                             f.type().name(), f.type().label(), f.type().grade().name(), f.message(),

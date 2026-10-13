@@ -9,6 +9,7 @@ import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.GeneratedProblemItem.GeneratedChoice;
 import project.study.study_project.llm.client.ProblemReview.Finding;
 import project.study.study_project.llm.client.ProblemReview.FindingType;
+import project.study.study_project.llm.client.ProblemReview.Grade;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
@@ -175,7 +176,7 @@ public final class ProblemReviewEvalCli {
             int index = i;
             // 의견은 적발도 헛경보도 아니다
             List<Finding> mine = findings.stream().filter(f -> f.problemIndex() == index)
-                    .filter(f -> f.type().grade() != project.study.study_project.llm.client.ProblemReview.Grade.OPINION)
+                    .filter(f -> f.type().grade() != Grade.OPINION)
                     .toList();
             if (ref.expectOrEmpty().isEmpty()) {
                 falseAlarms.addAll(mine);
