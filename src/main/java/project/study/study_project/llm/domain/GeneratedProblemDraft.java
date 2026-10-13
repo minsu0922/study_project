@@ -210,6 +210,19 @@ public class GeneratedProblemDraft {
         this.aiFindingsJson = aiFindingsJson;
     }
 
+    /**
+     * AI 검수가 낸 고친 문장을 받아들인다. 대기 중인 초안만 고칠 수 있다 —
+     * 승인된 초안은 이미 정식 문제를 만들었고, 그쪽은 문제 관리에서 고친다.
+     *
+     * @param choicesJson 보기를 고치지 않았으면 지금 값 그대로 넘긴다
+     */
+    public void applyAiSuggestion(String question, String choicesJson, String aiFindingsJson) {
+        requirePending();
+        this.question = question;
+        this.choicesJson = choicesJson;
+        this.aiFindingsJson = aiFindingsJson;
+    }
+
     /** 승인 처리 — 생성된 problem.id를 이력으로 남긴다. 이미 처리된 초안이면 LLM_002. */
     public void approve(Long problemId) {
         requirePending();

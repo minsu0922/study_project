@@ -179,6 +179,15 @@ public class AdminLlmProblemController {
         return ApiResponse.ok(llmDraftBulkApprover.approveAll(request.ids()));
     }
 
+    /**
+     * AI 검수 지적에 붙은 고친 문장을 초안에 적용한다. 수정 API를 따로 열지 않고 사건으로 둔 것은
+     * 승인과 같은 판단이다 — 검수자가 고르는 것은 "이 제안을 받는다"이지 임의의 문장이 아니다.
+     */
+    @PostMapping("/{id}/ai-findings/{index}/apply-suggestion")
+    public ApiResponse<LlmDraftResponse> applyAiSuggestion(@PathVariable Long id, @PathVariable int index) {
+        return ApiResponse.ok(llmProblemService.applyAiSuggestion(id, index));
+    }
+
     /** 거절 — 사유(선택)를 바디로 받는다: {@code {"reason": "..."} } (없으면 빈 바디 허용). */
     @PostMapping("/{id}/reject")
     public ApiResponse<Void> reject(@PathVariable Long id,

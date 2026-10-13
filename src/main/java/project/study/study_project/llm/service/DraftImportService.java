@@ -140,7 +140,8 @@ public class DraftImportService {
             }
             String question = Texts.trimToNull(batch.problems().get(finding.problemIndex()).question());
             byQuestion.computeIfAbsent(question, q -> new ArrayList<>())
-                    .add(new DraftAiFinding(finding.type(), finding.message(), finding.detail()));
+                    .add(new DraftAiFinding(finding.type(), finding.message(), finding.detail(),
+                            finding.suggestion()));
         }
         for (GeneratedProblemDraft draft : drafts) {
             draft.recordAiFindings(objectMapper.writeValueAsString(

@@ -9,12 +9,16 @@ import lombok.extern.slf4j.Slf4j;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.llm.client.ProblemReview.AfterSolve;
+import project.study.study_project.llm.client.ProblemReview.AfterSolveBatch;
 import project.study.study_project.llm.client.ProblemReview.ChoiceOnlyAnswer;
 import project.study.study_project.llm.client.ProblemReview.ChoiceOnlyBatch;
 import project.study.study_project.llm.client.ProblemReview.Finding;
 import project.study.study_project.llm.client.ProblemReview.FindingType;
+import project.study.study_project.llm.client.ProblemReview.FixTarget;
 import project.study.study_project.llm.client.ProblemReview.Judgement;
 import project.study.study_project.llm.client.ProblemReview.JudgementBatch;
+import project.study.study_project.llm.client.ProblemReview.Suggestion;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,9 +83,33 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
                - elsewhereCount: 오답마다 "이 오답이 정답이 되는 다른 조건"을 대 본다.
                  오해나 틀린 정의라서 어떤 조건에서도 정답이 될 수 없으면 세지 않는다.
                길이나 문장의 어려움으로 정하지 마라.
+            6. 다 푼 뒤 학습자 입장에서 의견을 남긴다. 결함 판정이 아니라 참고용이다.
+               - awkwardQuote: 지문이나 보기에 어색하거나 뜻이 흐린 문장이 있으면 하나만 글자 그대로 옮기고,
+                 awkwardFix에 뜻을 바꾸지 않고 고쳐 쓴다. 취향 차이일 뿐이면 둘 다 비운다.
+               - readabilityNote: 되돌아가 다시 읽은 곳이 있으면 어디가 왜 막혔는지 쓴다. 없으면 비운다.
+               - overallNote: 이 문제가 무엇을 아는지 가려내는지, 풀 만했는지 한두 문장으로 쓴다.
 
             [참고: 난이도 정의]
             %s
+            """;
+
+    static final String AFTER_SOLVE_PROMPT = """
+            너는 CS 학습 서비스의 객관식 문제를 마지막으로 손보는 검수자다.
+            문제마다 표시된 정답, 해설, 오답 풀이, 그리고 앞서 문서를 보고 직접 푼 검수자의 풀이를 받는다.
+            근거 문서는 주지 않는다. 검수자 풀이를 문서 내용으로 믿고 견준다.
+
+            문제마다 두 가지를 한다.
+            1. explanationIssue: 아래 중 하나에 해당하면 무엇이 어긋나는지 쓴다. 아니면 빈 문자열이다.
+               - 해설이 표시된 정답이 아닌 다른 보기를 정답처럼 설명한다.
+               - 해설이나 오답 풀이가 검수자 풀이와 사실관계가 반대다.
+               - 오답 풀이가 그 오답을 맞는 말로 설명한다.
+               표현이 다르거나 설명이 덜 자세한 것은 어긋남이 아니다. 검수자 풀이가 없는 문제는 빈 문자열이다.
+            2. "지적"이 달린 문제만 고친 문장을 하나 제안한다. 지적이 "없음"이면 fixTarget은 NONE이다.
+               - 보기 단서 누설: 정답 보기를 다른 보기와 길이와 말투가 비슷해지게 줄여 쓴다.
+                 fixTarget은 CHOICE, fixChoiceNo는 그 보기 번호다.
+               - 질문이 답을 드러냄: 질문에서 정답을 흘리는 표현을 걷어 낸다. fixTarget은 QUESTION이다.
+               - 지적이 둘이면 보기 단서 누설을 고친다.
+               - 뜻과 정답은 그대로 둔다. 사실을 더하거나 빼지 마라. fixText에는 고쳐 쓴 문장 전체를 적는다.
             """;
 
     private final String model;
@@ -109,7 +137,26 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
 
         ChoiceOnlyBatch choiceOnly = call(CHOICE_ONLY_PROMPT, buildChoiceOnlyPrompt(shown), ChoiceOnlyBatch.class, false);
         JudgementBatch judged = call(judgePrompt(), buildJudgePrompt(shown, source), JudgementBatch.class, true);
-        return compare(shown, choiceOnly, judged, labeled, source.contentMd());
+        List<Finding> findings = compare(shown, choiceOnly, judged, labeled, source.contentMd());
+
+        List<Finding> all = new ArrayList<>(afterSolve(shown, judged, findings));
+        all.addAll(opinionsOf(shown, judged));
+        return all;
+    }
+
+    /**
+     * 해설 검수와 고친 문장 제안. 실패해도 앞의 두 호출이 낸 지적은 살린다.
+     * 문서를 다시 보내지 않으려고 B의 풀이를 기준으로 삼는다. 문서가 입력의 대부분이다.
+     */
+    private List<Finding> afterSolve(List<Shown> shown, JudgementBatch judged, List<Finding> findings) {
+        try {
+            AfterSolveBatch after = call(AFTER_SOLVE_PROMPT, buildAfterSolvePrompt(shown, judged, findings),
+                    AfterSolveBatch.class, false);
+            return applyAfterSolve(shown, judged, findings, after);
+        } catch (BusinessException e) {
+            log.warn("해설 검수·고친 문장 제안을 건너뜁니다: {}", e.getMessage());
+            return findings;
+        }
     }
 
     /* ── 보여 줄 형태 ── */
@@ -280,6 +327,149 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
         return findings;
     }
 
+    /* ── 정답과 해설을 열어 본 뒤 ── */
+
+    /**
+     * C 호출의 입력. 보기는 섞지 않고 원래 순서로 보여 준다. 정답을 이미 알려 주는 호출이라 가릴 것이 없고,
+     * 지적 근거 속 번호(원래 순서)와 맞아야 한다.
+     */
+    static String buildAfterSolvePrompt(List<Shown> shown, JudgementBatch judged, List<Finding> findings) {
+        Map<Integer, Judgement> judgements = byNo(judged == null ? null : judged.judgements(), Judgement::problemNo);
+        StringBuilder sb = new StringBuilder();
+        for (int k = 0; k < shown.size(); k++) {
+            Shown s = shown.get(k);
+            GeneratedProblemItem item = s.item();
+            sb.append("[problemNo ").append(k + 1).append("]\n질문: ").append(item.question()).append('\n');
+            for (int n = 0; n < item.choices().size(); n++) {
+                GeneratedProblemItem.GeneratedChoice c = item.choices().get(n);
+                sb.append(n + 1).append(") ").append(c.text()).append(c.correct() ? "  ← 표시된 정답" : "").append('\n');
+                if (!c.correct() && !isBlank(c.rationale())) {
+                    sb.append("   오답 풀이: ").append(c.rationale().strip()).append('\n');
+                }
+            }
+            sb.append("해설: ").append(isBlank(item.explanation()) ? "없음" : item.explanation().strip()).append('\n');
+            Judgement j = judgements.get(k + 1);
+            sb.append("검수자 풀이: ").append(solvedAsMarked(s, j) ? s.inOriginalNumbers(j.answerReason()) : "없음")
+                    .append('\n');
+            String flags = findings.stream()
+                    .filter(f -> f.problemIndex() == s.index() && fixable(f.type()))
+                    .map(f -> "[%s] %s".formatted(f.type().label(), f.detail() == null ? "" : f.detail()))
+                    .collect(Collectors.joining(" / "));
+            sb.append("지적: ").append(flags.isEmpty() ? "없음" : flags).append("\n\n");
+        }
+        return sb.toString();
+    }
+
+    private static boolean fixable(FindingType type) {
+        return type == FindingType.CHOICE_CUE_LEAK || type == FindingType.QUESTION_REVEALS;
+    }
+
+    /** 검수자가 표시된 정답을 골랐을 때만 그 풀이를 기준으로 쓴다. 다른 보기를 골랐다면 이미 "정답 의심"이다. */
+    private static boolean solvedAsMarked(Shown s, Judgement j) {
+        return j != null && j.chosenNo() == s.correctNo() && !isBlank(j.answerReason());
+    }
+
+    /** C 응답을 지적에 얹는다. API 없이 테스트할 수 있게 순수 함수로 뒀다. */
+    static List<Finding> applyAfterSolve(List<Shown> shown, JudgementBatch judged, List<Finding> findings,
+                                         AfterSolveBatch after) {
+        Map<Integer, Judgement> judgements = byNo(judged == null ? null : judged.judgements(), Judgement::problemNo);
+        Map<Integer, AfterSolve> reviews = byNo(after == null ? null : after.reviews(), AfterSolve::problemNo);
+        List<Finding> result = new ArrayList<>(findings);
+        for (int k = 0; k < shown.size(); k++) {
+            Shown s = shown.get(k);
+            AfterSolve a = reviews.get(k + 1);
+            if (a == null) {
+                continue;
+            }
+            if (!isBlank(a.explanationIssue()) && solvedAsMarked(s, judgements.get(k + 1))) {
+                result.add(new Finding(s.index(), FindingType.EXPLANATION_MISMATCH,
+                        "해설이 표시된 정답이나 검수 AI의 풀이와 어긋납니다", a.explanationIssue().strip()));
+            }
+            Suggestion suggestion = suggestionOf(s.item(), a);
+            if (suggestion == null) {
+                continue;
+            }
+            FindingType target = suggestion.target() == FixTarget.CHOICE
+                    ? FindingType.CHOICE_CUE_LEAK : FindingType.QUESTION_REVEALS;
+            for (int i = 0; i < result.size(); i++) {
+                Finding f = result.get(i);
+                if (f.problemIndex() == s.index() && f.type() == target) {
+                    result.set(i, f.withSuggestion(suggestion));
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 받아들일 제안만 돌려준다. 보기 제안은 고친 뒤에도 정답이 길이로 튀면 버린다 —
+     * 지적을 없애지 못하는 제안을 검수자에게 누르게 할 수는 없다.
+     */
+    static Suggestion suggestionOf(GeneratedProblemItem item, AfterSolve a) {
+        if (a.fixTarget() == null || a.fixTarget() == FixTarget.NONE || isBlank(a.fixText())) {
+            return null;
+        }
+        String text = a.fixText().strip();
+        if (a.fixTarget() == FixTarget.QUESTION) {
+            return text.equals(item.question().strip()) ? null : new Suggestion(FixTarget.QUESTION, null, text);
+        }
+        int index = a.fixChoiceNo() - 1;
+        if (index < 0 || index >= item.choices().size() || text.equals(item.choices().get(index).text().strip())) {
+            return null;
+        }
+        List<GeneratedProblemItem.GeneratedChoice> fixed = new ArrayList<>(item.choices());
+        GeneratedProblemItem.GeneratedChoice c = fixed.get(index);
+        fixed.set(index, new GeneratedProblemItem.GeneratedChoice(text, c.correct(), c.rationale(), c.matchText()));
+        return answerStandsOutByLength(fixed) ? null : new Suggestion(FixTarget.CHOICE, index, text);
+    }
+
+    /* ── 의견 ── */
+
+    /**
+     * B가 남긴 의견을 지적 목록에 실을 형태로 바꾼다. 등급이 의견이라 검수함은 지적 수에 세지 않는다.
+     * 풀이는 표시된 정답을 골랐을 때만 싣는다. 다른 보기를 골랐으면 "정답 의심"의 근거에 이미 있다.
+     */
+    static List<Finding> opinionsOf(List<Shown> shown, JudgementBatch judged) {
+        Map<Integer, Judgement> judgements = byNo(judged == null ? null : judged.judgements(), Judgement::problemNo);
+        List<Finding> opinions = new ArrayList<>();
+        for (int k = 0; k < shown.size(); k++) {
+            Shown s = shown.get(k);
+            Judgement j = judgements.get(k + 1);
+            if (j == null) {
+                continue;
+            }
+            if (solvedAsMarked(s, j)) {
+                opinions.add(new Finding(s.index(), FindingType.SOLUTION, "검수 AI가 문서를 보고 푼 과정입니다",
+                        s.inOriginalNumbers(j.answerReason())));
+            }
+            // 어색하다는 문장이 문제에 실제로 있어야 싣는다. 지어낸 인용은 검수자가 찾을 수 없다
+            if (appearsIn(s.item(), j.awkwardQuote())) {
+                opinions.add(new Finding(s.index(), FindingType.AWKWARD_SENTENCE, "어색하거나 뜻이 흐린 문장이 있습니다",
+                        "지금: 「%s」".formatted(j.awkwardQuote().strip())
+                                + (isBlank(j.awkwardFix()) ? "" : "\n고치면: " + j.awkwardFix().strip())));
+            }
+            if (!isBlank(j.readabilityNote())) {
+                opinions.add(new Finding(s.index(), FindingType.READABILITY, "읽다가 막히는 곳이 있습니다",
+                        s.inOriginalNumbers(j.readabilityNote())));
+            }
+            if (!isBlank(j.overallNote())) {
+                opinions.add(new Finding(s.index(), FindingType.OVERALL, "풀어 본 총평입니다",
+                        s.inOriginalNumbers(j.overallNote())));
+            }
+        }
+        return opinions;
+    }
+
+    private static boolean appearsIn(GeneratedProblemItem item, String quote) {
+        String q = ClaudeDocumentFactChecker.normalize(quote);
+        if (q.isEmpty()) {
+            return false;
+        }
+        return ClaudeDocumentFactChecker.normalize(item.question()).contains(q)
+                || item.choices().stream().anyMatch(c -> ClaudeDocumentFactChecker.normalize(c.text()).contains(q));
+    }
+
     /**
      * 정답이 오답 평균보다 {@link #CUE_LENGTH_RATIO}배 이상 길 때만 보기 단서 누설로 친다.
      * 2026-10-07~12 지적 21건을 문제와 견줘 보니 수긍되는 12건은 모두 1.3배 이상이었고,
@@ -287,9 +477,13 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
      * 프롬프트는 그대로 두고 코드에서 거른다. 프롬프트를 바꾸면 적발률을 다시 재야 한다.
      */
     static boolean answerStandsOutByLength(GeneratedProblemItem item) {
+        return answerStandsOutByLength(item.choices());
+    }
+
+    static boolean answerStandsOutByLength(List<GeneratedProblemItem.GeneratedChoice> choices) {
         int answer = 0;
         int others = 0;
-        for (GeneratedProblemItem.GeneratedChoice c : item.choices()) {
+        for (GeneratedProblemItem.GeneratedChoice c : choices) {
             if (c.correct()) {
                 answer = c.text().length();
             } else {

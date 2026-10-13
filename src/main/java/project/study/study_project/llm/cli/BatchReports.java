@@ -98,7 +98,10 @@ final class BatchReports {
     }
 
     static String renderProblemReview(LocalDate date, List<GeneratedProblemItem> problems,
-                                      List<ProblemReview.Finding> findings) {
+                                      List<ProblemReview.Finding> all) {
+        // 의견(풀이·총평 등)은 문제마다 달려서 요약에 실으면 지적이 묻힌다. 검수함에서만 보여 준다
+        List<ProblemReview.Finding> findings = all.stream()
+                .filter(f -> f.type().grade() != ProblemReview.Grade.OPINION).toList();
         if (findings.isEmpty()) {
             return "🔎 %s 문제 검수: 지적 없음%n".formatted(date);
         }

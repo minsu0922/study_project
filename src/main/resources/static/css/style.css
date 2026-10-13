@@ -1442,6 +1442,14 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 .ai-finding + .ai-finding { border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); margin-top: 6px; }
 .ai-finding ul { margin: 6px 0 0; padding-left: 22px; line-height: 1.6; }
 .ai-finding li { margin-bottom: 2px; }
+/* 고친 문장 제안 — 지금 문장과 제안을 위아래로 나란히 두어 달라진 곳이 눈에 들어오게 한다 */
+.ai-suggestion { margin: 8px 0 4px 22px; display: grid; gap: 4px; }
+.ai-suggestion > div { display: flex; gap: 8px; line-height: 1.5; }
+.ai-suggestion button { justify-self: start; margin-top: 4px; }
+/* 의견은 접어 둔다. 지적 상자와 같은 무게로 보이면 검수자가 둘을 같은 것으로 읽는다 */
+.ai-opinions { margin: 6px 0 10px; color: var(--muted); font-size: var(--fs-1); }
+.ai-opinions summary { cursor: pointer; }
+.ai-opinions .ai-finding { color: var(--text, inherit); }
 /* 요약 표에서 넘어왔을 때 카드 윗부분이 고정 머리줄에 가리지 않게 띄운다 */
 .draft-card { scroll-margin-top: 72px; }
 .draft-card:target { outline: 2px solid var(--primary); outline-offset: 2px; }

@@ -290,6 +290,128 @@ class ClaudeProblemReviewerTest {
         });
     }
 
+    /* ── 의견: 지적과 따로 싣는다 ── */
+
+    @Test
+    @DisplayName("풀이·어색한 문장·가독성·총평을 의견 등급으로 싣고, 문제에 없는 문장을 어색하다고 하면 버린다")
+    void opinionsCarrySolutionAndNotes() {
+        var shown = ClaudeProblemReviewer.showable(List.of(mc("스키마란 무엇인가?"), mc("스키마의 뜻은?")));
+        int c0 = shown.get(0).correctNo();
+        int c1 = shown.get(1).correctNo();
+
+        List<Finding> opinions = ClaudeProblemReviewer.opinionsOf(shown, new JudgementBatch(List.of(
+                new Judgement(1, c0 + "번이 정의와 맞는다", c0, 0, "", "", "", true, "", "", "없음", 0,
+                        "스키마란 무엇인가?", "스키마는 무엇을 가리키는가?", "", "정의를 아는지 가려낸다"),
+                new Judgement(2, "이유", c1, 0, "", "", "", true, "", "", "없음", 0,
+                        "문제에 없는 문장", "고친 문장", "보기가 짧아 막힘이 없다", ""))));
+
+        assertThat(opinions).allSatisfy(f -> assertThat(f.type().grade()).isEqualTo(ProblemReview.Grade.OPINION));
+        assertThat(opinions).extracting(Finding::problemIndex, Finding::type, Finding::detail).containsExactly(
+                org.assertj.core.groups.Tuple.tuple(0, FindingType.SOLUTION, "1번이 정의와 맞는다"),
+                org.assertj.core.groups.Tuple.tuple(0, FindingType.AWKWARD_SENTENCE,
+                        "지금: 「스키마란 무엇인가?」\n고치면: 스키마는 무엇을 가리키는가?"),
+                org.assertj.core.groups.Tuple.tuple(0, FindingType.OVERALL, "정의를 아는지 가려낸다"),
+                org.assertj.core.groups.Tuple.tuple(1, FindingType.SOLUTION, "이유"),
+                org.assertj.core.groups.Tuple.tuple(1, FindingType.READABILITY, "보기가 짧아 막힘이 없다"));
+    }
+
+    @Test
+    @DisplayName("검수 AI가 다른 보기를 골랐으면 풀이를 의견으로 싣지 않는다 — 정답 의심의 근거에 이미 있다")
+    void noSolutionOpinionWhenAnswerDiffers() {
+        var shown = ClaudeProblemReviewer.showable(List.of(mc("스키마란?")));
+        int wrong = shown.get(0).correctNo() == 1 ? 2 : 1;
+
+        assertThat(ClaudeProblemReviewer.opinionsOf(shown, new JudgementBatch(List.of(fine(1, wrong))))).isEmpty();
+    }
+
+    /* ── 정답과 해설을 열어 본 뒤: 해설 검수와 고친 문장 ── */
+
+    private static final GeneratedProblemItem LONG_ANSWER = new GeneratedProblemItem("풀이 설정을 길게 잡으면 아끼는 것은?", "",
+            "연결을 재사용하면 핸드셰이크를 다시 하지 않는다.", List.of(
+            new GeneratedChoice("가".repeat(60), true, "", null),
+            new GeneratedChoice("나".repeat(30), false, "종료 비용도 줄어든다.", null),
+            new GeneratedChoice("다".repeat(30), false, "", null),
+            new GeneratedChoice("라".repeat(30), false, "", null)));
+
+    private static Finding cueLeak() {
+        return new Finding(0, FindingType.CHOICE_CUE_LEAK, "질문을 가리고 보기만 봐도 정답을 고를 수 있습니다", "1번만 길다");
+    }
+
+    @Test
+    @DisplayName("다 푼 뒤 보여 주는 글은 보기를 원래 순서로 적고 정답·해설·검수자 풀이·지적을 싣는다")
+    void afterSolvePromptShowsAnswerAndFlags() {
+        var shown = ClaudeProblemReviewer.showable(List.of(LONG_ANSWER));
+        int correct = shown.get(0).correctNo();
+
+        String prompt = ClaudeProblemReviewer.buildAfterSolvePrompt(shown,
+                new JudgementBatch(List.of(new Judgement(1, correct + "번이 맞다", correct, 0, "", "", "",
+                        false, "", "", "없음", 0))), List.of(cueLeak()));
+
+        assertThat(prompt).contains("1) " + "가".repeat(60) + "  ← 표시된 정답", "2) " + "나".repeat(30),
+                "   오답 풀이: 종료 비용도 줄어든다.", "해설: 연결을 재사용하면", "검수자 풀이: 1번이 맞다",
+                "지적: [보기 단서 누설] 1번만 길다");
+    }
+
+    @Test
+    @DisplayName("해설이 어긋난다는 답은 결함 지적이 되고, 길이 차를 없애는 제안은 단서 누설 지적에 붙는다")
+    void afterSolveAddsExplanationFindingAndSuggestion() {
+        var shown = ClaudeProblemReviewer.showable(List.of(LONG_ANSWER));
+        var judged = new JudgementBatch(List.of(fine(1, shown.get(0).correctNo())));
+
+        List<Finding> findings = ClaudeProblemReviewer.applyAfterSolve(shown, judged, List.of(cueLeak()),
+                new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1,
+                        "해설은 종료 비용이 그대로라고 하는데 오답 풀이는 줄어든다고 한다",
+                        ProblemReview.FixTarget.CHOICE, 1, "가".repeat(32)))));
+
+        assertThat(findings).hasSize(2);
+        assertThat(findings.get(0).suggestion())
+                .isEqualTo(new ProblemReview.Suggestion(ProblemReview.FixTarget.CHOICE, 0, "가".repeat(32)));
+        assertThat(findings.get(1).type()).isEqualTo(FindingType.EXPLANATION_MISMATCH);
+        assertThat(findings.get(1).type().grade()).isEqualTo(ProblemReview.Grade.DEFECT);
+    }
+
+    @Test
+    @DisplayName("고친 뒤에도 정답이 1.3배 이상 길거나, 지적이 없는 문제의 제안은 버린다")
+    void afterSolveDropsUselessSuggestions() {
+        var shown = ClaudeProblemReviewer.showable(List.of(LONG_ANSWER));
+        var judged = new JudgementBatch(List.of(fine(1, shown.get(0).correctNo())));
+        var stillLong = new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1, "",
+                ProblemReview.FixTarget.CHOICE, 1, "가".repeat(50))));
+        var onQuestion = new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1, "",
+                ProblemReview.FixTarget.QUESTION, 0, "고친 질문")));
+
+        assertThat(ClaudeProblemReviewer.applyAfterSolve(shown, judged, List.of(cueLeak()), stillLong))
+                .singleElement().satisfies(f -> assertThat(f.suggestion()).isNull());
+        assertThat(ClaudeProblemReviewer.applyAfterSolve(shown, judged, List.of(cueLeak()), onQuestion))
+                .as("질문 제안은 질문 누설 지적에만 붙는다")
+                .singleElement().satisfies(f -> assertThat(f.suggestion()).isNull());
+    }
+
+    @Test
+    @DisplayName("검수 AI가 다른 보기를 골랐으면 해설 어긋남을 따로 지적하지 않는다 — 기준으로 삼을 풀이가 없다")
+    void noExplanationFindingWithoutTrustedSolution() {
+        var shown = ClaudeProblemReviewer.showable(List.of(LONG_ANSWER));
+        int wrong = shown.get(0).correctNo() == 1 ? 2 : 1;
+
+        assertThat(ClaudeProblemReviewer.applyAfterSolve(shown, new JudgementBatch(List.of(fine(1, wrong))), List.of(),
+                new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1, "어긋난다",
+                        ProblemReview.FixTarget.NONE, 0, ""))))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("제안 칸이 없는 옛 지적 JSON도 읽히고, 제안은 JSON으로 오간다")
+    void findingJsonRoundTrip() throws Exception {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        Finding old = mapper.readValue(
+                "{\"problemIndex\":1,\"type\":\"CHOICE_CUE_LEAK\",\"message\":\"m\",\"detail\":\"d\"}", Finding.class);
+        Finding withFix = cueLeak().withSuggestion(
+                new ProblemReview.Suggestion(ProblemReview.FixTarget.CHOICE, 0, "짧게"));
+
+        assertThat(old.suggestion()).isNull();
+        assertThat(mapper.readValue(mapper.writeValueAsString(withFix), Finding.class)).isEqualTo(withFix);
+    }
+
     @Test
     @DisplayName("난이도 정의는 생성 프롬프트의 그 절만 잘라 온다")
     void slicesDifficultyDefinitionFromGeneratorPrompt() {

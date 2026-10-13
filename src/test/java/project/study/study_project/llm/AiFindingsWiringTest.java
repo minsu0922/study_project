@@ -62,9 +62,53 @@ class AiFindingsWiringTest {
         assertThat(drafts).extracting(LlmDraftResponse::question).containsExactly("지적 없는 문제", "지적 있는 문제");
         assertThat(drafts.get(0).aiFindings()).isEmpty();
         assertThat(drafts.get(1).aiFindings()).containsExactly(
-                new LlmDraftResponse.AiFinding("CHOICE_CUE_LEAK", "보기 단서 누설", "보기만 봐도 고른다",
-                        List.of("4번만 길다", "나머지는 짧다")),
-                new LlmDraftResponse.AiFinding("NO_SUPPORT", "문서에 근거 없음", "근거 없음", List.of()));
+                new LlmDraftResponse.AiFinding("CHOICE_CUE_LEAK", "보기 단서 누설", "POLISH", "보기만 봐도 고른다",
+                        List.of("4번만 길다", "나머지는 짧다"), null),
+                new LlmDraftResponse.AiFinding("NO_SUPPORT", "문서에 근거 없음", "DEFECT", "근거 없음", List.of(),
+                        null));
+    }
+
+    @Test
+    @DisplayName("고친 문장 제안을 적용하면 그 보기만 바뀌고, 지적은 제안을 떼고 바꾼 내용을 근거에 남긴다")
+    void appliesSuggestionToPendingDraft() throws Exception {
+        draftImportService.importFile(writeFile(List.of(
+                new ProblemReview.Finding(1, ProblemReview.FindingType.SOLUTION, "풀이", "1번이 맞다"),
+                new ProblemReview.Finding(1, ProblemReview.FindingType.CHOICE_CUE_LEAK, "보기만 봐도 고른다", "1번만 길다")
+                        .withSuggestion(new ProblemReview.Suggestion(ProblemReview.FixTarget.CHOICE, 0, "짧은 정답")))));
+        LlmDraftResponse before = reviewList().get(1);
+        assertThat(before.aiFindings().get(0).grade()).isEqualTo("OPINION");
+        assertThat(before.aiFindings().get(1).suggestion())
+                .isEqualTo(new LlmDraftResponse.AiSuggestion("CHOICE", 0, "짧은 정답"));
+
+        LlmDraftResponse after = llmProblemService.applyAiSuggestion(before.id(), 1);
+
+        assertThat(after.choices()).extracting(c -> c.text())
+                .containsExactly("짧은 정답", "오답 보기 1", "오답 보기 2", "오답 보기 3");
+        assertThat(after.choices().get(0).correct()).isTrue();
+        assertThat(after.aiFindings().get(1).suggestion()).isNull();
+        assertThat(after.aiFindings().get(1).details())
+                .containsExactly("1번만 길다", "제안 적용: 「정답 보기」 → 「짧은 정답」");
+        assertThat(reviewList().get(1).choices().get(0).text()).as("저장됐다").isEqualTo("짧은 정답");
+    }
+
+    @Test
+    @DisplayName("제안이 없는 지적이나 처리된 초안에는 적용할 수 없다")
+    void rejectsApplyWithoutSuggestionOrAfterReview() throws Exception {
+        draftImportService.importFile(writeFile(List.of(
+                new ProblemReview.Finding(1, ProblemReview.FindingType.QUESTION_REVEALS, "되받는다", "근거")
+                        .withSuggestion(new ProblemReview.Suggestion(ProblemReview.FixTarget.QUESTION, null, "고친 질문")),
+                new ProblemReview.Finding(1, ProblemReview.FindingType.NO_SUPPORT, "근거 없음"))));
+        Long id = reviewList().get(1).id();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmProblemService.applyAiSuggestion(id, 1))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmProblemService.applyAiSuggestion(id, 9))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+
+        assertThat(llmProblemService.applyAiSuggestion(id, 0).question()).isEqualTo("고친 질문");
+        llmProblemService.reject(id, "테스트");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmProblemService.applyAiSuggestion(id, 0))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
     }
 
     @Test
