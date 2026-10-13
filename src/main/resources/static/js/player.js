@@ -158,6 +158,7 @@ function startPlayer(mountEl, problems, opts = {}) {
 
       <div class="card player-card fade-in">
         <div class="q-text">${escapeHtml(p.question)}</div>
+        ${codeBlockHtml(p.code)}
         <div id="optArea">${renderInput(p)}</div>
         <div id="feedback"></div>
         <!-- 제출 버튼은 <답을 여러 번에 걸쳐 만드는> 유형에만 그린다 — 2026-09-08.

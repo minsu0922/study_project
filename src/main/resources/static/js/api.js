@@ -480,6 +480,20 @@ function escapeHtml(s) {
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
+/**
+ * 문제에 딸린 코드를 줄 번호와 함께 그린다. 코드가 없으면 빈 문자열.
+ *
+ * 색칠 라이브러리를 쓰지 않는다. 문제의 코드는 5~15줄이라 고정폭과 줄 번호면 읽히고,
+ * 해설이 "3행"처럼 줄을 가리키므로 번호가 색보다 먼저다.
+ */
+function codeBlockHtml(code) {
+  if (!code) return "";
+  const lines = String(code).replaceAll("\r\n", "\n").split("\n");
+  return `<pre class="q-code"><code>${lines.map((line, i) =>
+    `<span class="q-code-line"><span class="q-code-no">${i + 1}</span>${escapeHtml(line) || " "}</span>`
+  ).join("\n")}</code></pre>`;
+}
+
 /** ISO 날짜 문자열 → "2026-07-05 10:06" 같은 짧은 표기 */
 /**
  * 쪽 넘기기 한 벌(이전 · 몇 쪽 · 다음). 목록 화면이 모두 이것을 쓴다.

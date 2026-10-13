@@ -124,6 +124,17 @@ public class Problem {
     @Column(name = "document_slug", length = 150)
     private String documentSlug;
 
+    /**
+     * 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}이다.
+     * 지문에 섞지 않는 이유: 화면이 코드만 고정폭으로 그리고, 배치가 코드만 꺼내 실행해 보기 때문이다.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String code;
+
+    /** 코드의 언어(V39). 지금은 {@code java}만 받는다. 코드가 없으면 {@code null}. */
+    @Column(name = "code_language", length = 20)
+    private String codeLanguage;
+
     /** 비공개 여부(V30). 내려 둔 문제는 출제·목록·채점에서 빠지고 관리 화면에만 남는다. */
     @Column(nullable = false)
     private boolean hidden;
@@ -159,6 +170,15 @@ public class Problem {
     }
 
     /** 관리자 수정용 — id/created_at만 남기고 내용 필드를 통째로 교체한다(부분 수정 없음: 폼 전체 제출 방식). */
+    /**
+     * 코드를 붙이거나 뗀다. 팩터리와 update의 인자로 받지 않는 이유: 코드 문제는 일부뿐이라,
+     * 인자를 늘리면 코드가 없는 호출부 전부가 null 둘을 넘기게 된다.
+     */
+    public void attachCode(String code, String codeLanguage) {
+        this.code = code;
+        this.codeLanguage = code == null ? null : codeLanguage;
+    }
+
     public void update(DomainCode domain, Difficulty difficulty, ProblemType type, String title,
                        String question, String answer, String explanation, String documentSlug) {
         this.domain = domain;

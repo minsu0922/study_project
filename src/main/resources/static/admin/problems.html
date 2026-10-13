@@ -55,6 +55,9 @@ try {
                placeholder="예: static 필드에 여러 쓰레드가 동시에 쓸 때의 값 유실">
       </div>
       <div class="field"><label>문제 지문</label><textarea id="pQuestion" rows="3" style="width:100%"></textarea></div>
+      <!-- 코드 문제에만 채운다(V39). 지문과 칸을 나눈 이유: 화면이 코드만 고정폭·줄 번호로 그린다. -->
+      <div class="field"><label>코드 (선택 · Java)</label><textarea id="pCode" rows="6" spellcheck="false"
+        style="width:100%; font-family:var(--font-mono, ui-monospace, Consolas, monospace); white-space:pre; overflow-x:auto"></textarea></div>
 
       <!-- 유형에 따라 아래 두 블록 중 하나만 보인다 (객관식=보기 편집기, OX/단답형=answer 입력) -->
       <div class="field" id="pAnswerField">
@@ -347,6 +350,8 @@ function collectProblemBody() {
     answer: ["MULTIPLE_CHOICE", "MATCHING"].includes(type)
       ? null : document.getElementById("pAnswer").value || null,
     explanation: document.getElementById("pExplanation").value || null,
+    // trim하지 않는다 — 줄 앞의 들여쓰기가 코드의 일부다. 앞뒤 빈 줄은 서버가 걷는다.
+    code: document.getElementById("pCode").value || null,
     choices: [],
   };
   if (["MULTIPLE_CHOICE", "MATCHING", "ORDERING"].includes(type)) {
@@ -395,6 +400,7 @@ function resetProblemForm() {
   document.getElementById("pCancelBtn").hidden = true;
   document.getElementById("pTitle").value = "";
   document.getElementById("pQuestion").value = "";
+  document.getElementById("pCode").value = "";
   document.getElementById("pAnswer").value = "";
   document.getElementById("pExplanation").value = "";
   document.getElementById("pChoices").innerHTML = "";
@@ -613,6 +619,7 @@ async function editProblem(id) {
   // 저장 버튼 한 번에 그 가짜 제목이 진짜로 박힌다(AdminProblemDetail.title 주석).
   document.getElementById("pTitle").value = p.title ?? "";
   document.getElementById("pQuestion").value = p.question;
+  document.getElementById("pCode").value = p.code ?? "";
   document.getElementById("pAnswer").value = p.answer ?? "";
   document.getElementById("pExplanation").value = p.explanation ?? "";
   document.getElementById("pChoices").innerHTML = "";

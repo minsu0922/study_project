@@ -31,8 +31,19 @@ public record AdminProblemDetail(
         LocalDateTime createdAt,
         List<ChoiceDetail> choices,
         /** 내려 둔 문제인가(V30). */
-        boolean hidden
+        boolean hidden,
+        /** 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}. */
+        String code,
+        String codeLanguage
 ) {
+    /** 코드가 없는 보통 문제 — 코드 칸(V39)이 생기기 전의 테스트가 쓴다. */
+    public AdminProblemDetail(Long id, DomainCode domain, Difficulty difficulty, ProblemType type, String title,
+                              String question, String answer, String explanation, LocalDateTime createdAt,
+                              List<ChoiceDetail> choices, boolean hidden) {
+        this(id, domain, difficulty, type, title, question, answer, explanation, createdAt, choices, hidden,
+                null, null);
+    }
+
     /**
      * @param rationale 이 오답이 왜 틀렸는지 한 줄(V15). 정답 보기와 옛 문제는 {@code null}.
      *                  <b>수정 폼이 이 값을 되채운다</b> — 안 내려주면 문제를 한 번 수정할 때마다
@@ -55,7 +66,7 @@ public record AdminProblemDetail(
                 p.getId(), p.getDomain(), p.getDifficulty(), p.getType(), p.getTitle(),
                 p.getQuestion(), p.getAnswer(), p.getExplanation(), p.getCreatedAt(),
                 p.getChoices().stream().map(ChoiceDetail::from).toList(),
-                p.isHidden()
+                p.isHidden(), p.getCode(), p.getCodeLanguage()
         );
     }
 }

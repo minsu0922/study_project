@@ -26,7 +26,10 @@ public record QuizProblemItem(
         ProblemType type,
         String question,
         List<QuizChoiceItem> choices,
-        List<QuizMatchOption> matchOptions
+        List<QuizMatchOption> matchOptions,
+        /** 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}. */
+        String code,
+        String codeLanguage
 ) {
     public static QuizProblemItem from(Problem p) {
         // 행을 쓰는 유형일 때만 LAZY 보기 컬렉션에 접근한다(불필요한 쿼리 방지).
@@ -40,6 +43,6 @@ public record QuizProblemItem(
                 ? QuizMatchOption.shuffledFrom(p.getId(), p.getChoices())
                 : List.of();
         return new QuizProblemItem(p.getId(), p.getDomain(), p.getDifficulty(), p.getType(),
-                p.getQuestion(), choices, matchOptions);
+                p.getQuestion(), choices, matchOptions, p.getCode(), p.getCodeLanguage());
     }
 }

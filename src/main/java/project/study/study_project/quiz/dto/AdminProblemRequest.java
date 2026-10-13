@@ -60,8 +60,23 @@ public record AdminProblemRequest(
         List<ChoiceItem> choices,
 
         @Size(max = 150, message = "documentSlug는 150자 이하여야 합니다.") // DB VARCHAR(150)
-        String documentSlug
+        String documentSlug,
+
+        // 코드 문제에만 채운다(V39). 화면 한 장에 들어올 길이로 묶는다 — 긴 코드는 문제가 아니라 과제다
+        @Size(max = 4000, message = "code는 4000자 이하여야 합니다.")
+        String code,
+
+        @Size(max = 20, message = "codeLanguage는 20자 이하여야 합니다.") // DB VARCHAR(20)
+        String codeLanguage
 ) {
+
+    /** 코드가 없는 보통 문제 — 코드 칸(V39)이 생기기 전의 호출부와 테스트가 쓴다. */
+    public AdminProblemRequest(DomainCode domain, Difficulty difficulty, ProblemType type, String title,
+                               String question, String answer, String explanation, List<ChoiceItem> choices,
+                               String documentSlug) {
+        this(domain, difficulty, type, title, question, answer, explanation, choices, documentSlug, null, null);
+    }
+
     /** 보기 입력 항목 — 객관식의 보기, 짝짓기의 한 쌍, 순서 배열의 한 항목이 모두 이 모양이다. */
     public record ChoiceItem(
             @NotBlank(message = "보기 내용은 필수입니다.")

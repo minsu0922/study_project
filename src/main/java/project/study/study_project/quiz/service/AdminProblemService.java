@@ -96,6 +96,7 @@ public class AdminProblemService {
                 request.domain(), request.difficulty(), request.type(), Texts.trimToNull(request.title()),
                 request.question().trim(), normalizeAnswer(request), Texts.trimToNull(request.explanation()),
                 Texts.trimToNull(request.documentSlug()));
+        problem.attachCode(codeOf(request), codeLanguageOf(request));
         problem.replaceChoices(buildChoices(problem, request));
         return AdminProblemDetail.from(problemRepository.save(problem));
     }
@@ -118,6 +119,7 @@ public class AdminProblemService {
         problem.update(request.domain(), request.difficulty(), request.type(), Texts.trimToNull(request.title()),
                 request.question().trim(), normalizeAnswer(request), Texts.trimToNull(request.explanation()),
                 Texts.trimToNull(request.documentSlug()));
+        problem.attachCode(codeOf(request), codeLanguageOf(request));
         problem.replaceChoices(buildChoices(problem, request));
         return AdminProblemDetail.from(problem); // 변경 감지(dirty checking)로 커밋 시 자동 UPDATE
     }
@@ -158,6 +160,8 @@ public class AdminProblemService {
     }
 
     /** 지금 문제를 등록 요청과 같은 모양으로 — 이력에 적는 모양이자 되돌릴 때 다시 넣는 모양이다. */
+    static final String CODE_LANGUAGE_JAVA = "java";
+
     private AdminProblemRequest toRequest(Problem p) {
         return new AdminProblemRequest(p.getDomain(), p.getDifficulty(), p.getType(), p.getTitle(),
                 p.getQuestion(), p.getAnswer(), p.getExplanation(),
@@ -165,7 +169,21 @@ public class AdminProblemService {
                         .map(c -> new AdminProblemRequest.ChoiceItem(c.getText(), c.isCorrect(),
                                 c.getRationale(), c.getMatchText()))
                         .toList(),
-                p.getDocumentSlug());
+                p.getDocumentSlug(), p.getCode(), p.getCodeLanguage());
+    }
+
+    /** 코드는 앞뒤 빈 줄만 걷는다. 줄 안의 들여쓰기는 코드의 일부라 건드리지 않는다. */
+    private static String codeOf(AdminProblemRequest request) {
+        return request.code() == null || request.code().isBlank() ? null : request.code().strip();
+    }
+
+    /** 언어를 비워 보내면 java로 본다. 지금 받는 언어가 그것 하나다. */
+    private static String codeLanguageOf(AdminProblemRequest request) {
+        if (codeOf(request) == null) {
+            return null;
+        }
+        String language = Texts.trimToNull(request.codeLanguage());
+        return language == null ? CODE_LANGUAGE_JAVA : language.toLowerCase(java.util.Locale.ROOT);
     }
 
     /**
