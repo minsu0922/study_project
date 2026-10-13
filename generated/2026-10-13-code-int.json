@@ -1,0 +1,89 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-10-13",
+  "generatedAt" : "2026-10-13T14:13:27.846973200Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행했을 때 출력되는 결과로 알맞은 것은?",
+    "answer" : "",
+    "explanation" : "3행~6행의 오토박싱은 Integer.valueOf를 호출합니다. valueOf는 -128부터 127까지의 값을 미리 만들어 둔 캐시 객체로 돌려주므로 3행과 4행의 a와 b는 같은 객체이고, 7행의 a == b는 true입니다. 128은 캐시 범위 밖이라 5행과 6행에서 각각 새 객체가 만들어지고, 8행의 c == d는 참조가 달라 false입니다. 9행의 equals는 값을 비교하므로 true입니다.",
+    "choices" : [ {
+      "text" : "true / false / true",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "true / true / true",
+      "correct" : false,
+      "rationale" : "Integer도 값이 같으면 ==이 항상 true라고 오해했다.",
+      "matchText" : ""
+    }, {
+      "text" : "false / false / true",
+      "correct" : false,
+      "rationale" : "오토박싱은 항상 새 객체를 만든다고 오해했다.",
+      "matchText" : ""
+    }, {
+      "text" : "true / true / false",
+      "correct" : false,
+      "rationale" : "캐시 범위를 128까지로 착각했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "Integer 오토박싱과 == 비교 범위",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "다음 코드를 실행하면 어떻게 되는가?",
+    "answer" : "",
+    "explanation" : "5행과 6행에서 맵에는 \"kim\"만 넣었으므로 7행의 score.get(\"lee\")는 예외 없이 null을 돌려주고 lee는 null이 됩니다. 8행의 lee == null은 참조끼리의 비교라 true를 출력합니다. 9행의 lee == 90은 한쪽이 int이므로 Integer가 언박싱되어 lee.intValue()가 호출되는데, lee가 null이라 여기서 NullPointerException이 발생해 10행은 실행되지 않습니다.",
+    "choices" : [ {
+      "text" : "9행에서 NullPointerException이 난다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "7행에서 NullPointerException이 난다",
+      "correct" : false,
+      "rationale" : "없는 키를 get하면 예외가 난다고 오해했다. get은 null을 돌려줄 뿐이다.",
+      "matchText" : ""
+    }, {
+      "text" : "8행에서 NullPointerException이 난다",
+      "correct" : false,
+      "rationale" : "null과 ==로 비교하면 예외가 난다고 오해했다. 참조 비교라 true가 나온다.",
+      "matchText" : ""
+    }, {
+      "text" : "예외 없이 끝난다",
+      "correct" : false,
+      "rationale" : "Integer와 int의 ==도 참조 비교라고 오해했다. int와 비교하면 언박싱이 일어난다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "null인 Integer와 int의 == 비교",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : null,
+  "codeTopic" : "==과 equals, Integer 캐시",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "public class Main {\n    public static void main(String[] args) {\n        Integer a = 127;\n        Integer b = 127;\n        Integer c = 128;\n        Integer d = 128;\n        System.out.println(a == b);\n        System.out.println(c == d);\n        System.out.println(c.equals(d));\n    }\n}",
+    "expectedOutput" : "true\nfalse\ntrue",
+    "targetLine" : 0,
+    "errorType" : ""
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_ERROR",
+    "language" : "java",
+    "code" : "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Map<String, Integer> score = new TreeMap<>();\n        score.put(\"kim\", 90);\n        Integer lee = score.get(\"lee\");\n        System.out.println(lee == null);\n        System.out.println(lee == 90);\n        System.out.println(\"끝\");\n    }\n}",
+    "expectedOutput" : "",
+    "targetLine" : 9,
+    "errorType" : "NullPointerException"
+  } ]
+}
