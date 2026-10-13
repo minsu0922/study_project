@@ -128,6 +128,18 @@ class ClaudeProblemReviewerTest {
     }
 
     @Test
+    @DisplayName("보기만 보는 호출에는 정답이 길이로 튀는 문제만 싣고, 번호는 전체 목록의 위치를 쓴다")
+    void choiceOnlyPromptCarriesOnlyLengthSuspects() {
+        var shown = ClaudeProblemReviewer.showable(List.of(withLengths(40, 40, 40, 40), withLengths(60, 30, 30, 30)));
+
+        String prompt = ClaudeProblemReviewer.buildChoiceOnlyPrompt(shown);
+
+        assertThat(prompt).contains("[problemNo 2]").doesNotContain("[problemNo 1]");
+        assertThat(ClaudeProblemReviewer.buildChoiceOnlyPrompt(shown.subList(0, 1)))
+                .as("실을 문제가 없으면 호출하지 않는다").isNull();
+    }
+
+    @Test
     @DisplayName("길이 문턱은 오답 평균의 1.3배이고, 딱 1.3배는 지적한다")
     void lengthThresholdIsInclusive() {
         assertThat(ClaudeProblemReviewer.answerStandsOutByLength(withLengths(39, 30, 30, 30))).isTrue();

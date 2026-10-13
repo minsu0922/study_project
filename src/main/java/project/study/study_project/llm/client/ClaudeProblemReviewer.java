@@ -83,11 +83,8 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
                - elsewhereCount: 오답마다 "이 오답이 정답이 되는 다른 조건"을 대 본다.
                  오해나 틀린 정의라서 어떤 조건에서도 정답이 될 수 없으면 세지 않는다.
                길이나 문장의 어려움으로 정하지 마라.
-            6. 다 푼 뒤 학습자 입장에서 의견을 남긴다. 결함 판정이 아니라 참고용이다.
-               - awkwardQuote: 지문이나 보기에 어색하거나 뜻이 흐린 문장이 있으면 하나만 글자 그대로 옮기고,
-                 awkwardFix에 뜻을 바꾸지 않고 고쳐 쓴다. 취향 차이일 뿐이면 둘 다 비운다.
-               - readabilityNote: 되돌아가 다시 읽은 곳이 있으면 어디가 왜 막혔는지 쓴다. 없으면 비운다.
-               - overallNote: 이 문제가 무엇을 아는지 가려내는지, 풀 만했는지 한두 문장으로 쓴다.
+            6. 다 푼 뒤 학습자 입장에서 의견 칸(awkwardQuote, awkwardFix, readabilityNote, overallNote)을 채운다.
+               결함 판정이 아니라 참고용이다. 취향 차이일 뿐인 문장은 어색하다고 적지 않는다.
 
             [참고: 난이도 정의]
             %s
@@ -95,21 +92,18 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
 
     static final String AFTER_SOLVE_PROMPT = """
             너는 CS 학습 서비스의 객관식 문제를 마지막으로 손보는 검수자다.
-            문제마다 표시된 정답, 해설, 오답 풀이, 그리고 앞서 문서를 보고 직접 푼 검수자의 풀이를 받는다.
+            문제마다 표시된 정답, 해설, 오답 풀이, 그리고 문서를 보고 직접 푼 검수자의 풀이를 받는다.
             근거 문서는 주지 않는다. 검수자 풀이를 문서 내용으로 믿고 견준다.
 
-            문제마다 두 가지를 한다.
-            1. explanationIssue: 아래 중 하나에 해당하면 무엇이 어긋나는지 쓴다. 아니면 빈 문자열이다.
-               - 해설이 표시된 정답이 아닌 다른 보기를 정답처럼 설명한다.
+            1. explanationIssue: 아래 중 하나면 무엇이 어긋나는지 쓴다. 아니거나 검수자 풀이가 없으면 비운다.
+               - 해설이 표시된 정답이 아닌 보기를 정답처럼 설명한다.
                - 해설이나 오답 풀이가 검수자 풀이와 사실관계가 반대다.
                - 오답 풀이가 그 오답을 맞는 말로 설명한다.
-               표현이 다르거나 설명이 덜 자세한 것은 어긋남이 아니다. 검수자 풀이가 없는 문제는 빈 문자열이다.
-            2. "지적"이 달린 문제만 고친 문장을 하나 제안한다. 지적이 "없음"이면 fixTarget은 NONE이다.
-               - 보기 단서 누설: 정답 보기를 다른 보기와 길이와 말투가 비슷해지게 줄여 쓴다.
-                 fixTarget은 CHOICE, fixChoiceNo는 그 보기 번호다.
-               - 질문이 답을 드러냄: 질문에서 정답을 흘리는 표현을 걷어 낸다. fixTarget은 QUESTION이다.
+               표현이 다르거나 덜 자세한 것은 어긋남이 아니다.
+            2. "지적"이 달린 문제만 고친 문장을 하나 낸다. 뜻과 정답은 그대로 두고 사실을 더하거나 빼지 마라.
+               - 보기 단서 누설: 정답 보기를 다른 보기와 길이와 말투가 비슷해지게 줄인다(CHOICE와 그 번호).
+               - 질문이 답을 드러냄: 질문에서 정답을 흘리는 표현을 걷어 낸다(QUESTION).
                - 지적이 둘이면 보기 단서 누설을 고친다.
-               - 뜻과 정답은 그대로 둔다. 사실을 더하거나 빼지 마라. fixText에는 고쳐 쓴 문장 전체를 적는다.
             """;
 
     private final String model;
@@ -135,7 +129,11 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
             return List.of();
         }
 
-        ChoiceOnlyBatch choiceOnly = call(CHOICE_ONLY_PROMPT, buildChoiceOnlyPrompt(shown), ChoiceOnlyBatch.class, false);
+        // 보기 단서 누설은 정답이 길이로 튈 때만 지적한다(answerStandsOutByLength). 그 문제가 없으면
+        // 물어도 버릴 답이라 호출을 건너뛴다
+        String choiceOnlyPrompt = buildChoiceOnlyPrompt(shown);
+        ChoiceOnlyBatch choiceOnly = choiceOnlyPrompt == null ? null
+                : call(CHOICE_ONLY_PROMPT, choiceOnlyPrompt, ChoiceOnlyBatch.class, false);
         JudgementBatch judged = call(judgePrompt(), buildJudgePrompt(shown, source), JudgementBatch.class, true);
         List<Finding> findings = compare(shown, choiceOnly, judged, labeled, source.contentMd());
 
@@ -216,13 +214,23 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
         return shown;
     }
 
+    /**
+     * 정답이 길이로 튀는 문제만 싣는다. 번호는 전체 목록 안의 위치를 그대로 써서 compare가 짝을 찾는다.
+     *
+     * @return 실을 문제가 없으면 {@code null}
+     */
     static String buildChoiceOnlyPrompt(List<Shown> shown) {
         StringBuilder sb = new StringBuilder("아래 문제들의 보기만 보여 준다.\n\n");
+        boolean any = false;
         for (int k = 0; k < shown.size(); k++) {
+            if (!answerStandsOutByLength(shown.get(k).item())) {
+                continue;
+            }
+            any = true;
             sb.append("[problemNo ").append(k + 1).append("]\n");
             appendChoices(sb, shown.get(k));
         }
-        return sb.toString();
+        return any ? sb.toString() : null;
     }
 
     static String buildJudgePrompt(List<Shown> shown, SourceDocument source) {
