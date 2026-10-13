@@ -1,0 +1,97 @@
+# 자바 코드 문제 배치 — 주 1회, 코드 주제 하나로 문제를 내고 실행해서 확인한 것만 커밋한다.
+#
+# 개념 문서·문제(llm-daily.yml)와 따로 도는 이유: 근거가 다르다. 저쪽은 문서가 근거이고,
+# 이쪽은 실행 결과가 근거다. 주제도 generated/_code-topics.json으로 따로 관리한다.
+#
+# [스텝을 둘로 나눈 이유]
+# 검증 스텝은 모델이 쓴 코드를 실제로 컴파일하고 실행한다. 그 스텝에는 API 키가 없어야 한다.
+#   1. 생성 — ANTHROPIC_API_KEY가 있다. 코드를 실행하지 않는다.
+#   2. 검증 — 키가 없다. 후보의 코드를 돌려 정답과 대조하고, 통과한 것만 generated/ 에 쓴다.
+# 같은 이유로 checkout이 git 토큰을 저장소에 남기지 않게 하고(persist-credentials: false),
+# 토큰은 마지막 푸시 스텝에만 준다.
+name: LLM 코드 문제
+
+on:
+  schedule:
+    # 토요일 17:47 UTC = 일요일 02:47 KST. 일일 배치(16:17 UTC)가 끝난 뒤다.
+    - cron: '47 17 * * 6'
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: '주제를 직접 준다. 비우면 코드 주제 대기열(_code-topics.json)의 다음 차례'
+        required: false
+        default: ''
+      date:
+        description: '기준 날짜(YYYY-MM-DD). 비우면 오늘(한국 시간). 그 날짜의 코드 문제 파일이 있으면 건너뛴다'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+# 일일 배치와 같은 묶음에 둔다. 둘 다 generated/ 에 커밋하므로 동시에 돌면 푸시가 엇갈린다.
+concurrency:
+  group: llm-daily
+  cancel-in-progress: false
+
+jobs:
+  code-problems:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: 저장소 코드 받기
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: JDK 21 설치
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Gradle 설정 (캐시 포함)
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
+      - name: gradlew 실행 권한 부여
+        run: chmod +x gradlew
+
+      - name: 1. 생성 (API 키 있음, 코드를 실행하지 않는다)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          IN_TOPIC: ${{ inputs.topic }}
+          IN_DATE: ${{ inputs.date }}
+        run: |
+          # 주제에는 공백이 들어간다. 인자를 공백으로 쪼개는 방식이라 주제는 환경변수로 넘긴다
+          ARGS="--phase=generate --date=${IN_DATE}"
+          if [ -n "${IN_TOPIC}" ]; then
+            ARGS="${ARGS} --topic-env=IN_TOPIC"
+          fi
+          ./gradlew generateCodeProblems --no-daemon --console=plain -PcodeArgs="${ARGS}"
+
+      - name: 2. 실행 검증 (API 키 없음, 모델이 쓴 코드를 돌린다)
+        run: |
+          ./gradlew generateCodeProblems --no-daemon --console=plain -PcodeArgs="--phase=verify"
+
+      - name: 결과 커밋 & 푸시
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # chmod +x가 남긴 파일 모드 변경을 추적하지 않는다(llm-daily.yml의 같은 스텝 주석)
+          git config core.fileMode false
+
+          if [ -z "$(git status --porcelain generated)" ]; then
+            echo "새로 생성된 파일 없음 — 커밋 건너뜀"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated
+          git commit -m "chore(llm): $(TZ=Asia/Seoul date +%F) 자바 코드 문제 초안 자동 생성"
+
+          # checkout이 토큰을 남기지 않았으므로 여기서만 주소에 실어 쓴다
+          REMOTE="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git pull --rebase --autostash "${REMOTE}" "${GITHUB_REF_NAME}"
+          git push "${REMOTE}" "HEAD:${GITHUB_REF_NAME}"

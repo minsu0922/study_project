@@ -18,6 +18,9 @@ public final class CodeProblemRule {
     /** 화면 한 장에 들어올 길이. 넘으면 문제가 아니라 과제가 된다. */
     static final int MAX_LINES = 30;
 
+    /** 역슬래시와 u. 이 파일에 붙여 적으면 자바가 이 줄을 이스케이프로 읽으려다 컴파일이 깨진다. */
+    private static final String UNICODE_ESCAPE = "\\" + "u";
+
     private static final Pattern MAIN_CLASS = Pattern.compile("\\bclass\\s+Main\\b");
 
     /**
@@ -69,6 +72,10 @@ public final class CodeProblemRule {
         int lines = lineCount(code);
         if (lines > MAX_LINES) {
             return "코드가 %d줄이다(기준 %d줄)".formatted(lines, MAX_LINES);
+        }
+        // 금지어를 유니코드 이스케이프로 적으면 아래 검사를 지나친다. 자바는 소스의 그 표기를 먼저 풀어 읽는다
+        if (code.contains(UNICODE_ESCAPE) || item.choices().stream().anyMatch(c -> c.text().contains(UNICODE_ESCAPE))) {
+            return "금지 소재: 유니코드 이스케이프는 쓰지 않는다";
         }
         for (Banned banned : BANNED) {
             if (banned.in(code) || item.choices().stream().anyMatch(c -> banned.in(c.text()))) {

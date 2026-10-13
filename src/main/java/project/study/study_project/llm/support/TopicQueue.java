@@ -68,10 +68,14 @@ public final class TopicQueue {
 
     private final TopicQueueFile file;
 
+    /** 읽어 온 파일의 이름. 사용 표시를 같은 파일에 되쓴다 — 개념 주제와 코드 주제는 파일이 다르다. */
+    private final String fileName;
+
     /** 읽는 동안 건너뛴 항목의 사유. 사람이 읽는 문장이다(요약 화면에 그대로 실린다). */
     private final List<String> problems;
 
-    private TopicQueue(TopicQueueFile file, List<String> problems) {
+    private TopicQueue(String fileName, TopicQueueFile file, List<String> problems) {
+        this.fileName = fileName;
         this.file = file;
         // 반드시 가변 목록으로 복사한다 — 사유는 읽는 시점보다 <고르는 시점>에 알게 되는 것이
         // 더 많아서(빈 주제, 잘못된 분야) next()가 여기에 덧붙인다. List.of()를 그대로 들고 있으면
@@ -92,19 +96,24 @@ public final class TopicQueue {
      * 그 경우는 지금까지와 똑같이 모델이 주제를 고르면 된다.
      */
     public static TopicQueue read(Path dir) {
-        Path path = dir.resolve(FILE_NAME);
+        return read(dir, FILE_NAME);
+    }
+
+    /** @param fileName {@link #FILE_NAME}(개념 문서 주제) 또는 {@link #CODE_FILE_NAME}(코드 문제 주제) */
+    public static TopicQueue read(Path dir, String fileName) {
+        Path path = dir.resolve(fileName);
         if (!Files.exists(path)) {
-            return new TopicQueue(new TopicQueueFile(null, List.of()), List.of());
+            return new TopicQueue(fileName, new TopicQueueFile(null, List.of()), List.of());
         }
         try {
             TopicQueueFile parsed = MAPPER.readValue(path.toFile(), TopicQueueFile.class);
             List<TopicQueueFile.Entry> topics =
                     parsed.topics() == null ? List.of() : parsed.topics();
-            return new TopicQueue(new TopicQueueFile(parsed.note(), topics), findProblems(topics));
+            return new TopicQueue(fileName, new TopicQueueFile(parsed.note(), topics), findProblems(topics));
         } catch (Exception e) {
             // 쉼표 하나 빠뜨린 것으로 그날 생성이 죽으면 안 된다 — 대신 사유를 남긴다
-            return new TopicQueue(new TopicQueueFile(null, List.of()),
-                    List.of("`" + FILE_NAME + "`을 읽지 못했습니다(JSON 형식 확인): " + e.getMessage()));
+            return new TopicQueue(fileName, new TopicQueueFile(null, List.of()),
+                    List.of("`" + fileName + "`을 읽지 못했습니다(JSON 형식 확인): " + e.getMessage()));
         }
     }
 
@@ -232,7 +241,7 @@ public final class TopicQueue {
             TopicQueueFile written = new TopicQueueFile(
                     file.note() == null || file.note().isBlank() ? DEFAULT_NOTE : file.note(), updated);
             Files.createDirectories(dir);
-            Files.writeString(dir.resolve(FILE_NAME),
+            Files.writeString(dir.resolve(fileName),
                     MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(written));
             return true;
         } catch (Exception e) {
