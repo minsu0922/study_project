@@ -74,7 +74,17 @@ public record LlmDraftResponse(
         List<AiFinding> aiFindings,
 
         LocalDateTime createdAt,
-        LocalDateTime reviewedAt
+        LocalDateTime reviewedAt,
+
+        /** 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}. */
+        String code,
+
+        /** 코드 문제의 유형 이름과 화면 표기(V41). 코드 문제가 아니면 둘 다 {@code null}. */
+        String codeKind,
+        String codeKindLabel,
+
+        /** 배치가 실제로 돌려 확인한 출력. 검수자가 정답 보기와 한 번 더 견준다. */
+        String expectedOutput
 ) {
     /**
      * @param label      화면 표기용 한글 이름(예: 보기 단서 누설)

@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.global.common.Texts;
+import project.study.study_project.llm.client.CodeProblem;
 import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
@@ -96,9 +97,11 @@ public class DraftImportService {
 
         // documentSlug는 2단계에서 추가된 필드라 옛 파일에는 없다 — Jackson이 null로 채우고
         // 그대로 초안에 기록된다. "근거 문서 없이 만든 문제"와 같은 값이므로 특별 취급이 필요 없다.
-        List<GeneratedProblemDraft> drafts = llmProblemService.saveDrafts(
-                batch.domain(), batch.difficulty(), batch.type(), batch.problems(), model,
-                batch.documentSlug());
+        List<GeneratedProblemDraft> drafts = batch.codeParts() == null
+                ? llmProblemService.saveDrafts(
+                        batch.domain(), batch.difficulty(), batch.type(), batch.problems(), model,
+                        batch.documentSlug())
+                : saveCodeDrafts(batch, model);
 
         if (batch.reviewFindings() != null) {
             attachAiFindings(batch, drafts);
@@ -129,6 +132,37 @@ public class DraftImportService {
      * "검수를 안 돌렸다"(null)와 가르기 위해서다. 범위를 벗어난 번호는 손으로 고친 파일에서만
      * 나오므로 그 지적만 버린다. 지적 때문에 문제까지 못 들여오면 손해가 더 크다.
      */
+    /**
+     * 코드 문제는 한 건씩 저장한다. 그래야 어느 문제가 어느 초안이 됐는지 번호로 안다.
+     *
+     * <p>지적처럼 질문 문장으로 짝지을 수 없다. 코드 문제는 "다음 코드를 실행했을 때 출력되는 것은?"처럼
+     * 질문이 서로 같은 일이 흔하다. 코드가 엉뚱한 문제에 붙으면 정답이 틀린 문제가 된다.
+     */
+    private List<GeneratedProblemDraft> saveCodeDrafts(GeneratedBatchFile batch, String model) {
+        Map<Integer, CodeProblem.Part> byIndex = new HashMap<>();
+        for (CodeProblem.Part part : batch.codeParts()) {
+            if (part != null) {
+                byIndex.put(part.problemIndex(), part);
+            }
+        }
+        List<GeneratedProblemDraft> drafts = new ArrayList<>();
+        for (int i = 0; i < batch.problems().size(); i++) {
+            CodeProblem.Part part = byIndex.get(i);
+            if (part == null || part.code() == null || part.code().isBlank()) {
+                // 코드 없는 코드 문제는 풀 수 없다. 지문만 들여오느니 버린다
+                log.warn("초안 흡수: 코드가 딸리지 않은 코드 문제를 버림 — {}번", i + 1);
+                continue;
+            }
+            for (GeneratedProblemDraft draft : llmProblemService.saveDrafts(
+                    batch.domain(), batch.difficulty(), batch.type(), List.of(batch.problems().get(i)), model,
+                    batch.documentSlug())) {
+                draft.attachCode(part);
+                drafts.add(draft);
+            }
+        }
+        return drafts;
+    }
+
     private void attachAiFindings(GeneratedBatchFile batch, List<GeneratedProblemDraft> drafts)
             throws IOException {
         Map<String, List<DraftAiFinding>> byQuestion = new HashMap<>();

@@ -1,5 +1,7 @@
 package project.study.study_project.llm.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import project.study.study_project.llm.client.CodeProblem;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
@@ -56,8 +58,26 @@ public record GeneratedBatchFile(
         String documentSlug,
         List<GeneratedProblemItem> problems,
         List<String> shortfallReasons,
-        List<ProblemReview.Finding> reviewFindings
+        List<ProblemReview.Finding> reviewFindings,
+
+        // 아래 둘은 자바 코드 문제 파일에만 있다. 개념 문제 파일에 null 두 줄을 매일 싣지 않으려고 뺀다
+        /** 이 파일을 낸 코드 문제 주제. 주제가 되풀이될 때 앞선 코드를 찾는 열쇠다. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        String codeTopic,
+
+        /** 문제마다 딸린 코드와 대조 값. {@code problems}와 번호로 짝짓는다. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        List<CodeProblem.Part> codeParts
 ) {
+    /** 코드가 없는 개념 문제 파일 — 코드 칸이 생기기 전의 호출부가 쓴다. */
+    public GeneratedBatchFile(String note, String date, String generatedAt, DomainCode domain,
+                              Difficulty difficulty, ProblemType type, String model,
+                              String documentSlug, List<GeneratedProblemItem> problems,
+                              List<String> shortfallReasons, List<ProblemReview.Finding> reviewFindings) {
+        this(note, date, generatedAt, domain, difficulty, type, model, documentSlug, problems,
+                shortfallReasons, reviewFindings, null, null);
+    }
+
     /** 사유 없이 만드는 편의 생성자 — 필드를 붙이기 전 호출부(테스트)가 그대로 컴파일되게 한다. */
     public GeneratedBatchFile(String note, String date, String generatedAt, DomainCode domain,
                               Difficulty difficulty, ProblemType type, String model,
@@ -68,6 +88,12 @@ public record GeneratedBatchFile(
     /** 검수 지적만 바꾼 사본. 검수는 파일을 저장한 뒤에 돌기 때문에 나중에 붙인다. */
     public GeneratedBatchFile withReviewFindings(List<ProblemReview.Finding> findings) {
         return new GeneratedBatchFile(note, date, generatedAt, domain, difficulty, type, model,
-                documentSlug, problems, shortfallReasons, findings);
+                documentSlug, problems, shortfallReasons, findings, codeTopic, codeParts);
+    }
+
+    /** 코드 문제 파일로 만든 사본. */
+    public GeneratedBatchFile withCode(String topic, List<CodeProblem.Part> parts) {
+        return new GeneratedBatchFile(note, date, generatedAt, domain, difficulty, type, model,
+                documentSlug, problems, shortfallReasons, reviewFindings, topic, parts);
     }
 }

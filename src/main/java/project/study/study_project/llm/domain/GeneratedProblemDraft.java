@@ -21,6 +21,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
+import project.study.study_project.llm.client.CodeProblem;
 import project.study.study_project.llm.client.QuestionKind;
 
 import java.time.LocalDateTime;
@@ -122,6 +123,24 @@ public class GeneratedProblemDraft {
     @Column(name = "ai_findings_json")
     private String aiFindingsJson;
 
+    /** 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}. */
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    @Column
+    private String code;
+
+    @Column(name = "code_language", length = 20)
+    private String codeLanguage;
+
+    /** 코드 문제의 유형(V41). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "code_kind", length = 15)
+    private CodeProblem.Kind codeKind;
+
+    /** 배치가 실제로 돌려 확인한 출력(V41). 검수자가 정답 보기와 한 번 더 견준다. */
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    @Column(name = "expected_output")
+    private String expectedOutput;
+
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
@@ -206,6 +225,14 @@ public class GeneratedProblemDraft {
      * AI 검수 지적을 붙인다. 팩터리 인자로 받지 않는 이유: 지적은 배치 파일로 들어온 초안에만
      * 있고, 화면에서 만든 초안은 검수를 돌리지 않는다.
      */
+    /** 코드 문제의 코드와 대조 값을 붙인다. 코드 문제 파일로 들어온 초안에만 있다(V39, V41). */
+    public void attachCode(CodeProblem.Part part) {
+        this.code = part.code();
+        this.codeLanguage = part.language();
+        this.codeKind = part.kind();
+        this.expectedOutput = part.expectedOutput();
+    }
+
     public void recordAiFindings(String aiFindingsJson) {
         this.aiFindingsJson = aiFindingsJson;
     }

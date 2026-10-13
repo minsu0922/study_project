@@ -707,7 +707,8 @@ public class LlmProblemService {
         return new AdminProblemRequest(
                 draft.getDomain(), draft.getDifficulty(), draft.getType(), draft.getTitle(),
                 draft.getQuestion(), draft.getAnswer(), draft.getExplanation(),
-                readChoices(draft.getChoicesJson()), draft.getDocumentSlug());
+                readChoices(draft.getChoicesJson()), draft.getDocumentSlug(),
+                draft.getCode(), draft.getCodeLanguage());
     }
 
     /* ── JSON 직렬화 도우미 ───────────────────────────────── */
@@ -787,7 +788,9 @@ public class LlmProblemService {
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedProblemId(),
                 d.getDocumentSlug(), d.getQuestionKind(),
                 d.getQuestionKind() == null ? null : d.getQuestionKind().getLabel(),
-                checks, readAiFindings(d), d.getCreatedAt(), d.getReviewedAt());
+                checks, readAiFindings(d), d.getCreatedAt(), d.getReviewedAt(),
+                d.getCode(), d.getCodeKind() == null ? null : d.getCodeKind().name(),
+                d.getCodeKind() == null ? null : d.getCodeKind().label(), d.getExpectedOutput());
     }
 
     /**
