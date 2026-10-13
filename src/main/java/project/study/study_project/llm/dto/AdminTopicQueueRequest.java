@@ -1,5 +1,6 @@
 package project.study.study_project.llm.dto;
 
+import project.study.study_project.llm.domain.TopicKind;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -27,6 +28,15 @@ public record AdminTopicQueueRequest(
         String topic,
 
         @Size(max = 500, message = "메모는 500자를 넘을 수 없습니다.")
-        String memo
+        String memo,
+
+        // 비우면 개념 문서 주제다. 수정 요청에서는 읽지 않는다 — 종류는 추가할 때만 정한다
+        TopicKind kind
 ) {
+
+    /** 개념 문서 주제 — 종류 칸(V40)이 생기기 전의 호출부와 테스트가 쓴다. */
+    public AdminTopicQueueRequest(DomainCode domain, String topic, String memo) {
+        this(domain, topic, memo, null);
+    }
+
 }

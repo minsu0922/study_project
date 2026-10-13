@@ -127,6 +127,15 @@ try {
          메뉴 맨 끝에 있어서 실제 순서(주제 → 생성)와 반대로 놓여 있었다. -->
     <!-- id는 다른 화면에서 이 절을 가리키기 위한 것이다(검수 화면의 "주제 대기열" 카드). -->
     <h3 id="topics" style="margin-top:36px">문서를 캘 주제 범위</h3>
+    <!-- 주제는 두 종류다(V40). 개념 문서 주제는 4일 주기의 문서일에, 코드 문제 주제는 주 1회
+         자바 코드 문제 배치에 쓰인다. 차례와 순서가 종류마다 따로라 한 목록에 섞지 않는다. -->
+    <div class="seg" id="topicKindTabs" style="margin-bottom:12px">
+      <button type="button" class="seg-btn active" data-kind="CONCEPT">개념 문서 주제</button>
+      <button type="button" class="seg-btn" data-kind="CODE">코드 문제 주제</button>
+    </div>
+    <p class="meta" id="topicKindNote" hidden>주 1회 코드 문제 배치가 <b>주제 하나로 자바 코드 문제 5개</b>를 냅니다.
+      문서는 쓰지 않습니다. 출력이 갈리는 문법을 적으세요. (예: "==과 equals, Integer 캐시" / "초기화 순서" / "try-finally와 return")
+      내보내는 파일은 <code>generated/_code-topics.json</code>입니다.</p>
     <!-- 추가 폼만 접는다. 아래 <등록된 범위> 목록은 이 화면의 본체라 늘 펼쳐 둔다 —
          여기서 실제로 하는 일은 새 범위를 적는 것보다 있는 범위의 순서를 손보는 것이다. -->
     <details class="card form-panel" id="topicFormPanel">
@@ -264,6 +273,7 @@ try {
  */
 /* 주제 범위 목록의 검색어와 쪽 — 화면 상태다. 검색어가 있으면 이동 버튼을 잠근다(아래 설명). */
 let topicQuery = "";
+let topicKind = "CONCEPT";   // 보고 있는 탭. 추가·목록·이동이 모두 이 종류 안에서 일어난다
 let topicPage = 0;
 const TOPIC_PAGE_SIZE = 20;
 
@@ -703,6 +713,16 @@ function initTopicForm() {
     loadTopicQueue();
   });
 
+  document.getElementById("topicKindTabs").addEventListener("click", e => {
+    const btn = e.target.closest(".seg-btn");
+    if (!btn || btn.dataset.kind === topicKind) return;
+    topicKind = btn.dataset.kind;
+    topicPage = 0;   // 다른 종류의 3쪽은 없을 수 있다
+    document.querySelectorAll("#topicKindTabs .seg-btn")
+      .forEach(b => b.classList.toggle("active", b === btn));
+    document.getElementById("topicKindNote").hidden = topicKind !== "CODE";
+    loadTopicQueue();
+  });
   document.getElementById("tPrevBtn").addEventListener("click", () => { topicPage--; loadTopicQueue(); });
   document.getElementById("tNextBtn").addEventListener("click", () => { topicPage++; loadTopicQueue(); });
 }
@@ -742,6 +762,7 @@ async function submitTopic() {
         domain,
         topic,
         memo: document.getElementById("tMemo").value.trim() || null,
+        kind: topicKind,   // 추가할 때만 쓰인다. 수정은 종류를 바꾸지 않는다
       }),
     });
     showOk(msg, editing
@@ -804,7 +825,7 @@ function cancelEditTopic() {
  */
 async function loadTopicQueue() {
   const query = topicQuery ? `&q=${encodeURIComponent(topicQuery)}` : "";
-  const filters = (topicDomain ? `&domain=${topicDomain}` : "") + `&usage=${topicUsage}`;
+  const filters = (topicDomain ? `&domain=${topicDomain}` : "") + `&usage=${topicUsage}&kind=${topicKind}`;
   const data = await api(
     `/api/admin/topic-queue?page=${topicPage}&size=${TOPIC_PAGE_SIZE}${filters}${query}`);
   // 한 번만 받아 둔다. 목록을 다시 그릴 때마다 부르면 순서를 한 칸씩 옮기는 동안
@@ -882,7 +903,9 @@ async function loadTopicQueue() {
         <td>${escapeHtml(t.domainLabel)}</td>
         <td class="wrap">
           ${escapeHtml(t.topic)}
-          ${t.next ? ` <span class="badge orange">다음 차례${nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : ""}</span>` : ""}
+          ${t.next ? ` <span class="badge orange">다음 차례${
+            // 날짜는 4일 주기의 다음 문서일이다. 코드 문제 주제는 주 1회 배치가 쓰므로 그 날짜가 아니다
+            topicKind === "CONCEPT" && nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : ""}</span>` : ""}
           ${t.memo ? `<div class="meta">${escapeHtml(t.memo)}</div>` : ""}
         </td>
         <td>${t.usedCount === 0 ? `<span class="meta">—</span>` : `${t.usedCount}편`}</td>

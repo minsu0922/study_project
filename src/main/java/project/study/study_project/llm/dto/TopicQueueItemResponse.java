@@ -1,5 +1,6 @@
 package project.study.study_project.llm.dto;
 
+import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.TopicQueueItem;
 
@@ -31,7 +32,8 @@ public record TopicQueueItemResponse(
         LocalDate lastUsedAt,
         int usedCount,
         boolean next,
-        int order
+        int order,
+        TopicKind kind
 ) {
 
     /**
@@ -42,6 +44,6 @@ public record TopicQueueItemResponse(
         return new TopicQueueItemResponse(
                 item.getId(), item.getDomain(), domainLabel,
                 item.getTopic(), item.getMemo(), item.getSortOrder(),
-                item.getLastUsedAt(), item.getUsedCount(), next, order);
+                item.getLastUsedAt(), item.getUsedCount(), next, order, item.getKind());
     }
 }

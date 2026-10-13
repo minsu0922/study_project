@@ -13,6 +13,7 @@ import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;
@@ -121,7 +122,13 @@ public class TopicQueueService {
      */
     @Transactional(readOnly = true)
     public List<TopicQueueItemResponse> getAll() {
-        return toResponses(repository.findAllByOrderBySortOrderAsc());
+        return getAll(TopicKind.CONCEPT);
+    }
+
+    /** 한 종류의 주제 전부. "다음 차례"와 순번은 그 종류 안에서 매긴다. */
+    @Transactional(readOnly = true)
+    public List<TopicQueueItemResponse> getAll(TopicKind kind) {
+        return toResponses(repository.findAllByKindOrderBySortOrderAsc(kind));
     }
 
     /**
@@ -144,7 +151,13 @@ public class TopicQueueService {
     @Transactional(readOnly = true)
     public PageResponse<TopicQueueItemResponse> search(String q, DomainCode domain, TopicUsage usage,
                                                        Pageable pageable) {
-        List<TopicQueueItemResponse> all = getAll();
+        return search(q, domain, usage, TopicKind.CONCEPT, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<TopicQueueItemResponse> search(String q, DomainCode domain, TopicUsage usage,
+                                                       TopicKind kind, Pageable pageable) {
+        List<TopicQueueItemResponse> all = getAll(kind == null ? TopicKind.CONCEPT : kind);
 
         String keyword = (q == null) ? "" : q.trim().toLowerCase();
         List<TopicQueueItemResponse> matched = all.stream()
@@ -269,7 +282,12 @@ public class TopicQueueService {
     /** 관리자 화면 배지용 — 등록된 범위 수. 0이면 배치가 모델 자동 선택으로 돈다는 뜻이다. */
     @Transactional(readOnly = true)
     public long count() {
-        return repository.count();
+        return count(TopicKind.CONCEPT);
+    }
+
+    @Transactional(readOnly = true)
+    public long count(TopicKind kind) {
+        return repository.countByKind(kind == null ? TopicKind.CONCEPT : kind);
     }
 
     /* ── 변경 ─────────────────────────────────────────────────── */
@@ -293,8 +311,9 @@ public class TopicQueueService {
             throw new BusinessException(ErrorCode.TOPIC_002);
         }
 
+        TopicKind kind = request.kind() == null ? TopicKind.CONCEPT : request.kind();
         TopicQueueItem saved = repository.save(TopicQueueItem.fresh(
-                request.domain(), topic, Texts.trimToNull(request.memo()),
+                kind, request.domain(), topic, Texts.trimToNull(request.memo()),
                 repository.findMaxSortOrder() + 1));
 
         log.info("주제 범위 추가: [{}] {} — 커밋해야 다음 배치부터 반영됩니다",
@@ -305,7 +324,8 @@ public class TopicQueueService {
         // 목록을 다시 불러 정확한 값을 받는다. 여기서 짐작해 true를 넣으면 그 순간만 맞고
         // 다른 안 쓴 범위가 앞에 있을 때 틀린다.
         return TopicQueueItemResponse.from(
-                saved, domainCatalog.displayName(saved.getDomain()), false, (int) repository.count());
+                saved, domainCatalog.displayName(saved.getDomain()), false,
+                (int) repository.countByKind(saved.getKind()));
     }
 
     /**
@@ -347,7 +367,8 @@ public class TopicQueueService {
         // add와 같은 이유로 next는 false다 — 판정에 목록 전체가 필요하고, 화면은 수정 직후
         // 목록을 다시 불러 정확한 값을 받는다.
         return TopicQueueItemResponse.from(
-                item, domainCatalog.displayName(item.getDomain()), false, (int) repository.count());
+                item, domainCatalog.displayName(item.getDomain()), false,
+                (int) repository.countByKind(item.getKind()));
     }
 
     /**
@@ -376,7 +397,10 @@ public class TopicQueueService {
             return;
         }
         Set<Long> wanted = new LinkedHashSet<>(ids);
-        List<TopicQueueItem> all = repository.findAllByOrderBySortOrderAsc();
+        // 순서는 종류 안에서만 뜻이 있다. 화면이 탭 하나에서 고르므로 첫 주제의 종류를 따른다
+        TopicKind kind = repository.findAllById(wanted).stream().findFirst()
+                .map(TopicQueueItem::getKind).orElse(TopicKind.CONCEPT);
+        List<TopicQueueItem> all = repository.findAllByKindOrderBySortOrderAsc(kind);
 
         List<TopicQueueItem> picked = all.stream().filter(i -> wanted.contains(i.getId())).toList();
         if (picked.isEmpty()) {
@@ -429,7 +453,8 @@ public class TopicQueueService {
     public void move(Long id, Direction direction) {
         TopicQueueItem item = find(id);
 
-        List<TopicQueueItem> all = repository.findAllByOrderBySortOrderAsc();
+        // 이웃은 같은 종류에서 찾는다. 전체에서 찾으면 다른 탭의 주제와 자리를 바꿔 화면에선 안 움직인다
+        List<TopicQueueItem> all = repository.findAllByKindOrderBySortOrderAsc(item.getKind());
         int index = indexOf(all, id);
 
         // 맨 위로는 <맞바꾸기가 아니라 밀어내기>다. 한 칸 이동과 같은 방식으로 처리할 수 없다 —
@@ -524,6 +549,15 @@ public class TopicQueueService {
      */
     @Transactional
     public SyncResult syncFrom(TopicQueueFile file) {
+        return syncFrom(file, TopicKind.CONCEPT);
+    }
+
+    /**
+     * @param kind 이 파일이 담는 주제의 종류. 손으로 적어 넣은 줄(id 없음)을 이 종류로 들여온다.
+     *             사용 기록은 id로 찾으므로 종류와 무관하다
+     */
+    @Transactional
+    public SyncResult syncFrom(TopicQueueFile file, TopicKind kind) {
         if (file == null || file.topics() == null || file.topics().isEmpty()) {
             return new SyncResult(0, 0);
         }
@@ -540,7 +574,7 @@ public class TopicQueueService {
                 applied += applyUsed(entry) ? 1 : 0;
                 continue;
             }
-            TopicQueueItem adopted = adopt(entry, nextOrder + 1);
+            TopicQueueItem adopted = adopt(entry, kind, nextOrder + 1);
             if (adopted != null) {
                 nextOrder++;
                 imported++;
@@ -599,7 +633,7 @@ public class TopicQueueService {
      * <b>조용히 건너뛴다</b>({@code null} 반환) — 예외를 던지지 않는 이유는 이 메서드를 부르는
      * {@link #syncFrom}이 "형식이 틀린 줄은 조용히 건너뛴다"는 계약을 이미 지키고 있어서다.
      */
-    private TopicQueueItem adopt(TopicQueueFile.Entry entry, int sortOrder) {
+    private TopicQueueItem adopt(TopicQueueFile.Entry entry, TopicKind kind, int sortOrder) {
         DomainCode domain = TopicQueue.parseDomain(entry.domain());
         if (domain == null || entry.topic() == null || entry.topic().isBlank()) {
             return null;
@@ -614,7 +648,7 @@ public class TopicQueueService {
         // 사용 기록까지 함께 들여온다. 기록을 버리면 그 범위가 "새것"이 되어 곧바로 다음 차례가
         // 되고, 순환이 한쪽으로 쏠린다(엔티티 imported 주석).
         return repository.save(TopicQueueItem.imported(
-                domain, topic, Texts.trimToNull(entry.memo()), sortOrder,
+                kind, domain, topic, Texts.trimToNull(entry.memo()), sortOrder,
                 parseDate(entry.lastUsedAt()), entry.usedCount() == null ? 0 : entry.usedCount()));
     }
 

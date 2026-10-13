@@ -3,6 +3,7 @@ package project.study.study_project.llm.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.llm.domain.TopicQueueItem;
 
 import java.util.List;
@@ -18,6 +19,11 @@ public interface TopicQueueItemRepository extends JpaRepository<TopicQueueItem, 
 
     /** 사람이 정한 순서대로 — 화면과 내보내기가 같은 순서를 본다(그래야 "다음 차례"가 일치한다). */
     List<TopicQueueItem> findAllByOrderBySortOrderAsc();
+
+    /** 한 종류의 주제만 순서대로. 차례와 순번은 종류 안에서만 뜻이 있다. */
+    List<TopicQueueItem> findAllByKindOrderBySortOrderAsc(TopicKind kind);
+
+    long countByKind(TopicKind kind);
 
     /**
      * 같은 분야에 같은 이름의 범위가 이미 있는지.

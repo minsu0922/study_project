@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
@@ -133,7 +134,7 @@ class TopicQueueExporterTest {
     /* ── 테스트 재료 ─────────────────────────────────────────── */
 
     private void given(TopicQueueItem... items) {
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(items));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(items));
     }
 
     private TopicQueueFile read() throws Exception {

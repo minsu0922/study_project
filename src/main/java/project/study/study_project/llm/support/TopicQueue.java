@@ -50,6 +50,9 @@ public final class TopicQueue {
     /** 대기열 파일 이름. 언더스코어로 시작하는 것은 배치 결과 파일과 구분하는 저장소 관례다. */
     public static final String FILE_NAME = "_topics.json";
 
+    /** 자바 코드 문제 주제 파일. 형식은 {@link #FILE_NAME}과 같고 담는 주제만 다르다. */
+    public static final String CODE_FILE_NAME = "_code-topics.json";
+
     /** 파일을 새로 쓸 때 note가 비어 있으면 넣어 주는 설명 — 파일 자신이 사용법을 들고 있게 한다. */
     private static final String DEFAULT_NOTE =
             "개념 문서의 주제 범위 목록입니다. 배치가 문서일마다 범위 하나를 골라 그 안에서 세부 주제를 정합니다. "

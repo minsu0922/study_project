@@ -193,7 +193,7 @@ class TopicQueueServiceTest {
         TopicQueueItem b = item(2L, TestDomains.OS, "2번", 2);
         TopicQueueItem c = item(3L, TestDomains.OS, "3번", 3);
         TopicQueueItem d = item(4L, TestDomains.OS, "4번", 4);
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(a, b, c, d));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(a, b, c, d));
 
         // 일부러 뒤죽박죽으로 보낸다 — 화면이 체크한 순서를 실어 보내도 결과가 같아야 한다
         service.moveToTop(List.of(4L, 2L));
@@ -209,7 +209,7 @@ class TopicQueueServiceTest {
     void moveToTopIgnoresMissingIds() {
         TopicQueueItem a = item(1L, TestDomains.OS, "1번", 1);
         TopicQueueItem b = item(2L, TestDomains.OS, "2번", 2);
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(a, b));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(a, b));
 
         service.moveToTop(List.of(2L, 999L));
 
@@ -238,7 +238,7 @@ class TopicQueueServiceTest {
                 used(1L, TestDomains.OS, "오래전에 씀", 1, LocalDate.of(2026, 1, 1)),
                 used(2L, TestDomains.OS, "최근에 씀", 2, LocalDate.of(2026, 9, 1)),
                 item(3L, TestDomains.OS, "아직 안 씀", 3));
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(items);
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(items);
 
         List<TopicQueueItemResponse> sorted = service
                 .search(null, null, TopicQueueService.TopicUsage.ALL, PageRequest.of(0, 20))
@@ -265,7 +265,7 @@ class TopicQueueServiceTest {
     @Test
     @DisplayName("안 쓴 것끼리는 내가 놓은 순서가 그대로 남는다 — ↑↓가 뜻을 갖는 근거")
     void neverUsedRangesKeepHumanOrder() {
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(
                 item(1L, TestDomains.OS, "먼저 적은 것", 1),
                 item(2L, TestDomains.OS, "나중에 적은 것", 2)));
 
@@ -280,7 +280,7 @@ class TopicQueueServiceTest {
     @Test
     @DisplayName("쓴 적 있는 줄은 내가 놓은 순서와 무관하게 뒤로 간다 — 맨 위로 올려도 밀린다")
     void usedRangesFallBehindRegardlessOfHumanOrder() {
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(
                 used(1L, TestDomains.OS, "맨 위에 놓았지만 쓴 것", 1, LocalDate.of(2026, 9, 1)),
                 item(2L, TestDomains.OS, "뒤에 놓았지만 안 쓴 것", 2)));
 
@@ -302,7 +302,7 @@ class TopicQueueServiceTest {
     @Test
     @DisplayName("사용 이력으로 거른다 — 안 쓴 것끼리가 다음 차례를 두고 다투는 무리다")
     void filtersByUsage() {
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(
                 item(1L, TestDomains.OS, "안 쓴 것", 1),
                 used(2L, TestDomains.OS, "쓴 것", 2, LocalDate.of(2026, 9, 1))));
 
@@ -325,7 +325,7 @@ class TopicQueueServiceTest {
     @Test
     @DisplayName("분야로 거른다 — 값이 같고 인스턴스가 다른 분야도 걸러야 한다(==로 되돌리면 깨진다)")
     void filtersByDomain() {
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(
                 item(1L, TestDomains.OS, "운영체제 것", 1),
                 item(2L, TestDomains.DATABASE, "디비 것", 2)));
 
@@ -350,7 +350,7 @@ class TopicQueueServiceTest {
     void usageFilterFollowsTheDateNotTheCount() {
         TopicQueueItem restored = used(1L, TestDomains.OS, "되돌린 것", 1, LocalDate.of(2026, 9, 1));
         restored.clearUsage();
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(restored));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(restored));
 
         assertThat(listed(null, TopicQueueService.TopicUsage.NEVER_USED))
                 .containsExactly("되돌린 것");
@@ -366,7 +366,7 @@ class TopicQueueServiceTest {
     @Test
     @DisplayName("아직 안 쓴 범위가 다음 차례다 — 새로 넣은 범위가 한 바퀴를 기다리면 안 된다")
     void marksNeverUsedRangeAsNext() {
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(
                 used(1L, TestDomains.DATABASE, "인덱스", 1, LocalDate.of(2026, 8, 15)),
                 item(2L, TestDomains.BACKEND_FRAMEWORK, "Spring 트랜잭션", 2)));
 
@@ -376,7 +376,7 @@ class TopicQueueServiceTest {
     @Test
     @DisplayName("전부 쓴 상태면 가장 오래 안 쓴 범위가 다음 차례다 — 배치의 규칙과 같아야 한다")
     void marksLeastRecentlyUsedAsNext() {
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(
                 used(1L, TestDomains.DATABASE, "인덱스", 1, LocalDate.of(2026, 8, 15)),
                 used(2L, TestDomains.BACKEND_FRAMEWORK, "Spring 트랜잭션", 2, LocalDate.of(2026, 8, 7)),
                 used(3L, TestDomains.NETWORK, "TCP", 3, LocalDate.of(2026, 8, 19))));
@@ -387,7 +387,7 @@ class TopicQueueServiceTest {
     @Test
     @DisplayName("목록은 사람이 정한 순서 그대로 나간다 — 차례 순으로 재정렬하면 ↑↓가 안 먹는 것처럼 보인다")
     void keepsHumanOrderInList() {
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(
                 used(1L, TestDomains.DATABASE, "인덱스", 1, LocalDate.of(2026, 8, 15)),
                 item(2L, TestDomains.BACKEND_FRAMEWORK, "Spring 트랜잭션", 2)));
 
@@ -403,7 +403,7 @@ class TopicQueueServiceTest {
         TopicQueueItem first = item(1L, TestDomains.OS, "메모리 관리", 1);
         TopicQueueItem second = item(2L, TestDomains.NETWORK, "TCP", 2);
         when(repository.findById(2L)).thenReturn(Optional.of(second));
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(first, second));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(first, second));
 
         service.move(2L, TopicQueueService.Direction.UP);
 
@@ -416,7 +416,7 @@ class TopicQueueServiceTest {
     void moveUpAtTopDoesNothing() {
         TopicQueueItem first = item(1L, TestDomains.OS, "메모리 관리", 1);
         when(repository.findById(1L)).thenReturn(Optional.of(first));
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(first));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(first));
 
         service.move(1L, TopicQueueService.Direction.UP);
 
@@ -434,7 +434,7 @@ class TopicQueueServiceTest {
         TopicQueueItem first = used(1L, TestDomains.OS, "메모리 관리", 1, LocalDate.of(2026, 8, 11));
         TopicQueueItem second = used(2L, TestDomains.NETWORK, "TCP", 2, LocalDate.of(2026, 8, 15));
         when(repository.findById(1L)).thenReturn(Optional.of(first));
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(first, second));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(first, second));
 
         service.move(1L, TopicQueueService.Direction.DOWN);
 
@@ -459,7 +459,7 @@ class TopicQueueServiceTest {
         TopicQueueItem second = item(2L, TestDomains.NETWORK, "TCP", 2);
         TopicQueueItem third = item(3L, TestDomains.DATABASE, "인덱스", 3);
         when(repository.findById(3L)).thenReturn(Optional.of(third));
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(first, second, third));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(first, second, third));
 
         service.move(3L, TopicQueueService.Direction.TOP);
 
@@ -474,7 +474,7 @@ class TopicQueueServiceTest {
         TopicQueueItem first = item(1L, TestDomains.OS, "메모리 관리", 1);
         TopicQueueItem second = item(2L, TestDomains.NETWORK, "TCP", 2);
         when(repository.findById(1L)).thenReturn(Optional.of(first));
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(first, second));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(first, second));
 
         service.move(1L, TopicQueueService.Direction.TOP);
 
@@ -515,7 +515,7 @@ class TopicQueueServiceTest {
         TopicQueueItem cleared = used(1L, TestDomains.DATABASE, "기본키와 외래키", 1, LocalDate.of(2026, 9, 7));
         TopicQueueItem other = used(2L, TestDomains.NETWORK, "TCP", 2, LocalDate.of(2026, 8, 15));
         when(repository.findById(1L)).thenReturn(Optional.of(cleared));
-        when(repository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(cleared, other));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(cleared, other));
 
         service.resetUsage(1L);
 

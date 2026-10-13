@@ -1,5 +1,6 @@
 package project.study.study_project.admin.controller;
 
+import project.study.study_project.llm.domain.TopicKind;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -71,15 +72,16 @@ public class AdminTopicQueueController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) DomainCode domain,
             @RequestParam(defaultValue = "ALL") TopicQueueService.TopicUsage usage,
+            @RequestParam(defaultValue = "CONCEPT") TopicKind kind,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(topicQueueService.search(q, domain, usage, pageable));
+        return ApiResponse.ok(topicQueueService.search(q, domain, usage, kind, pageable));
     }
 
     /** 등록된 범위 수 — 탭 배지용. 0이면 배치가 모델 자동 선택으로 돈다. */
     @GetMapping("/count")
-    public ApiResponse<Map<String, Long>> count() {
-        return ApiResponse.ok(Map.of("count", topicQueueService.count()));
+    public ApiResponse<Map<String, Long>> count(@RequestParam(defaultValue = "CONCEPT") TopicKind kind) {
+        return ApiResponse.ok(Map.of("count", topicQueueService.count(kind)));
     }
 
     /** 범위 추가 — 맨 뒤에 붙는다. 같은 분야에 같은 범위가 이미 있으면 409(TOPIC_002). */

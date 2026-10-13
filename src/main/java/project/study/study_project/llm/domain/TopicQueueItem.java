@@ -2,6 +2,8 @@ package project.study.study_project.llm.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -67,6 +69,15 @@ public class TopicQueueItem {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
+    /**
+     * 무엇의 주제인가(V40). 개념 문서 주제와 자바 코드 문제 주제는 같은 표에 살지만
+     * 차례·순서·내보내는 파일이 따로다. 한 번 정하면 바꾸지 않는다 — 바꾸면 그 주제의 사용 기록이
+     * 다른 배치의 차례 계산에 끼어든다.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private TopicKind kind = TopicKind.CONCEPT;
+
     /** 이 범위로 마지막으로 문서를 만든 날. {@code null}이면 아직 한 번도 안 썼다(다음 차례 1순위). */
     @Column(name = "last_used_at")
     private LocalDate lastUsedAt;
@@ -79,8 +90,9 @@ public class TopicQueueItem {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    private TopicQueueItem(DomainCode domain, String topic, String memo, int sortOrder,
+    private TopicQueueItem(TopicKind kind, DomainCode domain, String topic, String memo, int sortOrder,
                            LocalDate lastUsedAt, int usedCount) {
+        this.kind = kind == null ? TopicKind.CONCEPT : kind;
         this.domain = domain;
         this.topic = topic;
         this.memo = memo;
@@ -91,7 +103,11 @@ public class TopicQueueItem {
 
     /** 관리자 화면에서 새로 추가하는 범위 — 아직 한 번도 안 쓴 상태로 태어난다. */
     public static TopicQueueItem fresh(DomainCode domain, String topic, String memo, int sortOrder) {
-        return new TopicQueueItem(domain, topic, memo, sortOrder, null, 0);
+        return fresh(TopicKind.CONCEPT, domain, topic, memo, sortOrder);
+    }
+
+    public static TopicQueueItem fresh(TopicKind kind, DomainCode domain, String topic, String memo, int sortOrder) {
+        return new TopicQueueItem(kind, domain, topic, memo, sortOrder, null, 0);
     }
 
     /**
@@ -103,7 +119,12 @@ public class TopicQueueItem {
      */
     public static TopicQueueItem imported(DomainCode domain, String topic, String memo,
                                           int sortOrder, LocalDate lastUsedAt, int usedCount) {
-        return new TopicQueueItem(domain, topic, memo, sortOrder, lastUsedAt, usedCount);
+        return imported(TopicKind.CONCEPT, domain, topic, memo, sortOrder, lastUsedAt, usedCount);
+    }
+
+    public static TopicQueueItem imported(TopicKind kind, DomainCode domain, String topic, String memo,
+                                          int sortOrder, LocalDate lastUsedAt, int usedCount) {
+        return new TopicQueueItem(kind, domain, topic, memo, sortOrder, lastUsedAt, usedCount);
     }
 
     /** 아직 한 번도 안 쓴 범위인가 — 다음 차례를 정할 때 이쪽이 먼저다. */

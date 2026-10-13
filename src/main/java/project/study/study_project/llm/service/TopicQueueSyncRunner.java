@@ -9,6 +9,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.support.TopicQueue;
 
@@ -54,7 +55,12 @@ public class TopicQueueSyncRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        Path file = Path.of(importDir).resolve(TopicQueue.FILE_NAME);
+        sync(TopicQueue.FILE_NAME, TopicKind.CONCEPT);
+        sync(TopicQueue.CODE_FILE_NAME, TopicKind.CODE);
+    }
+
+    private void sync(String fileName, TopicKind kind) {
+        Path file = Path.of(importDir).resolve(fileName);
         if (!Files.exists(file)) {
             // 아직 대기열을 한 번도 안 쓴 상태다. 정상이므로 조용히 넘어간다.
             log.debug("주제 대기열 파일 없음, 동기화 건너뜀: {}", file.toAbsolutePath());
@@ -62,7 +68,7 @@ public class TopicQueueSyncRunner implements ApplicationRunner {
         }
         try {
             TopicQueueService.SyncResult result =
-                    topicQueueService.syncFrom(objectMapper.readValue(file.toFile(), TopicQueueFile.class));
+                    topicQueueService.syncFrom(objectMapper.readValue(file.toFile(), TopicQueueFile.class), kind);
             if (result.imported() > 0) {
                 // 흡수한 줄은 다음 내보내기에서 id가 붙어 파일이 바뀐다 — 커밋이 필요하다는 뜻이라 info.
                 log.info("주제 대기열: 파일에 적힌 주제 {}건을 DB로 가져왔습니다(관리자 화면에서 확인하세요)",

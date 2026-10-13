@@ -8,6 +8,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
@@ -79,7 +80,8 @@ public class TopicQueueExporter extends SnapshotExporter {
      */
     @Override
     protected Snapshot build(boolean fileExists) {
-        List<TopicQueueFile.Entry> entries = repository.findAllByOrderBySortOrderAsc().stream()
+        // 코드 문제 주제는 싣지 않는다 — 그쪽은 CodeTopicQueueExporter가 다른 파일로 낸다
+        List<TopicQueueFile.Entry> entries = repository.findAllByKindOrderBySortOrderAsc(TopicKind.CONCEPT).stream()
                 .map(TopicQueueExporter::toEntry)
                 .toList();
 
@@ -107,7 +109,7 @@ public class TopicQueueExporter extends SnapshotExporter {
      * 붙어 있으면 사람이 손으로 고칠 때 <b>고쳐도 되는 값처럼</b> 보인다 — 이 파일에서 사람 몫은
      * 범위·분야·메모뿐이다. 안 쓴 범위는 {@code lastUsedAt}도 함께 비어 한눈에 구분된다.
      */
-    private static TopicQueueFile.Entry toEntry(TopicQueueItem item) {
+    static TopicQueueFile.Entry toEntry(TopicQueueItem item) {
         return new TopicQueueFile.Entry(
                 item.getId(), item.getDomain().value(), item.getTopic(), item.getMemo(),
                 item.getLastUsedAt() == null ? null : item.getLastUsedAt().toString(),
