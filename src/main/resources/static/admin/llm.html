@@ -738,8 +738,7 @@ async function loadDrafts(jumpToLast = false) {
         <p style="margin:6px 0 6px; white-space:pre-wrap"><b>${escapeHtml(d.question)}</b></p>
         ${codeBlockHtml(d.code)}
         ${d.expectedOutput ? `<div class="meta" style="margin:-8px 0 10px">배치가 실행해 확인한 출력:
-          <code>${escapeHtml(d.expectedOutput.trim().split("
-").join(" / "))}</code>
+          <code>${escapeHtml(d.expectedOutput.trim().split(/\r?\n/).join(" / "))}</code>
           <!-- 줄바꿈을 " / "로 잇는다. 출력 보기가 여러 줄을 그렇게 적으므로 정답 보기와 바로 견줘진다. --></div>` : ""}
         ${choices ? `<ul class="draft-choices">${choices}</ul>` : ""}
         ${d.answer ? `<div>정답: <b>${escapeHtml(d.answer)}</b></div>` : ""}
