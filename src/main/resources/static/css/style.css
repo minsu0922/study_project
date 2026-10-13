@@ -1522,7 +1522,7 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
  * 지문 바로 아래에 붙는다. 긴 줄은 접지 않고 가로로 민다 — 줄이 접히면 줄 번호와 어긋난다. */
 .q-code {
   margin: 12px 0 16px; padding: 12px 14px; overflow-x: auto;
-  background: var(--surface-2, #f8fafc); border: 1px solid var(--border, #e2e8f0); border-radius: 10px;
+  background: var(--fill); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
   font-family: ui-monospace, "Cascadia Code", Consolas, "D2Coding", monospace;
   font-size: var(--fs-2); font-weight: 400; line-height: 1.6; tab-size: 4;
 }
