@@ -1,0 +1,36 @@
+{
+  "note" : "관리자 화면의 '코드 문제 주제' 탭에서 내보낸 파일입니다. 주 1회 코드 문제 배치가 주제 하나를 골라 자바 코드 문제를 냅니다. 다음 차례는 '아직 안 쓴 주제 먼저, 그다음은 가장 오래 안 쓴 주제'입니다. lastUsedAt·usedCount는 배치가 적는 칸이고, id는 DB 행 번호이니 지우지 마세요. 이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.",
+  "topics" : [ {
+    "id" : 1082,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "String 불변성과 StringBuilder"
+  }, {
+    "id" : 1083,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "오버로딩 선택 규칙과 오토박싱·가변 인자"
+  }, {
+    "id" : 1084,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "정적·인스턴스 초기화 순서와 생성자 호출"
+  }, {
+    "id" : 1085,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "오버라이딩과 필드·정적 메서드 숨김"
+  }, {
+    "id" : 1086,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "try-catch-finally 실행 순서와 return"
+  }, {
+    "id" : 1087,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "정수 오버플로와 형 변환"
+  }, {
+    "id" : 1088,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "참조형 매개변수의 값 전달과 재할당"
+  }, {
+    "id" : 1089,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "리스트 순회 중 수정과 ConcurrentModificationException"
+  } ]
+}
