@@ -25,6 +25,13 @@ public class ClaudeCodeProblemGenerator {
 
     private static final long MAX_TOKENS = 16_000L;
 
+    /** 코드 문제 난이도의 정의. 검수의 "모르고 풀기"도 같은 정의로 급을 매긴다. */
+    static final String DIFFICULTY_GUIDE = """
+            - BEGINNER: 규칙 하나만 알면 푼다.
+            - INTERMEDIATE: 규칙 둘이 한 코드에서 얽힌다.
+            - ADVANCED: 직관과 반대로 나오는 자리다. 왜 그런지 설명할 수 있어야 맞힌다.
+            """;
+
     static final String SYSTEM_PROMPT = """
             너는 자바 학습 서비스의 코드 문제 출제자다. 모든 글은 한국어로 쓰고, 문장은 "~다"로 끝낸다("~습니다" 금지).
             네가 낸 문제는 생성 직후 실제로 컴파일하고 실행해서 정답과 대조한다. 대조에 실패한 문제는 버린다.
@@ -54,10 +61,7 @@ public class ClaudeCodeProblemGenerator {
               오답으로 바꾸면 출력이 달라지거나 컴파일되지 않아야 한다.
 
             [난이도]
-            - BEGINNER: 규칙 하나만 알면 푼다.
-            - INTERMEDIATE: 규칙 둘이 한 코드에서 얽힌다.
-            - ADVANCED: 직관과 반대로 나오는 자리다. 왜 그런지 설명할 수 있어야 맞힌다.
-
+            %s
             [보기와 해설]
             - 보기는 4개이고 정답은 1개다. 오답은 흔한 오해를 따랐을 때 나오는 답으로 만든다.
             - 정답 보기만 길거나 구체적이면 안 된다. 네 보기의 길이와 꼴을 맞춘다.
@@ -66,7 +70,7 @@ public class ClaudeCodeProblemGenerator {
             - 오답의 rationale에는 어떤 오해에서 그 답이 나오는지 한 줄로 적는다.
             - explanation은 줄을 "N행"으로 가리키며 실행 흐름을 따라 쓴다. 150자 이상으로 쓴다.
             - title은 무엇에 관한 문제인지 적되 정답을 드러내지 않는다.
-            """;
+            """.formatted(DIFFICULTY_GUIDE);
 
     private final String model;
 

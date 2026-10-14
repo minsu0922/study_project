@@ -108,6 +108,68 @@ class ClaudeCodeProblemReviewerTest {
     }
 
     @Test
+    @DisplayName("모르고 풀기 요청에는 정답 표시·해설·오답 이유·실행 결과가 없고, 보기는 섞인다")
+    void solvePromptHidesAnswer() {
+        List<Target> targets = List.of(new Target(ITEM, "- 1번(정답)을 넣으면: 출력 「같다」"));
+        List<List<Integer>> orders = ClaudeCodeProblemReviewer.ordersOf(targets);
+
+        String prompt = ClaudeCodeProblemReviewer.buildSolvePrompt(targets, orders);
+
+        assertThat(prompt).contains("[문제 1] 유형: 빈칸 코드", "  3 |         if (____) {", "s1.equals(s2)")
+                .doesNotContain("정답", "오답 이유", "해설", "실행 결과", "오해했다", "초급");
+        assertThat(orders.get(0)).containsExactlyInAnyOrder(0, 1, 2, 3);
+        assertThat(ClaudeCodeProblemReviewer.ordersOf(targets)).as("같은 문제는 늘 같은 순서").isEqualTo(orders);
+    }
+
+    @Test
+    @DisplayName("모르고 푼 답을 원래 번호로 되돌려 지적한다 — 틀리게 골랐으면 'AI 오답', 맞혔으면 풀이 의견")
+    void mapsSolveBackToOriginalNumbers() {
+        List<Target> targets = List.of(new Target(ITEM, ""), new Target(ITEM, ""));
+        // 보인 순서: 1번 자리에 원래 2번(s1 == s2), 2번 자리에 원래 1번(정답)
+        List<List<Integer>> orders = List.of(List.of(1, 0, 2, 3), List.of(1, 0, 2, 3));
+        var batch = new ClaudeCodeProblemReviewer.SolveBatch(List.of(
+                new ClaudeCodeProblemReviewer.Solve(1, 1, "1번은 참조를 비교한다고 봤다", "3행의 조건이 두 뜻으로 읽힌다",
+                        Difficulty.ADVANCED, "직관과 반대다"),
+                new ClaudeCodeProblemReviewer.Solve(2, 2, "2번이 내용을 비교한다", "", Difficulty.INTERMEDIATE, "")));
+
+        List<Finding> findings = ClaudeCodeProblemReviewer.solveFindings(targets, orders, batch);
+
+        assertThat(findings).extracting(Finding::problemIndex, Finding::type).containsExactly(
+                tuple(0, FindingType.MISSOLVED), tuple(0, FindingType.AMBIGUOUS_QUESTION),
+                tuple(0, FindingType.DIFFICULTY_MISMATCH), tuple(1, FindingType.SOLUTION));
+        assertThat(findings.get(0).detail()).isEqualTo("AI가 고른 보기: 2번 「s1 == s2」\n푼 과정: 2번은 참조를 비교한다고 봤다");
+        assertThat(findings.get(2).detail()).startsWith("매긴 급: 초급 → 느낀 급: 고급");
+        assertThat(findings.get(3).detail()).isEqualTo("1번이 내용을 비교한다");
+        assertThat(findings.get(3).type().grade()).isEqualTo(ProblemReview.Grade.OPINION);
+    }
+
+    @Test
+    @DisplayName("모르고 풀기가 실패해도 대조 검수 지적은 낸다")
+    void judgeRunsEvenIfSolveFails() {
+        ClaudeCodeProblemReviewer reviewer = new ClaudeCodeProblemReviewer(
+                prompt -> new JudgementBatch(List.of(new Judgement(1, "어긋남", "", List.of(), "", "", 0, "", "", "", ""))),
+                prompt -> {
+                    throw new IllegalStateException("API 오류");
+                });
+
+        assertThat(reviewer.review("주제", List.of(new Target(ITEM, "")))).singleElement()
+                .satisfies(f -> assertThat(f.type()).isEqualTo(FindingType.EXPLANATION_MISMATCH));
+    }
+
+    @Test
+    @DisplayName("생성 프롬프트의 난이도 절은 상수로 뺀 뒤에도 글자가 그대로다")
+    void generatorPromptKeepsDifficultySection() {
+        assertThat(ClaudeCodeProblemGenerator.SYSTEM_PROMPT).contains("""
+                [난이도]
+                - BEGINNER: 규칙 하나만 알면 푼다.
+                - INTERMEDIATE: 규칙 둘이 한 코드에서 얽힌다.
+                - ADVANCED: 직관과 반대로 나오는 자리다. 왜 그런지 설명할 수 있어야 맞힌다.
+
+                [보기와 해설]""");
+        assertThat(ClaudeCodeProblemReviewer.SOLVE_PROMPT).contains("- ADVANCED: 직관과 반대로 나오는 자리다.");
+    }
+
+    @Test
     @DisplayName("검수기는 모델 대신 넣은 답으로 돌아간다 — 문제가 없으면 부르지도 않는다")
     void callsCallerOnlyWithTargets() {
         int[] calls = {0};

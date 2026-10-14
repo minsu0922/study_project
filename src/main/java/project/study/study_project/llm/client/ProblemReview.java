@@ -168,9 +168,12 @@ public final class ProblemReview {
         QUESTION_MISMATCH("질문 어긋남", Grade.DEFECT),
         RATIONALE_MISMATCH("오답 이유 어긋남", Grade.DEFECT),
         CODE_COMMENT_REVEALS("주석이 답을 드러냄", Grade.POLISH),
-        /** 아래 둘은 코드 문제 AI 검수({@code ClaudeCodeProblemReviewer})만 낸다. */
+        /** 아래 넷은 코드 문제 AI 검수({@code ClaudeCodeProblemReviewer})만 낸다. */
         ENVIRONMENT_DEPENDENT("실행 환경 의존", Grade.DEFECT),
         OFF_TOPIC("주제 이탈", Grade.POLISH),
+        /** 정답은 실행으로 확인했으니 결함이 아니다. AI도 걸린 함정이거나 질문이 흐리다는 신호다. */
+        MISSOLVED("AI가 다른 답을 고름", Grade.POLISH),
+        AMBIGUOUS_QUESTION("질문이 모호함", Grade.POLISH),
         DIFFICULTY_MISMATCH("난이도 어긋남", Grade.POLISH),
         SOLUTION("AI 풀이", Grade.OPINION),
         AWKWARD_SENTENCE("어색한 문장", Grade.OPINION),

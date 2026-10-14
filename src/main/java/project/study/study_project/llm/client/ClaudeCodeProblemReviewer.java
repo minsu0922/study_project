@@ -2,11 +2,12 @@ package project.study.study_project.llm.client;
 
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.anthropic.models.messages.ThinkingConfigAdaptive;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import lombok.extern.slf4j.Slf4j;
+import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.CodeProblem.Choice;
@@ -17,16 +18,21 @@ import project.study.study_project.llm.client.ProblemReview.FixTarget;
 import project.study.study_project.llm.client.ProblemReview.Suggestion;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 /**
- * 자바 코드 문제 AI 검수 — 실행 검증을 통과한 문제의 글을 본다.
+ * 자바 코드 문제 AI 검수 — 실행 검증을 통과한 문제를 두 번 본다.
  *
- * <p>개념 문제 검수({@link ClaudeProblemReviewer})는 정답을 가리고 풀게 한다. 여기서는 정답을 이미
- * 실행으로 확인했으니 정답을 보여 주고, <b>실제 실행 결과도 함께 준다</b>. 모델이 코드를 머릿속으로
+ * <p>A. 모르고 풀기: 정답·해설·실행 결과를 가리고 학습자처럼 풀게 한다. 틀리게 고르거나 모호하다고 하면
+ * 함정이 지나치거나 질문이 흐리다는 신호다. 정답 자체는 실행으로 확인했으니 결함으로 보지 않는다.
+ *
+ * <p>B. 대조 검수: 정답을 보여 주고 <b>실제 실행 결과도 함께 준다</b>. 모델이 코드를 머릿속으로
  * 돌리다 틀리면 맞는 해설을 틀렸다고 지적하게 된다. 결과를 주면 그 계산을 하지 않아도 된다.
  *
  * <p>이 클래스는 코드를 실행하지 않는다. 실행 결과는 키 없는 단계가 글로 적어 넘긴다.
@@ -117,25 +123,195 @@ public class ClaudeCodeProblemReviewer {
     ) {
     }
 
-    private final Function<String, JudgementBatch> caller;
+    /* ── A. 모르고 풀기 ── */
+
+    static final String SOLVE_PROMPT = """
+            너는 자바를 공부하는 학습자 자리에서 코드 문제를 처음 풀어 보는 검수자다. 모든 글은 한국어로 쓴다.
+            정답, 해설, 실행 결과는 일부러 가렸다.
+
+            문제마다 아래를 한다.
+            1. 코드를 한 줄씩 따라가 직접 푼다. chosenNo에 고른 보기 번호, reason에 푼 과정을 쓴다.
+               줄은 "N행"으로 가리킨다.
+            2. ambiguity: 질문이나 코드가 두 가지로 읽혀 답이 갈릴 수 있으면, 어디가 어떻게 갈리는지 쓴다.
+               없으면 빈 문자열이다. 어렵거나 함정이 있는 것은 모호한 것이 아니다.
+            3. feltDifficulty: 아래 정의로 이 문제의 급을 매기고, difficultyReason에 근거를 쓴다.
+               코드 길이나 줄 수로 정하지 마라.
+
+            [난이도 정의]
+            %s""".formatted(ClaudeCodeProblemGenerator.DIFFICULTY_GUIDE);
+
+    public record Solve(
+            @JsonPropertyDescription("문제 번호(1부터)")
+            int problemNo,
+            @JsonPropertyDescription("고른 보기 번호(1부터)")
+            int chosenNo,
+            @JsonPropertyDescription("푼 과정")
+            String reason,
+            @JsonPropertyDescription("두 가지로 읽히는 곳. 없으면 빈 문자열")
+            String ambiguity,
+            @JsonPropertyDescription("느낀 난이도")
+            Difficulty feltDifficulty,
+            @JsonPropertyDescription("그 난이도로 본 근거")
+            String difficultyReason
+    ) {
+    }
+
+    public record SolveBatch(
+            @JsonPropertyDescription("문제마다 하나")
+            List<Solve> problems
+    ) {
+    }
+
+    private final Function<String, JudgementBatch> judge;
+    /** {@code null}이면 모르고 풀기를 건너뛴다(테스트) */
+    private final Function<String, SolveBatch> solver;
     private long inputTokens;
     private long outputTokens;
 
     public ClaudeCodeProblemReviewer(String model) {
-        this.caller = user -> call(model, user);
+        this.judge = user -> call(model, SYSTEM_PROMPT, user, JudgementBatch.class, "코드 문제 검수");
+        this.solver = user -> call(model, SOLVE_PROMPT, user, SolveBatch.class, "코드 문제 풀기");
     }
 
     /** 테스트가 모델 대신 답을 넣는다. 받는 글은 요청 글이다. */
-    public ClaudeCodeProblemReviewer(Function<String, JudgementBatch> caller) {
-        this.caller = caller;
+    public ClaudeCodeProblemReviewer(Function<String, JudgementBatch> judge) {
+        this(judge, null);
     }
 
-    /** @return 지적. {@code problemIndex}는 {@code targets} 안 위치다 */
+    public ClaudeCodeProblemReviewer(Function<String, JudgementBatch> judge, Function<String, SolveBatch> solver) {
+        this.judge = judge;
+        this.solver = solver;
+    }
+
+    /**
+     * 정답을 가리고 풀게 한 뒤(A), 정답과 실행 결과를 보여 글을 대조한다(B). 순서가 바뀌면 A가 답을 본다.
+     * 한쪽이 실패해도 다른 쪽 지적은 낸다. 둘 다 실패하면 예외를 던진다.
+     *
+     * @return 지적. {@code problemIndex}는 {@code targets} 안 위치다
+     */
     public List<Finding> review(String topic, List<Target> targets) {
         if (targets.isEmpty()) {
             return List.of();
         }
-        return findingsOf(targets, caller.apply(buildPrompt(topic, targets)));
+        List<Finding> findings = new ArrayList<>();
+        RuntimeException failure = null;
+        boolean anyDone = false;
+        if (solver != null) {
+            List<List<Integer>> orders = ordersOf(targets);
+            try {
+                findings.addAll(solveFindings(targets, orders, solver.apply(buildSolvePrompt(targets, orders))));
+                anyDone = true;
+            } catch (RuntimeException e) {
+                log.warn("코드 문제 모르고 풀기 실패: {}", e.getMessage());
+                failure = e;
+            }
+        }
+        try {
+            findings.addAll(findingsOf(targets, judge.apply(buildPrompt(topic, targets))));
+            anyDone = true;
+        } catch (RuntimeException e) {
+            log.warn("코드 문제 대조 검수 실패: {}", e.getMessage());
+            failure = e;
+        }
+        if (!anyDone) {
+            throw failure;
+        }
+        return findings;
+    }
+
+    /**
+     * 보기를 섞는 순서. 생성된 코드 문제는 정답이 1번에 몰려 있어, 그대로 보이면 번호로 고를 수 있다.
+     * 코드로 씨앗을 정해 같은 문제는 늘 같은 순서로 섞는다.
+     */
+    static List<List<Integer>> ordersOf(List<Target> targets) {
+        List<List<Integer>> orders = new ArrayList<>();
+        for (Target t : targets) {
+            List<Integer> order = new ArrayList<>();
+            for (int c = 0; c < t.item().choices().size(); c++) {
+                order.add(c);
+            }
+            Collections.shuffle(order, new Random(t.item().code().hashCode()));
+            orders.add(order);
+        }
+        return orders;
+    }
+
+    static String buildSolvePrompt(List<Target> targets, List<List<Integer>> orders) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < targets.size(); i++) {
+            Item item = targets.get(i).item();
+            sb.append(i == 0 ? "" : "\n").append("[문제 ").append(i + 1).append("] 유형: ").append(item.kind().label()).append('\n')
+                    .append("질문: ").append(item.question().strip()).append('\n');
+            appendCode(sb, item);
+            sb.append("보기:\n");
+            List<Integer> order = orders.get(i);
+            for (int n = 0; n < order.size(); n++) {
+                sb.append(n + 1).append(". ").append(item.choices().get(order.get(n)).text().strip()).append('\n');
+            }
+        }
+        return sb.toString();
+    }
+
+    static List<Finding> solveFindings(List<Target> targets, List<List<Integer>> orders, SolveBatch batch) {
+        Map<Integer, Solve> byNo = new HashMap<>();
+        if (batch != null && batch.problems() != null) {
+            for (Solve s : batch.problems()) {
+                if (s != null) {
+                    byNo.putIfAbsent(s.problemNo(), s);
+                }
+            }
+        }
+        List<Finding> findings = new ArrayList<>();
+        for (int i = 0; i < targets.size(); i++) {
+            Solve s = byNo.get(i + 1);
+            List<Integer> order = orders.get(i);
+            if (s == null || s.chosenNo() < 1 || s.chosenNo() > order.size()) {
+                continue;
+            }
+            Item item = targets.get(i).item();
+            int chosen = order.get(s.chosenNo() - 1);
+            String reason = inOriginalNumbers(s.reason(), order);
+            if (item.choices().get(chosen).correct()) {
+                findings.add(new Finding(i, FindingType.SOLUTION, "검수 AI가 정답을 가린 채 푼 과정입니다", reason));
+            } else {
+                findings.add(new Finding(i, FindingType.MISSOLVED, "검수 AI가 정답이 아닌 보기를 골랐습니다",
+                        "AI가 고른 보기: %d번 「%s」\n푼 과정: %s".formatted(
+                                chosen + 1, item.choices().get(chosen).text().strip(), reason)));
+            }
+            if (!isBlank(s.ambiguity())) {
+                findings.add(new Finding(i, FindingType.AMBIGUOUS_QUESTION, "질문이나 코드가 두 가지로 읽힐 수 있습니다",
+                        inOriginalNumbers(s.ambiguity(), order)));
+            }
+            // 한 단계 차이는 정의의 경계에서 흔히 갈린다. 두 단계(초급↔고급)만 지적한다
+            if (s.feltDifficulty() != null && Math.abs(s.feltDifficulty().ordinal() - item.difficulty().ordinal()) >= 2) {
+                findings.add(new Finding(i, FindingType.DIFFICULTY_MISMATCH, "검수 AI가 느낀 난이도가 매긴 급과 두 단계 다릅니다",
+                        "매긴 급: %s → 느낀 급: %s%s".formatted(item.difficulty().getDisplayName(),
+                                s.feltDifficulty().getDisplayName(),
+                                isBlank(s.difficultyReason()) ? "" : "\n근거: " + inOriginalNumbers(s.difficultyReason(), order))));
+            }
+        }
+        return findings;
+    }
+
+    private static final Pattern CHOICE_NO = Pattern.compile("(?<![0-9])([1-4])번");
+
+    /** AI가 섞인 순서로 적은 "2번"을 검수함에 보이는 원래 번호로 바꾼다. */
+    static String inOriginalNumbers(String text, List<Integer> order) {
+        if (text == null) {
+            return "";
+        }
+        return CHOICE_NO.matcher(text.strip()).replaceAll(m -> {
+            int no = Integer.parseInt(m.group(1));
+            return no <= order.size() ? (order.get(no - 1) + 1) + "번" : m.group();
+        });
+    }
+
+    private static void appendCode(StringBuilder sb, Item item) {
+        sb.append("코드:\n");
+        List<String> lines = item.code().strip().lines().toList();
+        for (int n = 0; n < lines.size(); n++) {
+            sb.append("%3d | %s".formatted(n + 1, lines.get(n))).append('\n');
+        }
     }
 
     public long inputTokens() {
@@ -152,12 +328,8 @@ public class ClaudeCodeProblemReviewer {
             Item item = targets.get(i).item();
             sb.append("\n[문제 ").append(i + 1).append("] 유형: ").append(item.kind().label())
                     .append(" · 난이도: ").append(item.difficulty().getDisplayName()).append('\n')
-                    .append("질문: ").append(item.question().strip()).append('\n')
-                    .append("코드:\n");
-            List<String> lines = item.code().strip().lines().toList();
-            for (int n = 0; n < lines.size(); n++) {
-                sb.append("%3d | %s%n".formatted(n + 1, lines.get(n)));
-            }
+                    .append("질문: ").append(item.question().strip()).append('\n');
+            appendCode(sb, item);
             sb.append("보기:\n");
             for (int c = 0; c < item.choices().size(); c++) {
                 Choice choice = item.choices().get(c);
@@ -283,18 +455,18 @@ public class ClaudeCodeProblemReviewer {
         return s == null || s.isBlank();
     }
 
-    private JudgementBatch call(String model, String user) {
-        StructuredMessageCreateParams<JudgementBatch> params = MessageCreateParams.builder()
+    private <T> T call(String model, String system, String user, Class<T> schema, String label) {
+        StructuredMessageCreateParams<T> params = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(MAX_TOKENS)
-                // 해설의 실행 흐름을 줄마다 실행 결과와 맞춰 봐야 하는 일이라 사고를 켠다
+                // 둘 다 코드를 줄마다 따라가야 하는 일이라 사고를 켠다
                 .thinking(ThinkingConfigAdaptive.builder().build())
-                .system(SYSTEM_PROMPT)
-                .outputConfig(JudgementBatch.class)
+                .system(system)
+                .outputConfig(schema)
                 .addUserMessage(user)
                 .build();
         try {
-            var response = ClaudeCalls.create("코드 문제 검수", params);
+            var response = ClaudeCalls.create(label, params);
             inputTokens += response.inputTokens();
             outputTokens += response.outputTokens();
             return java.util.Optional.ofNullable(response.value())
