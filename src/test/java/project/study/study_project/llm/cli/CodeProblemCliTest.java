@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
+import project.study.study_project.llm.client.ClaudeCodeProblemReviewer;
 import project.study.study_project.llm.client.CodeProblem;
 import project.study.study_project.llm.client.CodeProblem.Choice;
 import project.study.study_project.llm.client.CodeProblem.Item;
@@ -112,6 +113,70 @@ class CodeProblemCliTest {
             assertThat(f.problemIndex()).isZero();
             assertThat(f.type()).isEqualTo(FindingType.EXPLANATION_MISMATCH);
             assertThat(f.detail()).contains("9행").contains("5줄");
+        });
+    }
+
+    @Test
+    @DisplayName("검증이 실행 결과를 남기면, AI 검수는 그것을 받아 지적을 제 파일·제 번호 뒤에 덧붙인다")
+    void reviewAppendsFindingsToTheRightFile() throws Exception {
+        writeTopics();
+        Item badExplanation = output(Difficulty.INTERMEDIATE, "곱셈", "System.out.println(2 * 3);", "6");
+        writeCandidates(
+                output(Difficulty.BEGINNER, "나눗셈", "System.out.println(7 / 2);", "3"),
+                output(Difficulty.BEGINNER, "나머지", "System.out.println(7 % 2);", "1"),
+                new Item(badExplanation.kind(), badExplanation.difficulty(), badExplanation.title(), badExplanation.question(),
+                        badExplanation.code(), "6", 0, "", badExplanation.choices(), "8행이 곱을 출력한다."));
+        CodeProblemCli.verify(outDir, workDir, verifier, checker);
+
+        CodeProblemCli.RunNotes runs = CodeProblemCli.MAPPER.readValue(
+                workDir.resolve(CodeProblemCli.RUNS_FILE).toFile(), CodeProblemCli.RunNotes.class);
+        assertThat(runs.notes()).hasSize(3);
+        assertThat(runs.notes().get(1).facts()).isEqualTo("- 이 코드: 출력 「1」");
+
+        String[] prompt = {null};
+        CodeProblemCli.review(outDir, workDir, model -> new ClaudeCodeProblemReviewer(p -> {
+            prompt[0] = p;
+            // 요청 글의 문제 2(초급 파일의 1번)와 문제 3(중급 파일의 0번)에 답한다
+            return new ClaudeCodeProblemReviewer.JudgementBatch(List.of(
+                    new ClaudeCodeProblemReviewer.Judgement(2, "", List.of(), "", "주제와 상관없다", 0, "", "", "", ""),
+                    new ClaudeCodeProblemReviewer.Judgement(3, "해설의 8행은 없다", List.of(), "", "", 0, "", "", "", "")));
+        }));
+
+        assertThat(prompt[0]).contains("- 이 코드: 출력 「1」");
+        GeneratedBatchFile beg = CodeProblemCli.MAPPER.readValue(
+                outDir.resolve("2026-10-18-code-beg.json").toFile(), GeneratedBatchFile.class);
+        assertThat(beg.reviewFindings()).singleElement().satisfies(f -> {
+            assertThat(f.problemIndex()).isEqualTo(1);
+            assertThat(f.type()).isEqualTo(FindingType.OFF_TOPIC);
+        });
+        GeneratedBatchFile mid = CodeProblemCli.MAPPER.readValue(
+                outDir.resolve("2026-10-18-code-int.json").toFile(), GeneratedBatchFile.class);
+        assertThat(mid.reviewFindings()).as("기계 대조 지적 뒤에 AI 지적이 붙는다")
+                .extracting(f -> f.problemIndex() + ":" + f.message())
+                .containsExactly("0:해설이 코드에 없는 줄을 가리킵니다", "0:해설이 실제 실행과 어긋납니다");
+        assertThat(workDir.resolve(CodeProblemCli.RUNS_FILE)).as("한 번 쓰고 지운다").doesNotExist();
+    }
+
+    @Test
+    @DisplayName("AI 검수가 실패해도 문제 파일은 그대로 둔다")
+    void reviewFailureLeavesFilesAlone() throws Exception {
+        writeTopics();
+        writeCandidates(output(Difficulty.BEGINNER, "나눗셈", "System.out.println(7 / 2);", "3"));
+        CodeProblemCli.verify(outDir, workDir, verifier, checker);
+        String before = Files.readString(outDir.resolve("2026-10-18-code-beg.json"));
+
+        CodeProblemCli.review(outDir, workDir, model -> new ClaudeCodeProblemReviewer(p -> {
+            throw new IllegalStateException("API 오류");
+        }));
+
+        assertThat(Files.readString(outDir.resolve("2026-10-18-code-beg.json"))).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("검증 단계가 남긴 실행 결과가 없으면 AI 검수는 부르지 않는다")
+    void reviewSkipsWithoutRunNotes() throws Exception {
+        CodeProblemCli.review(outDir, workDir, model -> {
+            throw new AssertionError("검수기를 만들면 안 된다");
         });
     }
 

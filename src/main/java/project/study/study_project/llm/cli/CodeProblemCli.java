@@ -7,6 +7,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.ClaudeCalls;
 import project.study.study_project.llm.client.ClaudeCodeProblemGenerator;
+import project.study.study_project.llm.client.ClaudeCodeProblemReviewer;
 import project.study.study_project.llm.client.CodeProblem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemReview;
@@ -33,13 +34,15 @@ import java.util.stream.Stream;
 /**
  * 자바 코드 문제 배치 — 주 1회, 코드 주제 하나로 문제를 내고 실행해서 확인한 것만 저장한다.
  *
- * <p>두 단계로 나눠 부른다. 워크플로가 스텝을 따로 둔다.
+ * <p>세 단계로 나눠 부른다. 워크플로가 스텝을 따로 둔다.
  * <pre>
  *   --phase=generate   주제를 고르고 Claude에게 문제를 받아 후보 파일에 적는다 (API 키 필요)
  *   --phase=verify     후보의 코드를 실제로 돌려, 통과한 문제만 generated/ 에 쓴다 (API 키 없음)
+ *   --phase=review     저장한 문제와 verify가 적은 실행 결과를 AI에게 보여 지적을 덧붙인다 (API 키 필요)
  * </pre>
  * <b>나눈 이유</b>: verify는 모델이 쓴 코드를 실행한다. 그 스텝의 환경에 API 키가 아예 없어야 한다.
- * 한 프로세스에서 다 하면 키를 쥔 채로 남의 코드를 돌리게 된다.
+ * 한 프로세스에서 다 하면 키를 쥔 채로 남의 코드를 돌리게 된다. review는 코드를 돌린 작업 공간을
+ * 믿을 수 없어, 워크플로가 깨끗한 job에서 결과 파일만 받아 부른다.
  *
  * <p>개념 문제 배치({@link DraftGeneratorCli})와 주기·주제·근거가 모두 달라 진입점을 따로 뒀다.
  * 파일 모양은 같아서 들여오기와 검수함은 그대로 쓴다.
@@ -47,6 +50,7 @@ import java.util.stream.Stream;
 public final class CodeProblemCli {
 
     static final String CANDIDATES_FILE = "code-candidates.json";
+    static final String RUNS_FILE = "code-runs.json";
     static final String DEFAULT_WORK_DIR = "build/code-problems";
     /** 같은 주제로 전에 낸 코드를 프롬프트에 싣는 상한. 주제가 여러 번 돌면 끝없이 늘어난다. */
     static final int MAX_AVOID_CODES = 15;
@@ -66,6 +70,17 @@ public final class CodeProblemCli {
                       List<CodeProblem.Item> items) {
     }
 
+    /**
+     * 검증 단계가 AI 검수 단계에 넘기는 실행 결과. 검수 단계는 키를 쥐고 있어 코드를 돌리지 않는다.
+     *
+     * @param file 문제가 저장된 파일 이름({@code generated/} 안)
+     */
+    record RunNote(String file, int problemIndex, String facts) {
+    }
+
+    record RunNotes(String date, String topic, String model, List<RunNote> notes) {
+    }
+
     public static void main(String[] args) throws Exception {
         Map<String, String> opts = BatchOptions.parseArgs(args);
         Path outDir = BatchOptions.resolveOutDir(opts);
@@ -82,7 +97,11 @@ public final class CodeProblemCli {
                 Function<String, CodeRunner.Result> run = code -> runs.computeIfAbsent(code, runner::run);
                 verify(outDir, workDir, new CodeVerifier(run), new CodeFactChecker(run));
             }
-            default -> throw new IllegalArgumentException("--phase=generate 또는 --phase=verify 를 주세요: " + phase);
+            case "review" -> {
+                ClaudeCalls.useBatch(!"false".equalsIgnoreCase(opts.getOrDefault(BatchOptions.BATCH_API_OPT, "true")));
+                review(outDir, workDir, ClaudeCodeProblemReviewer::new);
+            }
+            default -> throw new IllegalArgumentException("--phase=generate|verify|review 중 하나를 주세요: " + phase);
         }
     }
 
@@ -186,6 +205,7 @@ public final class CodeProblemCli {
     /** @param verifier 테스트가 가짜를 넣을 수 있게 받는다. 실제로는 코드를 컴파일하고 실행한다 */
     static void verify(Path outDir, Path workDir, CodeVerifier verifier, CodeFactChecker checker) throws Exception {
         Path candidatesFile = workDir.resolve(CANDIDATES_FILE);
+        Files.deleteIfExists(workDir.resolve(RUNS_FILE));   // 지난 실행의 결과가 검수 단계로 새지 않게
         if (!Files.exists(candidatesFile)) {
             System.out.println("검증할 코드 문제 후보가 없습니다(생성 단계가 건너뛰었습니다).");
             return;
@@ -210,12 +230,22 @@ public final class CodeProblemCli {
         Files.createDirectories(outDir);
         int saved = 0;
         List<String> flagged = new ArrayList<>();
+        List<RunNote> runNotes = new ArrayList<>();
         for (Map.Entry<Difficulty, List<CodeProblem.Item>> entry : passed.entrySet()) {
             List<ProblemReview.Finding> findings = factFindings(entry.getValue(), checker);
             for (ProblemReview.Finding f : findings) {
                 flagged.add("「%s」 — %s".formatted(entry.getValue().get(f.problemIndex()).title(), f.type().label()));
             }
             Path file = outDir.resolve(fileNameOf(date, entry.getKey()));
+            for (int i = 0; i < entry.getValue().size(); i++) {
+                try {
+                    runNotes.add(new RunNote(file.getFileName().toString(), i, checker.runFacts(entry.getValue().get(i))));
+                } catch (RuntimeException e) {
+                    // 실행 결과 없이 AI에게 넘기면 코드를 머릿속으로 돌려 헛지적을 낸다. 그 문제는 검수에서 뺀다
+                    System.out.printf("실행 결과를 적지 못해 AI 검수에서 뺍니다: 「%s」 (%s)%n",
+                            entry.getValue().get(i).title(), e.getMessage());
+                }
+            }
             Files.writeString(file, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(
                     toBatchFile(candidates, date, entry.getKey(), entry.getValue()).withReviewFindings(findings)));
             saved += entry.getValue().size();
@@ -228,8 +258,102 @@ public final class CodeProblemCli {
                         .formatted(TopicQueue.CODE_FILE_NAME, candidates.topic()));
             }
         }
+        if (!runNotes.isEmpty()) {
+            Files.writeString(workDir.resolve(RUNS_FILE), MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(
+                    new RunNotes(date.toString(), candidates.topic(), candidates.model(), runNotes)));
+        }
         BatchReports.announce(renderSummary(date, candidates, saved, dropped, flagged));
         Files.deleteIfExists(candidatesFile);
+    }
+
+    /* ── 3. AI 검수 ── */
+
+    /**
+     * 저장한 코드 문제를 AI에게 보이고, 지적을 각 파일의 {@code reviewFindings} 뒤에 덧붙인다.
+     * 검수가 실패해도 문제 파일은 그대로 둔다. 검수는 문제를 막지 않는다.
+     *
+     * @param reviewerOf 모델 이름을 받아 검수기를 만든다. 테스트가 가짜를 넣는다
+     */
+    static void review(Path outDir, Path workDir, Function<String, ClaudeCodeProblemReviewer> reviewerOf) throws Exception {
+        Path runsFile = workDir.resolve(RUNS_FILE);
+        if (!Files.exists(runsFile)) {
+            System.out.println("AI 검수할 코드 문제가 없습니다(저장된 문제가 없거나 앞 단계가 건너뛰었습니다).");
+            return;
+        }
+        RunNotes runs = MAPPER.readValue(runsFile.toFile(), RunNotes.class);
+        LocalDate date = LocalDate.parse(runs.date());
+
+        Map<String, GeneratedBatchFile> files = new LinkedHashMap<>();
+        List<RunNote> reviewed = new ArrayList<>();
+        List<ClaudeCodeProblemReviewer.Target> targets = new ArrayList<>();
+        for (RunNote note : runs.notes()) {
+            GeneratedBatchFile batch = files.get(note.file());
+            if (batch == null) {
+                batch = MAPPER.readValue(outDir.resolve(note.file()).toFile(), GeneratedBatchFile.class);
+                files.put(note.file(), batch);
+            }
+            CodeProblem.Item item = itemOf(batch, note.problemIndex());
+            if (item != null) {
+                reviewed.add(note);
+                targets.add(new ClaudeCodeProblemReviewer.Target(item, note.facts()));
+            }
+        }
+
+        ClaudeCodeProblemReviewer reviewer = reviewerOf.apply(runs.model());
+        List<ProblemReview.Finding> findings;
+        try {
+            findings = reviewer.review(runs.topic(), targets);
+        } catch (RuntimeException e) {
+            BatchReports.announce("⚠️ **%s 코드 문제 AI 검수 실패** — %s. 문제는 검수 없이 그대로 들여옵니다."
+                    .formatted(date, e.getMessage()));
+            Files.deleteIfExists(runsFile);
+            return;
+        }
+
+        Map<String, List<ProblemReview.Finding>> added = new LinkedHashMap<>();
+        List<String> lines = new ArrayList<>();
+        for (ProblemReview.Finding f : findings) {
+            RunNote note = reviewed.get(f.problemIndex());
+            added.computeIfAbsent(note.file(), k -> new ArrayList<>())
+                    .add(new ProblemReview.Finding(note.problemIndex(), f.type(), f.message(), f.detail(), f.suggestion()));
+            if (f.type().grade() != ProblemReview.Grade.OPINION) {
+                lines.add("「%s」 — %s".formatted(targets.get(f.problemIndex()).item().title(), f.type().label()));
+            }
+        }
+        for (Map.Entry<String, List<ProblemReview.Finding>> entry : added.entrySet()) {
+            GeneratedBatchFile batch = files.get(entry.getKey());
+            List<ProblemReview.Finding> merged = new ArrayList<>(
+                    batch.reviewFindings() == null ? List.of() : batch.reviewFindings());
+            merged.addAll(entry.getValue());
+            Files.writeString(outDir.resolve(entry.getKey()),
+                    MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch.withReviewFindings(merged)));
+        }
+
+        StringBuilder sb = new StringBuilder("🤖 **%s 코드 문제 AI 검수** — %d문제, 지적 %d건 (의견 %d건은 세지 않음)"
+                .formatted(date, targets.size(), lines.size(), findings.size() - lines.size()));
+        if (!lines.isEmpty()) {
+            sb.append('\n').append(BatchReports.bullets(lines));
+        }
+        BatchReports.announce(sb.toString());
+        BatchReports.reportCostSummary(date, ClaudeCalls.ledger());
+        Files.deleteIfExists(runsFile);
+    }
+
+    /** 파일의 문제 본체와 곁칸을 검수 입력 모양으로 되돌린다. 짝이 없으면 {@code null} */
+    static CodeProblem.Item itemOf(GeneratedBatchFile batch, int index) {
+        if (batch.codeParts() == null || index < 0 || index >= batch.problems().size()) {
+            return null;
+        }
+        CodeProblem.Part part = batch.codeParts().stream()
+                .filter(p -> p != null && p.problemIndex() == index).findFirst().orElse(null);
+        if (part == null) {
+            return null;
+        }
+        GeneratedProblemItem p = batch.problems().get(index);
+        List<CodeProblem.Choice> choices = p.choices().stream()
+                .map(c -> new CodeProblem.Choice(c.text(), c.correct(), c.rationale())).toList();
+        return new CodeProblem.Item(part.kind(), batch.difficulty(), p.title(), p.question(), part.code(),
+                part.expectedOutput(), part.targetLine(), part.errorType(), choices, p.explanation());
     }
 
     /**

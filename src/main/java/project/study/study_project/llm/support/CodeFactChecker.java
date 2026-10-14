@@ -68,6 +68,37 @@ public final class CodeFactChecker {
         return findings;
     }
 
+    /**
+     * AI 검수에 넘길 실행 결과. 키를 쥔 단계는 코드를 돌리지 않으므로, 여기서 글로 적어 넘긴다.
+     * 빈칸·고치기는 보기마다 넣어 돌린 결과까지 적는다. 오답 이유를 견주려면 그게 있어야 한다.
+     */
+    public String runFacts(Item item) {
+        List<String> facts = new ArrayList<>();
+        if (item.kind().substitutesChoice()) {
+            if (item.kind() == Kind.CODE_FIX) {
+                facts.add("- 고치기 전 코드: " + describeFully(runner.apply(item.code())));
+            }
+            String verb = item.kind() == Kind.CODE_FIX ? "%d번%s으로 바꾸면" : "%d번%s을 넣으면";
+            for (int i = 0; i < item.choices().size(); i++) {
+                Choice choice = item.choices().get(i);
+                facts.add("- " + verb.formatted(i + 1, choice.correct() ? "(정답)" : "") + ": "
+                        + describeFully(runner.apply(CodeVerifier.codeWith(item, choice))));
+            }
+        } else {
+            facts.add("- 이 코드: " + describeFully(runner.apply(item.code())));
+        }
+        return String.join("\n", facts);
+    }
+
+    /** 예외로 끝나도 그 전에 나온 출력은 적는다. 해설이 그 출력을 말할 수 있다. */
+    private static String describeFully(CodeRunner.Result result) {
+        String outcome = CodeVerifier.describe(result);
+        if (result.compiled() && !result.finishedCleanly() && !result.stdout().isEmpty()) {
+            return "출력 「%s」 뒤 %s".formatted(CodeVerifier.oneLine(result.stdout()), outcome);
+        }
+        return outcome;
+    }
+
     private static void lineRefFinding(int index, FindingType type, String message, String text, int lines,
                                        List<Finding> findings) {
         Set<Integer> outside = new LinkedHashSet<>();

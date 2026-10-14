@@ -3,12 +3,16 @@
 # 개념 문서·문제(llm-daily.yml)와 따로 도는 이유: 근거가 다르다. 저쪽은 문서가 근거이고,
 # 이쪽은 실행 결과가 근거다. 주제도 generated/_code-topics.json으로 따로 관리한다.
 #
-# [스텝을 둘로 나눈 이유]
+# [스텝과 job을 나눈 이유]
 # 검증 스텝은 모델이 쓴 코드를 실제로 컴파일하고 실행한다. 그 스텝에는 API 키가 없어야 한다.
-#   1. 생성 — ANTHROPIC_API_KEY가 있다. 코드를 실행하지 않는다.
-#   2. 검증 — 키가 없다. 후보의 코드를 돌려 정답과 대조하고, 통과한 것만 generated/ 에 쓴다.
-# 같은 이유로 checkout이 git 토큰을 저장소에 남기지 않게 하고(persist-credentials: false),
-# 토큰은 마지막 푸시 스텝에만 준다.
+#   job 1  1. 생성 — ANTHROPIC_API_KEY가 있다. 코드를 실행하지 않는다.
+#          2. 검증 — 키가 없다. 후보의 코드를 돌려 정답과 대조하고, 통과한 것만 generated/ 에 쓴다.
+#   job 2  3. AI 검수 — 키가 있다. job 1이 남긴 결과 파일만 받아 지적을 덧붙인다.
+#          4. 커밋 — git 토큰은 이 스텝에만 준다.
+# 코드를 돌린 뒤의 작업 공간은 믿지 않는다. 그 코드가 빌드 스크립트나 .git/hooks 를 바꿔 두면
+# 다음에 키나 토큰을 쥐고 도는 gradlew·git이 그것을 실행한다. 그래서 키·토큰이 필요한 일은
+# 깨끗한 러너(job 2)에서 하고, job 1에서는 정해진 결과 파일만 넘겨받는다.
+# checkout이 git 토큰을 저장소에 남기지 않게 하는 것도 같은 이유다(persist-credentials: false).
 name: LLM 코드 문제
 
 on:
@@ -71,8 +75,64 @@ jobs:
           ./gradlew generateCodeProblems --no-daemon --console=plain -PcodeArgs="${ARGS}"
 
       - name: 2. 실행 검증 (API 키 없음, 모델이 쓴 코드를 돌린다)
+        id: verify
         run: |
           ./gradlew generateCodeProblems --no-daemon --console=plain -PcodeArgs="--phase=verify"
+          if [ -n "$(git status --porcelain generated)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 결과 파일 넘기기
+        if: steps.verify.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: code-problems
+          path: |
+            generated/*-code-*.json
+            generated/_code-topics.json
+            build/code-problems/code-runs.json
+          if-no-files-found: error
+          retention-days: 3
+
+    outputs:
+      changed: ${{ steps.verify.outputs.changed }}
+
+  review-and-commit:
+    needs: code-problems
+    if: needs.code-problems.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: 저장소 코드 받기 (코드를 돌리지 않은 깨끗한 러너)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: JDK 21 설치
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Gradle 설정 (캐시 포함)
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
+      - name: gradlew 실행 권한 부여
+        run: chmod +x gradlew
+
+      - name: 결과 파일 받기
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: code-problems
+          path: .
+
+      - name: 3. AI 검수 (API 키 있음, 코드를 실행하지 않는다)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # 검수가 실패해도 문제는 그대로 커밋한다. CLI가 실패를 요약에 적고 정상 종료한다
+          ./gradlew generateCodeProblems --no-daemon --console=plain -PcodeArgs="--phase=review"
 
       - name: 결과 커밋 & 푸시
         env:

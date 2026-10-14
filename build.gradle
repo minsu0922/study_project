@@ -232,9 +232,10 @@ tasks.register('generateDrafts', JavaExec) {
 //
 //   .\gradlew.bat generateCodeProblems -PcodeArgs="--phase=generate"   (API 키 필요, 요금 발생)
 //   .\gradlew.bat generateCodeProblems -PcodeArgs="--phase=verify"     (API 키 없이. 모델이 쓴 코드를 실행한다)
+//   .\gradlew.bat generateCodeProblems -PcodeArgs="--phase=review"     (API 키 필요, 요금 발생. 코드를 실행하지 않는다)
 //
-// 두 단계로 나눈 이유는 CodeProblemCli 주석에 있다. verify는 키가 없는 환경에서 돌려야 해서,
-// 이 태스크는 phase가 generate일 때만 키를 주입한다.
+// 단계를 나눈 이유는 CodeProblemCli 주석에 있다. verify는 키가 없는 환경에서 돌려야 해서,
+// 이 태스크는 phase가 generate·review일 때만 키를 주입한다.
 tasks.register('generateCodeProblems', JavaExec) {
     group = 'llm'
     description = '자바 코드 문제를 생성하고(generate) 실행해서 확인한 것만 generated/ 에 저장한다(verify)'
@@ -246,7 +247,7 @@ tasks.register('generateCodeProblems', JavaExec) {
         args raw.split(/\s+/)
     }
     String codeApiKey = project.findProperty('anthropicApiKey') ?: System.getenv('ANTHROPIC_API_KEY')
-    if (raw.contains('--phase=generate') && codeApiKey) {
+    if ((raw.contains('--phase=generate') || raw.contains('--phase=review')) && codeApiKey) {
         environment 'ANTHROPIC_API_KEY', codeApiKey
     } else {
         // 부모 환경에 키가 있어도 실행 검증 프로세스에는 넘기지 않는다

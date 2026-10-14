@@ -149,6 +149,17 @@ class CodeFactCheckerTest {
     }
 
     @Test
+    @DisplayName("AI 검수에 넘길 실행 결과 — 고치기는 고치기 전 코드와 보기마다 바꾼 결과를 적는다")
+    void writesRunFactsPerChoice() {
+        assertThat(checker.runFacts(fix(FIX_QUESTION, VALUE_OF_RATIONALE))).isEqualTo("""
+                - 고치기 전 코드: 출력 「1」
+                - 1번(정답)으로 바꾸면: 출력 「2」
+                - 2번으로 바꾸면: 출력 「1」
+                - 3번으로 바꾸면: 출력 「1」
+                - 4번으로 바꾸면: 출력 「0」""");
+    }
+
+    @Test
     @DisplayName("오답 이유의 오해 문장은 틀린 말이 맞으니 대조에서 뺀다")
     void ignoresMisbeliefSentence() {
         assertThat(CodeFactChecker.factualPart("없는 키를 get하면 NullPointerException이 난다고 오해했다. get은 null을 돌려준다."))
