@@ -154,6 +154,10 @@ public final class ProblemReview {
         /** AI가 낸 지적이 아니다. 문서 사실 검수 지적과 근거 인용을 코드가 대조한다({@code FlaggedSourceRule}). */
         SOURCE_FLAGGED("근거 문단에 사실 지적", Grade.DEFECT),
         EXPLANATION_MISMATCH("해설 어긋남", Grade.DEFECT),
+        /** 아래 셋은 AI가 아니라 코드 문제의 실행 결과를 코드가 대조한다({@code CodeFactChecker}). */
+        QUESTION_MISMATCH("질문 어긋남", Grade.DEFECT),
+        RATIONALE_MISMATCH("오답 이유 어긋남", Grade.DEFECT),
+        CODE_COMMENT_REVEALS("주석이 답을 드러냄", Grade.POLISH),
         DIFFICULTY_MISMATCH("난이도 어긋남", Grade.POLISH),
         SOLUTION("AI 풀이", Grade.OPINION),
         AWKWARD_SENTENCE("어색한 문장", Grade.OPINION),

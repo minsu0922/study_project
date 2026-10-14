@@ -13,6 +13,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.CodeProblem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
+import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.LlmDraftResponse;
 import project.study.study_project.llm.service.DraftImportService;
@@ -125,6 +126,27 @@ class CodeProblemWiringTest {
         AdminProblemDetail problem = llmProblemService.approve(drafts.get(0).id());
         assertThat(problem.codeFocusLine()).isEqualTo(3);
         assertThat(problem.codeChoices()).isTrue();
+    }
+
+    @Test
+    @DisplayName("실행 대조 지적은 질문이 같아도 번호로 제 초안에 붙고, 지적 없는 초안은 '대조함, 지적 없음'이 된다")
+    void factFindingsReachTheirOwnDraft() throws Exception {
+        Path file = writeFile(List.of(
+                new CodeProblem.Part(0, CodeProblem.Kind.CODE_OUTPUT, "java", CODE_A, "1", 0, ""),
+                new CodeProblem.Part(1, CodeProblem.Kind.CODE_OUTPUT, "java", CODE_B, "2", 0, "")));
+        ObjectMapper mapper = new ObjectMapper();
+        GeneratedBatchFile batch = mapper.readValue(file.toFile(), GeneratedBatchFile.class);
+        mapper.writeValue(file.toFile(), batch.withReviewFindings(List.of(new ProblemReview.Finding(1,
+                ProblemReview.FindingType.EXPLANATION_MISMATCH, "해설이 코드에 없는 줄을 가리킵니다", "9행 — 코드는 5줄입니다"))));
+
+        draftImportService.importFile(file);
+
+        List<LlmDraftResponse> drafts = myDrafts();
+        assertThat(drafts.get(0).aiFindings()).as("대조했고 지적 없음").isEmpty();
+        assertThat(drafts.get(1).aiFindings()).singleElement().satisfies(f -> {
+            assertThat(f.type()).isEqualTo("EXPLANATION_MISMATCH");
+            assertThat(f.grade()).isEqualTo("DEFECT");
+        });
     }
 
     @Test

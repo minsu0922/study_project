@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -97,14 +98,20 @@ public class DraftImportService {
 
         // documentSlug는 2단계에서 추가된 필드라 옛 파일에는 없다 — Jackson이 null로 채우고
         // 그대로 초안에 기록된다. "근거 문서 없이 만든 문제"와 같은 값이므로 특별 취급이 필요 없다.
-        List<GeneratedProblemDraft> drafts = batch.codeParts() == null
-                ? llmProblemService.saveDrafts(
-                        batch.domain(), batch.difficulty(), batch.type(), batch.problems(), model,
-                        batch.documentSlug())
-                : saveCodeDrafts(batch, model);
-
-        if (batch.reviewFindings() != null) {
-            attachAiFindings(batch, drafts);
+        List<GeneratedProblemDraft> drafts;
+        if (batch.codeParts() == null) {
+            drafts = llmProblemService.saveDrafts(
+                    batch.domain(), batch.difficulty(), batch.type(), batch.problems(), model,
+                    batch.documentSlug());
+            if (batch.reviewFindings() != null) {
+                attachAiFindings(batch, drafts);
+            }
+        } else {
+            Map<Integer, GeneratedProblemDraft> byIndex = saveCodeDrafts(batch, model);
+            drafts = new ArrayList<>(byIndex.values());
+            if (batch.reviewFindings() != null) {
+                attachCodeFindings(batch, byIndex);
+            }
         }
 
         String filename = file.getFileName().toString();
@@ -122,30 +129,19 @@ public class DraftImportService {
     }
 
     /**
-     * 파일의 AI 검수 지적을 초안마다 나눠 붙인다(docs/22 §6 2단계).
-     *
-     * <p><b>번호가 아니라 지문으로 짝짓는다.</b> 지적의 {@code problemIndex}는 파일 안 위치인데,
-     * {@code saveDrafts}가 규약을 어긴 문제를 빼면 초안 목록의 위치가 밀린다. 번호로 붙이면
-     * 3번의 지적이 4번 초안에 달린다.
-     *
-     * <p>검수를 돌린 파일이면 지적이 없는 초안에도 빈 목록을 적는다 — "AI가 봤고 지적이 없다"를
-     * "검수를 안 돌렸다"(null)와 가르기 위해서다. 범위를 벗어난 번호는 손으로 고친 파일에서만
-     * 나오므로 그 지적만 버린다. 지적 때문에 문제까지 못 들여오면 손해가 더 크다.
-     */
-    /**
      * 코드 문제는 한 건씩 저장한다. 그래야 어느 문제가 어느 초안이 됐는지 번호로 안다.
      *
      * <p>지적처럼 질문 문장으로 짝지을 수 없다. 코드 문제는 "다음 코드를 실행했을 때 출력되는 것은?"처럼
      * 질문이 서로 같은 일이 흔하다. 코드가 엉뚱한 문제에 붙으면 정답이 틀린 문제가 된다.
      */
-    private List<GeneratedProblemDraft> saveCodeDrafts(GeneratedBatchFile batch, String model) {
+    private Map<Integer, GeneratedProblemDraft> saveCodeDrafts(GeneratedBatchFile batch, String model) {
         Map<Integer, CodeProblem.Part> byIndex = new HashMap<>();
         for (CodeProblem.Part part : batch.codeParts()) {
             if (part != null) {
                 byIndex.put(part.problemIndex(), part);
             }
         }
-        List<GeneratedProblemDraft> drafts = new ArrayList<>();
+        Map<Integer, GeneratedProblemDraft> drafts = new LinkedHashMap<>();
         for (int i = 0; i < batch.problems().size(); i++) {
             CodeProblem.Part part = byIndex.get(i);
             if (part == null || part.code() == null || part.code().isBlank()) {
@@ -157,12 +153,40 @@ public class DraftImportService {
                     batch.domain(), batch.difficulty(), batch.type(), List.of(batch.problems().get(i)), model,
                     batch.documentSlug())) {
                 draft.attachCode(part);
-                drafts.add(draft);
+                drafts.put(i, draft);
             }
         }
         return drafts;
     }
 
+    /** 코드 문제의 지적은 번호로 붙인다. 저장도 번호로 짝지었고, 질문 문장은 문제끼리 겹친다. */
+    private void attachCodeFindings(GeneratedBatchFile batch, Map<Integer, GeneratedProblemDraft> byIndex)
+            throws IOException {
+        Map<Integer, List<DraftAiFinding>> findings = new HashMap<>();
+        for (ProblemReview.Finding finding : batch.reviewFindings()) {
+            if (finding == null || finding.type() == null) {
+                continue;
+            }
+            findings.computeIfAbsent(finding.problemIndex(), i -> new ArrayList<>())
+                    .add(new DraftAiFinding(finding.type(), finding.message(), finding.detail(), finding.suggestion()));
+        }
+        for (Map.Entry<Integer, GeneratedProblemDraft> entry : byIndex.entrySet()) {
+            entry.getValue().recordAiFindings(objectMapper.writeValueAsString(
+                    findings.getOrDefault(entry.getKey(), List.of())));
+        }
+    }
+
+    /**
+     * 파일의 AI 검수 지적을 초안마다 나눠 붙인다(docs/22 §6 2단계).
+     *
+     * <p><b>번호가 아니라 지문으로 짝짓는다.</b> 지적의 {@code problemIndex}는 파일 안 위치인데,
+     * {@code saveDrafts}가 규약을 어긴 문제를 빼면 초안 목록의 위치가 밀린다. 번호로 붙이면
+     * 3번의 지적이 4번 초안에 달린다.
+     *
+     * <p>검수를 돌린 파일이면 지적이 없는 초안에도 빈 목록을 적는다 — "AI가 봤고 지적이 없다"를
+     * "검수를 안 돌렸다"(null)와 가르기 위해서다. 범위를 벗어난 번호는 손으로 고친 파일에서만
+     * 나오므로 그 지적만 버린다. 지적 때문에 문제까지 못 들여오면 손해가 더 크다.
+     */
     private void attachAiFindings(GeneratedBatchFile batch, List<GeneratedProblemDraft> drafts)
             throws IOException {
         Map<String, List<DraftAiFinding>> byQuestion = new HashMap<>();

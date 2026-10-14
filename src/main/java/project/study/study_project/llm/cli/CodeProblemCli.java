@@ -9,7 +9,9 @@ import project.study.study_project.llm.client.ClaudeCalls;
 import project.study.study_project.llm.client.ClaudeCodeProblemGenerator;
 import project.study.study_project.llm.client.CodeProblem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
+import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
+import project.study.study_project.llm.support.CodeFactChecker;
 import project.study.study_project.llm.support.CodeProblemRule;
 import project.study.study_project.llm.support.CodeRunner;
 import project.study.study_project.llm.support.CodeVerifier;
@@ -21,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +75,13 @@ public final class CodeProblemCli {
         String phase = opts.getOrDefault("phase", "");
         switch (phase) {
             case "generate" -> generate(opts, outDir, workDir, date);
-            case "verify" -> verify(outDir, workDir, new CodeVerifier(new CodeRunner()::run));
+            case "verify" -> {
+                // 사실 대조는 검증이 이미 돌린 코드(오답을 넣은 코드)를 다시 돌린다. 결과를 나눠 쓴다
+                Map<String, CodeRunner.Result> runs = new HashMap<>();
+                CodeRunner runner = new CodeRunner();
+                Function<String, CodeRunner.Result> run = code -> runs.computeIfAbsent(code, runner::run);
+                verify(outDir, workDir, new CodeVerifier(run), new CodeFactChecker(run));
+            }
             default -> throw new IllegalArgumentException("--phase=generate 또는 --phase=verify 를 주세요: " + phase);
         }
     }
@@ -175,7 +184,7 @@ public final class CodeProblemCli {
     /* ── 2. 실행 검증 ── */
 
     /** @param verifier 테스트가 가짜를 넣을 수 있게 받는다. 실제로는 코드를 컴파일하고 실행한다 */
-    static void verify(Path outDir, Path workDir, CodeVerifier verifier) throws Exception {
+    static void verify(Path outDir, Path workDir, CodeVerifier verifier, CodeFactChecker checker) throws Exception {
         Path candidatesFile = workDir.resolve(CANDIDATES_FILE);
         if (!Files.exists(candidatesFile)) {
             System.out.println("검증할 코드 문제 후보가 없습니다(생성 단계가 건너뛰었습니다).");
@@ -200,10 +209,15 @@ public final class CodeProblemCli {
 
         Files.createDirectories(outDir);
         int saved = 0;
+        List<String> flagged = new ArrayList<>();
         for (Map.Entry<Difficulty, List<CodeProblem.Item>> entry : passed.entrySet()) {
+            List<ProblemReview.Finding> findings = factFindings(entry.getValue(), checker);
+            for (ProblemReview.Finding f : findings) {
+                flagged.add("「%s」 — %s".formatted(entry.getValue().get(f.problemIndex()).title(), f.type().label()));
+            }
             Path file = outDir.resolve(fileNameOf(date, entry.getKey()));
-            Files.writeString(file, MAPPER.writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(toBatchFile(candidates, date, entry.getKey(), entry.getValue())));
+            Files.writeString(file, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(
+                    toBatchFile(candidates, date, entry.getKey(), entry.getValue()).withReviewFindings(findings)));
             saved += entry.getValue().size();
         }
         // 하나도 못 건진 주제에는 사용 표시를 찍지 않는다. 다음 주에 같은 주제를 다시 시도한다
@@ -214,8 +228,24 @@ public final class CodeProblemCli {
                         .formatted(TopicQueue.CODE_FILE_NAME, candidates.topic()));
             }
         }
-        BatchReports.announce(renderSummary(date, candidates, saved, dropped));
+        BatchReports.announce(renderSummary(date, candidates, saved, dropped, flagged));
         Files.deleteIfExists(candidatesFile);
+    }
+
+    /**
+     * 통과한 문제의 글을 실행 결과와 맞춰 본다. 지적은 파일에 실려 검수함에 달린다.
+     * 대조가 실패해도 문제는 저장한다. 이미 정답을 확인한 문제다.
+     */
+    static List<ProblemReview.Finding> factFindings(List<CodeProblem.Item> items, CodeFactChecker checker) {
+        List<ProblemReview.Finding> findings = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            try {
+                findings.addAll(checker.findingsOf(i, items.get(i)));
+            } catch (RuntimeException e) {
+                System.out.printf("사실 대조를 건너뜁니다: 「%s」 (%s)%n", items.get(i).title(), e.getMessage());
+            }
+        }
+        return findings;
     }
 
     /** 모양과 금지 소재를 먼저 보고, 통과한 것만 실행한다. 금지 소재가 든 코드는 한 번도 돌리지 않는다. */
@@ -255,10 +285,15 @@ public final class CodeProblemCli {
                 .withCode(candidates.topic(), parts);
     }
 
-    static String renderSummary(LocalDate date, Candidates candidates, int saved, List<String> dropped) {
+    static String renderSummary(LocalDate date, Candidates candidates, int saved, List<String> dropped,
+                                List<String> flagged) {
         StringBuilder sb = new StringBuilder(saved > 0 ? "✅" : "⚠️")
                 .append(" **%s 코드 문제 %d건 저장** — 주제 \"%s\", 후보 %d개 중 실행 검증 통과 %d개"
                         .formatted(date, saved, candidates.topic(), candidates.items().size(), saved));
+        if (!flagged.isEmpty()) {
+            sb.append("\n\n🔎 실행 결과와 글이 어긋난 곳 ").append(flagged.size()).append("건 (검수함에 지적으로 답니다)\n")
+                    .append(BatchReports.bullets(flagged));
+        }
         if (!dropped.isEmpty()) {
             sb.append("\n\n버린 문제 ").append(dropped.size()).append("개 (검수함에 들이지 않습니다)\n")
                     .append(BatchReports.bullets(dropped));

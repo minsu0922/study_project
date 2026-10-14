@@ -31,7 +31,7 @@ public final class CodeVerifier {
     public String defectOf(Item item) {
         return switch (item.kind()) {
             case CODE_OUTPUT -> outputDefect(item);
-            case CODE_BLANK -> substitutionDefect(item, choice -> item.code().replace(CodeProblem.BLANK, choice.text().strip()));
+            case CODE_BLANK -> substitutionDefect(item, choice -> codeWith(item, choice));
             case CODE_FIX -> fixDefect(item);
             case CODE_ERROR -> errorDefect(item);
             case CODE_COMPILE -> compileDefect(item);
@@ -78,7 +78,17 @@ public final class CodeVerifier {
         if (original.finishedCleanly() && original.stdout().equals(CodeRunner.normalize(item.expectedOutput()))) {
             return "고치기 전 코드가 이미 기대 출력을 낸다";
         }
-        return substitutionDefect(item, choice -> replaceLine(item.code(), item.targetLine(), choice.text()));
+        return substitutionDefect(item, choice -> codeWith(item, choice));
+    }
+
+    /**
+     * 보기를 끼워 넣은 코드. 빈칸·고치기 유형에서만 뜻이 있다.
+     * {@link CodeFactChecker}도 이 함수로 만든다. 글자가 같아야 실행 결과를 다시 쓸 수 있다.
+     */
+    static String codeWith(Item item, Choice choice) {
+        return item.kind() == CodeProblem.Kind.CODE_BLANK
+                ? item.code().replace(CodeProblem.BLANK, choice.text().strip())
+                : replaceLine(item.code(), item.targetLine(), choice.text());
     }
 
     private String errorDefect(Item item) {
@@ -132,11 +142,11 @@ public final class CodeVerifier {
         return item.choices().stream().filter(Choice::correct).findFirst().orElseThrow();
     }
 
-    private static String oneLine(String output) {
+    static String oneLine(String output) {
         return String.join(LINE_JOINER, output.lines().toList());
     }
 
-    private static String describe(CodeRunner.Result result) {
+    static String describe(CodeRunner.Result result) {
         if (!result.compiled()) {
             return "컴파일 오류(%d행)".formatted(result.compileErrorLine());
         }

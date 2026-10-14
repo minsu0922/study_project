@@ -11,6 +11,8 @@ import project.study.study_project.llm.client.CodeProblem.Item;
 import project.study.study_project.llm.client.CodeProblem.Kind;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.TopicQueueFile;
+import project.study.study_project.llm.client.ProblemReview.FindingType;
+import project.study.study_project.llm.support.CodeFactChecker;
 import project.study.study_project.llm.support.CodeRunner;
 import project.study.study_project.llm.support.CodeVerifier;
 import project.study.study_project.llm.support.TopicQueue;
@@ -37,6 +39,7 @@ class CodeProblemCliTest {
     Path workDir;
 
     private final CodeVerifier verifier = new CodeVerifier(new CodeRunner()::run);
+    private final CodeFactChecker checker = new CodeFactChecker(new CodeRunner()::run);
 
     private static String program(String statement) {
         return "public class Main {\n    public static void main(String[] args) {\n        " + statement + "\n    }\n}";
@@ -71,7 +74,7 @@ class CodeProblemCliTest {
                 output(Difficulty.INTERMEDIATE, "틀린 계산", "System.out.println(7 / 2);", "3.5"),
                 output(Difficulty.ADVANCED, "환경 읽기", "System.out.println(System.getenv(\"X\"));", "null"));
 
-        CodeProblemCli.verify(outDir, workDir, verifier);
+        CodeProblemCli.verify(outDir, workDir, verifier, checker);
 
         Path saved = outDir.resolve("2026-10-18-code-beg.json");
         assertThat(saved).exists();
@@ -88,7 +91,28 @@ class CodeProblemCliTest {
             assertThat(part.expectedOutput()).isEqualTo("3");
             assertThat(part.code()).contains("7 / 2");
         });
+        assertThat(file.reviewFindings()).as("대조했고 어긋난 곳이 없다 — null이면 '대조 안 함'으로 읽힌다").isEmpty();
         assertThat(workDir.resolve(CodeProblemCli.CANDIDATES_FILE)).as("후보는 한 번 쓰고 지운다").doesNotExist();
+    }
+
+    @Test
+    @DisplayName("정답은 맞지만 해설이 없는 줄을 가리키면, 문제는 남기고 파일에 지적을 싣는다")
+    void keepsProblemAndRecordsFactFinding() throws Exception {
+        writeTopics();
+        Item item = output(Difficulty.BEGINNER, "나눗셈", "System.out.println(7 / 2);", "3");
+        writeCandidates(new Item(item.kind(), item.difficulty(), item.title(), item.question(), item.code(),
+                item.expectedOutput(), 0, "", item.choices(), "9행이 그 값을 출력한다."));
+
+        CodeProblemCli.verify(outDir, workDir, verifier, checker);
+
+        GeneratedBatchFile file = CodeProblemCli.MAPPER.readValue(
+                outDir.resolve("2026-10-18-code-beg.json").toFile(), GeneratedBatchFile.class);
+        assertThat(file.problems()).hasSize(1);
+        assertThat(file.reviewFindings()).singleElement().satisfies(f -> {
+            assertThat(f.problemIndex()).isZero();
+            assertThat(f.type()).isEqualTo(FindingType.EXPLANATION_MISMATCH);
+            assertThat(f.detail()).contains("9행").contains("5줄");
+        });
     }
 
     @Test
@@ -97,7 +121,7 @@ class CodeProblemCliTest {
         writeTopics();
         writeCandidates(output(Difficulty.BEGINNER, "나눗셈", "System.out.println(7 / 2);", "3"));
 
-        CodeProblemCli.verify(outDir, workDir, verifier);
+        CodeProblemCli.verify(outDir, workDir, verifier, checker);
 
         TopicQueueFile topics = CodeProblemCli.MAPPER.readValue(
                 outDir.resolve(TopicQueue.CODE_FILE_NAME).toFile(), TopicQueueFile.class);
@@ -116,7 +140,7 @@ class CodeProblemCliTest {
         writeTopics();
         writeCandidates(output(Difficulty.BEGINNER, "틀린 계산", "System.out.println(7 / 2);", "3.5"));
 
-        CodeProblemCli.verify(outDir, workDir, verifier);
+        CodeProblemCli.verify(outDir, workDir, verifier, checker);
 
         assertThat(CodeProblemCli.alreadyGenerated(outDir, DATE)).isFalse();
         TopicQueueFile topics = CodeProblemCli.MAPPER.readValue(
@@ -154,7 +178,7 @@ class CodeProblemCliTest {
     @Test
     @DisplayName("후보가 없으면 조용히 끝난다 — 생성 단계가 건너뛴 날이다")
     void doesNothingWithoutCandidates() throws Exception {
-        CodeProblemCli.verify(outDir, workDir, verifier);
+        CodeProblemCli.verify(outDir, workDir, verifier, checker);
 
         assertThat(Files.list(outDir)).isEmpty();
     }
