@@ -373,7 +373,7 @@ class ClaudeProblemReviewerTest {
         List<Finding> findings = ClaudeProblemReviewer.applyAfterSolve(shown, judged, List.of(cueLeak()),
                 new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1,
                         "해설은 종료 비용이 그대로라고 하는데 오답 풀이는 줄어든다고 한다",
-                        ProblemReview.FixTarget.CHOICE, 1, "가".repeat(32)))));
+                        ProblemReview.AfterSolveFix.CHOICE, 1, "가".repeat(32)))));
 
         assertThat(findings).hasSize(2);
         assertThat(findings.get(0).suggestion())
@@ -388,9 +388,9 @@ class ClaudeProblemReviewerTest {
         var shown = ClaudeProblemReviewer.showable(List.of(LONG_ANSWER));
         var judged = new JudgementBatch(List.of(fine(1, shown.get(0).correctNo())));
         var stillLong = new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1, "",
-                ProblemReview.FixTarget.CHOICE, 1, "가".repeat(50))));
+                ProblemReview.AfterSolveFix.CHOICE, 1, "가".repeat(50))));
         var onQuestion = new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1, "",
-                ProblemReview.FixTarget.QUESTION, 0, "고친 질문")));
+                ProblemReview.AfterSolveFix.QUESTION, 0, "고친 질문")));
 
         assertThat(ClaudeProblemReviewer.applyAfterSolve(shown, judged, List.of(cueLeak()), stillLong))
                 .singleElement().satisfies(f -> assertThat(f.suggestion()).isNull());
@@ -407,7 +407,7 @@ class ClaudeProblemReviewerTest {
 
         assertThat(ClaudeProblemReviewer.applyAfterSolve(shown, new JudgementBatch(List.of(fine(1, wrong))), List.of(),
                 new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1, "어긋난다",
-                        ProblemReview.FixTarget.NONE, 0, ""))))).isEmpty();
+                        ProblemReview.AfterSolveFix.NONE, 0, ""))))).isEmpty();
     }
 
     @Test

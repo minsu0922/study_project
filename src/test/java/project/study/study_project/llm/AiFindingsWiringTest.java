@@ -92,6 +92,30 @@ class AiFindingsWiringTest {
     }
 
     @Test
+    @DisplayName("해설과 오답 이유 제안은 그 칸만 바꾸고 보기 글과 정답은 그대로 둔다")
+    void appliesExplanationAndRationaleSuggestions() throws Exception {
+        draftImportService.importFile(writeFile(List.of(
+                new ProblemReview.Finding(1, ProblemReview.FindingType.EXPLANATION_MISMATCH, "해설 어긋남", "근거")
+                        .withSuggestion(new ProblemReview.Suggestion(ProblemReview.FixTarget.EXPLANATION, null, "고친 해설\n둘째 줄")),
+                new ProblemReview.Finding(1, ProblemReview.FindingType.RATIONALE_MISMATCH, "오답 이유 어긋남", "2번: 근거")
+                        .withSuggestion(new ProblemReview.Suggestion(ProblemReview.FixTarget.RATIONALE, 2, "고친 오답 이유")))));
+        Long id = reviewList().get(1).id();
+
+        llmProblemService.applyAiSuggestion(id, 0);
+        LlmDraftResponse after = llmProblemService.applyAiSuggestion(id, 1);
+
+        assertThat(after.explanation()).isEqualTo("고친 해설\n둘째 줄");
+        assertThat(after.aiFindings().get(0).details()).as("여러 줄 해설도 적용 기록은 한 항목이다")
+                .containsExactly("근거", "제안 적용: 「해설: 왜 정답인지와 오답의 오해를 설명한다.」 → 「고친 해설 둘째 줄」");
+        assertThat(after.choices().get(2).rationale()).isEqualTo("고친 오답 이유");
+        assertThat(after.choices()).extracting(c -> c.text())
+                .containsExactly("정답 보기", "오답 보기 1", "오답 보기 2", "오답 보기 3");
+        assertThat(after.choices().get(0).correct()).isTrue();
+        assertThat(after.aiFindings()).allSatisfy(f -> assertThat(f.suggestion()).isNull());
+        assertThat(reviewList().get(1).explanation()).as("저장됐다").isEqualTo("고친 해설\n둘째 줄");
+    }
+
+    @Test
     @DisplayName("제안이 없는 지적이나 처리된 초안에는 적용할 수 없다")
     void rejectsApplyWithoutSuggestionOrAfterReview() throws Exception {
         draftImportService.importFile(writeFile(List.of(

@@ -10,6 +10,7 @@ import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.ProblemReview.AfterSolve;
+import project.study.study_project.llm.client.ProblemReview.AfterSolveFix;
 import project.study.study_project.llm.client.ProblemReview.AfterSolveBatch;
 import project.study.study_project.llm.client.ProblemReview.ChoiceOnlyAnswer;
 import project.study.study_project.llm.client.ProblemReview.ChoiceOnlyBatch;
@@ -415,11 +416,11 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
      * 지적을 없애지 못하는 제안을 검수자에게 누르게 할 수는 없다.
      */
     static Suggestion suggestionOf(GeneratedProblemItem item, AfterSolve a) {
-        if (a.fixTarget() == null || a.fixTarget() == FixTarget.NONE || isBlank(a.fixText())) {
+        if (a.fixTarget() == null || a.fixTarget() == AfterSolveFix.NONE || isBlank(a.fixText())) {
             return null;
         }
         String text = a.fixText().strip();
-        if (a.fixTarget() == FixTarget.QUESTION) {
+        if (a.fixTarget() == AfterSolveFix.QUESTION) {
             return text.equals(item.question().strip()) ? null : new Suggestion(FixTarget.QUESTION, null, text);
         }
         int index = a.fixChoiceNo() - 1;

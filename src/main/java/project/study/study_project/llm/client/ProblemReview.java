@@ -110,7 +110,17 @@ public final class ProblemReview {
 
     /* ── C. 정답과 해설을 열어 본 뒤 ── */
 
-    public enum FixTarget { NONE, QUESTION, CHOICE }
+    /**
+     * 개념 문제 검수가 모델에게 고르게 하는 고칠 대상. 응답 스키마에 실리므로 {@link FixTarget}과 따로 둔다.
+     * 저쪽에 코드 문제용 값을 더해도 개념 문제 검수의 요청은 바뀌지 않는다.
+     */
+    public enum AfterSolveFix { NONE, QUESTION, CHOICE }
+
+    /**
+     * 제안이 고치는 곳. 해설과 오답 이유는 코드 문제 검수만 고친다.
+     * 코드와 정답은 고치지 않는다. 바꾸면 실행 검증을 다시 해야 한다.
+     */
+    public enum FixTarget { QUESTION, CHOICE, EXPLANATION, RATIONALE }
 
     @JsonClassDescription("정답과 해설을 열어 본 뒤의 검토")
     public record AfterSolve(
@@ -121,7 +131,7 @@ public final class ProblemReview {
             String explanationIssue,
 
             @JsonPropertyDescription("고칠 대상. NONE=고칠 것 없음, QUESTION=질문 문장, CHOICE=보기 하나")
-            FixTarget fixTarget,
+            AfterSolveFix fixTarget,
 
             @JsonPropertyDescription("fixTarget이 CHOICE일 때 고칠 보기 번호 1~4. 아니면 0")
             int fixChoiceNo,
@@ -187,9 +197,9 @@ public final class ProblemReview {
     /**
      * 지적에 붙는 고친 문장 제안.
      *
-     * @param target      질문을 고치는지 보기를 고치는지
-     * @param choiceIndex 보기를 고칠 때 그 보기의 원래 위치(0부터). 질문이면 {@code null}
-     * @param text        고쳐 쓴 문장 전체
+     * @param target      고치는 곳
+     * @param choiceIndex 보기나 오답 이유를 고칠 때 그 보기의 원래 위치(0부터). 질문·해설이면 {@code null}
+     * @param text        고쳐 쓴 글 전체. 그 칸을 통째로 바꾼다
      */
     public record Suggestion(FixTarget target, Integer choiceIndex, String text) {
     }

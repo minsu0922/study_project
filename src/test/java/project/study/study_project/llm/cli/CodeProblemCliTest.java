@@ -138,8 +138,8 @@ class CodeProblemCliTest {
             prompt[0] = p;
             // 요청 글의 문제 2(초급 파일의 1번)와 문제 3(중급 파일의 0번)에 답한다
             return new ClaudeCodeProblemReviewer.JudgementBatch(List.of(
-                    new ClaudeCodeProblemReviewer.Judgement(2, "", List.of(), "", "주제와 상관없다", 0, "", "", "", ""),
-                    new ClaudeCodeProblemReviewer.Judgement(3, "해설의 8행은 없다", List.of(), "", "", 0, "", "", "", "")));
+                    new ClaudeCodeProblemReviewer.Judgement(2, "", "", List.of(), "", "주제와 상관없다", 0, "", "", "", ""),
+                    new ClaudeCodeProblemReviewer.Judgement(3, "해설의 8행은 없다", "", List.of(), "", "", 0, "", "", "", "")));
         }));
 
         assertThat(prompt[0]).contains("- 이 코드: 출력 「1」");

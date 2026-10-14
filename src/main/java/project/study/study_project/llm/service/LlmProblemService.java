@@ -654,29 +654,42 @@ public class LlmProblemService {
         ProblemReview.Suggestion suggestion = finding.suggestion();
 
         String question = draft.getQuestion();
+        String explanation = draft.getExplanation();
         String choicesJson = draft.getChoicesJson();
         String before;
-        if (suggestion.target() == ProblemReview.FixTarget.QUESTION) {
-            before = question;
-            question = suggestion.text();
-        } else {
-            List<AdminProblemRequest.ChoiceItem> choices = new ArrayList<>(readChoices(choicesJson));
-            Integer index = suggestion.choiceIndex();
-            if (index == null || index < 0 || index >= choices.size()) {
-                throw new BusinessException(ErrorCode.COMMON_001, "제안이 가리키는 보기가 없습니다.");
+        switch (suggestion.target()) {
+            case QUESTION -> {
+                before = question;
+                question = suggestion.text();
             }
-            AdminProblemRequest.ChoiceItem c = choices.get(index);
-            before = c.text();
-            choices.set(index, new AdminProblemRequest.ChoiceItem(
-                    suggestion.text(), c.correct(), c.rationale(), c.matchText()));
-            choicesJson = writeJson(choices);
+            case EXPLANATION -> {
+                before = explanation;
+                explanation = suggestion.text();
+            }
+            case CHOICE, RATIONALE -> {
+                List<AdminProblemRequest.ChoiceItem> choices = new ArrayList<>(readChoices(choicesJson));
+                Integer index = suggestion.choiceIndex();
+                if (index == null || index < 0 || index >= choices.size()) {
+                    throw new BusinessException(ErrorCode.COMMON_001, "제안이 가리키는 보기가 없습니다.");
+                }
+                AdminProblemRequest.ChoiceItem c = choices.get(index);
+                boolean onRationale = suggestion.target() == ProblemReview.FixTarget.RATIONALE;
+                before = onRationale ? c.rationale() : c.text();
+                choices.set(index, new AdminProblemRequest.ChoiceItem(
+                        onRationale ? c.text() : suggestion.text(), c.correct(),
+                        onRationale ? suggestion.text() : c.rationale(), c.matchText()));
+                choicesJson = writeJson(choices);
+            }
+            default -> throw new BusinessException(ErrorCode.COMMON_001, "적용할 수 없는 제안입니다.");
         }
 
         List<DraftAiFinding> updated = new ArrayList<>(findings);
-        String applied = "제안 적용: 「%s」 → 「%s」".formatted(before, suggestion.text());
+        // 근거 칸은 줄마다 한 항목으로 그려진다. 해설처럼 여러 줄인 글은 한 줄로 펴서 적는다
+        String applied = "제안 적용: 「%s」 → 「%s」".formatted(
+                before == null ? "" : before.replaceAll("\\s*\\R\\s*", " "), suggestion.text().replaceAll("\\s*\\R\\s*", " "));
         updated.set(findingIndex, new DraftAiFinding(finding.type(), finding.message(),
                 finding.detail() == null ? applied : finding.detail() + "\n" + applied, null));
-        draft.applyAiSuggestion(question, choicesJson, writeJson(updated));
+        draft.applyAiSuggestion(question, explanation, choicesJson, writeJson(updated));
         log.info("문제 초안 #{}: AI 제안 적용({})", draft.getId(), finding.type());
         return toResponse(draft);
     }

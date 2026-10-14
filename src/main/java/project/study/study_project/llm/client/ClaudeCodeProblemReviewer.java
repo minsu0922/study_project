@@ -13,6 +13,8 @@ import project.study.study_project.llm.client.CodeProblem.Choice;
 import project.study.study_project.llm.client.CodeProblem.Item;
 import project.study.study_project.llm.client.ProblemReview.Finding;
 import project.study.study_project.llm.client.ProblemReview.FindingType;
+import project.study.study_project.llm.client.ProblemReview.FixTarget;
+import project.study.study_project.llm.client.ProblemReview.Suggestion;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,10 +49,13 @@ public class ClaudeCodeProblemReviewer {
                출력값·예외·실행 순서를 실제와 다르게 적었다, "N행"이 그 일을 하지 않는 줄을 가리킨다
                (코드 앞의 줄 번호로 확인한다), 정답이 아닌 보기를 정답처럼 설명한다.
                어긋난 문장을 옮기고 실제로는 어떤지 쓴다. 덜 자세하거나 표현이 다른 것은 어긋남이 아니다.
+               explanationFix: explanationIssue를 적었으면 고친 해설 전체를 쓴다. 어긋난 곳만 실행 결과에 맞게 고치고
+               나머지 문장은 그대로 둔다. 줄은 "N행"으로 가리키고 문장은 "~다"로 끝낸다.
             2. rationaleIssues: 오답 이유가 사실과 어긋나는 오답.
                이유의 앞부분은 학습자의 오해를 옮긴 것이라 틀린 말이 맞다. 그 뒤에 적은 결과
                ("1이 출력된다", "컴파일되지 않는다" 등)나 설명이 실제와 다를 때만 적는다.
                빈칸·고치기 유형은 그 오답을 넣어 돌린 결과가 실행 결과에 있다.
+               fixedRationale에는 고친 오답 이유 전체를 쓴다. 오해 문장은 그대로 두고 결과만 실제에 맞춘다.
             3. environmentIssue: 답이 JVM 옵션, JDK 버전, 운영체제, 기본 문자 인코딩, 로캘에 따라 바뀔 수 있는데
                문제가 그 전제를 밝히지 않았으면, 무엇에 따라 어떻게 바뀌는지 쓴다.
                자바 언어 명세나 API 문서가 보장하는 동작은 해당하지 않는다.
@@ -59,7 +64,8 @@ public class ClaudeCodeProblemReviewer {
             5. giveawayChoiceNo, giveawayReason: 코드를 따라가지 않아도 모양만 보고 지워지는 오답.
                문법이 한눈에 틀렸거나 질문이 요구하는 꼴과 다른 보기다. 흔한 오해에서 나온 오답은 해당하지 않는다.
             6. 의견(참고용, 결함 판정이 아니다):
-               awkwardQuote에 어색하거나 뜻이 흐린 문장을 글자 그대로 옮기고, awkwardFix에 고친 문장을 쓴다.
+               awkwardQuote에 질문·해설·오답 이유에서 어색하거나 뜻이 흐린 부분을 글자 그대로 옮기고,
+               awkwardFix에 그 부분을 대신할 글을 쓴다. 뜻과 값은 바꾸지 않는다. 코드와 보기의 코드는 고치지 않는다.
                readabilityNote에는 코드나 보기를 읽다 막히는 곳을 쓴다. 취향 차이는 적지 않는다.
 
             보기 번호는 받은 그대로 쓴다.
@@ -73,7 +79,9 @@ public class ClaudeCodeProblemReviewer {
             @JsonPropertyDescription("오답 보기 번호(1부터)")
             int choiceNo,
             @JsonPropertyDescription("오답 이유의 어느 부분이 실제와 어떻게 다른지")
-            String issue
+            String issue,
+            @JsonPropertyDescription("고친 오답 이유 전체")
+            String fixedRationale
     ) {
     }
 
@@ -82,6 +90,8 @@ public class ClaudeCodeProblemReviewer {
             int problemNo,
             @JsonPropertyDescription("해설이 실행 결과나 코드와 어긋나는 곳. 없으면 빈 문자열")
             String explanationIssue,
+            @JsonPropertyDescription("고친 해설 전체. explanationIssue가 비었으면 빈 문자열")
+            String explanationFix,
             @JsonPropertyDescription("오답 이유가 사실과 어긋나는 오답들. 없으면 빈 목록")
             List<RationaleIssue> rationaleIssues,
             @JsonPropertyDescription("실행 환경에 따라 답이 바뀌는 이유. 없으면 빈 문자열")
@@ -182,17 +192,16 @@ public class ClaudeCodeProblemReviewer {
             Item item = targets.get(i).item();
             if (!isBlank(j.explanationIssue())) {
                 findings.add(new Finding(i, FindingType.EXPLANATION_MISMATCH, "해설이 실제 실행과 어긋납니다",
-                        j.explanationIssue().strip()));
+                        j.explanationIssue().strip(), replacing(item.explanation(), j.explanationFix(), FixTarget.EXPLANATION, null)));
             }
-            List<String> rationale = new ArrayList<>();
+            // 오답마다 따로 단다. 제안 하나가 오답 이유 하나를 고치기 때문이다
             for (RationaleIssue r : j.rationaleIssues() == null ? List.<RationaleIssue>of() : j.rationaleIssues()) {
                 if (r != null && isWrongChoice(item, r.choiceNo()) && !isBlank(r.issue())) {
-                    rationale.add("%d번: %s".formatted(r.choiceNo(), r.issue().strip()));
+                    int index = r.choiceNo() - 1;
+                    findings.add(new Finding(i, FindingType.RATIONALE_MISMATCH, "오답 이유가 실제 실행과 어긋납니다",
+                            "%d번: %s".formatted(r.choiceNo(), r.issue().strip()),
+                            replacing(item.choices().get(index).rationale(), r.fixedRationale(), FixTarget.RATIONALE, index)));
                 }
-            }
-            if (!rationale.isEmpty()) {
-                findings.add(new Finding(i, FindingType.RATIONALE_MISMATCH, "오답 이유가 실제 실행과 어긋납니다",
-                        String.join("\n", rationale)));
             }
             if (!isBlank(j.environmentIssue())) {
                 findings.add(new Finding(i, FindingType.ENVIRONMENT_DEPENDENT, "실행 환경에 따라 답이 바뀔 수 있습니다",
@@ -210,7 +219,8 @@ public class ClaudeCodeProblemReviewer {
             if (appearsIn(item, j.awkwardQuote())) {
                 findings.add(new Finding(i, FindingType.AWKWARD_SENTENCE, "어색하거나 뜻이 흐린 문장이 있습니다",
                         "지금: 「%s」".formatted(j.awkwardQuote().strip())
-                                + (isBlank(j.awkwardFix()) ? "" : "\n고치면: " + j.awkwardFix().strip())));
+                                + (isBlank(j.awkwardFix()) ? "" : "\n고치면: " + j.awkwardFix().strip()),
+                        awkwardSuggestion(item, j.awkwardQuote(), j.awkwardFix())));
             }
             if (!isBlank(j.readabilityNote())) {
                 findings.add(new Finding(i, FindingType.READABILITY, "읽다가 막히는 곳이 있습니다",
@@ -218,6 +228,38 @@ public class ClaudeCodeProblemReviewer {
             }
         }
         return findings;
+    }
+
+    /** 고친 글이 있고 지금과 다를 때만 제안한다. 같은 글을 적용하라는 버튼은 뜻이 없다. */
+    private static Suggestion replacing(String now, String fixed, FixTarget target, Integer choiceIndex) {
+        if (isBlank(fixed) || fixed.strip().equals(now == null ? "" : now.strip())) {
+            return null;
+        }
+        return new Suggestion(target, choiceIndex, fixed.strip());
+    }
+
+    /**
+     * 어색한 부분만 바꾼 글 전체를 제안한다. 인용이 글자 그대로 있어야 바꿀 수 있다.
+     * 보기 글은 고치지 않는다. 코드 문제의 보기는 출력이나 코드라, 바꾸면 실행 검증을 다시 해야 한다.
+     */
+    static Suggestion awkwardSuggestion(Item item, String quote, String fix) {
+        if (isBlank(quote) || isBlank(fix)) {
+            return null;
+        }
+        String q = quote.strip();
+        if (item.question() != null && item.question().contains(q)) {
+            return replacing(item.question(), item.question().replace(q, fix.strip()), FixTarget.QUESTION, null);
+        }
+        if (item.explanation() != null && item.explanation().contains(q)) {
+            return replacing(item.explanation(), item.explanation().replace(q, fix.strip()), FixTarget.EXPLANATION, null);
+        }
+        for (int c = 0; c < item.choices().size(); c++) {
+            String rationale = item.choices().get(c).rationale();
+            if (rationale != null && rationale.contains(q)) {
+                return replacing(rationale, rationale.replace(q, fix.strip()), FixTarget.RATIONALE, c);
+            }
+        }
+        return null;
     }
 
     private static boolean isWrongChoice(Item item, int no) {

@@ -12,6 +12,8 @@ import project.study.study_project.llm.client.CodeProblem.Item;
 import project.study.study_project.llm.client.CodeProblem.Kind;
 import project.study.study_project.llm.client.ProblemReview.Finding;
 import project.study.study_project.llm.client.ProblemReview.FindingType;
+import project.study.study_project.llm.client.ProblemReview.FixTarget;
+import project.study.study_project.llm.client.ProblemReview.Suggestion;
 
 import java.util.List;
 
@@ -32,7 +34,7 @@ class ClaudeCodeProblemReviewerTest {
             "3행에서 equals로 내용을 비교한다.");
 
     private static Judgement judgement(int no) {
-        return new Judgement(no, "", List.of(), "", "", 0, "", "", "", "");
+        return new Judgement(no, "", "", List.of(), "", "", 0, "", "", "", "");
     }
 
     @Test
@@ -53,8 +55,10 @@ class ClaudeCodeProblemReviewerTest {
     @Test
     @DisplayName("모델의 답을 종류별 지적으로 옮기고, 결론 문장은 코드가 정한다")
     void mapsJudgementToFindings() {
-        Judgement j = new Judgement(1, "해설의 3행은 비교가 아니라 if문이다",
-                List.of(new RationaleIssue(3, "실제로는 컴파일된다")), "캐시 상한은 JVM 옵션으로 바뀐다",
+        Judgement j = new Judgement(1, "해설의 3행은 비교가 아니라 if문이다", "3행의 if문에서 equals로 내용을 비교한다.",
+                List.of(new RationaleIssue(3, "실제로는 컴파일된다", "대입식도 조건이 된다고 오해했다. 실제로는 컴파일된다."),
+                        new RationaleIssue(4, "int를 돌려준다", "")),
+                "캐시 상한은 JVM 옵션으로 바뀐다",
                 "연산자 우선순위만 알면 풀린다", 4, "boolean이 아닌 꼴이라 바로 지워진다",
                 "\"같다\"가 출력되도록", "\"같다\"를 출력하려면", "보기 2와 3이 한 글자 차이라 헷갈린다");
 
@@ -64,19 +68,37 @@ class ClaudeCodeProblemReviewerTest {
         assertThat(findings).extracting(Finding::problemIndex, Finding::type, Finding::message).containsExactly(
                 tuple(0, FindingType.EXPLANATION_MISMATCH, "해설이 실제 실행과 어긋납니다"),
                 tuple(0, FindingType.RATIONALE_MISMATCH, "오답 이유가 실제 실행과 어긋납니다"),
+                tuple(0, FindingType.RATIONALE_MISMATCH, "오답 이유가 실제 실행과 어긋납니다"),
                 tuple(0, FindingType.ENVIRONMENT_DEPENDENT, "실행 환경에 따라 답이 바뀔 수 있습니다"),
                 tuple(0, FindingType.OFF_TOPIC, "주제를 몰라도 풀리거나 다른 것이 답을 가릅니다"),
                 tuple(0, FindingType.CHOICE_CUE_LEAK, "코드를 따라가지 않아도 지워지는 오답이 있습니다"),
                 tuple(0, FindingType.AWKWARD_SENTENCE, "어색하거나 뜻이 흐린 문장이 있습니다"),
                 tuple(0, FindingType.READABILITY, "읽다가 막히는 곳이 있습니다"));
+        assertThat(findings.get(0).suggestion())
+                .isEqualTo(new Suggestion(FixTarget.EXPLANATION, null, "3행의 if문에서 equals로 내용을 비교한다."));
         assertThat(findings.get(1).detail()).isEqualTo("3번: 실제로는 컴파일된다");
-        assertThat(findings.get(4).detail()).isEqualTo("4번: boolean이 아닌 꼴이라 바로 지워진다");
+        assertThat(findings.get(1).suggestion())
+                .isEqualTo(new Suggestion(FixTarget.RATIONALE, 2, "대입식도 조건이 된다고 오해했다. 실제로는 컴파일된다."));
+        assertThat(findings.get(2).suggestion()).as("고친 글이 없으면 지적만 한다").isNull();
+        assertThat(findings.get(5).detail()).isEqualTo("4번: boolean이 아닌 꼴이라 바로 지워진다");
+        assertThat(findings.get(6).suggestion()).as("어색한 부분만 바꾼 질문 전체").isEqualTo(new Suggestion(FixTarget.QUESTION, null,
+                "실행했을 때 \"같다\"를 출력하려면 빈칸에 들어갈 코드로 알맞은 것은?"));
+    }
+
+    @Test
+    @DisplayName("어색한 문장 제안은 해설·오답 이유에도 붙지만, 보기 글(코드·출력)에는 붙지 않는다")
+    void awkwardSuggestionNeverTouchesChoiceText() {
+        assertThat(ClaudeCodeProblemReviewer.awkwardSuggestion(ITEM, "equals로 내용을", "equals로 문자열 내용을"))
+                .isEqualTo(new Suggestion(FixTarget.EXPLANATION, null, "3행에서 equals로 문자열 내용을 비교한다."));
+        assertThat(ClaudeCodeProblemReviewer.awkwardSuggestion(ITEM, "대입식도", "대입식까지"))
+                .extracting(Suggestion::target, Suggestion::choiceIndex).containsExactly(FixTarget.RATIONALE, 2);
+        assertThat(ClaudeCodeProblemReviewer.awkwardSuggestion(ITEM, "s1.compareTo(s2)", "s1.compareTo(s2) == 0")).isNull();
     }
 
     @Test
     @DisplayName("정답이나 없는 보기를 가리킨 지적, 문제에 없는 인용, 없는 문제 번호는 버린다")
     void dropsInvalidReferences() {
-        Judgement j = new Judgement(1, "", List.of(new RationaleIssue(1, "정답을 오답이라 함"), new RationaleIssue(9, "없는 보기")),
+        Judgement j = new Judgement(1, "", "", List.of(new RationaleIssue(1, "정답을 오답이라 함", ""), new RationaleIssue(9, "없는 보기", "")),
                 "", "", 1, "정답 번호", "문제에 없는 문장", "고친 문장", "");
 
         List<Finding> findings = ClaudeCodeProblemReviewer.findingsOf(List.of(new Target(ITEM, "")),
@@ -91,7 +113,7 @@ class ClaudeCodeProblemReviewerTest {
         int[] calls = {0};
         ClaudeCodeProblemReviewer reviewer = new ClaudeCodeProblemReviewer(prompt -> {
             calls[0]++;
-            return new JudgementBatch(List.of(new Judgement(1, "어긋남", List.of(), "", "", 0, "", "", "", "")));
+            return new JudgementBatch(List.of(new Judgement(1, "어긋남", "", List.of(), "", "", 0, "", "", "", "")));
         });
 
         assertThat(reviewer.review("주제", List.of())).isEmpty();
