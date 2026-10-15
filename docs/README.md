@@ -30,6 +30,7 @@ CS(컴퓨터 과학) 개념을 정리해 두고 문제로 풀어 보는 학습 �
 | [19-ui-refresh](19-ui-refresh.md) | 화면 개편 — 토큰 통합 4단계, 메뉴 여섯 → 넷, 첫 화면 "오늘" |
 | [21-domain-settings](21-domain-settings.md) | 분야 설정 관리창 — 순환·이름·힌트를 코드에서 DB로, 클라우드 배치까지 파일로 나르기 |
 | [24-java-code-problems](24-java-code-problems.md) | 자바 코드 문제 — 다섯 유형, 실행으로 정답 확인, 키 없는 실행 단계, 규칙·AI 검수 |
+| [25-admin-menu-reorg](25-admin-menu-reorg.md) | 관리 메뉴 개편 — 한 메뉴에 한 기능, 여섯 묶음 열다섯 화면, 배지 요청을 하나로 |
 | [GLOSSARY](GLOSSARY.md) | **용어집** — 이 저장소에서 쓰는 말과 쓰지 않는 말 (빠진 값 채우기·들여오기·현황 파일…) |
 | [adr/](adr/README.md) | 기술 결정 기록 (Architecture Decision Records) |
 

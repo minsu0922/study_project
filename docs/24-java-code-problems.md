@@ -206,7 +206,7 @@ $env:IN_TOPIC = "String 불변성과 StringBuilder"
 .\gradlew.bat generateCodeProblems -PcodeArgs="--phase=review"
 ```
 
-- 주제는 관리 콘솔 생성 화면의 "코드 문제 주제" 탭에서 넣고, 앱이 쓴 `generated/_code-topics.json`을 커밋한다.
+- 주제는 관리 콘솔 주제 대기열 화면의 "코드 문제 주제" 탭(`/admin/topics.html?kind=CODE`)에서 넣고, 앱이 쓴 `generated/_code-topics.json`을 커밋한다.
 - 코드 문제 배치는 `llm.batch-enabled`를 보지 않는다. 멈추려면 코드 주제를 비우거나 워크플로를 끈다.
 - Windows 콘솔에서는 CLI의 한글 요약이 깨져 보인다. Actions 요약에서는 정상이다.
 
