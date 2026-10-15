@@ -211,12 +211,11 @@ function renderReviewSummary(c) {
     { label: "문제 초안 대기", value: c.problems,  due: c.problems > 0 },
     { label: "문서 초안 대기", value: c.documents, due: c.documents > 0 },
     // 뒤의 둘은 다른 화면에서 처리한다 — 숫자를 보고 "그래서 어디로 가지"가 되지 않게
-    // 그 자리를 눌러 바로 가게 한다(2026-09-08). 주제 범위는 생성 화면 안의 한 절이라
-    // 앵커까지 붙인다(generate.html의 #topics).
+    // 그 자리를 눌러 바로 가게 한다(2026-09-08).
     { label: "제보 대기",      value: c.reports,   due: c.reports > 0,  href: "/admin/reports.html" },
     // 주제 대기열만 뜻이 반대다 — 0이 "할 일 없음"이 아니라 <생성이 멈춘다>는 경고다.
-    // 그래서 0일 때 색을 켠다. 기둥의 "생성 실행" 배지가 0에서 주황이 되는 것과 같은 규칙.
-    { label: "주제 대기열",    value: c.topics,    due: c.topics === 0, href: "/admin/generate.html#topics" },
+    // 그래서 0일 때 색을 켠다. 기둥의 "주제 대기열" 배지가 0에서 주황이 되는 것과 같은 규칙.
+    { label: "주제 대기열",    value: c.topics,    due: c.topics === 0, href: "/admin/topics.html" },
   ];
   document.getElementById("reviewSummary").innerHTML = cells.map(x => {
     const inner = `<div class="label">${x.label}</div>

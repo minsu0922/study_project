@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 일괄 보정 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지.
+   자세한 이유는 사용자 화면의 같은 주석 참고. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-shell">
+<div id="shell"></div>
+
+<main class="container admin">
+  <h1>일괄 보정</h1>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <div class="alert info" style="margin-bottom:16px">
+      이미 등록된 문제의 빈 칸을 Claude가 채웁니다. <b>누를 때마다 요금이 나갑니다.</b>
+      검수를 거치지 않고 바로 문제에 들어가므로, 채운 결과를 아래에서 눈으로 확인하세요.
+    </div>
+
+    <!-- 제목 백필(V13). 채울 것이 없으면 버튼을 잠근다 — 늘 눌리게 두면 "누르면 뭔가
+         좋아지나" 싶어 누르게 되고, 그때마다 요금만 나간다. -->
+    <div class="card" style="margin-bottom:12px">
+      <b>제목 없는 문제 <span id="untitledCount">…</span>건</b>
+      <div class="meta" style="margin:4px 0 8px">
+        목록 화면은 제목으로 문제를 고르게 한다. 제목이 없으면 지문 앞부분이 대신 뜨는데,
+        상황 서술로 시작하는 지문은 그렇게 잘라 놓으면 무엇을 묻는 문제인지 알 수 없다.
+        Claude가 한 번에 최대 40건까지 이름을 붙인다.
+      </div>
+      <button id="backfillBtn" disabled>제목 채우기</button>
+      <div id="backfillResult"></div>
+    </div>
+
+    <!-- 오답 설명 채우기(V15) — 제목 카드와 같은 규칙. -->
+    <div class="card" style="margin-bottom:12px">
+      <b>오답 설명이 빠진 문제 <span id="missingRationaleCount">…</span>건</b>
+      <div class="meta" style="margin:4px 0 8px">
+        오답 설명 칸이 생기기 전에 승인된 문제들이다. 지금은 틀려도 "왜 그게 아닌지"가
+        보기 아래에 뜨지 않는다. Claude가 한 번에 최대 10문제까지 채운다.
+        <b>해설은 바뀌지 않는다</b> — 되풀이가 생기는 문제만 아래에 이름이 뜨고, 다듬는 건 사람이 한다.
+      </div>
+      <button id="rationaleBtn" disabled>오답 설명 채우기</button>
+      <div id="rationaleResult"></div>
+    </div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script>
+/* 일괄 보정 — 이미 있는 문제의 빈 칸을 AI로 채우는 화면(2026-10-15에 문제 화면에서 독립).
+ *
+ * 문제 화면은 등록·수정·목록이 일이고, 이 둘은 요금이 나가는 AI 작업이라 성격이 다르다.
+ * 문제 화면에서는 채울 것이 있을 때만 카드가 떠서 평소에는 이 기능이 있는지조차 안 보였다.
+ * 여기서는 늘 보이고, 채울 것이 없으면 버튼만 잠근다. 남은 건수는 메뉴 배지로도 보인다. */
+
+if (initAdminPage("backfill")) {
+  document.getElementById("backfillBtn").addEventListener("click", backfillTitles);
+  document.getElementById("rationaleBtn").addEventListener("click", backfillRationales);
+  refreshCounts();
+}
+
+/** 두 개수를 받아 버튼을 잠그거나 연다. 조회가 실패하면 "?"로 두고 버튼은 연다 — 눌러 보면 서버가 답한다. */
+async function refreshCounts() {
+  await Promise.all([
+    countInto("/api/admin/problems/untitled-count", "untitledCount", "backfillBtn"),
+    countInto("/api/admin/problems/missing-rationale-count", "missingRationaleCount", "rationaleBtn"),
+  ]);
+}
+
+async function countInto(path, countId, btnId) {
+  try {
+    const count = await api(path);
+    document.getElementById(countId).textContent = count;
+    document.getElementById(btnId).disabled = count === 0;
+  } catch (e) {
+    document.getElementById(countId).textContent = "?";
+    document.getElementById(btnId).disabled = false;
+  }
+}
+
+/**
+ * 모델이 지은 제목을 <그 자리에서 보여 준다>.
+ *
+ * 이 작업은 사람 확인 없이 DB에 값을 넣는다. 건수만 알려 주면 결과를 보려고 목록을 다시
+ * 열어 한 줄씩 찾아야 하는데, 그러면 대개 확인하지 않는다. 방금 붙은 제목이 눈앞에 뜨면
+ * 이상한 것이 있을 때 바로 눈에 띄고, 번호를 눌러 고치면 된다.
+ *
+ * 버튼을 잠그는 이유: 수십 초 걸리는 외부 호출이라 응답이 없는 동안 사람이 또 누른다.
+ * 두 번 누르면 같은 문제에 두 번 요금을 낸다(제목이 이미 채워져 두 번째는 아무것도 안 바꾼다).
+ */
+async function backfillTitles() {
+  const btn = document.getElementById("backfillBtn");
+  const out = document.getElementById("backfillResult");
+  btn.disabled = true;
+  btn.textContent = "제목 짓는 중… (수십 초 걸립니다)";
+  out.innerHTML = "";
+  try {
+    const r = await api("/api/admin/problems/backfill-titles", { method: "POST" });
+    const missed = r.targeted - r.filled;
+    out.innerHTML = `
+      <div class="alert info" style="margin-top:8px">
+        ${r.filled}건 채웠습니다.
+        ${missed > 0 ? `모델이 ${missed}건을 빠뜨렸습니다 — 다시 누르면 그 건들부터 집어 옵니다.` : ""}
+        ${r.remaining > 0 ? `아직 ${r.remaining}건 남았습니다.` : ""}
+      </div>
+      <ul class="meta" style="margin:8px 0 0">
+        ${r.titles.map(t => `<li><a href="/admin/problems.html?edit=${t.problemId}">#${t.problemId}</a> — ${escapeHtml(t.title)}</li>`).join("")}
+      </ul>`;
+  } catch (e) {
+    showError(out, e);   // LLM_004(키 없음)·LLM_003(API 오류)이 그대로 표시된다
+  } finally {
+    btn.textContent = "제목 채우기";
+    refreshCounts();     // 버튼 잠금은 남은 개수가 정한다
+    refreshAdminBadges();
+  }
+}
+
+/**
+ * 채운 설명을 <보기 원문과 나란히> 보여 준다.
+ *
+ * 설명만 죽 늘어놓으면 "그럴듯한 문장 여러 개"로 보여서 눈이 미끄러진다. 이 작업의 유일한
+ * 사고 유형은 <엉뚱한 보기에 설명이 붙는 것>인데, 그건 보기 원문이 옆에 있어야만 보인다.
+ * 그래서 서버가 choiceText를 함께 내려준다.
+ *
+ * 진행 문구가 제목 쪽보다 긴 이유: 문제당 해설까지 읽고 오답 셋을 쓰므로 실제로 더 오래 걸린다.
+ * 사람은 "멈춘 건가?" 싶으면 새로고침을 누르고, 그러면 요금만 나가고 결과는 못 본다.
+ */
+async function backfillRationales() {
+  const btn = document.getElementById("rationaleBtn");
+  const out = document.getElementById("rationaleResult");
+  btn.disabled = true;
+  btn.textContent = "설명 쓰는 중… (1분 넘게 걸릴 수 있습니다)";
+  out.innerHTML = "";
+  try {
+    const r = await api("/api/admin/problems/backfill-rationales", { method: "POST" });
+    const byProblem = new Map();
+    for (const f of r.rationales) {
+      if (!byProblem.has(f.problemId)) byProblem.set(f.problemId, []);
+      byProblem.get(f.problemId).push(f);
+    }
+    const editLink = id => `<a href="/admin/problems.html?edit=${id}">#${id}</a>`;
+    out.innerHTML = `
+      <div class="alert info" style="margin-top:8px">
+        ${r.targeted}문제에서 오답 설명 ${r.filled}개를 채웠습니다.
+        ${r.remaining > 0 ? `아직 ${r.remaining}문제 남았습니다 — 다시 누르면 이어서 채웁니다.` : ""}
+      </div>
+      ${r.explanationsToCheck.length > 0 ? `
+      <div class="alert" style="margin-top:8px">
+        아래 문제는 <b>해설이 이미 오답을 언급</b>합니다. 같은 말이 두 번 읽히니 해설에서 그 대목을
+        덜어내 주세요(해설은 서버가 건드리지 않았습니다):
+        ${r.explanationsToCheck.map(editLink).join(" ")}
+      </div>` : ""}
+      ${[...byProblem.entries()].map(([pid, items]) => `
+        <div style="margin-top:10px">
+          <b>${editLink(pid)}</b>
+          <ul class="meta" style="margin:4px 0 0">
+            ${items.map(f => `<li>${escapeHtml(f.choiceText)}<br>↳ ${escapeHtml(f.rationale)}</li>`).join("")}
+          </ul>
+        </div>`).join("")}`;
+  } catch (e) {
+    showError(out, e);
+  } finally {
+    btn.textContent = "오답 설명 채우기";
+    refreshCounts();
+    refreshAdminBadges();
+  }
+}
+</script>
+</body>
+</html>

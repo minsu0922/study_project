@@ -82,33 +82,6 @@ try {
       <div id="pRevisions"></div>
     </details>
 
-    <!-- 제목 백필(V13) — 제목 없는 문제가 있을 때만 나타난다.
-         평소에 안 보이는 것이 중요하다: 늘 떠 있으면 "누르면 뭔가 좋아지나" 싶어 누르게 되고,
-         이 버튼은 누를 때마다 Claude 요금이 나간다. 할 일이 있을 때만 보이면 그 자체가 안내다. -->
-    <div class="card" id="backfillCard" hidden style="margin-bottom:12px">
-      <b>제목 없는 문제 <span id="untitledCount"></span>건</b>
-      <div class="meta" style="margin:4px 0 8px">
-        목록 화면은 제목으로 문제를 고르게 한다. 제목이 없으면 지문 앞부분이 대신 뜨는데,
-        상황 서술로 시작하는 지문은 그렇게 잘라 놓으면 무엇을 묻는 문제인지 알 수 없다.
-        Claude가 한 번에 최대 40건까지 이름을 붙인다.
-      </div>
-      <button id="backfillBtn">제목 채우기</button>
-      <div id="backfillResult"></div>
-    </div>
-
-    <!-- 오답 설명 채우기(V15) — 제목 카드와 같은 규칙으로, 채울 것이 있을 때만 나타난다.
-         이 버튼도 누를 때마다 Claude 요금이 나간다. -->
-    <div class="card" id="rationaleCard" hidden style="margin-bottom:12px">
-      <b>오답 설명이 빠진 문제 <span id="missingRationaleCount"></span>건</b>
-      <div class="meta" style="margin:4px 0 8px">
-        오답 설명 칸이 생기기 전에 승인된 문제들이다. 지금은 틀려도 "왜 그게 아닌지"가
-        보기 아래에 뜨지 않는다. Claude가 한 번에 최대 10문제까지 채운다.
-        <b>해설은 바뀌지 않는다</b> — 되풀이가 생기는 문제만 아래에 이름이 뜨고, 다듬는 건 사람이 한다.
-      </div>
-      <button id="rationaleBtn">오답 설명 채우기</button>
-      <div id="rationaleResult"></div>
-    </div>
-
     <h3>문제 목록 <span class="meta">(행을 누르면 위 폼에서 수정)</span></h3>
     <!-- 필터(2026-08-29). 서버에는 분야·유형 파라미터가 <이미 있었는데> 화면이 쓰지 않아,
          문제 76개를 네 쪽에 걸쳐 눈으로 훑는 수밖에 없었다. 난이도·근거 문서는 이번에 더했다 —
@@ -144,8 +117,6 @@ if (initAdminPage("problems")) {
   initProblemForm();
   initListFilters();
   loadProblems();
-  refreshBackfillCard();
-  refreshRationaleCard();
 
   const editId = param("edit");
   if (editId) {
@@ -167,8 +138,6 @@ function initProblemForm() {
   document.getElementById("pType").addEventListener("change", renderTypeFields);
   renderTypeFields();
 
-  document.getElementById("backfillBtn").addEventListener("click", backfillTitles);
-  document.getElementById("rationaleBtn").addEventListener("click", backfillRationales);
   document.getElementById("addChoiceBtn").addEventListener("click", () => addChoiceRow());
   // 정답 라디오를 옮기면 설명 칸도 따라 접힌다. 줄마다 리스너를 달지 않고 컨테이너에서 한 번만
   // 받는 이유: 보기 줄은 계속 생겼다 사라지므로, 줄에 달면 새로 만든 줄마다 다시 달아야 한다.
@@ -455,133 +424,6 @@ function loadProblems(opts) {
     },
     emptyText: "조건에 맞는 문제가 없습니다 — 필터를 지우면 전체가 보입니다.",
   }, opts);
-}
-
-/* ═══════════ 제목 백필 ═══════════ */
-
-/**
- * 제목 없는 문제가 있을 때만 카드를 띄운다. 조회 실패는 조용히 숨긴다 — 부가 기능이라 목록을 막을 이유가 없다.
- *
- * 단, <결과가 떠 있으면 0건이어도 숨기지 않는다>. 마지막 한 건을 채우면 개수가 0이 되는데
- * 그때 카드를 접어 버리면 방금 붙은 목록이 <읽기도 전에> 사라진다. 눈으로 확인하라고 만든
- * 목록이 확인할 수 없게 되는 셈이다. (2026-08-28, 오답 설명 쪽에서 실제로 겪고 양쪽 다 고쳤다.)
- */
-async function refreshBackfillCard() {
-  const card = document.getElementById("backfillCard");
-  const showingResult = document.getElementById("backfillResult").innerHTML !== "";
-  try {
-    const count = await api("/api/admin/problems/untitled-count");
-    card.hidden = count === 0 && !showingResult;
-    document.getElementById("untitledCount").textContent = count;
-  } catch (e) {
-    card.hidden = !showingResult;
-  }
-}
-
-/**
- * 모델이 지은 제목을 <그 자리에서 보여 준다>.
- *
- * 이 작업은 사람 확인 없이 DB에 값을 넣는다. 건수만 알려 주면 결과를 보려고 목록을 다시
- * 열어 한 줄씩 찾아야 하는데, 그러면 대개 확인하지 않는다. 방금 붙은 제목이 눈앞에 뜨면
- * 이상한 것이 있을 때 바로 눈에 띄고, 행을 눌러 고치면 된다.
- *
- * 버튼을 잠그는 이유: 수십 초 걸리는 외부 호출이라 응답이 없는 동안 사람이 또 누른다.
- * 두 번 누르면 같은 문제에 두 번 요금을 낸다(제목이 이미 채워져 두 번째는 아무것도 안 바꾼다).
- */
-async function backfillTitles() {
-  const btn = document.getElementById("backfillBtn");
-  const out = document.getElementById("backfillResult");
-  btn.disabled = true;
-  btn.textContent = "제목 짓는 중… (수십 초 걸립니다)";
-  out.innerHTML = "";
-  try {
-    const r = await api("/api/admin/problems/backfill-titles", { method: "POST" });
-    const missed = r.targeted - r.filled;
-    out.innerHTML = `
-      <div class="alert info" style="margin-top:8px">
-        ${r.filled}건 채웠습니다.
-        ${missed > 0 ? `모델이 ${missed}건을 빠뜨렸습니다 — 다시 누르면 그 건들부터 집어 옵니다.` : ""}
-        ${r.remaining > 0 ? `아직 ${r.remaining}건 남았습니다.` : ""}
-      </div>
-      <ul class="meta" style="margin:8px 0 0">
-        ${r.titles.map(t => `<li>#${t.problemId} — ${escapeHtml(t.title)}</li>`).join("")}
-      </ul>`;
-    loadProblems();      // 목록의 "(제목 없음)"이 사라진 것을 바로 보여 준다
-    refreshBackfillCard();
-  } catch (e) {
-    showError(out, e);   // LLM_004(키 없음)·LLM_003(API 오류)이 그대로 표시된다
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "제목 채우기";
-  }
-}
-
-/* ═══════════ 오답 설명 채우기 ═══════════ */
-
-/**
- * 제목 카드와 같은 규칙 — 채울 것이 있을 때만 띄우고, 조회 실패는 조용히 숨긴다.
- * 결과가 떠 있으면 0건이어도 접지 않는다(refreshBackfillCard 주석에 사연을 적었다).
- */
-async function refreshRationaleCard() {
-  const card = document.getElementById("rationaleCard");
-  const showingResult = document.getElementById("rationaleResult").innerHTML !== "";
-  try {
-    const count = await api("/api/admin/problems/missing-rationale-count");
-    card.hidden = count === 0 && !showingResult;
-    document.getElementById("missingRationaleCount").textContent = count;
-  } catch (e) {
-    card.hidden = !showingResult;
-  }
-}
-
-/**
- * 채운 설명을 <보기 원문과 나란히> 보여 준다.
- *
- * 설명만 죽 늘어놓으면 "그럴듯한 문장 여러 개"로 보여서 눈이 미끄러진다. 이 작업의 유일한
- * 사고 유형은 <엉뚱한 보기에 설명이 붙는 것>인데, 그건 보기 원문이 옆에 있어야만 보인다.
- * 그래서 서버가 choiceText를 함께 내려준다.
- *
- * 진행 문구가 제목 쪽보다 긴 이유: 문제당 해설까지 읽고 오답 셋을 쓰므로 실제로 더 오래 걸린다.
- * 사람은 "멈춘 건가?" 싶으면 새로고침을 누르고, 그러면 요금만 나가고 결과는 못 본다.
- */
-async function backfillRationales() {
-  const btn = document.getElementById("rationaleBtn");
-  const out = document.getElementById("rationaleResult");
-  btn.disabled = true;
-  btn.textContent = "설명 쓰는 중… (1분 넘게 걸릴 수 있습니다)";
-  out.innerHTML = "";
-  try {
-    const r = await api("/api/admin/problems/backfill-rationales", { method: "POST" });
-    const byProblem = new Map();
-    for (const f of r.rationales) {
-      if (!byProblem.has(f.problemId)) byProblem.set(f.problemId, []);
-      byProblem.get(f.problemId).push(f);
-    }
-    out.innerHTML = `
-      <div class="alert info" style="margin-top:8px">
-        ${r.targeted}문제에서 오답 설명 ${r.filled}개를 채웠습니다.
-        ${r.remaining > 0 ? `아직 ${r.remaining}문제 남았습니다 — 다시 누르면 이어서 채웁니다.` : ""}
-      </div>
-      ${r.explanationsToCheck.length > 0 ? `
-      <div class="alert" style="margin-top:8px">
-        아래 문제는 <b>해설이 이미 오답을 언급</b>합니다. 같은 말이 두 번 읽히니 해설에서 그 대목을
-        덜어내 주세요(해설은 서버가 건드리지 않았습니다):
-        ${r.explanationsToCheck.map(id => `<a href="?edit=${id}">#${id}</a>`).join(" ")}
-      </div>` : ""}
-      ${[...byProblem.entries()].map(([pid, items]) => `
-        <div style="margin-top:10px">
-          <b><a href="?edit=${pid}">#${pid}</a></b>
-          <ul class="meta" style="margin:4px 0 0">
-            ${items.map(f => `<li>${escapeHtml(f.choiceText)}<br>↳ ${escapeHtml(f.rationale)}</li>`).join("")}
-          </ul>
-        </div>`).join("")}`;
-    refreshRationaleCard();
-  } catch (e) {
-    showError(out, e);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "오답 설명 채우기";
-  }
 }
 
 /**

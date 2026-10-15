@@ -127,7 +127,7 @@ function renderActivity(a) {
       }).join("")
       + (a.receivedReportCount > a.recentReports.length
           ? `<div class="meta" style="margin-top:6px">최근 ${a.recentReports.length}건만 보입니다.
-               전체는 <a href="/admin/comments.html">토론 신고</a>에서 봅니다.</div>` : "");
+               전체는 <a href="/admin/comments.html">게시글 신고</a>에서 봅니다.</div>` : "");
 
   document.getElementById("activity").hidden = false;
 }

@@ -31,34 +31,34 @@
  * 지우지는 않았다 — 출제 분포 히트맵과 승인율 차트는 거기서만 볼 수 있다. 기둥 맨 위
  * "현황"을 누르면 간다.
  *
- * <h2>"주제 범위"도 항목이 아니다</h2>
+ * <h2>한 메뉴에 한 기능 (2026-10-15)</h2>
  *
- * <p>그 화면은 2026-08-29에 <b>생성 화면 안으로 흡수됐다</b>(topics.html은 넘겨주기만 한다).
- * 주제를 정하는 것은 생성의 <입력>이지 별개 작업이 아니라는 판단이었고, 여전히 맞다.
- * 그래서 주제 범위 상태는 "생성 실행" 항목의 배지로 보인다.
+ * <p>화면 하나에 기능이 둘 이상 붙어 있던 곳을 나눴다. 생성 화면에 있던 주제 대기열,
+ * 문제 화면에 있던 AI 일괄 작업이 각자 메뉴가 됐다. 한때는 "주제는 생성의 입력"이라
+ * 생성 화면에 들였는데, 실제로 그 화면에 오는 이유는 대개 주제를 손보는 것이었다.
  */
 const ADMIN_MENUS = [
   { group: "할 일", items: [
     // 제보가 검수 옆인 것은 하는 일이 같아서다 — 둘 다 <읽고 판정하는> 화면이고,
     // 다른 것은 판정 대상이 출제 전이냐 후냐뿐이다. 검수함이 비면 제보함을 보는 흐름.
-    { key: "llm",       label: "검수",      href: "/admin/llm.html",       icon: "📋" },
-    { key: "reports",   label: "제보",      href: "/admin/reports.html",   icon: "🚩" },
+    { key: "llm",       label: "검수",        href: "/admin/llm.html",       icon: "📋" },
+    { key: "reports",   label: "오류 제보",   href: "/admin/reports.html",   icon: "🚩" },
     // 제보 옆인 이유: 둘 다 학습자가 올린 것을 읽고 판정하는 화면이다. 대상이 문제냐 토론방의 글·댓글이냐만 다르다.
-    { key: "comments",  label: "토론 신고", href: "/admin/comments.html",  icon: "💬" },
+    { key: "comments",  label: "게시글 신고", href: "/admin/comments.html",  icon: "💬" },
   ]},
   { group: "콘텐츠", items: [
     { key: "problems",  label: "문제",      href: "/admin/problems.html",  icon: "🗂️" },
     { key: "documents", label: "문서",      href: "/admin/documents.html", icon: "📚" },
   ]},
-  { group: "생성", items: [
-    { key: "generate",  label: "생성 실행", href: "/admin/generate.html",  icon: "✨" },
-    // 배치가 맨 끝인 것은 자리가 남아서가 아니다. 메뉴가 일의 단계 순인데 배치는
-    // 단계가 아니라 <기계 상태>라 그 흐름에 낄 자리가 없다. 매일 보는 것도 아니다.
+  // 이 묶음의 화면은 전부 Claude를 부른다(주제 대기열은 배치가 부를 것을 정한다).
+  { group: "AI 생성", items: [
+    { key: "generate",  label: "직접 생성",   href: "/admin/generate.html",  icon: "✨" },
+    { key: "topics",    label: "주제 대기열", href: "/admin/topics.html",    icon: "🧭" },
+    { key: "backfill",  label: "일괄 보정",   href: "/admin/backfill.html",  icon: "🩹" },
+  ]},
+  // 배치는 일의 단계가 아니라 <기계>다. 상태(현황)와 설정(분야)은 한 기계의 두 면이라 나란히 둔다.
+  { group: "배치", items: [
     { key: "batch",     label: "배치 현황", href: "/admin/batch.html",     icon: "📅" },
-    // 분야 설정은 배치 바로 다음 자리다(Task 10) — 배치가 <기계의 상태>를 보여주는
-    // 화면이라면, 여기는 그 기계가 무엇을 켜고 어떤 순서·힌트로 돌지 정하는 <기계의
-    // 설정>이다. 상태와 설정은 한 기계의 두 면이라 나란히 두는 것이 자연스럽고,
-    // 단계 순서 규칙(위 주석) 밖에 있다는 점도 배치와 같다.
     { key: "settings",  label: "분야 설정", href: "/admin/settings.html",  icon: "⚙️" },
   ]},
   // 따로 묶은 이유: 위 셋은 문제와 문서를 다루고 여기는 사람을 다룬다. 매일 보는 화면도 아니다 —
@@ -133,22 +133,27 @@ function renderAdminShell(active = "") {
  *   <li><b>제보</b> — <b>주황</b>이다. "출제된 문제가 틀렸을지 모른다"는 신호라 하나만
  *       있어도 눈에 걸려야 한다. 검수 배지에 합치지 않은 이유이기도 하다.
  *       문제 제보 대기 수와 토론방 "오류 지적" 글 중 답 전인 수를 합친다 — 둘 다 그 화면에서 본다.
- *   <li><b>생성</b> — <b>뜻이 반대다.</b> 주제 범위가 0이면 배치가 모델 자동 선택으로
+ *   <li><b>주제 대기열</b> — <b>뜻이 반대다.</b> 개념 주제가 0이면 배치가 모델 자동 선택으로
  *       돌아가므로, <b>0일 때</b> "범위 없음"을 주황으로 띄운다. 숫자를 세는 배지가 아니다.
+ *   <li><b>일괄 보정</b> — 제목이나 오답 설명이 빈 문제 수. 회색이다. 급한 일이 아니라 남은 일이다.
  * </ul>
  */
 async function refreshAdminBadges() {
-  const [problems, documents, topics, reports, commentReports, errata] = await Promise.all([
+  const [problems, documents, topics, reports, commentReports, errata, untitled, noRationale] = await Promise.all([
     countOf("/api/admin/llm-problems/pending-count"),
     countOf("/api/admin/llm-documents/pending-count"),
     countOf("/api/admin/topic-queue/count"),
     countOf("/api/admin/reports/pending-count"),
     countOf("/api/admin/comment-reports/pending-count"),
     countOf("/api/admin/errata-posts/pending-count"),
+    // 이 둘은 {count}가 아니라 숫자 하나를 돌려준다
+    plainCountOf("/api/admin/problems/untitled-count"),
+    plainCountOf("/api/admin/problems/missing-rationale-count"),
   ]);
 
   setBadge("llm", problems + documents, false);
-  setBadge("generate", topics === 0 ? "범위 없음" : null, topics === 0);
+  setBadge("topics", topics === 0 ? "범위 없음" : null, topics === 0);
+  setBadge("backfill", untitled + noRationale, false);
   setBadge("reports", reports + errata, reports + errata > 0);
   setBadge("comments", commentReports, commentReports > 0);
 
@@ -165,6 +170,15 @@ async function refreshAdminBadges() {
   document.dispatchEvent(new CustomEvent("admin:counts", {
     detail: { problems, documents, topics, reports, commentReports, errata },
   }));
+}
+
+/** 숫자 하나를 돌려주는 개수 API용. 실패하면 0 — countOf와 같은 이유다. */
+async function plainCountOf(path) {
+  try {
+    return Number(await api(path)) || 0;
+  } catch (e) {
+    return 0;
+  }
 }
 
 /** 배지 하나 — 값이 null이거나 0이면 숨긴다(0을 붙여 두면 늘 시끄럽다). */

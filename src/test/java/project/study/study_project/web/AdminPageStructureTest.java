@@ -23,9 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 게다가 콘솔은 <b>서버가 출입증 쿠키로 막고 있어</b>({@code AdminGateFilter}) HTTP로
  * 열려면 로그인부터 해야 한다 — 구조를 보자고 그 절차를 태울 이유가 없다.
  *
- * <p><b>{@code topics.html}은 목록에 없다.</b> 그 화면은 meta refresh로 넘겨주기만 하는
- * 열몇 줄짜리 파일이고 스크립트가 없다. 규칙을 들이대면 전부 실패하는데, 실패가 맞는
- * 것이 아니라 <b>다른 종류의 파일</b>이다.
+ * <p><b>넘겨주기 전용 화면은 목록에 없다.</b> meta refresh로 넘겨주기만 하는 열몇 줄짜리
+ * 파일이고 스크립트가 없다. 규칙을 들이대면 전부 실패하는데, 실패가 맞는 것이 아니라
+ * <b>다른 종류의 파일</b>이다. 지금은 그런 파일이 없다(topics.html은 2026-10-15에 다시 화면이 됐다).
  *
  * <p><b>못 잡는 것</b>은 분명히 해 둔다: 실행 중 JS 오류, 레이아웃 깨짐, 대비 미달.
  * 그건 콘솔을 띄워 눈으로 본다. 이 테스트가 답하는 질문은 하나다 — "재료가 다 들어갔나".
@@ -36,11 +36,12 @@ class AdminPageStructureTest {
             Path.of("src", "main", "resources", "static", "admin");
 
     /** 넘겨주기 전용이라 규칙 밖에 둔다(위 주석 참고). */
-    private static final String REDIRECT_ONLY = "topics.html";
+    private static final List<String> REDIRECT_ONLY = List.of();
 
     private static final List<String> ADMIN_PAGES = List.of(
             "index.html",
             "audit.html",
+            "backfill.html",
             "batch.html",
             "comments.html",
             "documents.html",
@@ -49,6 +50,7 @@ class AdminPageStructureTest {
             "problems.html",
             "reports.html",
             "settings.html",
+            "topics.html",
             "user.html",
             "users.html");
 
@@ -139,7 +141,7 @@ class AdminPageStructureTest {
             List<String> found = files
                     .map(path -> path.getFileName().toString())
                     .filter(name -> name.endsWith(".html"))
-                    .filter(name -> !name.equals(REDIRECT_ONLY))
+                    .filter(name -> !REDIRECT_ONLY.contains(name))
                     .sorted()
                     .toList();
 
