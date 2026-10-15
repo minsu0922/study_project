@@ -150,6 +150,23 @@ class CodeProblemWiringTest {
     }
 
     @Test
+    @DisplayName("검수 목록과 대기 수를 개념 문제·코드 문제로 가를 수 있다 — 검수함 탭")
+    void reviewListSplitsByCode() throws Exception {
+        long conceptBefore = llmProblemService.pendingCount(false);
+        long codeBefore = llmProblemService.pendingCount(true);
+        draftImportService.importFile(writeFile(List.of(
+                new CodeProblem.Part(0, CodeProblem.Kind.CODE_OUTPUT, "java", CODE_A, "1", 0, ""),
+                new CodeProblem.Part(1, CodeProblem.Kind.CODE_OUTPUT, "java", CODE_B, "2", 0, ""))));
+
+        assertThat(llmProblemService.pendingCount(true)).isEqualTo(codeBefore + 2);
+        assertThat(llmProblemService.pendingCount(false)).isEqualTo(conceptBefore);
+        assertThat(llmProblemService.getDrafts(null, TestDomains.LANGUAGE_RUNTIME, Difficulty.BEGINNER, null, true,
+                PageRequest.of(0, 200)).content()).extracting(LlmDraftResponse::question).contains(SAME_QUESTION);
+        assertThat(llmProblemService.getDrafts(null, TestDomains.LANGUAGE_RUNTIME, Difficulty.BEGINNER, null, false,
+                PageRequest.of(0, 200)).content()).extracting(LlmDraftResponse::question).doesNotContain(SAME_QUESTION);
+    }
+
+    @Test
     @DisplayName("코드가 딸리지 않은 코드 문제는 들여오지 않는다 — 코드 없이는 풀 수 없다")
     void dropsProblemWithoutCode() throws Exception {
         draftImportService.importFile(writeFile(List.of(

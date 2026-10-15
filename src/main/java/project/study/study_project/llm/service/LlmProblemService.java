@@ -562,9 +562,16 @@ public class LlmProblemService {
     @Transactional(readOnly = true)
     public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, DomainCode domain, Difficulty difficulty,
                                                     String documentSlug, Pageable pageable) {
+        return getDrafts(status, domain, difficulty, documentSlug, null, pageable);
+    }
+
+    /** @param code true면 코드 문제만, false면 개념 문제만, null이면 둘 다 */
+    @Transactional(readOnly = true)
+    public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, DomainCode domain, Difficulty difficulty,
+                                                    String documentSlug, Boolean code, Pageable pageable) {
         DraftStatus target = status != null ? status : DraftStatus.PENDING;
         return PageResponse.from(draftRepository
-                .findForReview(target, domain, difficulty, Texts.trimToNull(documentSlug), pageable)
+                .findForReview(target, domain, difficulty, Texts.trimToNull(documentSlug), code, pageable)
                 .map(this::toResponse));
     }
 
@@ -581,6 +588,14 @@ public class LlmProblemService {
     @Transactional(readOnly = true)
     public long pendingCount() {
         return draftRepository.countByStatus(DraftStatus.PENDING);
+    }
+
+    /** @param code true면 코드 문제만, false면 개념 문제만 센다 */
+    @Transactional(readOnly = true)
+    public long pendingCount(boolean code) {
+        return code
+                ? draftRepository.countByStatusAndCodeKindIsNotNull(DraftStatus.PENDING)
+                : draftRepository.countByStatusAndCodeKindIsNull(DraftStatus.PENDING);
     }
 
     /**

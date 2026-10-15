@@ -133,9 +133,11 @@ public class AdminLlmProblemController {
             @RequestParam(required = false) DomainCode domain,
             @RequestParam(required = false) Difficulty difficulty,
             @RequestParam(required = false) String documentSlug,
+            // true면 코드 문제만, false면 개념 문제만. 없으면 둘 다(예전 목록)
+            @RequestParam(required = false) Boolean code,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(llmProblemService.getDrafts(status, domain, difficulty, documentSlug, pageable));
+        return ApiResponse.ok(llmProblemService.getDrafts(status, domain, difficulty, documentSlug, code, pageable));
     }
 
     /**
@@ -149,10 +151,11 @@ public class AdminLlmProblemController {
         return ApiResponse.ok(llmProblemService.getReviewDocumentSlugs(status));
     }
 
-    /** 검수 대기 건수 — 관리자 화면 배지용. */
+    /** 검수 대기 건수 — 관리자 화면 배지용. {@code code}를 주면 개념·코드 문제 중 한쪽만 센다(검수함 탭). */
     @GetMapping("/pending-count")
-    public ApiResponse<Map<String, Long>> pendingCount() {
-        return ApiResponse.ok(Map.of("count", llmProblemService.pendingCount()));
+    public ApiResponse<Map<String, Long>> pendingCount(@RequestParam(required = false) Boolean code) {
+        return ApiResponse.ok(Map.of("count",
+                code == null ? llmProblemService.pendingCount() : llmProblemService.pendingCount(code)));
     }
 
     /** 승인 — 정식 문제로 등록하고 생성된 문제 상세를 돌려준다(관리 화면에서 바로 확인·수정 가능). */

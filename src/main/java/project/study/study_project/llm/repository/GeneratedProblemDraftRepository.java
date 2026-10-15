@@ -44,6 +44,8 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
      * @param difficulty   null이면 난이도를 가리지 않는다
      * @param documentSlug null이면 근거 문서를 가리지 않는다. <b>빈 문자열이 아니라 null</b>이어야
      *                     한다 — 컨트롤러가 빈 값을 null로 정규화한다
+     * @param code         true면 코드 문제만, false면 개념 문제만, null이면 둘 다(2026-10-15).
+     *                     검수함이 둘을 탭으로 나눠 본다
      */
     @Query("""
             select d from GeneratedProblemDraft d
@@ -51,6 +53,9 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
               and (:domain is null or d.domain = :domain)
               and (:difficulty is null or d.difficulty = :difficulty)
               and (:documentSlug is null or d.documentSlug = :documentSlug)
+              and (:code is null
+                   or (:code = true and d.codeKind is not null)
+                   or (:code = false and d.codeKind is null))
             order by d.createdAt asc
             """)
     Page<GeneratedProblemDraft> findForReview(
@@ -58,6 +63,7 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
             @Param("domain") DomainCode domain,
             @Param("difficulty") Difficulty difficulty,
             @Param("documentSlug") String documentSlug,
+            @Param("code") Boolean code,
             Pageable pageable);
 
     /**
@@ -76,6 +82,12 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
 
     /** 대기 건수 — 관리자 화면 배지("검수 대기 N건")용. */
     long countByStatus(DraftStatus status);
+
+    /** 개념 문제만의 건수 — 검수함 탭의 숫자. */
+    long countByStatusAndCodeKindIsNull(DraftStatus status);
+
+    /** 코드 문제만의 건수 — 검수함 탭의 숫자. */
+    long countByStatusAndCodeKindIsNotNull(DraftStatus status);
 
     /**
      * 분야 삭제 전 사용량 확인(6번 작업, {@code DomainSettingService#delete})용 —
