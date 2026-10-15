@@ -16,26 +16,21 @@
  * ===================================================================== */
 
 /**
- * 콘솔 메뉴 — <b>세 묶음</b>으로 나눈다.
+ * 콘솔 메뉴 — 일의 종류로 묶는다.
  *
  * <p>예전에는 평평한 탭 일곱이었다. "지금 할 일"(검수·제보)과 "가끔 보는 것"(문제 목록,
  * 배치 현황)이 같은 줄에 서 있어서, 콘솔을 여는 이유의 대부분인 검수가 다른 것들과
- * 같은 무게로 보였다.
+ * 같은 무게로 보였다. 그래서 할 일을 맨 위에 두고, 콘솔 입구도 검수 화면이다.
  *
- * <p><b>배지의 뜻이 항목마다 다르다.</b> 셋 다 숫자 배지지만 읽는 법이 같지 않다 —
+ * <p><b>배지의 뜻이 항목마다 다르다.</b> 다 숫자 배지지만 읽는 법이 같지 않다 —
  * 자세한 것은 {@link refreshAdminBadges}. 여기서는 "어느 자리에 붙는가"만 정한다.
- *
- * <h2>현황(index)이 메뉴에서 빠졌다</h2>
- *
- * <p>콘솔에 들어오는 이유가 대부분 검수라 <b>검수를 첫 화면</b>으로 삼는다. 현황 화면을
- * 지우지는 않았다 — 출제 분포 히트맵과 승인율 차트는 거기서만 볼 수 있다. 기둥 맨 위
- * "현황"을 누르면 간다.
  *
  * <h2>한 메뉴에 한 기능 (2026-10-15)</h2>
  *
  * <p>화면 하나에 기능이 둘 이상 붙어 있던 곳을 나눴다. 생성 화면에 있던 주제 대기열,
- * 문제 화면에 있던 AI 일괄 작업이 각자 메뉴가 됐다. 한때는 "주제는 생성의 입력"이라
- * 생성 화면에 들였는데, 실제로 그 화면에 오는 이유는 대개 주제를 손보는 것이었다.
+ * 문제 화면에 있던 AI 일괄 작업, 현황 화면에 섞여 있던 학습 통계·출제 분포·승인율이
+ * 각자 메뉴가 됐다. 승인율은 배치 현황에도 있어 AI 품질 하나로 합쳤다.
+ * 현황은 메뉴 밖 기둥 맨 위 글자로만 들어가던 화면이라, 나누면서 메뉴로 올렸다.
  */
 const ADMIN_MENUS = [
   { group: "할 일", items: [
@@ -61,6 +56,12 @@ const ADMIN_MENUS = [
     { key: "batch",     label: "배치 현황", href: "/admin/batch.html",     icon: "📅" },
     { key: "settings",  label: "분야 설정", href: "/admin/settings.html",  icon: "⚙️" },
   ]},
+  // 읽기만 하는 화면들. 매일 볼 것은 아니고 무엇을 고칠지 정할 때 본다.
+  { group: "통계", items: [
+    { key: "stats",        label: "학습 현황", href: "/admin/index.html",        icon: "📈" },
+    { key: "distribution", label: "출제 분포", href: "/admin/distribution.html", icon: "🧮" },
+    { key: "quality",      label: "AI 품질",   href: "/admin/quality.html",      icon: "🎯" },
+  ]},
   // 따로 묶은 이유: 위 셋은 문제와 문서를 다루고 여기는 사람을 다룬다. 매일 보는 화면도 아니다 —
   // 대개 토론 신고의 "글쓴이 정지"로 넘어온다.
   { group: "운영", items: [
@@ -80,7 +81,7 @@ const ADMIN_MENUS = [
  * <p><b>[나가는 문은 하나]</b> "← 학습 화면으로"를 띠에 둔다. 관리자도 학습자라 오갈 일이
  * 있고 막을 이유가 없다 — 다만 <b>메뉴가 아니라 문</b>이라 기둥이 아니라 띠에 있다.
  *
- * @param active ADMIN_MENUS의 key. 해당 없으면 빈 문자열(현황 화면이 그렇다)
+ * @param active ADMIN_MENUS의 key. 사용자 상세처럼 메뉴에 없는 화면은 그 부모의 key를 준다
  */
 function renderAdminShell(active = "") {
   applyStoredTheme();
@@ -101,7 +102,6 @@ function renderAdminShell(active = "") {
     </header>
 
     <nav class="shell-side" aria-label="관리 메뉴">
-      <a class="brand" href="/admin/index.html">현황</a>
       ${ADMIN_MENUS.map(g => `
         <div class="shell-group">${escapeHtml(g.group)}</div>
         ${g.items.map(m => `

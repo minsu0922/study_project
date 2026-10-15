@@ -138,7 +138,7 @@ const MENUS = [
   // 콘솔은 가끔 들르는 부록이 아니라 매일 들어가는 작업장이고(검수·제보가 쌓인다),
   // spacer 뒤는 화면 높이에 따라 위치가 달라져 눈이 매번 다시 찾아야 한다.
   // 맨 위는 어느 화면에서나 같은 자리다. "다른 방"이라는 뜻은 구분선과 ↗로 지킨다.
-  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/index.html", need: "admin", icon: "🛠",
+  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/llm.html", need: "admin", icon: "🛠",
     badge: "adminBadge" },
 ];
 
@@ -226,7 +226,7 @@ function renderShell({ active = "", title = "" } = {}) {
            tab 속성이 있는 것만 담는데 콘솔에는 그것이 없다(다섯 칸을 학습 화면이
            다 쓴다). 그래서 폰에서 관리자는 주소를 직접 치는 수밖에 없었다.
            콘솔 쪽 띠에 있는 "← 학습 화면으로"와 짝이 되는 문이다. -->
-      ${console_.length ? `<a class="shell-door" href="/admin/index.html">🛠 관리<span id="adminBadge-door"></span></a>` : ""}
+      ${console_.length ? `<a class="shell-door" href="/admin/llm.html">🛠 관리<span id="adminBadge-door"></span></a>` : ""}
       <!-- 탭바에 자리를 못 얻은 메뉴(커뮤니티·마이페이지·설정)로 가는 길 — 2026-09-08.
            탭 다섯은 학습 화면이 다 쓰고, 기둥은 좁은 화면에서 숨는다. 그래서 그전에는
            내 기록 화면 본문에 입구를 뒀는데, 그건 <메뉴에 이미 있는 화면을 본문이 또
@@ -250,7 +250,7 @@ function renderShell({ active = "", title = "" } = {}) {
         <a class="brand" href="/">csquiz</a>
         <nav class="shell-nav" aria-label="주 메뉴">${headLinks(study, active)}</nav>
         <span class="spacer"></span>
-        ${console_.length ? `<a class="shell-door" href="/admin/index.html">🛠 관리 콘솔<span id="adminBadge"></span></a>` : ""}
+        ${console_.length ? `<a class="shell-door" href="/admin/llm.html">🛠 관리 콘솔<span id="adminBadge"></span></a>` : ""}
         <!-- 알림 종은 계정 메뉴 밖에 둔다. 메뉴 안에 넣으면 펴 보기 전에는 새 알림이 있는지 모른다. -->
         ${anon ? "" : `<a class="shell-bell" href="/notifications.html" title="알림"
               aria-label="알림">🔔<span id="notiBadge"></span></a>`}

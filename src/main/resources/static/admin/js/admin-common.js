@@ -75,7 +75,7 @@ function goLlm(params) {
   location.href = "/admin/llm.html?" + new URLSearchParams(params).toString();
 }
 
-/** 생성 화면으로 — 현황판의 빈 칸에서 "이 칸을 채우자"로 넘어올 때. 폼만 채우고 호출은 안 한다. */
+/** 생성 화면으로 — 출제 분포의 빈 칸에서 "이 칸을 채우자"로 넘어올 때. 폼만 채우고 호출은 안 한다. */
 function goGenerate(params) {
   location.href = "/admin/generate.html?" + new URLSearchParams(params).toString();
 }

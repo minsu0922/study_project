@@ -140,7 +140,7 @@ try {
  * /admin/topics.html(주제 대기열)로 옮겼다. 옛 주소 generate.html#topics는 그쪽으로 넘겨 준다.
  *
  * [주소로 상태를 받는다]
- *   ?domain=OS&difficulty=BEGINNER   현황판의 빈 칸에서 옴 → 폼을 채워 둔다(요청은 안 보낸다) */
+ *   ?domain=OS&difficulty=BEGINNER   출제 분포의 빈 칸에서 옴 → 폼을 채워 둔다(요청은 안 보낸다) */
 
 const QUESTION_KINDS = [
   ["SITUATION", "상황 적용"],
@@ -341,7 +341,7 @@ function applyDeepLink() {
   const difficulty = param("difficulty");
   if (domain) document.getElementById("gDomain").value = domain;
   if (difficulty) document.getElementById("gDifficulty").value = difficulty;
-  // 현황판의 빈 칸에서 "이 칸을 채우자"로 넘어온 경우다 — 채워 둔 폼이 접혀 있으면
+  // 출제 분포의 빈 칸에서 "이 칸을 채우자"로 넘어온 경우다 — 채워 둔 폼이 접혀 있으면
   // 링크를 누른 사람이 아무 일도 안 일어난 줄 안다(2026-09-08에 폼을 접으면서 생긴 자리).
   if (domain || difficulty) document.getElementById("genPanel").open = true;
 }

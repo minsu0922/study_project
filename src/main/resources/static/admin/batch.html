@@ -43,15 +43,12 @@ try {
       <div id="bCal" class="meta">불러오는 중…</div>
     </div>
 
-    <!-- 수확을 두 단계로 나눠 본다(2026-09-19). "요청한 만큼 나왔나"와 "나온 것이 승인됐나"는
-         고칠 곳이 다르다 — 앞은 재료·제약(프롬프트), 뒤는 문제의 질(검수). 한 숫자로 합치면
-         고급이 네 주기 연속 1~2개만 나온 것이 승인율 뒤에 숨는다. 순서도 파이프라인 순서대로. -->
+    <!-- "요청한 만큼 나왔나"와 "나온 것이 승인됐나"는 고칠 곳이 다르다 — 앞은 재료·제약(프롬프트),
+         뒤는 문제의 질(검수). 앞은 기계 상태라 여기 두고, 뒤는 2026-10-15에 AI 품질 화면으로 옮겼다
+         (현황 화면의 모델별 승인율과 같은 것을 두 화면이 보여 주고 있었다). -->
     <div class="card">
-      <h3>최근 30일 수확</h3>
-      <h4 class="harvest-step">① 요청한 만큼 나왔나 <span class="meta">(난이도별 · 예약 실행 결과 파일 기준)</span></h4>
+      <h3>최근 30일 생산량 <span class="meta">(난이도별 · 예약 실행 결과 파일 기준 · 승인됐는지는 <a href="/admin/quality.html">AI 품질</a>)</span></h3>
       <div id="bYield" class="meta">불러오는 중…</div>
-      <h4 class="harvest-step">② 나온 것이 승인됐나 <span class="meta">(들어온 문제 초안 기준)</span></h4>
-      <div id="bHarvest" class="meta">불러오는 중…</div>
     </div>
 
     <!-- 아래 넷은 <자세히 보기>다. 달력이 요약해 주므로 평소에는 접어 둔다.
@@ -124,7 +121,6 @@ async function loadBatchStatus() {
     renderSummary(s);
     renderCalendar(s);
     renderYield(s.yieldByDifficulty);
-    renderHarvest(s);
     renderState(s);
     renderPlan(s);
     renderWaiting(s.waitingFiles);
@@ -394,44 +390,9 @@ function renderYield(rows) {
   }).join("") + `</div>`;
 }
 
-/* ── 수확 ─────────────────────────────────────────────────────────────
- *
- * 들여오기 이력은 "몇 건 들어왔나"까지만 답한다. 열 건이 들어와도 아홉이 거절되면
- * 배치는 돈만 쓰고 아무것도 못 늘린 것인데, 그 구분이 화면 어디에도 없었다. */
-function renderHarvest(s) {
-  const h = s.harvest;
-  const el = document.getElementById("bHarvest");
-  if (h.generated === 0) {
-    el.innerHTML = `최근 ${h.days}일 동안 만들어진 문제 초안이 없습니다.`
-      + (s.enabled ? "" : ` 배치가 꺼져 있으니 당연한 결과입니다.`);
-    return;
-  }
-  const pct = n => (n / h.generated * 100).toFixed(1);
-  // 승인율은 <검수를 마친 것> 중의 비율이다. 대기까지 분모에 넣으면 검수를 미루기만 해도
-  // 승인율이 떨어져, 모델 품질을 보려던 숫자가 내 검수 속도를 재는 숫자가 된다.
-  const reviewed = h.approved + h.rejected;
-  const rate = reviewed === 0
-    ? `<span class="meta">아직 검수한 것이 없습니다</span>`
-    : `승인율 <b>${Math.round(h.approved / reviewed * 100)}%</b> <span class="meta">(검수한 ${reviewed}건 기준)</span>`;
-
-  el.innerHTML = `
-    <div class="harvest-bar">
-      <i class="ap" style="width:${pct(h.approved)}%"></i>
-      <i class="rj" style="width:${pct(h.rejected)}%"></i>
-      <i class="pd" style="width:${pct(h.pending)}%"></i>
-    </div>
-    <div class="harvest-nums">
-      <span>생성 <b>${h.generated}</b>건</span>
-      <span>승인 <b>${h.approved}</b></span>
-      <span>거절 <b>${h.rejected}</b></span>
-      <span>대기 <b>${h.pending}</b></span>
-      <span>${rate}</span>
-    </div>`;
-}
-
 function renderState(s) {
   // 켜짐/꺼짐을 색으로도 구분한다. 이 화면을 여는 가장 흔한 이유가 "왜 문제가 안 들어오지"인데,
-  // 그 답이 꺼져 있는 것일 때가 많아서 한눈에 보여야 한다(현황 화면의 배치 줄과 같은 판단).
+  // 그 답이 꺼져 있는 것일 때가 많아서 한눈에 보여야 한다.
   const state = s.enabled
     ? `<span class="batch-state on">일일 배치 켜짐 — 매일 06:17(KST)</span>`
     : `<span class="batch-state off">일일 배치 꺼짐 — 예약 실행이 아무것도 만들지 않습니다</span>`;
