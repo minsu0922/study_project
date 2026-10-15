@@ -5,7 +5,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.admin.dto.AdminBatchStatus;
+import project.study.study_project.admin.dto.AdminCodeBatchStatus;
 import project.study.study_project.admin.service.AdminBatchService;
+import project.study.study_project.admin.service.AdminCodeBatchService;
 import project.study.study_project.global.response.ApiResponse;
 
 /**
@@ -26,9 +28,16 @@ import project.study.study_project.global.response.ApiResponse;
 public class AdminBatchController {
 
     private final AdminBatchService adminBatchService;
+    private final AdminCodeBatchService adminCodeBatchService;
 
     @GetMapping
     public ApiResponse<AdminBatchStatus> status() {
         return ApiResponse.ok(adminBatchService.getStatus());
+    }
+
+    /** 주 1회 코드 문제 배치. 주기와 결과 파일이 일일 배치와 달라 따로 낸다. */
+    @GetMapping("/code")
+    public ApiResponse<AdminCodeBatchStatus> codeStatus() {
+        return ApiResponse.ok(adminCodeBatchService.getStatus());
     }
 }

@@ -51,6 +51,13 @@ try {
       <div id="bYield" class="meta">불러오는 중…</div>
     </div>
 
+    <!-- 주 1회 코드 문제 배치(2026-10-15). 위 달력·생산량은 4일 주기 일일 배치만 센다 —
+         주기와 결과 파일이 달라 한 표에 섞지 않고 따로 둔다. -->
+    <div class="card">
+      <h3>주간 코드 문제 <span class="meta">(매주 일요일 · 실행 검증을 통과한 문제만 들어온다)</span></h3>
+      <div id="bCode" class="meta">불러오는 중…</div>
+    </div>
+
     <!-- 아래 넷은 <자세히 보기>다. 달력이 요약해 주므로 평소에는 접어 둔다.
          "안 들어온 파일"만은 할 일이 있을 때(1건 이상) 스스로 펼친다 — 접힌 채로 두면
          앱을 켜기만 하면 되는 일을 며칠씩 모른다. -->
@@ -87,6 +94,8 @@ try {
         배치는 <b>GitHub Actions에서 돕니다</b> — 이 화면에서 켜거나 즉시 실행할 수 없습니다.<br>
         켜고 끄기: <code>application.yml</code>의 <code>batch-enabled</code>를 고쳐 커밋합니다.<br>
         한 번 돌리기: 저장소의 <b>Actions → llm-daily → Run workflow</b>.
+        코드 문제는 <b>Actions → LLM 코드 문제</b>이고, <code>batch-enabled</code>를 보지 않습니다 —
+        멈추려면 코드 문제 주제를 비웁니다.
         주제 범위 목록의 <b>복사</b> 버튼이 거기 넣을 값을 만들어 줍니다.<br>
         지나간 날짜를 손으로 채울 때는 <code>--suffix</code>를 붙입니다 — 안 붙이면 그날 예약 실행이 죽습니다.
       </p>
@@ -113,6 +122,41 @@ try {
 <script>
 if (initAdminPage("batch")) {
   loadBatchStatus();
+  loadCodeBatch();
+}
+
+/* ── 주간 코드 문제 ─────────────────────────────────────────────────────
+ * 일일 배치와 따로 부른다. 한쪽이 실패해도 다른 쪽은 보여야 한다. */
+async function loadCodeBatch() {
+  const el = document.getElementById("bCode");
+  let s;
+  try {
+    s = await api("/api/admin/batch-status/code");
+  } catch (e) {
+    el.textContent = "불러오지 못했습니다: " + e.message;
+    return;
+  }
+  const at = s.nextRunAt.replace("T", " ").slice(0, 16);
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][new Date(s.nextRunAt).getDay()];
+  // 주제가 없으면 배치가 요금 없이 건너뛴다. 꺼진 것처럼 조용하므로 그 사실을 맨 앞에 적는다
+  const head = s.topicCount === 0
+    ? `<p><span class="batch-state off">코드 문제 주제가 없어 매주 건너뜁니다</span>
+         <a href="/admin/topics.html?kind=CODE">코드 문제 주제 넣기 →</a></p>`
+    : `<p>다음 실행 <b>${escapeHtml(at)}(${weekday})</b> · 주제 <b>${escapeHtml(s.nextTopic ?? "")}</b>
+         <span class="meta">(주제 ${s.topicCount}개 · <a href="/admin/topics.html?kind=CODE">차례 보기</a>)</span></p>`;
+  const rows = s.runs.length === 0
+    ? `<p class="meta">아직 결과 파일이 없습니다.</p>`
+    : `<div class="table-wrap" style="margin-bottom:0"><table class="grid">
+        <tr><th>날짜</th><th>주제</th><th>문제</th><th>검수 지적</th><th>들여오기</th></tr>
+        ${s.runs.map(r => `<tr>
+          <td>${escapeHtml(r.date)}</td>
+          <td class="wrap">${escapeHtml(r.topic ?? "")}</td>
+          <td>${r.problems}</td>
+          <td>${r.findings === null ? '<span class="meta">검수 전</span>' : r.findings}</td>
+          <td>${r.imported ? "들어옴" : '<span class="meta">앱을 켜면 들어옵니다</span>'}</td>
+        </tr>`).join("")}
+      </table></div>`;
+  el.innerHTML = head + rows;
 }
 
 async function loadBatchStatus() {
