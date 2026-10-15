@@ -401,7 +401,11 @@ async function applyAiSuggestion(btn, id, index) {
   }
 }
 
-/** 요약 표의 열. 순서와 이름은 서버의 ProblemReview.FindingType과 맞춘다 — 이름은 좁은 열에 맞게 줄였다. */
+/**
+ * 요약 표의 열. 순서와 이름은 서버의 ProblemReview.FindingType과 맞춘다 — 이름은 좁은 열에 맞게 줄였다.
+ * 개념 문제와 코드 문제는 검수기가 달라 나오는 종류가 거의 겹치지 않는다. 한 표에 두면
+ * 어느 행이든 절반 넘는 열이 늘 비어 있어 표를 따로 그린다.
+ */
 const AI_FINDING_COLUMNS = [
   ["ANSWER_MISMATCH", "정답 의심"],
   ["OTHER_CORRECT", "정답 둘"],
@@ -410,13 +414,19 @@ const AI_FINDING_COLUMNS = [
   ["NO_SUPPORT", "근거 없음"],
   ["SOURCE_FLAGGED", "문서 지적"],
   ["EXPLANATION_MISMATCH", "해설"],
-  ["QUESTION_MISMATCH", "질문"],
+  ["DIFFICULTY_MISMATCH", "난이도"],
+];
+
+const CODE_AI_FINDING_COLUMNS = [
+  ["EXPLANATION_MISMATCH", "해설"],
   ["RATIONALE_MISMATCH", "오답 이유"],
-  ["CODE_COMMENT_REVEALS", "주석"],
+  ["QUESTION_MISMATCH", "질문"],
   ["ENVIRONMENT_DEPENDENT", "환경"],
-  ["OFF_TOPIC", "주제"],
   ["MISSOLVED", "AI 오답"],
   ["AMBIGUOUS_QUESTION", "모호"],
+  ["CHOICE_CUE_LEAK", "보기 단서"],
+  ["CODE_COMMENT_REVEALS", "주석"],
+  ["OFF_TOPIC", "주제"],
   ["DIFFICULTY_MISMATCH", "난이도"],
 ];
 
@@ -435,29 +445,42 @@ function renderAiSummary(drafts) {
     box.hidden = true;
     return;
   }
-  const has = (d, type) => d.aiFindings.some(f => f.type === type);
   // 의견은 세지 않는다. 문제마다 풀이와 총평이 달려, 세면 모든 행이 "지적 있음"이 된다.
   const countOf = d => d.aiFindings.filter(f => !isOpinion(f)).length;
   const total = reviewed.reduce((n, d) => n + countOf(d), 0);
   const skipped = drafts.length - reviewed.length;
-  const rows = reviewed.map(d => `
-        <tr>
-          <td class="wrap"><a href="#draft-${d.id}">#${d.id} ${escapeHtml(d.title ?? d.question.slice(0, 30))}</a></td>
-          ${AI_FINDING_COLUMNS.map(([type]) => `<td style="text-align:center">${has(d, type) ? "●" : ""}</td>`).join("")}
-          <td style="text-align:center"${countOf(d) ? "" : ` class="zero"`}>${countOf(d) || "없음"}</td>
-        </tr>`).join("");
-  const sums = AI_FINDING_COLUMNS.map(([type]) => reviewed.filter(d => has(d, type)).length);
+  const concept = reviewed.filter(d => !d.codeKind);
+  const code = reviewed.filter(d => d.codeKind);
+  // 한 종류만 있으면 표 이름을 달지 않는다. 늘 보던 개념 문제 표가 그대로 보이게 한다
+  const titled = concept.length > 0 && code.length > 0;
   box.hidden = false;
   box.innerHTML = `
     <div class="meta" style="margin-bottom:6px">
       <b>AI 검수 요약</b> · 이 목록 ${drafts.length}건 중 검수한 ${reviewed.length}건에 지적 ${total}건${
         skipped ? ` · 검수 안 돌린 ${skipped}건은 표에 없습니다` : ""}
     </div>
+    ${aiSummaryTable(concept, AI_FINDING_COLUMNS, titled ? "개념 문제" : "", countOf)}
+    ${aiSummaryTable(code, CODE_AI_FINDING_COLUMNS, titled ? "코드 문제" : "", countOf)}`;
+}
+
+function aiSummaryTable(drafts, columns, title, countOf) {
+  if (drafts.length === 0) return "";
+  const has = (d, type) => d.aiFindings.some(f => f.type === type);
+  const rows = drafts.map(d => `
+        <tr>
+          <td class="wrap"><a href="#draft-${d.id}">#${d.id} ${escapeHtml(d.title ?? d.question.slice(0, 30))}</a></td>
+          ${columns.map(([type]) => `<td style="text-align:center">${has(d, type) ? "●" : ""}</td>`).join("")}
+          <td style="text-align:center"${countOf(d) ? "" : ` class="zero"`}>${countOf(d) || "없음"}</td>
+        </tr>`).join("");
+  const sums = columns.map(([type]) => drafts.filter(d => has(d, type)).length);
+  const total = drafts.reduce((n, d) => n + countOf(d), 0);
+  return `
+    ${title ? `<div class="meta" style="margin:10px 0 4px"><b>${title}</b> ${drafts.length}건</div>` : ""}
     <div class="table-wrap" style="margin-bottom:0">
       <table class="grid">
         <thead><tr>
           <th>문제</th>
-          ${AI_FINDING_COLUMNS.map(([, label]) => `<th style="text-align:center">${label}</th>`).join("")}
+          ${columns.map(([, label]) => `<th style="text-align:center">${label}</th>`).join("")}
           <th style="text-align:center">지적</th>
         </tr></thead>
         <tbody>${rows}</tbody>
