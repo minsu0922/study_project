@@ -177,7 +177,7 @@ let docDraftPage = 0;
    우연히 맞지만, 그 우연은 코드를 옮기는 날 깨진다. */
 document.addEventListener("admin:counts", e => {
   renderReviewSummary(e.detail);
-  refreshTabCounts(e.detail.documents);
+  renderTabCounts(e.detail);
 });
 
 /** 보고 있는 탭 — concept | code | doc. 앞의 둘은 같은 문제 초안 목록을 code 조건으로 가른다. */
@@ -226,18 +226,14 @@ function showReviewTab(tab, reload = true) {
   }
 }
 
-/** 탭 옆 숫자 — 검수 대기 수. 문서 수는 배지가 이미 센 값을 받아 쓴다. */
-async function refreshTabCounts(documents) {
-  const [concept, code] = await Promise.all([
-    countOf("/api/admin/llm-problems/pending-count?code=false"),
-    countOf("/api/admin/llm-problems/pending-count?code=true"),
-  ]);
+/** 탭 옆 숫자 — 검수 대기 수. 배지와 같은 응답에서 받는다(따로 부르면 요청이 늘고 숫자가 어긋날 수 있다). */
+function renderTabCounts(c) {
   const put = (key, n) => {
     document.querySelector(`#reviewTabs [data-count="${key}"]`).textContent = n ? `(${n})` : "";
   };
-  put("concept", concept);
-  put("code", code);
-  put("doc", documents);
+  put("concept", c.conceptProblems);
+  put("code", c.codeProblems);
+  put("doc", c.documents);
 }
 
 /** 목록 필터·페이저 배선. 생성 폼은 2026-08-29에 /admin/generate.html로 떠났다. */

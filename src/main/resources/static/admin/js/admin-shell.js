@@ -122,7 +122,8 @@ function renderAdminShell(active = "") {
  * <p>배지를 <b>모든 화면</b>에서 부르는 것은 의도다. "검수할 게 남았다"는 지금 보고 있는
  * 화면과 무관하게 알아야 하는 정보이고, 화면을 옮길 때마다 최신값이 보인다.
  *
- * <p>넷을 한꺼번에 보낸다 — 순서대로 기다리면 화면이 뜨는 데 왕복 네 번이 그대로 더해진다.
+ * <p>개수 전부를 요청 하나로 받는다(2026-10-15). 개수마다 따로 부르던 때는 화면을 열 때마다
+ * 여덟 번씩 나가, 콘솔에서 화면을 몇 번 옮기면 요청 한도(분당 60회)에 걸렸다.
  *
  * <h2>같은 모양인데 읽는 법이 다르다</h2>
  *
@@ -139,21 +140,18 @@ function renderAdminShell(active = "") {
  * </ul>
  */
 async function refreshAdminBadges() {
-  const [problems, documents, topics, reports, commentReports, errata, untitled, noRationale] = await Promise.all([
-    countOf("/api/admin/llm-problems/pending-count"),
-    countOf("/api/admin/llm-documents/pending-count"),
-    countOf("/api/admin/topic-queue/count"),
-    countOf("/api/admin/reports/pending-count"),
-    countOf("/api/admin/comment-reports/pending-count"),
-    countOf("/api/admin/errata-posts/pending-count"),
-    // 이 둘은 {count}가 아니라 숫자 하나를 돌려준다
-    plainCountOf("/api/admin/problems/untitled-count"),
-    plainCountOf("/api/admin/problems/missing-rationale-count"),
-  ]);
+  let c;
+  try {
+    c = await api("/api/admin/badge-counts");
+  } catch (e) {
+    // 배지는 장식이라 화면을 막지 않는다. 0으로 채우지도 않는다 — 주제 대기열은 0이 경고라 거짓 경보가 된다
+    return;
+  }
+  const { problems, documents, topics, reports, commentReports, errata } = c;
 
   setBadge("llm", problems + documents, false);
   setBadge("topics", topics === 0 ? "범위 없음" : null, topics === 0);
-  setBadge("backfill", untitled + noRationale, false);
+  setBadge("backfill", c.untitled + c.missingRationale, false);
   setBadge("reports", reports + errata, reports + errata > 0);
   setBadge("comments", commentReports, commentReports > 0);
 
@@ -167,18 +165,7 @@ async function refreshAdminBadges() {
    * 검수 화면은 승인·거절·일괄승인 등 일곱 곳에서 이 함수를 부르는데, 요약 갱신을
    * 그 일곱 곳에 손으로 붙이면 여덟 번째를 더하는 날 하나를 빠뜨린다.
    * 여기서 한 번 알리면 듣는 쪽이 알아서 따라온다. */
-  document.dispatchEvent(new CustomEvent("admin:counts", {
-    detail: { problems, documents, topics, reports, commentReports, errata },
-  }));
-}
-
-/** 숫자 하나를 돌려주는 개수 API용. 실패하면 0 — countOf와 같은 이유다. */
-async function plainCountOf(path) {
-  try {
-    return Number(await api(path)) || 0;
-  } catch (e) {
-    return 0;
-  }
+  document.dispatchEvent(new CustomEvent("admin:counts", { detail: c }));
 }
 
 /** 배지 하나 — 값이 null이거나 0이면 숨긴다(0을 붙여 두면 늘 시끄럽다). */

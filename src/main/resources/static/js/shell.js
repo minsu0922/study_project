@@ -558,24 +558,20 @@ async function loadNotificationBadge() {
  * <p>주제 대기열은 <b>일부러 뺐다</b>. 그 값은 0일 때가 문제인데(생성이 멈춘다),
  * 그러면 "0이면 숨긴다"는 배지의 규칙과 뜻이 정반대가 된다. 한 배지에 방향이 다른 두
  * 신호를 섞으면 숫자가 커진 것이 좋은 소식인지 나쁜 소식인지 알 수 없어진다.
- * 그건 콘솔 안의 "생성 실행" 배지가 따로 맡는다.
+ * 그건 콘솔 안의 "주제 대기열" 배지가 따로 맡는다.
  *
  * <h2>비용</h2>
  *
- * <p>주소 셋을 한꺼번에(Promise.all) 부른다. 관리자가 아니면 <b>한 번도</b> 안 부른다 —
- * 일반 사용자에게는 이 링크 자체가 그려지지 않기 때문이다. 실패는 조용히 넘긴다.
- * 배지는 있으면 좋은 정보일 뿐, 이것 때문에 학습 화면이 에러를 띄우면 주객전도다.
+ * <p>콘솔 배지와 같은 개수 API 하나만 부른다(2026-10-15 — 따로 셋을 부르던 것이 요청 한도를
+ * 갉아먹었다). 관리자가 아니면 <b>한 번도</b> 안 부른다 — 일반 사용자에게는 이 링크 자체가
+ * 그려지지 않기 때문이다. 실패는 조용히 넘긴다. 배지는 있으면 좋은 정보일 뿐, 이것 때문에
+ * 학습 화면이 에러를 띄우면 주객전도다.
  */
 async function loadAdminBadge() {
   if (!isAdmin()) return;
-  const 세기 = async path => {
-    try { return (await api(path)).count ?? 0; } catch (e) { return 0; }
-  };
-  const [문제, 문서, 제보] = await Promise.all([
-    세기("/api/admin/llm-problems/pending-count"),
-    세기("/api/admin/llm-documents/pending-count"),
-    세기("/api/admin/reports/pending-count"),
-  ]);
+  let c;
+  try { c = await api("/api/admin/badge-counts"); } catch (e) { return; }
+  const 문제 = c.problems, 문서 = c.documents, 제보 = c.reports;
   const 합 = 문제 + 문서 + 제보;
   if (합 === 0) return;   // 0은 안 띄운다 — 늘 붙어 있으면 숫자가 신호이기를 그만둔다
 
