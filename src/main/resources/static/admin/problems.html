@@ -88,6 +88,9 @@ try {
          여기서 자주 하는 질문이 "이 문서로 만든 문제가 몇 개고 난이도가 고른가"인데
          그 둘이 없으면 답할 수 없다. -->
     <div class="filters" style="margin-bottom:12px">
+      <!-- 검색어(2026-10-17). 띠의 통합 검색은 다섯 개만 보여 주므로, 그 뒤를 이어 보는 자리가 여기다 -->
+      <div class="field"><label for="fpQ">검색</label>
+        <input type="search" id="fpQ" maxlength="50" placeholder="제목이나 지문 일부"></div>
       <div class="field"><label>분야</label><select id="fpDomain"></select></div>
       <div class="field"><label>난이도</label><select id="fpDifficulty"></select></div>
       <div class="field"><label>유형</label><select id="fpType"></select></div>
@@ -167,8 +170,17 @@ function initListFilters() {
   }
   document.getElementById("fpDocument").addEventListener("change", () => loadProblems({ page: 0 }));
 
+  // 띠의 "목록에서 모두 보기"가 ?q=로 넘어온다. 치는 동안은 쉬었다 부른다(요청 한도, admin-shell.js와 같은 이유)
+  const q = document.getElementById("fpQ");
+  q.value = param("q") || "";
+  let timer = null;
+  q.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => loadProblems({ page: 0 }), 300);
+  });
+
   document.getElementById("fpResetBtn").addEventListener("click", () => {
-    ["fpDomain", "fpDifficulty", "fpType", "fpDocument"].forEach(id => document.getElementById(id).value = "");
+    ["fpQ", "fpDomain", "fpDifficulty", "fpType", "fpDocument"].forEach(id => document.getElementById(id).value = "");
     loadProblems({ page: 0 });
   });
 
@@ -399,7 +411,7 @@ function loadProblems(opts) {
   return renderAdminTable("#problemList", {
     url: "/api/admin/problems",
     filters: () => filterQuery({
-      domain: "fpDomain", difficulty: "fpDifficulty",
+      q: "fpQ", domain: "fpDomain", difficulty: "fpDifficulty",
       type: "fpType", documentSlug: "fpDocument",
     }),
     columns: [

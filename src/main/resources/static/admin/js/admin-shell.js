@@ -261,7 +261,10 @@ function renderResults(q, r) {
         <span class="k">${escapeHtml(key)}</span>
         <span class="t">${escapeHtml(text || "(제목 없음)")}</span>
         ${tag ? `<span class="tag">${escapeHtml(tag)}</span>` : ""}
-      </a>`).join("")}`).join("");
+      </a>`).join("")}
+    ${name === "문제" && r.problemTotal > 0 ? `
+      <a class="more" href="/admin/problems.html?q=${encodeURIComponent(q)}" role="option">
+        문제 목록에서 모두 보기 (${r.problemTotal}건) →</a>` : ""}`).join("");
 }
 
 /**

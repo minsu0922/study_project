@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -53,7 +54,7 @@ class AdminLookupControllerTest {
         assertThat(r.problems()).containsExactly(new AdminLookup.Problem(7L, "문제 제목"));
         assertThat(r.drafts()).containsExactly(new AdminLookup.Draft(7L, "PENDING", true, "초안 제목"));
         assertThat(r.users()).isEmpty();
-        verify(problems, never()).searchForAdmin(any(), any());
+        verify(problems, never()).findForAdmin(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -66,7 +67,8 @@ class AdminLookupControllerTest {
         when(user.getId()).thenReturn(11L);
         when(user.getUsername()).thenReturn("tcpfan");
         when(user.getNickname()).thenReturn("티씨피");
-        when(problems.searchForAdmin(eq("%tcp!_%"), any(Pageable.class))).thenReturn(List.of(problem));
+        when(problems.findForAdmin(isNull(), isNull(), isNull(), isNull(), eq("%tcp!_%"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(problem), Pageable.ofSize(5), 12));
         when(drafts.searchForAdmin(eq("%tcp!_%"), any(Pageable.class))).thenReturn(List.of());
         when(users.search(eq("%tcp!_%"), anyBoolean(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(user)));
@@ -75,6 +77,7 @@ class AdminLookupControllerTest {
 
         assertThat(r.problems()).containsExactly(
                 new AdminLookup.Problem(3L, "TCP 3-way handshake에서 SYN 다음에 오는 것은?"));
+        assertThat(r.problemTotal()).isEqualTo(12);
         assertThat(r.drafts()).isEmpty();
         assertThat(r.users()).containsExactly(new AdminLookup.User(11L, "tcpfan", "티씨피"));
     }

@@ -20,10 +20,14 @@ import java.util.List;
  */
 public interface GeneratedProblemDraftRepository extends JpaRepository<GeneratedProblemDraft, Long> {
 
-    /** 관리 콘솔 통합 검색 — 상태를 가리지 않고 제목과 지문에서 찾는다. q는 이스케이프한 LIKE 패턴이다. */
+    /**
+     * 관리 콘솔 통합 검색 — 제목과 지문에서 찾는다. q는 이스케이프한 LIKE 패턴이다.
+     * 승인된 초안은 뺀다. 같은 제목의 문제가 따로 있어 결과에 두 번 뜨고, 고치려면 문제 쪽을 고쳐야 한다.
+     */
     @Query("""
             select d from GeneratedProblemDraft d
-            where lower(d.title) like lower(:q) escape '!' or lower(d.question) like lower(:q) escape '!'
+            where d.status <> project.study.study_project.llm.domain.DraftStatus.APPROVED
+              and (lower(d.title) like lower(:q) escape '!' or lower(d.question) like lower(:q) escape '!')
             order by d.id desc
             """)
     List<GeneratedProblemDraft> searchForAdmin(@Param("q") String q, Pageable pageable);

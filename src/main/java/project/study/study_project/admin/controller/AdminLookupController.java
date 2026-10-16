@@ -1,6 +1,7 @@
 package project.study.study_project.admin.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,17 +43,19 @@ public class AdminLookupController {
         if (NUMBER.matcher(word).matches()) {
             long id = Long.parseLong(word.replace("#", ""));
             return ApiResponse.ok(new AdminLookup(
-                    problemRepository.findById(id).map(AdminLookupController::toRow).stream().toList(),
+                    problemRepository.findById(id).map(AdminLookupController::toRow).stream().toList(), 0,
                     draftRepository.findById(id).map(AdminLookupController::toRow).stream().toList(),
                     List.of()));
         }
         String pattern = SearchKeyword.likePattern(word);
         if (pattern == null) {
-            return ApiResponse.ok(new AdminLookup(List.of(), List.of(), List.of()));
+            return ApiResponse.ok(new AdminLookup(List.of(), 0, List.of(), List.of()));
         }
         PageRequest top = PageRequest.of(0, PER_KIND);
+        // 문제 관리 목록과 같은 쿼리다. 띠의 결과와 "목록에서 모두 보기"의 결과가 어긋나지 않는다
+        Page<Problem> problems = problemRepository.findForAdmin(null, null, null, null, pattern, top);
         return ApiResponse.ok(new AdminLookup(
-                problemRepository.searchForAdmin(pattern, top).stream().map(AdminLookupController::toRow).toList(),
+                problems.stream().map(AdminLookupController::toRow).toList(), problems.getTotalElements(),
                 draftRepository.searchForAdmin(pattern, top).stream().map(AdminLookupController::toRow).toList(),
                 userRepository.search(pattern, false, LocalDateTime.now(), top).stream()
                         .map(u -> new AdminLookup.User(u.getId(), u.getUsername(), u.getNickname())).toList()));

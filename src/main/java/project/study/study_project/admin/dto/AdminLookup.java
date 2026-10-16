@@ -7,8 +7,10 @@ import java.util.List;
  *
  * <p>숫자면 그 번호의 문제와 문제 초안을 찾는다. 둘은 번호 체계가 따로라 같은 번호가 둘 다 있을 수 있다.
  * 글자면 문제·초안의 제목과 지문, 사용자의 아이디와 닉네임에서 찾는다. 종류마다 최근 것부터 몇 개만 준다.
+ *
+ * @param problemTotal 글자 검색에 걸린 문제의 전체 수. 화면이 "목록에서 모두 보기 (N건)"에 쓴다. 번호 검색은 0
  */
-public record AdminLookup(List<Problem> problems, List<Draft> drafts, List<User> users) {
+public record AdminLookup(List<Problem> problems, long problemTotal, List<Draft> drafts, List<User> users) {
 
     public record Problem(long id, String title) {
     }

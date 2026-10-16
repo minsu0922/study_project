@@ -36,14 +36,6 @@ import java.util.List;
  */
 public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
-    /** 관리 콘솔 통합 검색 — 제목과 지문에서 찾는다. q는 {@code SearchKeyword.likePattern}을 거친 패턴이다. */
-    @Query("""
-            select p from Problem p
-            where lower(p.title) like lower(:q) escape '!' or lower(p.question) like lower(:q) escape '!'
-            order by p.id desc
-            """)
-    List<Problem> searchForAdmin(@Param("q") String q, Pageable pageable);
-
     @Query(value = """
             SELECT * FROM problem p
             WHERE (:domain     IS NULL OR p.domain     = :domain)
@@ -70,6 +62,9 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      * 그마저 화면이 쓰지 않아, 문제 76개를 네 쪽에 걸쳐 눈으로 훑는 수밖에 없었다.
      * 실제로 자주 하는 질문은 "이 문서로 만든 문제가 몇 개고 난이도가 고른가"인데
      * 그 둘이 없으면 답할 수 없다.
+     *
+     * <p>keyword는 제목과 지문을 본다(2026-10-17). 상단 띠의 통합 검색도 이 쿼리를 쓰므로, 띠에서 본
+     * 결과와 "목록에서 모두 보기"로 간 결과가 같다. {@code SearchKeyword.likePattern}을 거친 패턴이다.
      */
     @Query("""
             select p from Problem p
@@ -77,6 +72,9 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
               and (:difficulty is null or p.difficulty = :difficulty)
               and (:type is null or p.type = :type)
               and (:documentSlug is null or p.documentSlug = :documentSlug)
+              and (:keyword is null
+                   or lower(p.title) like lower(:keyword) escape '!'
+                   or lower(p.question) like lower(:keyword) escape '!')
             order by p.id desc
             """)
     Page<Problem> findForAdmin(
@@ -84,6 +82,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             @Param("difficulty") Difficulty difficulty,
             @Param("type") ProblemType type,
             @Param("documentSlug") String documentSlug,
+            @Param("keyword") String keyword,
             Pageable pageable
     );
 

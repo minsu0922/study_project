@@ -13,6 +13,7 @@ import project.study.study_project.quiz.dto.AdminProblemRequest;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -67,9 +68,10 @@ public class AdminProblemService {
     /** 관리 화면 목록 — 최신순, 필터(선택), 정답·해설 포함(ADMIN 전용 경로라 노출 가능). */
     @Transactional(readOnly = true)
     public PageResponse<AdminProblemDetail> getProblems(DomainCode domain, Difficulty difficulty, ProblemType type,
-                                                        String documentSlug, Pageable pageable) {
+                                                        String documentSlug, String q, Pageable pageable) {
         // 빈 문자열은 "안 고름"이다 — 화면의 select가 빈 값을 보낼 수 있어 여기서 null로 맞춘다.
-        Page<Problem> page = problemRepository.findForAdmin(domain, difficulty, type, Texts.trimToNull(documentSlug), pageable);
+        Page<Problem> page = problemRepository.findForAdmin(domain, difficulty, type, Texts.trimToNull(documentSlug),
+                SearchKeyword.likePattern(q), pageable);
         return PageResponse.from(page.map(AdminProblemDetail::from));
     }
 

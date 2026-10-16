@@ -1227,7 +1227,7 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
 /* ── 폼(로그인/회원가입/필터) ── */
 .field { margin-bottom: var(--sp-3); }
 .field label { display: block; font-size: var(--fs-1); color: var(--muted); margin-bottom: var(--sp-1); }
-input[type=text], input[type=email], input[type=password], select, textarea {
+input[type=text], input[type=search], input[type=email], input[type=password], select, textarea {
   width: 100%; padding: 10px 12px;
   border: 1px solid var(--control-border); border-radius: var(--radius);
   font-size: .95rem; font-family: inherit;
@@ -1854,6 +1854,7 @@ body.admin-shell {
 .bar-jump-pop a .tag { flex: none; color: var(--muted); font-size: 12px; }
 .bar-jump-pop a:hover, .bar-jump-pop a.on { background: var(--primary-soft); }
 .bar-jump-empty { margin: 0; padding: 8px; color: var(--muted); }
+.bar-jump-pop a.more { color: var(--primary); font-size: 12px; }
 
 /* 테마 버튼 — 띠 위에서는 공용 버튼 모양(색 칠한 상자)이 너무 무겁다 */
 .admin-bar .bar-icon {
