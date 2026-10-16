@@ -16,8 +16,12 @@ package project.study.study_project.admin.dto;
  * @param errata           답이 안 달린 토론방 오류 지적 글
  * @param untitled         제목 없는 문제
  * @param missingRationale 오답 설명이 빠진 문제
+ * @param batchEnabled     일일 배치 스위치({@code llm.generation.batch-enabled}). 상단 띠의 배치 칩
+ * @param codeTopics       코드 문제 주제 수. 0이면 주간 코드 배치가 건너뛴다
+ * @param codeNextRunAt    주간 코드 배치의 다음 실행 시각(KST)
  */
 public record AdminBadgeCounts(long problems, long conceptProblems, long codeProblems, long documents,
                                long topics, long reports, long commentReports, long errata,
-                               long untitled, long missingRationale) {
+                               long untitled, long missingRationale,
+                               boolean batchEnabled, long codeTopics, java.time.LocalDateTime codeNextRunAt) {
 }

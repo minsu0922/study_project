@@ -1,6 +1,7 @@
 package project.study.study_project.admin.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminBadgeCounts;
@@ -13,6 +14,9 @@ import project.study.study_project.llm.service.LlmProblemService;
 import project.study.study_project.llm.service.ProblemTitleBackfillService;
 import project.study.study_project.llm.service.TopicQueueService;
 import project.study.study_project.report.service.ProblemReportService;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * 콘솔 메뉴 배지의 개수를 한 번에 센다. 각 개수의 뜻은 원래 API와 같다 — 그 서비스를 그대로 부른다.
@@ -31,6 +35,10 @@ public class AdminBadgeService {
     private final ProblemTitleBackfillService titleBackfillService;
     private final ChoiceRationaleBackfillService rationaleBackfillService;
 
+    // 배치 현황 화면(AdminBatchService)과 같은 키·기본값이다. 어긋나면 띠와 화면이 다른 말을 한다
+    @Value("${llm.generation.batch-enabled:true}")
+    private boolean batchEnabled;
+
     @Transactional(readOnly = true)
     public AdminBadgeCounts counts() {
         long concept = llmProblemService.pendingCount(false);
@@ -43,6 +51,9 @@ public class AdminBadgeService {
                 commentReportService.pendingCount(),
                 postService.errataPendingCount(),
                 titleBackfillService.untitledCount(),
-                rationaleBackfillService.missingRationaleCount());
+                rationaleBackfillService.missingRationaleCount(),
+                batchEnabled,
+                topicQueueService.count(TopicKind.CODE),
+                AdminCodeBatchService.nextRunAt(LocalDateTime.now(ZoneId.of("Asia/Seoul"))));
     }
 }

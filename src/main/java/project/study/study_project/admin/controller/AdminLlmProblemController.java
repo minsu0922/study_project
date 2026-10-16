@@ -135,9 +135,11 @@ public class AdminLlmProblemController {
             @RequestParam(required = false) String documentSlug,
             // true면 코드 문제만, false면 개념 문제만. 없으면 둘 다(예전 목록)
             @RequestParam(required = false) Boolean code,
+            // 그 번호 하나만 — 상단 띠의 "번호로 이동"이 검수함을 열 때 쓴다
+            @RequestParam(required = false) Long id,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(llmProblemService.getDrafts(status, domain, difficulty, documentSlug, code, pageable));
+        return ApiResponse.ok(llmProblemService.getDrafts(status, domain, difficulty, documentSlug, code, id, pageable));
     }
 
     /**

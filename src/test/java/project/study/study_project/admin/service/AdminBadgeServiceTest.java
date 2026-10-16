@@ -40,10 +40,16 @@ class AdminBadgeServiceTest {
         when(posts.errataPendingCount()).thenReturn(6L);
         when(titles.untitledCount()).thenReturn(7L);
         when(rationales.missingRationaleCount()).thenReturn(8L);
+        when(topics.count(TopicKind.CODE)).thenReturn(8L);
 
         AdminBadgeCounts c = new AdminBadgeService(problems, documents, topics, reports, comments, posts,
                 titles, rationales).counts();
 
-        assertThat(c).isEqualTo(new AdminBadgeCounts(7, 5, 2, 1, 49, 3, 4, 6, 7, 8));
+        assertThat(c).extracting(AdminBadgeCounts::problems, AdminBadgeCounts::conceptProblems,
+                        AdminBadgeCounts::codeProblems, AdminBadgeCounts::documents, AdminBadgeCounts::topics,
+                        AdminBadgeCounts::reports, AdminBadgeCounts::commentReports, AdminBadgeCounts::errata,
+                        AdminBadgeCounts::untitled, AdminBadgeCounts::missingRationale, AdminBadgeCounts::codeTopics)
+                .containsExactly(7L, 5L, 2L, 1L, 49L, 3L, 4L, 6L, 7L, 8L, 8L);
+        assertThat(c.codeNextRunAt().getDayOfWeek()).isEqualTo(java.time.DayOfWeek.SUNDAY);
     }
 }

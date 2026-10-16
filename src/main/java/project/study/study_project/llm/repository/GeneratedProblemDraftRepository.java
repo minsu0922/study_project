@@ -46,10 +46,12 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
      *                     한다 — 컨트롤러가 빈 값을 null로 정규화한다
      * @param code         true면 코드 문제만, false면 개념 문제만, null이면 둘 다(2026-10-15).
      *                     검수함이 둘을 탭으로 나눠 본다
+     * @param id           그 번호 하나만. 상단 띠의 "번호로 이동"이 쓴다. null이면 거르지 않는다
      */
     @Query("""
             select d from GeneratedProblemDraft d
             where d.status = :status
+              and (:id is null or d.id = :id)
               and (:domain is null or d.domain = :domain)
               and (:difficulty is null or d.difficulty = :difficulty)
               and (:documentSlug is null or d.documentSlug = :documentSlug)
@@ -64,6 +66,7 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
             @Param("difficulty") Difficulty difficulty,
             @Param("documentSlug") String documentSlug,
             @Param("code") Boolean code,
+            @Param("id") Long id,
             Pageable pageable);
 
     /**

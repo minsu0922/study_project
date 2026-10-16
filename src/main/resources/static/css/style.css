@@ -1788,26 +1788,75 @@ body.admin-shell {
 
 /* 상단 진한 띠 — "여기는 관리"를 색으로 알린다.
  *
- * --text를 바탕으로 쓰는 이유: 라이트에서 가장 진한 색이고, 다크에서는 밝은 색으로
- * 뒤집혀 여전히 본문과 대비된다. 글자는 그 반대인 --bg다. 새 색을 만들지 않고
- * <있는 두 값을 서로 바꿔> 쓰면 테마가 바뀔 때 따라올 걱정이 없다. */
+ * 두 테마 모두 같은 진한 남색이다(2026-10-16). 예전에는 --text와 --bg를 뒤집어 썼는데,
+ * 다크에서는 밝은 회색 띠가 어두운 화면 위에 떠서 눈에 거슬렸다. 띠가 하는 일은 "관리 화면"이라는
+ * 신호 하나라, 테마와 상관없이 같은 색이어야 그 신호도 같다. 글자는 띠 위에서만 쓰는 밝은 색이다.
+ * 대비(실측): 글자 13:1, 아이디(.78) 8.4:1, 칩 9.5:1, 이동 상자 안내 글자 5.0:1, 꺼짐 칩 9.6:1. */
+:root { --bar-bg: #1e1b4b; --bar-fg: #e0e7ff; --bar-soft: rgba(224, 231, 255, .12); }
 .admin-bar {
   grid-area: top;
   display: flex; align-items: center; gap: var(--sp-3);
   height: var(--shell-top-h); padding: 0 var(--sp-4);
-  background: var(--text); color: var(--bg);
+  background: var(--bar-bg); color: var(--bar-fg);
+  /* 다크에서는 띠와 본문 바탕이 둘 다 어두워 경계가 흐리다. 선 하나로 가른다 */
+  border-bottom: 1px solid rgba(224, 231, 255, .14);
   position: sticky; top: 0; z-index: 60;   /* 기둥(50)보다 위 */
   font-size: var(--fs-2);
 }
-.admin-bar .brand { font-weight: 800; color: var(--bg); text-decoration: none; flex: none; }
-.admin-bar .who { color: var(--bg); opacity: .65; }
+.admin-bar .brand { font-weight: 800; color: var(--bar-fg); text-decoration: none; flex: none; }
+.admin-bar .who { color: var(--bar-fg); opacity: .78; white-space: nowrap; }
 .admin-bar .spacer { flex: 1; }
 /* 바 높이만큼 누를 수 있게 — 글자 높이대로 두면 표적이 44px에 한참 못 미친다 */
 .admin-bar a {
   display: inline-flex; align-items: center; align-self: stretch;
-  color: var(--bg); text-decoration: none; white-space: nowrap;
+  color: var(--bar-fg); text-decoration: none; white-space: nowrap;
 }
 .admin-bar a:hover { opacity: .75; }
+
+/* 배치 칩 — 켜짐은 조용히, 꺼짐은 호박색으로 */
+.admin-bar a.bar-chip {
+  align-self: center; padding: 3px 10px; border-radius: 999px;
+  /* 칸 사이 띄어쓰기는 gap이 맡는다. flex 안에서는 글자 앞 공백이 지워진다 */
+  background: var(--bar-soft); font-size: 12px; gap: .35em;
+}
+.admin-bar a.bar-chip.off { background: #fbbf24; color: #1e1b4b; }
+.admin-bar a.bar-chip.off b { font-weight: 800; }
+
+/* 번호로 이동 */
+.bar-jump { position: relative; flex: none; margin: 0; }
+.bar-jump input {
+  width: 130px; height: 30px; padding: 0 10px; margin: 0;
+  border: 1px solid transparent; border-radius: 8px;
+  background: var(--bar-soft); color: var(--bar-fg); font-size: 13px;
+}
+.bar-jump input::placeholder { color: var(--bar-fg); opacity: .65; }
+.bar-jump input:focus { outline: none; border-color: var(--bar-fg); }
+/* 결과 상자는 본문 쪽 색을 쓴다 — 띠 밖으로 떨어져 본문 위에 얹히므로 */
+.bar-jump-pop {
+  position: absolute; top: calc(100% + 8px); right: 0; min-width: 240px; z-index: 70;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card); color: var(--text); box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  font-size: 13px;
+}
+.bar-jump-pop a {
+  display: block; margin-top: 6px; padding: 6px 8px; border-radius: 6px;
+  color: var(--primary); text-decoration: none;
+}
+.bar-jump-pop a:hover { background: var(--primary-soft); }
+
+/* 테마 버튼 — 띠 위에서는 공용 버튼 모양(색 칠한 상자)이 너무 무겁다 */
+.admin-bar .bar-icon {
+  flex: none; width: 34px; min-height: 34px; height: 34px; padding: 0;
+  border: 0; border-radius: 8px; background: transparent; color: var(--bar-fg);
+  font-size: 17px; line-height: 1; cursor: pointer;
+}
+.admin-bar .bar-icon:hover { background: var(--bar-soft); }
+
+/* 좁은 화면: 띠에 다 안 들어간다. 이동 상자와 아이디는 넓은 화면에서만, 칩은 앞부분만 */
+@media (max-width: 767px) {
+  .admin-bar { gap: var(--sp-2); padding: 0 var(--sp-3); }
+  .admin-bar .who, .bar-jump, .admin-bar .bar-chip-more, .admin-bar .bar-wide { display: none; }
+}
 
 /* 전체 건수 + 페이저를 한 줄에. 왼쪽이 "얼마나 있나", 오른쪽이 "어디를 보고 있나"다.
  *
@@ -1847,7 +1896,14 @@ body.admin-shell {
   /* 가로 줄에서는 묶음 제목과 브랜드가 자리만 먹는다 — 항목 여섯이 이미 넘친다 */
   body.admin-shell .shell-side .brand,
   body.admin-shell .shell-group { display: none; }
-  body.admin-shell .shell-link { white-space: nowrap; flex: none; }
+  /* 항목 모양은 768px 이상 블록에만 있어, 여기서 다시 적지 않으면 밑줄 친 맨 링크가 된다 */
+  body.admin-shell .shell-link {
+    display: flex; align-items: center; gap: 6px; flex: none; white-space: nowrap;
+    padding: 6px 10px; border-radius: var(--radius); min-height: 36px;
+    color: var(--text-2); text-decoration: none; font-size: var(--fs-2);
+  }
+  body.admin-shell .shell-link.active { background: var(--primary-soft); color: var(--primary-dark); font-weight: 700; }
+  body.admin-shell .shell-side { scrollbar-width: thin; }
 }
 
 /* ── 두세 갈래 전환 (내 기록의 정렬, 설정의 항목) ─────────────────────

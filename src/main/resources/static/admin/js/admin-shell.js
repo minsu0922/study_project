@@ -93,9 +93,20 @@ function renderAdminShell(active = "") {
   el.innerHTML = `
     <header class="admin-bar">
       <a class="brand" href="/admin/llm.html">csquiz 관리</a>
-      <span class="who">${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")}</span>
+      <!-- 배치 칩 — 어느 화면에서든 알아야 하는 기계 상태. 배지가 세는 응답에서 채운다 -->
+      <a class="bar-chip" id="barBatch" href="/admin/batch.html" hidden></a>
       <span class="spacer"></span>
-      <a href="/">← 학습 화면으로</a>
+      <!-- 번호로 이동. 검수·제보·대화에서 문제를 늘 번호로 부르는데 목록을 넘겨 찾아야 했다 -->
+      <form class="bar-jump" id="barJump" role="search">
+        <input id="barJumpInput" type="text" inputmode="numeric" autocomplete="off"
+               placeholder="#번호로 이동" aria-label="문제나 초안 번호로 이동">
+        <div class="bar-jump-pop" id="barJumpPop" hidden></div>
+      </form>
+      <!-- 콘솔에는 설정 화면이 없어 테마를 바꾸려면 학습 화면 설정까지 다녀와야 했다 -->
+      <button type="button" class="bar-icon" id="barTheme"></button>
+      <span class="who">${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")} · 관리자</span>
+      <!-- &nbsp;인 이유: 링크가 flex라 칸 앞의 보통 공백은 지워진다 -->
+      <a href="/">← 학습<span class="bar-wide">&nbsp;화면으로</span></a>
       <!-- 콘솔에는 설정 화면이 없어 로그아웃이 띠에 남는다. 사용자 화면 쪽은
            설정 안으로 옮겼다(shell.js authAreaHtml 주석). -->
       <a href="#" data-action="logout">로그아웃</a>
@@ -114,6 +125,94 @@ function renderAdminShell(active = "") {
     </nav>`;
 
   wireLogout();
+  wireThemeButton();
+  wireJump();
+}
+
+/* ── 테마 전환 ── 자동 → 라이트 → 다크 → 자동. 값은 학습 화면 설정과 같은 칸에 저장한다 */
+const THEME_CYCLE = { auto: "light", light: "dark", dark: "auto" };
+const THEME_LABEL = { auto: ["◐", "테마: 기기 설정 따름"], light: ["☀", "테마: 라이트"], dark: ["☾", "테마: 다크"] };
+
+function wireThemeButton() {
+  const btn = document.getElementById("barTheme");
+  const paint = () => {
+    const t = THEME_LABEL[getPref("csquiz_theme")] ? getPref("csquiz_theme") : "auto";
+    btn.textContent = THEME_LABEL[t][0];
+    // 누르면 무엇이 되는지까지 알려 준다. 지금 상태만 말하면 세 번 눌러 봐야 순서를 안다
+    btn.title = `${THEME_LABEL[t][1]} (누르면 ${THEME_LABEL[THEME_CYCLE[t]][1].replace("테마: ", "")})`;
+    btn.setAttribute("aria-label", btn.title);
+  };
+  paint();
+  btn.addEventListener("click", () => {
+    const now = THEME_LABEL[getPref("csquiz_theme")] ? getPref("csquiz_theme") : "auto";
+    setPref("csquiz_theme", THEME_CYCLE[now]);
+    applyStoredTheme();
+    paint();
+  });
+}
+
+/* ── 번호로 이동 ──
+ * 문제와 문제 초안은 번호 체계가 따로라 같은 번호가 둘 다 있을 수 있다. 서버가 둘 다 찾아 주고,
+ * 하나뿐이면 바로 가고 둘이면 고르게 한다. 문서 초안은 번호로 부를 일이 드물어 넣지 않았다. */
+function wireJump() {
+  const form = document.getElementById("barJump");
+  const input = document.getElementById("barJumpInput");
+  const pop = document.getElementById("barJumpPop");
+  const close = () => { pop.hidden = true; };
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = Number(input.value.replace(/[^0-9]/g, ""));
+    if (!id) return;
+    let r;
+    try {
+      r = await api(`/api/admin/lookup?id=${id}`);
+    } catch (err) {
+      showPop(`찾지 못했습니다: ${escapeHtml(err.message)}`);
+      return;
+    }
+    const targets = [];
+    if (r.draft) {
+      const tab = r.draft.code ? "code" : "concept";
+      targets.push([`/admin/llm.html?draft=${id}&kind=${tab}&status=${r.draft.status}`,
+        `초안 #${id}${r.draft.title ? " · " + escapeHtml(r.draft.title) : ""}`]);
+    }
+    if (r.problem) {
+      targets.push([`/admin/problems.html?edit=${id}`,
+        `문제 #${id}${r.problem.title ? " · " + escapeHtml(r.problem.title) : ""}`]);
+    }
+    if (targets.length === 0) return showPop(`#${id}인 문제나 초안이 없습니다.`);
+    if (targets.length === 1) {
+      location.href = targets[0][0];
+      return;
+    }
+    // 숫자 뒤 조사는 읽는 법에 따라 갈려(1이/2가) 조사 없이 쓴다
+    showPop(`#${id} — 문제와 초안이 모두 있습니다` + targets.map(([href, label]) => `<a href="${href}">${label}</a>`).join(""));
+  });
+  input.addEventListener("input", close);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  document.addEventListener("click", e => { if (!form.contains(e.target)) close(); });
+
+  function showPop(html) {
+    pop.innerHTML = html;
+    pop.hidden = false;
+  }
+}
+
+/**
+ * 띠의 배치 칩 — 일일 배치 스위치와 주간 코드 배치의 다음 실행.
+ * 꺼짐은 눈에 띄게 둔다. 검수함이 빈 것이 "다 처리했다"인지 "배치가 꺼졌다"인지 가르는 단서다.
+ */
+function renderBatchChip(c) {
+  const chip = document.getElementById("barBatch");
+  if (!chip) return;
+  const at = c.codeNextRunAt ? new Date(c.codeNextRunAt) : null;
+  const code = c.codeTopics === 0 || !at
+    ? "코드 주제 없음"
+    : `코드 ${at.getMonth() + 1}/${at.getDate()}(${"일월화수목금토"[at.getDay()]})`;
+  chip.innerHTML = `<span>일일 배치 ${c.batchEnabled ? "켜짐" : "<b>꺼짐</b>"}</span><span class="bar-chip-more">· ${code}</span>`;
+  chip.classList.toggle("off", !c.batchEnabled);
+  chip.title = c.batchEnabled ? "일일 배치가 켜져 있습니다. 누르면 배치 현황" : "일일 배치가 꺼져 있어 새 초안이 들어오지 않습니다. 누르면 배치 현황";
+  chip.hidden = false;
 }
 
 /**
@@ -154,6 +253,7 @@ async function refreshAdminBadges() {
   setBadge("backfill", c.untitled + c.missingRationale, false);
   setBadge("reports", reports + errata, reports + errata > 0);
   setBadge("comments", commentReports, commentReports > 0);
+  renderBatchChip(c);
 
   /* 센 숫자를 화면 쪽에도 흘린다.
    *

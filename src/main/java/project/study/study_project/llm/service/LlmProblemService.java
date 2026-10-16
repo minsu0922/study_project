@@ -569,9 +569,16 @@ public class LlmProblemService {
     @Transactional(readOnly = true)
     public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, DomainCode domain, Difficulty difficulty,
                                                     String documentSlug, Boolean code, Pageable pageable) {
+        return getDrafts(status, domain, difficulty, documentSlug, code, null, pageable);
+    }
+
+    /** @param id 그 번호 하나만 본다(상단 띠의 "번호로 이동"). null이면 거르지 않는다 */
+    @Transactional(readOnly = true)
+    public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, DomainCode domain, Difficulty difficulty,
+                                                    String documentSlug, Boolean code, Long id, Pageable pageable) {
         DraftStatus target = status != null ? status : DraftStatus.PENDING;
         return PageResponse.from(draftRepository
-                .findForReview(target, domain, difficulty, Texts.trimToNull(documentSlug), code, pageable)
+                .findForReview(target, domain, difficulty, Texts.trimToNull(documentSlug), code, id, pageable)
                 .map(this::toResponse));
     }
 
