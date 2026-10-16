@@ -36,6 +36,14 @@ import java.util.List;
  */
 public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
+    /** 관리 콘솔 통합 검색 — 제목과 지문에서 찾는다. q는 {@code SearchKeyword.likePattern}을 거친 패턴이다. */
+    @Query("""
+            select p from Problem p
+            where lower(p.title) like lower(:q) escape '!' or lower(p.question) like lower(:q) escape '!'
+            order by p.id desc
+            """)
+    List<Problem> searchForAdmin(@Param("q") String q, Pageable pageable);
+
     @Query(value = """
             SELECT * FROM problem p
             WHERE (:domain     IS NULL OR p.domain     = :domain)

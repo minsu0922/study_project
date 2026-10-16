@@ -20,6 +20,14 @@ import java.util.List;
  */
 public interface GeneratedProblemDraftRepository extends JpaRepository<GeneratedProblemDraft, Long> {
 
+    /** 관리 콘솔 통합 검색 — 상태를 가리지 않고 제목과 지문에서 찾는다. q는 이스케이프한 LIKE 패턴이다. */
+    @Query("""
+            select d from GeneratedProblemDraft d
+            where lower(d.title) like lower(:q) escape '!' or lower(d.question) like lower(:q) escape '!'
+            order by d.id desc
+            """)
+    List<GeneratedProblemDraft> searchForAdmin(@Param("q") String q, Pageable pageable);
+
     /** 검수 화면 목록 — 상태 필터, 오래된 순(먼저 생성된 것부터 처리). V6 인덱스와 정렬 방향 일치. */
     Page<GeneratedProblemDraft> findByStatusOrderByCreatedAtAsc(DraftStatus status, Pageable pageable);
 

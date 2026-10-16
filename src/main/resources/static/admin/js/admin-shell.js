@@ -96,11 +96,12 @@ function renderAdminShell(active = "") {
       <!-- 배치 칩 — 어느 화면에서든 알아야 하는 기계 상태. 배지가 세는 응답에서 채운다 -->
       <a class="bar-chip" id="barBatch" href="/admin/batch.html" hidden></a>
       <span class="spacer"></span>
-      <!-- 번호로 이동. 검수·제보·대화에서 문제를 늘 번호로 부르는데 목록을 넘겨 찾아야 했다 -->
+      <!-- 통합 검색. 검수·제보·대화에서 문제를 번호나 제목으로 부르는데 목록을 넘겨 찾아야 했다 -->
       <form class="bar-jump" id="barJump" role="search">
-        <input id="barJumpInput" type="text" inputmode="numeric" autocomplete="off"
-               placeholder="#번호로 이동" aria-label="문제나 초안 번호로 이동">
-        <div class="bar-jump-pop" id="barJumpPop" hidden></div>
+        <input id="barJumpInput" type="search" autocomplete="off" maxlength="50"
+               placeholder="검색  /" aria-label="번호, 제목, 사용자로 검색 (단축키 /)"
+               role="combobox" aria-expanded="false" aria-controls="barJumpPop">
+        <div class="bar-jump-pop" id="barJumpPop" role="listbox" hidden></div>
       </form>
       <!-- 콘솔에는 설정 화면이 없어 테마를 바꾸려면 학습 화면 설정까지 다녀와야 했다 -->
       <button type="button" class="bar-icon" id="barTheme"></button>
@@ -151,51 +152,116 @@ function wireThemeButton() {
   });
 }
 
-/* ── 번호로 이동 ──
- * 문제와 문제 초안은 번호 체계가 따로라 같은 번호가 둘 다 있을 수 있다. 서버가 둘 다 찾아 주고,
- * 하나뿐이면 바로 가고 둘이면 고르게 한다. 문서 초안은 번호로 부를 일이 드물어 넣지 않았다. */
+/* ── 통합 검색 ──
+ * 숫자는 번호로(문제와 초안은 번호 체계가 따로라 둘 다 나올 수 있다), 글자는 문제·초안의 제목과 지문,
+ * 사용자 아이디·닉네임으로 찾는다. 치는 동안 결과가 뜨고 ↑↓·Enter로 고른다. 문서는 넣지 않았다.
+ * 300ms를 쉬고 부른다. 한 글자마다 부르면 요청 한도(분당 60회)에 금방 닿는다. */
+const SEARCH_DELAY_MS = 300;
+const DRAFT_STATUS_LABEL = { PENDING: "검수 대기", APPROVED: "승인됨", REJECTED: "거절됨" };
+
 function wireJump() {
   const form = document.getElementById("barJump");
   const input = document.getElementById("barJumpInput");
   const pop = document.getElementById("barJumpPop");
-  const close = () => { pop.hidden = true; };
-  form.addEventListener("submit", async e => {
-    e.preventDefault();
-    const id = Number(input.value.replace(/[^0-9]/g, ""));
-    if (!id) return;
-    let r;
-    try {
-      r = await api(`/api/admin/lookup?id=${id}`);
-    } catch (err) {
-      showPop(`찾지 못했습니다: ${escapeHtml(err.message)}`);
-      return;
-    }
-    const targets = [];
-    if (r.draft) {
-      const tab = r.draft.code ? "code" : "concept";
-      targets.push([`/admin/llm.html?draft=${id}&kind=${tab}&status=${r.draft.status}`,
-        `초안 #${id}${r.draft.title ? " · " + escapeHtml(r.draft.title) : ""}`]);
-    }
-    if (r.problem) {
-      targets.push([`/admin/problems.html?edit=${id}`,
-        `문제 #${id}${r.problem.title ? " · " + escapeHtml(r.problem.title) : ""}`]);
-    }
-    if (targets.length === 0) return showPop(`#${id}인 문제나 초안이 없습니다.`);
-    if (targets.length === 1) {
-      location.href = targets[0][0];
-      return;
-    }
-    // 숫자 뒤 조사는 읽는 법에 따라 갈려(1이/2가) 조사 없이 쓴다
-    showPop(`#${id} — 문제와 초안이 모두 있습니다` + targets.map(([href, label]) => `<a href="${href}">${label}</a>`).join(""));
-  });
-  input.addEventListener("input", close);
-  document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
-  document.addEventListener("click", e => { if (!form.contains(e.target)) close(); });
+  let timer = null;
+  let seq = 0;
+  let links = [];
+  let cursor = -1;
 
-  function showPop(html) {
+  const close = () => {
+    pop.hidden = true;
+    input.setAttribute("aria-expanded", "false");
+    links = [];
+    cursor = -1;
+  };
+  const show = html => {
     pop.innerHTML = html;
     pop.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    links = [...pop.querySelectorAll("a")];
+    cursor = links.length ? 0 : -1;
+    mark();
+  };
+  const mark = () => links.forEach((a, i) => a.classList.toggle("on", i === cursor));
+
+  async function search() {
+    const q = input.value.trim();
+    // 한 글자 글자 검색은 거의 모든 줄에 걸려 쓸모가 없다. 숫자는 한 자리도 번호다
+    if (!q || (!/^#?\d+$/.test(q) && q.length < 2)) return close();
+    const mine = ++seq;
+    let r;
+    try {
+      r = await api(`/api/admin/lookup?q=${encodeURIComponent(q)}`);
+    } catch (err) {
+      if (mine === seq) show(`<p class="bar-jump-empty">찾지 못했습니다: ${escapeHtml(err.message)}</p>`);
+      return;
+    }
+    if (mine !== seq) return; // 늦게 온 앞 검색의 답은 버린다
+    show(renderResults(q, r));
+    pop.dataset.q = q;
   }
+
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(search, SEARCH_DELAY_MS);
+  });
+  input.addEventListener("focus", () => { if (input.value.trim()) search(); });
+  input.addEventListener("keydown", e => {
+    if (pop.hidden || !links.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      cursor = (cursor + (e.key === "ArrowDown" ? 1 : -1) + links.length) % links.length;
+      mark();
+      links[cursor].scrollIntoView({ block: "nearest" });
+    }
+  });
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    clearTimeout(timer);
+    // 쉬는 300ms 안에 Enter를 누르면 떠 있는 것은 앞 글자의 결과다. 새로 찾고 첫 줄로 간다
+    if (pop.hidden || pop.dataset.q !== input.value.trim()) await search();
+    if (links[cursor]) location.href = links[cursor].href;
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") { close(); input.blur(); }
+    // "/" 단축키. 글을 쓰는 칸에서는 그 글자 그대로 둔다
+    const t = e.target;
+    if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey
+        && !(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable)
+        && getComputedStyle(form).display !== "none") {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+  });
+  document.addEventListener("click", e => { if (!form.contains(e.target)) close(); });
+}
+
+function renderResults(q, r) {
+  // 문제가 먼저다. 승인된 초안은 같은 제목의 문제가 따로 있어, 초안이 앞서면 옛 사본으로 가게 된다
+  const groups = [];
+  if (r.problems.length) {
+    groups.push(["문제", r.problems.map(p => [`/admin/problems.html?edit=${p.id}`, `#${p.id}`, p.title, ""])]);
+  }
+  if (r.drafts.length) {
+    groups.push(["문제 초안", r.drafts.map(d => {
+      const tab = d.code ? "code" : "concept";
+      return [`/admin/llm.html?draft=${d.id}&kind=${tab}&status=${d.status}`,
+        `#${d.id}`, d.title, `${d.code ? "코드 · " : ""}${DRAFT_STATUS_LABEL[d.status] || d.status}`];
+    })]);
+  }
+  if (r.users.length) {
+    groups.push(["사용자", r.users.map(u => [`/admin/user.html?id=${u.id}`, u.username, u.nickname, ""])]);
+  }
+  if (!groups.length) return `<p class="bar-jump-empty">"${escapeHtml(q)}"에 맞는 것이 없습니다.</p>`;
+  return groups.map(([name, rows]) => `
+    <div class="bar-jump-group">${name}</div>
+    ${rows.map(([href, key, text, tag]) => `
+      <a href="${href}" role="option">
+        <span class="k">${escapeHtml(key)}</span>
+        <span class="t">${escapeHtml(text || "(제목 없음)")}</span>
+        ${tag ? `<span class="tag">${escapeHtml(tag)}</span>` : ""}
+      </a>`).join("")}`).join("");
 }
 
 /**

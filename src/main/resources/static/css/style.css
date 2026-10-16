@@ -1825,24 +1825,35 @@ body.admin-shell {
 /* 번호로 이동 */
 .bar-jump { position: relative; flex: none; margin: 0; }
 .bar-jump input {
-  width: 130px; height: 30px; padding: 0 10px; margin: 0;
+  width: 200px; height: 30px; padding: 0 10px; margin: 0;
   border: 1px solid transparent; border-radius: 8px;
   background: var(--bar-soft); color: var(--bar-fg); font-size: 13px;
+  transition: width .15s;
 }
+/* 칠 때만 넓힌다. 평소엔 띠의 다른 칸 자리를 뺏지 않는다 */
+.bar-jump input:focus { width: 300px; }
 .bar-jump input::placeholder { color: var(--bar-fg); opacity: .65; }
 .bar-jump input:focus { outline: none; border-color: var(--bar-fg); }
 /* 결과 상자는 본문 쪽 색을 쓴다 — 띠 밖으로 떨어져 본문 위에 얹히므로 */
 .bar-jump-pop {
-  position: absolute; top: calc(100% + 8px); right: 0; min-width: 240px; z-index: 70;
-  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  position: absolute; top: calc(100% + 8px); right: 0; width: 380px; z-index: 70;
+  max-height: 70vh; overflow-y: auto;
+  padding: 6px; border: 1px solid var(--border); border-radius: 10px;
   background: var(--card); color: var(--text); box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
   font-size: 13px;
 }
-.bar-jump-pop a {
-  display: block; margin-top: 6px; padding: 6px 8px; border-radius: 6px;
-  color: var(--primary); text-decoration: none;
+.bar-jump-group {
+  padding: 8px 8px 4px; color: var(--muted); font-size: 12px; font-weight: 600;
 }
-.bar-jump-pop a:hover { background: var(--primary-soft); }
+.bar-jump-pop a {
+  display: flex; align-items: baseline; gap: 8px; padding: 7px 8px; border-radius: 6px;
+  color: var(--text); text-decoration: none;
+}
+.bar-jump-pop a .k { flex: none; color: var(--primary); font-variant-numeric: tabular-nums; }
+.bar-jump-pop a .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-jump-pop a .tag { flex: none; color: var(--muted); font-size: 12px; }
+.bar-jump-pop a:hover, .bar-jump-pop a.on { background: var(--primary-soft); }
+.bar-jump-empty { margin: 0; padding: 8px; color: var(--muted); }
 
 /* 테마 버튼 — 띠 위에서는 공용 버튼 모양(색 칠한 상자)이 너무 무겁다 */
 .admin-bar .bar-icon {
