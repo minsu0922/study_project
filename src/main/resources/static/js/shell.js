@@ -305,12 +305,13 @@ function renderShell({ active = "", title = "" } = {}) {
  * 어느 화면에서든 옆 화면으로 바로 간다. 계정 일 넷은 마이페이지 안에서 #주소로 하나씩 연다.
  *
  * <p>위 헤더 메뉴(MENUS)와 따로 둔다. 헤더는 앱 전체의 길이고, 이것은 "나" 구역 안의 길이다.
- * 오답노트는 넣지 않았다. 복습 구역(복습 일정과 한 쌍)에 속한다.
+ * 오답노트는 링크만 둔다. 화면 자체는 복습 구역(복습 일정과 탭으로 한 쌍)이라 사이드바를 달지 않는다.
  */
 const MY_MENUS = [
   { group: "학습", items: [
     { key: "me",            label: "내 기록",   href: "/me.html",            icon: "📊" },
     { key: "history",       label: "풀이 이력", href: "/history.html",       icon: "🕘" },
+    { key: "wrong",         label: "오답노트",  href: "/wrong-answers.html", icon: "📝" },
     { key: "bookmarks",     label: "북마크",    href: "/bookmarks.html",     icon: "⭐" },
   ] },
   { group: "활동", items: [
