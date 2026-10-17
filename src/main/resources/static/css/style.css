@@ -2103,6 +2103,11 @@ body.admin-shell {
   .sample-choice:not(:disabled):hover { background: var(--fill); border-color: var(--border-strong); }
 }
 .sample-choice span:first-child { color: var(--muted); font-weight: 700; flex: none; }
+/* 고른 보기(아직 채점 전) — 풀이 화면의 .opt.selected와 같은 남보라. 올린 모양(회색)과 갈린다 */
+/* 선택자 무게를 위 hover 규칙(0-3-0)과 맞추고 뒤에 둬서, 고른 보기 위에 마우스가 있어도 고른 색이 남는다 */
+.sample-choices .sample-choice[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); color: var(--text); }
+.sample-choice[aria-pressed="true"] span:first-child { color: var(--primary-dark); }
+.sample-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-3); }
 /* 채점 뒤 — 고른 것과 정답을 함께 칠한다. 색은 채점 결과 상자와 같은 토큰이라
    이 앱 안에서 초록·빨강의 뜻이 한 벌로 유지된다(.result.correct / .result.wrong). */
 .sample-choice.is-correct { background: var(--correct-bg); border-color: var(--correct); color: var(--text); }

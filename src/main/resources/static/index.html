@@ -162,10 +162,8 @@ if (!isLoggedIn()) {
 /**
  * 랜딩 — 실제 문제 한 개와 집계 한 줄을 채운다.
  *
- * <p><b>왜 {@code /api/quiz}인가.</b> 목록 API({@code /api/problems})는 인증이 필요하다 —
- * 그 화면이 내 풀이 기록을 함께 보여 주기 때문이다. 여기서 필요한 건 "아무 문제 하나"뿐이라
- * 공개 API인 자유 퀴즈 조회를 쓴다. 이 프로젝트가 세운 "화면과 문제는 누구나, 채점만
- * 로그인"이라는 원칙이 여기서 값어치를 한다.
+ * <p><b>왜 {@code /api/quiz}인가.</b> 여기서 필요한 건 난이도·유형을 건 "아무 문제 하나"라,
+ * 정렬이 고정인 목록 API({@code /api/problems})보다 무작위로 뽑는 자유 퀴즈 조회가 맞다.
  *
  * <p><b>왜 숫자를 서버에서 받나.</b> "문제 296개"를 HTML에 글로 박으면 배치가 도는 다음 날
  * 거짓말이 된다. 게다가 이 숫자를 보는 사람은 가입할지 말지 정하는 중이라, 여기서 틀린
@@ -200,7 +198,9 @@ async function loadLanding() {
         <div class="q-text" style="font-size:var(--fs-3);margin:var(--sp-2) 0 0">
           ${escapeHtml(p.question)}</div>
         ${sampleChoices(p)}
-        <div class="meta" id="sampleHint" style="margin-top:var(--sp-3)">하나 골라 보세요. 가입 없이 채점됩니다.</div>`;
+        ${p.type === "MULTIPLE_CHOICE" && p.choices?.length ? `<div class="sample-actions">
+          <button type="button" id="sampleSubmit" disabled>제출</button></div>` : ""}
+        <div class="meta" id="sampleHint" style="margin-top:var(--sp-3)">하나 골라 제출해 보세요. 가입 없이 채점됩니다.</div>`;
       box.hidden = false;
       wireSample(p);
     }
@@ -225,7 +225,7 @@ function sampleChoices(p) {
   // div가 아니라 button이다 — 누를 수 있게 됐으니(2026-09-08) 생김새가 아니라 <요소>가
   // 그 사실을 말해야 한다. 키보드 탭 순서와 Enter, 스크린리더의 "버튼" 안내가 공짜로 따라온다.
   return `<div class="sample-choices">${p.choices.map(c => `
-    <button type="button" class="sample-choice" data-id="${c.id}">
+    <button type="button" class="sample-choice" data-id="${c.id}" aria-pressed="false">
       <span>${c.seq}</span><span>${escapeHtml(c.text)}</span>
     </button>`).join("")}</div>`;
 }
@@ -244,14 +244,28 @@ function sampleChoices(p) {
  *
  * <p>채점은 기록을 남기지 않는 공개 API를 쓴다. 실패하면 <b>조용히 원래대로</b> 둔다 —
  * 첫 화면에서 빨간 오류 상자를 만나는 것보다 아무 일도 안 일어나는 편이 낫다.
+ *
+ * <p>보기를 누르면 고르기만 하고 [제출]로 채점한다(2026-10-18). 풀이 화면(player.js selectOption)과
+ * 같은 규칙이다. 견본에서 바로 채점되고 가입 뒤 화면에서는 [제출]을 거치면 같은 앱이 두 규칙을 갖게 된다.
  */
 function wireSample(p) {
   const buttons = [...document.querySelectorAll("#sampleProblem .sample-choice")];
+  const submitBtn = document.getElementById("sampleSubmit");
   const hint = document.getElementById("sampleHint");
-  if (buttons.length === 0) return;
+  if (buttons.length === 0 || !submitBtn) return;
+  let picked = null;
 
-  buttons.forEach(btn => btn.addEventListener("click", async () => {
+  buttons.forEach(btn => btn.addEventListener("click", () => {
     if (btn.disabled) return;
+    picked = btn;
+    buttons.forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+    submitBtn.disabled = false;
+  }));
+
+  submitBtn.addEventListener("click", async () => {
+    if (!picked) return;
+    const btn = picked;
+    submitBtn.disabled = true;
     buttons.forEach(b => b.disabled = true);
     try {
       const r = await api(`/api/quiz/${p.id}/check`, {
@@ -261,16 +275,19 @@ function wireSample(p) {
       // 고른 것과 정답을 <함께> 칠한다. 틀렸을 때 "내가 뭘 골랐더라"를 다시 찾게 하지 않는다.
       const correctId = String((r.choices || []).find(c => c.correct)?.id ?? "");
       buttons.forEach(b => {
+        b.setAttribute("aria-pressed", "false");   // 고른 표시는 채점 색에 자리를 내준다
         if (b.dataset.id === correctId) b.classList.add("is-correct");
         else if (b === btn) b.classList.add("is-wrong");
       });
+      submitBtn.parentElement.remove();   // 다시 낼 수 없는 단추를 남기지 않는다
       hint.innerHTML = `<b class="${r.correct ? "sample-ok" : "sample-no"}">${r.correct ? "정답입니다" : "아쉽네요"}</b>
         ${r.explanation ? `<div style="margin-top:var(--sp-2)">${escapeHtml(r.explanation)}</div>` : ""}
         <div style="margin-top:var(--sp-2)">가입하면 이런 문제가 매일 10개 오고, 틀린 것은 복습으로 돌아옵니다.</div>`;
     } catch (e) {
       buttons.forEach(b => b.disabled = false);   // 다시 눌러 볼 수 있게 되돌린다
+      submitBtn.disabled = false;
     }
-  }));
+  });
 }
 
 /** 오늘 화면의 세 덩이를 그린다. 두 요청을 나란히 보내고 결과를 나눠 쓴다. */
