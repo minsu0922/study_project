@@ -142,8 +142,8 @@ async function init() {
     const r = reviewMap.get(problemId);
     if (!r) return "";
     const label = r.status === "GRADUATED" ? "복습 졸업 🎓" : `복습 ${r.stage + 1}단계`;
-    const color = r.status === "GRADUATED" ? "green" : "orange";
-    return `<a class="badge ${color}" href="/review.html" title="복습 페이지로">${label}</a>`;
+    // 테두리 배지(.source) — 채운 주황·초록이면 바로 옆 중급·초급 배지와 같은 색이 된다(풀이 화면과 같은 처방)
+    return `<a class="badge source" href="/review.html" title="복습 페이지로">${label}</a>`;
   }
 
   async function load() {
@@ -172,28 +172,24 @@ async function init() {
         // 접힌 줄에는 무슨 문제였는지만 둔다. 전에는 지문·답·해설·버튼을 다 펼쳐
         // 카드 한 장이 화면 하나를 채웠고, 목록을 훑을 수가 없었다. 나머지는 줄을 눌러 펼친다
         list.innerHTML = data.content.map(w => `
-          <details class="card wa-item">
+          <details class="list-row wa-item">
             <summary>
-              <span class="wa-badges">
-                <span class="badge">${escapeHtml(domainLabel(w.domain))}</span>
-                ${difficultyBadge(w.difficulty)}
-                ${reviewBadge(w.problemId)}
-              </span>
-              <span class="wa-title">${escapeHtml(w.title || w.question)}</span>
-              <span class="wa-sub meta">${formatDate(w.lastSubmittedAt).substring(0, 10)}에 틀림</span>
+              <span class="list-row-title wa-title">${escapeHtml(w.title || w.question)}</span>
+              <span class="meta"><span class="list-row-domain">${escapeHtml(domainLabel(w.domain))}</span>${
+                difficultyBadge(w.difficulty)}${reviewBadge(w.problemId)}<span class="list-row-date">${shortDay(w.lastSubmittedAt)}에 틀림</span></span>
             </summary>
             <div class="wa-body">
             <span class="badge gray">${escapeHtml(typeLabel(w.type))}</span>
             <p class="wa-question">${escapeHtml(w.question)}</p>
             ${codeBlockHtml(w.code, w.codeFocusLine)}
-            <div style="color:var(--wrong)">내 답: ${escapeHtml(w.myAnswer)}</div>
+            <div style="color:var(--wrong-fg)">내 답: ${escapeHtml(w.myAnswer)}</div>
             <!-- 서술형은 한 줄 정답이 없다. 모범 답안은 아래 해설 줄에 나온다. -->
-            ${w.correctAnswer ? `<div style="color:var(--correct)">정답: ${escapeHtml(w.correctAnswer)}</div>` : ""}
+            ${w.correctAnswer ? `<div style="color:var(--correct-fg)">정답: ${escapeHtml(w.correctAnswer)}</div>` : ""}
             <!-- 내가 고른 그 보기가 왜 틀렸는지(V15). 보기 넷을 다 늘어놓지 않는 이유는
                  이 화면이 보기를 아예 그리지 않기 때문이다 — 복습 카드에서 알고 싶은 것은
                  "내가 왜 틀렸나" 하나다(AnswerDisplay.userAnswerRationaleOf).
                  옛 문제는 이 값이 없고, 그때는 아래 통짜 해설이 같은 일을 한다. -->
-            ${w.myAnswerRationale ? `<div class="meta" style="margin-top:6px;color:var(--wrong)">
+            ${w.myAnswerRationale ? `<div class="meta" style="margin-top:6px;color:var(--wrong-fg)">
               왜 틀렸나: ${escapeHtml(w.myAnswerRationale)}</div>` : ""}
             ${w.explanation ? `<div class="meta" style="margin-top:6px">${escapeHtml(w.explanation)}</div>` : ""}
             <!-- 근거 개념 문서(docs/15 3단계) — 틀린 문제야말로 개념으로 돌아갈 이유가 가장 큰 자리다.
@@ -201,7 +197,6 @@ async function init() {
                  오답노트는 이미 답을 다 보여주는 화면이라 퀴즈와 달리 "미리 보면 안 되는" 문제가 없다. -->
             ${w.documentSlug ? `<div class="meta" style="margin-top:6px">📖 <a href="/document.html?slug=${
               encodeURIComponent(w.documentSlug)}">이 문제의 개념 문서 읽기</a></div>` : ""}
-            <div class="meta" style="margin-top:6px">마지막으로 틀린 날: ${formatDate(w.lastSubmittedAt)}</div>
             <!-- 다시 풀어도 복습 날 전이면 맞혀도 단계는 그대로다(ReviewService.onSubmission) -->
             <div class="wa-actions">
               <a class="btn" href="/quiz.html?problemId=${w.problemId}">다시 풀기</a>

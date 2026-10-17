@@ -64,11 +64,10 @@ function init() {
       if (data.content.length === 0) {
         showEmpty(list, "아직 알림이 없습니다.");
       } else list.innerHTML = data.content.map(n => `
-          <a class="card noti-item${n.read ? "" : " unread"}" href="${escapeHtml(n.link ?? "#")}"
+          <a class="list-row noti-item${n.read ? "" : " unread"}" href="${escapeHtml(n.link ?? "#")}"
              data-id="${n.id}" data-read="${n.read}">
-            <span aria-hidden="true">${ICONS[n.type] ?? "🔔"}</span>
-            ${escapeHtml(n.message)}
-            <div class="meta" style="margin-top:4px">${formatDate(n.createdAt)}${n.read ? "" : " · 안 읽음"}</div>
+            <span class="list-row-title"><span aria-hidden="true">${ICONS[n.type] ?? "🔔"}</span> ${escapeHtml(n.message)}</span>
+            <span class="meta">${shortDay(n.createdAt)}${n.read ? "" : ` · <b class="noti-new">안 읽음</b>`}</span>
           </a>`).join("");
       pager.update(data);
     } catch (e) {
