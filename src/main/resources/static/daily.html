@@ -56,6 +56,12 @@ const SOURCE_LABELS = {
   REVIEW: "복습 타이밍", WEAK: "취약 보강", NEW: "새 문제", GENERAL: "랜덤",
 };
 
+// 홈의 [시작하기]는 ?start=1로 온다. 홈이 이미 "N문제 남았어요"를 보여 줬으니 현황 카드를
+// 한 번 더 거치지 않고 바로 푼다. 한 번 쓰고 주소에서 지운다 — 남겨 두면 결과 화면의
+// [오늘의 퀴즈로]가 load()를 다시 부를 때 또 바로 시작해, 현황 카드로 돌아갈 수가 없다.
+let autoStart = new URLSearchParams(location.search).get("start") === "1";
+if (autoStart) history.replaceState(null, "", location.pathname);
+
 load();
 
 async function load() {
@@ -135,7 +141,8 @@ function render(data) {
       </div>
     </div>`;
 
-  document.getElementById("startBtn").addEventListener("click", () => {
+  const startBtn = document.getElementById("startBtn");
+  startBtn.addEventListener("click", () => {
     // 플레이어에는 "아직 안 푼 문제"만 넘긴다 — 이어서 풀기가 곧 재시작과 같은 코드가 된다.
     // badgeText로 출처 라벨을 실어 보내면 플레이어가 문제마다 배지로 보여준다(player.js 참고).
     const problems = remaining.map(i =>
@@ -166,6 +173,11 @@ function render(data) {
       },
     });
   });
+
+  if (autoStart) {
+    autoStart = false;
+    startBtn.click();
+  }
 }
 </script>
 </body>

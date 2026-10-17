@@ -316,7 +316,7 @@ function renderHero(daily, summary) {
       eyebrow: todayLabel(),
       title: "첫 문제를 풀어볼까요",
       lead: "오늘의 퀴즈 10문제면 첫 기록이 남고, 내일부터 복습이 붙습니다.",
-      actions: `<a class="btn" href="/daily.html">오늘의 퀴즈 시작 →</a>`,
+      actions: `<a class="btn" href="/daily.html?start=1">오늘의 퀴즈 시작 →</a>`,
     });
     renderFacts(summary.domains.length);
     return;
@@ -346,7 +346,7 @@ function renderHero(daily, summary) {
       bar: total > 0 ? Math.round(solved / total * 100) : 0,
       barNow: solved,
       barMax: total,
-      actions: `<a class="btn" href="/daily.html">${solved > 0 ? "이어서 풀기" : "시작하기"} →</a>${reviewBtn}`,
+      actions: `<a class="btn" href="/daily.html?start=1">${solved > 0 ? "이어서 풀기" : "시작하기"} →</a>${reviewBtn}`,
     });
     return;
   }
