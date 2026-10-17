@@ -39,7 +39,7 @@ try {
 renderShell({ title: "알림" });
 renderMySide("notifications");
 
-const ICONS = { POST_COMMENT: "💬", COMMENT_REPLY: "↩️", REPORT_ACCEPTED: "✅", REPORT_DISMISSED: "📝" };
+const ICONS = { POST_COMMENT: "message", COMMENT_REPLY: "reply", REPORT_ACCEPTED: "checkCircle", REPORT_DISMISSED: "noteX" };
 
 if (!isLoggedIn()) {
   document.getElementById("message").innerHTML =
@@ -66,7 +66,7 @@ function init() {
       } else list.innerHTML = data.content.map(n => `
           <a class="list-row noti-item${n.read ? "" : " unread"}" href="${escapeHtml(n.link ?? "#")}"
              data-id="${n.id}" data-read="${n.read}">
-            <span class="list-row-title"><span aria-hidden="true">${ICONS[n.type] ?? "🔔"}</span> ${escapeHtml(n.message)}</span>
+            <span class="list-row-title">${icon(ICONS[n.type] ?? "bell")} ${escapeHtml(n.message)}</span>
             <span class="meta">${shortDay(n.createdAt)}${n.read ? "" : ` · <b class="noti-new">안 읽음</b>`}</span>
           </a>`).join("");
       pager.update(data);

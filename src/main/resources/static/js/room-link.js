@@ -37,7 +37,7 @@ function prefetchRoomCounts(problemIds) {
 
 function roomLink(problemId) {
   return `<a class="room-link" data-room-link="${problemId}"
-             href="/discussion.html?problemId=${problemId}">💬 토론방</a>`;
+             href="/discussion.html?problemId=${problemId}">${icon("message")} 토론방</a>`;
 }
 
 /* 글이 없는 문제는 방도 아직 없다 — 첫 글이 방을 연다. 그래서 "0개"가 아니라 할 일을 적는다. */
@@ -47,7 +47,7 @@ function fillRoomLink(el) {
   // 비로그인은 글을 쓸 수 없다. 글이 없는 방은 읽을 것도 없어 링크를 거둔다 —
   // "첫 글 쓰기"를 눌러 들어갔다가 로그인하라는 말을 듣게 하지 않는다.
   if (total === 0 && !isLoggedIn()) { el.hidden = true; return; }
-  el.textContent = total > 0 ? `💬 토론방 · 글 ${total}개` : "💬 토론방에 첫 글 쓰기";
+  el.innerHTML = `${icon("message")} ${total > 0 ? `토론방 · 글 ${total}개` : "토론방에 첫 글 쓰기"}`;
 }
 
 /* 새로 그려진 링크를 찾아 개수를 채운다. 화면이 링크를 넣을 때마다 따로 부르게 하면 언젠가

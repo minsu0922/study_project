@@ -287,8 +287,8 @@ function startPlayer(mountEl, problems, opts = {}) {
     }
     if (p.type === "OX") {
       return `<div class="ox-row" role="group" aria-label="보기 2개">
-        <button class="opt" data-value="O" aria-pressed="false"><span>⭕ O</span></button>
-        <button class="opt" data-value="X" aria-pressed="false"><span>❌ X</span></button>
+        <button class="opt" data-value="O" aria-pressed="false"><span>O</span></button>
+        <button class="opt" data-value="X" aria-pressed="false"><span>X</span></button>
       </div>`;
     }
     if (p.type === "ORDERING") return renderOrdering(p);
@@ -644,7 +644,7 @@ function startPlayer(mountEl, problems, opts = {}) {
   function docLink(r) {
     if (!r.documentSlug) return "";
     const href = `/document.html?slug=${encodeURIComponent(r.documentSlug)}`;
-    return `<a class="fb-doc" href="${href}" target="_blank" rel="noopener">📖 개념 문서 읽기</a>`;
+    return `<a class="fb-doc" href="${href}" target="_blank" rel="noopener">${icon("book")} 개념 문서 읽기</a>`;
   }
 
   /* 오답 분석 — 오답 보기마다 왜 틀렸는지를 <이 화면의 번호>와 함께 늘어놓는다(V15).
@@ -731,8 +731,8 @@ function startPlayer(mountEl, problems, opts = {}) {
       <div class="feedback ${r.correct ? "correct" : "wrong"} fade-in">
         <div class="fb-head">
           <span class="verdict">${p.type === "ESSAY"
-            ? (r.correct ? "🎉 맞게 썼다고 기록했어요" : "📝 다시 볼 문제로 기록했어요")
-            : (r.correct ? "🎉 정답입니다!" : "😅 아쉬워요, 오답입니다")}</span>
+            ? (r.correct ? "✓ 맞게 썼다고 기록했어요" : "다시 볼 문제로 기록했어요")
+            : (r.correct ? "✓ 정답입니다" : "✕ 아쉬워요, 오답입니다")}</span>
           ${r.correct || !r.correctAnswer ? "" : `<div class="answer-line">정답: <b>${escapeHtml(r.correctAnswer)}</b></div>`}
         </div>
         <div class="fb-body">
@@ -758,7 +758,7 @@ function startPlayer(mountEl, problems, opts = {}) {
     // 3) 제출 버튼 → 다음/결과 버튼으로 교체
     const isLast = state.idx === problems.length - 1;
     const actions = mountEl.querySelector(".player-actions");
-    actions.innerHTML = `<button id="nextBtn" class="btn-lg">${isLast ? "결과 보기 🏁" : "다음 문제 →"}</button>`;
+    actions.innerHTML = `<button id="nextBtn" class="btn-lg">${isLast ? "결과 보기 →" : "다음 문제 →"}</button>`;
     actions.querySelector("#nextBtn").addEventListener("click", next);
     actions.querySelector("#nextBtn").focus();   // Enter로 바로 넘어갈 수 있게 포커스 이동
     shrinkKeyHint(isLast);
@@ -802,10 +802,10 @@ function startPlayer(mountEl, problems, opts = {}) {
       ? ` <span class="meta">(이번에 푼 ${problems.length}문제 중 ${state.score}개 정답)</span>`
       : "";
     // 점수대별 한 줄 코멘트 — 숫자만 던지는 것보다 "다음 행동"을 제안하는 쪽이 학습 사이트답다
-    const msg = pct === 100 ? "완벽해요! 🏆"
-      : pct >= 80 ? "훌륭해요! 조금만 더 다듬으면 완벽 👏"
-      : pct >= 50 ? "좋아요, 틀린 문제만 복습하면 금방 올라요 💪"
-      : "괜찮아요, 지금 틀린 게 실전에서 안 틀리는 길이에요 🌱";
+    const msg = pct === 100 ? "완벽해요!"
+      : pct >= 80 ? "훌륭해요! 조금만 더 다듬으면 완벽"
+      : pct >= 50 ? "좋아요, 틀린 문제만 복습하면 금방 올라요"
+      : "괜찮아요, 지금 틀린 게 실전에서 안 틀리는 길이에요";
 
     const missHtml = state.misses.length === 0 ? "" : `
       <div class="review-list">
@@ -817,7 +817,7 @@ function startPlayer(mountEl, problems, opts = {}) {
             <div class="ans">정답: ${escapeHtml(m.ans)}</div>
             ${m.why ? `<div class="my" style="margin-top:4px">왜 틀렸나: ${escapeHtml(m.why)}</div>` : ""}
             ${m.exp ? `<div class="exp">${escapeHtml(m.exp)}</div>` : ""}
-            ${m.doc ? `<div class="exp" style="font-size:.86rem">📖 <a href="/document.html?slug=${
+            ${m.doc ? `<div class="exp" style="font-size:.86rem">${icon("book")} <a href="/document.html?slug=${
               encodeURIComponent(m.doc)}" target="_blank" rel="noopener">이 문제의 개념 문서 읽기</a></div>` : ""}
             <!-- 틀린 문제를 다시 읽는 이 자리가 "왜 이게 답이지"를 묻고 싶어지는 때다. -->
             <div>${roomLink(m.pid)}</div>

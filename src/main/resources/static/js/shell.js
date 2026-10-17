@@ -23,6 +23,46 @@
  * 로그아웃했을 때만 서버에 출입증이 남는 상태가 된다.
  * ===================================================================== */
 
+/* ── 아이콘(선 그림 SVG) ─────────────────────────────────────────
+ * 메뉴·종·목록의 그림을 이모지에서 바꿨다(2026-10-17). 이모지는 OS마다 그림이 다르고(윈도·맥·안드로이드)
+ * 원색이라 남색 한 색으로 맞춘 화면에서 혼자 튄다. 이 선 그림은 글자색(currentColor)을 따라가
+ * 활성 메뉴는 남색, 보조 글자는 회색이 되고 다크 모드도 따로 손볼 것이 없다.
+ * 라이브러리를 들이지 않고 필요한 것만 적는다 — 빌드 도구가 없는 구조라 스크립트 하나가 화면 열 몇 개에 붙는다.
+ * 모양은 Lucide(ISC 라이선스)의 선 굵기·끝 처리를 따라 그렸다. */
+const ICON_PATHS = {
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  list: '<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  repeat: '<path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  sliders: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M8 17v-4M13 17V8M18 17v-7"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  noteX: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M10 13l4 4M14 13l-4 4"/>',
+  star: '<path d="m12 3 2.9 5.9 6.1.9-4.5 4.3 1.1 6.1L12 17.3l-5.6 2.9 1.1-6.1L3 9.8l6.1-.9z"/>',
+  key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2M16 7l3 3M18.5 4.5l2 2"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  thumb: '<path d="M7 10v11M15 5.9 14 10h5.8a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 18.4 21H7V10l4-8a3 3 0 0 1 4 3.9z"/>',
+  reply: '<path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',
+  checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+};
+
+/**
+ * 아이콘 SVG 한 개. 크기는 글자 크기를 따른다(.i). 뜻은 옆 글자나 aria-label이 말하므로 그림은 읽지 않게 숨긴다.
+ * @param name ICON_PATHS의 이름. 모르는 이름이면 빈 문자열
+ */
+function icon(name) {
+  const d = ICON_PATHS[name];
+  if (!d) return "";
+  return `<svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+}
+
 /* ── 권한 세 등급 ─────────────────────────────────────────────
  * 비로그인(anon) → 로그인 사용자(user) → 관리자(admin). 넓은 쪽이 좁은 쪽을 포함한다 —
  * 관리자도 학습자이므로 사용자 화면을 그대로 쓴다(관리 콘솔만 따로 있다).
@@ -108,25 +148,25 @@ function hasRole(need) {
  * 학습 메뉴를 두지 않는다.
  */
 const MENUS = [
-  { key: "today", label: "오늘", href: "/", need: "public", tab: "☀️" },
+  { key: "today", label: "오늘", href: "/", need: "public", tab: true, icon: "sun" },
   // 문제 목록은 내 풀이 기록을 함께 보여 주는 화면이라 로그인 사용자에게만 띄운다(docs/18)
-  { key: "problems", label: "문제", href: "/problems.html", need: "user", tab: "🗂️" },
+  { key: "problems", label: "문제", href: "/problems.html", need: "user", tab: true, icon: "list" },
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
-  { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: "🔁" },
-  { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: "📚" },
+  { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: true, icon: "repeat" },
+  { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: true, icon: "book" },
   // 커뮤니티(문제별 토론방의 최근 글). 읽기가 비로그인까지 열려 있어 메뉴도 누구에게나 보인다.
   // 탭 없음: 다섯 칸을 학습 화면이 다 쓴다. 폰에서는 상단 바의 아이콘으로 간다.
-  { key: "community", label: "커뮤니티", href: "/community.html", need: "public", icon: "💬" },
+  { key: "community", label: "커뮤니티", href: "/community.html", need: "public", icon: "message" },
   // 탭 라벨만 "나"로 줄인다 — 탭 다섯 칸에 "내 기록"은 안 들어간다
-  { key: "me", label: "내 기록", href: "/me.html", need: "user", tab: "🙂", tabLabel: "나" },
+  { key: "me", label: "내 기록", href: "/me.html", need: "user", tab: true, icon: "user", tabLabel: "나" },
   // 마이페이지(계정) — 2026-09-08 신설. 탭 없음: 다섯 상한을 학습 화면이 다 쓴다.
   //
   // [왜 내 기록과 따로인가] 한 번은 내 기록 안에 넣었다가 갈랐다. 통계와 진도를 보러 온
   // 화면 끝에 탈퇴 폼이 달려 있었기 때문이다 — 설정 화면이 겪던 문제를 그대로 옮긴 셈이었다.
   // 지금은 셋이 각자 한 가지만 한다: 내 기록=학습 데이터, 마이페이지=계정, 설정=취향.
-  { key: "mypage", label: "마이페이지", href: "/mypage.html", need: "user", icon: "🙋" },
+  { key: "mypage", label: "마이페이지", href: "/mypage.html", need: "user", icon: "user" },
   // 탭 없음: 다섯 상한을 지키느라 뺐다. 입구는 사이드바와 내 기록 화면 안에 있다
-  { key: "settings", label: "설정", href: "/settings.html", need: "user", icon: "⚙️" },
+  { key: "settings", label: "설정", href: "/settings.html", need: "user", icon: "sliders" },
   // 관리 콘솔은 "다른 영역으로 나간다"는 뜻이라 화살표를 붙여 다른 메뉴와 구분한다.
   //
   // need:"admin"이라 <관리자에게만> 보인다. 일반 사용자에게는 이 항목 자체가 안 그려지고,
@@ -138,7 +178,7 @@ const MENUS = [
   // 콘솔은 가끔 들르는 부록이 아니라 매일 들어가는 작업장이고(검수·제보가 쌓인다),
   // spacer 뒤는 화면 높이에 따라 위치가 달라져 눈이 매번 다시 찾아야 한다.
   // 맨 위는 어느 화면에서나 같은 자리다. "다른 방"이라는 뜻은 구분선과 ↗로 지킨다.
-  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/llm.html", need: "admin", icon: "🛠",
+  { key: "admin", label: "관리 콘솔 ↗", href: "/admin/llm.html", need: "admin", icon: "wrench",
     badge: "adminBadge" },
 ];
 
@@ -233,7 +273,7 @@ function renderShell({ active = "", title = "" } = {}) {
            tab 속성이 있는 것만 담는데 콘솔에는 그것이 없다(다섯 칸을 학습 화면이
            다 쓴다). 그래서 폰에서 관리자는 주소를 직접 치는 수밖에 없었다.
            콘솔 쪽 띠에 있는 "← 학습 화면으로"와 짝이 되는 문이다. -->
-      ${console_.length ? `<a class="shell-door" href="/admin/llm.html" aria-label="관리 콘솔">🛠<span class="door-text">&nbsp;관리</span><span id="adminBadge-door"></span></a>` : ""}
+      ${console_.length ? `<a class="shell-door" href="/admin/llm.html" aria-label="관리 콘솔">${icon("wrench")}<span class="door-text">&nbsp;관리</span><span id="adminBadge-door"></span></a>` : ""}
       <!-- 탭바에 자리를 못 얻은 메뉴(커뮤니티·마이페이지·설정)로 가는 길 — 2026-09-08.
            탭 다섯은 학습 화면이 다 쓰고, 기둥은 좁은 화면에서 숨는다. 그래서 그전에는
            내 기록 화면 본문에 입구를 뒀는데, 그건 <메뉴에 이미 있는 화면을 본문이 또
@@ -242,9 +282,9 @@ function renderShell({ active = "", title = "" } = {}) {
            title로 이름을 준다(마우스 툴팁 겸 스크린리더 이름). -->
       ${[...study, ...personal].filter(m => !m.tab).map(m =>
         `<a class="shell-icon" href="${m.href}" title="${escapeHtml(m.label)}"
-            aria-label="${escapeHtml(m.label)}">${m.icon || m.tab || "•"}</a>`).join("")}
+            aria-label="${escapeHtml(m.label)}">${icon(m.icon) || "•"}</a>`).join("")}
       ${anon ? "" : `<a class="shell-icon" href="/notifications.html" title="알림"
-            aria-label="알림">🔔<span id="notiBadge-top"></span></a>`}
+            aria-label="알림">${icon("bell")}<span id="notiBadge-top"></span></a>`}
       ${authAreaHtml()}
     </header>
 
@@ -257,10 +297,10 @@ function renderShell({ active = "", title = "" } = {}) {
         <a class="brand" href="/">csquiz</a>
         <nav class="shell-nav" aria-label="주 메뉴">${headLinks(study, active)}</nav>
         <span class="spacer"></span>
-        ${console_.length ? `<a class="shell-door" href="/admin/llm.html">🛠 관리 콘솔<span id="adminBadge"></span></a>` : ""}
+        ${console_.length ? `<a class="shell-door" href="/admin/llm.html">${icon("wrench")} 관리 콘솔<span id="adminBadge"></span></a>` : ""}
         <!-- 알림 종은 계정 메뉴 밖에 둔다. 메뉴 안에 넣으면 펴 보기 전에는 새 알림이 있는지 모른다. -->
         ${anon ? "" : `<a class="shell-bell" href="/notifications.html" title="알림"
-              aria-label="알림">🔔<span id="notiBadge"></span></a>`}
+              aria-label="알림">${icon("bell")}<span id="notiBadge"></span></a>`}
         ${anon ? `<div class="shell-head-auth">${authAreaHtml()}</div>` : accountMenuHtml(personal, active)}
       </div>
     </header>
@@ -272,7 +312,7 @@ function renderShell({ active = "", title = "" } = {}) {
       ${tabs.map(m => `
         <a class="shell-tab${m.key === active ? " active" : ""}" href="${m.href}"
            ${m.key === active ? 'aria-current="page"' : ""}>
-          <span class="ic" aria-hidden="true">${m.tab}</span>${escapeHtml(menuLabel(m, true))}
+          <span class="ic">${icon(m.icon)}</span>${escapeHtml(menuLabel(m, true))}
           ${m.badge ? `<span id="${m.badge}-tab"></span>` : ""}
         </a>`).join("")}
     </nav>`;
@@ -291,6 +331,9 @@ function renderShell({ active = "", title = "" } = {}) {
     main.setAttribute("tabindex", "-1");
     sessionExpiredNote(main);
   }
+
+  // 정적 HTML에 박힌 그림 자리(<span data-icon="calendar">)를 채운다. HTML에서는 icon()을 부를 수 없다
+  document.querySelectorAll("[data-icon]").forEach(el => { if (!el.firstChild) el.innerHTML = icon(el.dataset.icon); });
 
   loadReviewBadge();
   loadNotificationBadge();
@@ -333,22 +376,22 @@ function sessionExpiredNote(main) {
  */
 const MY_MENUS = [
   { group: "학습", items: [
-    { key: "me",            label: "내 기록",   href: "/me.html",            icon: "📊" },
-    { key: "history",       label: "풀이 이력", href: "/history.html",       icon: "🕘" },
-    { key: "wrong",         label: "오답노트",  href: "/wrong-answers.html", icon: "📝" },
-    { key: "bookmarks",     label: "북마크",    href: "/bookmarks.html",     icon: "⭐" },
+    { key: "me",            label: "내 기록",   href: "/me.html",            icon: "chart" },
+    { key: "history",       label: "풀이 이력", href: "/history.html",       icon: "clock" },
+    { key: "wrong",         label: "오답노트",  href: "/wrong-answers.html", icon: "noteX" },
+    { key: "bookmarks",     label: "북마크",    href: "/bookmarks.html",     icon: "star" },
   ] },
   { group: "활동", items: [
-    { key: "notifications", label: "알림",      href: "/notifications.html", icon: "🔔" },
+    { key: "notifications", label: "알림",      href: "/notifications.html", icon: "bell" },
   ] },
   { group: "계정", items: [
-    { key: "profile",       label: "프로필",    href: "/mypage.html#profile",  icon: "🙋" },
-    { key: "password",      label: "비밀번호",  href: "/mypage.html#password", icon: "🔑" },
-    { key: "recovery",      label: "복구 코드", href: "/mypage.html#recovery", icon: "🧾" },
-    { key: "leave",         label: "회원 탈퇴", href: "/mypage.html#leave",    icon: "🚪" },
+    { key: "profile",       label: "프로필",    href: "/mypage.html#profile",  icon: "user" },
+    { key: "password",      label: "비밀번호",  href: "/mypage.html#password", icon: "key" },
+    { key: "recovery",      label: "복구 코드", href: "/mypage.html#recovery", icon: "shield" },
+    { key: "leave",         label: "회원 탈퇴", href: "/mypage.html#leave",    icon: "logout" },
   ] },
   { group: "설정", items: [
-    { key: "settings",      label: "화면 설정", href: "/settings.html",      icon: "⚙️" },
+    { key: "settings",      label: "화면 설정", href: "/settings.html",      icon: "sliders" },
   ] },
 ];
 
@@ -366,7 +409,7 @@ function renderMySide(active) {
     ${g.items.map(m => `
       <a class="my-link${m.key === active ? " active" : ""}" href="${m.href}" data-key="${m.key}"
          ${m.key === active ? 'aria-current="page"' : ""}>
-        <span aria-hidden="true">${m.icon}</span><span>${escapeHtml(m.label)}</span>
+        ${icon(m.icon)}<span>${escapeHtml(m.label)}</span>
       </a>`).join("")}`).join("");
   // 좁은 화면의 가로 줄에서는 고른 항목이 화면 밖에 있을 수 있다. 보이는 자리로 당겨 둔다
   el.querySelector(".my-link.active")?.scrollIntoView({ block: "nearest", inline: "center" });

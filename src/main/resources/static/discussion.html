@@ -122,7 +122,7 @@ function postRow(p) {
   }
   return `<a class="list-row" href="/post.html?id=${p.id}">
     <span class="list-row-title">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}${
-      p.commentCount ? ` <span class="list-row-count">💬 ${p.commentCount}</span>` : ""}</span>
+      p.commentCount ? ` <span class="list-row-count">${icon("message")} ${p.commentCount}</span>` : ""}</span>
     <span class="meta">${escapeHtml(p.nickname || "탈퇴한 사용자")} · ${shortDay(p.createdAt)}</span>
   </a>`;
 }

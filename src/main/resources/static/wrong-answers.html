@@ -141,7 +141,7 @@ async function init() {
   function reviewBadge(problemId) {
     const r = reviewMap.get(problemId);
     if (!r) return "";
-    const label = r.status === "GRADUATED" ? "복습 졸업 🎓" : `복습 ${r.stage + 1}단계`;
+    const label = r.status === "GRADUATED" ? "복습 졸업" : `복습 ${r.stage + 1}단계`;
     // 테두리 배지(.source) — 채운 주황·초록이면 바로 옆 중급·초급 배지와 같은 색이 된다(풀이 화면과 같은 처방)
     return `<a class="badge source" href="/review.html" title="복습 페이지로">${label}</a>`;
   }
@@ -167,7 +167,7 @@ async function init() {
       if (data.content.length === 0) {
         showEmpty(list, filters.toString()
           ? "조건에 맞는 오답이 없습니다 — 필터를 지우면 전체가 보입니다."
-          : `아직 오답이 없습니다. 🎉 <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a>`);
+          : `아직 오답이 없습니다. <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a>`);
       } else {
         // 접힌 줄에는 무슨 문제였는지만 둔다. 전에는 지문·답·해설·버튼을 다 펼쳐
         // 카드 한 장이 화면 하나를 채웠고, 목록을 훑을 수가 없었다. 나머지는 줄을 눌러 펼친다
@@ -195,7 +195,7 @@ async function init() {
             <!-- 근거 개념 문서(docs/15 3단계) — 틀린 문제야말로 개념으로 돌아갈 이유가 가장 큰 자리다.
                  서버가 실재하는 문서일 때만 slug를 내려주므로 존재 여부를 여기서 다시 따지지 않는다.
                  오답노트는 이미 답을 다 보여주는 화면이라 퀴즈와 달리 "미리 보면 안 되는" 문제가 없다. -->
-            ${w.documentSlug ? `<div class="meta" style="margin-top:6px">📖 <a href="/document.html?slug=${
+            ${w.documentSlug ? `<div class="meta" style="margin-top:6px">${icon("book")} <a href="/document.html?slug=${
               encodeURIComponent(w.documentSlug)}">이 문제의 개념 문서 읽기</a></div>` : ""}
             <!-- 다시 풀어도 복습 날 전이면 맞혀도 단계는 그대로다(ReviewService.onSubmission) -->
             <div class="wa-actions">

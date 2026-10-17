@@ -680,8 +680,9 @@ body {
 .shell-top .shell-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 40px; min-height: 40px; flex: none;
-  font-size: 17px; text-decoration: none; border-radius: var(--radius);
+  color: var(--text-2); text-decoration: none; border-radius: var(--radius);
 }
+.shell-top .shell-icon .i, .shell-head .shell-bell .i { width: 20px; height: 20px; }
 /* 아이콘끼리는 붙인다. 바의 gap(12px)을 그대로 두면 셋이 144px을 쓴다 — 표적은 40px로 이미 충분하다. */
 .shell-top .shell-icon + .shell-icon { margin-left: -12px; }
 .shell-top .shell-icon:hover { background: var(--fill); }
@@ -786,7 +787,8 @@ body {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   position: relative;
 }
-.shell-tab .ic { font-size: 17px; line-height: 1; margin-bottom: 2px; }
+.shell-tab .ic { line-height: 1; margin-bottom: 3px; }
+.shell-tab .ic .i { width: 20px; height: 20px; }
 .shell-tab.active { color: var(--primary); font-weight: 700; }
 /* 탭에서는 배지가 글자 옆이 아니라 아이콘 오른쪽 위에 뜬다 — 탭 폭이 좁아
    옆에 붙이면 글자가 밀려 줄바꿈된다. */
@@ -849,7 +851,7 @@ body {
 
   /* 알림 종 — 계정 메뉴 왼쪽. 배지는 오른쪽 위에 얹는다. */
   .shell-head .shell-bell {
-    position: relative; flex: none; text-decoration: none; font-size: 17px;
+    position: relative; flex: none; text-decoration: none; color: var(--text-2);
     display: inline-flex; align-items: center; justify-content: center;
     width: 40px; height: 40px; border-radius: var(--radius);
   }
@@ -1223,6 +1225,8 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
   padding: 0 9px; font-size: var(--fs-1); font-weight: 600; text-decoration: none;
 }
 .doc-group .edition.advanced { color: var(--lv3-fg); }
+/* 첫 화면 새 소식에서는 칩이 둘째 줄(분야 옆)에 선다 — 앞 알약과 같은 간격으로 붙인다 */
+.doc-group .meta .edition { margin: 0 4px 0 0; vertical-align: 0; }
 .doc-group .edition:hover { background: var(--fill); }
 .badge.edition { background: var(--lv1-bg); color: var(--lv1-fg); }
 .badge.edition.advanced { background: var(--lv3-bg); color: var(--lv3-fg); }
@@ -1324,6 +1328,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus-ring)
 .field-ok { color: var(--correct); font-size: var(--fs-1); margin-top: var(--sp-1); }
 input.invalid { border-color: var(--wrong); }
 input.invalid:focus { outline-color: var(--wrong); }
+
+/* 선 그림 아이콘(shell.js icon). 글자 크기를 따라가고 글줄 가운데에 앉는다. 자리마다 크기를 정하는 곳은 따로 있다. */
+.i { width: 1.1em; height: 1.1em; flex: none; vertical-align: -.18em; }
 
 .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: end; }
 .filters .field { margin: 0; flex: 1; min-width: 130px; }
@@ -1841,7 +1848,12 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 }
 @media (min-width: 640px) { .landing-points { grid-template-columns: repeat(3, 1fr); } }
 .landing-points .card { margin: 0; }
-.landing-points .ic { font-size: 20px; line-height: 1; }
+.landing-points .ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: var(--radius);
+  background: var(--primary-soft); color: var(--primary-dark);
+}
+.landing-points .ic .i { width: 20px; height: 20px; }
 .landing-points b { display: block; margin: var(--sp-1) 0 var(--sp-1); }
 
 .landing-sample { text-align: left; margin-top: var(--sp-5); }

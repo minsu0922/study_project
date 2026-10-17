@@ -196,8 +196,8 @@ function stateToParams() {
 function postRow(p) {
   return `<div class="list-row">
     <a class="list-row-title" href="/post.html?id=${p.id}">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}${
-      p.commentCount ? ` <span class="list-row-count">💬 ${p.commentCount}</span>` : ""}${
-      p.likeCount ? ` <span class="list-row-count">👍 ${p.likeCount}</span>` : ""}</a>
+      p.commentCount ? ` <span class="list-row-count">${icon("message")} ${p.commentCount}</span>` : ""}${
+      p.likeCount ? ` <span class="list-row-count">${icon("thumb")} ${p.likeCount}</span>` : ""}</a>
     <span class="meta">
       <span class="list-row-domain">${escapeHtml(domainLabel(p.domain))}</span>
       <a class="list-row-sub" href="/discussion.html?problemId=${p.problemId}">${escapeHtml(p.problemTitle)}</a>

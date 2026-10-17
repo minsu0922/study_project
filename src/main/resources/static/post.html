@@ -101,10 +101,10 @@ function renderPost() {
  * 눌렀는지를 색과 글자("추천함") 둘 다로 알린다. */
 function likeButtonHtml() {
   if (post.mine) {
-    return post.likeCount ? `<span class="meta">👍 추천 ${post.likeCount}</span>` : "";
+    return post.likeCount ? `<span class="meta">${icon("thumb")} 추천 ${post.likeCount}</span>` : "";
   }
   return `<button type="button" class="like-btn" id="likeBtn" aria-pressed="${post.liked}">
-    👍 ${post.liked ? "추천함" : "추천"} <b>${post.likeCount}</b></button>`;
+    ${icon("thumb")} ${post.liked ? "추천함" : "추천"} <b>${post.likeCount}</b></button>`;
 }
 
 async function toggleLike(btn) {

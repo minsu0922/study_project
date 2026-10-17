@@ -103,7 +103,7 @@ function render(data) {
     statusBody.innerHTML = `
       <div class="card score-board fade-in">
         <div class="big">${correct}<small> / ${total}</small></div>
-        <div class="msg">오늘 완료! 내일 또 만나요 🎉</div>
+        <div class="msg">오늘 완료! 내일 또 만나요</div>
         <div class="actions">
           <a href="/review.html" class="btn btn-outline">복습 현황 보기</a>
           <a href="/quiz.html" class="btn">더 풀고 싶다면 자유 퀴즈 →</a>
@@ -137,7 +137,7 @@ function render(data) {
       ${solved === 0 ? "" : `<div class="sub">지금까지 ${correctSoFar(data)}개 정답</div>`}
       <div style="margin-top:14px">${compHtml}</div>
       <div class="actions">
-        <button id="startBtn" class="btn-lg">${solved === 0 ? "시작하기 🚀" : `이어서 풀기 (${remaining.length}문제) →`}</button>
+        <button id="startBtn" class="btn-lg">${solved === 0 ? "시작하기 →" : `이어서 풀기 (${remaining.length}문제) →`}</button>
       </div>
     </div>`;
 

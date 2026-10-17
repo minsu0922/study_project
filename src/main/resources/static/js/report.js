@@ -145,7 +145,7 @@ async function sendReport(box) {
         detail: box.querySelector(".report-detail").value,
       }),
     });
-    box.innerHTML = `<div class="report-done">제보를 보냈습니다. 확인하고 고치겠습니다 🙏</div>`;
+    box.innerHTML = `<div class="report-done">제보를 보냈습니다. 확인하고 고치겠습니다.</div>`;
   } catch (err) {
     sendBtn.disabled = false;
     // REPORT_001(이미 제보함)은 실패가 아니라 <상태 안내>다. 서버가 준 문장을 그대로 쓰되

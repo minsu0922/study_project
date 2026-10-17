@@ -422,7 +422,7 @@ async function fillCommentCounts(rows) {
     Object.entries(counts).forEach(([id, n]) => {
       const el = document.querySelector(`[data-comments-of="${id}"]`);
       if (!el) return;
-      el.textContent = `💬 ${n}`;
+      el.innerHTML = `${icon("message")} ${n}`;
       // 줄 전체가 문제로 가는 링크라 그 안에 링크를 또 넣을 수 없다. 대신 이 조각만 토론방으로 보낸다.
       el.setAttribute("role", "link");
       el.setAttribute("tabindex", "0");

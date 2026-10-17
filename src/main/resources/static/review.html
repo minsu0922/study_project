@@ -34,7 +34,7 @@ try {
     </div>
 
     <p class="meta">틀렸던 문제를 <b>1일 → 3일 → 7일 → 14일 → 30일</b> 간격으로 다시 만나요.
-      맞힐 때마다 간격이 늘고, 다섯 번 통과하면 졸업 🎓 (틀리면 한 칸만 내려가요)<br>
+      맞힐 때마다 간격이 늘고, 다섯 번 통과하면 졸업 (틀리면 한 칸만 내려가요)<br>
       <!-- 학습일 경계(2026-09-05) 안내 — "어제 틀렸는데 왜 아직 안 뜨지?"를 없애는 한 줄. -->
       복습은 <b>그 날 아침부터</b> 열려요. 밤늦게 푼 문제도 다음 날이면 올라옵니다.</p>
 
@@ -144,11 +144,10 @@ async function loadToday() {
     const rest = data.totalElements - inSession;
     box.innerHTML = `
       <div class="card" style="text-align:center;padding:28px">
-        <div style="font-size:1.6rem">📅</div>
         <b>오늘 복습할 문제 ${inSession}개를 골랐어요</b>
         <div class="meta" style="margin-top:4px">오래 밀린 문제부터 차례로 나와요${
           rest > 0 ? `<br>남은 ${rest}개는 이 판을 끝내면 이어서 나와요 — 한 번에 다 안 해도 돼요` : ""}</div>
-        <button id="startReviewBtn" class="btn-lg" style="margin-top:12px">복습 시작 ✍️</button>
+        <button id="startReviewBtn" class="btn-lg" style="margin-top:12px">복습 시작 →</button>
       </div>`;
     document.getElementById("startReviewBtn").addEventListener("click", () => {
       overviewEl.hidden = true;
@@ -220,7 +219,6 @@ async function renderNothingDue(box) {
   if (count === 0) {
     box.innerHTML = `
       <div class="card" style="text-align:center;padding:28px">
-        <div style="font-size:1.6rem">🎉</div>
         <b>복습할 문제가 없어요!</b>
         <div class="meta" style="margin-top:4px">${all
           ? "사다리의 문제를 모두 졸업했어요. 새로 틀린 문제가 생기면 여기에 올라와요."
@@ -233,7 +231,6 @@ async function renderNothingDue(box) {
   const on = shortDay(waiting.content[0].nextReviewAt);
   box.innerHTML = `
     <div class="card" style="text-align:center;padding:28px">
-      <div style="font-size:1.6rem">🌱</div>
       <b>오늘 몫은 끝났어요</b>
       <div class="meta" style="margin-top:4px">${count}개가 사다리에서 기다리는 중 —
         가장 이른 복습은 <b>${escapeHtml(on)}</b>부터예요.</div>
@@ -277,7 +274,7 @@ async function loadStatus() {
       // 두 페이지가 똑같아 보인다(메뉴 역할 분리 — 이 페이지의 본론은 단계/다음 복습일).
       list.innerHTML = data.content.map(r => {
         const stageBadge = r.status === "GRADUATED"
-          ? `<span class="badge green">졸업 🎓</span>`
+          ? `<span class="badge green">졸업</span>`
           : `<span class="badge orange">${r.stage + 1}단계</span>`;
         // 예정 시각은 "그 날 새벽 4시"라 시·분을 그대로 보여주면 "9/6 04:00"이 된다 —
         // 새벽 4시에 일어나라는 말로 읽힌다. 실제로 중요한 건 <어느 날부터 열리는가>이므로
@@ -320,7 +317,7 @@ async function loadStatus() {
 }
 
 /* ── 옆 기둥: 분야(문제 수)와 상태(복습 중·졸업) ── */
-const STATUSES = [["LEARNING", "복습 중", "learning"], ["GRADUATED", "졸업 🎓", "graduated"]];
+const STATUSES = [["LEARNING", "복습 중", "learning"], ["GRADUATED", "졸업", "graduated"]];
 
 function renderSide() {
   const byDomain = new Map((counts?.domains ?? []).map(d => [d.domain, d.count]));
