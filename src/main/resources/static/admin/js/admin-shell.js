@@ -92,7 +92,7 @@ function renderAdminShell(active = "") {
 
   el.innerHTML = `
     <header class="admin-bar">
-      <a class="brand" href="/admin/llm.html">csquiz 관리</a>
+      <a class="brand" href="/admin/llm.html"><span class="brand-site">csquiz&nbsp;</span>관리</a>
       <!-- 배치 칩 — 어느 화면에서든 알아야 하는 기계 상태. 배지가 세는 응답에서 채운다 -->
       <a class="bar-chip" id="barBatch" href="/admin/batch.html" hidden></a>
       <span class="spacer"></span>

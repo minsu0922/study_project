@@ -694,6 +694,19 @@ body {
   font-size: var(--fs-1); flex: none; align-self: center;
 }
 
+/* 아주 좁은 폰(420px 밑): 관리자는 관리 문과 아이콘 넷이 함께 서서 320px에서 66px 넘쳤다.
+   간격을 줄이고, 관리 문은 🛠만 남기고, 360px 밑에서는 화면 이름을 뺀다(본문 제목과 탭바가 같은 말을 한다) */
+@media (max-width: 420px) {
+  .shell-top { gap: 6px; padding: 0 10px; }
+  .shell-top .shell-icon { width: 36px; }
+  .shell-top .shell-icon + .shell-icon { margin-left: -6px; }
+  .shell-top .shell-door { padding: 4px 8px; }
+  .shell-top .shell-door .door-text { display: none; }
+}
+@media (max-width: 360px) {
+  .shell-top .shell-title { display: none; }
+}
+
 /* ── 푸터 (shell.js footerHtml) ──
  * 본문 칸이 1fr이라 내용이 짧아도 푸터는 화면 맨 아래(폰에서는 탭바 바로 위)에 붙는다.
  * 조용하게 둔다 — 화면의 끝을 알리는 자리이지 읽으라고 있는 자리가 아니다. */
@@ -1867,6 +1880,13 @@ body.admin-shell {
 .bar-jump-history a:first-child { flex: 1; min-width: 0; }
 .bar-jump-pop a.x { flex: none; padding: 7px 10px; color: var(--muted); }
 
+/* 태블릿 폭(768~1023px): 칸이 다 서면 768px에서 띠가 40px 넘쳤다. 아이디와 칩 뒷부분을 빼고 검색 칸을 줄인다 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .admin-bar .who, .admin-bar .bar-chip-more { display: none; }
+  .bar-jump input { width: 150px; }
+  .bar-jump input:focus { width: 220px; }
+}
+
 /* 돋보기는 좁은 화면에서만 보인다. 넓으면 칸이 늘 띠에 있다 */
 .admin-bar .bar-search-btn { display: none; align-items: center; justify-content: center; }
 
@@ -1883,6 +1903,11 @@ body.admin-shell {
   .admin-bar { gap: var(--sp-2); padding: 0 var(--sp-3); }
   .admin-bar .who, .bar-jump, .admin-bar .bar-chip-more, .admin-bar .bar-wide { display: none; }
   .admin-bar .bar-search-btn { display: inline-flex; }
+  /* 400px 밑: 320px에서 띠가 37px 넘쳤다. 간격을 줄이고 브랜드를 "관리"만 남긴다 */
+  @media (max-width: 400px) {
+    .admin-bar { gap: 4px; padding: 0 8px; }
+    .admin-bar .brand-site { display: none; }
+  }
   /* 돋보기를 누르면 칸이 띠 바로 아래에 한 줄로 펼쳐진다. 띠 안에서 다른 칸을 밀어내지 않는다 */
   .admin-bar.searching .bar-jump {
     display: block; position: absolute; top: 100%; left: 0; right: 0;
