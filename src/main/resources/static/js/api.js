@@ -592,41 +592,57 @@ function codeChoicesHtml(texts) {
 }
 
 /** ISO 날짜 문자열 → "2026-07-05 10:06" 같은 짧은 표기 */
+/** 한 번에 보이는 쪽 번호 수. 1~5, 6~10처럼 다섯씩 묶어 보인다 */
+const PAGER_BLOCK = 5;
+
 /**
- * 쪽 넘기기 한 벌(이전 · 몇 쪽 · 다음). 목록 화면이 모두 이것을 쓴다.
+ * 쪽 넘기기 한 벌 — 학습 화면과 관리 콘솔의 모든 목록이 이것을 쓴다.
+ * 모양: 왼쪽에 전체 건수, 가운데에 ‹ 1 2 3 4 5 ›. 번호는 다섯씩 묶음으로 보인다.
  *
- * 응답이 두 가지라 둘 다 받는다. 전체 쪽수를 아는 목록(totalPages가 있다)은 "2 / 7"로 적고
- * 쪽이 하나면 숨긴다. 다음이 있는지만 아는 목록(토론방 쪽)은 "2쪽"으로 적고 첫 쪽에 다음이 없으면 숨긴다.
+ * 응답이 두 가지라 둘 다 받는다. 전체 쪽수를 아는 목록(totalPages가 있다)은 그 묶음의 번호를 다 보이고,
+ * 다음이 있는지만 아는 목록(토론방 쪽)은 지금 쪽과 다음 쪽까지만 보인다. 쪽이 하나면 번호를 숨긴다.
+ * 전체 건수는 쪽이 하나여도 남긴다. 필터를 건 뒤 "몇 건으로 좁혀졌나"가 곧 답인 경우가 많다.
  *
  * 버튼에 id를 주지 않는다 — 퀴즈 플레이어가 nextBtn을 만들어, 같은 문서에 얹히면 id가 겹친다.
  *
- * @param el      빈 틀(<div class="pager" hidden>)
- * @param onMove  옮겨 갈 쪽 번호(0부터)를 받는다. 쪽 번호를 어디에 두는지는 화면이 정한다
- * @param opts    showTotal: 전체 건수도 적는다
- * @returns       { update({page, hasNext, totalPages, totalElements}), hide() }
+ * @param el     빈 틀(<div class="pager" hidden>). 한 화면에 목록이 둘이면 틀도 둘이다
+ * @param onMove 옮겨 갈 쪽 번호(0부터)를 받는다. 쪽 번호를 어디에 두는지는 화면이 정한다
+ * @returns      { update({page, hasNext, totalPages, totalElements}), hide() }
  */
-function mountPager(el, onMove, opts = {}) {
-  el.innerHTML = `
-    <button type="button" class="btn-outline" data-pager="-1">이전</button>
-    <span class="info"></span>
-    <button type="button" class="btn-outline" data-pager="1">다음</button>`;
-  const [prev, next] = el.querySelectorAll("button");
-  const info = el.querySelector(".info");
+function mountPager(el, onMove) {
+  el.classList.add("pager");
   let current = 0;
   el.addEventListener("click", e => {
-    const btn = e.target.closest("[data-pager]");
-    if (btn && !btn.disabled) onMove(current + Number(btn.dataset.pager));
+    const btn = e.target.closest("[data-page]");
+    if (!btn || btn.disabled) return;
+    const target = Number(btn.dataset.page);
+    if (target !== current) onMove(target);
   });
   return {
     update(data) {
       current = data.page;
-      const counted = data.totalPages !== undefined;
-      el.hidden = counted ? data.totalPages <= 1 : (data.page === 0 && !data.hasNext);
-      info.textContent = counted
-        ? `${data.page + 1} / ${Math.max(data.totalPages, 1)}` + (opts.showTotal ? ` — 전체 ${data.totalElements}건` : "")
-        : `${data.page + 1}쪽`;
-      prev.disabled = data.page === 0;
-      next.disabled = !data.hasNext;
+      const counted = data.totalPages !== undefined && data.totalPages !== null;
+      const last = counted ? Math.max(data.totalPages, 1) - 1 : data.page + (data.hasNext ? 1 : 0);
+      const start = Math.floor(data.page / PAGER_BLOCK) * PAGER_BLOCK;
+      const end = Math.min(start + PAGER_BLOCK - 1, last);
+      const numbers = [];
+      for (let p = start; p <= end; p++) {
+        numbers.push(p === data.page
+          ? `<button type="button" class="pager-num on" data-page="${p}" aria-current="page">${p + 1}</button>`
+          : `<button type="button" class="pager-num" data-page="${p}">${p + 1}</button>`);
+      }
+      const total = data.totalElements !== undefined && data.totalElements !== null
+        ? `<span class="pager-total">전체 ${data.totalElements}건</span>` : "";
+      const pages = last > 0 ? `
+        <span class="pager-pages">
+          <button type="button" class="pager-num" data-page="${data.page - 1}" aria-label="이전 쪽"
+                  ${data.page === 0 ? "disabled" : ""}>‹</button>
+          ${numbers.join("")}
+          <button type="button" class="pager-num" data-page="${data.page + 1}" aria-label="다음 쪽"
+                  ${data.page >= last ? "disabled" : ""}>›</button>
+        </span>` : "";
+      el.innerHTML = total + pages;
+      el.hidden = !total && !pages;
     },
     hide() { el.hidden = true; },
   };

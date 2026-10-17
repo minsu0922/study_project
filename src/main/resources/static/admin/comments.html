@@ -38,7 +38,7 @@ try {
 
     <div id="cMessage"></div>
     <div id="cList"></div>
-    <div class="pager-row" id="cPagerRow"></div>
+    <div class="pager" id="cPager" hidden></div>
   </div>
 </main>
 
@@ -82,15 +82,11 @@ function render(data) {
     ? `<div class="card">${status === "PENDING" ? "대기 중인 신고가 없습니다. 👍" : "해당하는 신고가 없습니다."}</div>`
     : data.content.map(card).join("");
 
-  const row = document.getElementById("cPagerRow");
-  row.innerHTML = `
-    <span class="meta">전체 ${data.totalElements}건</span>
-    <span class="spacer"></span>
-    ${renderAdminPager(data)}`;
-  row.querySelectorAll("[data-page]").forEach(btn => {
-    btn.addEventListener("click", () => { page = Number(btn.dataset.page); load(); });
-  });
+  cPager.update(data);
 }
+
+// 쪽 넘기기는 모든 목록이 같은 한 벌이다(api.js mountPager)
+const cPager = mountPager(document.getElementById("cPager"), p => { page = p; load(); });
 
 /**
  * 신고 한 장. 글 본문을 전문으로 싣는다 — "가릴 글인가"를 여기서 판단해야 한다.

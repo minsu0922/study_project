@@ -132,11 +132,7 @@ try {
 
     <div class="meta" id="tTotal" style="margin-bottom:6px"></div>
     <div class="table-wrap"><table class="grid" id="topicTable"></table></div>
-    <div class="pager" id="tPager" hidden>
-      <button id="tPrevBtn" class="btn-outline">이전</button>
-      <span class="info" id="tPageInfo"></span>
-      <button id="tNextBtn" class="btn-outline">다음</button>
-    </div>
+    <div class="pager" id="tPager" hidden></div>
   </div>
 </main>
 
@@ -157,6 +153,7 @@ try {
 
 /* 주제 범위 목록의 검색어와 쪽 — 화면 상태다. 검색어가 있으면 이동 버튼을 잠근다(아래 설명). */
 let topicQuery = "";
+let topicPager = null;   // initTopicForm에서 단다
 let topicKind = "CONCEPT";   // 보고 있는 탭. 추가·목록·이동이 모두 이 종류 안에서 일어난다
 let topicPage = 0;
 const TOPIC_PAGE_SIZE = 20;
@@ -276,8 +273,8 @@ function initTopicForm() {
     document.getElementById("tFileName").textContent = topicFile();
     loadTopicQueue();
   });
-  document.getElementById("tPrevBtn").addEventListener("click", () => { topicPage--; loadTopicQueue(); });
-  document.getElementById("tNextBtn").addEventListener("click", () => { topicPage++; loadTopicQueue(); });
+  // 쪽 넘기기는 모든 목록이 같은 한 벌이다(api.js mountPager)
+  topicPager = mountPager(document.getElementById("tPager"), p => { topicPage = p; loadTopicQueue(); });
 }
 
 /**
@@ -411,8 +408,8 @@ async function loadTopicQueue() {
   document.getElementById("tTotal").innerHTML = on.length
     ? `${on.join(" · ")} — ${data.totalElements}건
        <b>(거르는 중에는 순서를 바꿀 수 없습니다</b> — ↑↓는 전체 순서에서 움직이는데 이웃이 화면에 없습니다)`
-    : `전체 ${data.totalElements}건`;
-  renderTopicPager(data);
+    : "";   // 거르지 않을 때의 전체 건수는 아래 페이저가 적는다
+  topicPager.update(data);
   renderBulkBar();
 
   if (items.length === 0) {
@@ -589,15 +586,6 @@ async function moveSelectedToTop() {
   } catch (e) {
     showError(msg, e);
   }
-}
-
-/** 주제 목록 페이저. 검수 목록의 renderPager와 같은 모양이지만 파일이 달라 여기 한 벌 둔다. */
-function renderTopicPager(data) {
-  document.getElementById("tPager").hidden = data.totalPages <= 1;
-  document.getElementById("tPageInfo").textContent =
-    `${data.page + 1} / ${Math.max(data.totalPages, 1)}`;
-  document.getElementById("tPrevBtn").disabled = data.page === 0;
-  document.getElementById("tNextBtn").disabled = !data.hasNext;
 }
 
 /**

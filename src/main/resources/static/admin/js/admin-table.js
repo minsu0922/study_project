@@ -91,11 +91,11 @@ async function renderAdminTable(mountSelector, config, opts = {}) {
           </tr>`).join("")}</tbody>
       </table>
     </div>
-    <div class="pager-row">
-      <span class="meta">전체 ${data.totalElements ?? rows.length}건</span>
-      <span class="spacer"></span>
-      ${renderAdminPager(data)}
-    </div>`;
+    <div class="pager" hidden></div>`;
+
+  // 쪽 넘기기는 학습 화면과 같은 한 벌이다(api.js mountPager). 표를 다시 그릴 때마다 틀도 새로 생겨 다시 단다
+  mountPager(mount.querySelector(".pager"), p => renderAdminTable(mountSelector, config, { page: p }))
+    .update({ ...data, totalElements: data.totalElements ?? rows.length });
 
   wireAdminTable(mountSelector, mount, config, rows);
 }
@@ -126,13 +126,6 @@ function wireAdminTable(mountSelector, mount, config, rows) {
       config.onRowClick(row, btn ? btn.dataset.action : null, btn);
     };
   }
-
-  mount.querySelectorAll("[data-page]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const st = adminTableState.get(mountSelector);
-      renderAdminTable(mountSelector, st.config, { page: Number(btn.dataset.page) });
-    });
-  });
 }
 
 /**
@@ -151,23 +144,6 @@ async function adminTableReload(mountSelector) {
   if (rows.length === 0 && now.page > 0) {
     await renderAdminTable(mountSelector, now.config, { page: now.page - 1 });
   }
-}
-
-/**
- * 페이저 한 벌 — 표와 카드 목록이 함께 쓴다.
- *
- * <p>쪽이 하나면 통째로 안 그린다. 누를 수 없는 버튼 둘이 떠 있으면 "다음이 있나?"를
- * 매번 확인하게 된다.
- *
- * <p>마크업만 만들고 <b>동작은 안 붙인다</b>. 한 화면에 목록이 둘인 경우가 있어
- * (검수 화면의 문제 초안·문서 초안) "어느 목록의 쪽을 넘기는가"는 부르는 쪽이 정해야 한다.
- */
-function renderAdminPager(data) {
-  if (!data.totalPages || data.totalPages <= 1) return "";
-  return `
-    <button class="btn-outline" data-page="${data.page - 1}" ${data.page === 0 ? "disabled" : ""}>이전</button>
-    <span class="meta">${data.page + 1} / ${data.totalPages}</span>
-    <button class="btn-outline" data-page="${data.page + 1}" ${data.hasNext ? "" : "disabled"}>다음</button>`;
 }
 
 /**

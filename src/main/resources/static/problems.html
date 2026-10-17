@@ -80,7 +80,7 @@ try {
           <span class="pl-when">마지막</span>
         </div>
         <div id="list"></div>
-        <div class="pl-pager" id="pager" hidden></div>
+        <div class="pager" id="pager" hidden></div>
       </div>
     </div>
   </div>
@@ -519,7 +519,7 @@ document.getElementById("list")?.addEventListener("click", e => {
   loadList();
 });
 
-const pager = mountPager(document.getElementById("pager"), p => { page = p; loadList(); }, { showTotal: true });
+const pager = mountPager(document.getElementById("pager"), p => { page = p; loadList(); });
 
 function renderPager(data) {
   pager.update(data);

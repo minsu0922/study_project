@@ -104,7 +104,7 @@ try {
     <!-- 페이저(2026-08-29 신설). 그전에는 size=50 한 판만 불러 놓고 <잘렸다는 표시도 없었다> —
          승인됨이 114건이라 64건은 화면에서 볼 방법 자체가 없었다. 문제 관리 화면에는 이미
          같은 모양의 페이저가 있어서, 한 콘솔 안에서 규칙이 갈려 있기도 했다. -->
-    <div class="pager-row" id="dPagerRow"></div>
+    <div class="pager" id="dPager" hidden></div>
     </section>
 
     <section id="document-drafts" hidden>
@@ -129,7 +129,7 @@ try {
       <div class="field field-reset"><label>&nbsp;</label><button id="gdResetBtn" class="btn-outline">필터 지우기</button></div>
     </div>
     <div id="docDraftList"></div>
-    <div class="pager-row" id="ddPagerRow"></div>
+    <div class="pager" id="ddPager" hidden></div>
     </section>
   </div>
 </main>
@@ -309,35 +309,17 @@ function renderReviewSummary(c) {
 }
 
 /**
- * 페이저 한 벌 — 문제 초안·문서 초안 목록이 같은 함수를 쓴다.
- *
- * <p><b>마크업은 공용 {@code renderAdminPager}가 만든다</b>(admin-table.js). 예전에는 이
- * 화면이 제 페이저를 직접 그렸는데, 문제·문서 관리 화면의 페이저와 생김새가 조금씩
- * 어긋나 있었다 — 같은 콘솔 안에서 같은 동작이 화면마다 달라 보였다.
- *
- * <p>여기 남은 것은 <b>어느 목록의 쪽을 넘기는가</b>뿐이다. 공용 함수가 동작까지 붙이지
- * 못하는 이유가 바로 이 화면이다 — 한 화면에 목록이 둘이라 누를 때 무엇을 다시 불러야
- * 하는지를 공용 쪽에서는 알 수 없다.
- *
- * <p><b>전체 건수를 왼쪽에 따로 뺐다.</b> 예전에는 "1 / 3 — 전체 47건"처럼 쪽 표시에
- * 붙어 있었는데, 쪽이 하나면 페이저가 통째로 숨으면서 건수까지 같이 사라졌다.
- * 상태 필터를 옮겼을 때 "몇 건으로 좁혀졌나"가 곧 답인 화면이라 그 숫자는 남아야 한다.
+ * 페이저 — 문제 초안·문서 초안 목록이 하나씩. 모양과 동작은 모든 목록이 같은 한 벌이다(api.js mountPager).
+ * 여기 남은 것은 <b>어느 목록의 쪽을 넘기는가</b>뿐이다. 처음 부를 때 단다.
  *
  * @param prefix 요소 id 접두사(d = 문제 초안, dd = 개념 문서 초안)
  */
+const draftPagers = {};
 function renderPager(prefix, data) {
-  const row = document.getElementById(prefix + "PagerRow");
-  row.innerHTML = `
-    <span class="meta">전체 ${data.totalElements}건</span>
-    <span class="spacer"></span>
-    ${renderAdminPager(data)}`;
-
-  const go = prefix === "d"
+  draftPagers[prefix] ??= mountPager(document.getElementById(prefix + "Pager"), prefix === "d"
     ? n => { draftPage = n; loadDrafts(); }
-    : n => { docDraftPage = n; loadDocDrafts(); };
-  row.querySelectorAll("[data-page]").forEach(btn => {
-    btn.addEventListener("click", () => go(Number(btn.dataset.page)));
-  });
+    : n => { docDraftPage = n; loadDocDrafts(); });
+  draftPagers[prefix].update(data);
 }
 
 /**
