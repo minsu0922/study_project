@@ -54,8 +54,20 @@ public class DocumentService {
     /** 관리 화면 목록 — 내려 둔 문서까지 싣는다. 공개 목록과 갈라 둬야 내린 문서를 다시 올릴 수 있다. */
     @Transactional(readOnly = true)
     public PageResponse<DocumentListItem> getDocumentsIncludingHidden(String keyword, Pageable pageable) {
+        return getDocumentsForAdmin(null, null, keyword, null, pageable);
+    }
+
+    /**
+     * 관리 목록의 필터 넷. 공개 목록과 같은 쿼리에 "내림 상태" 조건만 더한다.
+     *
+     * @param hidden null이면 공개·내림 둘 다
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<DocumentListItem> getDocumentsForAdmin(DomainCode domain, String tag, String keyword,
+                                                               Boolean hidden, Pageable pageable) {
+        List<String> tags = tag == null || tag.isBlank() ? null : List.of(tag.trim());
         return PageResponse.from(withEditions(withDomainLabels(
-                documentRepository.searchListItems(null, null, keyword, true, pageable))));
+                documentRepository.searchListItems(domain, tags, keyword, hidden, pageable))));
     }
 
     /**

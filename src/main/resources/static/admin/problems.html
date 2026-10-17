@@ -89,13 +89,13 @@ try {
          그 둘이 없으면 답할 수 없다. -->
     <div class="filters" style="margin-bottom:12px">
       <!-- 검색어(2026-10-17). 띠의 통합 검색은 다섯 개만 보여 주므로, 그 뒤를 이어 보는 자리가 여기다 -->
-      <div class="field"><label for="fpQ">검색</label>
+      <div class="field field-search"><label for="fpQ">검색 <span class="meta">(제목·지문)</span></label>
         <input type="search" id="fpQ" maxlength="50" placeholder="제목이나 지문 일부"></div>
       <div class="field"><label>분야</label><select id="fpDomain"></select></div>
       <div class="field"><label>난이도</label><select id="fpDifficulty"></select></div>
       <div class="field"><label>유형</label><select id="fpType"></select></div>
       <div class="field"><label>근거 문서</label><select id="fpDocument"></select></div>
-      <div class="field"><label>&nbsp;</label><button id="fpResetBtn" class="btn-outline">필터 지우기</button></div>
+      <div class="field field-reset"><label>&nbsp;</label><button id="fpResetBtn" class="btn-outline">필터 지우기</button></div>
     </div>
     <!-- 표·전체 건수·페이저·빈 상태는 admin-table.js가 통째로 그린다. 여기는 자리만 둔다. -->
     <div id="problemList"></div>
@@ -165,16 +165,11 @@ function initListFilters() {
     const sel = document.getElementById(id);
     sel.innerHTML = `<option value="">전체</option>`
       + options.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
-    // 필터를 바꾸면 첫 쪽부터 — 3쪽을 보다 좁히면 결과가 1쪽뿐이라 빈 화면이 뜬다.
-    sel.addEventListener("change", () => loadProblems({ page: 0 }));
   }
-  document.getElementById("fpDocument").addEventListener("change", () => loadProblems({ page: 0 }));
-
-  wireSearchInput("fpQ", () => loadProblems({ page: 0 }));
-
-  document.getElementById("fpResetBtn").addEventListener("click", () => {
-    ["fpQ", "fpDomain", "fpDifficulty", "fpType", "fpDocument"].forEach(id => document.getElementById(id).value = "");
-    loadProblems({ page: 0 });
+  // 필터를 바꾸면 첫 쪽부터 — 3쪽을 보다 좁히면 결과가 1쪽뿐이라 빈 화면이 뜬다.
+  wireFilterBar({
+    search: "fpQ", selects: ["fpDomain", "fpDifficulty", "fpType", "fpDocument"], reset: "fpResetBtn",
+    onChange: () => loadProblems({ page: 0 }),
   });
 
   loadProblemDocumentFilter();

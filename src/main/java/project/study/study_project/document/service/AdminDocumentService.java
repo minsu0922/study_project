@@ -53,7 +53,24 @@ public class AdminDocumentService {
 
     /** @param q 제목·본문 검색어(공개 목록과 같은 조건). 비면 거르지 않는다 */
     public PageResponse<DocumentListItem> list(String q, Pageable pageable) {
-        return documentService.getDocumentsIncludingHidden(q, pageable);
+        return list(null, null, q, null, pageable);
+    }
+
+    /**
+     * 관리 목록 — 문제 관리 목록처럼 필터를 함께 건다.
+     *
+     * @param tag    태그 하나. 비면 거르지 않는다
+     * @param hidden true면 내린 문서만, false면 공개 문서만, null이면 둘 다
+     */
+    public PageResponse<DocumentListItem> list(DomainCode domain, String tag, String q, Boolean hidden,
+                                               Pageable pageable) {
+        return documentService.getDocumentsForAdmin(domain, tag, q, hidden, pageable);
+    }
+
+    /** 태그 필터에 채울 이름 — 문서에 실제로 붙은 것만. */
+    @Transactional(readOnly = true)
+    public List<String> usedTagNames() {
+        return documentRepository.findUsedTagNames();
     }
 
     /** 수정 폼 채우기용 단건. 공개 단건 API는 내려 둔 문서를 404로 막으므로 id로 따로 읽는다. */

@@ -9,6 +9,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
+import project.study.study_project.document.domain.Document;
+import project.study.study_project.document.dto.DocumentListItem;
+import project.study.study_project.document.repository.DocumentRepository;
+import project.study.study_project.document.service.DocumentService;
+import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.tag.domain.Tag;
+import project.study.study_project.tag.repository.TagRepository;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.common.SearchKeyword;
@@ -21,6 +28,7 @@ import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +44,12 @@ class AdminSearchQueriesIntegrationTest {
     private GeneratedProblemDraftRepository draftRepository;
     @Autowired
     private GeneratedDocumentDraftRepository documentDraftRepository;
+    @Autowired
+    private DocumentRepository documentRepository;
+    @Autowired
+    private DocumentService documentService;
+    @Autowired
+    private TagRepository tagRepository;
 
     @Test
     @DisplayName("문제 관리 목록의 검색어는 제목과 지문을 함께 보고, 대소문자를 가리지 않는다")
@@ -85,6 +99,37 @@ class AdminSearchQueriesIntegrationTest {
                 DraftStatus.PENDING, SearchKeyword.likePattern(word), PageRequest.of(0, 5));
 
         assertThat(found.getContent()).extracting(GeneratedDocumentDraft::getId).containsExactly(hit.getId());
+    }
+
+    @Test
+    @DisplayName("문서 관리 목록 — 상태는 공개만·내림만·둘 다로, 태그와 분야로도 거른다")
+    void documentAdminFilters() {
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        String tagName = word.toLowerCase();
+        Tag tag = tagRepository.save(Tag.of(tagName));
+        Document shown = documentRepository.save(Document.create(
+                TestDomains.NETWORK, word + " 공개", "a-" + tagName, "본문", null, Set.of(tag)));
+        Document hidden = documentRepository.save(Document.create(
+                TestDomains.SECURITY, word + " 내림", "b-" + tagName, "본문", null, Set.of()));
+        hidden.hide();
+        documentRepository.flush();
+        PageRequest page = PageRequest.of(0, 20);
+
+        assertThat(ids(documentService.getDocumentsForAdmin(null, null, word, null, page)))
+                .containsExactlyInAnyOrder(shown.getId(), hidden.getId());
+        assertThat(ids(documentService.getDocumentsForAdmin(null, null, word, true, page)))
+                .containsExactly(hidden.getId());
+        assertThat(ids(documentService.getDocumentsForAdmin(null, null, word, false, page)))
+                .containsExactly(shown.getId());
+        assertThat(ids(documentService.getDocumentsForAdmin(null, tagName, word, null, page)))
+                .containsExactly(shown.getId());
+        assertThat(ids(documentService.getDocumentsForAdmin(TestDomains.SECURITY, null, word, null, page)))
+                .containsExactly(hidden.getId());
+        assertThat(documentRepository.findUsedTagNames()).contains(tagName);
+    }
+
+    private static List<Long> ids(PageResponse<DocumentListItem> page) {
+        return page.content().stream().map(DocumentListItem::id).toList();
     }
 
     private Problem save(String title, String question) {

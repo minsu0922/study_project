@@ -80,11 +80,10 @@ try {
     <h3>등록된 범위 <span class="meta">(↑↓는 차례가 같을 때의 순서 · <b>편수</b>가 많아지면 그 범위가 마른다는 신호이니 갈아 끼우세요)</span></h3>
     <!-- 검색·쪽 나누기(2026-08-29). 범위가 67개까지 늘어 한 화면에 담기지 않는다. -->
     <div class="filters" style="margin-bottom:10px">
-      <div class="field" style="flex:1 1 320px">
-        <label>검색 <span class="meta">(주제·메모)</span></label>
+      <div class="field field-search">
+        <label for="tSearch">검색 <span class="meta">(주제·메모)</span></label>
         <input type="search" id="tSearch" maxlength="50" placeholder="예: 트랜잭션 / 인덱스 / 자바 2단계">
       </div>
-      <div class="field"><label>&nbsp;</label><button id="tSearchClearBtn" class="btn-outline">지우기</button></div>
       <!-- 정렬은 <보기 전용>이다. MANUAL이 아니면 아래 이동 버튼이 전부 잠긴다 —
            "한 칸 위로"는 전체 순서의 이웃과 자리를 바꾸는 동작이라, 다른 기준으로
            정렬해 놓고 누르면 눌러도 줄이 안 움직인다(검색 중 잠그는 것과 같은 사정). -->
@@ -100,6 +99,7 @@ try {
           <option value="USED">쓴 적 있는 것</option>
         </select>
       </div>
+      <div class="field field-reset"><label>&nbsp;</label><button id="tSearchClearBtn" class="btn-outline">필터 지우기</button></div>
     </div>
 
     <!--
@@ -246,34 +246,24 @@ function initTopicForm() {
     selectedTopicIds.clear();
     loadTopicQueue();   // 체크 표시를 지우려면 다시 그려야 한다
   });
-  document.getElementById("tDomainFilter").addEventListener("change", e => {
-    topicDomain = e.target.value;
-    topicPage = 0;      // 거르면 줄 수가 줄어 3쪽이 빈 쪽이 될 수 있다
-    loadTopicQueue();
+  // 필터 줄은 문제 관리 화면과 같은 모양이다(wireFilterBar). 바뀌면 셋을 다시 읽는다
+  wireFilterBar({
+    search: "tSearch", selects: ["tDomainFilter", "tUsage"], reset: "tSearchClearBtn",
+    onChange: () => {
+      topicQuery = document.getElementById("tSearch").value.trim();
+      topicDomain = document.getElementById("tDomainFilter").value;
+      topicUsage = document.getElementById("tUsage").value;
+      topicPage = 0;      // 거르면 줄 수가 줄어 3쪽이 빈 쪽이 될 수 있다
+      loadTopicQueue();
+    },
   });
-  document.getElementById("tUsage").addEventListener("change", e => {
-    topicUsage = e.target.value;
-    topicPage = 0;
-    loadTopicQueue();
-  });
+  topicQuery = document.getElementById("tSearch").value.trim();
 
   // 엔터로 추가 — 범위를 여러 개 몰아서 적는 화면이라 매번 버튼까지 가면 손이 많이 간다.
   document.getElementById("tTopic").addEventListener("keydown", e => {
     if (e.key === "Enter") addTopic();
   });
 
-  const search = wireSearchInput("tSearch", q => {
-    topicQuery = q;
-    topicPage = 0;               // 새 검색은 언제나 첫 쪽부터
-    loadTopicQueue();
-  });
-  topicQuery = search.value.trim();
-  document.getElementById("tSearchClearBtn").addEventListener("click", () => {
-    search.value = "";
-    topicQuery = "";
-    topicPage = 0;
-    loadTopicQueue();
-  });
 
   document.getElementById("topicKindTabs").addEventListener("click", e => {
     const btn = e.target.closest(".seg-btn");
@@ -427,7 +417,7 @@ async function loadTopicQueue() {
 
   if (items.length === 0) {
     table.innerHTML = topicQuery
-      ? `<tr><td class="meta">찾는 범위가 없습니다. 검색어를 지우면 전체가 보입니다.</td></tr>`
+      ? `<tr><td class="meta">찾는 범위가 없습니다 — 필터를 지우면 전체가 보입니다.</td></tr>`
       : `<tr><td class="meta">등록된 범위가 없습니다. 지금은 배치가 모델에게 주제를 맡깁니다 — 위 폼으로 범위를 넣어 두세요.</td></tr>`;
     table.onclick = null;   // 앞서 그린 행의 핸들러가 남아 빈 표를 눌러도 반응하지 않게
     return;

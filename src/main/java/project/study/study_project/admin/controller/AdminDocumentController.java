@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.document.dto.AdminDocumentRequest;
 import project.study.study_project.document.service.AdminDocumentService;
 import project.study.study_project.document.dto.DocumentDetailResponse;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
 
 /**
@@ -38,9 +39,18 @@ public class AdminDocumentController {
 
     /** 목록 — 내려 둔 문서 포함. 최신 등록 순. */
     @GetMapping
-    public ApiResponse<PageResponse<DocumentListItem>> list(@RequestParam(required = false) String q,
+    public ApiResponse<PageResponse<DocumentListItem>> list(@RequestParam(required = false) DomainCode domain,
+                                                           @RequestParam(required = false) String tag,
+                                                           @RequestParam(required = false) String q,
+                                                           @RequestParam(required = false) Boolean hidden,
                                                            @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(adminDocumentService.list(q, pageable));
+        return ApiResponse.ok(adminDocumentService.list(domain, tag, q, hidden, pageable));
+    }
+
+    /** 태그 필터의 선택지 — 문서에 실제로 붙은 태그 이름. */
+    @GetMapping("/tags")
+    public ApiResponse<List<String>> tags() {
+        return ApiResponse.ok(adminDocumentService.usedTagNames());
     }
 
     /** 단건(수정 폼·본문 복사용). */

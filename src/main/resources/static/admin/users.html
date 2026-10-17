@@ -21,16 +21,18 @@ try {
   <div id="guard"></div>
 
   <div id="adminUi" hidden>
-    <form class="filters" id="searchForm">
-      <div class="field">
-        <label for="q">아이디 또는 닉네임</label>
-        <input type="search" id="q" maxlength="20" placeholder="일부만 적어도 됩니다">
+    <!-- 필터 줄은 문제 관리 화면과 같은 모양이다. 치면 바로 찾으므로 찾기 단추는 두지 않는다 -->
+    <div class="filters" style="margin-bottom:12px">
+      <div class="field field-search"><label for="q">검색 <span class="meta">(아이디·닉네임)</span></label>
+        <input type="search" id="q" maxlength="20" placeholder="일부만 적어도 됩니다"></div>
+      <div class="field"><label for="fuStatus">상태</label>
+        <select id="fuStatus">
+          <option value="">전체</option>
+          <option value="true">정지 중</option>
+        </select>
       </div>
-      <label class="pw-reveal" style="margin:0 0 10px">
-        <input type="checkbox" id="suspendedOnly"> 정지 중인 사람만
-      </label>
-      <button type="submit">찾기</button>
-    </form>
+      <div class="field field-reset"><label>&nbsp;</label><button id="fuResetBtn" class="btn-outline">필터 지우기</button></div>
+    </div>
 
     <!-- 표·전체 건수·페이저·빈 상태는 admin-table.js가 그린다. -->
     <div id="userList"></div>
@@ -49,14 +51,11 @@ try {
  * 이 화면에서는 찾기만 한다. 정지 같은 관리는 행을 눌러 들어간 상세(user.html)에서 한다 —
  * 목록의 한 줄에는 "이 사람을 정지해도 되는가"를 판단할 근거가 없다. */
 if (initAdminPage("users")) {
-  wireSearchInput("q", () => loadUsers({ page: 0 }));
-  document.getElementById("suspendedOnly").checked = param("suspendedOnly") === "true";
-
-  document.getElementById("searchForm").addEventListener("submit", e => {
-    e.preventDefault();
-    loadUsers({ page: 0 });
+  document.getElementById("fuStatus").value = param("suspendedOnly") === "true" ? "true" : "";
+  wireFilterBar({
+    search: "q", selects: ["fuStatus"], reset: "fuResetBtn",
+    onChange: () => loadUsers({ page: 0 }),
   });
-  document.getElementById("suspendedOnly").addEventListener("change", () => loadUsers({ page: 0 }));
   loadUsers();
 }
 
@@ -64,11 +63,7 @@ if (initAdminPage("users")) {
 function loadUsers(opts) {
   return renderAdminTable("#userList", {
     url: "/api/admin/users",
-    filters: () => {
-      const q = document.getElementById("q").value.trim();
-      return (q ? `&q=${encodeURIComponent(q)}` : "")
-        + (document.getElementById("suspendedOnly").checked ? "&suspendedOnly=true" : "");
-    },
+    filters: () => filterQuery({ q: "q", suspendedOnly: "fuStatus" }),
     columns: [
       { head: "아이디", cell: u => escapeHtml(u.username) },
       { head: "닉네임", cell: u => u.nickname ? escapeHtml(u.nickname) : `<span class="meta">(없음)</span>` },
@@ -77,7 +72,7 @@ function loadUsers(opts) {
       { head: "상태", width: "200px", cell: statusCell },
     ],
     onRowClick: u => { location.href = "/admin/user.html?id=" + u.id; },
-    emptyText: "조건에 맞는 사용자가 없습니다 — 검색어를 지우면 전체가 보입니다.",
+    emptyText: "조건에 맞는 사용자가 없습니다 — 필터를 지우면 전체가 보입니다.",
   }, opts);
 }
 

@@ -69,12 +69,12 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
 
     @Override
     public Page<DocumentListItem> searchListItems(DomainCode domain, List<String> tagNames,
-                                                 String keyword, boolean includeHidden, Pageable pageable) {
+                                                 String keyword, Boolean hidden, Pageable pageable) {
         QDocument d = QDocument.document;
 
         BooleanBuilder where = new BooleanBuilder();
-        if (!includeHidden) {
-            where.and(d.hidden.isFalse());
+        if (hidden != null) {
+            where.and(d.hidden.eq(hidden));
         }
         if (domain != null) {
             where.and(d.domain.eq(domain));

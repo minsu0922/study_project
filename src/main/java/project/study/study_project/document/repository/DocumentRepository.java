@@ -45,6 +45,10 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, Docum
      * 순서가 흔들리면 내용이 같은데도 스냅샷 파일이 매번 바뀐 것으로 보인다
      * ({@code ExistingDocumentsExporter}가 변경 여부로 파일 쓰기를 결정한다).
      */
+    /** 관리 목록의 태그 필터에 채울 이름 — 문서에 실제로 붙은 것만. 붙은 곳 없는 태그를 고르면 늘 0건이다 */
+    @Query("select distinct t.name from Document d join d.tags t order by t.name")
+    List<String> findUsedTagNames();
+
     @Query("select d.title from Document d order by d.id")
     List<String> findAllTitles();
 

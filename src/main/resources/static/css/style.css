@@ -1277,6 +1277,9 @@ input.invalid:focus { outline-color: var(--wrong); }
 
 .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: end; }
 .filters .field { margin: 0; flex: 1; min-width: 130px; }
+/* 목록 필터 줄의 모양은 하나다: 검색 칸(넓게) → 고르기 칸들 → 필터 지우기(wireFilterBar) */
+.filters .field.field-search { flex: 2 1 220px; }
+.filters .field.field-reset { flex: none; min-width: 0; }
 
 button, .btn {
   background: var(--primary); color: var(--on-primary);
@@ -1910,10 +1913,11 @@ body.admin-shell {
 .pager-row button { min-height: 32px; padding: 5px 12px; }
 
 /* 기둥 안의 묶음 제목(할 일 / 콘텐츠 / 생성) */
+/* 대메뉴(할 일·콘텐츠…)는 하위 항목(13px)보다 크게 둔다. 9px 회색일 때는 묶음 이름이
+   항목보다 작아 눈이 묶음을 먼저 잡지 못했다 */
 .shell-group {
-  font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--muted); font-weight: 700;
-  padding: var(--sp-3) var(--sp-2) var(--sp-1);
+  font-size: var(--fs-3); color: var(--text); font-weight: 800;
+  padding: var(--sp-4) var(--sp-2) var(--sp-1);
 }
 .shell-side .shell-group:first-of-type { padding-top: var(--sp-2); }
 /* 배지는 항목 오른쪽 끝에 — 이름 길이가 달라도 눈이 찾는 자리는 늘 같다 */

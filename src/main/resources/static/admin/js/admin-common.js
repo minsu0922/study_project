@@ -97,6 +97,28 @@ const SEARCH_DELAY_MS = 300;
  *
  * @param onSearch 검색어(앞뒤 공백을 뗀 값)를 받아 목록을 다시 부른다
  */
+/**
+ * 목록 화면의 필터 줄 — 검색 칸, 고르기 칸들, "필터 지우기". 모든 목록이 문제 관리 화면의 모양을 따른다.
+ * 무엇이 바뀌든 onChange 하나만 부른다. 화면은 거기서 첫 쪽부터 다시 불러 오면 된다.
+ *
+ * @param cfg.search  검색 칸 id. 없으면 생략
+ * @param cfg.selects 고르기 칸 id 목록. 지우면 첫 선택지로 돌아간다(첫 선택지가 기본값이 되게 둔다)
+ * @param cfg.reset   "필터 지우기" 단추 id
+ */
+function wireFilterBar({ search, selects = [], reset, onChange }) {
+  if (search) wireSearchInput(search, () => onChange());
+  selects.forEach(id => document.getElementById(id).addEventListener("change", () => onChange()));
+  if (!reset) return;
+  document.getElementById(reset).addEventListener("click", () => {
+    if (search) document.getElementById(search).value = "";
+    selects.forEach(id => {
+      const sel = document.getElementById(id);
+      sel.value = sel.options[0]?.value ?? "";
+    });
+    onChange();
+  });
+}
+
 function wireSearchInput(id, onSearch) {
   const el = document.getElementById(id);
   el.value = param("q") || "";
