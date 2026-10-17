@@ -19,7 +19,7 @@ try {
 <body>
 <div id="shell"></div>
 
-<main class="container">
+<main class="container side-page">
   <h1>복습</h1>
     <!-- 구역 탭 — 복습과 오답노트는 <한 구역>이다(2026-08-29 메뉴 개편).
          둘 다 "틀린 문제를 다시 보는" 자리인데 상단 메뉴에 나란히 있어서, 어느 쪽을
@@ -35,22 +35,27 @@ try {
     각 카드의 <span class="badge orange" style="margin:0">N단계</span> 배지가 복습 사다리에서
     지금 어디까지 왔는지예요 — 일정은 <a href="/review.html">복습 일정</a> 탭에서 봅니다.</p>
 
-  <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar): 검색 → 고르기 → 필터 지우기 -->
-  <div class="filters" role="search">
-    <div class="field field-search"><label for="q">검색 <span class="meta">(제목·지문)</span></label>
-      <input type="search" id="q" maxlength="50" placeholder="예: TIME_WAIT" enterkeyhint="search"></div>
-    <div class="field">
-      <label for="domainFilter">분야</label>
-      <select id="domainFilter"></select>
+  <!-- 옆 기둥은 문제 목록과 같은 모양이다(.pl-side). 분야는 여기서 고르고, 같은 것을 다시 누르면 풀린다 -->
+  <div class="pl-body">
+    <aside class="pl-side" aria-label="분야">
+      <h2>분야 <span class="pl-unit">틀린 문제 수</span></h2>
+      <div class="pl-domains" id="domains"></div>
+    </aside>
+    <div class="pl-main">
+      <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar). 필터 지우기는 기둥까지 함께 푼다 -->
+      <div class="filters" role="search">
+        <div class="field field-search"><label for="q">검색 <span class="meta">(제목·지문)</span></label>
+          <input type="search" id="q" maxlength="50" placeholder="예: TIME_WAIT" enterkeyhint="search"></div>
+        <div class="field field-reset"><label>&nbsp;</label>
+          <button type="button" id="filterResetBtn" class="btn-outline">필터 지우기</button></div>
+      </div>
+
+      <div id="message"></div>
+      <div id="list"></div>
+
+      <div class="pager" id="pager" hidden></div>
     </div>
-    <div class="field field-reset"><label>&nbsp;</label>
-      <button type="button" id="filterResetBtn" class="btn-outline">필터 지우기</button></div>
   </div>
-
-  <div id="message"></div>
-  <div id="list"></div>
-
-  <div class="pager" id="pager" hidden></div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -74,12 +79,31 @@ if (!isLoggedIn()) {
 }
 
 async function init() {
-  const domainFilter = document.getElementById("domainFilter");
-  // domainsReady를 기다린 뒤 채운다 — 이유는 api.js의 domainsReady 주석 참고.
+  // domainsReady를 기다린 뒤 기둥을 그린다 — 이유는 api.js의 domainsReady 주석 참고.
   // init()은 페이지당 한 번만 불리므로 async로 바꿔도 부르는 쪽(else 분기)은 그대로다.
   await domainsReady;
-  fillSelect(domainFilter, DOMAINS, "전체");
   let page = 0;
+  /** 옆 기둥에서 고른 분야(null이면 전체)와 분야별 틀린 문제 수. 수를 못 받으면 이름만 적는다 */
+  let selectedDomain = null;
+  let domainCounts = null;
+
+  function renderSide() {
+    const byDomain = new Map((domainCounts ?? []).map(d => [d.domain, d.count]));
+    document.getElementById("domains").innerHTML = DOMAINS.map(([code, label]) => `
+      <button type="button" class="pl-domain" data-domain="${code}" aria-pressed="${selectedDomain === code}">
+        <span class="row"><span class="name">${escapeHtml(label)}</span>${
+          domainCounts ? `<span class="n">${byDomain.get(code) ?? 0}</span>` : ""}</span></button>`).join("");
+  }
+  document.getElementById("domains").addEventListener("click", e => {
+    const btn = e.target.closest(".pl-domain");
+    if (!btn) return;
+    selectedDomain = selectedDomain === btn.dataset.domain ? null : btn.dataset.domain;
+    page = 0; renderSide(); load();
+  });
+  renderSide();
+  api("/api/me/wrong-answers/domains")
+    .then(d => { domainCounts = d; renderSide(); })
+    .catch(() => { /* 수 없이 이름만 */ });
 
   /* problemId → 복습 상태(stage/status) 맵.
    * 오답노트와 복습은 같은 문제를 다른 관점으로 보는 페이지라(오답노트=기록, 복습=할 일),
@@ -129,7 +153,8 @@ async function init() {
     showLoading(list);
     try {
       const params = new URLSearchParams({ page });
-      const filters = filterParams({ q: "q", domain: "domainFilter" });
+      const filters = filterParams({ q: "q" });
+      if (selectedDomain) filters.set("domain", selectedDomain);
       filters.forEach((v, k) => params.set(k, v));
       const data = await api("/api/me/wrong-answers?" + params);
 
@@ -190,7 +215,8 @@ async function init() {
   }
 
   wireFilterBar({
-    search: "q", selects: ["domainFilter"], reset: "filterResetBtn",
+    search: "q", reset: "filterResetBtn",
+    onReset: () => { selectedDomain = null; renderSide(); },
     onChange: () => { page = 0; load(); },
   });
   const pager = mountPager(document.getElementById("pager"), p => { page = p; load(); });

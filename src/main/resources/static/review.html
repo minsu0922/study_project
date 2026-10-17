@@ -19,7 +19,7 @@ try {
 <body>
 <div id="shell"></div>
 
-<main class="container">
+<main class="container side-page">
   <!-- 화면 1: 오늘의 복습 요약 + 시작 버튼 + 내 복습 현황 -->
   <section id="overview">
     <h1>복습</h1>
@@ -48,24 +48,27 @@ try {
       <!-- "오답노트로 가라"는 안내를 뺐다(2026-08-29). 위 구역 탭이 같은 말을 하고 있어서,
            남겨 두면 같은 이동을 두 곳에서 권하는 셈이 된다. -->
       <p class="meta">여기서는 <b>몇 단계인지·다음 복습이 언제인지</b>만 보여요.</p>
-      <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar): 검색 → 고르기 → 필터 지우기 -->
-      <div class="filters" role="search">
-        <div class="field field-search"><label for="q">검색 <span class="meta">(제목·지문)</span></label>
-          <input type="search" id="q" maxlength="50" placeholder="예: TIME_WAIT" enterkeyhint="search"></div>
-        <div class="field">
-          <label for="statusFilter">상태</label>
-          <select id="statusFilter">
-            <option value="">전체</option>
-            <option value="LEARNING">복습 중</option>
-            <option value="GRADUATED">졸업 🎓</option>
-          </select>
+      <!-- 옆 기둥은 문제 목록과 같은 모양이다(.pl-side). 위의 "오늘의 복습"이 아니라 이 목록만 거르므로
+           목록 옆에 둔다. 분야와 상태는 여기서 고르고, 같은 것을 다시 누르면 풀린다 -->
+      <div class="pl-body">
+        <aside class="pl-side" aria-label="분야와 상태">
+          <h2>분야 <span class="pl-unit">문제 수</span></h2>
+          <div class="pl-domains" id="domains"></div>
+          <h2 class="second">상태</h2>
+          <div class="pl-tags" id="statuses"></div>
+        </aside>
+        <div class="pl-main">
+          <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar). 필터 지우기는 기둥까지 함께 푼다 -->
+          <div class="filters" role="search">
+            <div class="field field-search"><label for="q">검색 <span class="meta">(제목·지문)</span></label>
+              <input type="search" id="q" maxlength="50" placeholder="예: TIME_WAIT" enterkeyhint="search"></div>
+            <div class="field field-reset"><label>&nbsp;</label>
+              <button type="button" id="filterResetBtn" class="btn-outline">필터 지우기</button></div>
+          </div>
+          <div id="list"></div>
+          <div class="pager" id="pager" hidden></div>
         </div>
-        <div class="field"><label for="domainFilter">분야</label><select id="domainFilter"></select></div>
-        <div class="field field-reset"><label>&nbsp;</label>
-          <button type="button" id="filterResetBtn" class="btn-outline">필터 지우기</button></div>
       </div>
-      <div id="list"></div>
-      <div class="pager" id="pager" hidden></div>
     </div>
   </section>
 
@@ -91,6 +94,11 @@ renderShell({ active: "review", title: "복습" });
 const overviewEl = document.getElementById("overview");
 const playerEl = document.getElementById("player");
 let page = 0;
+/* 옆 기둥에서 고른 분야·상태(null이면 전체)와 거기 적을 수(GET /api/me/reviews/counts).
+   아래 loadStatus()가 파일을 다 읽기 전에 불리므로 쓰는 곳보다 위에 둔다(let은 선언 전에 읽으면 오류) */
+let selectedDomain = null;
+let selectedStatus = null;
+let counts = null;
 
 /* 한 판에 내보내는 복습 문제 수(2026-09-05). 20인 이유는 오답노트 한 페이지와 같은 수라
    "한 번에 다루는 양"의 감각이 사이트 안에서 일정하기 때문이다. 서버 상한은 50이지만
@@ -214,6 +222,7 @@ function backToOverview() {
   page = 0;
   loadToday();
   loadStatus();
+  loadCounts();
   window.scrollTo({ top: 0 });
 }
 
@@ -223,7 +232,9 @@ async function loadStatus() {
   showLoading(list);
   try {
     const params = new URLSearchParams({ page });
-    const filters = filterParams({ q: "q", status: "statusFilter", domain: "domainFilter" });
+    const filters = filterParams({ q: "q" });
+    if (selectedStatus) filters.set("status", selectedStatus);
+    if (selectedDomain) filters.set("domain", selectedDomain);
     filters.forEach((v, k) => params.set(k, v));
     const data = await api("/api/me/reviews?" + params);
 
@@ -283,12 +294,45 @@ async function loadStatus() {
   }
 }
 
-fillSelect(document.getElementById("domainFilter"), DOMAINS, "전체");
-domainsReady.then(() => fillDomainSelect(document.getElementById("domainFilter"), "전체"));
+/* ── 옆 기둥: 분야(문제 수)와 상태(복습 중·졸업) ── */
+const STATUSES = [["LEARNING", "복습 중", "learning"], ["GRADUATED", "졸업 🎓", "graduated"]];
+
+function renderSide() {
+  const byDomain = new Map((counts?.domains ?? []).map(d => [d.domain, d.count]));
+  document.getElementById("domains").innerHTML = DOMAINS.map(([code, label]) => `
+    <button type="button" class="pl-domain" data-domain="${code}" aria-pressed="${selectedDomain === code}">
+      <span class="row"><span class="name">${escapeHtml(label)}</span>${
+        counts ? `<span class="n">${byDomain.get(code) ?? 0}</span>` : ""}</span></button>`).join("");
+  document.getElementById("statuses").innerHTML = STATUSES.map(([v, label, key]) =>
+    `<button type="button" class="pl-level" data-status="${v}" aria-pressed="${selectedStatus === v}">${label}${
+      counts ? ` <span class="n">${counts[key]}</span>` : ""}</button>`).join("");
+}
+
+/** 수는 플레이어에서 돌아올 때도 바뀐다(졸업·새 오답). 그래서 현황을 다시 부를 때 함께 부른다 */
+async function loadCounts() {
+  try { counts = await api("/api/me/reviews/counts"); } catch (e) { /* 수 없이 이름만 */ }
+  renderSide();
+}
+
+document.getElementById("domains").addEventListener("click", e => {
+  const btn = e.target.closest(".pl-domain");
+  if (!btn) return;
+  selectedDomain = selectedDomain === btn.dataset.domain ? null : btn.dataset.domain;
+  page = 0; renderSide(); loadStatus();
+});
+document.getElementById("statuses").addEventListener("click", e => {
+  const btn = e.target.closest("[data-status]");
+  if (!btn) return;
+  selectedStatus = selectedStatus === btn.dataset.status ? null : btn.dataset.status;
+  page = 0; renderSide(); loadStatus();
+});
+
 wireFilterBar({
-  search: "q", selects: ["statusFilter", "domainFilter"], reset: "filterResetBtn",
+  search: "q", reset: "filterResetBtn",
+  onReset: () => { selectedDomain = null; selectedStatus = null; renderSide(); },
   onChange: () => { page = 0; loadStatus(); },
 });
+if (isLoggedIn()) domainsReady.then(loadCounts);
 const pager = mountPager(document.getElementById("pager"), p => { page = p; loadStatus(); });
 </script>
 </body>

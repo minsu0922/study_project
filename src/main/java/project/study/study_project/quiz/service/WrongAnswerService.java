@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.DomainCount;
 import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.domain.Problem;
@@ -46,6 +47,14 @@ public class WrongAnswerService {
     @Transactional(readOnly = true)
     public PageResponse<WrongAnswerItem> getWrongAnswers(Long userId, DomainCode domain, Pageable pageable) {
         return getWrongAnswers(userId, domain, null, pageable);
+    }
+
+    /** 오답노트 옆 기둥의 분야별 수 — 틀린 적 있는 문제 수(목록이 문제당 한 줄이라). */
+    @Transactional(readOnly = true)
+    public List<DomainCount> domainCounts(Long userId) {
+        return submissionRepository.countWrongProblemsByDomain(userId).stream()
+                .map(r -> new DomainCount(r.getDomain().value(), r.getCnt()))
+                .toList();
     }
 
     /** @param q 문제 제목·지문 검색어. 비면 거르지 않는다 */

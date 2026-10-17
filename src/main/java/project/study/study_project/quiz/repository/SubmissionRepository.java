@@ -10,6 +10,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.quiz.domain.Submission;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Submission 저장소 — 채점 시 저장 + 오답노트 조회(ADR-0002: 별도 오답 테이블 없이 조회 기반).
@@ -76,6 +77,20 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    /** 오답노트 옆 기둥의 분야별 수. 오답노트가 문제당 한 줄이라 틀린 <문제>를 센다(distinct). */
+    @Query("""
+            select s.problem.domain as domain, count(distinct s.problem.id) as cnt from Submission s
+            where s.userId = :userId and s.correct = false and s.problem.hidden = false
+            group by s.problem.domain
+            """)
+    List<DomainProblemCount> countWrongProblemsByDomain(@Param("userId") Long userId);
+
+    interface DomainProblemCount {
+        DomainCode getDomain();
+
+        long getCnt();
+    }
 
     /**
      * 날짜별 제출 수·정답 수 — 내 기록의 추이 막대.

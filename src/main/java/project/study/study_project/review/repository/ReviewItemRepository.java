@@ -115,6 +115,22 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
                                    @Param("keyword") String keyword,
                                    Pageable pageable);
 
+    /** 복습 현황 옆 기둥의 수 — 분야·상태별. 목록과 같이 숨긴 문제는 뺀다. */
+    @Query("""
+            select r.problem.domain as domain, r.status as status, count(r) as cnt from ReviewItem r
+            where r.userId = :userId and r.problem.hidden = false
+            group by r.problem.domain, r.status
+            """)
+    List<DomainStatusCount> countByDomainAndStatus(@Param("userId") Long userId);
+
+    interface DomainStatusCount {
+        DomainCode getDomain();
+
+        ReviewStatus getStatus();
+
+        long getCnt();
+    }
+
     /**
      * <b>지정한 문제들</b>의 복습 항목만 — 오답노트가 복습 단계 배지를 그릴 때 쓴다.
      *

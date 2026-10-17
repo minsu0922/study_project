@@ -12,6 +12,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.review.domain.ReviewStatus;
+import project.study.study_project.review.dto.ReviewCounts;
 import project.study.study_project.review.dto.ReviewListItem;
 import project.study.study_project.review.dto.ReviewTodayItem;
 import project.study.study_project.review.service.ReviewService;
@@ -41,6 +42,12 @@ public class ReviewController {
      * <p>정렬은 스펙 고정(nextReviewAt asc)이라 {@code sort} 파라미터는 받지 않는다.
      * size 상한(50) 보정은 서비스가 한다(정책은 서비스 책임).
      */
+    /** 복습 현황 옆 기둥의 수 — 분야별·상태별. 예: {@code GET /api/me/reviews/counts} */
+    @GetMapping("/counts")
+    public ApiResponse<ReviewCounts> counts(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(reviewService.getCounts(userId));
+    }
+
     @GetMapping("/today")
     public ApiResponse<PageResponse<ReviewTodayItem>> today(
             @AuthenticationPrincipal Long userId,

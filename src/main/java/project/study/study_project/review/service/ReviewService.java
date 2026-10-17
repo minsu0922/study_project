@@ -17,14 +17,18 @@ import project.study.study_project.quiz.service.DueReviewCounter;
 import project.study.study_project.quiz.service.SubmissionListener;
 import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
+import project.study.study_project.review.dto.ReviewCounts;
 import project.study.study_project.review.dto.ReviewListItem;
+import project.study.study_project.global.common.DomainCount;
 import project.study.study_project.review.dto.ReviewTodayItem;
 import project.study.study_project.review.repository.ReviewItemRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -76,6 +80,22 @@ public class ReviewService implements SubmissionListener, DueReviewCounter {
 
     /** 응답의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로 싣는다(Task 4). */
     private final DomainCatalog domainCatalog;
+
+    /** 복습 현황 옆 기둥의 수 — 분야별(두 상태 합)과 상태별. 쿼리 한 번으로 둘 다 낸다. */
+    @Transactional(readOnly = true)
+    public ReviewCounts getCounts(Long userId) {
+        Map<String, Long> byDomain = new LinkedHashMap<>();
+        long learning = 0;
+        long graduated = 0;
+        for (ReviewItemRepository.DomainStatusCount r : reviewItemRepository.countByDomainAndStatus(userId)) {
+            byDomain.merge(r.getDomain().value(), r.getCnt(), Long::sum);
+            if (r.getStatus() == ReviewStatus.GRADUATED) graduated += r.getCnt();
+            else learning += r.getCnt();
+        }
+        List<DomainCount> domains = byDomain.entrySet().stream()
+                .map(e -> new DomainCount(e.getKey(), e.getValue())).toList();
+        return new ReviewCounts(domains, learning, graduated);
+    }
 
     /**
      * "지금부터 {@code days}일 뒤"의 복습 예정 시각 — <b>시각이 아니라 학습일로 센다</b>.

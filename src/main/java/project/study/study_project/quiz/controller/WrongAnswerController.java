@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.DomainCount;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.WrongAnswerItem;
 import project.study.study_project.quiz.service.WrongAnswerService;
+
+import java.util.List;
 
 /**
  * 오답노트 API — 명세는 docs/03. 인증 필수(SecurityConfig의 /api/me/** authenticated).
@@ -44,5 +47,11 @@ public class WrongAnswerController {
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return ApiResponse.ok(wrongAnswerService.getWrongAnswers(userId, domain, q, pageable));
+    }
+
+    /** 오답노트 옆 기둥의 분야별 수. 예: {@code GET /api/me/wrong-answers/domains} */
+    @GetMapping("/wrong-answers/domains")
+    public ApiResponse<List<DomainCount>> wrongAnswerDomains(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(wrongAnswerService.domainCounts(userId));
     }
 }
