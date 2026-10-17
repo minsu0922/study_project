@@ -84,16 +84,16 @@ async function init() {
           ? "조건에 맞는 기록이 없습니다 — 필터를 지우면 전체가 보입니다."
           : `아직 기록이 없습니다. <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a>`);
       } else list.innerHTML = data.content.map(s => `
-          <div class="card">
-            <div style="margin-bottom:6px">
-              <!-- 색과 글자를 함께 쓴다. 초록·빨강을 못 가리는 사람은 색만으로 결과를 알 수 없다. -->
-              <span class="badge ${s.correct ? "green" : "orange"}">${s.correct ? "✓ 정답" : "✕ 오답"}</span>
-              <span class="badge">${escapeHtml(domainLabel(s.domain))}</span>
-              ${difficultyBadge(s.difficulty)}
-            </div>
-            <h3><a href="/quiz.html?problemId=${s.problemId}">${escapeHtml(short(s.title))}</a></h3>
-            <div class="meta" style="margin-top:6px">푼 날: ${formatDate(s.submittedAt)}</div>
-          </div>`).join("");
+          <a class="list-row split" href="/quiz.html?problemId=${s.problemId}">
+            <span class="list-row-main">
+              <span class="list-row-title">${escapeHtml(short(s.title))}</span>
+              <span class="meta"><span class="list-row-domain">${escapeHtml(domainLabel(s.domain))}</span>${
+                difficultyBadge(s.difficulty)}푼 날 ${shortDay(s.submittedAt)}</span>
+            </span>
+            <!-- 색과 글자를 함께 쓴다. 초록·빨강을 못 가리는 사람은 색만으로 결과를 알 수 없다. -->
+            <!-- 배지로 두지 않는다. 오답 배지(주황·빨강)가 같은 줄의 중급·고급 배지와 같은 색이 된다. -->
+            <span class="list-row-end ${s.correct ? "is-correct" : "is-wrong"}">${s.correct ? "✓ 정답" : "✕ 오답"}</span>
+          </a>`).join("");
       pager.update(data);
     } catch (e) {
       showErrorAlert(msg, e, "불러오지 못했습니다");

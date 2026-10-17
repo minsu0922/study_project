@@ -230,7 +230,7 @@ async function renderNothingDue(box) {
     return true;
   }
 
-  const on = formatDate(waiting.content[0].nextReviewAt).substring(0, 10);
+  const on = shortDay(waiting.content[0].nextReviewAt);
   box.innerHTML = `
     <div class="card" style="text-align:center;padding:28px">
       <div style="font-size:1.6rem">🌱</div>
@@ -271,7 +271,7 @@ async function loadStatus() {
         ? "조건에 맞는 복습 기록이 없어요 — 필터를 지우면 전체가 보여요."
         : "아직 복습 기록이 없어요. 퀴즈에서 문제를 틀리면 자동으로 여기에 올라와요.");
     } else {
-      // 표 대신 카드 — 모바일에서 표는 옆으로 잘리기 쉽고, 항목당 정보가 4~5개뿐이라 카드가 읽기 편하다
+      // 표 대신 공용 줄 목록(.list-row) — 모바일에서 표는 옆으로 잘리기 쉽고, 항목당 정보가 4~5개뿐이다
       // 지문은 "어느 문제인지 알아볼" 식별용으로만 — 한 줄 말줄임 + 흐린 색.
       // 지문·정답·해설을 크게 보여주는 건 오답노트의 역할이라, 여기서 지문을 키우면
       // 두 페이지가 똑같아 보인다(메뉴 역할 분리 — 이 페이지의 본론은 단계/다음 복습일).
@@ -282,7 +282,7 @@ async function loadStatus() {
         // 예정 시각은 "그 날 새벽 4시"라 시·분을 그대로 보여주면 "9/6 04:00"이 된다 —
         // 새벽 4시에 일어나라는 말로 읽힌다. 실제로 중요한 건 <어느 날부터 열리는가>이므로
         // 날짜만 쓴다(2026-09-05 학습일 경계 도입과 함께).
-        const on = formatDate(r.nextReviewAt).substring(0, 10);
+        const on = shortDay(r.nextReviewAt);
 
         // 졸업생은 nextReviewAt이 "재확인 예정일"이다(2026-09-05). 서버의 due 값은 졸업생에게
         // 늘 false라 여기서 직접 비교한다 — due는 "오늘의 복습 대상"이라는 뜻이고, 재확인은
@@ -298,19 +298,15 @@ async function loadStatus() {
           : r.due ? "오늘 복습할 문제" : `다음 복습 ${on}`;
         const action = ready ? "지금 풀기 ›" : "미리 풀어 보기 ›";
         return `
-          <a class="card clickable rv-row${ready ? " ready" : ""}" href="/quiz.html?problemId=${r.problemId}"
+          <a class="list-row split rv-row${ready ? " ready" : ""}" href="/quiz.html?problemId=${r.problemId}"
              title="${ready ? "맞히면 다음 단계로 올라가요" : "복습 날 전이라 맞혀도 단계는 그대로예요"}">
-            <span class="rv-main">
-              <span class="rv-badges">
-                <span class="badge">${escapeHtml(r.domainLabel)}</span>
-                ${stageBadge}
-              </span>
+            <span class="list-row-main">
               <!-- 제목이 있으면 제목. 지문은 상황 서술로 시작하는 일이 많아 한 줄로 자르면
                    무엇을 묻는지 알 수 없다(docs/18). 옛 문제는 제목이 없어 지문으로 대신한다. -->
-              <span class="rv-title one-line">${escapeHtml(r.title || r.question)}</span>
-              <span class="rv-when">${when}</span>
+              <span class="list-row-title one-line">${escapeHtml(r.title || r.question)}</span>
+              <span class="meta"><span class="list-row-domain">${escapeHtml(r.domainLabel)}</span>${stageBadge}<span class="rv-when">${when}</span></span>
             </span>
-            <span class="rv-go">${action}</span>
+            <span class="list-row-end">${action}</span>
           </a>`;
       }).join("");
     }

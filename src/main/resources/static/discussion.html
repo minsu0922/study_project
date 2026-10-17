@@ -118,12 +118,12 @@ async function loadPosts() {
 /* 가린 글은 줄만 남기고 링크를 걸지 않는다 — 들어가도 볼 것이 없다. */
 function postRow(p) {
   if (p.status !== "VISIBLE") {
-    return `<div class="post-row gone"><span class="meta">관리자가 가린 글입니다</span></div>`;
+    return `<div class="list-row gone"><span class="meta">관리자가 가린 글입니다</span></div>`;
   }
-  return `<a class="post-row" href="/post.html?id=${p.id}">
-    <span class="post-row-title">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}${
-      p.commentCount ? ` <span class="post-row-count">💬 ${p.commentCount}</span>` : ""}</span>
-    <span class="meta">${escapeHtml(p.nickname || "탈퇴한 사용자")} · ${formatDate(p.createdAt)}</span>
+  return `<a class="list-row" href="/post.html?id=${p.id}">
+    <span class="list-row-title">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}${
+      p.commentCount ? ` <span class="list-row-count">💬 ${p.commentCount}</span>` : ""}</span>
+    <span class="meta">${escapeHtml(p.nickname || "탈퇴한 사용자")} · ${shortDay(p.createdAt)}</span>
   </a>`;
 }
 

@@ -197,9 +197,9 @@ async function loadDocs() {
         g.push(d);
       }
 
-      // 카드 <전체>가 링크다. 예전에는 div에 onclick을 걸고 제목만 <a>였는데,
-      // 그러면 마우스로는 카드 어디나 눌리지만 <키보드로는 제목 링크에만> 갈 수 있었다.
-      // 겉모습(카드 전체가 눌린다)과 조작할 수 있는 것이 어긋난 상태다.
+      // 줄 <전체>가 링크다(공용 .list-row). 예전에는 div에 onclick을 걸고 제목만 <a>였는데,
+      // 그러면 마우스로는 줄 어디나 눌리지만 <키보드로는 제목 링크에만> 갈 수 있었다.
+      // 겉모습(줄 전체가 눌린다)과 조작할 수 있는 것이 어긋난 상태다.
       //
       // tabindex와 키 처리를 div에 붙이는 방법도 있지만 <a>로 만드는 쪽을 골랐다.
       // 그래야 브라우저가 공짜로 주는 것을 그대로 받는다 — 초점, 엔터, 가운데 클릭으로
@@ -209,8 +209,8 @@ async function loadDocs() {
       // 제목의 안쪽 <a>는 없앴다. 링크 안에 링크는 넣을 수 없다(HTML이 허용하지 않고,
       // 스크린리더는 하나의 링크를 두 번 읽는다).
       //
-      // <짝이 있는 카드만 div다.> 그때는 카드 안에 편 링크가 둘이라 카드 전체를 링크로
-      // 만들 수 없다(링크 안의 링크). 대신 제목 자체를 입문편 링크로 두어, 카드에서
+      // <짝이 있는 줄만 div다.> 그때는 줄 안에 편 링크가 둘이라 줄 전체를 링크로
+      // 만들 수 없다(링크 안의 링크). 대신 제목 자체를 입문편 링크로 두어, 줄에서
       // 가장 크고 먼저 읽히는 것이 그대로 눌리는 자리가 되게 했다.
       list.innerHTML = groups.map(docs => {
         // 대표는 입문편(접미사 없는 쪽)이다. 처음 읽는 사람이 갈 곳이 기본값이어야 한다.
@@ -219,33 +219,27 @@ async function loadDocs() {
         // 수정일은 <둘 중 최신>이다. 카드가 주제 하나를 뜻하므로 "이 주제가 마지막으로
         // 손질된 날"이 맞는 값이다.
         const 수정 = docs.map(d => d.updatedAt).sort().at(-1);
-        const 꼬리 = `
-          <span class="badge">${escapeHtml(입문.domainLabel)}</span>
-          ${입문.tags.map(t => `<span class="badge gray">#${escapeHtml(t)}</span>`).join("")}
-          <!-- 분까지 찍던 것을 날짜만 남겼다(2026-09-08). 목록에서 "18:44"는 읽는 사람의
-               판단을 바꾸지 않고, 첫 화면이 같은 값을 "9월 7일"로 적고 있어 두 화면이
-               같은 날짜를 다르게 말하고 있었다(api.js shortDay). -->
-          <div class="meta">수정: ${shortDay(수정)}</div>`;
+        // 둘째 줄(.meta) — 분야 · 태그 · 날짜. 태그는 배지 대신 글자로 둔다: 회색 배지 서넛이
+        // 제목보다 먼저 눈에 걸렸다. 날짜는 모든 목록과 같은 shortDay("9월 7일")다.
+        const 꼬리 = `<span class="meta"><span class="list-row-domain">${escapeHtml(입문.domainLabel)}</span>${
+          입문.tags.map(t => `<span class="list-row-tag">#${escapeHtml(t)}</span>`).join("")}수정 ${shortDay(수정)}</span>`;
 
         const href = slug => `/document.html?slug=${encodeURIComponent(slug)}`;
 
-        // 짝이 없으면 지금까지와 같다 — 카드 한 장이 통째로 링크.
+        // 짝이 없으면 줄 전체가 링크다. 제목은 h2로 둔다 — 화면 제목(h1) 바로 아래 단계라
+        // h3이면 스크린리더의 제목 목록에서 한 칸을 건너뛴다.
         if (!심화) {
           return `
-            <a class="card clickable" href="${href(입문.slug)}">
-              <!-- h2다. 화면 제목(h1) 바로 아래 단계라 h3이면 한 칸을 건너뛴다 —
-                   스크린리더의 제목 목록에서 층위가 어긋나 "빠진 제목이 있나"로 읽힌다. -->
-              <h2>${escapeHtml(입문.title)}</h2>
+            <a class="list-row" href="${href(입문.slug)}">
+              <h2 class="list-row-title doc-row-title">${escapeHtml(입문.title)}</h2>
               ${꼬리}
             </a>`;
         }
         return `
-          <div class="card doc-group">
-            <h2><a href="${href(입문.slug)}">${escapeHtml(입문.title)}</a></h2>
-            <p class="doc-sub">
+          <div class="list-row doc-group">
+            <h2 class="doc-row-title"><a class="list-row-title" href="${href(입문.slug)}">${escapeHtml(입문.title)}</a>
               <a class="edition" href="${href(입문.slug)}">입문편</a>
-              <a class="edition advanced" href="${href(심화.slug)}">심화편</a>
-            </p>
+              <a class="edition advanced" href="${href(심화.slug)}">심화편</a></h2>
             ${꼬리}
           </div>`;
       }).join("");

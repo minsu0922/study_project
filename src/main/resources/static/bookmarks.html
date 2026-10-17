@@ -73,15 +73,15 @@ async function init() {
     const href = b.type === "PROBLEM"
       ? `/quiz.html?problemId=${b.targetId}`
       : `/document.html?slug=${encodeURIComponent(b.slug)}`;
+    // 공용 줄 목록(.list-row). 북마크 단추가 줄 안에 있어 줄 전체를 링크로 두지 않는다.
     return `
-      <div class="card">
-        <div style="margin-bottom:6px">
-          <span class="badge">${escapeHtml(domainLabel(b.domain))}</span>
-          ${b.difficulty ? difficultyBadge(b.difficulty) : ""}
-        </div>
-        <h3><a href="${href}">${escapeHtml(short(b.title))}</a></h3>
-        <div class="meta" style="margin-top:6px">담은 날: ${formatDate(b.createdAt)}</div>
-        <div>${bookmarkButton(b.type, b.targetId)}</div>
+      <div class="list-row split">
+        <span class="list-row-main">
+          <a class="list-row-title" href="${href}">${escapeHtml(short(b.title))}</a>
+          <span class="meta"><span class="list-row-domain">${escapeHtml(domainLabel(b.domain))}</span>${
+            b.difficulty ? difficultyBadge(b.difficulty) : ""}담은 날 ${shortDay(b.createdAt)}</span>
+        </span>
+        <span class="list-row-end">${bookmarkButton(b.type, b.targetId)}</span>
       </div>`;
   }
 

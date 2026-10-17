@@ -194,14 +194,14 @@ function stateToParams() {
 /* 글 한 줄. 링크가 둘이다: 글 제목은 글로, 문제 이름은 그 문제의 토론방으로 간다.
  * 그래서 줄 전체를 링크로 감싸지 않는다 — 링크 안에 링크를 넣을 수 없다. */
 function postRow(p) {
-  return `<div class="post-row">
-    <a class="post-row-title" href="/post.html?id=${p.id}">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}${
-      p.commentCount ? ` <span class="post-row-count">💬 ${p.commentCount}</span>` : ""}${
-      p.likeCount ? ` <span class="post-row-count">👍 ${p.likeCount}</span>` : ""}</a>
+  return `<div class="list-row">
+    <a class="list-row-title" href="/post.html?id=${p.id}">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}${
+      p.commentCount ? ` <span class="list-row-count">💬 ${p.commentCount}</span>` : ""}${
+      p.likeCount ? ` <span class="list-row-count">👍 ${p.likeCount}</span>` : ""}</a>
     <span class="meta">
-      <span class="post-row-domain">${escapeHtml(domainLabel(p.domain))}</span>
-      <a class="post-row-room" href="/discussion.html?problemId=${p.problemId}">${escapeHtml(p.problemTitle)}</a>
-      · ${escapeHtml(p.nickname || "탈퇴한 사용자")} · ${formatDate(p.createdAt)}
+      <span class="list-row-domain">${escapeHtml(domainLabel(p.domain))}</span>
+      <a class="list-row-sub" href="/discussion.html?problemId=${p.problemId}">${escapeHtml(p.problemTitle)}</a>
+      · ${escapeHtml(p.nickname || "탈퇴한 사용자")} · ${shortDay(p.createdAt)}
     </span>
   </div>`;
 }
@@ -210,19 +210,19 @@ function postRow(p) {
  * 줄 전체가 그 글로 가는 링크다. */
 function myCommentRow(c) {
   const body = c.body.length > 120 ? c.body.slice(0, 120) + "…" : c.body;
-  return `<a class="post-row" href="/post.html?id=${c.postId}">
-    <span class="post-row-title">${c.hidden ? `<span class="badge gray">가려짐</span> ` : ""}${escapeHtml(body)}</span>
-    <span class="meta">${escapeHtml(c.postTitle)} · ${formatDate(c.createdAt)}</span>
+  return `<a class="list-row" href="/post.html?id=${c.postId}">
+    <span class="list-row-title">${c.hidden ? `<span class="badge gray">가려짐</span> ` : ""}${escapeHtml(body)}</span>
+    <span class="meta">${escapeHtml(c.postTitle)} · ${shortDay(c.createdAt)}</span>
   </a>`;
 }
 
 /* 토론방 한 줄. 줄 전체가 그 방으로 가는 링크다. */
 function roomRow(r) {
-  return `<a class="post-row" href="/discussion.html?problemId=${r.problemId}">
-    <span class="post-row-title">${escapeHtml(r.problemTitle)}</span>
+  return `<a class="list-row" href="/discussion.html?problemId=${r.problemId}">
+    <span class="list-row-title">${escapeHtml(r.problemTitle)}</span>
     <span class="meta">
-      <span class="post-row-domain">${escapeHtml(domainLabel(r.domain))}</span>
-      글 ${r.postCount}개 · 최근 글 ${formatDate(r.lastPostAt)}
+      <span class="list-row-domain">${escapeHtml(domainLabel(r.domain))}</span>
+      글 ${r.postCount}개 · 최근 글 ${shortDay(r.lastPostAt)}
     </span>
   </a>`;
 }

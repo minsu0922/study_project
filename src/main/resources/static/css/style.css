@@ -1204,21 +1204,20 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
 .doc-sub .edition { color: var(--lv1-fg); }
 .doc-sub .edition.advanced { color: var(--lv3-fg); }
 
-/* ── 한 주제 = 한 카드(문서 목록) ── 2026-09-08
+/* ── 한 주제 = 한 줄(문서 목록) ── 2026-09-08, 줄 목록으로 바꾼 것은 2026-10-17
  *
- * 짝이 있는 주제는 카드 안에 링크가 둘이라(입문편·심화편) 카드 전체를 링크로 만들 수 없다.
- * 대신 제목이 곧 입문편 링크다 — 카드에서 가장 크고 먼저 읽히는 것이 눌리는 자리여야 한다.
- * 카드 자체의 호버 효과(.card.clickable)는 주지 않는다: 카드 어디나 눌린다고 말해 놓고
- * 실제로는 링크 위에서만 눌리면, 겉모습과 조작이 어긋난 그 상태로 되돌아간다. */
-.doc-group h2 a { color: inherit; text-decoration: none; }
-.doc-group h2 a:hover { color: var(--primary); }
+ * 짝이 있는 주제는 줄 안에 링크가 둘이라(입문편·심화편) 줄 전체를 링크로 만들 수 없다.
+ * 대신 제목이 곧 입문편 링크다 — 가장 크고 먼저 읽히는 것이 눌리는 자리여야 한다. */
+.doc-row-title { font-size: var(--fs-3); margin: 0; line-height: 1.5; }
 /* 편 링크는 <누를 수 있는 칩>으로 보이게 테두리를 준다. 부제(글자)로만 두면 상세 화면의
-   같은 자리와 생김새가 같아, 목록에서만 눌린다는 사실이 안 보인다. */
-.doc-group .doc-sub .edition {
-  border: 1px solid currentColor; border-radius: 999px;
-  padding: 1px 10px; font-size: var(--fs-1); text-decoration: none;
+   같은 자리와 생김새가 같아, 목록에서만 눌린다는 사실이 안 보인다. 제목 바로 뒤에 붙인다. */
+.doc-group .edition {
+  display: inline-block; margin-left: 6px; vertical-align: 2px;
+  color: var(--lv1-fg); border: 1px solid currentColor; border-radius: 999px;
+  padding: 0 9px; font-size: var(--fs-1); font-weight: 600; text-decoration: none;
 }
-.doc-group .doc-sub .edition:hover { background: var(--fill); }
+.doc-group .edition.advanced { color: var(--lv3-fg); }
+.doc-group .edition:hover { background: var(--fill); }
 .badge.edition { background: var(--lv1-bg); color: var(--lv1-fg); }
 .badge.edition.advanced { background: var(--lv3-bg); color: var(--lv3-fg); }
 
@@ -2354,37 +2353,12 @@ a.stat.stat-link:hover { border-color: var(--border-strong); background: var(--f
   .home-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
   /* 오른쪽 칸의 첫 라벨이 왼쪽 히어로의 윗변과 줄이 맞게 위 여백을 없앤다. */
   .home-side > .section-label:first-child { margin-top: 0; }
-  /* 좁은 칸에서는 제목 한 줄이 "전송 계층의 신…"으로 잘린다. 분야·날짜를 윗줄에 두고
-     제목을 아랫줄에 통째로 낸다. */
-  .home-side .doc-line { flex-wrap: wrap; row-gap: 6px; }
-  .home-side .doc-line .ti { order: 3; flex-basis: 100%; white-space: normal; }
-  .home-side .doc-line .dt { margin-left: auto; }
 }
-/* 커뮤니티 새 글 한 줄. 문서 줄(.doc-line)의 틀을 그대로 쓰고 안쪽만 두 줄로 쌓는다. */
-.doc-line.home-post { flex-direction: column; align-items: stretch; gap: 4px; }
-.doc-line.home-post .ti { white-space: normal; flex: none; order: 0; font-weight: 600; }
-/* 문제 이름이 길면 그쪽만 말줄임한다. 댓글 수까지 한 줄로 자르면 "💬 2"가 "…"에 먹힌다. */
-.home-post-meta { display: flex; gap: 8px; color: var(--muted); font-size: .78rem; }
+/* 첫 화면 새 소식의 커뮤니티 줄 — 문제 이름이 길면 그쪽만 말줄임한다.
+   댓글 수까지 한 줄로 자르면 "💬 2"가 "…"에 먹힌다. */
+.home-post-meta { display: flex; gap: 8px; }
 .home-post-meta .where { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-post-meta .count { flex: none; }
-
-.doc-line {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 12px 16px; margin-bottom: 8px;
-  text-decoration: none; color: var(--text); font-size: .92rem;
-  transition: border-color .12s, background .12s;
-}
-.doc-line:hover { border-color: var(--primary); background: var(--primary-soft); }
-.doc-line .dm {
-  flex: none; font-size: .74rem; color: var(--primary-dark);
-  background: var(--primary-soft); padding: 3px 9px; border-radius: 999px;
-}
-.doc-line .ti { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.doc-line .dt { flex: none; color: var(--muted); font-size: .78rem; }
-/* 오늘 올라온 것만 색을 준다 — 다 칠하면 "새것"이라는 뜻이 사라진다 */
-.doc-line.fresh .dt { color: var(--lv2-fg); font-weight: 600; }
-@media (max-width: 560px) { .doc-line .dm, .doc-line .dt { display: none; } }
 
 .table-wrap { overflow-x: auto; margin-bottom: 24px; }
 table.grid { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); font-size: .9rem; }
@@ -2646,16 +2620,31 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 }
 .room-bar { display: flex; align-items: center; gap: 8px; margin: var(--sp-3) 0 var(--sp-1); }
 .room-bar .spacer { flex: 1; }
-/* 글 한 줄. 줄 전체가 링크다 — 제목 글자만 눌리면 폰에서 누를 자리가 좁다. */
-.post-row {
+/* ── 목록 한 줄(.list-row) — 사용자 화면의 모든 목록이 이 모양이다 ──────────────
+ * 개념 문서·커뮤니티·토론방·복습 현황·북마크·풀이 기록·첫 화면의 새 소식.
+ * 예전에는 화면마다 큰 카드·작은 카드·줄 목록이 섞여, 같은 "목록"이 화면을 옮길 때마다 달라 보였다.
+ * 카드 대신 위아래 1px 선으로 나눈다 — 그림자를 걷은 이유(:root --overlay-shadow 주석)와 같다.
+ * 1줄 = 제목, 2줄 = .meta(분야 알약 · 부가 정보 · 날짜). 날짜는 shortDay("10월 5일")로 적는다.
+ * 줄 전체가 링크면 <a class="list-row">, 줄 안에 링크가 둘 이상이면 div로 두고 제목만 링크다. */
+.list-row {
   display: flex; flex-direction: column; gap: 4px;
   padding: 12px 4px; border-top: 1px solid var(--border);
   color: var(--text); text-decoration: none;
 }
-.post-row:last-child { border-bottom: 1px solid var(--border); }
-@media (hover: hover) { a.post-row:hover .post-row-title { color: var(--primary); } }
-.post-row-title { font-weight: 600; overflow-wrap: anywhere; color: var(--text); text-decoration: none; }
-@media (hover: hover) { a.post-row-title:hover { color: var(--primary); } }
+.list-row:last-child { border-bottom: 1px solid var(--border); }
+@media (hover: hover) { a.list-row:hover .list-row-title { color: var(--primary); } }
+.list-row-title { font-weight: 600; overflow-wrap: anywhere; color: var(--text); text-decoration: none; }
+@media (hover: hover) { a.list-row-title:hover { color: var(--primary); } }
+/* 오른쪽 끝에 할 일(지금 풀기 ›)이나 단추(북마크)가 붙는 줄 */
+.list-row.split { flex-direction: row; align-items: center; gap: 12px; }
+.list-row-main { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.list-row-end { flex: none; font-size: .86rem; color: var(--muted); white-space: nowrap; }
+.list-row-end.is-correct { color: var(--correct-fg); font-weight: 600; }
+.list-row-end.is-wrong { color: var(--wrong-fg); font-weight: 600; }
+.list-row .meta .badge { margin: 0 4px 0 0; }
+.list-row-tag { color: var(--muted); margin-right: 6px; }
+/* 오늘 올라온 것만 색을 준다 — 다 칠하면 "새것"이라는 뜻이 사라진다 */
+.list-row-fresh { color: var(--lv2-fg); font-weight: 600; }
 /* 말머리 표시(api.js postCategoryChip). 제목 앞에 붙는다. 종류마다 색을 달리하되 글자가 종류를
    말하므로 색을 못 가려도 읽힌다. 오류 지적만 눈에 띄게 한다 — 관리자가 훑다가 걸려야 하는 글이다. */
 .post-cat {
@@ -2690,16 +2679,16 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
 /* 고르는 칸은 늘리지 않는다. 검색 칸이 숨는 탭(토론방·내 활동)에서 고르는 칸 하나가 줄 전체로 퍼진다. */
 /* 140: 검색 칸(220)·고르는 칸 셋·필터 지우기가 본문 폭(812px) 한 줄에 든다 */
 .community-filters .field:not(.field-search):not(.field-reset) { flex: 0 1 140px; }
-/* 글이 속한 문제의 분야. 개념 문서 목록의 분야 표시(.doc-line .dm)와 같은 모양이다. */
-.post-row-domain {
+/* 줄의 분야 표시. 모든 목록이 같은 알약을 쓴다. */
+.list-row-domain {
   display: inline-block; margin-right: 6px;
   font-size: .74rem; color: var(--primary-dark);
   background: var(--primary-soft); padding: 1px 8px; border-radius: 999px;
 }
-/* 커뮤니티 목록에서 글이 속한 문제. 누르면 그 문제의 토론방으로 간다. */
-.post-row-room { color: var(--text-2); }
-.post-row-count { font-weight: 400; font-size: .8rem; color: var(--muted); white-space: nowrap; }
-.post-row.gone { font-style: italic; }
+/* 줄 안의 두 번째 링크(커뮤니티 글이 속한 문제 → 그 토론방). */
+.list-row-sub { color: var(--text-2); }
+.list-row-count { font-weight: 400; font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.list-row.gone { font-style: italic; }
 .post-title { font-size: var(--fs-4, 1.3rem); margin: 0 0 6px; overflow-wrap: anywhere; }
 /* 줄바꿈을 살린다. 본문은 서식 없는 글이고 escapeHtml로 넣으므로 pre-wrap이 없으면 한 문단으로 뭉친다. */
 .post-body { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: var(--sp-3); line-height: 1.7; }
@@ -2889,15 +2878,9 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
  * 좁은 화면에서 가로 줄로 접히는 규칙(아래 975px)도 한 벌로 끝난다. */
 .side-page { max-width: 980px; }
 
-/* 복습 현황 한 줄 — 카드 전체가 그 문제 풀이로 가는 링크. 오른쪽 글자가 지금 풀면 단계에 반영되는지 말한다 */
-.card.rv-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 8px; }
-.rv-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
-.rv-badges .badge { margin: 0 4px 0 0; }
-.rv-title { font-weight: 600; }
-.rv-when { font-size: .84rem; color: var(--muted); }
-.rv-go { flex: none; font-size: .86rem; color: var(--muted); white-space: nowrap; }
-.rv-row.ready { border-left: 3px solid var(--review); }
-.rv-row.ready .rv-when, .rv-row.ready .rv-go { color: var(--review); font-weight: 700; }
+/* 복습 현황 한 줄(.list-row.split) — 오른쪽 글자가 지금 풀면 단계에 반영되는지 말한다.
+   풀 때가 된 줄은 글자색으로만 띄운다. 줄 목록에서 왼쪽 띠를 두면 그 줄만 들여쓰기된 것처럼 어긋난다. */
+.rv-row.ready .rv-when, .rv-row.ready .list-row-end { color: var(--lv2-fg); font-weight: 700; }
 
 /* 오답노트 한 줄 — 접힌 상태에서 무엇을 틀렸는지만 보이고, 누르면 지문·해설이 펼쳐진다 */
 .wa-item { padding: 0; margin-bottom: 8px; }

@@ -512,9 +512,9 @@ async function loadRecentPosts() {
   if (posts.length === 0) return;
 
   document.getElementById("postList").innerHTML = posts.map(p => `
-    <a class="doc-line home-post" href="/post.html?id=${p.id}">
-      <span class="ti">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}</span>
-      <span class="home-post-meta">
+    <a class="list-row" href="/post.html?id=${p.id}">
+      <span class="list-row-title">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}</span>
+      <span class="meta home-post-meta">
         <span class="where">${escapeHtml(p.problemTitle)} · ${escapeHtml(p.nickname || "탈퇴한 사용자")}</span>${
         p.commentCount ? `<span class="count">💬 ${p.commentCount}</span>` : ""}
       </span>
@@ -539,10 +539,10 @@ async function loadRecentDocs() {
     // 두 번 뜬다(실제로 그렇게 나왔다). 그러면 새 소식이 셋이 아니라 둘이고, 읽는 사람은
     // 목록이 고장 났다고 본다. 서버는 <짝이 실제로 있을 때만> edition을 채우므로
     // 짝이 없는 문서에는 아무것도 안 붙는다(DocumentListItem).
-    return `<a class="doc-line ${day === today ? "fresh" : ""}" href="/document.html?slug=${encodeURIComponent(d.slug)}">
-      <span class="dm">${escapeHtml(d.domainLabel)}</span>
-      <span class="ti">${escapeHtml(d.title)}${d.edition ? " " + editionBadge(d.edition) : ""}</span>
-      <span class="dt">${day === today ? "오늘" : escapeHtml(shortDay(day))}</span>
+    return `<a class="list-row" href="/document.html?slug=${encodeURIComponent(d.slug)}">
+      <span class="list-row-title">${escapeHtml(d.title)}${d.edition ? " " + editionBadge(d.edition) : ""}</span>
+      <span class="meta"><span class="list-row-domain">${escapeHtml(d.domainLabel)}</span>${
+        day === today ? `<span class="list-row-fresh">오늘</span>` : escapeHtml(shortDay(day))}</span>
     </a>`;
   }).join("");
   document.getElementById("docLabel").hidden = false;
