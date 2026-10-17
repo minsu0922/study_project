@@ -103,6 +103,8 @@ let counts = null;
 /* 한 판에 내보내는 복습 문제 수(2026-09-05). 서버 상한은 50이지만
    상한을 다 쓰는 것과 사람이 한자리에서 풀 수 있는 양은 다른 문제다. */
 const SESSION_SIZE = 20;
+/** 현황 한 쪽에 10문제. 오답노트와 같은 수라 두 탭을 오가도 한 쪽 분량이 같다 */
+const STATUS_PAGE_SIZE = 10;
 
 if (!isLoggedIn()) {
   // 위 사다리 설명은 남긴다 — 이 화면에서 비로그인에게도 뜻이 있는 유일한 내용이고,
@@ -230,7 +232,7 @@ async function loadStatus() {
   const list = document.getElementById("list");
   showLoading(list);
   try {
-    const params = new URLSearchParams({ page });
+    const params = new URLSearchParams({ page, size: STATUS_PAGE_SIZE });
     const filters = filterParams({ q: "q" });
     if (selectedStatus) filters.set("status", selectedStatus);
     if (selectedDomain) filters.set("domain", selectedDomain);
@@ -333,7 +335,10 @@ wireFilterBar({
   onChange: () => { page = 0; loadStatus(); },
 });
 if (isLoggedIn()) domainsReady.then(loadCounts);
-const pager = mountPager(document.getElementById("pager"), p => { page = p; loadStatus(); });
+const pager = mountPager(document.getElementById("pager"), p => {
+  page = p; loadStatus();
+  document.getElementById("statusBlock").scrollIntoView({ block: "start" });
+});
 </script>
 </body>
 </html>
