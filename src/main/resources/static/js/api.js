@@ -468,6 +468,56 @@ function wireFilterBar({ search, selects = [], reset, onChange, onReset }) {
   });
 }
 
+/**
+ * 좁은 화면에서 필터 줄의 고르기 칸을 [필터] 단추 뒤로 접는다. 검색 칸은 늘 보인다.
+ *
+ * 폰에서 커뮤니티를 열면 탭·분야·검색·말머리·정렬·필터 지우기가 첫 화면을 다 먹고,
+ * 첫 글이 600px 아래에서 시작했다. 정렬·말머리는 매번 바꾸는 값이 아니라 접어도 된다.
+ * 고른 것이 있으면 단추에 개수를 적는다 — 접힌 채로 걸러진 목록을 보고 "글이 왜 적지?"가 되지 않게.
+ * 고르기 칸이 없는 줄(검색 + 필터 지우기뿐)은 접을 것이 없어 그대로 둔다. 관리 콘솔은 건드리지 않는다.
+ */
+function collapseFilterBars() {
+  if (location.pathname.startsWith("/admin")) return;
+  document.querySelectorAll(".filters").forEach(form => {
+    const extras = [...form.querySelectorAll(".field:not(.field-search):not(.field-reset)")];
+    if (extras.length === 0) return;
+    const wrap = document.createElement("div");
+    wrap.className = "field field-toggle";
+    wrap.innerHTML = `<label>&nbsp;</label>
+      <button type="button" class="btn-outline filter-toggle" aria-expanded="false">필터</button>`;
+    const search = form.querySelector(".field-search");
+    if (search) search.after(wrap); else form.prepend(wrap);
+    form.classList.add("has-toggle");
+    const btn = wrap.querySelector("button");
+    btn.addEventListener("click", () => {
+      const open = form.classList.toggle("open");
+      btn.setAttribute("aria-expanded", String(open));
+    });
+
+    // 탭에 따라 칸이 숨는 화면(커뮤니티)이 있어, 보이는 칸만 센다.
+    // 값이 같으면 쓰지 않는다 — hidden을 같은 값으로 다시 써도 아래 감시자가 깨어나,
+    // 감시자 → update → hidden 쓰기 → 감시자로 끝없이 돌아 화면이 멈췄다.
+    const update = () => {
+      const shown = extras.filter(f => !f.hidden);
+      const none = shown.length === 0;
+      if (wrap.hidden !== none) wrap.hidden = none;
+      const picked = shown.filter(f => {
+        const sel = f.querySelector("select");
+        return sel && sel.options.length && sel.value !== sel.options[0].value;
+      }).length;
+      const label = picked ? `필터 · ${picked}` : "필터";
+      if (btn.textContent !== label) btn.textContent = label;
+    };
+    form.addEventListener("change", update);
+    // 필터 지우기·탭 전환은 값을 코드로 바꿔 change가 안 난다. 처리기가 끝난 뒤에 다시 센다
+    document.addEventListener("click", () => setTimeout(update));
+    const watch = new MutationObserver(update);
+    extras.forEach(f => watch.observe(f, { attributes: true, attributeFilter: ["hidden"] }));
+    update();
+  });
+}
+document.addEventListener("DOMContentLoaded", collapseFilterBars);
+
 /** <select>에 "전체" + 고정 목록 옵션을 채운다 (난이도·유형 등 서버가 안 주는 값) */
 function fillSelect(selectEl, pairs, allLabel) {
   selectEl.innerHTML = "";

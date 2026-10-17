@@ -1325,6 +1325,14 @@ input.invalid:focus { outline-color: var(--wrong); }
 /* 목록 필터 줄의 모양은 하나다: 검색 칸(넓게) → 고르기 칸들 → 필터 지우기(wireFilterBar) */
 .filters .field.field-search { flex: 2 1 220px; }
 .filters .field.field-reset { flex: none; min-width: 0; }
+/* 좁은 화면에서 고르기 칸을 접는 [필터] 단추(api.js collapseFilterBars). 넓은 화면에서는 안 보인다.
+   975px은 아래 옆 기둥이 가로 칩 줄로 접히는 눈금과 같다 — 둘이 같은 폭에서 바뀌어야 한다. */
+.filters .field.field-toggle { display: none; }
+@media (max-width: 975px) {
+  .filters.has-toggle .field.field-toggle:not([hidden]) { display: block; flex: none; min-width: 0; }
+  .filters.has-toggle:not(.open) .field:not(.field-search):not(.field-toggle) { display: none; }
+  .filters.open .filter-toggle { background: var(--primary-soft); }
+}
 
 button, .btn {
   background: var(--primary); color: var(--on-primary);
