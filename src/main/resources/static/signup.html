@@ -321,7 +321,7 @@ document.getElementById("signupForm").addEventListener("submit", async e => {
     const data = await api("/api/auth/signup", { method: "POST", body: JSON.stringify({ username, password, nickname }) });
     setLogin(data.tokens.accessToken, username);
     ["signupForm", "signupIntro", "signupHelp"].forEach(id => document.getElementById(id).hidden = true);
-    document.getElementById("recoveryCode").textContent = data.recoveryCode;
+    showRecoveryCode(document.getElementById("recoveryCode"), data.recoveryCode);
     document.getElementById("recoveryPanel").hidden = false;
     window.scrollTo({ top: 0 });
   } catch (err) {

@@ -214,7 +214,7 @@ async function wireRecoveryCode() {
       const data = await api("/api/me/recovery-code", { method: "POST",
         body: JSON.stringify({ currentPassword: pw.value }) });
       pw.value = "";
-      out.textContent = data.recoveryCode;
+      showRecoveryCode(out, data.recoveryCode);
       out.hidden = false;
       status.textContent = "새 코드입니다. 지금 적어 두세요 — 이 화면을 떠나면 다시 볼 수 없습니다.";
     } catch (e2) {

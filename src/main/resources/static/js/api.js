@@ -549,6 +549,42 @@ function escapeHtml(s) {
 }
 
 /**
+ * 복구 코드 상자를 채운다 — 코드 한 줄 + [복사] 버튼. 가입·재설정·마이페이지 세 곳이 함께 쓴다.
+ *
+ * 옮겨 적다 한 글자만 틀려도 그 코드는 쓸모가 없고, 틀렸다는 것은 비밀번호를 잊은 날에야 안다.
+ * clipboard API는 https·localhost에서만 살아서, 사설 IP로 연 폰에서는 textarea 방식으로 넘어간다.
+ * (관리 화면의 copyToClipboard와 이름을 다르게 둔 것은 두 파일을 함께 싣는 화면이 있어서다.)
+ */
+function showRecoveryCode(box, code) {
+  box.innerHTML = `<span class="recovery-code-text"></span>
+    <button type="button" class="btn-outline btn-sm recovery-copy">복사</button>`;
+  box.querySelector(".recovery-code-text").textContent = code;
+  const btn = box.querySelector(".recovery-copy");
+  btn.addEventListener("click", async () => {
+    let ok = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(code);
+        ok = true;
+      }
+    } catch (e) { /* 아래 옛 방식으로 */ }
+    if (!ok) {
+      const ta = document.createElement("textarea");
+      ta.value = code;
+      ta.readOnly = true;
+      ta.style.cssText = "position:fixed; left:-9999px; top:0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      ta.remove();
+    }
+    btn.textContent = ok ? "복사됨" : "복사 실패";
+    clearTimeout(btn._timer);
+    btn._timer = setTimeout(() => { btn.textContent = "복사"; }, 1800);
+  });
+}
+
+/**
  * 문제에 딸린 코드를 줄 번호와 함께 그린다. 코드가 없으면 빈 문자열.
  *
  * 색칠 라이브러리를 쓰지 않는다. 문제의 코드는 5~15줄이라 고정폭과 줄 번호면 읽히고,
