@@ -1,0 +1,101 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-10-18",
+  "generatedAt" : "2026-10-17T19:46:27.673168265Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "출력이 123|3이 되도록 5행을 고치려 한다. 5행을 대신할 코드로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "3행에서 s는 빈 문자열이다. 4행의 반복문이 i를 1부터 3까지 돌지만, 5행의 s.concat(...)은 새 문자열을 돌려줄 뿐 s를 바꾸지 않는다. 그래서 지금 코드는 7행에서 |0을 출력한다. 5행을 s = s.concat(String.valueOf(i));로 바꾸면 돌려받은 새 문자열을 s에 다시 담아 \"1\", \"12\", \"123\" 순으로 쌓인다. 7행은 123|3을 출력한다. i + s는 앞에 붙여 순서가 뒤집히므로 답이 아니다.",
+    "choices" : [ {
+      "text" : "s = s.concat(String.valueOf(i));",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "s = i + s;",
+      "correct" : false,
+      "rationale" : "앞에 붙여도 순서가 같다고 오해한 것으로, 출력은 321|3이 된다.",
+      "matchText" : ""
+    }, {
+      "text" : "s = String.valueOf(i);",
+      "correct" : false,
+      "rationale" : "대입만 하면 누적된다고 오해한 것으로, 출력은 3|1이 된다.",
+      "matchText" : ""
+    }, {
+      "text" : "s.concat(s + i);",
+      "correct" : false,
+      "rationale" : "concat이 s를 직접 바꾼다고 여전히 오해한 것으로, 출력은 |0이 된다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "반복문에서 문자열을 이어 붙이는 코드 고치기",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "다음 코드를 실행했을 때 출력되는 결과로 옳은 것은?",
+    "answer" : "",
+    "explanation" : "3행과 4행에서 a와 b는 같은 \"hi\"를 가리킨다. 5행의 b += \"!\"는 String이 불변이므로 새 문자열 \"hi!\"를 만들어 b에만 다시 대입한다. a는 여전히 \"hi\"다. 6행과 7행에서 x와 y는 같은 StringBuilder 객체를 가리킨다. 8행의 append는 그 객체 자체를 바꾸므로 x와 y 모두 \"hi!\"를 보게 된다. 그래서 9행은 hi hi!, 10행은 hi! hi!를 출력한다.",
+    "choices" : [ {
+      "text" : "hi hi! / hi! hi!",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "hi hi! / hi hi!",
+      "correct" : false,
+      "rationale" : "StringBuilder도 String처럼 append가 새 객체를 만든다고 오해한 답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "hi! hi! / hi! hi!",
+      "correct" : false,
+      "rationale" : "b += \"!\"가 a와 함께 쓰는 객체를 바꾼다고 오해한 답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "hi hi / hi! hi!",
+      "correct" : false,
+      "rationale" : "b += \"!\"가 아무 효과도 없다고 오해한 답이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "String과 StringBuilder의 참조 공유 차이",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "원래 5행은 concat의 결과를 버리므로 s는 계속 \"\"이고, 7행은 |0을 출력한다. 1번은 s에 \"1\", \"12\", \"123\"이 차례로 대입되어 123|3이 나온다. 3번은 s가 \"3\"으로 끝나 3|1이 나온다. 4번은 반환값을 버리므로 여전히 |0이다. 2번은 i + s로 앞에 붙여 나가므로 321|3이 나온다. 답은 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "4행에서 b는 a와 같은 \"hi\"를 가리킨다. 5행 b += \"!\"는 새 문자열 \"hi!\"를 만들어 b에만 대입하므로 a는 \"hi\" 그대로다. 7행에서 y는 x와 같은 StringBuilder 객체를 가리킨다. 8행 append는 그 객체를 직접 바꾸므로 x와 y 모두 \"hi!\"가 된다. 9행은 hi hi!, 10행은 hi! hi!를 출력한다.",
+    "suggestion" : null
+  } ],
+  "codeTopic" : "String 불변성과 StringBuilder",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_FIX",
+    "language" : "java",
+    "code" : "public class Main {\n    public static void main(String[] args) {\n        String s = \"\";\n        for (int i = 1; i <= 3; i++) {\n            s.concat(String.valueOf(i));\n        }\n        System.out.println(s + \"|\" + s.length());\n    }\n}",
+    "expectedOutput" : "123|3",
+    "targetLine" : 5,
+    "errorType" : ""
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "public class Main {\n    public static void main(String[] args) {\n        String a = \"hi\";\n        String b = a;\n        b += \"!\";\n        StringBuilder x = new StringBuilder(\"hi\");\n        StringBuilder y = x;\n        y.append(\"!\");\n        System.out.println(a + \" \" + b);\n        System.out.println(x + \" \" + y);\n    }\n}",
+    "expectedOutput" : "hi hi!\nhi! hi!",
+    "targetLine" : 0,
+    "errorType" : ""
+  } ]
+}

@@ -3,7 +3,9 @@
   "topics" : [ {
     "id" : 1082,
     "domain" : "LANGUAGE_RUNTIME",
-    "topic" : "String 불변성과 StringBuilder"
+    "topic" : "String 불변성과 StringBuilder",
+    "lastUsedAt" : "2026-10-18",
+    "usedCount" : 1
   }, {
     "id" : 1083,
     "domain" : "LANGUAGE_RUNTIME",
