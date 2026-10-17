@@ -103,6 +103,12 @@ function renderAdminShell(active = "") {
                role="combobox" aria-expanded="false" aria-controls="barJumpPop">
         <div class="bar-jump-pop" id="barJumpPop" role="listbox" hidden></div>
       </form>
+      <!-- 좁은 화면에는 검색 칸이 들어갈 자리가 없어 돋보기만 둔다. 누르면 띠 아래로 칸이 펼쳐진다 -->
+      <button type="button" class="bar-icon bar-search-btn" id="barSearchBtn"
+              aria-label="검색 열기" aria-controls="barJump" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      </button>
       <!-- 콘솔에는 설정 화면이 없어 테마를 바꾸려면 학습 화면 설정까지 다녀와야 했다 -->
       <button type="button" class="bar-icon" id="barTheme"></button>
       <span class="who">${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")} · 관리자</span>
@@ -153,19 +159,68 @@ function wireThemeButton() {
 }
 
 /* ── 통합 검색 ──
- * 숫자는 번호로(문제와 초안은 번호 체계가 따로라 둘 다 나올 수 있다), 글자는 문제·초안의 제목과 지문,
- * 사용자 아이디·닉네임으로 찾는다. 치는 동안 결과가 뜨고 ↑↓·Enter로 고른다. 문서는 넣지 않았다.
- * 쉬는 시간(SEARCH_DELAY_MS)은 목록 화면의 검색 칸과 같은 값이다(admin-common.js). */
+ * 숫자는 번호로(문제와 초안은 번호 체계가 따로라 둘 다 나올 수 있다), 글자는 문제·초안·문서의 제목과
+ * 지문, 사용자 아이디·닉네임으로 찾는다. 치는 동안 결과가 뜨고 ↑↓·Enter로 고른다.
+ * 쉬는 시간(SEARCH_DELAY_MS)은 목록 화면의 검색 칸과 같은 값이다(admin-common.js).
+ *
+ * 빈 칸을 누르면 안내를 띄운다. 무엇을 칠 수 있는지와, 이 브라우저에서 자주 찾은 검색어다.
+ * 검색어는 서버에 남기지 않는다. 관리자가 한 명이라 서버에서 세도 이 브라우저의 기록과 같다. */
 const DRAFT_STATUS_LABEL = { PENDING: "검수 대기", APPROVED: "승인됨", REJECTED: "거절됨" };
+const SEARCH_HISTORY_KEY = "csquiz_admin_search_history";
+const SEARCH_HISTORY_SHOWN = 6;
+/** 기록이 끝없이 늘지 않게 이만큼만 둔다. 넘치면 가장 오래 안 쓴 것부터 버린다 */
+const SEARCH_HISTORY_KEPT = 30;
+/** 범위 칩. 고르면 그 종류만 보여 준다. 예시는 칩을 눌렀을 때 칸에 미리 넣어 줄 글이다 */
+const SEARCH_SCOPES = [
+  ["number", "번호", "#"],
+  ["problems", "문제", ""],
+  ["drafts", "문제 초안", ""],
+  ["documents", "문서", ""],
+  ["users", "사용자", ""],
+];
+
+function readSearchHistory() {
+  try {
+    const list = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || "[]");
+    return Array.isArray(list) ? list.filter(h => h && typeof h.q === "string") : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/** 결과로 실제 이동한 검색어만 센다. 치다 만 글자까지 세면 "TC" 같은 조각이 위로 올라온다 */
+function rememberSearch(q) {
+  const list = readSearchHistory();
+  const hit = list.find(h => h.q === q);
+  if (hit) {
+    hit.count++;
+    hit.at = Date.now();
+  } else {
+    list.push({ q, count: 1, at: Date.now() });
+  }
+  list.sort((a, b) => b.at - a.at);
+  try {
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(list.slice(0, SEARCH_HISTORY_KEPT)));
+  } catch (e) { /* 저장 못 해도 이동은 한다 */ }
+}
+
+function forgetSearch(q) {
+  try {
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(readSearchHistory().filter(h => h.q !== q)));
+  } catch (e) { /* 다음에 다시 보여도 해가 없다 */ }
+}
 
 function wireJump() {
   const form = document.getElementById("barJump");
   const input = document.getElementById("barJumpInput");
   const pop = document.getElementById("barJumpPop");
+  const bar = form.closest(".admin-bar");
+  const openBtn = document.getElementById("barSearchBtn");
   let timer = null;
   let seq = 0;
   let links = [];
   let cursor = -1;
+  let scope = null;
 
   const close = () => {
     pop.hidden = true;
@@ -173,11 +228,33 @@ function wireJump() {
     links = [];
     cursor = -1;
   };
+  // 좁은 화면에서 돋보기로 펼친 칸을 접는다. 넓은 화면에서는 클래스만 빠지고 달라지는 것이 없다
+  const fold = () => {
+    bar.classList.remove("searching");
+    openBtn.setAttribute("aria-expanded", "false");
+  };
+  const unfold = () => {
+    bar.classList.add("searching");
+    openBtn.setAttribute("aria-expanded", "true");
+    input.focus();
+  };
+  const setScope = s => {
+    scope = s;
+    const label = SEARCH_SCOPES.find(([key]) => key === s)?.[1];
+    input.placeholder = label ? `${label}에서 검색` : "검색  /";
+  };
+  const showGuide = () => {
+    show(renderSearchGuide(scope));
+    pop.dataset.q = "";
+    // 안내에서는 아무것도 골라 두지 않는다. 빈 칸에서 Enter를 눌렀다고 칩이 눌리면 안 된다
+    cursor = -1;
+    mark();
+  };
   const show = html => {
     pop.innerHTML = html;
     pop.hidden = false;
     input.setAttribute("aria-expanded", "true");
-    links = [...pop.querySelectorAll("a")];
+    links = [...pop.querySelectorAll("a:not(.x)")]; // 기록 지우기(✕)는 ↑↓로 지나가지 않는다
     cursor = links.length ? 0 : -1;
     mark();
   };
@@ -185,8 +262,10 @@ function wireJump() {
 
   async function search() {
     const q = input.value.trim();
+    // "#"만 있으면 번호 칩을 막 누른 참이다. 번호를 칠 때까지 안내를 그대로 둔다
+    if (!q || q === "#") return showGuide();
     // 한 글자 글자 검색은 거의 모든 줄에 걸려 쓸모가 없다. 숫자는 한 자리도 번호다
-    if (!q || (!/^#?\d+$/.test(q) && q.length < 2)) return close();
+    if (!/^#?\d+$/.test(q) && q.length < 2) return close();
     const mine = ++seq;
     let r;
     try {
@@ -196,20 +275,54 @@ function wireJump() {
       return;
     }
     if (mine !== seq) return; // 늦게 온 앞 검색의 답은 버린다
-    show(renderResults(q, r));
+    show(renderResults(q, r, scope));
     pop.dataset.q = q;
   }
 
   input.addEventListener("input", () => {
     clearTimeout(timer);
+    // 칸을 비우면 기다리지 않고 바로 안내로 돌아간다
+    if (!input.value.trim()) return showGuide();
     timer = setTimeout(search, SEARCH_DELAY_MS);
   });
-  input.addEventListener("focus", () => { if (input.value.trim()) search(); });
+  input.addEventListener("focus", search);
+  openBtn.addEventListener("click", () => (bar.classList.contains("searching") ? fold() : unfold()));
+
+  // 결과·안내 상자 안의 누름. 안내 항목은 이동이 아니라 칸을 채우는 일이라 여기서 가로챈다
+  pop.addEventListener("click", e => {
+    const a = e.target.closest("a");
+    if (!a) return;
+    if (a.dataset.forget !== undefined) {
+      e.preventDefault();
+      forgetSearch(a.dataset.forget);
+      showGuide();
+      input.focus();
+      return;
+    }
+    if (a.dataset.scope !== undefined) {
+      e.preventDefault();
+      setScope(a.dataset.scope === scope ? null : a.dataset.scope);
+      if (a.dataset.fill) input.value = a.dataset.fill;
+      input.focus();
+      search();
+      return;
+    }
+    if (a.dataset.fillQuery !== undefined) {
+      e.preventDefault();
+      input.value = a.dataset.fillQuery;
+      input.focus();
+      search();
+      return;
+    }
+    if (pop.dataset.q) rememberSearch(pop.dataset.q);
+  });
   input.addEventListener("keydown", e => {
     if (pop.hidden || !links.length) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
-      cursor = (cursor + (e.key === "ArrowDown" ? 1 : -1) + links.length) % links.length;
+      const step = e.key === "ArrowDown" ? 1 : -1;
+      // 안내처럼 아무것도 안 골랐으면(-1) ↓는 첫 줄, ↑는 끝 줄로 간다
+      cursor = cursor < 0 ? (step > 0 ? 0 : links.length - 1) : (cursor + step + links.length) % links.length;
       mark();
       links[cursor].scrollIntoView({ block: "nearest" });
     }
@@ -219,21 +332,54 @@ function wireJump() {
     clearTimeout(timer);
     // 쉬는 300ms 안에 Enter를 누르면 떠 있는 것은 앞 글자의 결과다. 새로 찾고 첫 줄로 간다
     if (pop.hidden || pop.dataset.q !== input.value.trim()) await search();
-    if (links[cursor]) location.href = links[cursor].href;
+    // 안내 항목(칩·검색어)은 이동이 아니라 칸 채우기라, 주소로 가지 않고 누른 것처럼 처리한다
+    if (links[cursor]) links[cursor].click();
   });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") { close(); input.blur(); }
-    // "/" 단축키. 글을 쓰는 칸에서는 그 글자 그대로 둔다
+    if (e.key === "Escape") { close(); fold(); input.blur(); }
+    // "/" 단축키. 글을 쓰는 칸에서는 그 글자 그대로 둔다. 좁은 화면이면 칸을 펼친다
     const t = e.target;
     if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey
-        && !(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable)
-        && getComputedStyle(form).display !== "none") {
+        && !(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable)) {
       e.preventDefault();
-      input.focus();
+      unfold();
       input.select();
     }
   });
-  document.addEventListener("click", e => { if (!form.contains(e.target)) close(); });
+  document.addEventListener("click", e => {
+    if (form.contains(e.target) || openBtn.contains(e.target)) return;
+    close();
+    fold();
+  });
+}
+
+/**
+ * 빈 칸의 안내. 무엇으로 찾을 수 있는지(범위 칩)와 자주 찾은 검색어다.
+ * 칩은 범위를 고르는 단추이기도 하다. 고르면 결과에 그 종류만 남는다.
+ */
+function renderSearchGuide(scope) {
+  const chips = SEARCH_SCOPES.map(([key, label, fill]) => `
+    <a href="#" role="option" class="chip${key === scope ? " on" : ""}" data-scope="${key}" data-fill="${fill}">${label}</a>`).join("");
+  // 자주 쓴 것이 위로, 횟수가 같으면 최근 것이 위로
+  const history = readSearchHistory()
+    .sort((a, b) => b.count - a.count || b.at - a.at)
+    .slice(0, SEARCH_HISTORY_SHOWN);
+  const rows = history.length
+    ? history.map(h => `
+        <div class="bar-jump-history">
+          <a href="#" role="option" data-fill-query="${escapeHtml(h.q)}">
+            <span class="t">${escapeHtml(h.q)}</span>
+            <span class="tag">${h.count}번</span>
+          </a>
+          <a href="#" class="x" data-forget="${escapeHtml(h.q)}" aria-label="${escapeHtml(h.q)} 기록 지우기">✕</a>
+        </div>`).join("")
+    : `<p class="bar-jump-empty">아직 없습니다. 결과로 이동한 검색어가 여기에 쌓입니다.</p>`;
+  return `
+    <div class="bar-jump-group">찾을 수 있는 것</div>
+    <div class="bar-jump-chips">${chips}</div>
+    <p class="bar-jump-hint">#7339처럼 번호, 제목·지문 일부, 아이디나 닉네임을 칩니다.</p>
+    <div class="bar-jump-group">자주 찾은 검색어</div>
+    ${rows}`;
 }
 
 /**
@@ -241,8 +387,10 @@ function wireJump() {
  * 모두 보기는 결과가 상자에 다 안 들어갔을 때만 단다. 그 목록 화면이 같은 검색어로 같은 결과를 낸다.
  * 초안은 모두 보기가 없다. 검수함은 상태를 하나씩 보는데 띠는 검수 대기·거절됨을 함께 찾는다.
  */
-function renderResults(q, r) {
+function renderResults(q, r, scope) {
   const enc = encodeURIComponent(q);
+  // 번호 칩은 거르지 않는다. 번호 검색은 원래 문제와 초안만 돌려준다
+  const keep = { problems: "문제", drafts: "문제 초안", documents: "문서", users: "사용자" }[scope];
   // 문제가 먼저다. 사람들이 가장 자주 찾는 것이고, 고칠 곳도 초안이 아니라 문제다
   const kinds = [
     ["문제", r.problems, p => [`/admin/problems.html?edit=${p.id}`, `#${p.id}`, p.title, ""],
@@ -253,9 +401,12 @@ function renderResults(q, r) {
       `/admin/documents.html?q=${enc}`],
     ["사용자", r.users, u => [`/admin/user.html?id=${u.id}`, u.username, u.nickname, ""],
       `/admin/users.html?q=${enc}`],
-  ].filter(([, section]) => section.items.length);
-  if (!kinds.length) return `<p class="bar-jump-empty">"${escapeHtml(q)}"에 맞는 것이 없습니다.</p>`;
-  return kinds.map(([name, section, toRow, moreHref]) => `
+  ].filter(([name, section]) => section.items.length && (!keep || name === keep));
+  // 범위를 골랐으면 결과 위에 적어 둔다. 칸의 안내 글은 글자를 치는 순간 사라진다
+  const scopeLine = keep
+    ? `<p class="bar-jump-hint">${keep}만 보는 중 · <a href="#" class="inline" data-scope="${scope}">전체 보기</a></p>` : "";
+  if (!kinds.length) return scopeLine + `<p class="bar-jump-empty">"${escapeHtml(q)}"에 맞는 것이 없습니다.</p>`;
+  return scopeLine + kinds.map(([name, section, toRow, moreHref]) => `
     <div class="bar-jump-group">${name}</div>
     ${section.items.map(toRow).map(([href, key, text, tag]) => `
       <a href="${href}" role="option">
@@ -278,7 +429,8 @@ function renderBatchChip(c) {
   const code = c.codeTopics === 0 || !at
     ? "코드 주제 없음"
     : `코드 ${at.getMonth() + 1}/${at.getDate()}(${"일월화수목금토"[at.getDay()]})`;
-  chip.innerHTML = `<span>일일 배치 ${c.batchEnabled ? "켜짐" : "<b>꺼짐</b>"}</span><span class="bar-chip-more">· ${code}</span>`;
+  // "일일"은 좁은 화면에서 뺀다. 돋보기가 들어가며 375px 띠가 6px 넘쳤다
+  chip.innerHTML = `<span><span class="bar-wide">일일&nbsp;</span>배치 ${c.batchEnabled ? "켜짐" : "<b>꺼짐</b>"}</span><span class="bar-chip-more">· ${code}</span>`;
   chip.classList.toggle("off", !c.batchEnabled);
   chip.title = c.batchEnabled ? "일일 배치가 켜져 있습니다. 누르면 배치 현황" : "일일 배치가 꺼져 있어 새 초안이 들어오지 않습니다. 누르면 배치 현황";
   chip.hidden = false;
