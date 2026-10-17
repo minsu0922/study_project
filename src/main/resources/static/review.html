@@ -115,7 +115,9 @@ if (!isLoggedIn()) {
      <p class="meta">계정이 없어도 <a href="/quiz.html">자유 퀴즈</a>는 바로 풀 수 있어요 —
        가입한 뒤부터 틀린 문제가 이 사다리에 올라갑니다.</p>`;
 } else {
-  document.getElementById("statusBlock").hidden = false;
+  // 현황 구역은 여기서 열지 않는다 — 사다리에 오른 문제가 하나도 없는 사람에게는 0건짜리
+  // 분야 11개와 검색창, "기록이 없어요"가 위 안내 카드와 겹쳐 빈 화면이 두 번 나왔다.
+  // 기록이 있는지는 loadToday가 알게 되므로 거기서 연다.
   loadToday();
   loadStatus();
 }
@@ -132,9 +134,10 @@ async function loadToday() {
     // "제일 급한 것부터 한 판"이 된다.
     const data = await api(`/api/me/reviews/today?size=${SESSION_SIZE}`);
     if (data.totalElements === 0) {
-      await renderNothingDue(box);
+      showStatusBlock(await renderNothingDue(box));
       return;
     }
+    showStatusBlock(true);
     // 밀린 게 한 판을 넘으면 "전부"가 아니라 "이번 판 몫"을 앞세운다. 47개를 들이미는 대신
     // 20개를 보여 주고 남은 건 괄호로 밀어 두는 것만으로도 시작하기가 훨씬 쉬워진다.
     const inSession = data.content.length;
@@ -164,9 +167,14 @@ async function loadToday() {
     });
   } catch (e) {
     showErrorAlert(box, e, "복습 목록을 불러오지 못했습니다");
+    showStatusBlock(true);   // 오늘 몫을 못 읽었어도 현황은 따로 읽을 수 있다
   } finally {
     clearLoading(box);
   }
+}
+
+function showStatusBlock(show) {
+  document.getElementById("statusBlock").hidden = !show;
 }
 
 /**
@@ -183,25 +191,43 @@ async function loadToday() {
  *
  * <p>정렬이 nextReviewAt 오름차순으로 고정돼 있어(ReviewItemRepository) 한 건만 받으면
  * 그것이 곧 <b>가장 가까운 예정일</b>이다 — 목록을 다 받아 최솟값을 찾을 이유가 없다.
+ *
+ * <p>같은 이유로 <b>사다리에 아무것도 없는 사람</b>(가입 직후)과 <b>전부 졸업한 사람</b>도 가른다.
+ * 앞쪽에게 🎉는 맞지 않고, 아래 현황 구역도 보여 줄 것이 없다.
+ *
+ * @return 아래 현황 구역을 보여 줄지 — 한 번이라도 사다리에 오른 문제가 있으면 true
  */
 async function renderNothingDue(box) {
   let waiting = null;
+  let all = null;
   try {
     waiting = await api("/api/me/reviews?status=LEARNING&size=1");
+    if (waiting.totalElements === 0) all = await api("/api/me/reviews?size=1");
   } catch (e) {
-    // 못 세면 예전 문구로 돌아간다 — 안내 한 줄 때문에 화면이 비면 안 된다.
+    // 못 세면 졸업 문구로 돌아간다 — 안내 한 줄 때문에 화면이 비면 안 된다.
   }
 
   const count = waiting?.totalElements || 0;
+  if (count === 0 && all && all.totalElements === 0) {
+    box.innerHTML = `
+      <div class="card" style="text-align:center;padding:28px">
+        <b>아직 복습할 문제가 없어요</b>
+        <div class="meta" style="margin-top:4px">퀴즈에서 틀린 문제가 다음 날부터 여기에 올라와요.</div>
+        <a class="btn" style="margin-top:12px" href="/daily.html?start=1">오늘의 퀴즈 풀기</a>
+      </div>`;
+    return false;
+  }
   if (count === 0) {
     box.innerHTML = `
       <div class="card" style="text-align:center;padding:28px">
         <div style="font-size:1.6rem">🎉</div>
         <b>복습할 문제가 없어요!</b>
-        <div class="meta" style="margin-top:4px">문제를 틀리면 여기 사다리에 올라와요.</div>
+        <div class="meta" style="margin-top:4px">${all
+          ? "사다리의 문제를 모두 졸업했어요. 새로 틀린 문제가 생기면 여기에 올라와요."
+          : "문제를 틀리면 여기 사다리에 올라와요."}</div>
         <a class="btn" style="margin-top:12px" href="/quiz.html?start=1">퀴즈 풀러 가기</a>
       </div>`;
-    return;
+    return true;
   }
 
   const on = formatDate(waiting.content[0].nextReviewAt).substring(0, 10);
@@ -213,6 +239,7 @@ async function renderNothingDue(box) {
         가장 이른 복습은 <b>${escapeHtml(on)}</b>부터예요.</div>
       <a class="btn" style="margin-top:12px" href="/quiz.html?start=1">새 문제 풀러 가기</a>
     </div>`;
+  return true;
 }
 
 /** 플레이어 결과 화면에서 복귀 — 방금 푼 결과가 반영되게 요약·현황·배지를 다시 불러온다. */
