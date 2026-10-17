@@ -27,6 +27,15 @@ try {
     <button class="tab-btn" data-type="DOCUMENT">문서</button>
   </div>
 
+  <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar). 탭은 그대로 둔다 —
+       문제와 문서는 거르는 조건이 아니라 서로 다른 목록이다 -->
+  <div class="filters" role="search">
+    <div class="field field-search"><label for="q">검색 <span class="meta" id="qScope">(제목·지문)</span></label>
+      <input type="search" id="q" maxlength="50" placeholder="예: TIME_WAIT" enterkeyhint="search"></div>
+    <div class="field field-reset"><label>&nbsp;</label>
+      <button type="button" id="filterResetBtn" class="btn-outline">필터 지우기</button></div>
+  </div>
+
   <div id="message"></div>
   <div id="list"></div>
   <div class="pager" id="pager" hidden></div>
@@ -76,9 +85,12 @@ async function init() {
     msg.innerHTML = "";
     showLoading(list);
     try {
-      const data = await api(`/api/me/bookmarks?type=${type}&page=${page}`);
+      const filters = filterParams({ q: "q" });
+      const data = await api(`/api/me/bookmarks?type=${type}&page=${page}` + (filters.toString() ? "&" + filters : ""));
       if (data.content.length === 0) {
-        showEmpty(list, type === "PROBLEM"
+        showEmpty(list, filters.toString()
+          ? "검색어에 맞는 북마크가 없습니다 — 필터를 지우면 전체가 보입니다."
+          : type === "PROBLEM"
           ? "담아 둔 문제가 없습니다. 문제를 풀고 채점 결과 아래의 ☆ 북마크를 눌러 보세요."
           : "담아 둔 문서가 없습니다. 문서 제목 아래의 ☆ 북마크를 눌러 보세요.");
       } else {
@@ -101,8 +113,12 @@ async function init() {
     page = 0;
     document.querySelectorAll("#typeTabs .tab-btn")
       .forEach(b => b.classList.toggle("active", b === btn));
+    // 문서는 제목만 찾는다. 본문까지 보면 담아 둔 문서 몇 편에서도 거의 다 걸린다
+    document.getElementById("qScope").textContent = type === "PROBLEM" ? "(제목·지문)" : "(제목)";
     load();
   });
+
+  wireFilterBar({ search: "q", reset: "filterResetBtn", onChange: () => { page = 0; load(); } });
 
   const pager = mountPager(document.getElementById("pager"), p => { page = p; load(); });
   load();

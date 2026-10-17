@@ -43,6 +43,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
               and s.correct = false
               and p.hidden = false
               and (:domain is null or p.domain = :domain)
+              and (:keyword is null
+                   or lower(p.title) like lower(:keyword) escape '!'
+                   or lower(p.question) like lower(:keyword) escape '!')
               and s.id = (
                   select max(s2.id) from Submission s2
                   where s2.userId = :userId
@@ -57,6 +60,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
               and s.correct = false
               and s.problem.hidden = false
               and (:domain is null or s.problem.domain = :domain)
+              and (:keyword is null
+                   or lower(s.problem.title) like lower(:keyword) escape '!'
+                   or lower(s.problem.question) like lower(:keyword) escape '!')
               and s.id = (
                   select max(s2.id) from Submission s2
                   where s2.userId = :userId
@@ -67,6 +73,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     Page<Submission> findLatestWrongAnswers(
             @Param("userId") Long userId,
             @Param("domain") DomainCode domain,
+            @Param("keyword") String keyword,
             Pageable pageable
     );
 
@@ -103,6 +110,10 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             where s.userId = :userId
               and p.hidden = false
               and (:correct is null or s.correct = :correct)
+              and (:domain is null or p.domain = :domain)
+              and (:keyword is null
+                   or lower(p.title) like lower(:keyword) escape '!'
+                   or lower(p.question) like lower(:keyword) escape '!')
             order by s.id desc
             """,
             countQuery = """
@@ -110,8 +121,13 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             where s.userId = :userId
               and s.problem.hidden = false
               and (:correct is null or s.correct = :correct)
+              and (:domain is null or s.problem.domain = :domain)
+              and (:keyword is null
+                   or lower(s.problem.title) like lower(:keyword) escape '!'
+                   or lower(s.problem.question) like lower(:keyword) escape '!')
             """)
     Page<Submission> findHistory(@Param("userId") Long userId, @Param("correct") Boolean correct,
+                                 @Param("domain") DomainCode domain, @Param("keyword") String keyword,
                                  Pageable pageable);
 
     /** 관리자 문제 삭제 전 검사용 — 제출 이력이 있으면 삭제 불가(QUIZ_003, FK RESTRICT 정책과 일치). */

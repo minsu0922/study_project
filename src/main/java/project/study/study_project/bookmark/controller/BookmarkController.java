@@ -36,8 +36,9 @@ public class BookmarkController {
     @GetMapping
     public ApiResponse<PageResponse<BookmarkItem>> list(@AuthenticationPrincipal Long userId,
                                                         @RequestParam BookmarkTarget type,
+                                                        @RequestParam(required = false) String q,
                                                         @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(bookmarkService.list(userId, type, pageable));
+        return ApiResponse.ok(bookmarkService.list(userId, type, q, pageable));
     }
 
     /** 예: {@code GET /api/me/bookmarks/state?problemIds=1,2,3} */

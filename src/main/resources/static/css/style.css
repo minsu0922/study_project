@@ -1028,10 +1028,6 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
 .tag-link:hover { background: var(--border-strong); color: var(--text); }
 
 /* 태그로 좁혀졌을 때 목록 위에 뜨는 줄. 걸린 사실과 푸는 법을 한 줄에 둔다. */
-/* 목록 위 검색 줄 — 문제·문서가 같은 것을 쓴다. */
-.pl-search { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
-.pl-search input { flex: 1; min-width: 0; }
-.pl-search button { flex: none; }
 
 /* 눈에는 안 보이지만 스크린리더는 읽는 글.
  *
@@ -2572,8 +2568,6 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 .post-cat[data-cat="SUMMARY"] { background: var(--correct-bg); color: var(--correct-fg); }
 .post-cat[data-cat="ERRATA"] { background: var(--review-soft); color: var(--lv2-fg); }
 
-/* 커뮤니티의 찾기 줄. 검색 칸이 주인공이라 다른 두 칸보다 넓게 잡는다. */
-.community-filters .field:first-child { flex: 2 1 220px; }
 /* 관리 콘솔의 사용자 상세 — 활동 수치와 최근 글·신고 줄. */
 .user-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
 .user-stat {
@@ -2593,11 +2587,9 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
 .user-line-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 a.user-line:hover .user-line-text { text-decoration: underline; }
 
-.search-row { display: flex; gap: 8px; }
-.search-row input { flex: 1; min-width: 0; }
-.search-row button { flex: none; }
 /* 고르는 칸은 늘리지 않는다. 검색 칸이 숨는 탭(토론방·내 활동)에서 고르는 칸 하나가 줄 전체로 퍼진다. */
-.community-filters .field:not(:first-child) { flex: 0 1 150px; }   /* 150: 고르는 칸 셋과 버튼이 860px 한 줄에 든다 */
+/* 140: 검색 칸(220)·고르는 칸 셋·필터 지우기가 본문 폭(812px) 한 줄에 든다 */
+.community-filters .field:not(.field-search):not(.field-reset) { flex: 0 1 140px; }
 /* 글이 속한 문제의 분야. 개념 문서 목록의 분야 표시(.doc-line .dm)와 같은 모양이다. */
 .post-row-domain {
   display: inline-block; margin-right: 6px;

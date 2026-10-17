@@ -7,6 +7,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.StudyTrendDay;
@@ -30,12 +31,14 @@ public class StudyHistoryController {
         return ApiResponse.ok(studyHistoryService.trend(userId, days));
     }
 
-    /** 예: {@code GET /api/me/submissions?correct=true&page=0} */
+    /** 예: {@code GET /api/me/submissions?correct=true&domain=NETWORK&q=TCP&page=0} */
     @GetMapping("/api/me/submissions")
     public ApiResponse<PageResponse<SubmissionHistoryItem>> history(
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) Boolean correct,
+            @RequestParam(required = false) DomainCode domain,
+            @RequestParam(required = false) String q,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(studyHistoryService.history(userId, correct, pageable));
+        return ApiResponse.ok(studyHistoryService.history(userId, correct, domain, q, pageable));
     }
 }

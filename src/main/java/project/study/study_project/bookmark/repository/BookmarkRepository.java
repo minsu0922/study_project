@@ -45,25 +45,33 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
             select b from Bookmark b
             join fetch b.problem p
             where b.userId = :userId and p.hidden = false
+              and (:keyword is null
+                   or lower(p.title) like lower(:keyword) escape '!'
+                   or lower(p.question) like lower(:keyword) escape '!')
             order by b.id desc
             """,
             countQuery = """
             select count(b) from Bookmark b
             where b.userId = :userId and b.problem is not null and b.problem.hidden = false
+              and (:keyword is null
+                   or lower(b.problem.title) like lower(:keyword) escape '!'
+                   or lower(b.problem.question) like lower(:keyword) escape '!')
             """)
-    Page<Bookmark> findProblems(@Param("userId") Long userId, Pageable pageable);
+    Page<Bookmark> findProblems(@Param("userId") Long userId, @Param("keyword") String keyword, Pageable pageable);
 
     @Query(value = """
             select b from Bookmark b
             join fetch b.document d
             where b.userId = :userId and d.hidden = false
+              and (:keyword is null or lower(d.title) like lower(:keyword) escape '!')
             order by b.id desc
             """,
             countQuery = """
             select count(b) from Bookmark b
             where b.userId = :userId and b.document is not null and b.document.hidden = false
+              and (:keyword is null or lower(b.document.title) like lower(:keyword) escape '!')
             """)
-    Page<Bookmark> findDocuments(@Param("userId") Long userId, Pageable pageable);
+    Page<Bookmark> findDocuments(@Param("userId") Long userId, @Param("keyword") String keyword, Pageable pageable);
 
     /** 넘긴 문제 가운데 내가 담아 둔 것 — 화면이 버튼을 채워 그릴지 정하는 데 쓴다. */
     @Query("select b.problem.id from Bookmark b where b.userId = :userId and b.problem.id in :ids")

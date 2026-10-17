@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.domainsetting.support.DomainCatalog;
 import project.study.study_project.quiz.domain.Problem;
@@ -254,10 +256,20 @@ public class ReviewService implements SubmissionListener, DueReviewCounter {
     @Transactional(readOnly = true)
     public PageResponse<ReviewListItem> getMyReviews(Long userId, ReviewStatus status,
                                                      List<Long> problemIds, Pageable pageable) {
+        return getMyReviews(userId, status, null, null, problemIds, pageable);
+    }
+
+    /**
+     * @param domain 분야. null이면 거르지 않는다
+     * @param q      문제 제목·지문 검색어. problemIds를 주면 둘 다 쓰지 않는다(오답노트가 상태만 묻는 경로)
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<ReviewListItem> getMyReviews(Long userId, ReviewStatus status, DomainCode domain, String q,
+                                                     List<Long> problemIds, Pageable pageable) {
         // due 판정 기준 시각은 페이지 전체에 하나 — 항목마다 now()를 부르면 기준이 미세하게 갈린다.
         LocalDateTime now = LocalDateTime.now();
         Page<ReviewItem> page = (problemIds == null || problemIds.isEmpty())
-                ? reviewItemRepository.findAllOfUser(userId, status, clamp(pageable))
+                ? reviewItemRepository.findAllOfUser(userId, status, domain, SearchKeyword.likePattern(q), clamp(pageable))
                 : reviewItemRepository.findAllOfUserByProblemIds(userId, capIds(problemIds), clamp(pageable));
         return PageResponse.from(page.map(
                 r -> ReviewListItem.from(r, now, domainCatalog.displayName(r.getProblem().getDomain()))));

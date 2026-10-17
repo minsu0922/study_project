@@ -22,10 +22,21 @@ try {
   <p class="meta">맞힌 것까지 포함해 내가 낸 답을 최근 순으로 보여 줍니다.
     틀린 문제의 해설을 다시 읽으려면 <a href="/wrong-answers.html">오답노트</a>로 가세요.</p>
 
-  <div class="tabs" id="resultTabs">
-    <button class="tab-btn active" data-correct="">전체</button>
-    <button class="tab-btn" data-correct="true">맞힌 것</button>
-    <button class="tab-btn" data-correct="false">틀린 것</button>
+  <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar): 검색 → 고르기 → 필터 지우기.
+       결과(맞힘·틀림)는 탭이었는데, 분야와 함께 거르는 조건이라 고르기 칸으로 옮겼다 -->
+  <div class="filters" role="search">
+    <div class="field field-search"><label for="q">검색 <span class="meta">(제목·지문)</span></label>
+      <input type="search" id="q" maxlength="50" placeholder="예: TIME_WAIT" enterkeyhint="search"></div>
+    <div class="field"><label for="resultFilter">결과</label>
+      <select id="resultFilter">
+        <option value="">전체</option>
+        <option value="true">맞힌 것</option>
+        <option value="false">틀린 것</option>
+      </select>
+    </div>
+    <div class="field"><label for="domainFilter">분야</label><select id="domainFilter"></select></div>
+    <div class="field field-reset"><label>&nbsp;</label>
+      <button type="button" id="filterResetBtn" class="btn-outline">필터 지우기</button></div>
   </div>
 
   <div id="message"></div>
@@ -48,8 +59,8 @@ if (!isLoggedIn()) {
 
 async function init() {
   await domainsReady;   // 분야 표기 이름을 쓰려면 목록이 먼저 와야 한다(api.js)
-  let correct = "";
   let page = 0;
+  fillSelect(document.getElementById("domainFilter"), DOMAINS, "전체");
   const list = document.getElementById("list");
   // 제목이 없는 문제는 지문이 통째로 온다 — 목록 한 줄에 맞게 자른다.
   const short = s => s.length > 80 ? s.slice(0, 80) + "…" : s;
@@ -60,10 +71,13 @@ async function init() {
     showLoading(list);
     try {
       const params = new URLSearchParams({ page });
-      if (correct) params.set("correct", correct);
+      const filters = filterParams({ q: "q", correct: "resultFilter", domain: "domainFilter" });
+      filters.forEach((v, k) => params.set(k, v));
       const data = await api("/api/me/submissions?" + params);
       if (data.content.length === 0) {
-        showEmpty(list, `아직 기록이 없습니다. <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a>`);
+        showEmpty(list, filters.toString()
+          ? "조건에 맞는 기록이 없습니다 — 필터를 지우면 전체가 보입니다."
+          : `아직 기록이 없습니다. <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a>`);
       } else list.innerHTML = data.content.map(s => `
           <div class="card">
             <div style="margin-bottom:6px">
@@ -83,14 +97,9 @@ async function init() {
     }
   }
 
-  document.getElementById("resultTabs").addEventListener("click", e => {
-    const btn = e.target.closest("[data-correct]");
-    if (!btn || btn.dataset.correct === correct) return;
-    correct = btn.dataset.correct;
-    page = 0;
-    document.querySelectorAll("#resultTabs .tab-btn")
-      .forEach(b => b.classList.toggle("active", b === btn));
-    load();
+  wireFilterBar({
+    search: "q", selects: ["resultFilter", "domainFilter"], reset: "filterResetBtn",
+    onChange: () => { page = 0; load(); },
   });
 
   const pager = mountPager(document.getElementById("pager"), p => { page = p; load(); });

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.domain.Submission;
@@ -44,7 +45,14 @@ public class WrongAnswerService {
      */
     @Transactional(readOnly = true)
     public PageResponse<WrongAnswerItem> getWrongAnswers(Long userId, DomainCode domain, Pageable pageable) {
-        Page<Submission> page = submissionRepository.findLatestWrongAnswers(userId, domain, pageable);
+        return getWrongAnswers(userId, domain, null, pageable);
+    }
+
+    /** @param q 문제 제목·지문 검색어. 비면 거르지 않는다 */
+    @Transactional(readOnly = true)
+    public PageResponse<WrongAnswerItem> getWrongAnswers(Long userId, DomainCode domain, String q, Pageable pageable) {
+        Page<Submission> page = submissionRepository.findLatestWrongAnswers(
+                userId, domain, SearchKeyword.likePattern(q), pageable);
         // 이 페이지에 실제로 존재하는 근거 문서 slug를 <한 번에> 조회해 둔다(아래 메서드 주석).
         Set<String> existingSlugs = findExistingDocumentSlugs(page.getContent());
         return PageResponse.from(page.map(s -> toItem(s, existingSlugs)));

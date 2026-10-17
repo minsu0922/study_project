@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.quiz.dto.StudyTrendDay;
 import project.study.study_project.quiz.dto.SubmissionHistoryItem;
@@ -59,7 +61,15 @@ public class StudyHistoryService {
      */
     @Transactional(readOnly = true)
     public PageResponse<SubmissionHistoryItem> history(Long userId, Boolean correct, Pageable pageable) {
-        return PageResponse.from(submissionRepository.findHistory(userId, correct, pageable)
+        return history(userId, correct, null, null, pageable);
+    }
+
+    /** @param q 문제 제목·지문 검색어. 비면 거르지 않는다 */
+    @Transactional(readOnly = true)
+    public PageResponse<SubmissionHistoryItem> history(Long userId, Boolean correct, DomainCode domain, String q,
+                                                       Pageable pageable) {
+        return PageResponse.from(submissionRepository
+                .findHistory(userId, correct, domain, SearchKeyword.likePattern(q), pageable)
                 .map(SubmissionHistoryItem::from));
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.review.domain.ReviewStatus;
@@ -71,8 +72,11 @@ public class ReviewController {
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) ReviewStatus status,
             @RequestParam(required = false) List<Long> problemIds,
+            // 분야·검색어 — 복습 화면의 필터 줄. problemIds와 함께 오면 쓰이지 않는다
+            @RequestParam(required = false) DomainCode domain,
+            @RequestParam(required = false) String q,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(reviewService.getMyReviews(userId, status, problemIds, pageable));
+        return ApiResponse.ok(reviewService.getMyReviews(userId, status, domain, q, problemIds, pageable));
     }
 }

@@ -39,8 +39,10 @@ public class WrongAnswerController {
     public ApiResponse<PageResponse<WrongAnswerItem>> wrongAnswers(
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) DomainCode domain,
+            // 문제 제목·지문 검색어
+            @RequestParam(required = false) String q,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(wrongAnswerService.getWrongAnswers(userId, domain, pageable));
+        return ApiResponse.ok(wrongAnswerService.getWrongAnswers(userId, domain, q, pageable));
     }
 }

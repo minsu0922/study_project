@@ -176,11 +176,6 @@ function renderAdminPager(data) {
  * @param map {@code { 파라미터이름: 요소id }} — 예 {@code { domain: "fpDomain" }}
  */
 function filterQuery(map) {
-  return Object.entries(map)
-    .map(([key, id]) => {
-      const el = document.getElementById(id);
-      const v = el ? el.value : "";
-      return v ? `&${key}=${encodeURIComponent(v)}` : "";
-    })
-    .join("");
+  const query = filterParams(map).toString();   // api.js — 학습 화면과 같은 규칙
+  return query ? "&" + query : "";
 }

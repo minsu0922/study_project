@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.review.domain.ReviewItem;
 import project.study.study_project.review.domain.ReviewStatus;
 
@@ -92,6 +93,10 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
             where r.userId = :userId
               and (:status is null or r.status = :status)
               and p.hidden = false
+              and (:domain is null or p.domain = :domain)
+              and (:keyword is null
+                   or lower(p.title) like lower(:keyword) escape '!'
+                   or lower(p.question) like lower(:keyword) escape '!')
             order by r.nextReviewAt asc
             """,
             countQuery = """
@@ -99,9 +104,15 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
             where r.userId = :userId
               and (:status is null or r.status = :status)
               and r.problem.hidden = false
+              and (:domain is null or r.problem.domain = :domain)
+              and (:keyword is null
+                   or lower(r.problem.title) like lower(:keyword) escape '!'
+                   or lower(r.problem.question) like lower(:keyword) escape '!')
             """)
     Page<ReviewItem> findAllOfUser(@Param("userId") Long userId,
                                    @Param("status") ReviewStatus status,
+                                   @Param("domain") DomainCode domain,
+                                   @Param("keyword") String keyword,
                                    Pageable pageable);
 
     /**

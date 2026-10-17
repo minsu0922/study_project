@@ -35,11 +35,16 @@ try {
     각 카드의 <span class="badge orange" style="margin:0">N단계</span> 배지가 복습 사다리에서
     지금 어디까지 왔는지예요 — 일정은 <a href="/review.html">복습 일정</a> 탭에서 봅니다.</p>
 
-  <div class="filters">
+  <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar): 검색 → 고르기 → 필터 지우기 -->
+  <div class="filters" role="search">
+    <div class="field field-search"><label for="q">검색 <span class="meta">(제목·지문)</span></label>
+      <input type="search" id="q" maxlength="50" placeholder="예: TIME_WAIT" enterkeyhint="search"></div>
     <div class="field">
-      <label for="domainFilter">도메인</label>
+      <label for="domainFilter">분야</label>
       <select id="domainFilter"></select>
     </div>
+    <div class="field field-reset"><label>&nbsp;</label>
+      <button type="button" id="filterResetBtn" class="btn-outline">필터 지우기</button></div>
   </div>
 
   <div id="message"></div>
@@ -73,7 +78,7 @@ async function init() {
   // domainsReady를 기다린 뒤 채운다 — 이유는 api.js의 domainsReady 주석 참고.
   // init()은 페이지당 한 번만 불리므로 async로 바꿔도 부르는 쪽(else 분기)은 그대로다.
   await domainsReady;
-  fillSelect(domainFilter, DOMAINS, "전체 도메인");
+  fillSelect(domainFilter, DOMAINS, "전체");
   let page = 0;
 
   /* problemId → 복습 상태(stage/status) 맵.
@@ -124,7 +129,8 @@ async function init() {
     showLoading(list);
     try {
       const params = new URLSearchParams({ page });
-      if (domainFilter.value) params.set("domain", domainFilter.value);
+      const filters = filterParams({ q: "q", domain: "domainFilter" });
+      filters.forEach((v, k) => params.set(k, v));
       const data = await api("/api/me/wrong-answers?" + params);
 
       // 어느 문제의 배지가 필요한지는 목록을 받아 봐야 안다 — 그래서 순서가 뒤집혔다.
@@ -134,7 +140,9 @@ async function init() {
       await loadReviewMap(data.content.map(w => w.problemId));
 
       if (data.content.length === 0) {
-        showEmpty(list, `아직 오답이 없습니다. 🎉 <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a>`);
+        showEmpty(list, filters.toString()
+          ? "조건에 맞는 오답이 없습니다 — 필터를 지우면 전체가 보입니다."
+          : `아직 오답이 없습니다. 🎉 <a href="/quiz.html">퀴즈를 풀러 가볼까요?</a>`);
       } else {
         // 오답노트는 "복습"이 목적이라 내 답·정답·해설을 한 번에 다 보여준다
         list.innerHTML = data.content.map(w => `
@@ -181,7 +189,10 @@ async function init() {
     }
   }
 
-  domainFilter.addEventListener("change", () => { page = 0; load(); });
+  wireFilterBar({
+    search: "q", selects: ["domainFilter"], reset: "filterResetBtn",
+    onChange: () => { page = 0; load(); },
+  });
   const pager = mountPager(document.getElementById("pager"), p => { page = p; load(); });
   load();   // 배지는 load() 안에서 이 페이지에 필요한 것만 이어서 받는다
 }

@@ -400,6 +400,74 @@ function fillDomainSelect(selectEl, allLabel) {
   if (keep) selectEl.value = keep;
 }
 
+/* ── 목록의 검색 칸과 필터 줄 ──
+ * 학습 화면과 관리 콘솔의 모든 목록이 같은 모양을 쓴다: 검색 칸(넓게) → 고르기 칸 → 필터 지우기.
+ * 검색은 치기를 멈추고 300ms 뒤에 부른다. 글자마다 부르면 요청 한도(분당 60회)에 금방 닿고,
+ * 늦게 온 앞 글자의 답이 뒤 글자의 답을 덮기도 한다. 그래서 "찾기" 단추가 따로 없다. */
+const SEARCH_DELAY_MS = 300;
+
+/**
+ * 검색 칸을 잇는다. 주소의 ?q=로 채워 두어, 다른 화면이 검색어를 들고 넘어올 수 있다.
+ * Enter는 기다리지 않고 바로 찾는다(휴대폰 키보드의 "검색" 단추가 Enter다).
+ *
+ * @param onSearch 검색어(앞뒤 공백을 뗀 값)를 받아 목록을 다시 부른다
+ */
+function wireSearchInput(id, onSearch) {
+  const el = document.getElementById(id);
+  el.value = new URLSearchParams(location.search).get("q") || "";
+  let timer = null;
+  el.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => onSearch(el.value.trim()), SEARCH_DELAY_MS);
+  });
+  el.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();   // 폼 안에 있어도 화면을 새로 고치지 않는다
+    clearTimeout(timer);
+    onSearch(el.value.trim());
+  });
+  return el;
+}
+
+/**
+ * 필터 줄 — 검색 칸, 고르기 칸들, "필터 지우기". 무엇이 바뀌든 onChange 하나만 부른다.
+ * 화면은 거기서 첫 쪽부터 다시 불러 오면 된다.
+ *
+ * @param cfg.search  검색 칸 id. 없으면 생략
+ * @param cfg.selects 고르기 칸 id 목록. 지우면 첫 선택지로 돌아간다(첫 선택지가 기본값이 되게 둔다)
+ * @param cfg.reset   "필터 지우기" 단추 id
+ * @param cfg.onReset 지우기 때 칸 밖의 조건(태그·칩 등)도 풀어야 하는 화면이 쓴다. onChange 전에 부른다
+ */
+/**
+ * 필터 줄의 칸들을 요청 파라미터로. 빈 칸은 넣지 않는다(서버가 조건을 건너뛴다).
+ *
+ * @param map {파라미터 이름: 칸 id}
+ */
+function filterParams(map) {
+  const params = new URLSearchParams();
+  for (const [key, id] of Object.entries(map)) {
+    const value = document.getElementById(id)?.value.trim();
+    if (value) params.set(key, value);
+  }
+  return params;
+}
+
+function wireFilterBar({ search, selects = [], reset, onChange, onReset }) {
+  if (search) wireSearchInput(search, () => onChange());
+  selects.forEach(id => document.getElementById(id).addEventListener("change", () => onChange()));
+  if (!reset) return;
+  document.getElementById(reset).addEventListener("click", e => {
+    e.preventDefault();
+    if (search) document.getElementById(search).value = "";
+    selects.forEach(id => {
+      const sel = document.getElementById(id);
+      sel.value = sel.options[0]?.value ?? "";
+    });
+    if (onReset) onReset();
+    onChange();
+  });
+}
+
 /** <select>에 "전체" + 고정 목록 옵션을 채운다 (난이도·유형 등 서버가 안 주는 값) */
 function fillSelect(selectEl, pairs, allLabel) {
   selectEl.innerHTML = "";

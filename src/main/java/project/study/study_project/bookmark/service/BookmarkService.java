@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.bookmark.dto.BookmarkItem;
 import project.study.study_project.bookmark.dto.BookmarkState;
 import project.study.study_project.bookmark.dto.BookmarkTarget;
@@ -60,9 +61,16 @@ public class BookmarkService {
 
     @Transactional(readOnly = true)
     public PageResponse<BookmarkItem> list(Long userId, BookmarkTarget type, Pageable pageable) {
+        return list(userId, type, null, pageable);
+    }
+
+    /** @param q 문제는 제목·지문, 문서는 제목에서 찾는다. 비면 거르지 않는다 */
+    @Transactional(readOnly = true)
+    public PageResponse<BookmarkItem> list(Long userId, BookmarkTarget type, String q, Pageable pageable) {
+        String keyword = SearchKeyword.likePattern(q);
         return type == BookmarkTarget.PROBLEM
-                ? PageResponse.from(bookmarkRepository.findProblems(userId, pageable).map(BookmarkItem::ofProblem))
-                : PageResponse.from(bookmarkRepository.findDocuments(userId, pageable).map(BookmarkItem::ofDocument));
+                ? PageResponse.from(bookmarkRepository.findProblems(userId, keyword, pageable).map(BookmarkItem::ofProblem))
+                : PageResponse.from(bookmarkRepository.findDocuments(userId, keyword, pageable).map(BookmarkItem::ofDocument));
     }
 
     /** 빈 목록은 조회하지 않는다 — {@code IN ()}은 SQL 문법 오류다. */
