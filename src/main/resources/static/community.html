@@ -16,7 +16,7 @@ try {
 <body>
 <div id="shell"></div>
 
-<main class="container">
+<main class="container side-page">
   <h1>커뮤니티</h1>
   <!-- 글쓰기 버튼이 여기 없는 이유를 미리 말한다. 글은 문제의 토론방에 쓰는데,
        이 화면만 본 사람은 어디서 쓰는지 알 길이 없다. -->
@@ -38,16 +38,25 @@ try {
   <!-- 찾기·정렬·분야·말머리. 조건은 주소(?tab=&q=&sort=&domain=&category=)에 남긴다 — 글을 읽고 뒤로 돌아왔을 때
        찾던 목록이 그대로 있어야 하고, 찾은 목록을 남에게 보낼 수도 있어야 한다.
        탭마다 쓰는 칸이 다르다(아래 TABS). 안 쓰는 칸은 감춘다 — 눌러도 아무 일 없는 칸을 두지 않는다. -->
+  <!-- 옆 기둥은 문제 목록과 같은 모양이다(.pl-side). 분야는 글 수와 함께 여기서 고른다(필터 줄에서 뺐다).
+       아래 "최근 글이 달린 방"은 좁은 화면에서 감춘다 — 목록 위에 다섯 줄이 더 서면 글이 화면 밖으로 밀린다 -->
+  <div class="pl-body">
+  <aside class="pl-side" aria-label="분야와 토론방">
+    <h2>분야 <span class="pl-unit">글 수</span></h2>
+    <div class="pl-domains" id="domains"></div>
+    <div class="pl-side-extra">
+      <h2 class="second">최근 글이 달린 방</h2>
+      <div class="pl-rooms" id="sideRooms"></div>
+    </div>
+  </aside>
+
+  <div class="pl-main">
   <form class="filters community-filters" id="filterForm" role="search">
     <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar): 검색 → 고르기 → 필터 지우기.
          치기를 멈추면 찾으므로 찾기 단추는 없다 -->
     <div class="field field-search" data-control="q">
       <label for="q">검색 <span class="meta">(제목·본문)</span></label>
       <input type="search" id="q" maxlength="50" placeholder="예: 캐시, 502" enterkeyhint="search">
-    </div>
-    <div class="field" data-control="domain">
-      <label for="domainFilter">분야</label>
-      <select id="domainFilter"></select>
     </div>
     <div class="field" data-control="category">
       <label for="categoryFilter">말머리</label>
@@ -79,6 +88,8 @@ try {
   <div id="list"></div>
 
   <div class="pager" id="pager" hidden></div>
+  </div>
+  </div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -93,7 +104,8 @@ try {
 renderShell({ active: "community", title: "커뮤니티" });
 
 const qInput = document.getElementById("q");
-const domainFilter = document.getElementById("domainFilter");
+/** 옆 기둥에 적을 분야별 글 수(GET /api/quiz/post-domains). 못 받으면 수 없이 이름만 적는다 */
+let domainCounts = null;
 const categoryFilter = document.getElementById("categoryFilter");
 const sortSelect = document.getElementById("sortSelect");
 const kindSelect = document.getElementById("kindSelect");
@@ -125,7 +137,7 @@ function readStateFromUrl() {
 /* 조건을 화면의 탭과 칸에 비춘다. */
 function syncControls() {
   qInput.value = state.q;
-  domainFilter.value = state.domain;
+  renderSideDomains();
   categoryFilter.value = state.category;
   sortSelect.value = state.sort;
   kindSelect.value = state.kind;
@@ -137,6 +149,32 @@ function syncControls() {
   document.querySelectorAll("#filterForm [data-control]").forEach(el => {
     el.hidden = !uses(el.dataset.control);
   });
+}
+
+/* 옆 기둥의 분야. 내 활동 탭은 분야로 거르지 않으므로 눌린 것을 두지 않는다. */
+function renderSideDomains() {
+  const counts = new Map((domainCounts ?? []).map(d => [d.domain, d.count]));
+  document.getElementById("domains").innerHTML = DOMAINS.map(([code, label]) => {
+    const on = uses("domain") && state.domain === code;
+    const n = domainCounts ? `<span class="n">${counts.get(code) ?? 0}</span>` : "";
+    return `<button type="button" class="pl-domain" data-domain="${code}" aria-pressed="${on}">
+      <span class="row"><span class="name">${escapeHtml(label)}</span>${n}</span></button>`;
+  }).join("");
+}
+
+/* 최근 글이 달린 방 다섯. 토론방 탭의 첫 다섯 줄과 같은 목록이다. */
+async function loadSideRooms() {
+  const box = document.getElementById("sideRooms");
+  try {
+    const data = await api("/api/quiz/rooms?size=5");
+    box.innerHTML = data.rooms.length
+      ? data.rooms.map(r => `<a class="pl-room" href="/discussion.html?problemId=${r.problemId}">
+          <span class="name">${escapeHtml(r.problemTitle)}</span>
+          <span class="meta">${escapeHtml(domainLabel(r.domain))} · 글 ${r.postCount}</span></a>`).join("")
+      : `<span class="meta">아직 열린 방이 없습니다</span>`;
+  } catch (e) {
+    box.innerHTML = "";   // 곁들이는 정보라 실패를 따로 알리지 않는다
+  }
 }
 
 /* 기본값과 이 탭이 안 쓰는 조건은 주소에 적지 않는다 — 아무것도 안 고른 주소가
@@ -298,17 +336,30 @@ wireSearchInput("q", q => apply({ q, page: 0 }, { replace: true }));
 document.getElementById("filterResetBtn").addEventListener("click", () =>
   apply({ q: "", domain: "", category: "", sort: "latest", kind: "written", page: 0 }));
 // 고르는 것은 누르는 즉시 적용한다. 고르고 나서 "찾기"를 또 누르게 하면 한 번이 헛걸음이다.
-domainFilter.addEventListener("change", () => apply({ domain: domainFilter.value, q: qInput.value.trim(), page: 0 }));
+// 기둥의 분야를 누르면 거른다. 같은 것을 다시 누르면 풀린다. 내 활동 탭에서 누르면 전체 탭으로 간다
+document.getElementById("domains").addEventListener("click", e => {
+  const btn = e.target.closest(".pl-domain");
+  if (!btn) return;
+  const tab = uses("domain") ? state.tab : "all";
+  const domain = tab === state.tab && state.domain === btn.dataset.domain ? "" : btn.dataset.domain;
+  apply({ tab, domain, q: qInput.value.trim(), page: 0 });
+});
 categoryFilter.addEventListener("change", () => apply({ category: categoryFilter.value, q: qInput.value.trim(), page: 0 }));
 sortSelect.addEventListener("change", () => apply({ sort: sortSelect.value, q: qInput.value.trim(), page: 0 }));
 kindSelect.addEventListener("change", () => apply({ kind: kindSelect.value, page: 0 }));
 const pager = mountPager(document.getElementById("pager"), p => apply({ page: p }));
 window.addEventListener("popstate", () => { readStateFromUrl(); show(); });
 
-fillSelect(domainFilter, DOMAINS, "전체");
 fillSelect(categoryFilter, POST_CATEGORIES, "전체");
 readStateFromUrl();
 show();
+loadSideRooms();
+// 분야 이름은 서버 값으로 다시 그린다(api.js domainsReady). 수는 목록과 따로 받는다
+(async () => {
+  await domainsReady;
+  try { domainCounts = await api("/api/quiz/post-domains"); } catch (e) { /* 수 없이 이름만 */ }
+  renderSideDomains();
+})();
 </script>
 </body>
 </html>

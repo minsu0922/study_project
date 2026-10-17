@@ -52,6 +52,29 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, Docum
     @Query("select d.title from Document d order by d.id")
     List<String> findAllTitles();
 
+    /** 공개 문서의 분야별 수 — 문서 목록의 옆 기둥. */
+    @Query("select d.domain as domain, count(d) as cnt from Document d where d.hidden = false group by d.domain")
+    List<DomainCountRow> countPublicByDomain();
+
+    /** 공개 문서의 태그별 수. 많이 달린 태그부터 — 옆 기둥이 앞쪽 몇 개만 보여 준다. */
+    @Query("""
+            select t.name as name, count(d) as cnt from Document d join d.tags t
+            where d.hidden = false group by t.name order by count(d) desc, t.name
+            """)
+    List<TagCountRow> countPublicByTag();
+
+    interface DomainCountRow {
+        DomainCode getDomain();
+
+        long getCnt();
+    }
+
+    interface TagCountRow {
+        String getName();
+
+        long getCnt();
+    }
+
     /**
      * 분야를 함께 뽑는다 — 회피 목록을 <b>[분야] 제목</b> 꼴로 내보내려고(2026-09-03).
      *

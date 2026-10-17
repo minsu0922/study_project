@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.document.dto.DocumentDetailResponse;
+import project.study.study_project.document.dto.DocumentFacets;
 import project.study.study_project.document.dto.DocumentListItem;
 import project.study.study_project.document.service.DocumentService;
 import project.study.study_project.global.common.DomainCode;
@@ -44,6 +45,16 @@ public class DocumentController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ApiResponse.ok(documentService.getDocuments(domain, tags, keyword, pageable));
+    }
+
+    /**
+     * 목록 옆 기둥의 분야별·태그별 문서 수. 예: {@code GET /api/documents/facets}
+     *
+     * <p>아래 {@code /{slug}}보다 글자 그대로인 경로가 먼저 맞는다. 그래서 slug가 "facets"인 문서는 열 수 없다.
+     */
+    @GetMapping("/facets")
+    public ApiResponse<DocumentFacets> facets() {
+        return ApiResponse.ok(documentService.getFacets());
     }
 
     /** 문서 단건(본문 포함). 예: {@code GET /api/documents/osi-7-layer} */

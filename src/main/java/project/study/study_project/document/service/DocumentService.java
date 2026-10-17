@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.document.config.DocumentCacheConfig;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.dto.DocumentDetailResponse;
+import project.study.study_project.document.dto.DocumentFacets;
+import project.study.study_project.global.common.DomainCount;
 import project.study.study_project.document.dto.DocumentListItem;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
@@ -49,6 +51,16 @@ public class DocumentService {
                                                       String keyword, Pageable pageable) {
         return PageResponse.from(withEditions(withDomainLabels(
                 documentRepository.searchListItems(domain, tags, keyword, false, pageable))));
+    }
+
+    /** 문서 목록 옆 기둥의 수 — 분야별·태그별. 공개 문서만 센다(목록과 같은 기준). */
+    @Transactional(readOnly = true)
+    public DocumentFacets getFacets() {
+        return new DocumentFacets(
+                documentRepository.countPublicByDomain().stream()
+                        .map(r -> new DomainCount(r.getDomain().value(), r.getCnt())).toList(),
+                documentRepository.countPublicByTag().stream()
+                        .map(r -> new DocumentFacets.TagCount(r.getName(), r.getCnt())).toList());
     }
 
     /** 관리 화면 목록 — 내려 둔 문서까지 싣는다. 공개 목록과 갈라 둬야 내린 문서를 다시 올릴 수 있다. */

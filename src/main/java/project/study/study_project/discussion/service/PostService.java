@@ -28,6 +28,7 @@ import project.study.study_project.discussion.repository.CommentRepository;
 import project.study.study_project.discussion.repository.DiscussionRepository;
 import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.DomainCount;
 import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -143,6 +144,14 @@ public class PostService {
                         r.getPostCount(), r.getLastPostAt()))
                 .toList();
         return new RoomListResponse(rows.hasNext(), items);
+    }
+
+    /** 분야별 보이는 글 수 — 커뮤니티의 옆 기둥. */
+    @Transactional(readOnly = true)
+    public List<DomainCount> domainCounts() {
+        return postRepository.countByDomain(CommentStatus.VISIBLE).stream()
+                .map(r -> new DomainCount(r.getDomain().value(), r.getCnt()))
+                .toList();
     }
 
     /** "오류 지적" 글 — 관리 콘솔용. {@code unansweredOnly}면 운영진 댓글이 없는 글만. */

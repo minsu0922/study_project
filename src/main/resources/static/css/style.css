@@ -2797,7 +2797,7 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
 /* ── 본문 2단 ─────────────────────────────────────────────────── */
 .pl-body { display: flex; gap: 20px; align-items: flex-start; }
 .pl-side {
-  width: var(--pl-sidebar-w); flex: none;
+  width: var(--pl-sidebar-w, 190px); flex: none;
   border-right: 1px solid var(--border); padding-right: 16px;
 }
 .pl-main { flex: 1; min-width: 0; }   /* min-width:0 — 안 주면 긴 제목이 표를 밀어낸다 */
@@ -2839,6 +2839,30 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
 .pl-level[aria-pressed="true"][data-lv="BEGINNER"]     { background: var(--lv1-bg); color: var(--lv1-fg); border-color: var(--lv1-solid); }
 .pl-level[aria-pressed="true"][data-lv="INTERMEDIATE"] { background: var(--lv2-bg); color: var(--lv2-fg); border-color: var(--lv2-solid); }
 .pl-level[aria-pressed="true"][data-lv="ADVANCED"]     { background: var(--lv3-bg); color: var(--lv3-fg); border-color: var(--lv3-solid); }
+
+/* ── 옆 기둥을 함께 쓰는 화면(개념 문서·커뮤니티) ───────────────────
+ * 문제 목록의 기둥(.pl-body·.pl-side)을 그대로 빌린다. 세 화면이 같은 모양이어야 하고,
+ * 좁은 화면에서 가로 줄로 접히는 규칙(아래 975px)도 한 벌로 끝난다. */
+.side-page { max-width: 980px; }
+.pl-domain .n, .pl-level .n { font-size: 11px; color: var(--muted); }
+.pl-level .n { margin-left: 3px; }
+/* 진척 바가 없는 기둥이라 버튼 공통 하한(44px)이면 줄 사이가 비어 보인다. 마우스로 고르는 넓은 화면에서만 줄인다 */
+@media (min-width: 976px) {
+  .side-page .pl-domain { min-height: 34px; padding: 6px 8px; }
+  .side-page .pl-tags .pl-level { min-height: 30px; padding: 4px 10px; }
+}
+.pl-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.pl-tags .pl-level[aria-pressed="true"] {
+  background: var(--primary-soft); border-color: var(--primary); color: var(--primary-dark);
+}
+.pl-rooms { display: flex; flex-direction: column; gap: 2px; }
+.pl-room {
+  display: block; padding: 6px 8px; border-radius: var(--radius);
+  color: var(--text); text-decoration: none; font-size: 13px;
+}
+.pl-room:hover { background: var(--fill); }
+.pl-room .name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-room .meta { font-size: 11px; }
 
 /* ── 상태 필터 칩 ─────────────────────────────────────────────── */
 .pl-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -2937,6 +2961,9 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
     flex: none; min-width: 88px; max-width: 150px;
     border: 1px solid var(--border); border-radius: var(--radius);
   }
+  .pl-tags { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .pl-tags .pl-level { flex: none; }
+  .pl-side-extra { display: none; }
   .pl-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
   .pl-chip { flex: none; }
 

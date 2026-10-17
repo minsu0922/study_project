@@ -16,6 +16,7 @@ import project.study.study_project.discussion.dto.RecentPostResponse;
 import project.study.study_project.discussion.dto.RoomListResponse;
 import project.study.study_project.discussion.service.PostService;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.common.DomainCount;
 import project.study.study_project.global.response.ApiResponse;
 
 import java.util.List;
@@ -58,6 +59,12 @@ public class PostController {
                                                   @RequestParam(defaultValue = "0") int page) {
         return ApiResponse.ok(postService.recent(
                 PostFilter.community(q, PostSort.from(sort), domain, category), page));
+    }
+
+    /** 분야별 글 수 — 커뮤니티의 옆 기둥. 예: {@code GET /api/quiz/post-domains} */
+    @GetMapping("/post-domains")
+    public ApiResponse<List<DomainCount>> domainCounts() {
+        return ApiResponse.ok(postService.domainCounts());
     }
 
     /** 토론방 목록 — 글이 있는 문제를 최근 글이 달린 방부터. 예: {@code GET /api/quiz/rooms?domain=NETWORK} */

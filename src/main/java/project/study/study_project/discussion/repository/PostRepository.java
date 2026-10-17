@@ -203,6 +203,23 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<ProblemPostCount> countByProblemIds(@Param("problemIds") Collection<Long> problemIds,
                                              @Param("visible") CommentStatus visible);
 
+    /** 분야별 보이는 글 수 — 커뮤니티의 옆 기둥. 글이 없는 분야는 결과에 없다. */
+    @Query("""
+            select pr.domain as domain, count(p) as cnt
+            from Post p
+              join Discussion d on d.id = p.discussionId
+              join Problem pr on pr.id = d.problemId
+            where p.status = :visible
+            group by pr.domain
+            """)
+    List<DomainPostCount> countByDomain(@Param("visible") CommentStatus visible);
+
+    interface DomainPostCount {
+        DomainCode getDomain();
+
+        long getCnt();
+    }
+
     interface ProblemPostCount {
         Long getProblemId();
 
