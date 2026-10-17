@@ -162,8 +162,8 @@ function hasRole(need) {
  */
 const MENUS = [
   { key: "today", label: "오늘", href: "/", need: "public", tab: true, icon: "sun" },
-  // 문제 목록은 내 풀이 기록을 함께 보여 주는 화면이라 로그인 사용자에게만 띄운다(docs/18)
-  { key: "problems", label: "문제", href: "/problems.html", need: "user", tab: true, icon: "list" },
+  // 문제 목록은 비로그인에게도 연다(2026-10-18). 내 기록 칸만 감춘 카탈로그로 보인다(problems.html anon)
+  { key: "problems", label: "문제", href: "/problems.html", need: "public", tab: true, icon: "list" },
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
   { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: true, icon: "repeat" },
   { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: true, icon: "book" },

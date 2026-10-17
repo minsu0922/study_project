@@ -2994,6 +2994,9 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
 }
 
 .pl-empty { padding: 40px 14px; text-align: center; color: var(--text-2); font-size: 14px; }
+
+/* 비로그인 문제 목록(problems.html anon) — 나와의 관계를 말하는 칸을 감춘다. 다 "안 푼 문제"·"—"라 정보가 없다 */
+.pl-anon .pl-stats, .pl-anon #chips, .pl-anon .pl-state, .pl-anon .pl-when, .pl-anon .pl-unit { display: none; }
 .pl-empty .act { margin-top: 12px; }
 
 

@@ -122,6 +122,11 @@ public class SecurityConfig {
                         // 새는 것이 없는 이유: 문제의 내용이 아니라 개수뿐이고, 내용은 이미
                         // 위 줄에서 공개다("화면과 문제는 누구나, 채점만 로그인").
                         .requestMatchers(HttpMethod.GET, "/api/stats").permitAll()
+                        // 공개: 문제 목록(2026-10-18). 비로그인에게는 "로그인이 필요합니다" 한 줄만 보여서,
+                        // 가입 전에 어떤 문제가 있는지 훑어볼 길이 없었다. 비로그인이면 userId가 null이라
+                        // 풀이 기록 쪽 조건이 아무것도 안 맞아 모든 줄이 "안 푼 문제"로 나온다
+                        // (ProblemRepository.findListForUser). 새는 것은 위 /api/quiz/**와 같은 수준이다.
+                        .requestMatchers(HttpMethod.GET, "/api/problems").permitAll()
                         // 공개: 기록을 남기지 않는 채점(2026-09-08). 원칙이 "채점만 로그인"에서
                         // <기록만 로그인>으로 좁아진 자리다 — 왜 좁혔는지는 QuizService.check에 적었다.
                         // 한 줄로: 첫 화면이 "가입 없이 풀어보기"라고 약속해 놓고 서버가 그것을
