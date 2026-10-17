@@ -161,13 +161,10 @@ function startPlayer(mountEl, problems, opts = {}) {
         ${codeBlockHtml(p.code, p.codeFocusLine)}
         <div id="optArea">${renderInput(p)}</div>
         <div id="feedback"></div>
-        <!-- 제출 버튼은 <답을 여러 번에 걸쳐 만드는> 유형에만 그린다 — 2026-09-08.
-             객관식·OX는 보기를 누르는 순간 채점되므로(selectOption) 이 버튼이 할 일이 없다.
-             할 일이 없는 버튼을 남겨 두면 "이걸 눌러야 하나"를 매번 묻게 된다.
-             채점 뒤에는 이 자리가 [다음 문제]로 바뀌므로 칸 자체는 유형과 무관하게 있어야 한다. -->
+        <!-- 모든 유형이 [제출]을 거친다(2026-10-18). 객관식·OX도 보기를 누르면 고르기만 한다(selectOption).
+             채점 뒤에는 이 자리가 [다음 문제]로 바뀐다. -->
         <div class="player-actions">
-          ${autoSubmits(p.type) ? "" : `<button id="submitBtn" disabled>${
-            p.type === "ESSAY" ? "모범 답안 보기" : "제출"}</button>`}
+          <button id="submitBtn" disabled>${p.type === "ESSAY" ? "모범 답안 보기" : "제출"}</button>
         </div>
         ${keyHint(shortcutHint(p.type))}
       </div>`;
@@ -179,8 +176,6 @@ function startPlayer(mountEl, problems, opts = {}) {
       // 입력이 생기면 제출 버튼 활성화 — "빈 답 제출"을 버튼 단계에서 차단
       input.addEventListener("input", () => {
         state.selected = input.value.trim();
-        // 단답형에는 제출 버튼이 반드시 있다(autoSubmits가 false) — 그래도 null 검사를 두는 것은
-        // 이 줄이 유형 규칙을 <다시> 알고 있게 만들지 않기 위해서다.
         const btn = mountEl.querySelector("#submitBtn");
         if (btn) btn.disabled = !state.selected;
       });
@@ -199,11 +194,6 @@ function startPlayer(mountEl, problems, opts = {}) {
     if (submitBtn) submitBtn.addEventListener("click", submit);
   }
 
-  /** 보기를 누르는 순간 답이 정해지는 유형인가 — 객관식과 OX뿐이다(selectOption 주석). */
-  function autoSubmits(type) {
-    return type === "MULTIPLE_CHOICE" || type === "OX";
-  }
-
   /**
    * 유형마다 <실제로 되는 것>만 적는다 — 2026-09-08.
    *
@@ -215,8 +205,6 @@ function startPlayer(mountEl, problems, opts = {}) {
    * <p>객관식·OX·순서 배열에서는 숫자가 실제로 동작한다(OX는 1=O, 2=X).
    */
   function shortcutHint(type) {
-    // 객관식·OX는 숫자키가 곧 제출이다. "선택"이라고 적으면 한 번 더 눌러야 하는 줄 안다.
-    if (autoSubmits(type)) return `<kbd>1</kbd>~<kbd>9</kbd> 보기 고르면 바로 채점 · <kbd>Enter</kbd> 다음`;
     // 서술형은 Enter가 줄바꿈이라 단축키가 없다. 없는 기능을 안내하지 않는다.
     if (type === "ESSAY") return `답을 적고 모범 답안과 견줘 스스로 채점합니다`;
     const enter = `<kbd>Enter</kbd> 제출/다음`;
@@ -353,18 +341,12 @@ function startPlayer(mountEl, problems, opts = {}) {
 
   /** 보기 선택(채점 전) — 선택 표시를 바꾸고 제출 버튼을 활성화한다. */
   /**
-   * 보기 하나를 고른다 — <b>고르는 순간이 곧 제출이다</b>(2026-09-08).
+   * 객관식·OX의 보기 하나를 <b>고른다</b>. 채점은 [제출]이나 Enter로 한다.
    *
-   * <p>전에는 고른 뒤 오른쪽 아래 [제출]까지 손이 한 번 더 가야 했다. 객관식과 OX는
-   * <b>한 번 누르면 답이 정해지는</b> 유형이라 그 한 걸음이 하는 일이 없다 —
-   * 폰에서는 화면 아래까지 엄지를 옮겼다가 돌아와야 한다.
-   *
-   * <p><b>다른 유형은 이렇게 하면 안 된다.</b> 짝짓기는 왼쪽을 누른 <b>뒤</b> 오른쪽을 눌러야
-   * 한 쌍이 되고, 순서 배열은 여러 번 눌러 순서를 쌓아야 답이 완성된다. 단답형은 타이핑이
-   * 끝나야 한다. 그 셋에서 첫 누름을 제출로 받으면 <b>완성되지도 않은 답이 채점된다</b> —
-   * 그래서 이 함수는 객관식·OX만 부른다(bindOptions·keyHandler가 유형으로 갈라 준다).
-   *
-   * <p>같은 이유로 [제출] 버튼도 그 셋에만 그린다(render).
+   * <p>2026-09-08부터 한동안은 고르는 순간 채점했다. [제출]까지 엄지를 옮기는 한 걸음을
+   * 덜려던 것인데, 손이 미끄러져 옆 보기를 누르면 되돌릴 수 없이 오답으로 기록되고
+   * 복습 사다리까지 움직였다. 기록이 남는 화면에서 한 걸음보다 그 사고가 더 비쌌다(2026-10-18).
+   * 고른 뒤에는 다른 보기를 눌러 바꿀 수 있다.
    */
   function selectOption(value) {
     if (state.answered || state.submitting) return;
@@ -377,7 +359,6 @@ function startPlayer(mountEl, problems, opts = {}) {
     });
     const submitBtn = mountEl.querySelector("#submitBtn");
     if (submitBtn) submitBtn.disabled = false;
-    submit();   // 고른 것이 곧 답이다 — 위 주석 참고
   }
 
   /**
@@ -441,8 +422,6 @@ function startPlayer(mountEl, problems, opts = {}) {
     const p = problems[state.idx];
     mountEl.querySelector("#optArea").innerHTML = renderInput(p);
     bindOptions(p);
-    // 이 함수는 순서·짝짓기에서만 불리지만(둘 다 제출 버튼이 있다), 버튼의 존재를 단정하지
-    // 않는다 — 유형별 규칙은 autoSubmits 한 곳에만 두고 나머지는 있으면 쓰는 식이다.
     const btn = mountEl.querySelector("#submitBtn");
     if (btn) btn.disabled = !state.selected;
   }
@@ -474,8 +453,7 @@ function startPlayer(mountEl, problems, opts = {}) {
     if (p.type === "ESSAY") { if (!state.essayModel) revealModelAnswer(p); return; }
 
     state.submitting = true;
-    // 객관식·OX에는 이 버튼이 아예 없다(autoSubmits). 있으면 잠그고, 없으면 잠글 것이 없다 —
-    // 중복 제출은 state.submitting이 막는다.
+    // 버튼을 잠근다. Enter로 거듭 누르는 중복 제출은 state.submitting이 막는다.
     const submitBtn = mountEl.querySelector("#submitBtn");
     if (submitBtn) submitBtn.disabled = true;
 
