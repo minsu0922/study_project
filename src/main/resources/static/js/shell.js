@@ -169,7 +169,14 @@ const MENUS = [
  * @param title  폰 상단 바에 뜨는 화면 이름. 좁은 화면에는 기둥이 없어
  *               "지금 어디인지"를 말해 줄 자리가 여기밖에 없다
  */
+/* 쓰기 요청에서 세션이 끝나면 화면은 그대로 두고 셸만 로그아웃 모양으로 다시 그린다(api.js onSessionExpired) */
+let lastShellArgs = null;
+window.addEventListener("csquiz:session-expired", () => {
+  if (lastShellArgs) renderShell(lastShellArgs);
+});
+
 function renderShell({ active = "", title = "" } = {}) {
+  lastShellArgs = { active, title };
   applyStoredTheme();
   applyStoredFontSize();
 
@@ -282,6 +289,7 @@ function renderShell({ active = "", title = "" } = {}) {
   if (main) {
     if (!main.id) main.id = "main";
     main.setAttribute("tabindex", "-1");
+    sessionExpiredNote(main);
   }
 
   loadReviewBadge();
@@ -291,6 +299,22 @@ function renderShell({ active = "", title = "" } = {}) {
   loadNickname();
   wireAccountMenu();
   wireLogout();
+}
+
+/**
+ * 세션이 끝나 새로 고친 화면이면 맨 위에 한 줄 알린다. 말 없이 로그아웃 모양으로 바뀌면
+ * 무엇을 잘못 눌렀나 싶다. 한 번 보이고 지운다. 로그인 화면에서는 링크를 빼고 말만 둔다.
+ */
+function sessionExpiredNote(main) {
+  let expired = false;
+  try {
+    expired = sessionStorage.getItem(SESSION_EXPIRED_KEY) === "1";
+    sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+  } catch (e) { return; }
+  if (!expired || main.querySelector(".session-note")) return;
+  const link = location.pathname === "/login.html" ? "" : ` <a href="/login.html">다시 로그인</a>`;
+  main.insertAdjacentHTML("afterbegin",
+    `<div class="alert info session-note" role="status">로그인이 만료돼 로그아웃했어요.${link}</div>`);
 }
 
 /**

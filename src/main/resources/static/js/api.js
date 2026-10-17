@@ -123,6 +123,7 @@ async function api(path, options = {}) {
     }
     clearLogin(); // 재발급도 실패 = 진짜 세션 종료 → 재로그인 필요
     needLogin = true;
+    if (token) onSessionExpired(options.method);
   }
   if (!res.ok || !body || body.success === false) {
     const errInfo = (body && body.error) || { code: "HTTP_" + res.status, message: "요청에 실패했습니다." };
@@ -140,6 +141,31 @@ async function api(path, options = {}) {
     throw err;
   }
   return body.data;
+}
+
+/** 만료로 로그아웃시켰다는 표시. 새로 고친 화면의 셸이 읽고 지운다(shell.js sessionExpiredNote). */
+const SESSION_EXPIRED_KEY = "csquiz_session_expired";
+let sessionExpiredHandled = false;
+
+/**
+ * 세션이 끝났을 때(토큰을 들고 있었는데 재발급도 실패) 화면을 로그아웃 상태로 되돌린다.
+ *
+ * 토큰만 지우면 이미 그려진 헤더(닉네임·관리 콘솔)와 본문은 로그인한 모습 그대로 남는다.
+ * 첫 화면은 "진행 상황을 불러오지 못했어요"만 띄운 채 로그인한 척을 했다.
+ * - 읽기(GET)에서 알았으면 화면을 새로 고친다. 화면마다 로그아웃 모양을 따로 그릴 필요가 없다.
+ * - 쓰기(POST 등)에서 알았으면 새로 고치지 않는다. 쓰던 글이 날아간다. 셸만 다시 그리고,
+ *   무엇이 안 됐는지는 그 화면의 오류 알림(로그인 링크가 붙는다)이 말한다.
+ * 동시에 나간 요청 여럿이 함께 401을 받으므로 한 번만 처리한다.
+ */
+function onSessionExpired(method) {
+  if (sessionExpiredHandled) return;
+  sessionExpiredHandled = true;
+  if (!method || method.toUpperCase() === "GET") {
+    try { sessionStorage.setItem(SESSION_EXPIRED_KEY, "1"); } catch (e) { /* 안내 한 줄만 빠진다 */ }
+    location.reload();
+    return;
+  }
+  window.dispatchEvent(new Event("csquiz:session-expired"));
 }
 
 /**
