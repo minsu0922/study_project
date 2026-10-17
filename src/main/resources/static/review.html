@@ -47,7 +47,7 @@ try {
       <h2>내 복습 현황</h2>
       <!-- "오답노트로 가라"는 안내를 뺐다(2026-08-29). 위 구역 탭이 같은 말을 하고 있어서,
            남겨 두면 같은 이동을 두 곳에서 권하는 셈이 된다. -->
-      <p class="meta">여기서는 <b>몇 단계인지·다음 복습이 언제인지</b>만 보여요.</p>
+      <p class="meta">사다리에 오른 문제 전부와 다음 복습 날이에요. 누르면 그 문제 하나만 바로 풀어요.</p>
       <!-- 옆 기둥은 문제 목록과 같은 모양이다(.pl-side). 위의 "오늘의 복습"이 아니라 이 목록만 거르므로
            목록 옆에 둔다. 분야와 상태는 여기서 고르고, 같은 것을 다시 누르면 풀린다 -->
       <div class="pl-body">
@@ -100,8 +100,7 @@ let selectedDomain = null;
 let selectedStatus = null;
 let counts = null;
 
-/* 한 판에 내보내는 복습 문제 수(2026-09-05). 20인 이유는 오답노트 한 페이지와 같은 수라
-   "한 번에 다루는 양"의 감각이 사이트 안에서 일정하기 때문이다. 서버 상한은 50이지만
+/* 한 판에 내보내는 복습 문제 수(2026-09-05). 서버 상한은 50이지만
    상한을 다 쓰는 것과 사람이 한자리에서 풀 수 있는 양은 다른 문제다. */
 const SESSION_SIZE = 20;
 
@@ -261,28 +260,29 @@ async function loadStatus() {
         // 그 목록에 넣지 않기로 한 별개의 권유이기 때문이다.
         const recheckDue = r.status === "GRADUATED" && new Date(r.nextReviewAt) <= new Date();
 
-        const dueLabel = r.status === "GRADUATED"
-          ? (recheckDue
-              // 링크는 문제 지목 풀이 경로다. 틀리면 자동으로 사다리에 다시 오르고,
-              // 맞히면 다음 재확인으로 미뤄진다 — 어느 쪽이든 서버가 알아서 처리한다.
-              ? `<a href="/quiz.html?problemId=${r.problemId}" style="color:var(--review);font-weight:700"
-                   >오래 안 봤어요 — 다시 확인해볼까요? 🔍</a>`
-              : `복습 끝! ${on}에 한 번만 다시 확인해요 🎓`)
-          : r.due ? `<span style="color:var(--review);font-weight:700">지금 복습할 시간!</span>`
-                  : `다음 복습: ${on}부터`;
+        // 카드 전체가 문제 지목 풀이(quiz.html?problemId)로 가는 링크다. 같은 채점 경로라
+        // 복습 날이 된 문제는 맞히면 오르고, 날 전에 맞히면 단계가 그대로다(ReviewService.onSubmission).
+        // 그래서 오른쪽 글자가 "지금 풀면 반영되는지"를 미리 말해 준다
+        const ready = r.due || recheckDue;
+        const when = r.status === "GRADUATED"
+          ? (recheckDue ? "재확인할 때예요" : `졸업 · ${on}에 한 번 재확인`)
+          : r.due ? "오늘 복습할 문제" : `다음 복습 ${on}`;
+        const action = ready ? "지금 풀기 ›" : "미리 풀어 보기 ›";
         return `
-          <div class="card">
-            <div style="margin-bottom:4px">
-              <span class="badge">${escapeHtml(r.domainLabel)}</span>
-              ${stageBadge}
-              ${r.reviewCount > 0 ? `<span class="badge gray">복습 ${r.reviewCount}회</span>` : ""}
-            </div>
-            <!-- 제목이 있으면 제목. 지문은 상황 서술로 시작하는 일이 많아 한 줄로 자르면
-                 무엇을 묻는지 알 수 없다(문제 목록이 제목 컬럼을 만든 이유, docs/18).
-                 옛 문제는 제목이 없으므로 그때만 지문으로 대신한다. -->
-            <div class="meta one-line" title="${escapeHtml(r.question)}">${escapeHtml(r.title || r.question)}</div>
-            <div style="margin-top:4px;font-size:.86rem">${dueLabel}</div>
-          </div>`;
+          <a class="card clickable rv-row${ready ? " ready" : ""}" href="/quiz.html?problemId=${r.problemId}"
+             title="${ready ? "맞히면 다음 단계로 올라가요" : "복습 날 전이라 맞혀도 단계는 그대로예요"}">
+            <span class="rv-main">
+              <span class="rv-badges">
+                <span class="badge">${escapeHtml(r.domainLabel)}</span>
+                ${stageBadge}
+              </span>
+              <!-- 제목이 있으면 제목. 지문은 상황 서술로 시작하는 일이 많아 한 줄로 자르면
+                   무엇을 묻는지 알 수 없다(docs/18). 옛 문제는 제목이 없어 지문으로 대신한다. -->
+              <span class="rv-title one-line">${escapeHtml(r.title || r.question)}</span>
+              <span class="rv-when">${when}</span>
+            </span>
+            <span class="rv-go">${action}</span>
+          </a>`;
       }).join("");
     }
 

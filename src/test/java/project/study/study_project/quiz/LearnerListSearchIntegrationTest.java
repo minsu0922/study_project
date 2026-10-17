@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 /**
  * 학습 화면 목록의 검색어 — 풀이 기록·오답노트·복습·북마크가 문제 제목과 지문에서 찾고,
@@ -76,8 +77,8 @@ class LearnerListSearchIntegrationTest {
         assertThat(studyHistoryService.history(user.getId(), null, TestDomains.NETWORK, q, PAGE).content())
                 .extracting(SubmissionHistoryItem::problemId).containsExactly(byTitle.getId());
         assertThat(wrongAnswerService.getWrongAnswers(user.getId(), null, q, PAGE).content())
-                .extracting(WrongAnswerItem::problemId)
-                .containsExactlyInAnyOrder(byTitle.getId(), byQuestion.getId());
+                .extracting(WrongAnswerItem::problemId, WrongAnswerItem::title)
+                .containsExactlyInAnyOrder(tuple(byTitle.getId(), word + " 제목"), tuple(byQuestion.getId(), null));
         assertThat(reviewService.getMyReviews(user.getId(), null, TestDomains.SECURITY, q, null, PAGE).content())
                 .extracting(ReviewListItem::problemId).containsExactly(byQuestion.getId());
         assertThat(bookmarkService.list(user.getId(), BookmarkTarget.PROBLEM, q, PAGE).content())

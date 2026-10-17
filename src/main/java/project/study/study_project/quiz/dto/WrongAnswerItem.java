@@ -40,6 +40,8 @@ public record WrongAnswerItem(
         String myAnswerRationale,
         /** 지문과 함께 보여 줄 코드(V39). 코드 문제가 아니면 {@code null}. */
         String code,
-        Integer codeFocusLine
+        Integer codeFocusLine,
+        /** 접힌 줄에 보여 줄 제목. 옛 문제는 {@code null}이라 화면이 지문으로 대신한다. */
+        String title
 ) {
 }

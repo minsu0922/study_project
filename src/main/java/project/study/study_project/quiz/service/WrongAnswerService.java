@@ -116,7 +116,8 @@ public class WrongAnswerService {
                 // 일으키므로 쿼리가 더 나가지 않는다 — 같은 컬렉션을 한 번 더 훑을 뿐이다.
                 AnswerDisplay.userAnswerRationaleOf(p, s.getUserAnswer()),
                 p.getCode(),
-                p.getCodeFocusLine()
+                p.getCodeFocusLine(),
+                p.getTitle()
         );
     }
 }

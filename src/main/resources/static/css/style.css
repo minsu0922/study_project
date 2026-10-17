@@ -2844,6 +2844,38 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
  * 문제 목록의 기둥(.pl-body·.pl-side)을 그대로 빌린다. 세 화면이 같은 모양이어야 하고,
  * 좁은 화면에서 가로 줄로 접히는 규칙(아래 975px)도 한 벌로 끝난다. */
 .side-page { max-width: 980px; }
+
+/* 복습 현황 한 줄 — 카드 전체가 그 문제 풀이로 가는 링크. 오른쪽 글자가 지금 풀면 단계에 반영되는지 말한다 */
+.card.rv-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 8px; }
+.rv-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.rv-badges .badge { margin: 0 4px 0 0; }
+.rv-title { font-weight: 600; }
+.rv-when { font-size: .84rem; color: var(--muted); }
+.rv-go { flex: none; font-size: .86rem; color: var(--muted); white-space: nowrap; }
+.rv-row.ready { border-left: 3px solid var(--review); }
+.rv-row.ready .rv-when, .rv-row.ready .rv-go { color: var(--review); font-weight: 700; }
+
+/* 오답노트 한 줄 — 접힌 상태에서 무엇을 틀렸는지만 보이고, 누르면 지문·해설이 펼쳐진다 */
+.wa-item { padding: 0; margin-bottom: 8px; }
+.wa-item > summary {
+  list-style: none; cursor: pointer; padding: 12px 84px 12px 16px; position: relative;
+  display: flex; flex-direction: column; gap: 4px; border-radius: var(--radius);
+}
+.wa-item > summary::-webkit-details-marker { display: none; }
+.wa-item > summary:hover { background: var(--fill); }
+.wa-item > summary::after {
+  content: "펼치기 ▾"; font-size: .8rem; color: var(--muted);
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+}
+.wa-item[open] > summary::after { content: "접기 ▴"; }
+.wa-item[open] > summary { border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; }
+.wa-badges .badge { margin: 0 4px 0 0; }
+.wa-title { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wa-sub { font-size: .84rem; }
+.wa-body { padding: 12px 16px 16px; }
+.wa-question { margin: 8px 0; white-space: pre-wrap; line-height: 1.6; }
+.wa-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+
 .pl-domain .n, .pl-level .n { font-size: 11px; color: var(--muted); }
 .pl-level .n { margin-left: 3px; }
 /* 진척 바가 없는 기둥이라 버튼 공통 하한(44px)이면 줄 사이가 비어 보인다. 마우스로 고르는 넓은 화면에서만 줄인다 */
