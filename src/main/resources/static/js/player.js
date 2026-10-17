@@ -627,7 +627,7 @@ function startPlayer(mountEl, problems, opts = {}) {
    * 적히면 그중 무엇이 진짜인지 알 수 없다(index.html의 히어로 note). */
   function anonNote() {
     if (isLoggedIn()) return "";
-    return `<div class="explain doc-link">`
+    return `<div class="fb-note">`
       + `가입하면 이 기록이 남고, 틀린 문제는 복습으로 돌아옵니다. `
       + `<a href="/signup.html">가입하기</a></div>`;
   }
@@ -641,17 +641,10 @@ function startPlayer(mountEl, problems, opts = {}) {
    *
    * 새 탭(target=_blank)으로 여는 이유: 퀴즈는 여러 문제를 이어서 푸는 흐름이라, 같은 탭에서
    * 문서로 이동하면 풀던 세트가 통째로 날아간다(점수·진행 상태가 화면 메모리에만 있다). */
-  /* 한 줄로 붙여 쓰는 것이 <중요하다>. 이 줄은 .explain 안에 있고 그 클래스에는
-   * white-space: pre-wrap이 걸려 있다(해설의 줄바꿈을 살리려고 넣은 규칙이다).
-   * 그래서 템플릿 문자열을 예쁘게 들여쓰면 그 <들여쓰기와 줄바꿈이 화면에 그대로> 나온다 —
-   * 실제로 📖만 위에 뜨고 글자가 다음 줄로 내려가 있었다(2026-09-08에 발견).
-   * 코드 모양을 위해 넣은 공백이 화면에 새어 나오는 자리라, 여기서는 줄을 접지 않는다. */
   function docLink(r) {
     if (!r.documentSlug) return "";
     const href = `/document.html?slug=${encodeURIComponent(r.documentSlug)}`;
-    return `<div class="explain doc-link">`
-      + `📖 <a href="${href}" target="_blank" rel="noopener">이 문제의 개념 문서 읽기</a>`
-      + `</div>`;
+    return `<a class="fb-doc" href="${href}" target="_blank" rel="noopener">📖 개념 문서 읽기</a>`;
   }
 
   /* 오답 분석 — 오답 보기마다 왜 틀렸는지를 <이 화면의 번호>와 함께 늘어놓는다(V15).
@@ -730,25 +723,34 @@ function startPlayer(mountEl, problems, opts = {}) {
     const essayInput = mountEl.querySelector("#essayInput");
     if (essayInput) essayInput.disabled = true;
 
-    // 2) 피드백 박스: 판정 + 정답 + 해설 + 오답 분석
+    /* 2) 피드백 박스 — 판정 / 읽을 것 / 할 수 있는 일, 세 칸으로 나눈다.
+     * 예전에는 여섯 가지가 한 초록(빨강) 판 위에 세로로 쌓여, 긴 해설까지 색 판 위에서 읽어야 했고
+     * 북마크·제보·토론방이 제각각 다른 모양으로 한 줄씩 차지했다.
+     * 색은 판정 띠에만 둔다 — "맞았나"는 한눈에, 해설은 흰 바탕에서 읽힌다. */
     mountEl.querySelector("#feedback").innerHTML = `
       <div class="feedback ${r.correct ? "correct" : "wrong"} fade-in">
-        <span class="verdict">${p.type === "ESSAY"
-          ? (r.correct ? "🎉 맞게 썼다고 기록했어요" : "📝 다시 볼 문제로 기록했어요")
-          : (r.correct ? "🎉 정답입니다!" : "😅 아쉬워요, 오답입니다")}</span>
-        ${r.correct || !r.correctAnswer ? "" : `<div class="answer-line">정답: <b>${escapeHtml(r.correctAnswer)}</b></div>`}
-        ${r.explanation ? `<div class="explain">${escapeHtml(r.explanation)}</div>` : ""}
-        ${wrongAnalysis(p, r)}
-        ${docLink(r)}
-        ${anonNote()}
-        ${opts.reviewMode ? `<div class="explain" style="font-size:.82rem">${
-          r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요 👋"
-                    : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요 📅"}</div>` : ""}
-        <!-- 북마크(V33). 채점 뒤에 둔다 — "다시 봐야겠다"는 판단이 서는 때가 해설을 읽은 직후다. -->
-        <div>${bookmarkButton("PROBLEM", pidOf(p))}</div>
-        ${reportBlock(p.id)}
-        <!-- 토론방 링크. 채점 뒤에만 낸다 — 토론에는 정답 이야기가 나오고, 풀던 사람을 밖으로 보내지 않는다. -->
-        <div>${roomLink(pidOf(p))}</div>
+        <div class="fb-head">
+          <span class="verdict">${p.type === "ESSAY"
+            ? (r.correct ? "🎉 맞게 썼다고 기록했어요" : "📝 다시 볼 문제로 기록했어요")
+            : (r.correct ? "🎉 정답입니다!" : "😅 아쉬워요, 오답입니다")}</span>
+          ${r.correct || !r.correctAnswer ? "" : `<div class="answer-line">정답: <b>${escapeHtml(r.correctAnswer)}</b></div>`}
+        </div>
+        <div class="fb-body">
+          ${r.explanation ? `<div class="explain">${escapeHtml(r.explanation)}</div>` : ""}
+          ${wrongAnalysis(p, r)}
+          ${anonNote()}
+          ${opts.reviewMode ? `<div class="fb-note">${
+            r.correct ? "복습 간격이 한 단계 늘어났어요. 다음엔 더 나중에 만나요."
+                      : "내일 다시 만나요. 오늘 틀린 건 내일이 복습 타이밍이에요."}</div>` : ""}
+        </div>
+        <!-- 북마크(V33)·토론방은 채점 뒤에만 낸다 — "다시 봐야겠다"는 판단은 해설을 읽은 직후에 서고,
+             토론에는 정답 이야기가 나온다. 제보는 맨 끝에 붙여 곁문으로 둔다. -->
+        <div class="fb-tools">
+          ${docLink(r)}
+          ${bookmarkButton("PROBLEM", pidOf(p))}
+          ${roomLink(pidOf(p))}
+          ${reportBlock(p.id)}
+        </div>
       </div>`;
 
     hydrateBookmarks(mountEl.querySelector("#feedback"));
