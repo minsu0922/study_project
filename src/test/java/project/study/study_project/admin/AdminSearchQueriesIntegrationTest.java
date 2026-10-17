@@ -6,12 +6,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.global.common.SearchKeyword;
+import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
+import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.GeneratedProblemDraftRepository;
 import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
@@ -30,6 +34,8 @@ class AdminSearchQueriesIntegrationTest {
     private ProblemRepository problemRepository;
     @Autowired
     private GeneratedProblemDraftRepository draftRepository;
+    @Autowired
+    private GeneratedDocumentDraftRepository documentDraftRepository;
 
     @Test
     @DisplayName("문제 관리 목록의 검색어는 제목과 지문을 함께 보고, 대소문자를 가리지 않는다")
@@ -58,11 +64,27 @@ class AdminSearchQueriesIntegrationTest {
         rejected.reject("테스트");
         draftRepository.flush();
 
-        List<GeneratedProblemDraft> found = draftRepository.searchForAdmin(
-                SearchKeyword.likePattern(word), PageRequest.of(0, 5));
+        Page<GeneratedProblemDraft> found = draftRepository.findForReview(
+                List.of(DraftStatus.PENDING, DraftStatus.REJECTED), null, null, null, null, null,
+                SearchKeyword.likePattern(word), PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "id")));
 
-        assertThat(found).extracting(GeneratedProblemDraft::getId)
+        assertThat(found.getContent()).extracting(GeneratedProblemDraft::getId)
                 .containsExactly(rejected.getId(), pending.getId());
+    }
+
+    @Test
+    @DisplayName("문서 초안 검색은 제목만 보고 상태 하나 안에서 찾는다")
+    void documentDraftSearchByTitle() {
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        GeneratedDocumentDraft hit = documentDraftRepository.save(GeneratedDocumentDraft.pending(
+                TestDomains.NETWORK, word + " 문서", "s-" + word, "본문", "[]", "test-model"));
+        documentDraftRepository.save(GeneratedDocumentDraft.pending(
+                TestDomains.NETWORK, "다른 제목", "t-" + word, "본문에만 " + word, "[]", "test-model"));
+
+        Page<GeneratedDocumentDraft> found = documentDraftRepository.findForReview(
+                DraftStatus.PENDING, SearchKeyword.likePattern(word), PageRequest.of(0, 5));
+
+        assertThat(found.getContent()).extracting(GeneratedDocumentDraft::getId).containsExactly(hit.getId());
     }
 
     private Problem save(String title, String question) {

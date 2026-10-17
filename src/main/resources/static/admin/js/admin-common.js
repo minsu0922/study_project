@@ -85,6 +85,29 @@ function param(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
+/* ── 검색 칸 ──
+ * 콘솔의 모든 검색 칸(상단 띠, 목록 화면들)이 여기를 거친다.
+ * 치기를 멈추고 300ms 뒤에 부른다. 글자마다 부르면 요청 한도(분당 60회)에 금방 닿고,
+ * 늦게 온 앞 글자의 답이 뒤 글자의 답을 덮기도 한다. */
+const SEARCH_DELAY_MS = 300;
+
+/**
+ * 목록 화면의 검색 칸을 잇는다. 주소의 {@code ?q=}로 채워 두어, 띠의 "목록에서 모두 보기"가
+ * 검색어를 들고 넘어온다.
+ *
+ * @param onSearch 검색어(앞뒤 공백을 뗀 값)를 받아 목록을 다시 부른다
+ */
+function wireSearchInput(id, onSearch) {
+  const el = document.getElementById(id);
+  el.value = param("q") || "";
+  let timer = null;
+  el.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => onSearch(el.value.trim()), SEARCH_DELAY_MS);
+  });
+  return el;
+}
+
 /* ── 되돌리기 어려운 동작의 2단계 확인 ──
  * confirm() 같은 브라우저 팝업 대신 "버튼을 한 번 더 누르면 실행" 방식.
  * 팝업은 흐름을 끊고, 자동화 도구·테스트도 막는다. 3초 지나면 원래대로 돌아간다.

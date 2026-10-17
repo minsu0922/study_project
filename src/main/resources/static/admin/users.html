@@ -24,7 +24,7 @@ try {
     <form class="filters" id="searchForm">
       <div class="field">
         <label for="q">아이디 또는 닉네임</label>
-        <input type="text" id="q" maxlength="20" placeholder="일부만 적어도 됩니다">
+        <input type="search" id="q" maxlength="20" placeholder="일부만 적어도 됩니다">
       </div>
       <label class="pw-reveal" style="margin:0 0 10px">
         <input type="checkbox" id="suspendedOnly"> 정지 중인 사람만
@@ -49,9 +49,8 @@ try {
  * 이 화면에서는 찾기만 한다. 정지 같은 관리는 행을 눌러 들어간 상세(user.html)에서 한다 —
  * 목록의 한 줄에는 "이 사람을 정지해도 되는가"를 판단할 근거가 없다. */
 if (initAdminPage("users")) {
-  const params = new URLSearchParams(location.search);
-  document.getElementById("q").value = params.get("q") || "";
-  document.getElementById("suspendedOnly").checked = params.get("suspendedOnly") === "true";
+  wireSearchInput("q", () => loadUsers({ page: 0 }));
+  document.getElementById("suspendedOnly").checked = param("suspendedOnly") === "true";
 
   document.getElementById("searchForm").addEventListener("submit", e => {
     e.preventDefault();

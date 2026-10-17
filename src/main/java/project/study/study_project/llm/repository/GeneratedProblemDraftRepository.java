@@ -11,6 +11,7 @@ import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -19,18 +20,6 @@ import java.util.List;
  * JPQL을 손으로 쓰면 오타 검증 시점만 늦어진다(파생 쿼리는 부팅 시 검증).
  */
 public interface GeneratedProblemDraftRepository extends JpaRepository<GeneratedProblemDraft, Long> {
-
-    /**
-     * 관리 콘솔 통합 검색 — 제목과 지문에서 찾는다. q는 이스케이프한 LIKE 패턴이다.
-     * 승인된 초안은 뺀다. 같은 제목의 문제가 따로 있어 결과에 두 번 뜨고, 고치려면 문제 쪽을 고쳐야 한다.
-     */
-    @Query("""
-            select d from GeneratedProblemDraft d
-            where d.status <> project.study.study_project.llm.domain.DraftStatus.APPROVED
-              and (lower(d.title) like lower(:q) escape '!' or lower(d.question) like lower(:q) escape '!')
-            order by d.id desc
-            """)
-    List<GeneratedProblemDraft> searchForAdmin(@Param("q") String q, Pageable pageable);
 
     /** 검수 화면 목록 — 상태 필터, 오래된 순(먼저 생성된 것부터 처리). V6 인덱스와 정렬 방향 일치. */
     Page<GeneratedProblemDraft> findByStatusOrderByCreatedAtAsc(DraftStatus status, Pageable pageable);
@@ -59,26 +48,32 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
      * @param code         true면 코드 문제만, false면 개념 문제만, null이면 둘 다(2026-10-15).
      *                     검수함이 둘을 탭으로 나눠 본다
      * @param id           그 번호 하나만. 상단 띠의 "번호로 이동"이 쓴다. null이면 거르지 않는다
+     * @param statuses     이 상태들만. 검수함은 하나를, 통합 검색은 승인 아닌 둘을 넘긴다
+     * @param keyword      제목·지문 검색. {@code SearchKeyword.likePattern}을 거친 패턴, null이면 거르지 않는다
+     * @param pageable     정렬은 여기에 담는다. 검수함은 오래된 순, 통합 검색은 최근 순이라 쿼리에 고정하지 않았다
      */
     @Query("""
             select d from GeneratedProblemDraft d
-            where d.status = :status
+            where d.status in :statuses
               and (:id is null or d.id = :id)
+              and (:keyword is null
+                   or lower(d.title) like lower(:keyword) escape '!'
+                   or lower(d.question) like lower(:keyword) escape '!')
               and (:domain is null or d.domain = :domain)
               and (:difficulty is null or d.difficulty = :difficulty)
               and (:documentSlug is null or d.documentSlug = :documentSlug)
               and (:code is null
                    or (:code = true and d.codeKind is not null)
                    or (:code = false and d.codeKind is null))
-            order by d.createdAt asc
             """)
     Page<GeneratedProblemDraft> findForReview(
-            @Param("status") DraftStatus status,
+            @Param("statuses") Collection<DraftStatus> statuses,
             @Param("domain") DomainCode domain,
             @Param("difficulty") Difficulty difficulty,
             @Param("documentSlug") String documentSlug,
             @Param("code") Boolean code,
             @Param("id") Long id,
+            @Param("keyword") String keyword,
             Pageable pageable);
 
     /**

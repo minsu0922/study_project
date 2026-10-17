@@ -82,7 +82,7 @@ try {
     <div class="filters" style="margin-bottom:10px">
       <div class="field" style="flex:1 1 320px">
         <label>검색 <span class="meta">(주제·메모)</span></label>
-        <input type="text" id="tSearch" placeholder="예: 트랜잭션 / 인덱스 / 자바 2단계">
+        <input type="search" id="tSearch" maxlength="50" placeholder="예: 트랜잭션 / 인덱스 / 자바 2단계">
       </div>
       <div class="field"><label>&nbsp;</label><button id="tSearchClearBtn" class="btn-outline">지우기</button></div>
       <!-- 정렬은 <보기 전용>이다. MANUAL이 아니면 아래 이동 버튼이 전부 잠긴다 —
@@ -262,18 +262,12 @@ function initTopicForm() {
     if (e.key === "Enter") addTopic();
   });
 
-  // 검색은 입력이 멈춘 뒤에 보낸다. 글자마다 요청하면 "트랜잭션" 다섯 글자에 요청이 다섯 번
-  // 나가고, 늦게 온 응답이 먼저 온 응답을 덮어써 <내가 지운 글자의 결과>가 남기도 한다.
-  const search = document.getElementById("tSearch");
-  let timer = null;
-  search.addEventListener("input", () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      topicQuery = search.value.trim();
-      topicPage = 0;               // 새 검색은 언제나 첫 쪽부터
-      loadTopicQueue();
-    }, 250);
+  const search = wireSearchInput("tSearch", q => {
+    topicQuery = q;
+    topicPage = 0;               // 새 검색은 언제나 첫 쪽부터
+    loadTopicQueue();
   });
+  topicQuery = search.value.trim();
   document.getElementById("tSearchClearBtn").addEventListener("click", () => {
     search.value = "";
     topicQuery = "";

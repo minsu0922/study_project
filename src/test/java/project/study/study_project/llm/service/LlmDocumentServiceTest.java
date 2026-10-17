@@ -413,7 +413,7 @@ class LlmDocumentServiceTest {
     }
 
     private void givenDraftPage(DraftStatus status, GeneratedDocumentDraft draft) {
-        when(draftRepository.findByStatusOrderByCreatedAtAsc(eq(status), any()))
+        when(draftRepository.findForReview(eq(status), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(draft)));
     }
 

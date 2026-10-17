@@ -45,9 +45,10 @@ public class AdminLlmDocumentController {
             @RequestParam(required = false) DraftStatus status,
             // 문제 목록(20)보다 작게 잡은 이유: 응답에 3,000자짜리 본문이 통째로 들어간다.
             // 20건이면 한 번에 60KB를 넘기는데, 검수는 어차피 한 편씩 읽는 작업이라 낭비다.
+            @RequestParam(required = false) String q,
             @PageableDefault(size = 5) Pageable pageable
     ) {
-        return ApiResponse.ok(llmDocumentService.getDrafts(status, pageable));
+        return ApiResponse.ok(llmDocumentService.getDrafts(status, q, pageable));
     }
 
     /** 검수 대기 건수 — 관리자 화면 배지용. */

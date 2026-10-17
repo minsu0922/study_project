@@ -17,6 +17,7 @@ import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.domainsetting.support.DomainCatalog;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -114,9 +115,15 @@ public class LlmDocumentService {
     /** 초안 목록 — 기본 PENDING, 오래된 순. 각 건에 자동 검증 결과가 함께 실린다. */
     @Transactional(readOnly = true)
     public PageResponse<LlmDocumentDraftResponse> getDrafts(DraftStatus status, Pageable pageable) {
+        return getDrafts(status, null, pageable);
+    }
+
+    /** @param q 제목 검색어. 비면 거르지 않는다 */
+    @Transactional(readOnly = true)
+    public PageResponse<LlmDocumentDraftResponse> getDrafts(DraftStatus status, String q, Pageable pageable) {
         DraftStatus target = status != null ? status : DraftStatus.PENDING;
-        return PageResponse.from(
-                draftRepository.findByStatusOrderByCreatedAtAsc(target, pageable).map(this::toResponse));
+        return PageResponse.from(draftRepository
+                .findForReview(target, SearchKeyword.likePattern(q), pageable).map(this::toResponse));
     }
 
     /** 관리자 대시보드 배지용 — 문서 검수 대기 건수. */

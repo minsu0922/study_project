@@ -170,14 +170,7 @@ function initListFilters() {
   }
   document.getElementById("fpDocument").addEventListener("change", () => loadProblems({ page: 0 }));
 
-  // 띠의 "목록에서 모두 보기"가 ?q=로 넘어온다. 치는 동안은 쉬었다 부른다(요청 한도, admin-shell.js와 같은 이유)
-  const q = document.getElementById("fpQ");
-  q.value = param("q") || "";
-  let timer = null;
-  q.addEventListener("input", () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => loadProblems({ page: 0 }), 300);
-  });
+  wireSearchInput("fpQ", () => loadProblems({ page: 0 }));
 
   document.getElementById("fpResetBtn").addEventListener("click", () => {
     ["fpQ", "fpDomain", "fpDifficulty", "fpType", "fpDocument"].forEach(id => document.getElementById(id).value = "");

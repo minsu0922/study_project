@@ -53,9 +53,9 @@ public class DocumentService {
 
     /** 관리 화면 목록 — 내려 둔 문서까지 싣는다. 공개 목록과 갈라 둬야 내린 문서를 다시 올릴 수 있다. */
     @Transactional(readOnly = true)
-    public PageResponse<DocumentListItem> getDocumentsIncludingHidden(Pageable pageable) {
+    public PageResponse<DocumentListItem> getDocumentsIncludingHidden(String keyword, Pageable pageable) {
         return PageResponse.from(withEditions(withDomainLabels(
-                documentRepository.searchListItems(null, null, null, true, pageable))));
+                documentRepository.searchListItems(null, null, keyword, true, pageable))));
     }
 
     /**

@@ -137,9 +137,11 @@ public class AdminLlmProblemController {
             @RequestParam(required = false) Boolean code,
             // 그 번호 하나만 — 상단 띠의 "번호로 이동"이 검수함을 열 때 쓴다
             @RequestParam(required = false) Long id,
+            // 제목·지문 검색어. 승인됨·거절됨이 쌓여 수백 건이 되자 넘겨 찾을 수 없게 됐다
+            @RequestParam(required = false) String q,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(llmProblemService.getDrafts(status, domain, difficulty, documentSlug, code, id, pageable));
+        return ApiResponse.ok(llmProblemService.getDrafts(status, domain, difficulty, documentSlug, code, id, q, pageable));
     }
 
     /**

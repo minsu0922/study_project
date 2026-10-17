@@ -48,7 +48,12 @@ public class AdminDocumentService {
 
     /** 관리 화면 목록 — 내려 둔 문서 포함. */
     public PageResponse<DocumentListItem> list(Pageable pageable) {
-        return documentService.getDocumentsIncludingHidden(pageable);
+        return list(null, pageable);
+    }
+
+    /** @param q 제목·본문 검색어(공개 목록과 같은 조건). 비면 거르지 않는다 */
+    public PageResponse<DocumentListItem> list(String q, Pageable pageable) {
+        return documentService.getDocumentsIncludingHidden(q, pageable);
     }
 
     /** 수정 폼 채우기용 단건. 공개 단건 API는 내려 둔 문서를 404로 막으므로 id로 따로 읽는다. */

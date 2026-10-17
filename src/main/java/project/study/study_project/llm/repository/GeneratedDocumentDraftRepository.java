@@ -23,8 +23,19 @@ import java.util.List;
  */
 public interface GeneratedDocumentDraftRepository extends JpaRepository<GeneratedDocumentDraft, Long> {
 
-    /** 검수 화면 목록 — 상태 필터, 오래된 순. V8 인덱스(status, created_at)와 정렬 방향 일치. */
-    Page<GeneratedDocumentDraft> findByStatusOrderByCreatedAtAsc(DraftStatus status, Pageable pageable);
+    /**
+     * 검수 화면 목록 — 상태 필터, 오래된 순. V8 인덱스(status, created_at)와 정렬 방향 일치.
+     * keyword는 제목만 본다. 본문은 3,000자라 LIKE로 훑기에 무겁고, 문서는 제목으로 부른다.
+     */
+    @Query("""
+            select d from GeneratedDocumentDraft d
+            where d.status = :status
+              and (:keyword is null or lower(d.title) like lower(:keyword) escape '!')
+            order by d.createdAt asc
+            """)
+    Page<GeneratedDocumentDraft> findForReview(@Param("status") DraftStatus status,
+                                               @Param("keyword") String keyword,
+                                               Pageable pageable);
 
     /** 대기 건수 — 관리자 화면 배지("문서 검수 대기 N건")용. */
     long countByStatus(DraftStatus status);

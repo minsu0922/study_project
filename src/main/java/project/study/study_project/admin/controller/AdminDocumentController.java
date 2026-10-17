@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.document.dto.AdminDocumentRequest;
@@ -37,8 +38,9 @@ public class AdminDocumentController {
 
     /** 목록 — 내려 둔 문서 포함. 최신 등록 순. */
     @GetMapping
-    public ApiResponse<PageResponse<DocumentListItem>> list(@PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(adminDocumentService.list(pageable));
+    public ApiResponse<PageResponse<DocumentListItem>> list(@RequestParam(required = false) String q,
+                                                           @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(adminDocumentService.list(q, pageable));
     }
 
     /** 단건(수정 폼·본문 복사용). */

@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.quiz.dto.AdminProblemDetail;
@@ -19,6 +20,7 @@ import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.global.common.SearchKeyword;
 import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
@@ -576,9 +578,23 @@ public class LlmProblemService {
     @Transactional(readOnly = true)
     public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, DomainCode domain, Difficulty difficulty,
                                                     String documentSlug, Boolean code, Long id, Pageable pageable) {
+        return getDrafts(status, domain, difficulty, documentSlug, code, id, null, pageable);
+    }
+
+    /**
+     * @param q 제목·지문 검색어. 비면 거르지 않는다
+     *          오래된 순은 여기서 정한다. 먼저 들어온 것부터 처리하는 화면이라 요청이 바꾸지 못하게 한다
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<LlmDraftResponse> getDrafts(DraftStatus status, DomainCode domain, Difficulty difficulty,
+                                                    String documentSlug, Boolean code, Long id, String q,
+                                                    Pageable pageable) {
         DraftStatus target = status != null ? status : DraftStatus.PENDING;
+        Pageable oldestFirst = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                Sort.by("createdAt", "id"));
         return PageResponse.from(draftRepository
-                .findForReview(target, domain, difficulty, Texts.trimToNull(documentSlug), code, id, pageable)
+                .findForReview(List.of(target), domain, difficulty, Texts.trimToNull(documentSlug), code, id,
+                        SearchKeyword.likePattern(q), oldestFirst)
                 .map(this::toResponse));
     }
 

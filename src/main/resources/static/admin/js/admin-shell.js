@@ -155,8 +155,7 @@ function wireThemeButton() {
 /* ── 통합 검색 ──
  * 숫자는 번호로(문제와 초안은 번호 체계가 따로라 둘 다 나올 수 있다), 글자는 문제·초안의 제목과 지문,
  * 사용자 아이디·닉네임으로 찾는다. 치는 동안 결과가 뜨고 ↑↓·Enter로 고른다. 문서는 넣지 않았다.
- * 300ms를 쉬고 부른다. 한 글자마다 부르면 요청 한도(분당 60회)에 금방 닿는다. */
-const SEARCH_DELAY_MS = 300;
+ * 쉬는 시간(SEARCH_DELAY_MS)은 목록 화면의 검색 칸과 같은 값이다(admin-common.js). */
 const DRAFT_STATUS_LABEL = { PENDING: "검수 대기", APPROVED: "승인됨", REJECTED: "거절됨" };
 
 function wireJump() {
@@ -237,34 +236,35 @@ function wireJump() {
   document.addEventListener("click", e => { if (!form.contains(e.target)) close(); });
 }
 
+/**
+ * 결과 상자. 종류마다 [이름, 결과, 한 줄로 바꾸기, 모두 보기 주소]다.
+ * 모두 보기는 결과가 상자에 다 안 들어갔을 때만 단다. 그 목록 화면이 같은 검색어로 같은 결과를 낸다.
+ * 초안은 모두 보기가 없다. 검수함은 상태를 하나씩 보는데 띠는 검수 대기·거절됨을 함께 찾는다.
+ */
 function renderResults(q, r) {
-  // 문제가 먼저다. 승인된 초안은 같은 제목의 문제가 따로 있어, 초안이 앞서면 옛 사본으로 가게 된다
-  const groups = [];
-  if (r.problems.length) {
-    groups.push(["문제", r.problems.map(p => [`/admin/problems.html?edit=${p.id}`, `#${p.id}`, p.title, ""])]);
-  }
-  if (r.drafts.length) {
-    groups.push(["문제 초안", r.drafts.map(d => {
-      const tab = d.code ? "code" : "concept";
-      return [`/admin/llm.html?draft=${d.id}&kind=${tab}&status=${d.status}`,
-        `#${d.id}`, d.title, `${d.code ? "코드 · " : ""}${DRAFT_STATUS_LABEL[d.status] || d.status}`];
-    })]);
-  }
-  if (r.users.length) {
-    groups.push(["사용자", r.users.map(u => [`/admin/user.html?id=${u.id}`, u.username, u.nickname, ""])]);
-  }
-  if (!groups.length) return `<p class="bar-jump-empty">"${escapeHtml(q)}"에 맞는 것이 없습니다.</p>`;
-  return groups.map(([name, rows]) => `
+  const enc = encodeURIComponent(q);
+  // 문제가 먼저다. 사람들이 가장 자주 찾는 것이고, 고칠 곳도 초안이 아니라 문제다
+  const kinds = [
+    ["문제", r.problems, p => [`/admin/problems.html?edit=${p.id}`, `#${p.id}`, p.title, ""],
+      `/admin/problems.html?q=${enc}`],
+    ["문제 초안", r.drafts, d => [`/admin/llm.html?draft=${d.id}&kind=${d.code ? "code" : "concept"}&status=${d.status}`,
+      `#${d.id}`, d.title, `${d.code ? "코드 · " : ""}${DRAFT_STATUS_LABEL[d.status] || d.status}`], null],
+    ["문서", r.documents, d => [`/admin/documents.html?edit=${d.id}`, `#${d.id}`, d.title, d.hidden ? "내림" : ""],
+      `/admin/documents.html?q=${enc}`],
+    ["사용자", r.users, u => [`/admin/user.html?id=${u.id}`, u.username, u.nickname, ""],
+      `/admin/users.html?q=${enc}`],
+  ].filter(([, section]) => section.items.length);
+  if (!kinds.length) return `<p class="bar-jump-empty">"${escapeHtml(q)}"에 맞는 것이 없습니다.</p>`;
+  return kinds.map(([name, section, toRow, moreHref]) => `
     <div class="bar-jump-group">${name}</div>
-    ${rows.map(([href, key, text, tag]) => `
+    ${section.items.map(toRow).map(([href, key, text, tag]) => `
       <a href="${href}" role="option">
         <span class="k">${escapeHtml(key)}</span>
         <span class="t">${escapeHtml(text || "(제목 없음)")}</span>
         ${tag ? `<span class="tag">${escapeHtml(tag)}</span>` : ""}
       </a>`).join("")}
-    ${name === "문제" && r.problemTotal > 0 ? `
-      <a class="more" href="/admin/problems.html?q=${encodeURIComponent(q)}" role="option">
-        문제 목록에서 모두 보기 (${r.problemTotal}건) →</a>` : ""}`).join("");
+    ${moreHref && section.total > section.items.length ? `
+      <a class="more" href="${moreHref}" role="option">${name} 목록에서 모두 보기 (${section.total}건) →</a>` : ""}`).join("");
 }
 
 /**
