@@ -1331,6 +1331,9 @@ input.invalid:focus { outline-color: var(--wrong); }
 
 /* 선 그림 아이콘(shell.js icon). 글자 크기를 따라가고 글줄 가운데에 앉는다. 자리마다 크기를 정하는 곳은 따로 있다. */
 .i { width: 1.1em; height: 1.1em; flex: none; vertical-align: -.18em; }
+/* 관리 콘솔 기둥의 메뉴 그림(admin-shell.js). 넓은 기둥이든 좁은 화면의 가로 줄이든 같은 크기다 */
+.shell-link .ic { display: inline-flex; }
+.shell-link .ic .i { width: 18px; height: 18px; }
 
 .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: end; }
 .filters .field { margin: 0; flex: 1; min-width: 130px; }

@@ -36,38 +36,38 @@ const ADMIN_MENUS = [
   { group: "할 일", items: [
     // 제보가 검수 옆인 것은 하는 일이 같아서다 — 둘 다 <읽고 판정하는> 화면이고,
     // 다른 것은 판정 대상이 출제 전이냐 후냐뿐이다. 검수함이 비면 제보함을 보는 흐름.
-    { key: "llm",       label: "검수",        href: "/admin/llm.html",       icon: "📋" },
-    { key: "reports",   label: "오류 제보",   href: "/admin/reports.html",   icon: "🚩" },
+    { key: "llm",       label: "검수",        href: "/admin/llm.html",       icon: "clipboard" },
+    { key: "reports",   label: "오류 제보",   href: "/admin/reports.html",   icon: "flag" },
     // 제보 옆인 이유: 둘 다 학습자가 올린 것을 읽고 판정하는 화면이다. 대상이 문제냐 토론방의 글·댓글이냐만 다르다.
-    { key: "comments",  label: "게시글 신고", href: "/admin/comments.html",  icon: "💬" },
+    { key: "comments",  label: "게시글 신고", href: "/admin/comments.html",  icon: "message" },
   ]},
   { group: "콘텐츠", items: [
-    { key: "problems",  label: "문제",      href: "/admin/problems.html",  icon: "🗂️" },
-    { key: "documents", label: "문서",      href: "/admin/documents.html", icon: "📚" },
+    { key: "problems",  label: "문제",      href: "/admin/problems.html",  icon: "list" },
+    { key: "documents", label: "문서",      href: "/admin/documents.html", icon: "book" },
   ]},
   // 이 묶음의 화면은 전부 Claude를 부른다(주제 대기열은 배치가 부를 것을 정한다).
   { group: "AI 생성", items: [
-    { key: "generate",  label: "직접 생성",   href: "/admin/generate.html",  icon: "✨" },
-    { key: "topics",    label: "주제 대기열", href: "/admin/topics.html",    icon: "🧭" },
-    { key: "backfill",  label: "일괄 보정",   href: "/admin/backfill.html",  icon: "🩹" },
+    { key: "generate",  label: "직접 생성",   href: "/admin/generate.html",  icon: "sparkles" },
+    { key: "topics",    label: "주제 대기열", href: "/admin/topics.html",    icon: "queue" },
+    { key: "backfill",  label: "일괄 보정",   href: "/admin/backfill.html",  icon: "wand" },
   ]},
   // 배치는 일의 단계가 아니라 <기계>다. 상태(현황)와 설정(분야)은 한 기계의 두 면이라 나란히 둔다.
   { group: "배치", items: [
-    { key: "batch",     label: "배치 현황", href: "/admin/batch.html",     icon: "📅" },
-    { key: "settings",  label: "분야 설정", href: "/admin/settings.html",  icon: "⚙️" },
+    { key: "batch",     label: "배치 현황", href: "/admin/batch.html",     icon: "calendar" },
+    { key: "settings",  label: "분야 설정", href: "/admin/settings.html",  icon: "sliders" },
   ]},
   // 읽기만 하는 화면들. 매일 볼 것은 아니고 무엇을 고칠지 정할 때 본다.
   { group: "통계", items: [
-    { key: "stats",        label: "학습 현황", href: "/admin/index.html",        icon: "📈" },
-    { key: "distribution", label: "출제 분포", href: "/admin/distribution.html", icon: "🧮" },
-    { key: "quality",      label: "AI 품질",   href: "/admin/quality.html",      icon: "🎯" },
+    { key: "stats",        label: "학습 현황", href: "/admin/index.html",        icon: "chart" },
+    { key: "distribution", label: "출제 분포", href: "/admin/distribution.html", icon: "pie" },
+    { key: "quality",      label: "AI 품질",   href: "/admin/quality.html",      icon: "target" },
   ]},
   // 따로 묶은 이유: 위 셋은 문제와 문서를 다루고 여기는 사람을 다룬다. 매일 보는 화면도 아니다 —
   // 대개 토론 신고의 "글쓴이 정지"로 넘어온다.
   { group: "운영", items: [
-    { key: "users",     label: "사용자",    href: "/admin/users.html",     icon: "👤" },
+    { key: "users",     label: "사용자",    href: "/admin/users.html",     icon: "user" },
     // 관리자가 한 쓰기 요청의 기록. 사람을 다루는 일의 뒤를 확인하러 오는 자리라 사용자 아래에 둔다.
-    { key: "audit",     label: "처리 기록", href: "/admin/audit.html",     icon: "🧾" },
+    { key: "audit",     label: "처리 기록", href: "/admin/audit.html",     icon: "fileText" },
   ]},
 ];
 
@@ -125,7 +125,7 @@ function renderAdminShell(active = "") {
         ${g.items.map(m => `
           <a class="shell-link${m.key === active ? " active" : ""}" href="${m.href}"
              ${m.key === active ? 'aria-current="page"' : ""}>
-            <span class="ic" aria-hidden="true">${m.icon}</span>
+            <span class="ic">${icon(m.icon)}</span>
             <span>${escapeHtml(m.label)}</span>
             <span id="badge-${m.key}" class="badge gray" hidden></span>
           </a>`).join("")}`).join("")}
