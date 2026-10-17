@@ -19,7 +19,10 @@ try {
 <body>
 <div id="shell"></div>
 
-<main class="container">
+<main class="container my-layout">
+  <!-- "나" 구역 사이드바 — 내 기록·풀이 이력·북마크·알림·계정·설정을 오간다(shell.js renderMySide) -->
+  <nav class="my-side" id="mySide" aria-label="내 메뉴"></nav>
+  <div class="my-body">
   <h1>내 기록</h1>
   <!-- "2026년 7월 12일에 시작 · 57일째" 같은 줄을 두려다 뺐다.
        가입일을 주는 API가 없고, 없는 값을 만들어 채우면 화면이 거짓말을 한다.
@@ -51,21 +54,9 @@ try {
     </div>
     <a class="btn btn-outline" href="/wrong-answers.html">열기</a>
   </div>
-  <div class="setting-row">
-    <div>
-      <b>북마크</b>
-      <div class="meta">다시 보려고 담아 둔 문제와 문서</div>
-    </div>
-    <a class="btn btn-outline" href="/bookmarks.html">열기</a>
-  </div>
-  <div class="setting-row">
-    <div>
-      <b>풀이 이력</b>
-      <div class="meta">맞힌 것까지 포함해 내가 낸 답을 최근 순으로</div>
-    </div>
-    <a class="btn btn-outline" href="/history.html">열기</a>
-  </div>
+  <!-- 북마크·풀이 이력의 "열기"는 뺐다. 왼쪽 "나" 사이드바가 같은 길을 낸다. 오답노트는 복습 구역이라 남긴다 -->
 
+  </div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -106,6 +97,7 @@ if (!isLoggedIn()) {
   location.replace("/login.html");
 } else {
   renderShell({ active: "me", title: "내 기록" });
+  renderMySide("me");
   loadMe();
 
   document.getElementById("sortSeg").addEventListener("click", e => {

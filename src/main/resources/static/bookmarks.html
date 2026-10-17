@@ -16,7 +16,10 @@ try {
 <body>
 <div id="shell"></div>
 
-<main class="container">
+<main class="container my-layout">
+  <!-- "나" 구역 사이드바 — 내 기록·풀이 이력·북마크·알림·계정·설정을 오간다(shell.js renderMySide) -->
+  <nav class="my-side" id="mySide" aria-label="내 메뉴"></nav>
+  <div class="my-body">
   <h1>북마크</h1>
   <p class="meta">다시 보려고 담아 둔 문제와 문서입니다. 최근에 담은 것이 위에 옵니다.</p>
 
@@ -39,6 +42,7 @@ try {
   <div id="message"></div>
   <div id="list"></div>
   <div class="pager" id="pager" hidden></div>
+  </div>
 </main>
 
 <script src="/js/api.js"></script>
@@ -46,6 +50,7 @@ try {
 <script src="/js/bookmark.js"></script>
 <script>
 renderShell({ active: "me", title: "북마크" });
+renderMySide("bookmarks");
 
 if (!isLoggedIn()) {
   document.getElementById("message").innerHTML =

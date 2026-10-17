@@ -16,7 +16,10 @@ try {
 <body>
 <div id="shell"></div>
 
-<main class="container">
+<main class="container my-layout">
+  <!-- "나" 구역 사이드바 — 내 기록·풀이 이력·북마크·알림·계정·설정을 오간다(shell.js renderMySide) -->
+  <nav class="my-side" id="mySide" aria-label="내 메뉴"></nav>
+  <div class="my-body">
   <h1>풀이 이력</h1>
   <!-- 오답노트와 다른 점을 첫 줄에 말한다. 둘 다 "지난 풀이"라 이름만으로는 안 갈린다. -->
   <p class="meta">맞힌 것까지 포함해 내가 낸 답을 최근 순으로 보여 줍니다.
@@ -42,12 +45,14 @@ try {
   <div id="message"></div>
   <div id="list"></div>
   <div class="pager" id="pager" hidden></div>
+  </div>
 </main>
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script>
 renderShell({ active: "me", title: "풀이 이력" });
+renderMySide("history");
 
 if (!isLoggedIn()) {
   document.getElementById("message").innerHTML =

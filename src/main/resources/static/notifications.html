@@ -16,7 +16,10 @@ try {
 <body>
 <div id="shell"></div>
 
-<main class="container">
+<main class="container my-layout">
+  <!-- "나" 구역 사이드바 — 내 기록·풀이 이력·북마크·알림·계정·설정을 오간다(shell.js renderMySide) -->
+  <nav class="my-side" id="mySide" aria-label="내 메뉴"></nav>
+  <div class="my-body">
   <h1>알림</h1>
   <p class="meta">내 글에 댓글이 달리거나, 보낸 문제 오류 제보가 판정되면 여기에 쌓입니다.</p>
 
@@ -27,12 +30,14 @@ try {
   <div id="message"></div>
   <div id="list"></div>
   <div class="pager" id="pager" hidden></div>
+  </div>
 </main>
 
 <script src="/js/api.js"></script>
 <script src="/js/shell.js"></script>
 <script>
 renderShell({ title: "알림" });
+renderMySide("notifications");
 
 const ICONS = { POST_COMMENT: "💬", COMMENT_REPLY: "↩️", REPORT_ACCEPTED: "✅", REPORT_DISMISSED: "📝" };
 

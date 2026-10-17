@@ -707,6 +707,30 @@ body {
   .shell-top .shell-title { display: none; }
 }
 
+/* ── "나" 구역 사이드바(shell.js renderMySide) ──
+   넓으면 왼쪽 기둥(관리 콘솔 기둥과 같은 생김새: 묶음 이름이 항목보다 크다), 좁으면 가로로 밀어 보는 한 줄 */
+.container.my-layout { max-width: 980px; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 32px; align-items: start; }
+.my-body { min-width: 0; max-width: 680px; }
+.my-side { position: sticky; top: calc(var(--shell-top-h) + 20px); display: flex; flex-direction: column; gap: 2px; }
+.my-side .my-group { font-size: var(--fs-3); font-weight: 800; color: var(--text); padding: 14px 8px 4px; }
+.my-side .my-group:first-child { padding-top: 0; }
+.my-side .my-link {
+  display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 8px;
+  border-radius: var(--radius); color: var(--text-2); text-decoration: none; font-size: var(--fs-2);
+}
+.my-side .my-link:hover { background: var(--fill); }
+.my-side .my-link.active { background: var(--primary-soft); color: var(--primary-dark); font-weight: 700; }
+@media (max-width: 767px) {
+  .container.my-layout { grid-template-columns: 1fr; gap: 12px; }
+  .my-side {
+    position: static; flex-direction: row; overflow-x: auto; gap: 4px;
+    margin: 0 -16px; padding: 0 16px 6px; scrollbar-width: thin;
+  }
+  .my-side .my-group { display: none; }
+  .my-side .my-link { flex: none; white-space: nowrap; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; }
+  .my-side .my-link.active { border-color: var(--primary-soft); }
+}
+
 /* ── 푸터 (shell.js footerHtml) ──
  * 본문 칸이 1fr이라 내용이 짧아도 푸터는 화면 맨 아래(폰에서는 탭바 바로 위)에 붙는다.
  * 조용하게 둔다 — 화면의 끝을 알리는 자리이지 읽으라고 있는 자리가 아니다. */

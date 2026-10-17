@@ -19,12 +19,18 @@ try {
 <body>
 <div id="shell"></div>
 
-<main class="container narrow" style="max-width:560px">
+<main class="container my-layout">
+  <!-- "나" 구역 사이드바 — 내 기록·풀이 이력·북마크·알림·계정·설정을 오간다(shell.js renderMySide) -->
+  <nav class="my-side" id="mySide" aria-label="내 메뉴"></nav>
+  <div class="my-body">
   <h1>마이페이지</h1>
   <p class="meta">이 계정에 대한 것만 모여 있습니다.</p>
-  <!-- 글쓰기 정지 안내. 토론방에 가서 글을 쓰려다 알게 하지 않고, 계정 화면에서 먼저 보인다. -->
+  <!-- 글쓰기 정지 안내. 토론방에 가서 글을 쓰려다 알게 하지 않고, 계정 화면에서 먼저 보인다.
+       어느 칸을 열어도 보이게 칸 밖에 둔다. -->
   <div id="suspensionNotice" role="status"></div>
 
+  <!-- 칸 넷 — 사이드바의 프로필·비밀번호·복구 코드·회원 탈퇴. 한 번에 하나만 보인다(#주소) -->
+  <section data-panel="profile">
   <div class="section-label"><span>계정</span></div>
   <div class="setting-row" style="border-top:0">
     <div id="accountLine"></div>
@@ -53,7 +59,9 @@ try {
       <button type="submit" id="nickSubmit">닉네임 저장</button>
     </form>
   </div>
+  </section>
 
+  <section data-panel="password" hidden>
   <div class="setting-row stacked" id="pwPanel">
     <b class="setting-head">비밀번호 변경</b>
     <div id="pwMessage" role="alert" aria-live="assertive"></div>
@@ -83,7 +91,9 @@ try {
     </form>
 
   </div>
+  </section>
 
+  <section data-panel="recovery" hidden>
   <!-- 복구 코드(V32). 비밀번호를 잊으면 이 코드로만 다시 정할 수 있다. -->
   <div class="setting-row stacked" id="recoveryPanel">
     <b class="setting-head">복구 코드</b>
@@ -100,7 +110,9 @@ try {
     </form>
     <div class="recovery-code" id="recoveryCode" hidden></div>
   </div>
+  </section>
 
+  <section data-panel="leave" hidden>
   <div class="section-label"><span>위험한 일</span></div>
   <div class="setting-row stacked" style="border-top:0" id="byePanel">
     <b class="setting-head">회원 탈퇴</b>
@@ -118,6 +130,8 @@ try {
            둘째 누름이 진짜다 — confirm 창을 띄우는 것보다 되돌리기 쉽다. -->
       <button type="submit" class="danger" id="byeSubmit">탈퇴하기</button>
     </form>
+  </div>
+  </section>
   </div>
 </main>
 
@@ -142,8 +156,18 @@ try {
  * 오는 길은 <상단 바의 아이콘>이다 — 한때 내 기록 화면 안에 입구를 뒀는데, 메뉴에 이미
  * 있는 화면을 본문에서 또 가리키는 모양이라 걷어냈다. 길은 셸이 낸다.
  *
- * [항목을 접지 않는다]
- * 마크업 쪽 주석 참고. 이 화면에 있는 것은 계정 셋뿐이라 접을 이유가 없다. */
+ * [칸을 하나씩 연다 — 2026-10-17]
+ * 예전에는 네 가지를 한 줄로 펼쳐 두었다. "나" 구역 사이드바(shell.js renderMySide)가 생기며
+ * 네 가지를 사이드바 항목으로 갈랐다. 닉네임을 바꾸러 온 사람 눈앞에 탈퇴 폼이 함께 서 있지 않다.
+ * 주소의 #profile·#password·#recovery·#leave가 칸을 정한다 — 새로고침해도 같은 칸이 열린다. */
+const PANELS = ["profile", "password", "recovery", "leave"];
+
+/** #주소에 맞는 칸 하나만 보이고, 사이드바 표시도 옮긴다. 모르는 주소면 프로필을 연다. */
+function showPanel() {
+  const key = PANELS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "profile";
+  document.querySelectorAll("[data-panel]").forEach(s => { s.hidden = s.dataset.panel !== key; });
+  renderMySide(key);
+}
 if (!isLoggedIn()) {
   // 남의 계정을 다룰 화면이 아니다. 비로그인으로 오면 로그인부터.
   // href가 아니라 replace다. 이 화면이 방문 기록에 남으면 로그인 화면에서 뒤로 가기를
@@ -151,6 +175,8 @@ if (!isLoggedIn()) {
   location.replace("/login.html");
 } else {
   renderShell({ active: "mypage", title: "마이페이지" });
+  showPanel();
+  window.addEventListener("hashchange", showPanel);
 
   document.getElementById("accountLine").innerHTML =
     `<b>${escapeHtml(localStorage.getItem(USERNAME_KEY) || "")}</b>

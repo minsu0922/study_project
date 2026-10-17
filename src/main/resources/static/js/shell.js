@@ -297,6 +297,56 @@ function renderShell({ active = "", title = "" } = {}) {
  * 헤더의 학습 메뉴 한 줄. 아이콘 없이 글자만 둔다 — 가로 한 줄에서는 그림이 글자 사이를
  * 벌려 놓기만 한다. 그림은 폰 탭바에서 쓴다(글자가 10px이라 그림이 표적 노릇을 한다).
  */
+/**
+ * "나" 구역의 사이드바 — 내 기록·풀이 이력·북마크·알림·계정·설정을 한곳에서 오간다(2026-10-17).
+ *
+ * <p>예전에는 이 화면들이 서로 이어지지 않았다. 마이페이지는 계정 일 넷을 한 줄로 쌓아 두었고,
+ * 풀이 이력·북마크는 내 기록 화면 맨 아래 "열기" 단추로만 갔다. 관리 콘솔의 기둥처럼 묶어서
+ * 어느 화면에서든 옆 화면으로 바로 간다. 계정 일 넷은 마이페이지 안에서 #주소로 하나씩 연다.
+ *
+ * <p>위 헤더 메뉴(MENUS)와 따로 둔다. 헤더는 앱 전체의 길이고, 이것은 "나" 구역 안의 길이다.
+ * 오답노트는 넣지 않았다. 복습 구역(복습 일정과 한 쌍)에 속한다.
+ */
+const MY_MENUS = [
+  { group: "학습", items: [
+    { key: "me",            label: "내 기록",   href: "/me.html",            icon: "📊" },
+    { key: "history",       label: "풀이 이력", href: "/history.html",       icon: "🕘" },
+    { key: "bookmarks",     label: "북마크",    href: "/bookmarks.html",     icon: "⭐" },
+  ] },
+  { group: "활동", items: [
+    { key: "notifications", label: "알림",      href: "/notifications.html", icon: "🔔" },
+  ] },
+  { group: "계정", items: [
+    { key: "profile",       label: "프로필",    href: "/mypage.html#profile",  icon: "🙋" },
+    { key: "password",      label: "비밀번호",  href: "/mypage.html#password", icon: "🔑" },
+    { key: "recovery",      label: "복구 코드", href: "/mypage.html#recovery", icon: "🧾" },
+    { key: "leave",         label: "회원 탈퇴", href: "/mypage.html#leave",    icon: "🚪" },
+  ] },
+  { group: "설정", items: [
+    { key: "settings",      label: "화면 설정", href: "/settings.html",      icon: "⚙️" },
+  ] },
+];
+
+/**
+ * "나" 사이드바를 #mySide에 그린다. 넓은 화면에서는 왼쪽 기둥, 좁으면 가로로 밀어 보는 한 줄이다.
+ * 같은 화면 안에서 고르는 것(마이페이지의 #주소)도 있어, 고른 뒤 다시 부르면 표시만 옮긴다.
+ *
+ * @param active MY_MENUS의 key
+ */
+function renderMySide(active) {
+  const el = document.getElementById("mySide");
+  if (!el) return;
+  el.innerHTML = MY_MENUS.map(g => `
+    <div class="my-group">${escapeHtml(g.group)}</div>
+    ${g.items.map(m => `
+      <a class="my-link${m.key === active ? " active" : ""}" href="${m.href}" data-key="${m.key}"
+         ${m.key === active ? 'aria-current="page"' : ""}>
+        <span aria-hidden="true">${m.icon}</span><span>${escapeHtml(m.label)}</span>
+      </a>`).join("")}`).join("");
+  // 좁은 화면의 가로 줄에서는 고른 항목이 화면 밖에 있을 수 있다. 보이는 자리로 당겨 둔다
+  el.querySelector(".my-link.active")?.scrollIntoView({ block: "nearest", inline: "center" });
+}
+
 function headLinks(items, active) {
   return items.map(m =>
     `<a class="shell-nav-link${m.key === active ? " active" : ""}" href="${m.href}"
