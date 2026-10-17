@@ -52,15 +52,15 @@ try {
 
     <div class="landing-points">
       <div class="card">
-        <div class="ic" aria-hidden="true">📅</div><b>매일 10문제</b>
+        <div class="ic" data-icon="calendar"></div><b>매일 10문제</b>
         <p class="meta">아침마다 새로 준비됩니다. 10분이면 끝나요.</p>
       </div>
       <div class="card">
-        <div class="ic" aria-hidden="true">🔁</div><b>잊을 때쯤 다시</b>
+        <div class="ic" data-icon="repeat"></div><b>잊을 때쯤 다시</b>
         <p class="meta">틀린 문제는 하루·사흘·일주일 뒤에 다시 나옵니다.</p>
       </div>
       <div class="card">
-        <div class="ic" aria-hidden="true">📚</div><b>개념도 같이</b>
+        <div class="ic" data-icon="book"></div><b>개념도 같이</b>
         <p class="meta">틀린 자리에서 바로 읽을 개념 문서가 붙어 있어요.</p>
       </div>
     </div>
@@ -141,6 +141,11 @@ try {
 // 폰 상단 바의 화면 이름도 로그인 여부로 갈린다 — 기둥 메뉴가 "소개"로 뜨는데
 // 상단 바만 "오늘"이면 같은 화면을 두 이름으로 부르게 된다(shell.js ANON_LABELS).
 renderShell({ active: "today", title: isLoggedIn() ? "오늘" : "소개" });
+
+/* 새 소식 칸의 줄 수. 왼쪽 칸(히어로·통계·진도)과 높이가 맞도록 잡았다 — 늘리면 오른쪽만 길게 처진다.
+   아래 loadRecentDocs가 선언 전에 읽으면 오류라(let·const) 부르는 곳보다 위에 둔다. */
+const HOME_POSTS = 3;
+const HOME_DOC_TOPICS = 3;
 
 if (!isLoggedIn()) {
   document.getElementById("intro").hidden = false;
@@ -487,7 +492,7 @@ function todayLabel() {
 }
 
 /**
- * 최근 개념 문서 세 편.
+ * 최근 개념 문서 세 주제(HOME_DOC_TOPICS) — 입문편·심화편은 한 줄로 묶는다.
  *
  * <p>이 앱에서 가만히 둬도 늘어나는 것은 문서뿐이라(4일에 한 편, 배치가 만든다) 첫 화면에
  * "새 소식" 자리가 하나 필요하다. 그게 없으면 매일 같은 화면이 뜬다.
@@ -497,7 +502,7 @@ function todayLabel() {
  * 날짜만 적는다 — 나중에 문서를 손보면 어긋날 표기라 문구로 약속하지 않는다.
  */
 /**
- * 커뮤니티 새 글 다섯 줄 — 모든 토론방의 최근 글(GET /api/quiz/posts).
+ * 커뮤니티 새 글 세 줄(HOME_POSTS) — 모든 토론방의 최근 글(GET /api/quiz/posts).
  *
  * <p>글이 하나도 없으면 자리를 비운다. "아직 글이 없습니다"를 첫 화면에 걸어 두면 빈 가게처럼
  * 보인다 — 쓸 곳은 문제를 푼 뒤의 토론방 링크가 알려 준다.
@@ -505,7 +510,7 @@ function todayLabel() {
 async function loadRecentPosts() {
   let posts;
   try {
-    posts = (await api("/api/quiz/posts")).posts.slice(0, 5);
+    posts = (await api("/api/quiz/posts")).posts.slice(0, HOME_POSTS);
   } catch (e) {
     return;   // 부가 정보 — 실패하면 자리를 비운다
   }
@@ -516,7 +521,7 @@ async function loadRecentPosts() {
       <span class="list-row-title">${postCategoryChip(p.category, p.categoryLabel)}${escapeHtml(p.title)}</span>
       <span class="meta home-post-meta">
         <span class="where">${escapeHtml(p.problemTitle)} · ${escapeHtml(p.nickname || "탈퇴한 사용자")}</span>${
-        p.commentCount ? `<span class="count">💬 ${p.commentCount}</span>` : ""}
+        p.commentCount ? `<span class="count">${icon("message")} ${p.commentCount}</span>` : ""}
       </span>
     </a>`).join("");
   document.getElementById("postLabel").hidden = false;
@@ -525,25 +530,44 @@ async function loadRecentPosts() {
 async function loadRecentDocs() {
   let docs;
   try {
-    docs = (await api("/api/documents?size=3")).content;   // 기본 정렬이 createdAt 내림차순
+    // 주제 셋을 채우려면 편 둘씩 묶일 것을 감안해 넉넉히 받는다. 기본 정렬이 createdAt 내림차순
+    docs = (await api(`/api/documents?size=${HOME_DOC_TOPICS * 2}`)).content;
   } catch (e) {
     return;   // 부가 정보 — 실패하면 자리를 비운다
   }
   if (!docs || docs.length === 0) return;
 
+  // 한 주제 = 한 줄. 한 주제는 입문편·심화편 두 편으로 만들어지고 제목이 <글자까지 같다>.
+  // 편마다 한 줄씩 그리면 세 줄 중 두 줄이 같은 제목이라 새 소식이 사실상 둘이었다.
+  // 개념 문서 목록(documents.html)과 같은 규칙으로 slug 꼬리로 묶는다.
+  const topics = [];
+  const byTopic = new Map();
+  for (const d of docs) {
+    const key = d.slug.endsWith(ADVANCED_SLUG_SUFFIX) ? d.slug.slice(0, -ADVANCED_SLUG_SUFFIX.length) : d.slug;
+    let t = byTopic.get(key);
+    if (!t) { t = []; byTopic.set(key, t); topics.push(t); }
+    t.push(d);
+  }
+
   const today = new Date().toISOString().substring(0, 10);
-  document.getElementById("docList").innerHTML = docs.map(d => {
-    const day = (d.updatedAt || "").substring(0, 10);
-    // 편(입문/심화)을 함께 찍는다 — 2026-09-08. 한 주제는 두 편으로 만들어지고 제목이
-    // <글자까지 같다>. 편을 안 그리면 이 세 줄짜리 새 소식 자리에 같은 제목이 연달아
-    // 두 번 뜬다(실제로 그렇게 나왔다). 그러면 새 소식이 셋이 아니라 둘이고, 읽는 사람은
-    // 목록이 고장 났다고 본다. 서버는 <짝이 실제로 있을 때만> edition을 채우므로
-    // 짝이 없는 문서에는 아무것도 안 붙는다(DocumentListItem).
-    return `<a class="list-row" href="/document.html?slug=${encodeURIComponent(d.slug)}">
-      <span class="list-row-title">${escapeHtml(d.title)}${d.edition ? " " + editionBadge(d.edition) : ""}</span>
-      <span class="meta"><span class="list-row-domain">${escapeHtml(d.domainLabel)}</span>${
-        day === today ? `<span class="list-row-fresh">오늘</span>` : escapeHtml(shortDay(day))}</span>
-    </a>`;
+  const href = slug => `/document.html?slug=${encodeURIComponent(slug)}`;
+  document.getElementById("docList").innerHTML = topics.slice(0, HOME_DOC_TOPICS).map(t => {
+    const 입문 = t.find(d => !d.slug.endsWith(ADVANCED_SLUG_SUFFIX)) ?? t[0];
+    const 심화 = t.find(d => d.slug.endsWith(ADVANCED_SLUG_SUFFIX));
+    const day = t.map(d => (d.updatedAt || "").substring(0, 10)).sort().at(-1);
+    const meta = `<span class="meta"><span class="list-row-domain">${escapeHtml(입문.domainLabel)}</span>${
+      day === today ? `<span class="list-row-fresh">오늘</span>` : escapeHtml(shortDay(day))}</span>`;
+    // 짝이 없으면 줄 전체가 링크, 있으면 제목이 입문편 링크이고 편 칩이 각각 링크다(링크 안에 링크를 못 넣는다)
+    if (!심화) {
+      return `<a class="list-row" href="${href(입문.slug)}">
+        <span class="list-row-title">${escapeHtml(입문.title)}</span>${meta}</a>`;
+    }
+    // 편 칩은 둘째 줄(분야·날짜 옆)에 둔다. 340px 칸에서 제목 뒤에 붙이면 칩만 한 줄을 더 먹는다
+    return `<div class="list-row doc-group">
+      <a class="list-row-title" href="${href(입문.slug)}">${escapeHtml(입문.title)}</a>
+      <span class="meta"><span class="list-row-domain">${escapeHtml(입문.domainLabel)}</span><a class="edition" href="${
+        href(입문.slug)}">입문편</a><a class="edition advanced" href="${href(심화.slug)}">심화편</a> ${
+        day === today ? `<span class="list-row-fresh">오늘</span>` : escapeHtml(shortDay(day))}</span></div>`;
   }).join("");
   document.getElementById("docLabel").hidden = false;
 }
