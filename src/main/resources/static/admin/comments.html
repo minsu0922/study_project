@@ -79,7 +79,7 @@ async function load() {
 
 function render(data) {
   document.getElementById("cList").innerHTML = data.content.length === 0
-    ? `<div class="card">${status === "PENDING" ? "대기 중인 신고가 없습니다. 👍" : "해당하는 신고가 없습니다."}</div>`
+    ? `<div class="card">${status === "PENDING" ? "대기 중인 신고가 없습니다." : "해당하는 신고가 없습니다."}</div>`
     : data.content.map(card).join("");
 
   cPager.update(data);

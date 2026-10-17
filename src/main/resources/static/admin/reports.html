@@ -170,9 +170,9 @@ const rPager = mountPager(document.getElementById("rPager"), p => { page = p; lo
 
 function emptyText() {
   if (source === "errata") {
-    return unanswered === "true" ? "답을 기다리는 오류 지적 글이 없습니다. 👍" : "오류 지적 글이 없습니다.";
+    return unanswered === "true" ? "답을 기다리는 오류 지적 글이 없습니다." : "오류 지적 글이 없습니다.";
   }
-  return status === "PENDING" ? "대기 중인 제보가 없습니다. 👍" : "해당하는 제보가 없습니다.";
+  return status === "PENDING" ? "대기 중인 제보가 없습니다." : "해당하는 제보가 없습니다.";
 }
 
 /**

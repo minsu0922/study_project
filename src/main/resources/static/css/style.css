@@ -1985,6 +1985,8 @@ body.admin-shell {
   font-size: 17px; line-height: 1; cursor: pointer;
 }
 .admin-bar .bar-icon:hover { background: var(--bar-soft); }
+.admin-bar .bar-icon { display: inline-flex; align-items: center; justify-content: center; }
+.admin-bar .bar-icon .i { width: 18px; height: 18px; }
 
 /* 좁은 화면: 띠에 다 안 들어간다. 이동 상자와 아이디는 넓은 화면에서만, 칩은 앞부분만 */
 @media (max-width: 767px) {

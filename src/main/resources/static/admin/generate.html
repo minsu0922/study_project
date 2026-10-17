@@ -279,8 +279,8 @@ function updateEditionHint() {
     return;
   }
   hint.hidden = false;
-  hint.textContent = `⚠️ ${difficultyLabel(difficulty)}는 ${wanted}에서 뽑습니다.`
-    + ` 지금 고른 문서는 ${edition}이라 캘 절이 없을 수 있어요 — 같은 제목의 ${wanted}를 확인하세요.`;
+  hint.innerHTML = `${icon("alert")} ${escapeHtml(difficultyLabel(difficulty))}는 ${wanted}에서 뽑습니다.`
+    + ` 지금 고른 문서는 ${escapeHtml(edition)}이라 캘 절이 없을 수 있어요 — 같은 제목의 ${wanted}를 확인하세요.`;
 }
 
 /**

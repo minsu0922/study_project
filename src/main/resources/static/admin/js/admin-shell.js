@@ -138,13 +138,13 @@ function renderAdminShell(active = "") {
 
 /* ── 테마 전환 ── 자동 → 라이트 → 다크 → 자동. 값은 학습 화면 설정과 같은 칸에 저장한다 */
 const THEME_CYCLE = { auto: "light", light: "dark", dark: "auto" };
-const THEME_LABEL = { auto: ["◐", "테마: 기기 설정 따름"], light: ["☀", "테마: 라이트"], dark: ["☾", "테마: 다크"] };
+const THEME_LABEL = { auto: ["contrast", "테마: 기기 설정 따름"], light: ["sun", "테마: 라이트"], dark: ["moon", "테마: 다크"] };
 
 function wireThemeButton() {
   const btn = document.getElementById("barTheme");
   const paint = () => {
     const t = THEME_LABEL[getPref("csquiz_theme")] ? getPref("csquiz_theme") : "auto";
-    btn.textContent = THEME_LABEL[t][0];
+    btn.innerHTML = icon(THEME_LABEL[t][0]);
     // 누르면 무엇이 되는지까지 알려 준다. 지금 상태만 말하면 세 번 눌러 봐야 순서를 안다
     btn.title = `${THEME_LABEL[t][1]} (누르면 ${THEME_LABEL[THEME_CYCLE[t]][1].replace("테마: ", "")})`;
     btn.setAttribute("aria-label", btn.title);

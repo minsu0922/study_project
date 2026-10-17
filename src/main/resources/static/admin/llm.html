@@ -394,7 +394,7 @@ function warningBoxOf(d) {
   if (checks.length === 0) return "";
   return `
     <div class="alert" style="margin:10px 0">
-      ${checks.map(c => `⚠ ${escapeHtml(c.message)}`).join("<br>")}
+      ${checks.map(c => `${icon("alert")} ${escapeHtml(c.message)}`).join("<br>")}
     </div>`;
 }
 
@@ -613,7 +613,7 @@ function renderKindBalance(drafts, status) {
     const summary = Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(" · ");
     const situations = intermediate.filter(d => d.questionKind === "SITUATION").length;
     lines.push(situations > 2
-      ? { bad: true, html: `⚠ 검수 대기 중급 ${intermediate.length}건 중 <b>상황 적용형이 ${situations}건</b>입니다 (상한 2건).`
+      ? { bad: true, html: `${icon("alert")} 검수 대기 중급 ${intermediate.length}건 중 <b>상황 적용형이 ${situations}건</b>입니다 (상한 2건).`
           + ` 나머지는 비교·인과·판정·순서로 채우세요. 지금 형태 — ${escapeHtml(summary)}` }
       : { bad: false, html: `검수 대기 중급 ${intermediate.length}건의 형태 — ${escapeHtml(summary)}` });
   }
@@ -638,7 +638,7 @@ function renderKindBalance(drafts, status) {
       const n = tails.filter(t => t.endsWith(tail)).length;
       lines.push({
         bad: true,
-        html: `⚠ ${escapeHtml(difficultyLabel(level))} ${n}건이 사실상 같은 물음으로 끝납니다 —`
+        html: `${icon("alert")} ${escapeHtml(difficultyLabel(level))} ${n}건이 사실상 같은 물음으로 끝납니다 —`
           + ` "<b>${escapeHtml(tail)}</b>". 문형이 같으면 개념이 아니라 형식이 외워집니다.`,
       });
     });
@@ -1011,7 +1011,7 @@ async function approveDraft(btn, id) {
   btn.disabled = true;
   try {
     const problem = await api(`/api/admin/llm-problems/${id}/approve`, { method: "POST" });
-    markCardDone(btn, `✅ 승인됨 → 문제 #${problem.id}`);
+    markCardDone(btn, `${icon("checkCircle")} 승인됨 → 문제 #${problem.id}`);
     refreshAdminBadges();
   } catch (e) {
     btn.disabled = false;
@@ -1127,7 +1127,7 @@ async function loadDocDrafts() {
       </div>` : "";
     const warningBox = warnings.length ? `
       <div class="meta" style="margin:8px 0">
-        ${warnings.map(c => `⚠ ${escapeHtml(c.message)}`).join("<br>")}
+        ${warnings.map(c => `${icon("alert")} ${escapeHtml(c.message)}`).join("<br>")}
       </div>` : "";
 
     const actions = d.status === "PENDING" ? `
@@ -1226,7 +1226,7 @@ async function approveDocDraft(btn, id) {
     const doc = await api(`/api/admin/llm-documents/${id}/approve`, { method: "POST" });
     // 문서 카드는 본문 미리보기 때문에 화면을 거의 채운다 — 목록을 다시 그리면
     // 스크롤이 통째로 튄다. 문제 쪽과 같은 이유로 카드만 바꾼다.
-    markCardDone(btn, `✅ 승인됨 → <a href="/document.html?slug=${encodeURIComponent(doc.slug)}">문서 보기</a>`);
+    markCardDone(btn, `${icon("checkCircle")} 승인됨 → <a href="/document.html?slug=${encodeURIComponent(doc.slug)}">문서 보기</a>`);
     refreshAdminBadges();
   } catch (e) {
     btn.disabled = false;
