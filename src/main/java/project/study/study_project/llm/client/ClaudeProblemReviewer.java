@@ -43,69 +43,11 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
     static final int CONDITION_QUOTE_MIN = 8;
     static final double CUE_LENGTH_RATIO = 1.3;
 
-    static final String CHOICE_ONLY_PROMPT = """
-            너는 객관식 문제의 보기에 정답 단서가 새어 있는지 보는 검수자다.
-            질문은 일부러 가렸다. 보기 네 개만 보고, 글의 모양만으로 정답이 드러나는지 판단한다.
+    static final String CHOICE_ONLY_PROMPT = Prompts.load("problem-review/choice-only.txt");
 
-            [단서의 예]
-            - 한 보기만 유독 길거나 구체적이다.
-            - 한 보기만 조건이나 단서를 덧붙였다.
-            - 한 보기만 표현의 결이 다르다(나머지는 짧은 단정, 하나만 설명조 등).
-            - 네 보기의 공통 부분을 한 보기만 가장 많이 담았다.
+    static final String JUDGE_PROMPT = Prompts.load("problem-review/judge.txt");
 
-            [하지 말 것]
-            - 지식으로 참·거짓을 가려 고르지 마라. 보기 내용이 사실인지는 판단 대상이 아니다.
-            - 단서가 없으면 cue는 빈 문자열, choiceNo는 0이다. 확신 없는 단서는 적지 마라.
-              정답을 맞히는 것이 목표가 아니다. 모양이 답을 알려 주는지만 본다.
-            """;
-
-    static final String JUDGE_PROMPT = """
-            너는 CS 학습 서비스의 객관식 문제 검수자다.
-            근거 문서와 문제들을 받는다. 정답 표시와 해설은 일부러 가렸다.
-            이 문제들은 학습자가 정답을 외우는 재료가 된다. 틀린 정답 하나가 틀린 지식을 만든다.
-
-            문제마다 다음을 한다.
-            1. 직접 풀어 answerReason에 이유를 쓰고, chosenNo에 고른 번호를 적는다.
-            2. 고른 답 말고도 이 문제의 조건에서 정답으로 방어할 수 있는 보기가 있으면
-               otherCorrectNo와 그 이유를 적는다. 없으면 0과 빈 문자열이다.
-               학습자가 이의를 제기하면 받아들여야 할 수준일 때만 적는다.
-            3. supportQuote에는 정답을 뒷받침하는 문서 문장 하나를 글자 그대로 복사한다.
-               문서에 근거가 없으면 빈 문자열이다. 지어내면 코드가 원문과 대조해 걸러 낸다.
-            4. revealReason: 질문의 표현을 한 보기만 그대로 되받아, 뜻을 몰라도 문장 비교만으로
-               답이 좁혀지면 그 이유를 쓴다. 아니면 빈 문자열이다.
-               네 보기가 모두 질문의 주제어를 담는 것은 정상이다.
-            5. 난이도는 판정하지 말고 아래 세 가지를 관찰만 한다. 급은 코드가 정한다.
-               - asksDefinition: 질문이 용어가 무엇인지(뜻, 설명, 뜻에 맞는 용어)만 묻는가.
-                 "X에 대한 설명으로 옳은 것은?"도 X가 무엇인지 묻는 것이면 true다.
-                 이유·비교·순서를 묻거나 원리를 적용하게 하면 false다.
-               - conditionQuote: 지문에 답을 가르는 조건이 있으면 그 문장을 글자 그대로 옮긴다.
-                 조건은 장면(무엇을 하려다 무엇이 어긋났나)이나 명세(비율, 규모, 유실 허용, 요건)다.
-                 질문의 주제어나 "옳은 것은?" 같은 물음은 조건이 아니다.
-               - elsewhereCount: 오답마다 "이 오답이 정답이 되는 다른 조건"을 대 본다.
-                 오해나 틀린 정의라서 어떤 조건에서도 정답이 될 수 없으면 세지 않는다.
-               길이나 문장의 어려움으로 정하지 마라.
-            6. 다 푼 뒤 학습자 입장에서 의견 칸(awkwardQuote, awkwardFix, readabilityNote, overallNote)을 채운다.
-               결함 판정이 아니라 참고용이다. 취향 차이일 뿐인 문장은 어색하다고 적지 않는다.
-
-            [참고: 난이도 정의]
-            %s
-            """;
-
-    static final String AFTER_SOLVE_PROMPT = """
-            너는 CS 학습 서비스의 객관식 문제를 마지막으로 손보는 검수자다.
-            문제마다 표시된 정답, 해설, 오답 풀이, 그리고 문서를 보고 직접 푼 검수자의 풀이를 받는다.
-            근거 문서는 주지 않는다. 검수자 풀이를 문서 내용으로 믿고 견준다.
-
-            1. explanationIssue: 아래 중 하나면 무엇이 어긋나는지 쓴다. 아니거나 검수자 풀이가 없으면 비운다.
-               - 해설이 표시된 정답이 아닌 보기를 정답처럼 설명한다.
-               - 해설이나 오답 풀이가 검수자 풀이와 사실관계가 반대다.
-               - 오답 풀이가 그 오답을 맞는 말로 설명한다.
-               표현이 다르거나 덜 자세한 것은 어긋남이 아니다.
-            2. "지적"이 달린 문제만 고친 문장을 하나 낸다. 뜻과 정답은 그대로 두고 사실을 더하거나 빼지 마라.
-               - 보기 단서 누설: 정답 보기를 다른 보기와 길이와 말투가 비슷해지게 줄인다(CHOICE와 그 번호).
-               - 질문이 답을 드러냄: 질문에서 정답을 흘리는 표현을 걷어 낸다(QUESTION).
-               - 지적이 둘이면 보기 단서 누설을 고친다.
-            """;
+    static final String AFTER_SOLVE_PROMPT = Prompts.load("problem-review/after-solve.txt");
 
     private final String model;
     private long inputTokens;

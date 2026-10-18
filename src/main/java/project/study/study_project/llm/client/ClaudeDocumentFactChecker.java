@@ -28,57 +28,13 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
      * 저자가 아니라 반박자로 부른다. 같은 모델이 쓴 글을 저자 입장에서 다시 읽으면
      * 자기 설명을 그대로 믿는 쪽으로 기운다(docs/22 §5).
      */
-    static final String SYSTEM_PROMPT = """
-            너는 백엔드 CS 개념 문서의 사실 검수자다.
-            이 문서는 다른 모델이 썼고, 학습 서비스에 올라가 시험 문제의 근거가 된다.
-            문서에 틀린 주장이 하나 있으면, 그 주장을 정답으로 외우는 학습자가 생긴다.
-            너의 일은 이 글을 믿지 않고 읽으며 틀린 곳을 찾아내는 것이다.
-
-            [찾을 것 — 여기 적힌 항목만]
-            1. FACT_ERROR: 사실과 다른 주장.
-               기술의 동작, 기본값, 명령·옵션의 의미, 에러 이름, 표준의 내용이 실제와 다른 곳.
-               코드 블록의 주석과 출력 예시도 본문과 똑같이 검사한다.
-            2. INTERNAL_MISMATCH: 같은 문서 안에서 서로 어긋나는 곳.
-               한 곳에서 1초라고 하고 다른 곳에서 1분이라고 하는 식이다.
-               비유나 요약 절이 본문과 다른 수치를 쓰는 경우를 특히 본다.
-
-            [찾지 말 것]
-            - 문체, 구성, 길이, 난이도, 설명 순서. 다른 검사가 맡는다.
-            - 입문자를 위해 일부러 단순하게 쓴 설명. 단순화는 오류가 아니다.
-              다만 단순화한 결과가 사실과 반대가 되면 오류다.
-            - 비유가 정확하지 않은 것. 비유 안의 수치가 본문과 다를 때만 INTERNAL_MISMATCH다.
-            - "더 정확히 쓰면 좋겠다" 수준의 보충. 틀린 것만 적는다.
-            - 버전·설정마다 다른 동작을 문서가 그렇다고 밝혀 둔 곳.
-              한 버전에서만 맞는 동작을 모든 경우의 사실처럼 단정했을 때만 지적한다.
-
-            [적는 법]
-            - quote에는 틀린 내용이 든 문장을 문서에서 글자 그대로 복사한다. 한 문장만 옮긴다.
-              고쳐 쓰거나 요약하면 그 지적은 버려진다. 코드가 원문과 대조한다.
-            - reason에는 왜 틀렸는지 쓴다. INTERNAL_MISMATCH면 어긋나는 상대 문장도 적는다.
-            - correction에는 올바른 내용을 쓴다.
-            - 확신하면 HIGH, 의심되지만 확신하지 못하면 LOW로 둔다.
-            - 틀린 곳이 없으면 빈 목록을 낸다. 목록을 채우려고 억지로 찾지 마라.
-              잘못된 지적은 검수자가 경고를 안 읽게 만든다.
-            """;
+    static final String SYSTEM_PROMPT = Prompts.load("document-fact-check/system.txt");
 
     /**
      * 입문편에만 붙인다. 심화편은 입문편에서 푼 용어를 다시 풀지 않게 쓰므로,
      * 심화편 하나만 보고 이 항목을 돌리면 입문편 용어가 전부 헛경보로 나온다.
      */
-    static final String UNDEFINED_TERM_RULE = """
-
-            [찾을 것 — 입문편 추가 항목]
-            3. UNDEFINED_TERM: 처음 나온 곳에서 뜻을 풀지 않은 전문 용어.
-               이 글의 독자는 주제를 오늘 처음 본다. 뜻을 모르는 말이 하나 나오면 거기서 글을 덮는다.
-               quote에는 그 용어가 처음 나온 문장을 옮기고, reason에 어느 용어인지 적는다.
-               correction에는 그 자리에 넣을 한 줄 뜻풀이를 쓴다.
-               다음은 지적하지 않는다.
-               - 같은 문장이나 바로 다음 문장에서 뜻을 푼 용어
-               - 앞에서 이미 뜻을 푼 용어
-               - 개발을 모르는 사람도 아는 일상어
-               - 코드 블록 안의 식별자, 명령어, 설정 이름
-               같은 용어는 처음 나온 곳 한 번만 적는다.
-            """;
+    static final String UNDEFINED_TERM_RULE = Prompts.load("document-fact-check/undefined-term-rule.txt");
 
     static String systemPromptFor(DocumentEdition edition) {
         return edition == DocumentEdition.ADVANCED ? SYSTEM_PROMPT : SYSTEM_PROMPT + UNDEFINED_TERM_RULE;
@@ -97,16 +53,7 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
     /** 편당 검색 상한. 검색 한 번마다 요금과 결과 토큰이 붙는다. */
     static final long MAX_SEARCHES = 5;
 
-    static final String WEB_SEARCH_RULE = """
-
-            [공식 문서로 확인하기]
-            web_search 도구로 공식 문서를 찾아볼 수 있다. 검색은 %d번까지다.
-            - 기술의 동작, 기본값, 에러·장애 상황의 동작(적재 중, 디스크 부족, 실패했을 때 등)에 대한 주장 중
-              네가 확신하지 못하는 것을 골라 공식 문서로 확인한다.
-              네가 안다고 생각하는 것도 틀릴 수 있다. 특히 "장애가 나면 어떻게 되는가"는 틀리기 쉽다.
-            - 공식 문서로 확인한 지적에는 sourceUrl에 그 페이지 주소를 적는다. 검색 결과에서 본 주소만 적는다.
-            - 공식 문서와 맞는 주장은 지적하지 않는다.
-            """.formatted(MAX_SEARCHES);
+    static final String WEB_SEARCH_RULE = Prompts.load("document-fact-check/web-search-rule.txt").formatted(MAX_SEARCHES);
 
     private final String model;
     private final boolean webSearch;
