@@ -8,6 +8,7 @@ import java.time.LocalDate;
  * @param signups     그날 가입한 계정 수. 탈퇴한 계정은 행이 지워져 세어지지 않는다
  * @param activeUsers 그날 한 문제라도 제출한 사람 수
  * @param submissions 그날의 제출 수
+ * @param correct     그날 제출 중 정답 수
  */
-public record AdminUsageDay(LocalDate date, long signups, long activeUsers, long submissions) {
+public record AdminUsageDay(LocalDate date, long signups, long activeUsers, long submissions, long correct) {
 }

@@ -152,26 +152,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     boolean existsByUserIdAndProblem_Id(Long userId, Long problemId);
 
     /**
-     * 대시보드 문제별 정답률 — 제출이 0건인 문제도 보여야 하므로 Problem 기준 LEFT JOIN.
-     * (INNER JOIN이면 아무도 안 푼 문제가 통계에서 사라져 "안 풀리는 문제"를 발견할 수 없다)
-     * 집계는 SQL(GROUP BY)에서 끝낸다 — 전 제출을 자바로 끌어와 세는 것보다 훨씬 싸다.
-     * 별칭(problemId 등)이 인터페이스 getter와 매핑되는 네이티브 프로젝션.
-     */
-    @Query(value = """
-            SELECT p.id            AS problemId,
-                   p.domain        AS domain,
-                   p.type          AS type,
-                   p.question      AS question,
-                   COUNT(s.id)     AS attempts,
-                   COALESCE(SUM(s.is_correct), 0) AS correctCount
-            FROM problem p
-            LEFT JOIN submission s ON s.problem_id = p.id
-            GROUP BY p.id, p.domain, p.type, p.question
-            ORDER BY attempts DESC, p.id
-            """, nativeQuery = true)
-    java.util.List<ProblemStatRow> aggregateProblemStats();
-
-    /**
      * 오늘의 퀴즈 "취약 도메인" 판정 재료(docs/12) — <b>이 사용자의</b> 도메인별 제출 수·정답 수.
      *
      * <p>⚠️ 기존 {@code domain_stats} 뷰(R__)를 못 쓰는 이유: 뷰는 전체 사용자 합산이라
@@ -201,16 +181,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     interface UserDomainStat {
         DomainCode getDomain();
         long getTotal();
-        long getCorrectCount();
-    }
-
-    /** {@link #aggregateProblemStats} 결과 행. */
-    interface ProblemStatRow {
-        Long getProblemId();
-        String getDomain();
-        String getType();
-        String getQuestion();
-        long getAttempts();
         long getCorrectCount();
     }
 

@@ -26,7 +26,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 관리자 대시보드 통계 — 전체 요약 + 도메인×난이도 현황판 + 문제별 정답률.
+ * 관리자 대시보드 통계 — 전체 요약 + 도메인×난이도 현황판 + 도메인별 정답률.
+ * 문제별 정답률은 쪽 단위 검색이라 {@link AdminProblemStatsService}가 따로 맡는다.
  *
  * <p>집계는 전부 SQL(GROUP BY/COUNT)에서 끝내고 자바는 포장만 한다.
  * 전 행을 애플리케이션으로 끌어와 세는 방식은 데이터가 커지는 순간 무너진다.
@@ -117,16 +118,6 @@ public class AdminStatsService {
                         rs.getLong("solver_count")))
                 .list();
 
-        List<AdminDashboardResponse.ProblemStat> stats = submissionRepository.aggregateProblemStats()
-                .stream()
-                .map(row -> new AdminDashboardResponse.ProblemStat(
-                        row.getProblemId(), row.getDomain(), row.getType(), row.getQuestion(),
-                        row.getAttempts(), row.getCorrectCount(),
-                        // 제출 0건은 "데이터 없음"(null) — 0%(전부 오답)와 의미가 다르다(DTO 주석 참고)
-                        row.getAttempts() == 0 ? null
-                                : (int) Math.round(row.getCorrectCount() * 100.0 / row.getAttempts())))
-                .toList();
-
         var llmReview = new AdminDashboardResponse.LlmReview(
                 toModelStats(problemDraftRepository.countGroupByModelAndStatus()),
                 toModelStats(documentDraftRepository.countGroupByModelAndStatus()));
@@ -153,7 +144,7 @@ public class AdminStatsService {
                 problemRepository.countWithMissingRationale(),
                 batchEnabled, emptyCells, plannedCells);
 
-        return new AdminDashboardResponse(totals, matrix, domainStats, stats, llmReview, todo);
+        return new AdminDashboardResponse(totals, matrix, domainStats, llmReview, todo);
     }
 
     /**

@@ -13,7 +13,6 @@ import java.util.List;
  * @param problemMatrix 도메인×난이도별 문제 수 — "어느 칸이 비었나"를 보는 출제 현황판
  * @param domainStats   도메인별 정답률 — DB 뷰 domain_stats(R__domain_stats_view.sql) 조회 결과.
  *                      문제 단위(problemStats)보다 한 단계 넓은 시야: "어느 영역이 약한가"
- * @param problemStats  문제별 제출 수·정답률 — 너무 어렵거나(정답률↓) 오류인 문제 발견용
  * @param llmReview     AI 초안의 모델별 승인율 — "모델·프롬프트를 바꿨더니 나아졌나"를 보는 저울
  * @param todo          <b>지금 할 일</b>(2026-08-29 신설). 나머지 넷이 "쌓인 것"을 보여 준다면
  *                      이건 "손대야 할 것"이다 — 대시보드를 매일 여는 이유가 후자인데
@@ -23,7 +22,6 @@ public record AdminDashboardResponse(
         Totals totals,
         List<MatrixCell> problemMatrix,
         List<DomainStat> domainStats,
-        List<ProblemStat> problemStats,
         LlmReview llmReview,
         Todo todo
 ) {
@@ -85,14 +83,6 @@ public record AdminDashboardResponse(
     }
 
     /**
-     * @param correctRate 정답률(%). 제출이 0건이면 null — "0%"(전부 틀림)와 "데이터 없음"은
-     *                    다른 의미인데 0으로 뭉개면 구분할 수 없어서 null로 남긴다.
-     */
-    public record ProblemStat(Long problemId, String domain, String type, String question,
-                              long attempts, long correctCount, Integer correctRate) {
-    }
-
-    /**
      * AI 초안 검수 현황 — 문제와 문서를 <b>나눠서</b> 담는다.
      *
      * <p>둘은 생성 빈도가 다르다(문제 하루 5개 vs 문서 나흘에 1편). 합치면 표본이 큰 문제 쪽
@@ -113,7 +103,7 @@ public record AdminDashboardResponse(
      *
      * @param approvalRate 승인율(%) = 승인 ÷ (승인 + 거절). <b>아직 검수한 게 없으면 null</b> —
      *                     "0%(전부 거절당함)"와 "아직 아무도 안 봄"은 정반대 신호인데 0으로
-     *                     뭉개면 구분할 수 없다({@link ProblemStat#correctRate}와 같은 규칙).
+     *                     뭉개면 구분할 수 없다(문제별 정답률의 correctRate와 같은 규칙).
      *                     검수 대기(pending)는 분모에서 뺀다: 아직 판정이 안 난 것을
      *                     실패로 세면 부지런히 만들수록 승인율이 떨어지는 이상한 지표가 된다
      */

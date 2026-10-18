@@ -5,6 +5,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.admin.dto.AdminUsageDay;
+import project.study.study_project.admin.dto.AdminUsageSummary;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -51,20 +52,48 @@ public class AdminUsageService {
 
         Map<LocalDate, long[]> activity = new HashMap<>();
         jdbcClient.sql("""
-                        SELECT DATE(submitted_at) AS d, COUNT(DISTINCT user_id) AS users, COUNT(*) AS cnt
+                        SELECT DATE(submitted_at) AS d, COUNT(DISTINCT user_id) AS users, COUNT(*) AS cnt,
+                               COALESCE(SUM(is_correct), 0) AS correct
                         FROM submission WHERE submitted_at >= :from
                         GROUP BY DATE(submitted_at)
                         """)
                 .param("from", fromTime)
                 .query((rs, n) -> activity.put(rs.getDate("d").toLocalDate(),
-                        new long[]{rs.getLong("users"), rs.getLong("cnt")}))
+                        new long[]{rs.getLong("users"), rs.getLong("cnt"), rs.getLong("correct")}))
                 .list();
 
         List<AdminUsageDay> result = new ArrayList<>(span);
         for (LocalDate d = from; !d.isAfter(today); d = d.plusDays(1)) {
-            long[] a = activity.getOrDefault(d, new long[]{0, 0});
-            result.add(new AdminUsageDay(d, signups.getOrDefault(d, 0L), a[0], a[1]));
+            long[] a = activity.getOrDefault(d, new long[]{0, 0, 0});
+            result.add(new AdminUsageDay(d, signups.getOrDefault(d, 0L), a[0], a[1], a[2]));
         }
         return result;
+    }
+
+    /** 오늘을 포함한 최근 {@code days}일과, 그 바로 앞 같은 길이 기간의 합계. */
+    @Transactional(readOnly = true)
+    public AdminUsageSummary summary(int days) {
+        int span = Math.min(Math.max(days, 1), MAX_DAYS);
+        LocalDate today = LocalDate.now();
+        LocalDate from = today.minusDays(span - 1L);
+        LocalDate prevFrom = from.minusDays(span);
+        return new AdminUsageSummary(period(from, today), period(prevFrom, from.minusDays(1)));
+    }
+
+    private AdminUsageSummary.Period period(LocalDate from, LocalDate to) {
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime end = to.plusDays(1).atStartOfDay();
+        long signups = jdbcClient.sql("SELECT COUNT(*) FROM `user` WHERE created_at >= :s AND created_at < :e")
+                .param("s", start).param("e", end)
+                .query(Long.class).single();
+        return jdbcClient.sql("""
+                        SELECT COUNT(DISTINCT user_id) AS users, COUNT(*) AS cnt,
+                               COALESCE(SUM(is_correct), 0) AS correct
+                        FROM submission WHERE submitted_at >= :s AND submitted_at < :e
+                        """)
+                .param("s", start).param("e", end)
+                .query((rs, n) -> new AdminUsageSummary.Period(from, to, signups,
+                        rs.getLong("users"), rs.getLong("cnt"), rs.getLong("correct")))
+                .single();
     }
 }
