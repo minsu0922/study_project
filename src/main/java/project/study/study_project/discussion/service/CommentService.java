@@ -68,7 +68,7 @@ public class CommentService {
      */
     @Transactional(readOnly = true)
     public CommentListResponse list(Long postId, Long viewerId, int page) {
-        Post post = requirePost(postId);
+        Post post = postRepository.getAlive(postId);
         Long problemId = problemIdOf(post);
         User viewer = viewerId == null ? null : userRepository.findById(viewerId).orElse(null);
         boolean solved = viewer != null && submissionRepository.existsByUserIdAndProblem_Id(viewerId, problemId);
@@ -112,10 +112,9 @@ public class CommentService {
 
     @Transactional
     public CommentItem write(Long userId, CommentWriteRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        User user = userRepository.getAuthenticated(userId);
         SuspensionGuard.requireNotSuspended(user);
-        Post post = requirePost(request.postId());
+        Post post = postRepository.getAlive(request.postId());
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
@@ -155,8 +154,7 @@ public class CommentService {
         if (!comment.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        User user = userRepository.getAuthenticated(userId);
         SuspensionGuard.requireNotSuspended(user);
         comment.edit(body.trim());
         return CommentItem.of(comment, user.getNickname(), userId, List.of());
@@ -182,13 +180,6 @@ public class CommentService {
             notificationService.notify(post.getUserId(), writer.getId(), NotificationType.POST_COMMENT,
                     writer.getNickname() + "님이 내 글에 댓글을 달았습니다: " + post.getTitle(), link);
         }
-    }
-
-    /** 지운 글은 없는 글로 답한다({@link PostService}와 같은 판단). */
-    private Post requirePost(Long postId) {
-        return postRepository.findById(postId)
-                .filter(p -> !p.isDeleted())
-                .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
     }
 
     private Long problemIdOf(Post post) {

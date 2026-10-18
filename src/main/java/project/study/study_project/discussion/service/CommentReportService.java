@@ -189,8 +189,7 @@ public class CommentReportService {
 
     /** 신고도 쓰기다. 정지된 사람이 남의 글을 신고로 괴롭히는 길을 남기지 않는다. */
     private void requireNotSuspended(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        User user = userRepository.getAuthenticated(userId);
         SuspensionGuard.requireNotSuspended(user);
     }
 

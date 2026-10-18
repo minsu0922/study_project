@@ -55,15 +55,13 @@ public class AccountService {
 
     @Transactional(readOnly = true)
     public String getNickname(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003))
+        return userRepository.getAuthenticated(userId)
                 .getNickname();
     }
 
     @Transactional(readOnly = true)
     public SuspensionResponse getSuspension(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        User user = userRepository.getAuthenticated(userId);
         String notice = SuspensionGuard.noticeFor(user);
         return new SuspensionResponse(notice != null, notice);
     }
@@ -76,8 +74,7 @@ public class AccountService {
      */
     @Transactional
     public String changeNickname(Long userId, String nickname) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        User user = userRepository.getAuthenticated(userId);
         // 운영진으로 보이는 이름은 관리자만 쓴다 — 가입과 같은 목록이다(NicknameRule).
         if (user.getRole() != Role.ADMIN && NicknameRule.isReserved(nickname)) {
             throw new BusinessException(ErrorCode.DISCUSSION_010);
@@ -194,8 +191,7 @@ public class AccountService {
     /** 복구 코드를 발급받은 적이 있는가 — 마이페이지가 "아직 없음"을 알리는 데 쓴다. */
     @Transactional(readOnly = true)
     public boolean hasRecoveryCode(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003))
+        return userRepository.getAuthenticated(userId)
                 .getRecoveryCodeHash() != null;
     }
 

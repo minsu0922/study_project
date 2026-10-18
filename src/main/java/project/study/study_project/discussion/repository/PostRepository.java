@@ -10,6 +10,8 @@ import project.study.study_project.discussion.domain.CommentStatus;
 import project.study.study_project.discussion.domain.Post;
 import project.study.study_project.discussion.domain.PostCategory;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.user.domain.Role;
 
 import java.time.LocalDateTime;
@@ -17,6 +19,13 @@ import java.util.Collection;
 import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
+
+    /** 지우지 않은 글. 지운 글은 없는 글과 똑같이 DISCUSSION_011(404)로 답한다. */
+    default Post getAlive(Long postId) {
+        return findById(postId)
+                .filter(p -> !p.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
+    }
 
     /**
      * 한 방의 글을 새 글부터. 지운 글은 빼고 가린 글은 넣는다 — 가린 글은 자리를 남겨 보여 준다.

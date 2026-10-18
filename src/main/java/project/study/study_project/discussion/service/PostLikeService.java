@@ -35,8 +35,7 @@ public class PostLikeService {
      */
     @Transactional
     public PostLikeState like(Long userId, Long postId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        User user = userRepository.getAuthenticated(userId);
         // 추천도 쓰기다. 정지 중에 추천으로 글 순서를 움직일 수 있으면 정지가 뜻이 없다.
         SuspensionGuard.requireNotSuspended(user);
         Post post = requireVisible(postId);
@@ -56,9 +55,7 @@ public class PostLikeService {
     }
 
     private Post requireVisible(Long postId) {
-        Post post = postRepository.findById(postId)
-                .filter(p -> !p.isDeleted())
-                .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
+        Post post = postRepository.getAlive(postId);
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }

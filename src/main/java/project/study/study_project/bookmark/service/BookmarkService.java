@@ -14,7 +14,6 @@ import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
-import project.study.study_project.quiz.domain.Problem;
 import project.study.study_project.quiz.repository.ProblemRepository;
 
 import java.time.LocalDateTime;
@@ -37,9 +36,7 @@ public class BookmarkService {
     public void add(Long userId, BookmarkTarget type, Long targetId) {
         LocalDateTime now = LocalDateTime.now();
         if (type == BookmarkTarget.PROBLEM) {
-            problemRepository.findById(targetId).filter(p -> !p.isHidden())
-                    .map(Problem::getId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+            problemRepository.getVisible(targetId);
             bookmarkRepository.addProblem(userId, targetId, now);
         } else {
             documentRepository.findById(targetId).filter(d -> !d.isHidden())

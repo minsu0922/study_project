@@ -179,7 +179,7 @@ public class PostService {
     /** 지운 글은 없는 글로 답한다. 가린 글은 자리만 돌려준다 — 링크로 들어온 사람에게 이유를 보여 준다. */
     @Transactional(readOnly = true)
     public PostDetail detail(Long postId, Long viewerId) {
-        Post post = requireAlive(postId);
+        Post post = postRepository.getAlive(postId);
         String nickname = post.getUserId() == null
                 ? null
                 : userRepository.findById(post.getUserId()).map(User::getNickname).orElse(null);
@@ -194,8 +194,7 @@ public class PostService {
 
     @Transactional
     public PostDetail write(Long userId, PostWriteRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        User user = userRepository.getAuthenticated(userId);
         SuspensionGuard.requireNotSuspended(user);
         Long problemId = request.problemId();
         requireProblem(problemId);
@@ -220,13 +219,12 @@ public class PostService {
 
     @Transactional
     public PostDetail edit(Long userId, Long postId, PostEditRequest request) {
-        Post post = requireOwn(userId, requireAlive(postId));
+        Post post = requireOwn(userId, postRepository.getAlive(postId));
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
         // 수정도 막는다. 정지 중에 이미 올린 글의 내용을 바꿔 치울 수 있으면 정지가 뜻이 없다.
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+        User user = userRepository.getAuthenticated(userId);
         SuspensionGuard.requireNotSuspended(user);
         post.edit(request.category(), request.title().trim(), request.body().trim());
         // 수정 응답으로 화면을 다시 그리므로 추천 수도 실어 보낸다 — 빠지면 고칠 때마다 0으로 보인다
@@ -279,12 +277,6 @@ public class PostService {
         if (!problemRepository.existsById(problemId)) {
             throw new BusinessException(ErrorCode.QUIZ_001);
         }
-    }
-
-    private Post requireAlive(Long postId) {
-        return postRepository.findById(postId)
-                .filter(p -> !p.isDeleted())
-                .orElseThrow(() -> new BusinessException(ErrorCode.DISCUSSION_011));
     }
 
     /** 존재를 먼저 보고 주인을 본다 — 뒤집으면 없는 id에 "권한 없음"이 나간다. */

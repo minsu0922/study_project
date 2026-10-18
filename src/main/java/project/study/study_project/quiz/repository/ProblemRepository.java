@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.quiz.domain.Problem;
 
 import java.time.LocalDateTime;
@@ -35,6 +37,13 @@ import java.util.List;
  * enum 파라미터는 네이티브 쿼리라 자동 변환이 안 되므로 서비스에서 {@code name()} 문자열로 넘긴다.
  */
 public interface ProblemRepository extends JpaRepository<Problem, Long> {
+
+    /** 숨기지 않은 문제. 숨긴 문제는 없는 문제와 똑같이 QUIZ_001(404)로 답한다. 관리 화면은 findById를 쓴다. */
+    default Problem getVisible(Long problemId) {
+        return findById(problemId)
+                .filter(p -> !p.isHidden())
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
+    }
 
     @Query(value = """
             SELECT * FROM problem p

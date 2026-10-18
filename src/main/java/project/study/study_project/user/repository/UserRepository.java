@@ -5,6 +5,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
+import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.user.domain.User;
 
 import java.time.LocalDateTime;
@@ -24,6 +26,14 @@ import java.util.Optional;
  * 쓰지 않는 조회 메서드를 남겨 두면 "이쪽으로도 로그인이 되나?" 하는 오해를 부른다.
  */
 public interface UserRepository extends JpaRepository<User, Long> {
+
+    /**
+     * 토큰에 든 사용자 ID로 조회한다. 없으면 AUTH_003(401)이라 화면이 로그아웃시킨다.
+     * 로그인 실패(AUTH_002)나 관리자 조회(USER_001)에는 쓰지 않는다. 그쪽은 응답이 달라야 한다.
+     */
+    default User getAuthenticated(Long userId) {
+        return findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.AUTH_003));
+    }
 
     boolean existsByUsername(String username);
 

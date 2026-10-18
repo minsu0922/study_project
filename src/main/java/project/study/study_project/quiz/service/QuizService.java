@@ -88,7 +88,7 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public QuizResponse getOne(Long problemId) {
-        Problem problem = findVisible(problemId);
+        Problem problem = problemRepository.getVisible(problemId);
         return new QuizResponse(List.of(QuizProblemItem.from(problem)));
     }
 
@@ -123,7 +123,7 @@ public class QuizService {
      */
     @Transactional
     public QuizSubmitResponse submit(Long userId, QuizSubmitRequest request) {
-        Problem problem = findVisible(request.problemId());
+        Problem problem = problemRepository.getVisible(request.problemId());
 
         // 서술형은 서버가 정오를 가릴 수 없어 학습자가 매긴 결과를 받는다. 그 값이 빠진 제출은
         // 오답으로 치지 않고 400으로 돌려보낸다 — 조용히 오답 처리하면 복습 사다리가 오염된다.
@@ -186,7 +186,7 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public QuizSubmitResponse check(Long problemId, String userAnswer) {
-        Problem problem = findVisible(problemId);
+        Problem problem = problemRepository.getVisible(problemId);
         if (!problem.getType().isAutoScored()) {
             throw new BusinessException(ErrorCode.QUIZ_002);
         }
@@ -216,7 +216,7 @@ public class QuizService {
      */
     @Transactional(readOnly = true)
     public EssayModelAnswer modelAnswer(Long problemId) {
-        Problem problem = findVisible(problemId);
+        Problem problem = problemRepository.getVisible(problemId);
         if (problem.getType() != ProblemType.ESSAY) {
             throw new BusinessException(ErrorCode.QUIZ_002);
         }
@@ -225,13 +225,6 @@ public class QuizService {
                         .map(String::trim).filter(s -> !s.isEmpty()).toList();
         return new EssayModelAnswer(problem.getExplanation(), checkpoints,
                 existingDocumentSlug(problem.getDocumentSlug()));
-    }
-
-    /** 내려 둔 문제(V30)는 없는 문제와 똑같이 404다 — id를 직접 넣어도 풀거나 채점받을 수 없다. */
-    private Problem findVisible(Long problemId) {
-        return problemRepository.findById(problemId)
-                .filter(p -> !p.isHidden())
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_001));
     }
 
     /**
