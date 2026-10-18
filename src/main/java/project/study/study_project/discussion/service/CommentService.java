@@ -27,6 +27,7 @@ import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
+import project.study.study_project.user.support.RequiresActiveUser;
 import project.study.study_project.user.support.SuspensionGuard;
 
 import java.time.LocalDateTime;
@@ -111,9 +112,9 @@ public class CommentService {
     }
 
     @Transactional
+    @RequiresActiveUser
     public CommentItem write(Long userId, CommentWriteRequest request) {
         User user = userRepository.getAuthenticated(userId);
-        SuspensionGuard.requireNotSuspended(user);
         Post post = postRepository.getAlive(request.postId());
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
@@ -149,13 +150,13 @@ public class CommentService {
     }
 
     @Transactional
+    @RequiresActiveUser
     public CommentItem edit(Long userId, Long commentId, String body) {
         Comment comment = requireOwn(userId, commentId);
         if (!comment.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
         User user = userRepository.getAuthenticated(userId);
-        SuspensionGuard.requireNotSuspended(user);
         comment.edit(body.trim());
         return CommentItem.of(comment, user.getNickname(), userId, List.of());
     }

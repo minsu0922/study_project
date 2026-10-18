@@ -29,7 +29,7 @@ import project.study.study_project.quiz.repository.ProblemRepository;
 import project.study.study_project.report.domain.ReportStatus;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
-import project.study.study_project.user.support.SuspensionGuard;
+import project.study.study_project.user.support.RequiresActiveUser;
 
 import java.time.LocalDateTime;
 
@@ -55,8 +55,8 @@ public class CommentReportService {
 
     /** 중복은 두 겹으로 막는다 — 미리 세어 안내하고, 끼어든 요청은 유일 제약이 막는다(문제 제보와 같은 방식). */
     @Transactional
+    @RequiresActiveUser // 신고도 쓰기다. 정지된 사람이 남의 글을 신고로 괴롭히는 길을 남기지 않는다.
     public ReportReceipt report(Long userId, CommentReportRequest request) {
-        requireNotSuspended(userId);
         Comment comment = requireComment(request.commentId());
         if (!comment.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
@@ -77,8 +77,8 @@ public class CommentReportService {
 
     /** 글 신고. 지운 글은 없는 글로, 이미 가린 글은 처리된 것으로 답한다. */
     @Transactional
+    @RequiresActiveUser
     public ReportReceipt reportPost(Long userId, PostReportRequest request) {
-        requireNotSuspended(userId);
         Post post = requirePost(request.postId());
         if (post.isDeleted()) {
             throw new BusinessException(ErrorCode.DISCUSSION_011);
@@ -185,12 +185,6 @@ public class CommentReportService {
         if (userId.equals(authorId)) {
             throw new BusinessException(ErrorCode.DISCUSSION_012);
         }
-    }
-
-    /** 신고도 쓰기다. 정지된 사람이 남의 글을 신고로 괴롭히는 길을 남기지 않는다. */
-    private void requireNotSuspended(Long userId) {
-        User user = userRepository.getAuthenticated(userId);
-        SuspensionGuard.requireNotSuspended(user);
     }
 
     private Comment requireComment(Long commentId) {

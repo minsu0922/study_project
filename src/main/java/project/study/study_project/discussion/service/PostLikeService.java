@@ -9,9 +9,7 @@ import project.study.study_project.discussion.repository.PostLikeRepository;
 import project.study.study_project.discussion.repository.PostRepository;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
-import project.study.study_project.user.domain.User;
-import project.study.study_project.user.repository.UserRepository;
-import project.study.study_project.user.support.SuspensionGuard;
+import project.study.study_project.user.support.RequiresActiveUser;
 
 import java.time.LocalDateTime;
 
@@ -27,17 +25,14 @@ public class PostLikeService {
 
     private final PostLikeRepository postLikeRepository;
     private final PostRepository postRepository;
-    private final UserRepository userRepository;
 
     /**
      * @throws BusinessException 없는 글 DISCUSSION_011, 가려진 글 DISCUSSION_006,
      *                           내 글 DISCUSSION_014, 정지 중 DISCUSSION_013
      */
     @Transactional
+    @RequiresActiveUser // 추천도 쓰기다. 정지 중에 추천으로 글 순서를 움직일 수 있으면 정지가 뜻이 없다.
     public PostLikeState like(Long userId, Long postId) {
-        User user = userRepository.getAuthenticated(userId);
-        // 추천도 쓰기다. 정지 중에 추천으로 글 순서를 움직일 수 있으면 정지가 뜻이 없다.
-        SuspensionGuard.requireNotSuspended(user);
         Post post = requireVisible(postId);
         if (userId.equals(post.getUserId())) {
             throw new BusinessException(ErrorCode.DISCUSSION_014);

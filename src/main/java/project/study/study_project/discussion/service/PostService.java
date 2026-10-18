@@ -38,6 +38,7 @@ import project.study.study_project.quiz.repository.SubmissionRepository;
 import project.study.study_project.user.domain.Role;
 import project.study.study_project.user.domain.User;
 import project.study.study_project.user.repository.UserRepository;
+import project.study.study_project.user.support.RequiresActiveUser;
 import project.study.study_project.user.support.SuspensionGuard;
 
 import java.time.LocalDateTime;
@@ -193,9 +194,9 @@ public class PostService {
     }
 
     @Transactional
+    @RequiresActiveUser
     public PostDetail write(Long userId, PostWriteRequest request) {
         User user = userRepository.getAuthenticated(userId);
-        SuspensionGuard.requireNotSuspended(user);
         Long problemId = request.problemId();
         requireProblem(problemId);
         if (user.getRole() != Role.ADMIN
@@ -217,15 +218,15 @@ public class PostService {
         return PostDetail.of(saved, problemId, user.getNickname(), userId);
     }
 
+    /** 수정도 막는다. 정지 중에 이미 올린 글의 내용을 바꿔 치울 수 있으면 정지가 뜻이 없다. */
     @Transactional
+    @RequiresActiveUser
     public PostDetail edit(Long userId, Long postId, PostEditRequest request) {
         Post post = requireOwn(userId, postRepository.getAlive(postId));
         if (!post.isVisible()) {
             throw new BusinessException(ErrorCode.DISCUSSION_006);
         }
-        // 수정도 막는다. 정지 중에 이미 올린 글의 내용을 바꿔 치울 수 있으면 정지가 뜻이 없다.
         User user = userRepository.getAuthenticated(userId);
-        SuspensionGuard.requireNotSuspended(user);
         post.edit(request.category(), request.title().trim(), request.body().trim());
         // 수정 응답으로 화면을 다시 그리므로 추천 수도 실어 보낸다 — 빠지면 고칠 때마다 0으로 보인다
         return withLikes(PostDetail.of(post, problemIdOf(post), user.getNickname(), userId), userId);
