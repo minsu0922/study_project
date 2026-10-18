@@ -22,11 +22,24 @@ try {
   <div id="guard"></div>
 
   <div id="adminUi" hidden>
-    <!-- 빈 칸 수는 서버가 센다. 화면의 분야 목록과 배치가 채우는 후보가 달라서, 화면에서 세면
-         채울 계획도 없는 칸까지 "빈 칸"으로 잡힌다(옛 현황 화면 renderTodo 주석에서 옮김). -->
-    <p class="meta" id="emptyCells" style="margin-bottom:12px"></p>
-    <h3>분야 × 난이도 <span class="meta">(진할수록 많다 · 칸을 누르면 그 칸으로 직접 생성)</span></h3>
+    <!-- 전부 공개 문제 기준이다. 내린 문제로 채워진 칸은 학습자에게는 빈 칸이다(AdminDistributionService). -->
+    <p class="meta" id="distSummary" style="margin-bottom:12px"></p>
+
+    <h3>분야 × 난이도 <span class="meta">(공개 문제 수 · 진할수록 많다 · 칸을 누르면 그 칸으로 직접 생성)</span></h3>
     <div class="table-wrap"><table class="grid heatmap" id="matrixTable"></table></div>
+    <p class="meta" style="margin:-8px 0 24px">칸 아래 <b>+N</b>은 최근 30일에 늘어난 공개 문제, <b>내림 N</b>은 내린 문제입니다.
+      <span class="badge gray">배치 밖</span> 분야는 배치가 채우지 않아 빈 칸으로 세지 않습니다.</p>
+
+    <h3>분야 × 유형 <span class="meta">(공개 문제 수 · 칸 색은 그 분야 안 비율)</span></h3>
+    <div class="table-wrap"><table class="grid heatmap" id="typeTable"></table></div>
+    <p class="meta" style="margin:-8px 0 24px">한 유형이 <b>80% 이상</b>인 분야에 <span class="badge orange">쏠림</span>을 붙입니다.
+      같은 형식만 풀면 개념이 아니라 형식에 익숙해집니다.</p>
+
+    <h3>문서별 문제 수 <span class="meta">(공개 문제 적은 순)</span>
+      <label class="meta" style="font-weight:400; margin-left:8px">
+        <input type="checkbox" id="docZeroOnly"> 문제 없는 문서만</label></h3>
+    <p class="meta" id="docNote" style="margin-bottom:8px"></p>
+    <div class="table-wrap"><table class="grid" id="docTable"></table></div>
   </div>
 </main>
 
@@ -43,51 +56,61 @@ if (initAdminPage("distribution")) {
   loadDistribution();
 }
 
+let dist = null;
+
 async function loadDistribution() {
   try {
-    const d = await api("/api/admin/dashboard");
-    const t = d.todo;
-    document.getElementById("emptyCells").innerHTML = t.emptyCells === 0
-      ? `배치가 채우는 ${t.plannedCells}칸에 모두 문제가 있습니다.`
-      : `배치가 채우는 ${t.plannedCells}칸 중 <b>${t.emptyCells}칸</b>에 아직 문제가 없습니다.`;
-    renderMatrix(d.problemMatrix);
+    dist = await api("/api/admin/distribution");
   } catch (e) {
     showErrorAlert(document.getElementById("guard"), e, "출제 분포를 불러오지 못했습니다");
+    return;
   }
+  const visible = dist.cells.reduce((a, c) => a + c.visible, 0);
+  const hidden = dist.cells.reduce((a, c) => a + c.hidden, 0);
+  const recent = dist.cells.reduce((a, c) => a + c.recent, 0);
+  document.getElementById("distSummary").innerHTML =
+    `공개 문제 <b>${visible}</b>개 · 내린 문제 ${hidden}개 · 최근 ${dist.recentDays}일 <b>+${recent}</b>. `
+    + (dist.emptyCells === 0
+      ? `배치가 채우는 ${dist.plannedCells}칸에 모두 공개 문제가 있습니다.`
+      : `배치가 채우는 ${dist.plannedCells}칸 중 <b>${dist.emptyCells}칸</b>에 공개 문제가 없습니다.`);
+  renderMatrix();
+  renderTypes();
+  document.getElementById("docZeroOnly").onchange = renderDocuments;
+  renderDocuments();
 }
 
-/* 행=분야(전체 고정), 열=난이도. 데이터 없는 칸도 0으로 그려서 "빈 곳"을 드러낸다. */
-function renderMatrix(matrix) {
-  const cellMap = {};
-  matrix.forEach(c => cellMap[c.domain + "|" + c.difficulty] = c.count);
+/* 한 가지 색으로 많을수록 진하게. 10~55% 사이로 누른다. 55%가 두 테마 모두 본문 글씨 대비 4.5를 넘는
+   상한이다(어두운 테마 60%에서 4.43으로 깨졌다). color-mix는 칸의 실제 바탕과 섞어 다크 모드에서도 같은 뜻이 된다. */
+function shade(ratio) {
+  if (!ratio) return "";
+  return ` style="background: color-mix(in srgb, var(--primary) ${(10 + ratio * 45).toFixed(0)}%, var(--card))"`;
+}
 
-  /* 색 농도 — 한 가지 색으로 <많을수록 진하게>.
-   * 값이 "문제 수"라는 크기 하나뿐이라 한 색의 밝기로 충분하다. 숫자는 지우지 않는다 —
-   * 색만으로 알리면 색 구분이 어려운 사람에게는 신호가 아니다.
-   * 최댓값을 100%로 잡아 문제가 늘어도 상대 분포가 보이게 한다. */
-  const counts = Object.values(cellMap);
-  const max = counts.length ? Math.max(...counts) : 0;
-  const shade = n => {
-    if (n === 0) return "";
-    // 10~55% 사이로 누른다. 55%가 두 테마 모두 본문 글씨 대비 4.5를 넘는 상한이다
-    // (어두운 테마 60%에서 4.43으로 깨졌다). color-mix는 칸의 실제 바탕(--card)과 섞어
-    // 다크 모드에서도 같은 뜻이 된다 — 반투명 rgba는 흰 바탕을 가정한다.
-    const pct = max === 0 ? 0 : 10 + (n / max) * 45;
-    return ` style="background: color-mix(in srgb, var(--primary) ${pct.toFixed(0)}%, var(--card))"`;
-  };
+/* 행 = 분야(전체 고정), 열 = 난이도. 문제 없는 칸도 0으로 그려 빈 곳을 드러낸다.
+   배치 분야의 빈 칸은 테두리로 한 번 더 표시한다. 색만으로 알리지 않는다. */
+function renderMatrix() {
+  const map = {};
+  dist.cells.forEach(c => map[c.domain + "|" + c.difficulty] = c);
+  const max = Math.max(1, ...dist.cells.map(c => c.visible));
+  const batch = new Set(dist.batchDomains);
 
   const table = document.getElementById("matrixTable");
   table.innerHTML =
     `<tr><th>분야</th>${DIFFICULTIES.map(([, l]) => `<th>${l}</th>`).join("")}<th>합계</th></tr>` +
     DOMAINS.map(([dv, dl]) => {
+      const inBatch = batch.has(dv);
       let sum = 0;
       const cells = DIFFICULTIES.map(([lv, ll]) => {
-        const n = cellMap[dv + "|" + lv] || 0; sum += n;
-        return `<td class="click-cell ${n === 0 ? "zero" : ""}"${shade(n)}
+        const c = map[dv + "|" + lv] || { visible: 0, hidden: 0, recent: 0 };
+        sum += c.visible;
+        const gap = inBatch && c.visible === 0;
+        const sub = [c.recent ? `+${c.recent}` : "", c.hidden ? `내림 ${c.hidden}` : ""].filter(Boolean).join(" · ");
+        return `<td class="click-cell ${c.visible === 0 ? "zero" : ""} ${gap ? "gap" : ""}"${shade(c.visible / max)}
                     data-domain="${dv}" data-difficulty="${lv}"
-                    title="${dl} · ${ll} — 문제 ${n}개. 누르면 이 칸으로 직접 생성">${n}</td>`;
+                    title="${dl} · ${ll} — 공개 ${c.visible}개, 내림 ${c.hidden}개, 최근 30일 +${c.recent}. 누르면 이 칸으로 직접 생성">
+                  <b>${c.visible}</b>${sub ? `<div class="cell-sub">${sub}</div>` : ""}</td>`;
       }).join("");
-      return `<tr><td>${dl}</td>${cells}<td><b>${sum}</b></td></tr>`;
+      return `<tr class="${inBatch ? "" : "off-batch"}"><td>${dl}${inBatch ? "" : ' <span class="badge gray">배치 밖</span>'}</td>${cells}<td><b>${sum}</b></td></tr>`;
     }).join("");
 
   // 폼만 채우고 요청은 보내지 않는다 — 생성은 돈이 드는 동작이라 "누르자마자 호출"은 위험하다.
@@ -95,6 +118,63 @@ function renderMatrix(matrix) {
     const cell = e.target.closest(".click-cell");
     if (cell) goGenerate({ domain: cell.dataset.domain, difficulty: cell.dataset.difficulty });
   };
+}
+
+/* 쏠림 문턱. 한 유형이 이만큼이면 사실상 한 형식만 나오는 분야다. 5개 미만인 분야는 판정하지 않는다 */
+const TYPE_SKEW = 0.8;
+
+/* 행 = 공개 문제가 있는 분야, 열 = 한 번이라도 쓰인 유형. 칸 색은 그 분야 안에서의 비율이다.
+   분야끼리 문제 수가 크게 달라, 개수로 칠하면 큰 분야만 진하고 쏠림이 안 보인다. */
+function renderTypes() {
+  const used = TYPES.filter(([tv]) => dist.types.some(t => t.type === tv));
+  const byDomain = {};
+  dist.types.forEach(t => { (byDomain[t.domain] = byDomain[t.domain] || {})[t.type] = t.count; });
+  const table = document.getElementById("typeTable");
+  const rows = DOMAINS.filter(([dv]) => byDomain[dv]);
+  if (!rows.length) {
+    table.innerHTML = `<tr><td class="meta">공개 문제가 없습니다.</td></tr>`;
+    return;
+  }
+  table.innerHTML =
+    `<tr><th>분야</th>${used.map(([, l]) => `<th>${l}</th>`).join("")}<th>합계</th></tr>` +
+    rows.map(([dv, dl]) => {
+      const m = byDomain[dv];
+      const total = Object.values(m).reduce((a, n) => a + n, 0);
+      const top = Math.max(...Object.values(m));
+      const skew = total >= 5 && top / total >= TYPE_SKEW;
+      return `<tr><td>${dl}${skew ? ' <span class="badge orange">쏠림</span>' : ""}</td>${used.map(([tv, tl]) => {
+        const n = m[tv] || 0;
+        return `<td class="${n === 0 ? "zero" : ""}"${shade(n / total)} title="${dl} · ${tl} — ${n}개 (${Math.round(n / total * 100)}%)">${n}</td>`;
+      }).join("")}<td><b>${total}</b></td></tr>`;
+    }).join("");
+}
+
+/* 문서별 문제 수. 문제가 없는 문서는 다음 생성 후보다. 내린 문서는 표시만 한다(그 문서로는 만들지 않는다). */
+function renderDocuments() {
+  const zeroOnly = document.getElementById("docZeroOnly").checked;
+  const docs = dist.documents.filter(d => !zeroOnly || d.visible === 0);
+  const zero = dist.documents.filter(d => d.visible === 0 && !d.documentHidden).length;
+  document.getElementById("docNote").innerHTML =
+    `문서 ${dist.documents.length}편 중 <b>공개 문제가 없는 문서 ${zero}편</b>(내린 문서 제외).`
+    + ` 근거 문서 없이 등록된 공개 문제 ${dist.noDocumentProblems}개`
+    + (dist.missingDocumentProblems
+      ? ` · <b>없는 문서를 가리키는 문제 ${dist.missingDocumentProblems}개</b>(문서 slug가 바뀌었을 수 있습니다)` : "")
+    + ".";
+  const table = document.getElementById("docTable");
+  if (!docs.length) {
+    table.innerHTML = `<tr><td class="meta" style="padding:18px;text-align:center">조건에 맞는 문서가 없습니다.</td></tr>`;
+    return;
+  }
+  table.innerHTML = `<tr><th>문서</th><th>분야</th><th>공개 문제</th><th>내린 문제</th></tr>` +
+    docs.map(d => `
+      <tr>
+        <td class="wrap"><a href="/document.html?slug=${encodeURIComponent(d.slug)}" target="_blank" rel="noopener">${escapeHtml(d.title)}</a>
+          ${d.documentHidden ? ' <span class="badge gray">문서 내림</span>' : ""}
+          <div class="meta">${escapeHtml(d.slug)}</div></td>
+        <td>${escapeHtml(domainLabel(d.domain))}</td>
+        <td class="${d.visible === 0 ? "zero" : ""}">${d.visible === 0 ? "<b>0</b>" : d.visible}</td>
+        <td class="${d.hidden === 0 ? "zero" : ""}">${d.hidden}</td>
+      </tr>`).join("");
 }
 </script>
 </body>
