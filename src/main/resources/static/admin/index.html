@@ -283,7 +283,7 @@ function renderUsageChart() {
   const avgLine = `<line class="avg-line" x1="${pad.l}" x2="${W - pad.r}" y1="${y(avg)}" y2="${y(avg)}"></line>`;
 
   box.innerHTML = head + `
-    <svg class="usage-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
+    <svg class="bar-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
          aria-label="${m.chart}, 최근 ${usageState.days}일, 평균 ${avgText}">${grid}${bars}${avgLine}${xLabels}</svg>`;
 
   const tip = chartTip();
@@ -304,25 +304,6 @@ function renderUsageChart() {
   });
 }
 
-/** 차트 공용 툴팁 하나를 만들어 두고 나눠 쓴다. */
-function chartTip() {
-  let tip = document.getElementById("chartTip");
-  if (!tip) {
-    tip = document.createElement("div");
-    tip.id = "chartTip";
-    tip.className = "chart-tip";
-    tip.hidden = true;
-    document.body.appendChild(tip);
-  }
-  return tip;
-}
-
-function moveTip(e) {
-  const tip = chartTip();
-  // 커서 오른쪽 아래 12px — 커서에 딱 붙이면 툴팁이 커서를 가린다
-  tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + "px";
-  tip.style.top = (e.clientY + 12) + "px";
-}
 
 async function loadDashboard() {
   try {

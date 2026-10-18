@@ -210,6 +210,39 @@ function cut(s, n) {
   return s.length > n ? s.substring(0, n) + "…" : s;
 }
 
+/** 차트 공용 툴팁 하나를 만들어 두고 나눠 쓴다(학습 현황·AI 품질). */
+function chartTip() {
+  let tip = document.getElementById("chartTip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.id = "chartTip";
+    tip.className = "chart-tip";
+    tip.hidden = true;
+    document.body.appendChild(tip);
+  }
+  return tip;
+}
+
+/** mousemove에 단다. 커서 오른쪽 아래 12px에 둔다. 커서에 딱 붙이면 툴팁이 커서를 가린다. */
+function moveTip(e) {
+  const tip = chartTip();
+  tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + "px";
+  tip.style.top = (e.clientY + 12) + "px";
+}
+
+/**
+ * 요소 묶음에 툴팁을 단다.
+ * @param html 요소를 받아 툴팁 HTML을 돌려준다. 사용자 입력이 들어가면 그쪽에서 escapeHtml을 한다
+ */
+function bindTip(elements, html) {
+  const tip = chartTip();
+  elements.forEach(el => {
+    el.addEventListener("mouseenter", () => { tip.innerHTML = html(el); tip.hidden = false; });
+    el.addEventListener("mousemove", moveTip);
+    el.addEventListener("mouseleave", () => { tip.hidden = true; });
+  });
+}
+
 /** 2026-08-15T21:53:… → 08-15. 관리 화면의 표에서 초 단위는 읽히지 않고 폭만 먹는다. */
 function shortDate(iso) {
   return iso ? iso.slice(5, 10) : "";

@@ -554,15 +554,15 @@ body {
 .usage-chart { padding: 14px 16px; margin-bottom: 24px; }
 .usage-chart-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
 .usage-chart-head b { font-size: .95rem; }
-.usage-svg { display: block; width: 100%; overflow: visible; }
-.usage-svg .grid-line { stroke: var(--border); stroke-width: 1; }
-.usage-svg .axis-text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.usage-svg .bar { fill: var(--primary); }
-.usage-svg .bar.today { fill: var(--primary-dark); }
-.usage-svg .hit { fill: transparent; cursor: default; }
-.usage-svg .hit:hover + .bar, .usage-svg .col:hover .bar { opacity: .75; }
-.usage-svg .avg-line { stroke: var(--text-2); stroke-width: 1.5; stroke-dasharray: 4 4; }
-.usage-svg .avg-text { fill: var(--text-2); font-size: 11px; font-weight: 600; }
+.bar-svg { display: block; width: 100%; overflow: visible; }
+.bar-svg .grid-line { stroke: var(--border); stroke-width: 1; }
+.bar-svg .axis-text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.bar-svg .bar { fill: var(--primary); }
+.bar-svg .bar.today { fill: var(--primary-dark); }
+.bar-svg .hit { fill: transparent; cursor: default; }
+.bar-svg .hit:hover + .bar, .bar-svg .col:hover .bar { opacity: .75; }
+.bar-svg .avg-line { stroke: var(--text-2); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.bar-svg .avg-text { fill: var(--text-2); font-size: 11px; font-weight: 600; }
 .usage-empty { text-align: center; color: var(--muted); padding: 32px 0; font-size: .9rem; }
 
 /* 문제별 정답률 칸 안의 작은 막대. 숫자가 주인공이고 막대는 훑기용이다. */
@@ -570,6 +570,13 @@ body {
 .rate-cell .rate-track { flex: 1; height: 6px; background: var(--primary-soft); border-radius: 3px; overflow: hidden; }
 .rate-cell .rate-fill { display: block; height: 100%; background: var(--primary); }
 .rate-cell b { font-variant-numeric: tabular-nums; min-width: 38px; text-align: right; font-weight: 600; }
+
+/* AI 품질(admin/quality.html). 표본이 작은 막대는 옅게 그린다. 숫자는 그대로 두고 막대만 흐린다 */
+.bar-svg .bar.faint, .hbar-fill.faint { opacity: .4; }
+/* 거절 사유는 문장이라 라벨 칸을 넓히고 줄바꿈을 허용한다 */
+.hbar-row.reason-row { grid-template-columns: minmax(0, 3fr) minmax(60px, 2fr) 56px; }
+.reason-row .hbar-label { white-space: normal; line-height: 1.4; }
+@media (max-width: 600px) { .hbar-row.reason-row { grid-template-columns: minmax(0, 1fr) 56px; } .reason-row .hbar-track { display: none; } }
 .trend-key { margin-left: 8px; white-space: nowrap; }
 .trend-key i {
   display: inline-block; width: 10px; height: 10px; border-radius: 2px;
