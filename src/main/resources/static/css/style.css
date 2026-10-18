@@ -526,11 +526,50 @@ body {
   border-top: 1px solid var(--border); padding-top: 4px;
   color: var(--muted); font-size: .75rem;
 }
-/* 관리 대시보드의 이용 추이는 한 가지 값만 그려 막대를 통째로 칠한다. 줄 높이도 낮춘다. */
-.trend-bar.solid { background: var(--primary); }
-.usage-row + .usage-row { margin-top: 14px; }
-.usage-row .trend { height: 56px; }
-.usage-head { margin-bottom: 4px; }
+/* 관리 학습 현황의 이용 추이(admin/index.html). 위에 요약 카드 넷, 아래에 고른 카드의 날짜별 차트 하나.
+   카드를 누르면 차트가 바뀐다. 고른 카드는 테두리와 aria-pressed 둘 다로 알린다. */
+.usage-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.usage-top h3 { margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; background: var(--card); }
+.seg button {
+  background: none; border: none; color: var(--text-2); min-height: 32px; padding: 4px 14px;
+  border-radius: 999px; font-size: .85rem; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--primary); color: var(--bg); font-weight: 600; }
+.usage-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+@media (max-width: 720px) { .usage-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi {
+  text-align: left; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; cursor: pointer; color: var(--text); display: flex; flex-direction: column; gap: 2px;
+  align-items: flex-start; justify-content: flex-start;
+  min-height: 0; font: inherit;
+}
+.kpi[aria-pressed="true"] { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+@media (hover: hover) { .kpi:hover { background: var(--fill); } }
+.kpi-label { font-size: .82rem; color: var(--text-2); font-weight: 600; }
+.kpi-value { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.kpi-value small { font-size: .8rem; font-weight: 500; color: var(--muted); margin-left: 2px; }
+.kpi-delta { font-size: .78rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.kpi-hint { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+.usage-chart { padding: 14px 16px; margin-bottom: 24px; }
+.usage-chart-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.usage-chart-head b { font-size: .95rem; }
+.usage-svg { display: block; width: 100%; overflow: visible; }
+.usage-svg .grid-line { stroke: var(--border); stroke-width: 1; }
+.usage-svg .axis-text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.usage-svg .bar { fill: var(--primary); }
+.usage-svg .bar.today { fill: var(--primary-dark); }
+.usage-svg .hit { fill: transparent; cursor: default; }
+.usage-svg .hit:hover + .bar, .usage-svg .col:hover .bar { opacity: .75; }
+.usage-svg .avg-line { stroke: var(--text-2); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.usage-svg .avg-text { fill: var(--text-2); font-size: 11px; font-weight: 600; }
+.usage-empty { text-align: center; color: var(--muted); padding: 32px 0; font-size: .9rem; }
+
+/* 문제별 정답률 칸 안의 작은 막대. 숫자가 주인공이고 막대는 훑기용이다. */
+.rate-cell { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+.rate-cell .rate-track { flex: 1; height: 6px; background: var(--primary-soft); border-radius: 3px; overflow: hidden; }
+.rate-cell .rate-fill { display: block; height: 100%; background: var(--primary); }
+.rate-cell b { font-variant-numeric: tabular-nums; min-width: 38px; text-align: right; font-weight: 600; }
 .trend-key { margin-left: 8px; white-space: nowrap; }
 .trend-key i {
   display: inline-block; width: 10px; height: 10px; border-radius: 2px;
@@ -2563,7 +2602,10 @@ a.todo-tile:hover { border-color: var(--primary); background: var(--primary-soft
   font-size: .82rem; font-weight: 400;
   padding: 3px 6px;
   vertical-align: middle;
+  width: auto;   /* 전역 select의 width:100%를 끈다. 안 끄면 제목 줄을 통째로 차지한다 */
 }
+/* 학습 현황의 문제별 정답률 필터는 칸이 여덟이라 두 줄로 접힌다. 둘째 줄 칸이 늘어나지 않게 폭을 묶는다 */
+#psFilters .field:not(.field-search):not(.field-reset) { flex: 0 1 150px; }
 
 /* 자주 쓰는 거절 사유 칩 — 2026-08-29.
  *

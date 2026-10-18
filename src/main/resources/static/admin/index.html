@@ -32,9 +32,18 @@ try {
 
     <div class="meta" id="totals" style="margin:0 0 20px"></div>
 
-    <!-- 누적 합계는 "지금 얼마"만 말한다. 늘고 있는지 줄고 있는지는 날짜로 펴야 보인다. -->
-    <h3>이용 추이 <span class="meta">(최근 30일 · 막대 하나가 하루)</span></h3>
-    <div class="card" id="usageTrend" style="padding:14px 16px; margin-bottom:24px"></div>
+    <!-- 누적 합계는 "지금 얼마"만 말한다. 늘고 있는지 줄고 있는지는 기간을 잘라 직전 기간과 견줘야 보인다.
+         카드 넷이 기간 합계와 직전 대비를 말하고, 아래 차트 하나가 고른 카드의 날짜별 값을 편다. -->
+    <div class="usage-top">
+      <h3>이용 추이</h3>
+      <div class="seg" id="usageRange" role="group" aria-label="기간">
+        <button type="button" data-days="7">7일</button>
+        <button type="button" data-days="30" aria-pressed="true">30일</button>
+        <button type="button" data-days="90">90일</button>
+      </div>
+    </div>
+    <div class="usage-kpis" id="usageKpis"></div>
+    <div class="card usage-chart" id="usageChart"></div>
 
     <!-- ═══ 학습 통계 — 표본이 쌓이면 열린다 ═══
          제출 2건에 정답률 0%는 통계가 아니라 우연이다. 그런데 막대 하나짜리 차트와
@@ -52,19 +61,47 @@ try {
       </h3>
       <div class="card" id="domainChart" style="padding:14px 16px"></div>
 
-      <h3>문제별 정답률
-        <select id="problemSort" class="sort-select">
-          <option value="asc">낮은 순 — 어렵거나 오답 후보부터</option>
-          <option value="desc">높은 순 — 너무 쉬운 문제부터</option>
-          <option value="attempts">제출 많은 순 — 표본이 큰 것부터</option>
-        </select>
-        <span class="meta">(행을 누르면 수정)</span>
-      </h3>
-      <div class="table-wrap"><table class="grid" id="statsTable"></table></div>
-      <!-- 접힌 줄이 몇 개인지 숫자로 말한다(renderProblemStats 주석). 처음에는 감춰져 있고
-           줄 수가 상한을 넘을 때만 나타난다 — 늘 떠 있으면 누를 것이 없는 버튼이 된다. -->
-      <button type="button" class="btn-outline btn-sm" id="statsMore" hidden
-              style="margin-top:8px"></button>
+      <h3>문제별 정답률 <span class="meta">(행을 누르면 수정)</span></h3>
+      <!-- 쪽 단위로 서버에서 거른다. 전에는 전부 받아 스무 줄만 그리고 "더 보기"로 폈는데,
+           문제가 늘수록 응답이 커지고 원하는 문제를 찾을 수단이 정렬 셋뿐이었다. -->
+      <div class="filters" id="psFilters">
+        <div class="field field-search"><label for="psQ">검색 <span class="meta">(제목·지문)</span></label>
+          <input type="search" id="psQ" maxlength="50" placeholder="제목이나 지문 일부"></div>
+        <div class="field"><label for="psDomain">분야</label><select id="psDomain"></select></div>
+        <div class="field"><label for="psDifficulty">난이도</label><select id="psDifficulty"></select></div>
+        <div class="field"><label for="psType">유형</label><select id="psType"></select></div>
+        <div class="field"><label for="psBand">정답률</label>
+          <select id="psBand">
+            <option value="">전체</option>
+            <option value="LOW">낮음 (40% 미만)</option>
+            <option value="MID">보통 (40~79%)</option>
+            <option value="HIGH">높음 (80% 이상)</option>
+            <option value="NO_DATA">아직 아무도 안 풂</option>
+          </select></div>
+        <div class="field"><label for="psMin">최소 제출</label>
+          <select id="psMin">
+            <option value="">제한 없음</option>
+            <option value="1">1건 이상</option>
+            <option value="5">5건 이상</option>
+            <option value="10">10건 이상</option>
+            <option value="30">30건 이상</option>
+          </select></div>
+        <div class="field"><label for="psHidden">공개</label>
+          <select id="psHidden">
+            <option value="">전체</option>
+            <option value="false">공개 중</option>
+            <option value="true">내린 문제</option>
+          </select></div>
+        <div class="field"><label for="psSort">정렬</label>
+          <select id="psSort">
+            <option value="RATE_ASC">정답률 낮은 순</option>
+            <option value="RATE_DESC">정답률 높은 순</option>
+            <option value="ATTEMPTS_DESC">제출 많은 순</option>
+            <option value="NEWEST">최근 등록 순</option>
+          </select></div>
+        <div class="field field-reset"><label>&nbsp;</label><button id="psReset" class="btn-outline">필터 지우기</button></div>
+      </div>
+      <div id="problemStats"></div>
     </details>
   </div>
 </main>
@@ -82,59 +119,209 @@ try {
  *   2) 정적 파일: AdminGateFilter가 관리자 쿠키를 검사하고 없으면 404.
  *   3) 데이터: SecurityConfig가 /api/admin/** 를 hasRole(ADMIN)으로 막는다.
  * 2번이 이번에 추가된 겹이다. 1·3만 있던 시절에는 화면 파일 자체는 누구나 받아 볼 수 있었다. */
-/* 마지막으로 받은 통계 — 정렬을 바꿀 때 서버를 다시 부르지 않으려고 들고 있는다.
- *
- * [왜 서버 정렬이 아닌가] 서버 쪽 주석이 이미 답을 적어 뒀다: "정렬은 화면 요구라 SQL에 두지
- * 않는다 — 뷰는 표현 중립을 유지한다"(AdminStatsService). 게다가 대시보드는 네 가지를 한 번에
- * 받아 오는 구조라, 정렬 하나 바꾸자고 전부를 다시 받는 것은 낭비다. 행도 수십 개 규모다. */
-let dashboardStats = { domains: [], problems: [] };
+/* 마지막으로 받은 도메인 통계 — 정렬을 바꿀 때 서버를 다시 부르지 않으려고 들고 있는다. */
+let domainStats = [];
 
+/* ═══ 이용 추이 ═══
+ * 전에는 가입·푼 사람·제출을 눈금 없는 막대 세 줄로 그렸다. 줄마다 높이 기준이 달라 값을 읽을 수 없었고,
+ * "많은 건가 적은 건가"를 판단할 기준도 없었다. 지금은 카드가 기간 합계와 직전 기간 대비를 말하고,
+ * 차트는 고른 지표 하나만 눈금(0·중간·최대)과 평균선을 붙여 그린다. */
+const USAGE_METRICS = {
+  submissions: { label: "제출", unit: "건", hint: "문제를 풀어 답을 낸 횟수",
+                 chart: "날짜별 제출 수" },
+  activeUsers: { label: "활동 회원", unit: "명", hint: "기간 안에 한 문제라도 푼 사람(중복 없이)",
+                 chart: "날짜별 푼 사람 수" },
+  signups:     { label: "신규 가입", unit: "명", hint: "새로 만든 계정 수(탈퇴한 계정은 빠짐)",
+                 chart: "날짜별 가입 수" },
+  rate:        { label: "정답률", unit: "%", hint: "제출 중 맞힌 비율",
+                 chart: "날짜별 정답률" },
+};
+const usageState = { days: 30, metric: "submissions", trend: null, summary: null };
+
+// 시작은 위 상수들 뒤에 둔다. 앞에 두면 const를 선언 전에 읽어 이용 추이가 통째로 실패한다
 if (initAdminPage("stats")) {
-  document.getElementById("domainSort").addEventListener("change",
-    () => renderDomainChart(dashboardStats.domains));
-  document.getElementById("problemSort").addEventListener("change",
-    () => renderProblemStats(dashboardStats.problems));
+  document.getElementById("domainSort").addEventListener("change", () => renderDomainChart(domainStats));
   loadDashboard();
-  loadUsageTrend();
+  initUsage();
+  initProblemStats();
 }
 
-/**
- * 이용 추이 — 가입·푼 사람·제출을 날짜별 막대 세 줄로.
- *
- * 대시보드 본체와 따로 부른다. 추이가 실패해도 정답률은 그대로 보여야 한다.
- * 줄마다 세로 눈금이 다르다(가입은 한 자릿수, 제출은 수십). 한 눈금에 맞추면 가입 줄이 바닥에 붙는다.
- * 그래서 줄마다 가장 큰 값과 합계를 글자로 적는다 — 막대만으로는 값을 읽을 수 없다.
- */
-async function loadUsageTrend() {
-  const box = document.getElementById("usageTrend");
-  let days;
+function initUsage() {
+  const range = document.getElementById("usageRange");
+  range.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-days]");
+    if (!btn) return;
+    range.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+    usageState.days = Number(btn.dataset.days);
+    loadUsage();
+  });
+  document.getElementById("usageKpis").addEventListener("click", e => {
+    const card = e.target.closest(".kpi");
+    if (!card) return;
+    usageState.metric = card.dataset.metric;
+    renderUsage();
+  });
+  // 차트는 상자 폭에 맞춰 픽셀로 그린다(글자가 늘어나지 않게). 폭이 바뀌면 다시 그린다
+  let t;
+  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(renderUsageChart, 150); });
+  loadUsage();
+}
+
+/** 대시보드 본체와 따로 부른다. 추이가 실패해도 정답률은 그대로 보여야 한다. */
+async function loadUsage() {
   try {
-    days = await api("/api/admin/usage-trend?days=30");
+    const [trend, summary] = await Promise.all([
+      api(`/api/admin/usage-trend?days=${usageState.days}`),
+      api(`/api/admin/usage-summary?days=${usageState.days}`),
+    ]);
+    Object.assign(usageState, { trend, summary });
+    renderUsage();
   } catch (e) {
-    box.innerHTML = `<div class="meta">이용 추이를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+    document.getElementById("usageKpis").innerHTML = "";
+    document.getElementById("usageChart").innerHTML =
+      `<div class="meta">이용 추이를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderUsage() {
+  const { current: cur, previous: prev } = usageState.summary;
+  const rateOf = p => p.submissions ? Math.round(p.correct * 100 / p.submissions) : null;
+  const values = {
+    submissions: [cur.submissions, prev.submissions],
+    activeUsers: [cur.activeUsers, prev.activeUsers],
+    signups:     [cur.signups, prev.signups],
+    rate:        [rateOf(cur), rateOf(prev)],
+  };
+  document.getElementById("usageKpis").innerHTML = Object.entries(USAGE_METRICS).map(([key, m]) => {
+    const [now, before] = values[key];
+    return `
+      <button type="button" class="kpi" data-metric="${key}" aria-pressed="${key === usageState.metric}">
+        <span class="kpi-label">${m.label}</span>
+        <span class="kpi-value">${now === null ? "—" : now.toLocaleString()}<small>${now === null ? "" : m.unit}</small></span>
+        <span class="kpi-delta">${usageDelta(key, now, before, m.unit)}</span>
+        <span class="kpi-hint">${m.hint}</span>
+      </button>`;
+  }).join("");
+  renderUsageChart();
+}
+
+/** 직전 같은 길이 기간과 견준 한 줄. 정답률은 비율끼리라 %가 아니라 %p 차이로 적는다. */
+function usageDelta(key, now, before, unit) {
+  const span = `직전 ${usageState.days}일`;
+  if (key === "rate") {
+    if (now === null) return "이 기간엔 제출이 없음";
+    if (before === null) return `${span}엔 제출이 없었음`;
+    const d = now - before;
+    return `${span} ${before}% 대비 ` + (d === 0 ? "같음" : `${d > 0 ? "▲" : "▼"} ${Math.abs(d)}%p`);
+  }
+  if (before === 0) return now === 0 ? `${span}도 0${unit}` : `${span}엔 0${unit}`;
+  const pct = Math.round((now - before) / before * 100);
+  return `${span} ${before.toLocaleString()}${unit} 대비 `
+    + (pct === 0 ? "비슷" : `${pct > 0 ? "▲" : "▼"} ${Math.abs(pct)}%`);
+}
+
+/** 0부터 시작하는 세로 눈금의 위 끝 — 1·2·5 단위로 올린다. 정수 값이라 4 이하면 그대로 쓴다. */
+function niceMax(v) {
+  if (v <= 4) return Math.max(v, 1);
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  return [1, 2, 5, 10].map(s => s * p).find(n => n >= v);
+}
+
+function renderUsageChart() {
+  const box = document.getElementById("usageChart");
+  const days = usageState.trend;
+  if (!days) return;
+  const key = usageState.metric;
+  const m = USAGE_METRICS[key];
+  const val = d => key === "rate" ? (d.submissions ? Math.round(d.correct * 100 / d.submissions) : null) : d[key];
+  const vals = days.map(val);
+  const present = vals.filter(v => v !== null);
+  const avg = present.length ? present.reduce((a, v) => a + v, 0) / present.length : 0;
+  const md = iso => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
+  const avgText = key === "rate" ? `${Math.round(avg)}%` : `${avg.toFixed(avg < 10 ? 1 : 0)}${m.unit}`;
+
+  const head = `<div class="usage-chart-head"><b>${m.chart}</b>
+    <span class="meta">최근 ${usageState.days}일 · 막대 하나가 하루 · 점선은 ${key === "rate" ? "제출 있던 날의 " : "하루 "}평균 ${avgText}</span></div>`;
+  if (!present.some(v => v > 0)) {
+    box.innerHTML = head + `<div class="usage-empty">이 기간엔 ${m.label === "정답률" ? "제출" : m.label} 기록이 없습니다.</div>`;
     return;
   }
-  const md = iso => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
-  const rows = [
-    ["가입", "signups", "명"],
-    ["푼 사람", "activeUsers", "명"],
-    ["제출", "submissions", "건"],
-  ];
-  box.innerHTML = rows.map(([label, key, unit]) => {
-    const max = Math.max(...days.map(d => d[key]));
-    const sum = days.reduce((a, d) => a + d[key], 0);
-    // 푼 사람은 날마다 같은 사람이 겹쳐 세어진다. 합계를 내면 사람 수처럼 읽혀 틀린 숫자가 된다.
-    const note = key === "activeUsers" ? `하루 최대 ${max}${unit}` : `합계 ${sum}${unit} · 하루 최대 ${max}${unit}`;
-    return `
-      <div class="usage-row">
-        <div class="usage-head"><b>${label}</b> <span class="meta">${note}</span></div>
-        <div class="trend" role="img" aria-label="${label} 최근 30일: ${note}">
-          ${days.map(d => `<div class="trend-day" title="${md(d.date)} — ${d[key]}${unit}">
-            <div class="trend-bar solid" style="height:${max ? Math.round(d[key] / max * 100) : 0}%"></div>
-          </div>`).join("")}
-        </div>
-      </div>`;
-  }).join("") + `<div class="trend-axis"><span>${md(days[0].date)}</span><span>오늘</span></div>`;
+
+  const W = Math.max(box.clientWidth - 32, 280), H = 180;
+  const pad = { l: 36, r: 8, t: 10, b: 22 };
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  const top = key === "rate" ? 100 : niceMax(Math.max(...present));
+  const y = v => pad.t + ih - v / top * ih;
+  const band = iw / days.length;
+  const bw = Math.max(Math.min(band * 0.7, 28), 1.5);
+  const r = Math.min(4, bw / 2);
+  const ticks = top <= 1 ? [0, top] : [0, top / 2, top].filter(t => key === "rate" || Number.isInteger(t));
+  // 날짜 글자는 오늘부터 거꾸로 일정 간격으로만 — 매일 적으면 30일·90일에서 겹친다
+  const every = days.length <= 7 ? 1 : days.length <= 30 ? 7 : 14;
+
+  const bars = days.map((d, i) => {
+    const v = vals[i];
+    const x = pad.l + band * i + (band - bw) / 2;
+    const h = v ? Math.max(v / top * ih, 2) : 0;
+    const isToday = i === days.length - 1;
+    // 위 두 모서리만 둥글게: 바닥에 붙는 쪽은 각지게 둔다
+    const path = h ? `M${x},${pad.t + ih} v${-(h - r)} q0,${-r} ${r},${-r} h${bw - 2 * r} q${r},0 ${r},${r} v${h - r} z` : "";
+    return `<g class="col" data-i="${i}">
+      <rect class="hit" x="${pad.l + band * i}" y="${pad.t}" width="${band}" height="${ih}"></rect>
+      ${path ? `<path class="bar${isToday ? " today" : ""}" d="${path}"></path>` : ""}
+    </g>`;
+  }).join("");
+  const xLabels = days.map((d, i) => {
+    const fromEnd = days.length - 1 - i;
+    if (fromEnd % every !== 0) return "";
+    const x = pad.l + band * i + band / 2;
+    return `<text class="axis-text" x="${x}" y="${H - 6}" text-anchor="middle">${fromEnd === 0 ? "오늘" : md(d.date)}</text>`;
+  }).join("");
+  const grid = ticks.map(t => `
+    <line class="grid-line" x1="${pad.l}" x2="${W - pad.r}" y1="${y(t)}" y2="${y(t)}"></line>
+    <text class="axis-text" x="${pad.l - 6}" y="${y(t) + 4}" text-anchor="end">${t}${key === "rate" ? "%" : ""}</text>`).join("");
+  const avgLine = `<line class="avg-line" x1="${pad.l}" x2="${W - pad.r}" y1="${y(avg)}" y2="${y(avg)}"></line>`;
+
+  box.innerHTML = head + `
+    <svg class="usage-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
+         aria-label="${m.chart}, 최근 ${usageState.days}일, 평균 ${avgText}">${grid}${bars}${avgLine}${xLabels}</svg>`;
+
+  const tip = chartTip();
+  const wd = ["일", "월", "화", "수", "목", "금", "토"];
+  box.querySelectorAll(".col").forEach(g => {
+    const d = days[Number(g.dataset.i)];
+    g.addEventListener("mouseenter", () => {
+      const day = wd[new Date(d.date + "T00:00:00").getDay()];
+      const detail = key === "rate"
+        ? (d.submissions ? `정답률 ${val(d)}% (${d.correct}/${d.submissions})` : "제출 없음")
+        : key === "submissions" ? `제출 ${d.submissions}건 · 정답 ${d.correct}건`
+        : `${m.label} ${d[key]}${m.unit}`;
+      tip.innerHTML = `<b>${md(d.date)}(${day})</b><br>${detail}`;
+      tip.hidden = false;
+    });
+    g.addEventListener("mousemove", moveTip);
+    g.addEventListener("mouseleave", () => { tip.hidden = true; });
+  });
+}
+
+/** 차트 공용 툴팁 하나를 만들어 두고 나눠 쓴다. */
+function chartTip() {
+  let tip = document.getElementById("chartTip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.id = "chartTip";
+    tip.className = "chart-tip";
+    tip.hidden = true;
+    document.body.appendChild(tip);
+  }
+  return tip;
+}
+
+function moveTip(e) {
+  const tip = chartTip();
+  // 커서 오른쪽 아래 12px — 커서에 딱 붙이면 툴팁이 커서를 가린다
+  tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + "px";
+  tip.style.top = (e.clientY + 12) + "px";
 }
 
 async function loadDashboard() {
@@ -145,7 +332,7 @@ async function loadDashboard() {
     document.getElementById("totals").textContent =
       `회원 ${d.totals.users} · 문서 ${d.totals.documents} · 문제 ${d.totals.problems} · 제출 ${d.totals.submissions}`;
 
-    dashboardStats = { domains: d.domainStats, problems: d.problemStats };
+    domainStats = d.domainStats;
     renderLearningStats(d);
   } catch (e) {
     showErrorAlert(document.getElementById("guard"), e, "학습 현황을 불러오지 못했습니다");
@@ -178,80 +365,51 @@ function renderLearningStats(d) {
   panel.open = enough;
 
   renderDomainChart(d.domainStats);
-  renderProblemStats(d.problemStats);
 }
 
 /**
- * 문제별 정답률 표.
+ * 문제별 정답률 — 쪽 단위로 서버에서 거른다(GET /api/admin/problem-stats).
  *
  * <p>기본 정렬은 정답률 낮은 순. 이 표를 보는 이유가 "어느 문제가 문제인가"이기 때문이다.
- * 서버가 준 순서(ID 순)를 그대로 그리면 60문제 중 정답률 20%짜리를 눈으로 찾아야 한다.
- *
- * <p><b>정렬을 고를 수 있게 했다(2026-08-29).</b> 낮은 순만으로는 답이 안 나오는 질문이 둘 있다 —
- * "너무 쉬운 문제는 없나"(높은 순)와 "그 숫자를 믿어도 되나"(제출 많은 순). 2회 제출에 0%는
- * 통계가 아니라 우연이라, 표본이 큰 것부터 보는 눈이 따로 필요하다.
- *
- * <p>기록 없는 문제(correctRate === null)는 <b>어느 정렬에서도</b> 맨 아래다. 0%(다 틀렸다)와
- * "아직 아무도 안 풀었다"는 정반대 신호인데, 섞이면 이 표가 거짓말을 한다.
- *
- * <p><b>기본은 {@link #PROBLEM_ROWS}줄까지만 그린다(2026-09-08).</b> 전에는 문제 수만큼 전부
- * 그렸다 — 105문제일 때 이 표 하나로 화면이 6천 픽셀이 됐고, 대시보드가 <b>훑는 화면이 아니라
- * 스크롤하는 화면</b>이 됐다. 문제가 늘수록 나빠지기만 하는 구조다.
- *
- * <p>정렬이 이미 "먼저 볼 것"을 위로 올려 주므로(낮은 순·높은 순·제출 많은 순) 위쪽 스무 줄이
- * 이 표를 보는 이유의 대부분이다. 나머지는 "%d개 더 보기"로 편다. 정렬을 바꾸면 <b>다시
- * 접는다</b> — 기준이 바뀌면 "위에서 스무 개"의 뜻도 바뀌기 때문이다.
+ * 기록 없는 문제는 정답률 정렬에서 늘 맨 아래다. 0%와 "아무도 안 풀었다"는 정반대 신호다.
+ * 최소 제출 필터는 표본이 작은 극단값(2건에 0%)을 걸러 내는 용도다.
  */
-function renderProblemStats(stats, expanded = false) {
-  const mode = document.getElementById("problemSort").value;
-  const sorted = [...stats].sort((a, b) => {
-    // 기록 없는 문제는 정렬 기준과 무관하게 늘 맨 아래다. 0%(다 틀렸다)와 "아직 아무도
-    // 안 풀었다"는 정반대 신호라, 어느 방향으로 정렬하든 섞이면 표가 거짓말을 한다.
-    if (a.correctRate === null || b.correctRate === null) {
-      if (a.correctRate === null && b.correctRate === null) return 0;
-      return a.correctRate === null ? 1 : -1;
-    }
-    if (mode === "attempts") return b.attempts - a.attempts;
-    return mode === "desc" ? b.correctRate - a.correctRate : a.correctRate - b.correctRate;
+function initProblemStats() {
+  fillDomainSelect(document.getElementById("psDomain"), "전체");
+  fillSelect(document.getElementById("psDifficulty"), DIFFICULTIES, "전체");
+  fillSelect(document.getElementById("psType"), TYPES, "전체");
+  wireFilterBar({
+    search: "psQ",
+    selects: ["psDomain", "psDifficulty", "psType", "psBand", "psMin", "psHidden", "psSort"],
+    reset: "psReset",
+    onChange: () => loadProblemStats({ page: 0 }),
   });
-  const shown = expanded ? sorted : sorted.slice(0, PROBLEM_ROWS);
-  const table = document.getElementById("statsTable");
-  table.innerHTML =
-    `<tr><th>ID</th><th>문제</th><th>도메인</th><th>유형</th><th>제출</th><th>정답</th><th>정답률</th></tr>` +
-    shown.map(s => `
-      <tr class="click-row" data-id="${s.problemId}" title="이 문제를 수정">
-        <td>${s.problemId}</td>
-        <td class="wrap">${escapeHtml(cut(s.question, 40))}</td>
-        <td>${escapeHtml(domainLabel(s.domain))}</td>
-        <td>${escapeHtml(typeLabel(s.type))}</td>
-        <td>${s.attempts}</td>
-        <td>${s.correctCount}</td>
-        <td>${s.correctRate === null ? '<span class="meta">기록 없음</span>' : s.correctRate + "%"}</td>
-      </tr>`).join("");
-
-  table.onclick = e => {
-    const tr = e.target.closest(".click-row");
-    if (tr) goProblemEdit(Number(tr.dataset.id));
-  };
-
-  // 더 보기 — 접힌 줄이 몇 개인지 숫자로 말한다. "더 보기"만 있으면 몇 개가 숨었는지
-  // 몰라 누를지 말지를 못 정한다(문제 목록의 "+ 7개 더 보기"와 같은 방식).
-  const more = document.getElementById("statsMore");
-  const rest = sorted.length - shown.length;
-  more.hidden = rest === 0;
-  if (rest > 0) {
-    more.textContent = `${rest}개 더 보기`;
-    more.onclick = () => renderProblemStats(stats, true);
-  }
+  loadProblemStats();
 }
 
-/**
- * 대시보드에 기본으로 그릴 문제별 정답률 줄 수.
- *
- * <p>스물인 근거: 이 표를 여는 이유는 "손볼 문제 몇 개를 고른다"이고, 한 번에 손볼 수 있는
- * 양이 그 정도다. 화면 한 판(1080px)에 표 머리와 함께 대략 들어가는 줄 수이기도 하다.
- */
-const PROBLEM_ROWS = 20;
+function loadProblemStats(opts = {}) {
+  return renderAdminTable("#problemStats", {
+    url: "/api/admin/problem-stats",
+    pageSize: 20,
+    filters: () => filterQuery({
+      q: "psQ", domain: "psDomain", difficulty: "psDifficulty", type: "psType",
+      band: "psBand", minAttempts: "psMin", hidden: "psHidden", sort: "psSort",
+    }),
+    columns: [
+      { head: "ID", width: "56px", cell: s => s.problemId },
+      { head: "문제", wrap: true, cell: s => escapeHtml(cut(s.title || s.question, 48))
+          + (s.hidden ? ' <span class="badge gray">내림</span>' : "") },
+      { head: "분야", cell: s => escapeHtml(domainLabel(s.domain)) },
+      { head: "난이도", cell: s => escapeHtml(difficultyLabel(s.difficulty)) },
+      { head: "유형", cell: s => escapeHtml(typeLabel(s.type)) },
+      { head: "제출", cell: s => s.attempts },
+      { head: "정답", cell: s => s.correctCount },
+      { head: "정답률", cell: s => s.correctRate === null ? '<span class="meta">기록 없음</span>'
+          : `<span class="rate-cell"><span class="rate-track"><span class="rate-fill" style="width:${s.correctRate}%"></span></span><b>${s.correctRate}%</b></span>` },
+    ],
+    onRowClick: s => goProblemEdit(s.problemId),
+  }, opts);
+}
 
 /**
  * 도메인별 정답률 가로 막대 차트 — 데이터 출처는 DB 뷰 domain_stats(R__ 마이그레이션).
@@ -286,14 +444,7 @@ function renderDomainChart(rows) {
   /* 호버 툴팁 — 화면에 다 적으면 시끄러운 상세 수치(정답/문제/도전자)는 툴팁으로.
    * 툴팁 하나를 공유하고 행마다 내용만 바꾼다. innerHTML이 아니라 textContent 조립이
    * 아니어도 되는 이유: 아래 문자열은 전부 숫자와 우리가 만든 라벨뿐(사용자 입력 없음). */
-  let tip = document.getElementById("chartTip");
-  if (!tip) {
-    tip = document.createElement("div");
-    tip.id = "chartTip";
-    tip.className = "chart-tip";
-    tip.hidden = true;
-    document.body.appendChild(tip);
-  }
+  const tip = chartTip();
   box.querySelectorAll(".hbar-row").forEach(row => {
     const r = sorted[Number(row.dataset.i)];
     row.addEventListener("mouseenter", () => {
@@ -302,11 +453,7 @@ function renderDomainChart(rows) {
         풀린 문제 ${r.attemptedProblemCount}개 · 도전자 ${r.solverCount}명`;
       tip.hidden = false;
     });
-    row.addEventListener("mousemove", e => {
-      // 커서 오른쪽 아래 12px — 커서에 딱 붙이면 툴팁이 커서를 가린다
-      tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + "px";
-      tip.style.top = (e.clientY + 12) + "px";
-    });
+    row.addEventListener("mousemove", moveTip);
     row.addEventListener("mouseleave", () => { tip.hidden = true; });
   });
 }
