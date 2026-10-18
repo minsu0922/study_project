@@ -58,7 +58,7 @@ public final class DomainSettings implements DomainCatalog {
     /** 배치와 관리 화면 내보내기가 함께 가리키는 파일 이름. {@code DomainSettingExporter}가 빌려 쓴다. */
     public static final String FILE_NAME = "_domain-settings.json";
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JsonMappers.STRICT;
 
     private final DomainSettingsFile file;
 

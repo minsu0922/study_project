@@ -1,6 +1,7 @@
 package project.study.study_project.llm.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
@@ -105,7 +106,7 @@ public final class PromptEvalCli {
      */
     private static final Pattern DECLARATIVE_SENTENCE = Pattern.compile("다[)\\]]?[.]([\\s)]|$)");
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JsonMappers.STRICT;
 
     private PromptEvalCli() {
     }
@@ -113,7 +114,7 @@ public final class PromptEvalCli {
     public static void main(String[] args) throws Exception {
         Map<String, String> opts = BatchOptions.parseArgs(args);
         Map<String, Object> generation = BatchOptions.readGenerationConfig();
-        String model = (String) generation.getOrDefault("model", "claude-opus-5");
+        String model = BatchOptions.configuredModel(generation);
         int count = opts.containsKey("count") ? Integer.parseInt(opts.get("count")) : DEFAULT_COUNT;
 
         Path documentFile = resolveDocumentFile(opts.get("document"));

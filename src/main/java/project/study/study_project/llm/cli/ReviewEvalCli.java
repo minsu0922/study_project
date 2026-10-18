@@ -1,7 +1,7 @@
 package project.study.study_project.llm.cli;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.DocumentEdition;
 import project.study.study_project.llm.client.FactCheckFinding;
@@ -54,17 +54,14 @@ public final class ReviewEvalCli {
     /** 이보다 짧은 인용은 부분 일치로 치지 않는다. "1024번" 한 단어가 아무 데나 맞는 것을 막는다. */
     static final int MIN_QUOTE_LENGTH = 8;
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper MAPPER = JsonMappers.LENIENT;
 
     private ReviewEvalCli() {
     }
 
     public static void main(String[] args) throws Exception {
         Map<String, String> opts = BatchOptions.parseArgs(args);
-        String model = opts.containsKey("model")
-                ? opts.get("model")
-                : (String) BatchOptions.readGenerationConfig().getOrDefault("model", "claude-opus-5");
+        String model = BatchOptions.resolveModel(opts);
         SampleFile sampleFile = MAPPER.readValue(
                 Path.of(opts.getOrDefault("samples", DEFAULT_SAMPLES)).toFile(), SampleFile.class);
 

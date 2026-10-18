@@ -1,6 +1,7 @@
 package project.study.study_project.llm.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
@@ -78,7 +79,7 @@ import java.util.Objects;
  */
 public final class DraftGeneratorCli {
 
-    static final ObjectMapper MAPPER = new ObjectMapper();
+    static final ObjectMapper MAPPER = JsonMappers.STRICT;
 
     private DraftGeneratorCli() {
     }
@@ -103,7 +104,7 @@ public final class DraftGeneratorCli {
         // application.yml을 직접 읽는 이유: 모델 ID·후보 도메인을 워크플로에 따로 적어 두면
         // 설정을 바꿨을 때 두 곳이 어긋난다. 설정의 단일 출처는 언제나 application.yml이다.
         Map<String, Object> generation = BatchOptions.readGenerationConfig();
-        String model = (String) generation.getOrDefault("model", "claude-opus-5");
+        String model = BatchOptions.configuredModel(generation);
         int defaultCount = (int) generation.getOrDefault("batch-count", 5);
         // 난이도별 배분. 없으면 null로 두고 resolveCount가 위 폴백을 쓰게 한다 —
         // 여기서 기본 문자열을 끼워 넣으면 설정을 지운 사람이 <지운 대로> 못 돌게 된다.

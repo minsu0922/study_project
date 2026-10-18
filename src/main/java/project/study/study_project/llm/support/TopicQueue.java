@@ -64,7 +64,7 @@ public final class TopicQueue {
                     + "lastUsedAt·usedCount는 배치가 적는 칸이니 손대지 마세요. "
                     + "목록이 비면 예전처럼 모델이 주제를 자동으로 고릅니다. 고친 뒤에는 커밋해야 다음 배치에 반영됩니다.";
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JsonMappers.STRICT;
 
     private final TopicQueueFile file;
 

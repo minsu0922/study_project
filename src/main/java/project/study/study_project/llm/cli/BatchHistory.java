@@ -7,6 +7,7 @@ import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.RejectionNotesFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.JsonMappers;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +23,7 @@ import java.util.Objects;
  */
 final class BatchHistory {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JsonMappers.STRICT;
 
     private BatchHistory() {
     }

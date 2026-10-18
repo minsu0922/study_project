@@ -1,7 +1,7 @@
 package project.study.study_project.llm.cli;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
@@ -55,8 +55,7 @@ public final class CodeProblemCli {
     /** 같은 주제로 전에 낸 코드를 프롬프트에 싣는 상한. 주제가 여러 번 돌면 끝없이 늘어난다. */
     static final int MAX_AVOID_CODES = 15;
 
-    static final ObjectMapper MAPPER = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    static final ObjectMapper MAPPER = JsonMappers.LENIENT;
 
     private CodeProblemCli() {
     }
@@ -126,8 +125,7 @@ public final class CodeProblemCli {
         }
         String topic = picked == null ? givenTopic : picked.topic();
         DomainCode domain = picked == null ? DomainCode.of(opts.getOrDefault("domain", "LANGUAGE_RUNTIME")) : picked.domain();
-        String model = BatchOptions.isSet(opts.get("model")) ? opts.get("model")
-                : (String) BatchOptions.readGenerationConfig().getOrDefault("model", "claude-opus-5");
+        String model = BatchOptions.resolveModel(opts);
         ClaudeCalls.useBatch(!"false".equalsIgnoreCase(opts.getOrDefault(BatchOptions.BATCH_API_OPT, "true")));
 
         List<String> avoid = previousCodes(outDir, topic);

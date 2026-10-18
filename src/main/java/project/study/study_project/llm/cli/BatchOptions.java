@@ -334,6 +334,19 @@ final class BatchOptions {
         }
     }
 
+    /** application.yml에 {@code llm.generation.model}이 없을 때 쓰는 모델. */
+    static final String DEFAULT_MODEL = "claude-opus-5";
+
+    /** 설정 블록에서 모델 ID를 꺼낸다. */
+    static String configuredModel(Map<String, Object> generation) {
+        return (String) generation.getOrDefault("model", DEFAULT_MODEL);
+    }
+
+    /** {@code --model}이 있으면 그것, 없으면 설정값. 옵션이 있으면 설정 파일을 읽지 않는다. */
+    static String resolveModel(Map<String, String> opts) throws Exception {
+        return isSet(opts.get("model")) ? opts.get("model") : configuredModel(readGenerationConfig());
+    }
+
     /**
      * 결과 디렉터리 — {@code --out} 아니면 {@link #DEFAULT_OUT_DIR}.
      *

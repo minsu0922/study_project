@@ -12,6 +12,7 @@ import project.study.study_project.llm.support.GenerationSchedule;
 import project.study.study_project.llm.support.TopicQueue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.JsonMappers;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,7 +33,7 @@ import java.util.Objects;
 final class DocumentBatch {
 
     /** 기존 DraftGeneratorCli와 같은 설정이라 쓰는 JSON 파일 형식도 같다. */
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JsonMappers.STRICT;
 
     private DocumentBatch() {
     }

@@ -1,7 +1,7 @@
 package project.study.study_project.llm.cli;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.llm.client.ClaudeProblemReviewer;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
@@ -42,17 +42,14 @@ public final class ProblemReviewEvalCli {
     private static final String DEFAULT_SAMPLES = "eval-samples/problem-review.json";
     private static final String DEFAULT_OUT_DIR = "eval";
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper MAPPER = JsonMappers.LENIENT;
 
     private ProblemReviewEvalCli() {
     }
 
     public static void main(String[] args) throws Exception {
         Map<String, String> opts = BatchOptions.parseArgs(args);
-        String model = opts.containsKey("model")
-                ? opts.get("model")
-                : (String) BatchOptions.readGenerationConfig().getOrDefault("model", "claude-opus-5");
+        String model = BatchOptions.resolveModel(opts);
         SampleFile file = MAPPER.readValue(
                 Path.of(opts.getOrDefault("samples", DEFAULT_SAMPLES)).toFile(), SampleFile.class);
 

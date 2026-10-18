@@ -1,7 +1,7 @@
 package project.study.study_project.admin.service;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.JsonMappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,8 +51,7 @@ public class AdminCodeBatchService {
     /** 화면에 싣는 최근 실행 수. 두 달 치면 주제가 한 바퀴 도는지 보인다. */
     private static final int RECENT_RUNS = 8;
 
-    private static final ObjectMapper READER = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper READER = JsonMappers.LENIENT;
 
     private final TopicQueueService topicQueueService;
     private final ImportedDraftFileRepository importedDraftFileRepository;
