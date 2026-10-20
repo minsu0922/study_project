@@ -4,7 +4,7 @@
 > 인증: `Authorization: Bearer <accessToken>`. 재발급은 [`POST /api/auth/refresh`](#post-apiauthrefresh).
 > Base URL: `/api` · 🔒 = 로그인 필요 · 🛡️ = **ADMIN 전용**
 
-## 전체 엔드포인트 (64개 — 사용자 21 · 관리자 43)
+## 전체 엔드포인트 (66개 — 사용자 21 · 관리자 45)
 
 | 묶음 | 엔드포인트 | |
 |---|---|---|
@@ -14,7 +14,7 @@
 | **문제 목록** | `GET /api/problems` 🔒 · `GET /api/me/study-summary` 🔒 | [↓](#get-apiproblems-) |
 | **내 학습** | `GET /api/me/wrong-answers` 🔒<br>`GET /api/me/reviews` · `/reviews/today` 🔒<br>`GET /api/me/daily-quiz` 🔒 | [↓](#get-apimewrong-answers-) |
 | **오류 제보** | `POST /api/me/problem-reports` 🔒 | [↓](#post-apimeproblem-reports-) |
-| **학습 로드맵** | `GET /api/learning-paths` · `/{key}` · `/{key}/steps/{seq}/problems`<br>`GET /api/me/learning-paths/current` 🔒 · `POST`·`DELETE /api/me/learning-paths/{key}` 🔒<br>`/api/admin/learning-paths`(6) 🛡️ | [↓](#학습-로드맵-api) |
+| **학습 로드맵** | `GET /api/learning-paths` · `/{key}` · `/{key}/steps/{seq}/problems`<br>`GET /api/me/learning-paths/current` 🔒 · `POST`·`DELETE /api/me/learning-paths/{key}` 🔒<br>`/api/admin/learning-paths`(8) 🛡️ | [↓](#학습-로드맵-api) |
 | **토론방** | `GET /api/quiz/posts` · `/{problemId}/posts` · `/posts/{postId}` · `/posts/{postId}/comments` · `/post-counts`<br>`POST`·`PUT`·`DELETE /api/me/posts` 🔒 · `/api/me/comments` 🔒 · `POST /api/me/comment-reports` 🔒 | [↓](#토론방-api) |
 | **관리자·문제** | `GET`·`POST /api/admin/problems` · `GET`·`PUT`·`DELETE /{id}` · 제목/근거 백필 🛡️ | [↓](#관리자-api-️) |
 | **관리자·문서** | `POST /api/admin/documents` · `PUT`·`DELETE /{id}` 🛡️ | [↓](#관리자-api-️) |
@@ -539,6 +539,8 @@ access 토큰 재발급. **refresh 토큰은 1회용**이라 쓰는 순간 새�
 | GET | `/api/admin/learning-paths` · `/{id}` · `/documents` | 추천 코스 목록·상세·단계로 고를 문서 🛡️ |
 | POST·PUT | `/api/admin/learning-paths` · `/{id}` | 바디 `{title, description, sortOrder, documentIds[], published}`. 단계는 `documentIds` 순서 그대로 🛡️ |
 | DELETE | `/api/admin/learning-paths/{id}` | 🛡️ |
+| GET | `/api/admin/learning-paths/domain-order/{domain}` | 분야 코스의 지금 순서. 줄마다 `seq`(사람이 정한 자리, 없으면 null) 🛡️ |
+| PUT | `/api/admin/learning-paths/domain-order/{domain}` | 바디 `{documentIds[]}`. 그 분야 순번을 통째로 다시 쓴다. 빈 목록이면 기본 순서로 되돌린다 🛡️ |
 
 - 진도는 저장하지 않는다. 제출 기록에서 센다. `solved`는 맞힌 적 있는 문제 수, `attempted`는 제출한 문제 수다.
 - `nextSeq`(다음 추천 단계)는 **안 푼 문제가 남은 첫 단계**다. 단계는 잠그지 않으므로 권유일 뿐이다.
