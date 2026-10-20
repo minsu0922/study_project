@@ -48,6 +48,7 @@ class AdminPageStructureTest {
             "documents.html",
             "generate.html",
             "llm.html",
+            "paths.html",
             "problems.html",
             "quality.html",
             "reports.html",

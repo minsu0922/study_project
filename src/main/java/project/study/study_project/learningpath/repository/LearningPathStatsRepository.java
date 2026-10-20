@@ -25,6 +25,15 @@ public interface LearningPathStatsRepository extends Repository<Problem, Long> {
             + "from Document d where d.hidden = false and d.id in :ids")
     List<DocumentRow> findPublicDocumentsByIds(@Param("ids") Collection<Long> ids);
 
+    /** 관리 콘솔의 문서 고르기 — 내린 문서도 보인다(고른 뒤 내린 문서를 단계 목록에서 알아봐야 한다) */
+    @Query("select d.id as id, d.domain as domain, d.slug as slug, d.title as title, d.hidden as hidden "
+            + "from Document d order by d.domain asc, d.id asc")
+    List<AdminDocumentRow> findAllDocumentsForAdmin();
+
+    interface AdminDocumentRow extends DocumentRow {
+        boolean isHidden();
+    }
+
     /** 단계마다 문제 수 — 문서로 묶인 문제 */
     @Query("select p.documentSlug as key, count(p) as cnt from Problem p "
             + "where p.hidden = false and p.documentSlug in :slugs group by p.documentSlug")

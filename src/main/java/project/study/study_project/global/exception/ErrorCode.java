@@ -124,6 +124,8 @@ public enum ErrorCode {
     // "형식 오류"와 "없음"을 갈라 알려 줄 이유가 없다.
     PATH_001("PATH_001", HttpStatus.NOT_FOUND, "학습 코스를 찾을 수 없습니다."),
     PATH_002("PATH_002", HttpStatus.BAD_REQUEST, "코스 단계에 넣을 수 없는 문서가 있습니다."),
+    // 400인 이유: 빈 코스를 공개하면 사용자 목록에서 조용히 빠진다(CourseCatalog). 그 혼란을 저장 때 막는다
+    PATH_003("PATH_003", HttpStatus.BAD_REQUEST, "공개 문서가 한 편도 없는 코스는 공개할 수 없습니다."),
 
     // 사용자 관리(V26) — 관리자가 사용자를 정지하고 푼다.
     USER_001("USER_001", HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),

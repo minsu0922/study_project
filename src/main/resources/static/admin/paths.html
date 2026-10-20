@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 로드맵 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-shell">
+<div id="shell"></div>
+
+<main class="container admin">
+  <h1>로드맵</h1>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <p class="meta">여기서 만드는 것은 <b>추천 코스</b>예요. 분야를 넘나드는 순서(예: 입문자 코스)를 사람이 정해요.
+      분야별 코스와 자바 코드 코스는 문서·문제로 저절로 만들어져서 여기 없어요.</p>
+
+    <details class="card form-panel" id="pFormPanel">
+      <summary id="pFormTitle">새 코스 만들기</summary>
+      <div id="pMessage"></div>
+      <div class="field"><label for="pTitle">제목</label><input type="text" id="pTitle" maxlength="100" placeholder="입문자 코스"></div>
+      <div class="field"><label for="pDesc">설명 <span class="meta">(목록 카드에 한두 줄로 보인다)</span></label>
+        <input type="text" id="pDesc" maxlength="500" placeholder="처음 CS를 공부하는 사람이 보기 좋은 순서예요."></div>
+      <div class="filters">
+        <div class="field"><label for="pOrder">목록 순서 <span class="meta">(작을수록 위)</span></label>
+          <input type="number" id="pOrder" min="0" max="9999" value="0"></div>
+        <div class="field"><label><input type="checkbox" id="pPublished"> 사용자에게 공개</label></div>
+      </div>
+
+      <!-- 왼쪽: 고른 단계(순서대로). 오른쪽: 문서 고르기. 좁으면 위아래로 쌓인다 -->
+      <div class="lp-editor">
+        <div>
+          <h3>단계 <span class="meta" id="pStepCount"></span></h3>
+          <ol class="lp-pick" id="pSteps"></ol>
+        </div>
+        <div>
+          <h3>문서 고르기</h3>
+          <div class="filters">
+            <div class="field"><label for="pDomain">분야</label><select id="pDomain"><option value="">전체</option></select></div>
+            <div class="field field-search"><label for="pQ">검색</label><input type="search" id="pQ" placeholder="제목 일부"></div>
+          </div>
+          <ul class="lp-pick" id="pDocs"></ul>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button id="pSubmitBtn">만들기</button>
+        <button id="pCancelBtn" class="btn-outline" hidden>수정 취소</button>
+        <button id="pDeleteBtn" class="btn-outline danger" hidden>코스 지우기</button>
+        <a id="pPreview" class="btn btn-outline" hidden target="_blank" rel="noopener">사용자 화면 열기 ↗</a>
+      </div>
+    </details>
+
+    <h3>추천 코스 <span class="meta">(행을 누르면 위에서 고친다)</span></h3>
+    <div id="pathList"></div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script>
+/* 추천 코스 관리 — /api/admin/learning-paths. 단계는 문서 id 목록을 순서대로 보낸다(폼 전체 제출). */
+
+let editingId = null;
+/** 고른 단계 — 문서 고르기 목록의 한 줄(AdminPathDocumentOption)을 그대로 담는다 */
+let picked = [];
+/** 고를 수 있는 문서 전부 */
+let options = [];
+
+if (initAdminPage("paths")) {
+  initForm();
+  loadOptions();
+  loadPaths();
+}
+
+function initForm() {
+  document.getElementById("pSubmitBtn").addEventListener("click", submit);
+  document.getElementById("pCancelBtn").addEventListener("click", resetForm);
+  document.getElementById("pDeleteBtn").addEventListener("click", e =>
+    armedAction(e.currentTarget, removePath, "정말 지울까요?"));
+  document.getElementById("pDomain").addEventListener("change", renderOptions);
+  document.getElementById("pQ").addEventListener("input", renderOptions);
+
+  // 단계 줄의 ↑ ↓ ✕ — 위임 하나로 받는다(값을 HTML 속성 문자열에 코드로 심지 않는다)
+  document.getElementById("pSteps").addEventListener("click", e => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn) return;
+    const i = Number(btn.dataset.i);
+    if (btn.dataset.act === "up" && i > 0) [picked[i - 1], picked[i]] = [picked[i], picked[i - 1]];
+    if (btn.dataset.act === "down" && i < picked.length - 1) [picked[i + 1], picked[i]] = [picked[i], picked[i + 1]];
+    if (btn.dataset.act === "remove") picked.splice(i, 1);
+    renderSteps();
+    renderOptions();
+  });
+  document.getElementById("pDocs").addEventListener("click", e => {
+    const btn = e.target.closest("[data-add]");
+    if (!btn) return;
+    const doc = options.find(o => o.id === Number(btn.dataset.add));
+    if (doc && !picked.some(p => p.id === doc.id)) picked.push(doc);
+    renderSteps();
+    renderOptions();
+  });
+  renderSteps();
+}
+
+async function loadOptions() {
+  try {
+    options = await api("/api/admin/learning-paths/documents");
+    const domains = [...new Map(options.map(o => [o.domain, o.domainLabel])).entries()];
+    document.getElementById("pDomain").insertAdjacentHTML("beforeend",
+      domains.map(([v, l]) => `<option value="${escapeHtml(v)}">${escapeHtml(l)}</option>`).join(""));
+    renderOptions();
+  } catch (e) {
+    showErrorAlert(document.getElementById("pDocs"), e, "문서 목록을 불러오지 못했습니다");
+  }
+}
+
+function docLine(d) {
+  return `${escapeHtml(d.title)}${d.edition ? ` <span class="badge source">${escapeHtml(d.edition)}</span>` : ""}
+    <span class="meta">${escapeHtml(d.domainLabel)} · 문제 ${d.problemCount}</span>${
+    d.hidden ? ` <span class="badge orange" title="사용자에게는 이 단계가 보이지 않는다">내린 문서</span>` : ""}`;
+}
+
+function renderSteps() {
+  const el = document.getElementById("pSteps");
+  document.getElementById("pStepCount").textContent = picked.length ? `(${picked.length})` : "";
+  el.innerHTML = picked.length === 0
+    ? `<li class="meta">오른쪽에서 문서를 골라 넣으세요. 넣은 순서가 단계 순서예요.</li>`
+    : picked.map((d, i) => `
+      <li>
+        <span class="lp-pick-main"><b>${i + 1}.</b> ${docLine(d)}</span>
+        <span class="lp-pick-acts">
+          <button type="button" class="btn-outline btn-sm" data-act="up" data-i="${i}" aria-label="위로" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button type="button" class="btn-outline btn-sm" data-act="down" data-i="${i}" aria-label="아래로" ${i === picked.length - 1 ? "disabled" : ""}>↓</button>
+          <button type="button" class="btn-outline btn-sm" data-act="remove" data-i="${i}" aria-label="빼기">✕</button>
+        </span>
+      </li>`).join("");
+}
+
+function renderOptions() {
+  const domain = document.getElementById("pDomain").value;
+  const q = document.getElementById("pQ").value.trim().toLowerCase();
+  const list = options.filter(o => (!domain || o.domain === domain) && (!q || o.title.toLowerCase().includes(q)));
+  document.getElementById("pDocs").innerHTML = list.length === 0
+    ? `<li class="meta">조건에 맞는 문서가 없어요.</li>`
+    : list.map(d => {
+      const used = picked.some(p => p.id === d.id);
+      return `
+        <li>
+          <span class="lp-pick-main">${docLine(d)}</span>
+          <button type="button" class="btn-outline btn-sm" data-add="${d.id}" ${used ? "disabled" : ""}>${used ? "넣음" : "+ 넣기"}</button>
+        </li>`;
+    }).join("");
+}
+
+/* 표는 admin-table.js와 같은 모양(.table-wrap · table.grid · click-row)으로 직접 그린다.
+   renderAdminTable은 쪽 나누기 응답(content)만 받는데, 코스는 많아야 몇 개라 목록을 통째로 받는다. */
+async function loadPaths() {
+  const mount = document.getElementById("pathList");
+  let rows;
+  try {
+    rows = await api("/api/admin/learning-paths");
+  } catch (e) {
+    showErrorAlert(mount, e, "목록을 불러오지 못했습니다");
+    return;
+  }
+  const body = rows.length === 0
+    ? `<tr><td colspan="5" class="meta" style="padding:18px;text-align:center">아직 추천 코스가 없습니다. 위에서 만드세요.</td></tr>`
+    : rows.map(p => `
+      <tr class="click-row" data-id="${p.id}">
+        <td>${p.sortOrder}</td>
+        <td class="wrap"><b>${escapeHtml(p.title)}</b><div class="meta">${escapeHtml(p.description)}</div></td>
+        <td>${p.visibleStepCount === p.stepCount ? p.stepCount
+          : `${p.visibleStepCount} <span class="meta">/ ${p.stepCount} (내린 문서 있음)</span>`}</td>
+        <td>${p.published ? `<span class="badge green">공개</span>` : `<span class="meta">만드는 중</span>`}</td>
+        <td>${formatDate(p.updatedAt)}</td>
+      </tr>`).join("");
+  mount.innerHTML = `
+    <div class="table-wrap">
+      <table class="grid">
+        <thead><tr><th style="width:60px">순서</th><th>제목</th><th style="width:110px">단계</th>
+          <th style="width:90px">상태</th><th style="width:150px">고친 날</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+}
+document.getElementById("pathList").addEventListener("click", e => {
+  const row = e.target.closest("tr[data-id]");
+  if (row) edit(Number(row.dataset.id));
+});
+
+async function edit(id) {
+  const msg = document.getElementById("pMessage");
+  msg.innerHTML = "";
+  try {
+    const p = await api(`/api/admin/learning-paths/${id}`);
+    editingId = id;
+    document.getElementById("pTitle").value = p.title;
+    document.getElementById("pDesc").value = p.description;
+    document.getElementById("pOrder").value = p.sortOrder;
+    document.getElementById("pPublished").checked = p.published;
+    // 단계 줄은 고르기 목록과 같은 모양으로 맞춘다(편 이름·분야 이름은 고르기 목록에 있다)
+    picked = p.steps.map(s => options.find(o => o.id === s.documentId)
+      ?? { id: s.documentId, title: s.title, domainLabel: s.domain, problemCount: s.problemCount, hidden: s.hidden });
+    renderSteps();
+    renderOptions();
+    document.getElementById("pFormTitle").textContent = `코스 고치기 — ${p.title}`;
+    document.getElementById("pSubmitBtn").textContent = "저장";
+    document.getElementById("pCancelBtn").hidden = false;
+    document.getElementById("pDeleteBtn").hidden = false;
+    const preview = document.getElementById("pPreview");
+    preview.hidden = !p.published;
+    preview.href = `/path.html?key=custom:${id}`;
+    const panel = document.getElementById("pFormPanel");
+    panel.open = true;
+    panel.scrollIntoView({ block: "start" });
+  } catch (e) {
+    showErrorAlert(msg, e, "코스를 불러오지 못했습니다");
+  }
+}
+
+function resetForm() {
+  editingId = null;
+  picked = [];
+  ["pTitle", "pDesc"].forEach(id => { document.getElementById(id).value = ""; });
+  document.getElementById("pOrder").value = 0;
+  document.getElementById("pPublished").checked = false;
+  document.getElementById("pFormTitle").textContent = "새 코스 만들기";
+  document.getElementById("pSubmitBtn").textContent = "만들기";
+  ["pCancelBtn", "pDeleteBtn", "pPreview"].forEach(id => { document.getElementById(id).hidden = true; });
+  document.getElementById("pMessage").innerHTML = "";
+  renderSteps();
+  renderOptions();
+}
+
+async function submit() {
+  const msg = document.getElementById("pMessage");
+  const body = {
+    title: document.getElementById("pTitle").value.trim(),
+    description: document.getElementById("pDesc").value.trim(),
+    sortOrder: Number(document.getElementById("pOrder").value) || 0,
+    documentIds: picked.map(p => p.id),
+    published: document.getElementById("pPublished").checked,
+  };
+  if (!body.title || !body.description) {
+    showErrorAlert(msg, "제목과 설명을 적어 주세요");
+    return;
+  }
+  const btn = document.getElementById("pSubmitBtn");
+  btn.disabled = true;
+  try {
+    const saved = await api(editingId ? `/api/admin/learning-paths/${editingId}` : "/api/admin/learning-paths",
+      { method: editingId ? "PUT" : "POST", body: JSON.stringify(body) });
+    await loadPaths();
+    await edit(saved.id);
+    document.getElementById("pMessage").innerHTML = `<div class="alert info">저장했어요.</div>`;
+  } catch (e) {
+    showErrorAlert(msg, e, "저장하지 못했습니다");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function removePath() {
+  try {
+    await api(`/api/admin/learning-paths/${editingId}`, { method: "DELETE" });
+    resetForm();
+    document.getElementById("pFormPanel").open = false;
+    loadPaths();
+  } catch (e) {
+    showErrorAlert(document.getElementById("pMessage"), e, "지우지 못했습니다");
+  }
+}
+</script>
+</body>
+</html>

@@ -44,6 +44,8 @@ const ADMIN_MENUS = [
   { group: "콘텐츠", items: [
     { key: "problems",  label: "문제",      href: "/admin/problems.html",  icon: "list" },
     { key: "documents", label: "문서",      href: "/admin/documents.html", icon: "book" },
+    // 문서를 순서대로 엮은 추천 코스(docs/26). 분야별·코드 코스는 규칙으로 만들어 여기 없다
+    { key: "paths",     label: "로드맵",    href: "/admin/paths.html",     icon: "route" },
   ]},
   // 이 묶음의 화면은 전부 Claude를 부른다(주제 대기열은 배치가 부를 것을 정한다).
   { group: "AI 생성", items: [
