@@ -286,10 +286,21 @@ public class ReviewService implements SubmissionListener, DueReviewCounter {
     @Transactional(readOnly = true)
     public PageResponse<ReviewListItem> getMyReviews(Long userId, ReviewStatus status, DomainCode domain, String q,
                                                      List<Long> problemIds, Pageable pageable) {
+        return getMyReviews(userId, status, false, domain, q, problemIds, pageable);
+    }
+
+    /**
+     * @param dueOnly true면 지금 복습할 차례인 것만(오늘의 복습과 같은 조건). 복습 화면의 "오늘" 칩이 쓴다
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<ReviewListItem> getMyReviews(Long userId, ReviewStatus status, boolean dueOnly,
+                                                     DomainCode domain, String q,
+                                                     List<Long> problemIds, Pageable pageable) {
         // due 판정 기준 시각은 페이지 전체에 하나 — 항목마다 now()를 부르면 기준이 미세하게 갈린다.
         LocalDateTime now = LocalDateTime.now();
         Page<ReviewItem> page = (problemIds == null || problemIds.isEmpty())
-                ? reviewItemRepository.findAllOfUser(userId, status, domain, SearchKeyword.likePattern(q), clamp(pageable))
+                ? reviewItemRepository.findAllOfUser(userId, status, dueOnly ? now : null,
+                        domain, SearchKeyword.likePattern(q), clamp(pageable))
                 : reviewItemRepository.findAllOfUserByProblemIds(userId, capIds(problemIds), clamp(pageable));
         return PageResponse.from(page.map(
                 r -> ReviewListItem.from(r, now, domainCatalog.displayName(r.getProblem().getDomain()))));

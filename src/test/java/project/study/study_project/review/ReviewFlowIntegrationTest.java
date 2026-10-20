@@ -271,6 +271,26 @@ class ReviewFlowIntegrationTest {
         assertThat(result.content()).hasSize(1);
     }
 
+    @Test
+    @DisplayName("dueOnly는 오늘의 복습과 같은 것만 남긴다 — 내일 차례·졸업은 빠진다")
+    void dueOnlyMatchesTodayReviews() {
+        submit("X");                                   // 기본 문제: 차례가 된다(아래 시간 여행)
+        Problem later = saveProblem("UDP는 순서를 보장하지 않는다.");
+        timeTravelToDue();
+        quizService.submit(userId, new QuizSubmitRequest(later.getId(), "X"));  // 이건 내일 차례
+
+        PageResponse<ReviewListItem> dueOnly = reviewService.getMyReviews(
+                userId, null, true, null, null, null, PageRequest.of(0, 20));
+        PageResponse<ReviewListItem> all = reviewService.getMyReviews(
+                userId, null, false, null, null, null, PageRequest.of(0, 20));
+
+        assertThat(all.content()).hasSize(2);
+        assertThat(dueOnly.content()).extracting(ReviewListItem::problemId).containsExactly(problem.getId());
+        assertThat(dueOnly.totalElements())
+                .as("[복습 시작] 카드 수와 칩 수가 같아야 한다")
+                .isEqualTo(today().totalElements());
+    }
+
     /** 같은 사용자·다른 문제를 만들 때 쓰는 헬퍼 — 지문만 다르면 되므로 나머지는 고정. */
     private Problem saveProblem(String question) {
         return problemRepository.save(Problem.create(

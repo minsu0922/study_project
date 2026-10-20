@@ -78,12 +78,14 @@ public class ReviewController {
     public ApiResponse<PageResponse<ReviewListItem>> myReviews(
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) ReviewStatus status,
+            // true면 오늘 복습할 차례인 것만 — 복습 화면 목록의 "오늘" 칩
+            @RequestParam(defaultValue = "false") boolean due,
             @RequestParam(required = false) List<Long> problemIds,
             // 분야·검색어 — 복습 화면의 필터 줄. problemIds와 함께 오면 쓰이지 않는다
             @RequestParam(required = false) DomainCode domain,
             @RequestParam(required = false) String q,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(reviewService.getMyReviews(userId, status, domain, q, problemIds, pageable));
+        return ApiResponse.ok(reviewService.getMyReviews(userId, status, due, domain, q, problemIds, pageable));
     }
 }

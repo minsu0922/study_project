@@ -78,6 +78,28 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             Pageable pageable
     );
 
+    /**
+     * 지정한 문제들의 최신 오답 — 복습 화면이 목록에 보이는 문제의 내 답·해설만 받아 간다.
+     * userId 조건이 격리의 핵심이다. problemIds는 클라이언트가 준 값이다.
+     */
+    @Query("""
+            select s from Submission s
+            join fetch s.problem p
+            where s.userId = :userId
+              and s.correct = false
+              and p.hidden = false
+              and p.id in :problemIds
+              and s.id = (
+                  select max(s2.id) from Submission s2
+                  where s2.userId = :userId
+                    and s2.problem = s.problem
+                    and s2.correct = false
+              )
+            order by p.id asc
+            """)
+    List<Submission> findLatestWrongAnswersOf(@Param("userId") Long userId,
+                                              @Param("problemIds") List<Long> problemIds);
+
     /** 오답노트 옆 기둥의 분야별 수. 오답노트가 문제당 한 줄이라 틀린 <문제>를 센다(distinct). */
     @Query("""
             select s.problem.domain as domain, count(distinct s.problem.id) as cnt from Submission s

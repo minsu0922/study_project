@@ -86,12 +86,17 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
     /**
      * 내 복습 현황 전체(졸업 포함) — 대시보드/진척 확인용. status 필터는 선택(null이면 전체),
      * 정렬은 스펙 기본값(nextReviewAt asc)으로 고정.
+     *
+     * <p>{@code dueAt}을 주면 그 시각까지 차례가 온 LEARNING만 남긴다. 조건은 {@link #findDue}와
+     * 같아야 한다 — 복습 화면의 "오늘" 칩 수와 [복습 시작] 카드 수가 어긋나면 안 된다.
      */
     @Query(value = """
             select r from ReviewItem r
             join fetch r.problem p
             where r.userId = :userId
               and (:status is null or r.status = :status)
+              and (:dueAt is null or (r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
+                                      and r.nextReviewAt <= :dueAt))
               and p.hidden = false
               and (:domain is null or p.domain = :domain)
               and (:keyword is null
@@ -103,6 +108,8 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
             select count(r) from ReviewItem r
             where r.userId = :userId
               and (:status is null or r.status = :status)
+              and (:dueAt is null or (r.status = project.study.study_project.review.domain.ReviewStatus.LEARNING
+                                      and r.nextReviewAt <= :dueAt))
               and r.problem.hidden = false
               and (:domain is null or r.problem.domain = :domain)
               and (:keyword is null
@@ -111,6 +118,7 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
             """)
     Page<ReviewItem> findAllOfUser(@Param("userId") Long userId,
                                    @Param("status") ReviewStatus status,
+                                   @Param("dueAt") LocalDateTime dueAt,
                                    @Param("domain") DomainCode domain,
                                    @Param("keyword") String keyword,
                                    Pageable pageable);

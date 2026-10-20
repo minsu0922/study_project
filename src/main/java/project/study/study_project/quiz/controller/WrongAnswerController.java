@@ -49,6 +49,20 @@ public class WrongAnswerController {
         return ApiResponse.ok(wrongAnswerService.getWrongAnswers(userId, domain, q, pageable));
     }
 
+    /**
+     * 지정한 문제들의 오답 카드(내 답·정답·해설). 예: {@code GET /api/me/wrong-answers/of?problemIds=12,34}
+     *
+     * <p>복습 화면은 목록을 복습 API로 그리고, 줄을 펼칠 내용만 여기서 받는다(2026-10-20 두 화면 합침).
+     * 내 오답이 아닌 id는 결과에 없다.
+     */
+    @GetMapping("/wrong-answers/of")
+    public ApiResponse<List<WrongAnswerItem>> wrongAnswersOf(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam List<Long> problemIds
+    ) {
+        return ApiResponse.ok(wrongAnswerService.getWrongAnswersOf(userId, problemIds));
+    }
+
     /** 오답노트 옆 기둥의 분야별 수. 예: {@code GET /api/me/wrong-answers/domains} */
     @GetMapping("/wrong-answers/domains")
     public ApiResponse<List<DomainCount>> wrongAnswerDomains(@AuthenticationPrincipal Long userId) {

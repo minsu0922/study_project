@@ -68,6 +68,24 @@ public class WrongAnswerService {
     }
 
     /**
+     * 지정한 문제들의 오답 카드 — 복습 화면이 목록 한 쪽(10문제)의 펼칠 내용을 한 번에 받는다.
+     * 개수는 {@link #MAX_IDS}로 자른다. 목록 길이가 곧 IN 쿼리 크기라서다.
+     */
+    @Transactional(readOnly = true)
+    public List<WrongAnswerItem> getWrongAnswersOf(Long userId, List<Long> problemIds) {
+        if (problemIds == null || problemIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = problemIds.size() > MAX_IDS ? problemIds.subList(0, MAX_IDS) : problemIds;
+        List<Submission> found = submissionRepository.findLatestWrongAnswersOf(userId, ids);
+        Set<String> existingSlugs = findExistingDocumentSlugs(found);
+        return found.stream().map(s -> toItem(s, existingSlugs)).toList();
+    }
+
+    /** problemIds 상한 — 복습 API(ReviewService)와 같은 값 */
+    private static final int MAX_IDS = 50;
+
+    /**
      * 이 페이지의 문제들이 가리키는 근거 문서 중 <b>실제로 있는 것</b>의 slug 집합.
      *
      * <p><b>왜 미리 한 번에 조회하나.</b> 항목마다 {@code existsBySlug}를 부르면 한 화면(20건)에
