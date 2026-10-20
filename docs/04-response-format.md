@@ -125,6 +125,9 @@ public record FieldError(String field, String reason) {}
 | `USER_003` | 400 | 관리자가 자기 권한을 바꾸려 함 (관리자) |
 | `USER_004` | 409 | 정지 중인 사용자를 관리자로 올리려 함 (관리자) |
 | `USER_005` | 400 | 관리자 계정을 탈퇴시키려 함 (관리자) |
+| `PATH_001` | 404 | 없는 학습 코스·단계, 형식이 틀린 코스 키 |
+| `PATH_002` | 400 | 코스 단계에 같은 문서 두 번, 없는 문서 (관리자) |
+| `PATH_003` | 400 | 공개 문서가 한 편도 없는 코스를 공개하려 함 (관리자) |
 
 > 새 에러는 이 표에 추가하고 코드로 `enum ErrorCode`(code, httpStatus, defaultMessage) 관리.
 

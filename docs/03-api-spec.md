@@ -4,7 +4,7 @@
 > 인증: `Authorization: Bearer <accessToken>`. 재발급은 [`POST /api/auth/refresh`](#post-apiauthrefresh).
 > Base URL: `/api` · 🔒 = 로그인 필요 · 🛡️ = **ADMIN 전용**
 
-## 전체 엔드포인트 (53개 — 사용자 16 · 관리자 37)
+## 전체 엔드포인트 (64개 — 사용자 21 · 관리자 43)
 
 | 묶음 | 엔드포인트 | |
 |---|---|---|
@@ -14,6 +14,7 @@
 | **문제 목록** | `GET /api/problems` 🔒 · `GET /api/me/study-summary` 🔒 | [↓](#get-apiproblems-) |
 | **내 학습** | `GET /api/me/wrong-answers` 🔒<br>`GET /api/me/reviews` · `/reviews/today` 🔒<br>`GET /api/me/daily-quiz` 🔒 | [↓](#get-apimewrong-answers-) |
 | **오류 제보** | `POST /api/me/problem-reports` 🔒 | [↓](#post-apimeproblem-reports-) |
+| **학습 로드맵** | `GET /api/learning-paths` · `/{key}` · `/{key}/steps/{seq}/problems`<br>`GET /api/me/learning-paths/current` 🔒 · `POST`·`DELETE /api/me/learning-paths/{key}` 🔒<br>`/api/admin/learning-paths`(6) 🛡️ | [↓](#학습-로드맵-api) |
 | **토론방** | `GET /api/quiz/posts` · `/{problemId}/posts` · `/posts/{postId}` · `/posts/{postId}/comments` · `/post-counts`<br>`POST`·`PUT`·`DELETE /api/me/posts` 🔒 · `/api/me/comments` 🔒 · `POST /api/me/comment-reports` 🔒 | [↓](#토론방-api) |
 | **관리자·문제** | `GET`·`POST /api/admin/problems` · `GET`·`PUT`·`DELETE /{id}` · 제목/근거 백필 🛡️ | [↓](#관리자-api-️) |
 | **관리자·문서** | `POST /api/admin/documents` · `PUT`·`DELETE /{id}` 🛡️ | [↓](#관리자-api-️) |
@@ -514,6 +515,34 @@ access 토큰 재발급. **refresh 토큰은 1회용**이라 쓰는 순간 새�
 - 되먹임은 거절 사유와 **같은 파일**(`generated/_rejection-notes.json`)로 합류하고,
   사유 앞에 `[출제 후 제보] `가 붙는다. 파일을 새로 파지 않은 이유는
   `LlmProblemService.REPORT_NOTE_PREFIX` 주석에 있다.
+
+---
+
+## 학습 로드맵 API
+
+설계는 [26-learning-paths](26-learning-paths.md). 코스는 세 종류이고 키 하나로 가리킨다.
+
+| 키 | 코스 | 저장 |
+|---|---|---|
+| `custom:{id}` | 관리자가 고른 추천 코스 | `learning_path` 테이블 |
+| `domain:{분야 코드}` | 분야별 코스 | 저장하지 않는다. 공개 문서로 요청 때 만든다 |
+| `code:java` | 자바 코드 문제 코스 | 저장하지 않는다. 난이도별 코드 문제로 만든다 |
+
+| 메서드 | 경로 | 비고 |
+|---|---|---|
+| GET | `/api/learning-paths` | 공개. 시작한 코스가 앞(최근 순). 토큰이 있으면 내 진도가 실린다 |
+| GET | `/api/learning-paths/{key}` | 공개. `summary` + `steps[]`(단계마다 `total`·`attempted`·`solved`·`done`) |
+| GET | `/api/learning-paths/{key}/steps/{seq}/problems` | 공개. `GET /api/quiz`와 같은 모양. 못 맞힌 문제 먼저, 그 안에서 쉬운 문제 먼저. 로그인했으면 코스를 시작한 것으로 적는다 |
+| GET | `/api/me/learning-paths/current` | 홈의 "이어서 하기". 시작한 코스가 없으면 `data: null` |
+| POST | `/api/me/learning-paths/{key}` | 시작(이미 시작했으면 마지막 학습 시각만 당긴다) |
+| DELETE | `/api/me/learning-paths/{key}` | "진행 중"에서 뺀다. 풀이 기록은 그대로다 |
+| GET | `/api/admin/learning-paths` · `/{id}` · `/documents` | 추천 코스 목록·상세·단계로 고를 문서 🛡️ |
+| POST·PUT | `/api/admin/learning-paths` · `/{id}` | 바디 `{title, description, sortOrder, documentIds[], published}`. 단계는 `documentIds` 순서 그대로 🛡️ |
+| DELETE | `/api/admin/learning-paths/{id}` | 🛡️ |
+
+- 진도는 저장하지 않는다. 제출 기록에서 센다. `solved`는 맞힌 적 있는 문제 수, `attempted`는 제출한 문제 수다.
+- `nextSeq`(다음 추천 단계)는 **안 푼 문제가 남은 첫 단계**다. 단계는 잠그지 않으므로 권유일 뿐이다.
+- 형식이 틀린 키·없는 코스·없는 단계는 모두 `PATH_001`(404)이다.
 
 ---
 
