@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코스 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다(이유는 review.html의 같은 자리 주석). */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container">
+  <!-- 화면 1: 코스 머리말 + 단계 목록 -->
+  <section id="overview">
+    <p class="meta"><a href="/paths.html">← 로드맵 목록</a></p>
+    <div id="message"></div>
+    <div id="head"></div>
+    <ol class="lp-steps" id="steps"></ol>
+  </section>
+  <!-- 화면 2: 단계 문제 풀이(js/player.js) -->
+  <section id="player" hidden></section>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/js/report.js"></script>
+<script src="/js/bookmark.js"></script>
+<script src="/js/room-link.js"></script>
+<script src="/js/player.js"></script>
+<script>
+/* 코스 상세 — GET /api/learning-paths/{key}. 단계 문제는 /steps/{seq}/problems로 받아 기존 플레이어로 푼다.
+ * 채점은 POST /api/quiz/submit 그대로라 틀린 문제는 복습 사다리에 오른다. 설계는 docs/26. */
+renderShell({ active: "paths", title: "코스" });
+
+const key = new URLSearchParams(location.search).get("key") || "";
+const overviewEl = document.getElementById("overview");
+const playerEl = document.getElementById("player");
+/** 마지막으로 받은 상세. 플레이어에서 돌아오면 다시 받는다(진도가 바뀌었다) */
+let detail = null;
+
+loadDetail();
+
+async function loadDetail() {
+  const head = document.getElementById("head");
+  showLoading(head);
+  try {
+    detail = await api(`/api/learning-paths/${encodeURIComponent(key)}`);
+    document.title = `${detail.summary.title} — csquiz`;
+    renderHead(detail.summary);
+    renderSteps(detail);
+  } catch (e) {
+    document.getElementById("steps").innerHTML = "";
+    showErrorAlert(document.getElementById("message"), e, "코스를 불러오지 못했습니다");
+  } finally {
+    clearLoading(head);
+  }
+}
+
+function renderHead(s) {
+  const pct = s.total > 0 ? Math.round(s.solved / s.total * 100) : 0;
+  const nextBtn = s.nextSeq
+    ? `<button type="button" class="btn-lg" data-solve="${s.nextSeq}">${
+        s.attempted > 0 ? "이어서 하기" : "첫 단계 시작"} · ${s.nextSeq}단계 →</button>`
+    : "";
+  // 시작 기록은 단계 문제를 받을 때 저절로 남는다. 단추는 "진행 중"에서 빼는 쪽만 둔다
+  const stopBtn = s.started ? `<button type="button" class="btn-outline" id="stopBtn">진행 중에서 빼기</button>` : "";
+  document.getElementById("head").innerHTML = `
+    <h1>${escapeHtml(s.title)}</h1>
+    <p class="meta">${escapeHtml(s.description)}</p>
+    ${isLoggedIn() ? `
+      <div class="lp-total">
+        <span class="meta">맞힌 문제</span>
+        <span class="num">${s.solved}<span class="of"> / ${s.total}</span></span>
+      </div>
+      <div class="bar" role="progressbar" aria-label="코스 진도" aria-valuemin="0"
+           aria-valuemax="${s.total}" aria-valuenow="${s.solved}"><i style="width:${pct}%"></i></div>`
+      : `<p class="meta">로그인하면 단계마다 맞힌 문제가 쌓여요. 지금은 풀어도 기록이 남지 않아요.
+           <a href="/login.html">로그인</a></p>`}
+    <div class="lp-actions">${nextBtn}${stopBtn}</div>
+    ${!s.nextSeq && s.total > 0 ? `<p class="meta">모든 단계의 문제를 한 번씩 풀었어요. 틀린 문제는 복습에서 다시 만나요.</p>` : ""}`;
+  document.getElementById("stopBtn")?.addEventListener("click", stopCourse);
+}
+
+function renderSteps(d) {
+  const next = d.summary.nextSeq;
+  document.getElementById("steps").innerHTML = d.steps.map(s => {
+    const pct = s.total > 0 ? Math.round(s.solved / s.total * 100) : 0;
+    const state = s.done ? " done" : s.seq === next ? " next" : "";
+    const mark = s.done ? icon("checkCircle") : s.seq;
+    return `
+      <li class="lp-step${state}">
+        <span class="lp-seq" aria-hidden="true">${mark}</span>
+        <div class="lp-body">
+          <div class="lp-step-title">
+            <b>${escapeHtml(s.title)}</b>
+            ${s.edition ? `<span class="badge source">${escapeHtml(s.edition)}</span>` : ""}
+            ${s.seq === next ? `<span class="badge orange">다음 추천</span>` : ""}
+          </div>
+          <div class="meta">문제 ${s.total}개${isLoggedIn() ? ` · 맞힘 ${s.solved} · 푼 문제 ${s.attempted}` : ""}</div>
+          ${isLoggedIn() ? `<div class="bar" role="progressbar" aria-label="${s.seq}단계 진도" aria-valuemin="0"
+               aria-valuemax="${s.total}" aria-valuenow="${s.solved}"><i style="width:${pct}%"></i></div>` : ""}
+          <div class="lp-actions">
+            ${s.documentSlug ? `<a class="btn btn-outline" href="/document.html?slug=${encodeURIComponent(s.documentSlug)}">${
+              icon("book")} 문서 읽기</a>` : ""}
+            ${s.total > 0 ? `<button type="button" class="btn" data-solve="${s.seq}">문제 풀기 ${s.total}</button>`
+              : `<span class="meta">아직 이 문서로 만든 문제가 없어요</span>`}
+          </div>
+        </div>
+      </li>`;
+  }).join("");
+}
+
+overviewEl.addEventListener("click", e => {
+  const btn = e.target.closest("[data-solve]");
+  if (btn) solveStep(Number(btn.dataset.solve), btn);
+});
+
+async function solveStep(seq, btn) {
+  btn.disabled = true;
+  try {
+    const data = await api(`/api/learning-paths/${encodeURIComponent(key)}/steps/${seq}/problems`);
+    if (data.problems.length === 0) {
+      showErrorAlert(document.getElementById("message"), "이 단계에 풀 문제가 없어요");
+      return;
+    }
+    overviewEl.hidden = true;
+    playerEl.hidden = false;
+    window.scrollTo({ top: 0 });
+    startPlayer(playerEl, data.problems, {
+      exitLabel: "코스로 돌아가기",
+      onExit: backToOverview,
+    });
+  } catch (e) {
+    showErrorAlert(document.getElementById("message"), e, "문제를 불러오지 못했습니다");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function backToOverview() {
+  playerEl.hidden = true;
+  playerEl.innerHTML = "";
+  overviewEl.hidden = false;
+  loadDetail();
+  window.scrollTo({ top: 0 });
+}
+
+async function stopCourse() {
+  try {
+    await api(`/api/me/learning-paths/${encodeURIComponent(key)}`, { method: "DELETE" });
+    loadDetail();
+  } catch (e) {
+    showErrorAlert(document.getElementById("message"), e, "처리하지 못했습니다");
+  }
+}
+</script>
+</body>
+</html>

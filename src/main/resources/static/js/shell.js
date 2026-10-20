@@ -50,6 +50,7 @@ const ICON_PATHS = {
   thumb: '<path d="M7 10v11M15 5.9 14 10h5.8a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 18.4 21H7V10l4-8a3 3 0 0 1 4 3.9z"/>',
   reply: '<path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',
   checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
   // 관리 콘솔 메뉴(admin-shell.js ADMIN_MENUS)가 쓰는 것
   clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 13l2 2 4-4"/>',
   flag: '<path d="M4 22V4M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1"/>',
@@ -164,6 +165,9 @@ const MENUS = [
   { key: "today", label: "오늘", href: "/", need: "public", tab: true, icon: "sun" },
   // 문제 목록은 비로그인에게도 연다(2026-10-18). 내 기록 칸만 감춘 카탈로그로 보인다(problems.html anon)
   { key: "problems", label: "문제", href: "/problems.html", need: "public", tab: true, icon: "list" },
+  // 학습 로드맵(2026-10-20, docs/26). 코스와 단계는 비로그인에게도 보인다.
+  // 탭 없음: 다섯 칸이 차 있다. 폰에서는 상단 바 아이콘으로 가고, 홈의 "이어서 하기" 카드가 입구를 겸한다
+  { key: "paths", label: "로드맵", href: "/paths.html", need: "public", icon: "route" },
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
   { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: true, icon: "repeat" },
   { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: true, icon: "book" },

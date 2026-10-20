@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로드맵 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다(이유는 review.html의 같은 자리 주석). */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container">
+  <h1>로드맵</h1>
+  <p class="meta">순서가 정해진 코스를 골라 한 단계씩 공부해요. 단계마다 개념 문서를 읽고 그 문서로 만든 문제를 풀어요.
+    단계는 잠겨 있지 않아요. 아는 내용은 건너뛰어도 돼요.</p>
+
+  <div id="message"></div>
+  <!-- 묶음 넷: 진행 중 / 추천 코스(관리자가 고른 순서) / 분야별 / 코드 문제. 빈 묶음은 그리지 않는다 -->
+  <div id="groups"></div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+/* 로드맵 목록 — GET /api/learning-paths (공개, 로그인했으면 내 진도가 실린다). 설계는 docs/26. */
+renderShell({ active: "paths", title: "로드맵" });
+
+const GROUPS = [
+  { title: "진행 중인 코스", pick: c => c.started },
+  { title: "추천 코스", pick: c => !c.started && c.kind === "CUSTOM",
+    note: "분야를 넘나들며 입문자가 보기 좋은 순서로 골랐어요." },
+  { title: "분야별 코스", pick: c => !c.started && c.kind === "DOMAIN",
+    note: "한 분야만 깊게. 주제마다 입문편 다음 심화편이에요." },
+  { title: "코드 문제", pick: c => !c.started && c.kind === "CODE" },
+];
+
+loadPaths();
+
+async function loadPaths() {
+  const el = document.getElementById("groups");
+  showLoading(el);
+  try {
+    const courses = await api("/api/learning-paths");
+    if (courses.length === 0) {
+      showEmpty(el, "아직 공개된 코스가 없어요.");
+      return;
+    }
+    el.innerHTML = GROUPS.map(g => {
+      const mine = courses.filter(g.pick);
+      if (mine.length === 0) return "";
+      return `
+        <div class="section-label"><span>${escapeHtml(g.title)}</span></div>
+        ${g.note ? `<p class="meta">${escapeHtml(g.note)}</p>` : ""}
+        <div class="lp-grid">${mine.map(cardHtml).join("")}</div>`;
+    }).join("");
+  } catch (e) {
+    showErrorAlert(document.getElementById("message"), e, "코스를 불러오지 못했습니다");
+  } finally {
+    clearLoading(el);
+  }
+}
+
+/** 코스 카드 — 숫자는 "맞힌 문제 / 문제 수". 퍼센트는 쓰지 않는다(분모가 매일 늘어 가만히 있어도 줄어든다) */
+function cardHtml(c) {
+  const pct = c.total > 0 ? Math.round(c.solved / c.total * 100) : 0;
+  const next = c.started && c.nextStepTitle
+    ? `<div class="meta lp-next">다음: ${escapeHtml(c.nextStepTitle)}</div>`
+    : c.started && c.total > 0 && c.attempted >= c.total ? `<div class="meta lp-next">모든 단계를 풀었어요</div>` : "";
+  return `
+    <a class="card lp-card" href="/path.html?key=${encodeURIComponent(c.key)}">
+      <b class="lp-title">${escapeHtml(c.title)}</b>
+      <span class="meta lp-desc">${escapeHtml(c.description)}</span>
+      <span class="lp-foot">
+        <span class="meta">${c.stepCount}단계 · 문제 ${c.total}개</span>
+        ${isLoggedIn() ? `<span class="num">${c.solved}<span class="of"> / ${c.total}</span></span>` : ""}
+      </span>
+      ${isLoggedIn() ? `<span class="bar" role="progressbar" aria-label="${escapeHtml(c.title)} 진도"
+        aria-valuemin="0" aria-valuemax="${c.total}" aria-valuenow="${c.solved}"><i style="width:${pct}%"></i></span>` : ""}
+      ${next}
+    </a>`;
+}
+</script>
+</body>
+</html>

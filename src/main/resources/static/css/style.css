@@ -2992,6 +2992,32 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
 .wa-question { margin: 8px 0; white-space: pre-wrap; line-height: 1.6; }
 .wa-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
 
+/* ── 학습 로드맵 (paths.html · path.html · 홈 카드) ──
+ * 카드 전체가 링크다. 진도 막대(.bar)를 span으로 넣으므로 block으로 세운다. */
+.lp-grid { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-5); }
+@media (min-width: 640px) { .lp-grid { grid-template-columns: 1fr 1fr; } }
+.lp-card { display: flex; flex-direction: column; gap: 6px; color: inherit; text-decoration: none; }
+.lp-card:hover { border-color: var(--primary); }
+.lp-card .bar { display: block; }
+.lp-title { font-size: var(--fs-3, 1.05rem); }
+.lp-foot { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); margin-top: auto; }
+.lp-next { color: var(--primary); }
+.lp-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: var(--sp-3); }
+.lp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.lp-actions .btn .i { margin-right: 4px; }
+/* 단계 목록 — 왼쪽 번호 동그라미, 오른쪽 내용. 다음 추천 단계는 테두리로, 다 맞힌 단계는 초록 표시로 가른다 */
+.lp-steps { list-style: none; padding: 0; margin: var(--sp-5) 0 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.lp-step { display: flex; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.lp-step.next { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.lp-seq {
+  flex: none; width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--fill); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.lp-step.next .lp-seq { background: var(--primary); color: var(--on-primary, #fff); }
+.lp-step.done .lp-seq { background: transparent; color: var(--correct-fg); font-size: 1.3rem; }
+.lp-body { flex: 1; min-width: 0; }
+.lp-step-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
 .pl-domain .n, .pl-level .n { font-size: 11px; color: var(--muted); }
 .pl-level .n { margin-left: 3px; }
 /* 진척 바가 없는 기둥이라 버튼 공통 하한(44px)이면 줄 사이가 비어 보인다. 마우스로 고르는 넓은 화면에서만 줄인다 */

@@ -84,6 +84,8 @@ class StaticPageStructureTest {
             "me.html",
             "mypage.html",
             "notifications.html",
+            "path.html",
+            "paths.html",
             "post.html",
             "problems.html",
             "quiz.html",

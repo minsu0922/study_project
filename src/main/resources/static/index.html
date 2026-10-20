@@ -89,6 +89,13 @@ try {
         <!-- 첫날에는 감춘다. 0이 넷 뜨는 것보다 히어로 안의 "여기 있는 것"이 맞는 정보다. -->
         <div class="stat-row" id="stats" hidden></div>
 
+        <!-- 학습 로드맵(docs/26). 시작한 코스가 있으면 "이어서 하기", 없으면 로드맵으로 가는 한 줄 -->
+        <div class="section-label" id="pathLabel" hidden>
+          <span>학습 로드맵</span>
+          <a href="/paths.html">전체 보기 →</a>
+        </div>
+        <div id="pathBox"></div>
+
         <div class="section-label" id="progLabel" hidden>
           <span>분야별 진도</span>
           <a href="/me.html">전체 보기 →</a>
@@ -155,6 +162,7 @@ if (!isLoggedIn()) {
   // 두 칸을 담을 만큼 본문을 넓힌다. 비로그인 소개 화면은 읽는 화면이라 860px 그대로 둔다.
   document.querySelector("main").classList.add("home-wide");
   loadHome();
+  loadCurrentPath();
   loadRecentPosts();
   loadRecentDocs();
 }
@@ -518,6 +526,38 @@ function todayLabel() {
  * 뒤 거의 고쳐지지 않아 사실상 올라온 날과 같다. 그래서 "올라온 날"이라고 <단정하지 않고>
  * 날짜만 적는다 — 나중에 문서를 손보면 어긋날 표기라 문구로 약속하지 않는다.
  */
+/**
+ * 학습 로드맵 칸 — 가장 최근에 공부한 코스의 "이어서 하기"(GET /api/me/learning-paths/current).
+ * 시작한 코스가 없으면 로드맵으로 가는 한 줄만 둔다. 실패하면 칸을 통째로 비운다(첫 화면을 막지 않는다).
+ */
+async function loadCurrentPath() {
+  const box = document.getElementById("pathBox");
+  try {
+    const c = await api("/api/me/learning-paths/current");
+    document.getElementById("pathLabel").hidden = false;
+    if (!c) {
+      box.innerHTML = `<a class="card lp-card" href="/paths.html">
+          <b class="lp-title">순서대로 공부하고 싶다면</b>
+          <span class="meta">입문자 코스·분야별 코스를 골라 한 단계씩 읽고 풀어요.</span></a>`;
+      return;
+    }
+    const pct = c.total > 0 ? Math.round(c.solved / c.total * 100) : 0;
+    box.innerHTML = `
+      <a class="card lp-card" href="/path.html?key=${encodeURIComponent(c.key)}">
+        <span class="lp-foot">
+          <b class="lp-title">${escapeHtml(c.title)}</b>
+          <span class="num">${c.solved}<span class="of"> / ${c.total}</span></span>
+        </span>
+        <span class="bar" role="progressbar" aria-label="${escapeHtml(c.title)} 진도"
+          aria-valuemin="0" aria-valuemax="${c.total}" aria-valuenow="${c.solved}"><i style="width:${pct}%"></i></span>
+        <span class="meta lp-next">${c.nextStepTitle
+          ? `이어서 하기 · ${c.nextSeq}단계 ${escapeHtml(c.nextStepTitle)} →` : "모든 단계를 풀었어요 →"}</span>
+      </a>`;
+  } catch (e) {
+    box.innerHTML = "";
+  }
+}
+
 /**
  * 커뮤니티 새 글 세 줄(HOME_POSTS) — 모든 토론방의 최근 글(GET /api/quiz/posts).
  *
