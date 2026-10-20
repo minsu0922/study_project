@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -89,8 +90,27 @@ class StaticPageStructureTest {
             "reset-password.html",
             "review.html",
             "settings.html",
-            "signup.html",
-            "wrong-answers.html");
+            "signup.html");
+
+    /**
+     * 옛 주소를 새 화면으로 넘기기만 하는 파일 — 메뉴·테마가 없으므로 위 규칙에서 뺀다.
+     * 지우지 않는 이유는 옛 북마크가 404가 되지 않게 하려는 것이다. 값은 넘겨 보낼 화면이다.
+     */
+    private static final Map<String, String> REDIRECT_PAGES = Map.of(
+            "wrong-answers.html", "review.html");   // 2026-10-20 복습 화면에 합침
+
+    @Test
+    @DisplayName("넘기기만 하는 화면은 실제로 있는 화면으로 넘긴다")
+    void redirectPagesPointToRealPages() throws IOException {
+        for (Map.Entry<String, String> e : REDIRECT_PAGES.entrySet()) {
+            String html = read(e.getKey());
+            assertThat(html).as("%s: lang=\"ko\"가 없다", e.getKey()).contains("lang=\"ko\"");
+            assertThat(html).as("%s: %s로 넘기지 않는다", e.getKey(), e.getValue())
+                    .contains("location.replace(\"/" + e.getValue());
+            assertThat(STATIC_DIR.resolve(e.getValue())).as("넘겨 보낼 %s가 없다", e.getValue()).exists();
+            assertThat(USER_PAGES).as("넘겨 보낼 화면은 규칙 검사를 받는 화면이어야 한다").contains(e.getValue());
+        }
+    }
 
     @Test
     @DisplayName("모든 사용자 화면이 한국어·모바일 대응·제목·공용 스타일을 갖춘다")
@@ -204,9 +224,10 @@ class StaticPageStructureTest {
                     .sorted()
                     .toList();
 
+            List<String> listed = Stream.concat(USER_PAGES.stream(), REDIRECT_PAGES.keySet().stream()).toList();
             assertThat(found)
                     .as("화면을 새로 만들었다면 USER_PAGES에도 넣어야 위의 규칙 검사를 받는다")
-                    .containsExactlyInAnyOrderElementsOf(USER_PAGES);
+                    .containsExactlyInAnyOrderElementsOf(listed);
         }
     }
 

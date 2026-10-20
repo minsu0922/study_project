@@ -385,13 +385,13 @@ function sessionExpiredNote(main) {
  * 어느 화면에서든 옆 화면으로 바로 간다. 계정 일 넷은 마이페이지 안에서 #주소로 하나씩 연다.
  *
  * <p>위 헤더 메뉴(MENUS)와 따로 둔다. 헤더는 앱 전체의 길이고, 이것은 "나" 구역 안의 길이다.
- * 오답노트는 링크만 둔다. 화면 자체는 복습 구역(복습 일정과 탭으로 한 쌍)이라 사이드바를 달지 않는다.
+ * 오답노트는 링크만 둔다. 2026-10-20부터 복습 화면의 "틀린 문제" 목록이라 그 자리(#list)로 보낸다.
  */
 const MY_MENUS = [
   { group: "학습", items: [
     { key: "me",            label: "내 기록",   href: "/me.html",            icon: "chart" },
     { key: "history",       label: "풀이 이력", href: "/history.html",       icon: "clock" },
-    { key: "wrong",         label: "오답노트",  href: "/wrong-answers.html", icon: "noteX" },
+    { key: "wrong",         label: "오답노트",  href: "/review.html#list",    icon: "noteX" },
     { key: "bookmarks",     label: "북마크",    href: "/bookmarks.html",     icon: "star" },
   ] },
   { group: "활동", items: [

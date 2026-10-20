@@ -2967,11 +2967,11 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
  * 좁은 화면에서 가로 줄로 접히는 규칙(아래 975px)도 한 벌로 끝난다. */
 .side-page { max-width: 980px; }
 
-/* 복습 현황 한 줄(.list-row.split) — 오른쪽 글자가 지금 풀면 단계에 반영되는지 말한다.
-   풀 때가 된 줄은 글자색으로만 띄운다. 줄 목록에서 왼쪽 띠를 두면 그 줄만 들여쓰기된 것처럼 어긋난다. */
-.rv-row.ready .rv-when, .rv-row.ready .list-row-end { color: var(--lv2-fg); font-weight: 700; }
+/* 복습 화면의 틀린 문제 한 줄 — 풀 때가 된 줄은 "다음 복습" 글자색으로만 띄운다.
+   줄 목록에서 왼쪽 띠를 두면 그 줄만 들여쓰기된 것처럼 어긋난다. */
+.wa-item.ready .rv-when { color: var(--lv2-fg); font-weight: 700; }
 
-/* 오답노트 한 줄 — 접힌 상태에서 무엇을 틀렸는지만 보이고, 누르면 지문·해설이 펼쳐진다 */
+/* 틀린 문제 한 줄 — 접힌 상태에서 무엇을 틀렸는지만 보이고, 누르면 지문·해설이 펼쳐진다 */
 /* 공용 줄 목록(.list-row) 위에 얹는다. details는 flex 상자로 그리지 않는 브라우저가 있어 block으로 되돌리고,
    줄의 안쪽 여백은 summary가 갖는다 — 그래야 summary 전체가 눌리는 자리가 된다. */
 .list-row.wa-item { display: block; padding: 0; }

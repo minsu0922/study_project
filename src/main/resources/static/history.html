@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>풀이 이력 — csquiz</title>
 <script>
-/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지(wrong-answers.html의 같은 주석 참고). */
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지(review.html의 같은 주석 참고). */
 try {
   var t = localStorage.getItem("csquiz_theme");
   if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
@@ -23,7 +23,7 @@ try {
   <h1>풀이 이력</h1>
   <!-- 오답노트와 다른 점을 첫 줄에 말한다. 둘 다 "지난 풀이"라 이름만으로는 안 갈린다. -->
   <p class="meta">맞힌 것까지 포함해 내가 낸 답을 최근 순으로 보여 줍니다.
-    틀린 문제의 해설을 다시 읽으려면 <a href="/wrong-answers.html">오답노트</a>로 가세요.</p>
+    틀린 문제의 해설을 다시 읽으려면 <a href="/review.html#list">복습 화면의 틀린 문제</a>에서 펼쳐 보세요.</p>
 
   <!-- 필터 줄은 모든 목록이 같은 모양이다(api.js wireFilterBar): 검색 → 고르기 → 필터 지우기.
        결과(맞힘·틀림)는 탭이었는데, 분야와 함께 거르는 조건이라 고르기 칸으로 옮겼다 -->
