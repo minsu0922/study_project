@@ -42,12 +42,32 @@ class CourseCatalogTest {
                         tuple(5, "http-advanced", "심화편"));
     }
 
+    @Test
+    @DisplayName("순번을 정한 문서가 순번대로 앞에 서고, 나머지는 기본 규칙으로 뒤에 붙는다")
+    void manualOrderComesFirstThenDefault() {
+        List<DocumentRow> docs = List.of(
+                row(1, "tcp", "TCP", null),
+                row(2, "tcp-advanced", "TCP", 3),
+                row(3, "dns", "DNS", null),
+                row(4, "http", "HTTP", 1),
+                row(5, "udp", "UDP", 2),
+                row(6, "new-doc", "새 문서", null));   // 나중에 공개된 문서 — 손대지 않아도 뒤에 붙는다
+
+        assertThat(CourseCatalog.orderedForDomain(docs)).extracting(DocumentRow::getSlug)
+                .containsExactly("http", "udp", "tcp-advanced", "tcp", "dns", "new-doc");
+    }
+
     private static DocumentRow row(long id, String slug, String title) {
+        return row(id, slug, title, null);
+    }
+
+    private static DocumentRow row(long id, String slug, String title, Integer seq) {
         return new DocumentRow() {
             public Long getId() { return id; }
             public DomainCode getDomain() { return NETWORK; }
             public String getSlug() { return slug; }
             public String getTitle() { return title; }
+            public Integer getSeq() { return seq; }
         };
     }
 }

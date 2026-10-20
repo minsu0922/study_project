@@ -8,7 +8,10 @@ import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.repository.DocumentRepository;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.domainsetting.support.DomainCatalog;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.learningpath.domain.DomainCourseOrder;
+import project.study.study_project.learningpath.repository.DomainCourseOrderRepository;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.learningpath.domain.LearningPath;
 import project.study.study_project.learningpath.domain.LearningPathStep;
@@ -38,6 +41,7 @@ public class AdminLearningPathService {
     private final DocumentRepository documentRepository;
     private final LearningPathStatsRepository statsRepository;
     private final DomainCatalog domainCatalog;
+    private final DomainCourseOrderRepository orderRepository;
     private final EntityManager em;
 
     @Transactional(readOnly = true)
@@ -54,14 +58,58 @@ public class AdminLearningPathService {
     @Transactional(readOnly = true)
     public List<AdminPathDocumentOption> documentOptions() {
         List<AdminDocumentRow> docs = statsRepository.findAllDocumentsForAdmin();
-        Set<String> slugs = docs.stream().map(AdminDocumentRow::getSlug).collect(Collectors.toSet());
-        Map<String, Long> counts = problemCounts(slugs);
+        return toOptions(docs, docs);
+    }
+
+    /**
+     * 분야 코스의 지금 순서 — 사용자 화면과 같은 규칙(CourseCatalog.orderedForDomain)으로 줄 세운다.
+     * 내린 문서도 자리를 보여 준다. 사용자 코스에서는 빠진다.
+     */
+    @Transactional(readOnly = true)
+    public List<AdminPathDocumentOption> domainOrder(DomainCode domain) {
+        requireDomain(domain);
+        List<AdminDocumentRow> all = statsRepository.findAllDocumentsForAdmin();
+        List<AdminDocumentRow> mine = all.stream().filter(d -> d.getDomain().equals(domain)).toList();
+        return toOptions(CourseCatalog.orderedForDomain(mine), all);
+    }
+
+    /**
+     * 분야 코스 순서 저장 — 그 분야의 순번을 통째로 지우고 받은 순서대로 1부터 다시 쓴다.
+     * 빈 목록이면 지우기만 해서 기본 순서로 돌아간다.
+     */
+    @Transactional
+    public List<AdminPathDocumentOption> saveDomainOrder(DomainCode domain, List<Long> ids) {
+        requireDomain(domain);
+        if (new HashSet<>(ids).size() != ids.size()) {
+            throw new BusinessException(ErrorCode.PATH_002, "같은 문서를 두 자리에 넣을 수 없습니다.");
+        }
+        Set<Long> domainDocs = statsRepository.findAllDocumentsForAdmin().stream()
+                .filter(d -> d.getDomain().equals(domain)).map(AdminDocumentRow::getId).collect(Collectors.toSet());
+        if (!domainDocs.containsAll(ids)) {
+            throw new BusinessException(ErrorCode.PATH_002, "이 분야의 문서가 아닌 것이 들어 있습니다.");
+        }
+        orderRepository.deleteByDomain(domain);
+        for (int i = 0; i < ids.size(); i++) {
+            orderRepository.save(new DomainCourseOrder(ids.get(i), i + 1));
+        }
+        em.flush();
+        return domainOrder(domain);
+    }
+
+    private void requireDomain(DomainCode domain) {
+        if (!domainCatalog.exists(domain)) throw new BusinessException(ErrorCode.DOMAIN_003);
+    }
+
+    /** @param all 편 이름을 정할 때 짝 문서가 있는지 볼 범위 */
+    private List<AdminPathDocumentOption> toOptions(List<AdminDocumentRow> docs, List<AdminDocumentRow> all) {
+        Set<String> slugs = all.stream().map(AdminDocumentRow::getSlug).collect(Collectors.toSet());
+        Map<String, Long> counts = problemCounts(docs.stream().map(AdminDocumentRow::getSlug).collect(Collectors.toSet()));
         return docs.stream().map(d -> {
             String pair = DocumentEditions.counterpartSlugOf(d.getSlug());
             String edition = pair != null && slugs.contains(pair) ? DocumentEditions.labelOf(d.getSlug()) : null;
             return new AdminPathDocumentOption(d.getId(), d.getSlug(), d.getTitle(), d.getDomain().value(),
                     domainCatalog.displayName(d.getDomain()), edition, d.isHidden(),
-                    counts.getOrDefault(d.getSlug(), 0L));
+                    counts.getOrDefault(d.getSlug(), 0L), d.getSeq());
         }).toList();
     }
 

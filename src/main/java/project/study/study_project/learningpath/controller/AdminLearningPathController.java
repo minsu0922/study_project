@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.response.ApiResponse;
+import project.study.study_project.learningpath.dto.AdminDomainOrderRequest;
 import project.study.study_project.learningpath.dto.AdminLearningPathItem;
 import project.study.study_project.learningpath.dto.AdminLearningPathRequest;
 import project.study.study_project.learningpath.dto.AdminPathDocumentOption;
@@ -38,6 +40,19 @@ public class AdminLearningPathController {
     @GetMapping("/documents")
     public ApiResponse<List<AdminPathDocumentOption>> documents() {
         return ApiResponse.ok(service.documentOptions());
+    }
+
+    /** 분야 코스의 지금 순서. 예: {@code GET /api/admin/learning-paths/domain-order/NETWORK} */
+    @GetMapping("/domain-order/{domain}")
+    public ApiResponse<List<AdminPathDocumentOption>> domainOrder(@PathVariable DomainCode domain) {
+        return ApiResponse.ok(service.domainOrder(domain));
+    }
+
+    /** 분야 코스 순서 저장. 빈 목록이면 기본 순서로 되돌린다 */
+    @PutMapping("/domain-order/{domain}")
+    public ApiResponse<List<AdminPathDocumentOption>> saveDomainOrder(@PathVariable DomainCode domain,
+                                                                      @Valid @RequestBody AdminDomainOrderRequest req) {
+        return ApiResponse.ok(service.saveDomainOrder(domain, req.documentIds()));
     }
 
     @GetMapping("/{id}")

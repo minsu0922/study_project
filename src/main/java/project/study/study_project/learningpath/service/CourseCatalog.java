@@ -16,6 +16,7 @@ import project.study.study_project.learningpath.repository.LearningPathStatsRepo
 import project.study.study_project.learningpath.repository.LearningPathStatsRepository.DocumentRow;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -106,26 +107,41 @@ public class CourseCatalog {
     }
 
     /**
-     * 분야별 코스 — 주제마다 입문편 다음 심화편, 주제끼리는 먼저 만든 문서가 앞.
-     * 문서 행은 id 오름차순으로 온다. 주제의 자리는 그 주제에서 가장 먼저 만든 편이 정한다.
+     * 분야별 코스 — 사람이 순번을 정한 문서(V44)가 순번대로 앞에 선다. 나머지는 기본 규칙으로 뒤에 붙는다.
+     * 기본 규칙: 주제마다 입문편 다음 심화편, 주제끼리는 먼저 만든 문서가 앞(행은 id 오름차순으로 온다).
      */
     static Course domainCourse(DomainCode domain, String name, List<DocumentRow> docs, Set<String> publicSlugs) {
-        Map<String, List<DocumentRow>> byTopic = new LinkedHashMap<>();
-        for (DocumentRow d : docs) {
+        List<Course.Step> steps = new ArrayList<>();
+        for (DocumentRow d : orderedForDomain(docs)) {
+            steps.add(Course.Step.document(steps.size() + 1, d.getTitle(), editionOf(d.getSlug(), publicSlugs), d.getSlug()));
+        }
+        String description = name + " 개념 문서 " + steps.size() + "편을 주제마다 입문편부터 차례로 읽고 풀어요.";
+        return new Course(PathKey.domain(domain.value()), name + " 코스", description, steps);
+    }
+
+    /**
+     * 분야 코스의 문서 순서. 관리 콘솔도 같은 순서를 보여 줘야 해서 따로 뺐다(AdminLearningPathService).
+     *
+     * @param docs 한 분야의 문서, id 오름차순
+     */
+    static <T extends DocumentRow> List<T> orderedForDomain(List<T> docs) {
+        Map<String, List<T>> byTopic = new LinkedHashMap<>();
+        for (T d : docs) {
             String topic = DocumentEditions.isAdvanced(d.getSlug())
                     ? DocumentEditions.counterpartSlugOf(d.getSlug()) : d.getSlug();
             byTopic.computeIfAbsent(topic, k -> new ArrayList<>()).add(d);
         }
-        List<Course.Step> steps = new ArrayList<>();
-        for (List<DocumentRow> topic : byTopic.values()) {
+        List<T> byDefault = new ArrayList<>();
+        for (List<T> topic : byTopic.values()) {
             topic.stream()
-                    .sorted((a, b) -> Boolean.compare(DocumentEditions.isAdvanced(a.getSlug()),
-                            DocumentEditions.isAdvanced(b.getSlug())))
-                    .forEach(d -> steps.add(Course.Step.document(steps.size() + 1, d.getTitle(),
-                            editionOf(d.getSlug(), publicSlugs), d.getSlug())));
+                    .sorted(Comparator.comparing((T d) -> DocumentEditions.isAdvanced(d.getSlug())))
+                    .forEach(byDefault::add);
         }
-        String description = name + " 개념 문서 " + steps.size() + "편을 주제마다 입문편부터 차례로 읽고 풀어요.";
-        return new Course(PathKey.domain(domain.value()), name + " 코스", description, steps);
+        // 안정 정렬이라 순번 없는 문서끼리는 위 기본 순서가 그대로 남는다
+        return byDefault.stream()
+                .sorted(Comparator.comparing((T d) -> d.getSeq() == null)
+                        .thenComparing(d -> d.getSeq() == null ? 0 : d.getSeq()))
+                .toList();
     }
 
     /** 자바 코드 코스 — 문제가 있는 난이도만 초급 → 중급 → 고급 */

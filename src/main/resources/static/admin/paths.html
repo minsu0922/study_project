@@ -62,6 +62,22 @@ try {
 
     <h3>추천 코스 <span class="meta">(행을 누르면 위에서 고친다)</span></h3>
     <div id="pathList"></div>
+
+    <!-- 분야별 코스 순서(V44). 코스는 여전히 자동으로 만들어지고, 여기서는 문서의 자리만 정한다 -->
+    <details class="card form-panel" id="oPanel">
+      <summary>분야별 코스 순서</summary>
+      <p class="meta">기본 순서는 주제마다 입문편 다음 심화편, 주제끼리는 먼저 만든 문서 순이에요.
+        여기서 저장한 순서가 앞에 서고, 나중에 공개되는 문서는 저절로 맨 뒤에 붙어요. 내린 문서는 사용자 코스에서 빠져요.</p>
+      <div id="oMessage"></div>
+      <div class="filters">
+        <div class="field"><label for="oDomain">분야</label><select id="oDomain"></select></div>
+      </div>
+      <ol class="lp-pick" id="oList"></ol>
+      <div class="form-actions">
+        <button id="oSaveBtn">이 순서로 저장</button>
+        <button id="oResetBtn" class="btn-outline">기본 순서로 되돌리기</button>
+      </div>
+    </details>
   </div>
 </main>
 
@@ -80,8 +96,77 @@ let options = [];
 
 if (initAdminPage("paths")) {
   initForm();
+  initDomainOrder();
   loadOptions();
   loadPaths();
+}
+
+/* ── 분야별 코스 순서 ──
+ * 저장은 보이는 목록 전체를 그 순서대로 보낸다. 그러면 지금 있는 문서는 전부 자리를 받고,
+ * 나중에 공개되는 문서만 순번 없이 뒤에 붙는다. */
+let orderList = [];
+
+function initDomainOrder() {
+  const sel = document.getElementById("oDomain");
+  const fill = () => { fillDomainSelect(sel); };
+  fill();
+  domainsReady.then(() => { fill(); loadDomainOrder(); });
+  sel.addEventListener("change", loadDomainOrder);
+  document.getElementById("oList").addEventListener("click", e => {
+    const btn = e.target.closest("[data-oact]");
+    if (!btn) return;
+    const i = Number(btn.dataset.i);
+    const j = btn.dataset.oact === "up" ? i - 1 : i + 1;
+    if (j < 0 || j >= orderList.length) return;
+    [orderList[i], orderList[j]] = [orderList[j], orderList[i]];
+    renderDomainOrder(true);
+  });
+  document.getElementById("oSaveBtn").addEventListener("click", () => saveDomainOrder(orderList.map(d => d.id)));
+  document.getElementById("oResetBtn").addEventListener("click", e =>
+    armedAction(e.currentTarget, () => saveDomainOrder([]), "정말 되돌릴까요?"));
+}
+
+async function loadDomainOrder() {
+  const domain = document.getElementById("oDomain").value;
+  if (!domain) return;
+  document.getElementById("oMessage").innerHTML = "";
+  try {
+    orderList = await api(`/api/admin/learning-paths/domain-order/${encodeURIComponent(domain)}`);
+    renderDomainOrder(false);
+  } catch (e) {
+    showErrorAlert(document.getElementById("oMessage"), e, "순서를 불러오지 못했습니다");
+  }
+}
+
+/** @param dirty 저장하지 않은 변경이 있다 — 안내 한 줄을 띄운다 */
+function renderDomainOrder(dirty) {
+  const el = document.getElementById("oList");
+  el.innerHTML = orderList.length === 0
+    ? `<li class="meta">이 분야에는 문서가 없어요.</li>`
+    : orderList.map((d, i) => `
+      <li>
+        <span class="lp-pick-main"><b>${i + 1}.</b> ${docLine(d)}${
+          d.seq == null && !dirty ? ` <span class="meta">(자동)</span>` : ""}</span>
+        <span class="lp-pick-acts">
+          <button type="button" class="btn-outline btn-sm" data-oact="up" data-i="${i}" aria-label="위로" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button type="button" class="btn-outline btn-sm" data-oact="down" data-i="${i}" aria-label="아래로" ${i === orderList.length - 1 ? "disabled" : ""}>↓</button>
+        </span>
+      </li>`).join("");
+  if (dirty) document.getElementById("oMessage").innerHTML =
+    `<div class="alert info">순서를 바꿨어요. [이 순서로 저장]을 눌러야 사용자 코스에 반영돼요.</div>`;
+}
+
+async function saveDomainOrder(ids) {
+  const domain = document.getElementById("oDomain").value;
+  const msg = document.getElementById("oMessage");
+  try {
+    orderList = await api(`/api/admin/learning-paths/domain-order/${encodeURIComponent(domain)}`,
+      { method: "PUT", body: JSON.stringify({ documentIds: ids }) });
+    renderDomainOrder(false);
+    msg.innerHTML = `<div class="alert info">${ids.length ? "저장했어요." : "기본 순서로 되돌렸어요."}</div>`;
+  } catch (e) {
+    showErrorAlert(msg, e, "저장하지 못했습니다");
+  }
 }
 
 function initForm() {

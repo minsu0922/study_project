@@ -22,8 +22,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -105,6 +107,53 @@ class AdminLearningPathApiIntegrationTest {
                 .andExpect(jsonPath("$.data[?(@.id == " + hidden.getId() + ")].hidden").value(true));
         mockMvc.perform(get("/api/admin/learning-paths").header(HttpHeaders.AUTHORIZATION, fixtures.bearer(Role.USER)))
                 .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    @DisplayName("분야 코스 순서를 저장하면 사용자 코스가 그 순서가 되고, 빈 목록으로 저장하면 기본 순서로 돌아간다")
+    void domainOrderSaveAndReset() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        Document first = doc(false), second = doc(false);   // 기본 순서는 first → second(먼저 만든 순)
+
+        mockMvc.perform(put("/api/admin/learning-paths/domain-order/" + TestDomains.NETWORK.value())
+                        .header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("documentIds", List.of(second.getId())))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(second.getId()))
+                .andExpect(jsonPath("$.data[0].seq").value(1));
+
+        // 순번을 받은 second가 코스 맨 앞, 순번 없는 문서는 그 뒤
+        mockMvc.perform(get("/api/learning-paths/domain:" + TestDomains.NETWORK.value()))
+                .andExpect(jsonPath("$.data.steps[0].documentSlug").value(second.getSlug()));
+
+        mockMvc.perform(put("/api/admin/learning-paths/domain-order/" + TestDomains.NETWORK.value())
+                        .header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("documentIds", List.of()))))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/admin/learning-paths/domain-order/" + TestDomains.NETWORK.value())
+                        .header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(jsonPath("$.data[?(@.id == " + second.getId() + ")].seq").value(contains(nullValue())));
+        mockMvc.perform(get("/api/learning-paths/domain:" + TestDomains.NETWORK.value()))
+                .andExpect(jsonPath("$.data.steps[*].documentSlug", hasItem(first.getSlug())));
+    }
+
+    @Test
+    @DisplayName("다른 분야 문서·같은 문서 두 번은 PATH_002, 없는 분야는 DOMAIN_003")
+    void domainOrderRejectsBadInput() throws Exception {
+        String admin = fixtures.bearer(Role.ADMIN);
+        Document a = doc(false);
+        Document other = documentRepository.save(Document.create(TestDomains.SECURITY, "보안 " + UUID.randomUUID(),
+                "sec-" + UUID.randomUUID().toString().substring(0, 8), "본문", null, Set.of()));
+        String url = "/api/admin/learning-paths/domain-order/" + TestDomains.NETWORK.value();
+
+        mockMvc.perform(put(url).header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("documentIds", List.of(other.getId())))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("PATH_002"));
+        mockMvc.perform(put(url).header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("documentIds", List.of(a.getId(), a.getId())))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("PATH_002"));
+        mockMvc.perform(get("/api/admin/learning-paths/domain-order/NO_SUCH_DOMAIN").header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("DOMAIN_003"));
     }
 
     private String body(List<Long> ids, boolean published) throws Exception {

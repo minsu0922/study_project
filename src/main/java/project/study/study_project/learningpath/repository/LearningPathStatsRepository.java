@@ -16,18 +16,19 @@ import java.util.List;
  */
 public interface LearningPathStatsRepository extends Repository<Problem, Long> {
 
-    /** 분야별 코스의 재료 — 공개 문서 전부. 먼저 만든 문서가 앞이다(주제 순서의 기준) */
-    @Query("select d.id as id, d.domain as domain, d.slug as slug, d.title as title "
-            + "from Document d where d.hidden = false order by d.id asc")
+    /**
+     * 분야별 코스의 재료 — 공개 문서 전부와 사람이 정한 순번(V44, 없으면 null).
+     * 먼저 만든 문서가 앞이다(순번 없는 문서의 주제 순서 기준)
+     */
+    @Query("select d.id as id, d.domain as domain, d.slug as slug, d.title as title, o.seq as seq "
+            + "from Document d left join DomainCourseOrder o on o.documentId = d.id "
+            + "where d.hidden = false order by d.id asc")
     List<DocumentRow> findPublicDocuments();
 
-    @Query("select d.id as id, d.domain as domain, d.slug as slug, d.title as title "
-            + "from Document d where d.hidden = false and d.id in :ids")
-    List<DocumentRow> findPublicDocumentsByIds(@Param("ids") Collection<Long> ids);
-
     /** 관리 콘솔의 문서 고르기 — 내린 문서도 보인다(고른 뒤 내린 문서를 단계 목록에서 알아봐야 한다) */
-    @Query("select d.id as id, d.domain as domain, d.slug as slug, d.title as title, d.hidden as hidden "
-            + "from Document d order by d.domain asc, d.id asc")
+    @Query("select d.id as id, d.domain as domain, d.slug as slug, d.title as title, d.hidden as hidden, o.seq as seq "
+            + "from Document d left join DomainCourseOrder o on o.documentId = d.id "
+            + "order by d.domain asc, d.id asc")
     List<AdminDocumentRow> findAllDocumentsForAdmin();
 
     interface AdminDocumentRow extends DocumentRow {
@@ -89,6 +90,9 @@ public interface LearningPathStatsRepository extends Repository<Problem, Long> {
         String getSlug();
 
         String getTitle();
+
+        /** 분야별 코스에서 사람이 정한 자리(V44). 정하지 않았으면 null */
+        Integer getSeq();
     }
 
     interface KeyCount {
