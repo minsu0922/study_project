@@ -393,6 +393,13 @@ access 토큰 재발급. **refresh 토큰은 1회용**이라 쓰는 순간 새�
 - `documentSlug`도 **존재하는 문서만** 내려간다. 목록이라 문서를 한 건씩 확인하면 N+1이 되므로,
   slug를 모아 `IN` 한 번으로 확인한다.
 
+## GET /api/me/wrong-answers/of  🔒
+지정한 문제들의 오답 카드만 준다(2026-10-20). 복습 화면이 목록 한 쪽에 보이는 문제의 내 답·해설을 한 번에 받는다.
+
+**Query params**: `problemIds`(필수, 콤마로 잇는다. 50개까지)
+
+**Response 200**: 위 `content`의 항목과 같은 모양의 **배열**(페이지가 아니다). 내 오답이 없는 id는 빠진다.
+
 ---
 
 ## GET /api/me/reviews/today  🔒
