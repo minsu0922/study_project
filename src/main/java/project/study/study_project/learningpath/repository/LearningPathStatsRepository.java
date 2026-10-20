@@ -59,6 +59,19 @@ public interface LearningPathStatsRepository extends Repository<Problem, Long> {
             """)
     List<DifficultyProgress> codeProgressByDifficulty(@Param("userId") Long userId, @Param("lang") String lang);
 
+    /** 문서 단계의 문제 — 난이도 정렬은 부르는 쪽이 한다(난이도가 문자열로 저장돼 DB 정렬은 알파벳순이다) */
+    @Query("select p from Problem p where p.hidden = false and p.documentSlug = :slug order by p.id asc")
+    List<Problem> findStepProblemsBySlug(@Param("slug") String slug);
+
+    @Query("select p from Problem p where p.hidden = false and p.code is not null "
+            + "and p.codeLanguage = :lang and p.difficulty = :difficulty order by p.id asc")
+    List<Problem> findStepCodeProblems(@Param("lang") String lang, @Param("difficulty") Difficulty difficulty);
+
+    /** 넘긴 문제 가운데 내가 맞힌 적 있는 것 — 단계 세트에서 아직 못 맞힌 문제를 앞에 세운다 */
+    @Query("select distinct s.problem.id from Submission s "
+            + "where s.userId = :userId and s.correct = true and s.problem.id in :ids")
+    List<Long> findSolvedProblemIds(@Param("userId") Long userId, @Param("ids") Collection<Long> ids);
+
     interface DocumentRow {
         Long getId();
 

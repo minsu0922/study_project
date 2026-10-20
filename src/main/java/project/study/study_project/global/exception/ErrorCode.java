@@ -120,6 +120,11 @@ public enum ErrorCode {
     DISCUSSION_013("DISCUSSION_013", HttpStatus.FORBIDDEN, "글쓰기가 정지된 계정입니다."),
     DISCUSSION_014("DISCUSSION_014", HttpStatus.BAD_REQUEST, "내가 쓴 글은 추천할 수 없습니다."),
 
+    // 학습 로드맵(V43, docs/26). 형식이 틀린 키도 404로 답한다 — 주소창에서 오는 값이라
+    // "형식 오류"와 "없음"을 갈라 알려 줄 이유가 없다.
+    PATH_001("PATH_001", HttpStatus.NOT_FOUND, "학습 코스를 찾을 수 없습니다."),
+    PATH_002("PATH_002", HttpStatus.BAD_REQUEST, "코스 단계에 넣을 수 없는 문서가 있습니다."),
+
     // 사용자 관리(V26) — 관리자가 사용자를 정지하고 푼다.
     USER_001("USER_001", HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
     // 400인 이유: 지금 상태와의 충돌이 아니라 어떤 상태에서도 받지 않는 요청이다.

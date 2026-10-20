@@ -127,6 +127,9 @@ public class SecurityConfig {
                         // 풀이 기록 쪽 조건이 아무것도 안 맞아 모든 줄이 "안 푼 문제"로 나온다
                         // (ProblemRepository.findListForUser). 새는 것은 위 /api/quiz/**와 같은 수준이다.
                         .requestMatchers(HttpMethod.GET, "/api/problems").permitAll()
+                        // 공개: 학습 로드맵(2026-10-20). 코스와 단계 문제는 누구나 보고, 비로그인이면
+                        // 진도가 0으로 나온다. 시작·그만두기는 /api/me/** 아래라 로그인이 필요하다.
+                        .requestMatchers(HttpMethod.GET, "/api/learning-paths", "/api/learning-paths/**").permitAll()
                         // 공개: 기록을 남기지 않는 채점(2026-09-08). 원칙이 "채점만 로그인"에서
                         // <기록만 로그인>으로 좁아진 자리다 — 왜 좁혔는지는 QuizService.check에 적었다.
                         // 한 줄로: 첫 화면이 "가입 없이 풀어보기"라고 약속해 놓고 서버가 그것을
