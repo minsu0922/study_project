@@ -20,7 +20,7 @@ class PathKeyTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "NETWORK", "domain:", "domain:network", "code:Java", "custom:0", "custom:-1",
+    @ValueSource(strings = {"", "NETWORK", "domain:", "domain:network", "domain:A", "code:Java", "custom:0", "custom:-1",
             "custom:1a", "other:1", "domain:NET WORK", "domain:<b>"})
     @DisplayName("형식 밖의 키는 빈 값이다 — 주소창에서 오는 값이라 걸러야 한다")
     void rejectsMalformed(String raw) {

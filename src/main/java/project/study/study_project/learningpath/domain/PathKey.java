@@ -1,5 +1,7 @@
 package project.study.study_project.learningpath.domain;
 
+import project.study.study_project.global.common.DomainCode;
+
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -18,8 +20,8 @@ public record PathKey(Kind kind, String value) {
 
     public enum Kind { DOMAIN, CODE, CUSTOM }
 
-    /** 분야 코드는 대문자·숫자·밑줄, 언어는 소문자, 관리자 코스는 숫자 */
-    private static final Pattern DOMAIN_VALUE = Pattern.compile("[A-Z][A-Z0-9_]{0,29}");
+    /* 분야 코드는 DomainCode가 직접 검사한다(isDomainCode). 여기서 정규식을 따로 두면 두 규칙이
+       어긋난다 — 한 글자 코드를 이쪽만 통과시켜 DomainCode.of가 500을 냈다(2026-10-21). */
     private static final Pattern CODE_VALUE = Pattern.compile("[a-z]{1,20}");
     private static final Pattern CUSTOM_VALUE = Pattern.compile("[1-9][0-9]{0,17}");
 
@@ -43,11 +45,20 @@ public record PathKey(Kind kind, String value) {
         String head = raw.substring(0, colon);
         String value = raw.substring(colon + 1);
         return switch (head) {
-            case "domain" -> DOMAIN_VALUE.matcher(value).matches() ? Optional.of(domain(value)) : Optional.empty();
+            case "domain" -> isDomainCode(value) ? Optional.of(domain(value)) : Optional.empty();
             case "code" -> CODE_VALUE.matcher(value).matches() ? Optional.of(code(value)) : Optional.empty();
             case "custom" -> CUSTOM_VALUE.matcher(value).matches() ? Optional.of(new PathKey(Kind.CUSTOM, value)) : Optional.empty();
             default -> Optional.empty();
         };
+    }
+
+    private static boolean isDomainCode(String value) {
+        try {
+            DomainCode.of(value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     public long customId() {

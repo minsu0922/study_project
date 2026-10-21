@@ -125,6 +125,9 @@ class LearningPathApiIntegrationTest {
         String key = "custom:" + published(d).getId();
         mockMvc.perform(get("/api/learning-paths/nonsense")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/learning-paths/domain:NO_SUCH")).andExpect(status().isNotFound());
+        // 키 검사가 분야 코드 규칙(두 글자 이상)보다 느슨해서 500이 나던 자리(2026-10-21)
+        mockMvc.perform(get("/api/learning-paths/domain:A")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/learning-paths/domain:A/steps/1/problems")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/learning-paths/" + key + "/steps/9/problems")).andExpect(status().isNotFound());
         mockMvc.perform(post("/api/me/learning-paths/" + key)).andExpect(status().isUnauthorized());
     }
