@@ -21,63 +21,81 @@ try {
   <div id="guard"></div>
 
   <div id="adminUi" hidden>
-    <p class="meta">여기서 만드는 것은 <b>추천 코스</b>예요. 분야를 넘나드는 순서(예: 입문자 코스)를 사람이 정해요.
-      분야별 코스와 자바 코드 코스는 문서·문제로 저절로 만들어져서 여기 없어요.</p>
+    <!-- 두 일은 서로 다른 코스를 다룬다. 한 화면에 쌓아 두면 어느 쪽을 고치는지 헷갈려서 탭으로 가른다 -->
+    <div class="tabs" id="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="custom" role="tab">추천 코스</button>
+      <button class="tab-btn" data-tab="domain" role="tab">분야별 코스 순서</button>
+    </div>
 
-    <details class="card form-panel" id="pFormPanel">
-      <summary id="pFormTitle">새 코스 만들기</summary>
+    <!-- ── 추천 코스: 목록 ── -->
+    <section id="customList">
+      <div class="lp-head">
+        <p class="meta" style="margin:0">분야를 넘나드는 순서(예: 입문자 코스)를 직접 짜요. 행을 누르면 고칠 수 있어요.</p>
+        <button id="pNewBtn">+ 새 코스 만들기</button>
+      </div>
+      <div id="pathList"></div>
+    </section>
+
+    <!-- ── 추천 코스: 편집 ── -->
+    <section id="pEditor" class="card form-panel" hidden>
+      <a href="#" class="lp-back" id="pBack">← 코스 목록</a>
+      <h2 style="margin:0 0 var(--sp-3)"><span id="pFormTitle">새 코스 만들기</span><span id="pDirty" class="badge orange lp-dirty" hidden>저장 안 됨</span></h2>
       <div id="pMessage"></div>
+
       <div class="field"><label for="pTitle">제목</label><input type="text" id="pTitle" maxlength="100" placeholder="입문자 코스"></div>
-      <div class="field"><label for="pDesc">설명 <span class="meta">(목록 카드에 한두 줄로 보인다)</span></label>
+      <div class="field"><label for="pDesc">설명 <span class="meta">(목록 카드에 한두 줄로 보여요)</span></label>
         <input type="text" id="pDesc" maxlength="500" placeholder="처음 CS를 공부하는 사람이 보기 좋은 순서예요."></div>
       <div class="filters">
-        <div class="field"><label for="pOrder">목록 순서 <span class="meta">(작을수록 위)</span></label>
+        <div class="field" style="flex:none"><label for="pOrder">목록 순서 <span class="meta">(작을수록 위)</span></label>
           <input type="number" id="pOrder" min="0" max="9999" value="0"></div>
-        <div class="field"><label><input type="checkbox" id="pPublished"> 사용자에게 공개</label></div>
+        <div class="field"><label><input type="checkbox" id="pPublished"> 사용자에게 공개</label>
+          <div class="meta">끄면 "만드는 중"으로 남고 사용자 로드맵 목록에 안 보여요.</div></div>
       </div>
 
       <!-- 왼쪽: 고른 단계(순서대로). 오른쪽: 문서 고르기. 좁으면 위아래로 쌓인다 -->
       <div class="lp-editor">
         <div>
-          <h3>단계 <span class="meta" id="pStepCount"></span></h3>
+          <div class="lp-head"><h3>단계</h3><span class="meta" id="pStepCount"></span></div>
+          <p class="meta" style="margin:0 0 8px">줄을 끌어 놓거나 ↑ ↓로 순서를 바꿔요.</p>
           <ol class="lp-pick" id="pSteps"></ol>
         </div>
         <div>
-          <h3>문서 고르기</h3>
+          <div class="lp-head"><h3>문서 고르기</h3><span class="meta" id="pDocCount"></span></div>
           <div class="filters">
             <div class="field"><label for="pDomain">분야</label><select id="pDomain"><option value="">전체</option></select></div>
             <div class="field field-search"><label for="pQ">검색</label><input type="search" id="pQ" placeholder="제목 일부"></div>
           </div>
+          <label class="meta" style="display:block;margin:-8px 0 8px"><input type="checkbox" id="pHideUsed" checked> 넣은 문서는 숨기기</label>
           <ul class="lp-pick" id="pDocs"></ul>
         </div>
       </div>
 
       <div class="form-actions">
         <button id="pSubmitBtn">만들기</button>
-        <button id="pCancelBtn" class="btn-outline" hidden>수정 취소</button>
-        <button id="pDeleteBtn" class="btn-outline danger" hidden>코스 지우기</button>
         <a id="pPreview" class="btn btn-outline" hidden target="_blank" rel="noopener">사용자 화면 열기 ↗</a>
+        <button id="pDeleteBtn" class="danger lp-push" hidden>코스 지우기</button>
       </div>
-    </details>
+    </section>
 
-    <h3>추천 코스 <span class="meta">(행을 누르면 위에서 고친다)</span></h3>
-    <div id="pathList"></div>
-
-    <!-- 분야별 코스 순서(V44). 코스는 여전히 자동으로 만들어지고, 여기서는 문서의 자리만 정한다 -->
-    <details class="card form-panel" id="oPanel">
-      <summary>분야별 코스 순서</summary>
-      <p class="meta">기본 순서는 주제마다 입문편 다음 심화편, 주제끼리는 먼저 만든 문서 순이에요.
-        여기서 저장한 순서가 앞에 서고, 나중에 공개되는 문서는 저절로 맨 뒤에 붙어요. 내린 문서는 사용자 코스에서 빠져요.</p>
+    <!-- ── 분야별 코스 순서(V44). 코스는 저절로 만들어지고, 여기서는 문서의 자리만 정한다 ── -->
+    <section id="domainTab" class="card form-panel" hidden>
+      <p class="meta" style="margin-top:0">분야별 코스는 문서·문제로 저절로 만들어져요. 여기서는 단계 순서만 정해요.
+        기본은 주제마다 입문편 다음 심화편, 주제끼리는 먼저 만든 문서 순이에요.
+        새로 공개되는 문서는 저절로 맨 뒤에 붙고, 내린 문서는 사용자 코스에서 빠져요.</p>
       <div id="oMessage"></div>
       <div class="filters">
         <div class="field"><label for="oDomain">분야</label><select id="oDomain"></select></div>
       </div>
+      <div class="lp-head"><h3>단계 <span id="oDirty" class="badge orange lp-dirty" hidden>저장 안 됨</span></h3>
+        <span class="meta" id="oCount"></span></div>
       <ol class="lp-pick" id="oList"></ol>
       <div class="form-actions">
         <button id="oSaveBtn">이 순서로 저장</button>
-        <button id="oResetBtn" class="btn-outline">기본 순서로 되돌리기</button>
+        <button id="oDiscardBtn" class="btn-outline" hidden>변경 버리기</button>
+        <a id="oPreview" class="btn btn-outline" target="_blank" rel="noopener">사용자 화면 열기 ↗</a>
+        <button id="oResetBtn" class="btn-outline lp-push">기본 순서로 되돌리기</button>
       </div>
-    </details>
+    </section>
   </div>
 </main>
 
@@ -86,159 +104,328 @@ try {
 <script src="/admin/js/admin-shell.js"></script>
 <script src="/admin/js/admin-common.js"></script>
 <script>
-/* 추천 코스 관리 — /api/admin/learning-paths. 단계는 문서 id 목록을 순서대로 보낸다(폼 전체 제출). */
+/* 로드맵 관리 — /api/admin/learning-paths.
+ * 추천 코스는 단계(문서 id 목록)를 순서대로 폼 전체로 보낸다. 분야별 순서는 보이는 목록 전체를 보낸다.
+ * 주소의 #(custom-12 · new · domain-NETWORK)로 지금 보는 자리를 기억해, 새로 고쳐도 그 자리로 돌아온다. */
 
 let editingId = null;
 /** 고른 단계 — 문서 고르기 목록의 한 줄(AdminPathDocumentOption)을 그대로 담는다 */
 let picked = [];
 /** 고를 수 있는 문서 전부 */
 let options = [];
+/** 마지막으로 저장(또는 불러온) 폼 상태. 지금 값과 다르면 "저장 안 됨" */
+let pSaved = "";
+let orderList = [];
+let oSaved = "";
+
+const $ = id => document.getElementById(id);
 
 if (initAdminPage("paths")) {
+  initTabs();
   initForm();
   initDomainOrder();
-  loadOptions();
-  loadPaths();
+  start();
 }
 
-/* ── 분야별 코스 순서 ──
- * 저장은 보이는 목록 전체를 그 순서대로 보낸다. 그러면 지금 있는 문서는 전부 자리를 받고,
- * 나중에 공개되는 문서만 순번 없이 뒤에 붙는다. */
-let orderList = [];
+async function start() {
+  await Promise.all([loadOptions(), loadPaths()]);
+  const h = location.hash.slice(1);
+  if (h === "new") openEditor(null);
+  else if (/^custom-\d+$/.test(h)) openEditor(Number(h.slice(7)));
+  else if (h.startsWith("domain")) showTab("domain", h.slice(7));
+}
+
+function setHash(h) {
+  history.replaceState(null, "", h ? `#${h}` : location.pathname);
+}
+
+// 저장 안 한 변경을 두고 창을 닫거나 다른 메뉴로 가면 브라우저가 한 번 묻는다
+window.addEventListener("beforeunload", e => {
+  if (pDirty() || oDirty()) { e.preventDefault(); e.returnValue = ""; }
+});
+
+/* ── 탭 ── */
+function initTabs() {
+  $("tabs").addEventListener("click", e => {
+    const btn = e.target.closest("[data-tab]");
+    if (!btn) return;
+    // 편집 중에 [추천 코스]를 누르면 목록으로 돌아간다. 그 밖에 이미 고른 탭은 그대로 둔다
+    if (btn.classList.contains("active") && $("pEditor").hidden) return;
+    if (leaveBlocked(btn)) return;
+    showTab(btn.dataset.tab);
+  });
+}
+
+/** 탭을 옮기면 지금 탭의 변경이 버려진다. 변경이 있으면 첫 클릭은 경고만 하고, 한 번 더 눌러야 옮긴다 */
+function leaveBlocked(btn) {
+  const dirty = !$("pEditor").hidden ? pDirty() : !$("domainTab").hidden && oDirty();
+  if (!dirty || btn.dataset.leaveOk) return false;
+  btn.dataset.leaveOk = "1";
+  const label = btn.textContent;
+  btn.textContent = "저장 안 한 변경이 사라져요. 한 번 더 누르기";
+  setTimeout(() => { delete btn.dataset.leaveOk; btn.textContent = label; }, 3000);
+  return true;
+}
+
+function showTab(tab, domain) {
+  document.querySelectorAll("#tabs .tab-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.tab === tab);
+    delete b.dataset.leaveOk;
+  });
+  $("customList").hidden = tab !== "custom";
+  $("pEditor").hidden = true;
+  $("domainTab").hidden = tab !== "domain";
+  if (tab === "custom") { resetEditorState(); setHash(""); }
+  else loadDomainOrder(domain);
+}
+
+/* ── 끌어서 순서 바꾸기 ──
+ * 두 목록(추천 코스 단계·분야 순서)이 같이 쓴다. li에 data-i(지금 자리)가 있어야 한다. */
+function enableDragSort(listEl, getArr, onMoved) {
+  let from = null;
+  const clear = () => listEl.querySelectorAll(".drop-before, .drop-after, .dragging")
+    .forEach(li => li.classList.remove("drop-before", "drop-after", "dragging"));
+  const isAfter = (li, e) => {
+    const r = li.getBoundingClientRect();
+    return e.clientY > r.top + r.height / 2;
+  };
+  listEl.addEventListener("dragstart", e => {
+    const li = e.target.closest("li[data-i]");
+    if (!li) return;
+    from = Number(li.dataset.i);
+    li.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(from));   // 파이어폭스는 데이터가 없으면 끌기를 시작하지 않는다
+  });
+  listEl.addEventListener("dragover", e => {
+    const li = e.target.closest("li[data-i]");
+    if (from == null || !li) return;
+    e.preventDefault();
+    listEl.querySelectorAll(".drop-before, .drop-after").forEach(x => x.classList.remove("drop-before", "drop-after"));
+    li.classList.add(isAfter(li, e) ? "drop-after" : "drop-before");
+  });
+  listEl.addEventListener("drop", e => {
+    const li = e.target.closest("li[data-i]");
+    if (from == null || !li) return;
+    e.preventDefault();
+    let to = Number(li.dataset.i) + (isAfter(li, e) ? 1 : 0);
+    if (from < to) to--;
+    const arr = getArr();
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    from = null;
+    clear();
+    onMoved(to);
+  });
+  listEl.addEventListener("dragend", () => { from = null; clear(); });
+}
+
+/** 같은 목록 안에서 i번째를 j로 옮긴다(↑ ↓ 단추) */
+function move(arr, i, j) {
+  if (j < 0 || j >= arr.length) return false;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  return true;
+}
+
+function flash(listEl, i) {
+  const li = listEl.querySelector(`li[data-i="${i}"]`);
+  if (li) { li.classList.add("moved"); li.addEventListener("animationend", () => li.classList.remove("moved"), { once: true }); }
+}
+
+function sortRow(d, i, len, acts, extra = "") {
+  return `
+    <li draggable="true" data-i="${i}">
+      <span class="lp-pick-main"><span class="lp-handle" aria-hidden="true">⠿</span><b>${i + 1}.</b> ${docLine(d)}${extra}</span>
+      <span class="lp-pick-acts">
+        <button type="button" class="btn-outline btn-sm" data-${acts}="up" data-i="${i}" aria-label="위로" ${i === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" class="btn-outline btn-sm" data-${acts}="down" data-i="${i}" aria-label="아래로" ${i === len - 1 ? "disabled" : ""}>↓</button>
+        ${acts === "act" ? `<button type="button" class="btn-outline btn-sm" data-act="remove" data-i="${i}" aria-label="빼기">✕</button>` : ""}
+      </span>
+    </li>`;
+}
+
+function docLine(d) {
+  return `${escapeHtml(d.title)}${d.edition ? ` <span class="badge source">${escapeHtml(d.edition)}</span>` : ""}
+    <span class="meta">${escapeHtml(d.domainLabel)} · 문제 ${d.problemCount}</span>${
+    d.problemCount === 0 ? ` <span class="badge orange" title="풀 문제가 없어 사용자는 읽기만 한다">문제 없음</span>` : ""}${
+    d.hidden ? ` <span class="badge orange" title="사용자에게는 이 단계가 보이지 않는다">내린 문서</span>` : ""}`;
+}
+
+/* ── 분야별 코스 순서 ── */
+function oDirty() {
+  return !$("domainTab").hidden && JSON.stringify(orderList.map(d => d.id)) !== oSaved;
+}
 
 function initDomainOrder() {
-  const sel = document.getElementById("oDomain");
-  const fill = () => { fillDomainSelect(sel); };
-  fill();
-  domainsReady.then(() => { fill(); loadDomainOrder(); });
-  sel.addEventListener("change", loadDomainOrder);
-  document.getElementById("oList").addEventListener("click", e => {
+  const sel = $("oDomain");
+  fillDomainSelect(sel);
+  domainsReady.then(() => fillDomainSelect(sel));
+  sel.addEventListener("focus", () => { sel.dataset.prev = sel.value; });
+  sel.addEventListener("change", () => {
+    if (JSON.stringify(orderList.map(d => d.id)) !== oSaved) {
+      // 고르기 칸은 두 번 누르기를 못 하니, 바꾸기 전 분야로 돌려 놓고 알린다
+      sel.value = sel.dataset.prev || sel.value;
+      $("oMessage").innerHTML = `<div class="alert error">저장하지 않은 순서가 있어요. [이 순서로 저장]이나 [변경 버리기]를 누른 뒤 분야를 바꾸세요.</div>`;
+      return;
+    }
+    sel.dataset.prev = sel.value;
+    loadDomainOrder();
+  });
+  $("oList").addEventListener("click", e => {
     const btn = e.target.closest("[data-oact]");
     if (!btn) return;
     const i = Number(btn.dataset.i);
     const j = btn.dataset.oact === "up" ? i - 1 : i + 1;
-    if (j < 0 || j >= orderList.length) return;
-    [orderList[i], orderList[j]] = [orderList[j], orderList[i]];
-    renderDomainOrder(true);
+    if (move(orderList, i, j)) { renderDomainOrder(); flash($("oList"), j); }
   });
-  document.getElementById("oSaveBtn").addEventListener("click", () => saveDomainOrder(orderList.map(d => d.id)));
-  document.getElementById("oResetBtn").addEventListener("click", e =>
+  enableDragSort($("oList"), () => orderList, to => { renderDomainOrder(); flash($("oList"), to); });
+  $("oSaveBtn").addEventListener("click", () => saveDomainOrder(orderList.map(d => d.id)));
+  $("oDiscardBtn").addEventListener("click", () => loadDomainOrder());
+  $("oResetBtn").addEventListener("click", e =>
     armedAction(e.currentTarget, () => saveDomainOrder([]), "정말 되돌릴까요?"));
 }
 
-async function loadDomainOrder() {
-  const domain = document.getElementById("oDomain").value;
+/** @param want 주소(#domain-X)로 들어온 분야. 분야 목록이 온 뒤에야 고를 수 있다 */
+async function loadDomainOrder(want) {
+  await domainsReady;
+  const sel = $("oDomain");
+  fillDomainSelect(sel);
+  if (want) sel.value = want;
+  if (!sel.value && sel.options.length) sel.value = sel.options[0].value;
+  const domain = sel.value;
   if (!domain) return;
-  document.getElementById("oMessage").innerHTML = "";
+  sel.dataset.prev = domain;
+  setHash(`domain-${domain}`);
+  $("oMessage").innerHTML = "";
+  $("oPreview").href = `/path.html?key=domain:${encodeURIComponent(domain)}`;
   try {
     orderList = await api(`/api/admin/learning-paths/domain-order/${encodeURIComponent(domain)}`);
-    renderDomainOrder(false);
+    oSaved = JSON.stringify(orderList.map(d => d.id));
+    renderDomainOrder();
   } catch (e) {
-    showErrorAlert(document.getElementById("oMessage"), e, "순서를 불러오지 못했습니다");
+    showErrorAlert($("oMessage"), e, "순서를 불러오지 못했습니다");
   }
 }
 
-/** @param dirty 저장하지 않은 변경이 있다 — 안내 한 줄을 띄운다 */
-function renderDomainOrder(dirty) {
-  const el = document.getElementById("oList");
-  el.innerHTML = orderList.length === 0
-    ? `<li class="meta">이 분야에는 문서가 없어요.</li>`
-    : orderList.map((d, i) => `
-      <li>
-        <span class="lp-pick-main"><b>${i + 1}.</b> ${docLine(d)}${
-          d.seq == null && !dirty ? ` <span class="meta">(자동)</span>` : ""}</span>
-        <span class="lp-pick-acts">
-          <button type="button" class="btn-outline btn-sm" data-oact="up" data-i="${i}" aria-label="위로" ${i === 0 ? "disabled" : ""}>↑</button>
-          <button type="button" class="btn-outline btn-sm" data-oact="down" data-i="${i}" aria-label="아래로" ${i === orderList.length - 1 ? "disabled" : ""}>↓</button>
-        </span>
-      </li>`).join("");
-  if (dirty) document.getElementById("oMessage").innerHTML =
-    `<div class="alert info">순서를 바꿨어요. [이 순서로 저장]을 눌러야 사용자 코스에 반영돼요.</div>`;
+function renderDomainOrder() {
+  const dirty = JSON.stringify(orderList.map(d => d.id)) !== oSaved;
+  const custom = orderList.filter(d => d.seq != null).length;
+  $("oDirty").hidden = !dirty;
+  $("oDiscardBtn").hidden = !dirty;
+  $("oSaveBtn").disabled = !dirty;
+  $("oCount").textContent = orderList.length === 0 ? ""
+    : `${orderList.length}단계 · ${custom ? `직접 정한 자리 ${custom}개` : "기본 순서"}`;
+  $("oList").innerHTML = orderList.length === 0
+    ? `<li class="meta">이 분야에는 아직 공개된 문서가 없어요.</li>`
+    : orderList.map((d, i) => sortRow(d, i, orderList.length, "oact",
+        d.seq == null && !dirty ? ` <span class="meta">(자동)</span>` : "")).join("");
 }
 
 async function saveDomainOrder(ids) {
-  const domain = document.getElementById("oDomain").value;
-  const msg = document.getElementById("oMessage");
+  const domain = $("oDomain").value;
+  const msg = $("oMessage");
   try {
     orderList = await api(`/api/admin/learning-paths/domain-order/${encodeURIComponent(domain)}`,
       { method: "PUT", body: JSON.stringify({ documentIds: ids }) });
-    renderDomainOrder(false);
-    msg.innerHTML = `<div class="alert info">${ids.length ? "저장했어요." : "기본 순서로 되돌렸어요."}</div>`;
+    oSaved = JSON.stringify(orderList.map(d => d.id));
+    renderDomainOrder();
+    msg.innerHTML = `<div class="alert info">${ids.length ? "저장했어요. 사용자 코스에 바로 반영돼요." : "기본 순서로 되돌렸어요."}</div>`;
   } catch (e) {
     showErrorAlert(msg, e, "저장하지 못했습니다");
   }
 }
 
+/* ── 추천 코스 편집 ── */
+function formState() {
+  return JSON.stringify([$("pTitle").value.trim(), $("pDesc").value.trim(), Number($("pOrder").value) || 0,
+    $("pPublished").checked, picked.map(p => p.id)]);
+}
+
+function pDirty() {
+  return !$("pEditor").hidden && formState() !== pSaved;
+}
+
+function syncDirty() {
+  $("pDirty").hidden = !pDirty();
+}
+
 function initForm() {
-  document.getElementById("pSubmitBtn").addEventListener("click", submit);
-  document.getElementById("pCancelBtn").addEventListener("click", resetForm);
-  document.getElementById("pDeleteBtn").addEventListener("click", e =>
-    armedAction(e.currentTarget, removePath, "정말 지울까요?"));
-  document.getElementById("pDomain").addEventListener("change", renderOptions);
-  document.getElementById("pQ").addEventListener("input", renderOptions);
+  $("pNewBtn").addEventListener("click", () => openEditor(null));
+  $("pBack").addEventListener("click", e => {
+    e.preventDefault();
+    if (pDirty() && !$("pBack").dataset.leaveOk) {
+      const a = $("pBack");
+      a.dataset.leaveOk = "1";
+      a.textContent = "← 저장 안 한 변경이 사라져요. 한 번 더 누르기";
+      setTimeout(() => { delete a.dataset.leaveOk; a.textContent = "← 코스 목록"; }, 3000);
+      return;
+    }
+    showTab("custom");
+  });
+  $("pSubmitBtn").addEventListener("click", submit);
+  $("pDeleteBtn").addEventListener("click", e =>
+    armedAction(e.currentTarget, removePath, "정말 지울까요? 한 번 더 누르기"));
+  $("pDomain").addEventListener("change", renderOptions);
+  $("pQ").addEventListener("input", renderOptions);
+  $("pHideUsed").addEventListener("change", renderOptions);
+  ["pTitle", "pDesc", "pOrder", "pPublished"].forEach(id => $(id).addEventListener("input", syncDirty));
+  $("pPublished").addEventListener("change", syncDirty);
 
   // 단계 줄의 ↑ ↓ ✕ — 위임 하나로 받는다(값을 HTML 속성 문자열에 코드로 심지 않는다)
-  document.getElementById("pSteps").addEventListener("click", e => {
+  $("pSteps").addEventListener("click", e => {
     const btn = e.target.closest("[data-act]");
     if (!btn) return;
     const i = Number(btn.dataset.i);
-    if (btn.dataset.act === "up" && i > 0) [picked[i - 1], picked[i]] = [picked[i], picked[i - 1]];
-    if (btn.dataset.act === "down" && i < picked.length - 1) [picked[i + 1], picked[i]] = [picked[i], picked[i + 1]];
+    let to = null;
+    if (btn.dataset.act === "up" && move(picked, i, i - 1)) to = i - 1;
+    if (btn.dataset.act === "down" && move(picked, i, i + 1)) to = i + 1;
     if (btn.dataset.act === "remove") picked.splice(i, 1);
     renderSteps();
     renderOptions();
+    if (to != null) flash($("pSteps"), to);
   });
-  document.getElementById("pDocs").addEventListener("click", e => {
+  enableDragSort($("pSteps"), () => picked, to => { renderSteps(); flash($("pSteps"), to); });
+  $("pDocs").addEventListener("click", e => {
     const btn = e.target.closest("[data-add]");
     if (!btn) return;
     const doc = options.find(o => o.id === Number(btn.dataset.add));
     if (doc && !picked.some(p => p.id === doc.id)) picked.push(doc);
     renderSteps();
     renderOptions();
+    flash($("pSteps"), picked.length - 1);
   });
-  renderSteps();
 }
 
 async function loadOptions() {
   try {
     options = await api("/api/admin/learning-paths/documents");
     const domains = [...new Map(options.map(o => [o.domain, o.domainLabel])).entries()];
-    document.getElementById("pDomain").insertAdjacentHTML("beforeend",
+    $("pDomain").insertAdjacentHTML("beforeend",
       domains.map(([v, l]) => `<option value="${escapeHtml(v)}">${escapeHtml(l)}</option>`).join(""));
     renderOptions();
   } catch (e) {
-    showErrorAlert(document.getElementById("pDocs"), e, "문서 목록을 불러오지 못했습니다");
+    showErrorAlert($("pDocs"), e, "문서 목록을 불러오지 못했습니다");
   }
 }
 
-function docLine(d) {
-  return `${escapeHtml(d.title)}${d.edition ? ` <span class="badge source">${escapeHtml(d.edition)}</span>` : ""}
-    <span class="meta">${escapeHtml(d.domainLabel)} · 문제 ${d.problemCount}</span>${
-    d.hidden ? ` <span class="badge orange" title="사용자에게는 이 단계가 보이지 않는다">내린 문서</span>` : ""}`;
-}
-
 function renderSteps() {
-  const el = document.getElementById("pSteps");
-  document.getElementById("pStepCount").textContent = picked.length ? `(${picked.length})` : "";
-  el.innerHTML = picked.length === 0
-    ? `<li class="meta">오른쪽에서 문서를 골라 넣으세요. 넣은 순서가 단계 순서예요.</li>`
-    : picked.map((d, i) => `
-      <li>
-        <span class="lp-pick-main"><b>${i + 1}.</b> ${docLine(d)}</span>
-        <span class="lp-pick-acts">
-          <button type="button" class="btn-outline btn-sm" data-act="up" data-i="${i}" aria-label="위로" ${i === 0 ? "disabled" : ""}>↑</button>
-          <button type="button" class="btn-outline btn-sm" data-act="down" data-i="${i}" aria-label="아래로" ${i === picked.length - 1 ? "disabled" : ""}>↓</button>
-          <button type="button" class="btn-outline btn-sm" data-act="remove" data-i="${i}" aria-label="빼기">✕</button>
-        </span>
-      </li>`).join("");
+  const total = picked.reduce((n, d) => n + d.problemCount, 0);
+  $("pStepCount").textContent = picked.length ? `${picked.length}단계 · 문제 ${total}개` : "";
+  $("pSteps").innerHTML = picked.length === 0
+    ? `<li class="meta">오른쪽에서 문서를 골라 [+ 넣기]를 누르세요. 넣은 순서가 단계 순서가 되고, 나중에 바꿀 수 있어요.</li>`
+    : picked.map((d, i) => sortRow(d, i, picked.length, "act")).join("");
+  syncDirty();
 }
 
 function renderOptions() {
-  const domain = document.getElementById("pDomain").value;
-  const q = document.getElementById("pQ").value.trim().toLowerCase();
-  const list = options.filter(o => (!domain || o.domain === domain) && (!q || o.title.toLowerCase().includes(q)));
-  document.getElementById("pDocs").innerHTML = list.length === 0
-    ? `<li class="meta">조건에 맞는 문서가 없어요.</li>`
+  const domain = $("pDomain").value;
+  const q = $("pQ").value.trim().toLowerCase();
+  const hideUsed = $("pHideUsed").checked;
+  const list = options.filter(o => (!domain || o.domain === domain) && (!q || o.title.toLowerCase().includes(q))
+    && !(hideUsed && picked.some(p => p.id === o.id)));
+  $("pDocCount").textContent = `${list.length}편`;
+  $("pDocs").innerHTML = list.length === 0
+    ? `<li class="meta">${options.length && hideUsed && picked.length ? "조건에 맞는 문서를 다 넣었거나, 맞는 문서가 없어요." : "조건에 맞는 문서가 없어요."}</li>`
     : list.map(d => {
       const used = picked.some(p => p.id === d.id);
       return `
@@ -252,7 +439,7 @@ function renderOptions() {
 /* 표는 admin-table.js와 같은 모양(.table-wrap · table.grid · click-row)으로 직접 그린다.
    renderAdminTable은 쪽 나누기 응답(content)만 받는데, 코스는 많아야 몇 개라 목록을 통째로 받는다. */
 async function loadPaths() {
-  const mount = document.getElementById("pathList");
+  const mount = $("pathList");
   let rows;
   try {
     rows = await api("/api/admin/learning-paths");
@@ -261,95 +448,113 @@ async function loadPaths() {
     return;
   }
   const body = rows.length === 0
-    ? `<tr><td colspan="5" class="meta" style="padding:18px;text-align:center">아직 추천 코스가 없습니다. 위에서 만드세요.</td></tr>`
+    ? `<tr><td colspan="5" class="meta" style="padding:18px;text-align:center">아직 추천 코스가 없어요. [+ 새 코스 만들기]로 첫 코스를 짜 보세요.</td></tr>`
     : rows.map(p => `
-      <tr class="click-row" data-id="${p.id}">
+      <tr class="click-row" data-id="${p.id}" tabindex="0">
         <td>${p.sortOrder}</td>
         <td class="wrap"><b>${escapeHtml(p.title)}</b><div class="meta">${escapeHtml(p.description)}</div></td>
         <td>${p.visibleStepCount === p.stepCount ? p.stepCount
           : `${p.visibleStepCount} <span class="meta">/ ${p.stepCount} (내린 문서 있음)</span>`}</td>
-        <td>${p.published ? `<span class="badge green">공개</span>` : `<span class="meta">만드는 중</span>`}</td>
+        <td>${p.published ? `<span class="badge green">공개</span>` : `<span class="badge gray">만드는 중</span>`}</td>
         <td>${formatDate(p.updatedAt)}</td>
       </tr>`).join("");
   mount.innerHTML = `
     <div class="table-wrap">
       <table class="grid">
         <thead><tr><th style="width:60px">순서</th><th>제목</th><th style="width:110px">단계</th>
-          <th style="width:90px">상태</th><th style="width:150px">고친 날</th></tr></thead>
+          <th style="width:100px">상태</th><th style="width:150px">고친 날</th></tr></thead>
         <tbody>${body}</tbody>
       </table>
     </div>`;
 }
-document.getElementById("pathList").addEventListener("click", e => {
+$("pathList").addEventListener("click", e => {
   const row = e.target.closest("tr[data-id]");
-  if (row) edit(Number(row.dataset.id));
+  if (row) openEditor(Number(row.dataset.id));
+});
+$("pathList").addEventListener("keydown", e => {
+  const row = e.target.closest("tr[data-id]");
+  if (row && e.key === "Enter") openEditor(Number(row.dataset.id));
 });
 
-async function edit(id) {
-  const msg = document.getElementById("pMessage");
+function resetEditorState() {
+  editingId = null;
+  picked = [];
+  pSaved = "";
+}
+
+/** id가 null이면 새 코스. 목록을 가리고 편집 칸을 연다 */
+async function openEditor(id) {
+  const msg = $("pMessage");
   msg.innerHTML = "";
-  try {
-    const p = await api(`/api/admin/learning-paths/${id}`);
+  resetEditorState();
+  $("pTitle").value = "";
+  $("pDesc").value = "";
+  $("pOrder").value = 0;
+  $("pPublished").checked = false;
+  $("pQ").value = "";
+  $("pDomain").value = "";
+  let p = null;
+  if (id != null) {
+    try {
+      p = await api(`/api/admin/learning-paths/${id}`);
+    } catch (e) {
+      showTab("custom");
+      showErrorAlert($("pathList"), e, "코스를 불러오지 못했습니다");
+      return;
+    }
     editingId = id;
-    document.getElementById("pTitle").value = p.title;
-    document.getElementById("pDesc").value = p.description;
-    document.getElementById("pOrder").value = p.sortOrder;
-    document.getElementById("pPublished").checked = p.published;
+    $("pTitle").value = p.title;
+    $("pDesc").value = p.description;
+    $("pOrder").value = p.sortOrder;
+    $("pPublished").checked = p.published;
     // 단계 줄은 고르기 목록과 같은 모양으로 맞춘다(편 이름·분야 이름은 고르기 목록에 있다)
     picked = p.steps.map(s => options.find(o => o.id === s.documentId)
       ?? { id: s.documentId, title: s.title, domainLabel: s.domain, problemCount: s.problemCount, hidden: s.hidden });
-    renderSteps();
-    renderOptions();
-    document.getElementById("pFormTitle").textContent = `코스 고치기 — ${p.title}`;
-    document.getElementById("pSubmitBtn").textContent = "저장";
-    document.getElementById("pCancelBtn").hidden = false;
-    document.getElementById("pDeleteBtn").hidden = false;
-    const preview = document.getElementById("pPreview");
-    preview.hidden = !p.published;
-    preview.href = `/path.html?key=custom:${id}`;
-    const panel = document.getElementById("pFormPanel");
-    panel.open = true;
-    panel.scrollIntoView({ block: "start" });
-  } catch (e) {
-    showErrorAlert(msg, e, "코스를 불러오지 못했습니다");
   }
-}
-
-function resetForm() {
-  editingId = null;
-  picked = [];
-  ["pTitle", "pDesc"].forEach(id => { document.getElementById(id).value = ""; });
-  document.getElementById("pOrder").value = 0;
-  document.getElementById("pPublished").checked = false;
-  document.getElementById("pFormTitle").textContent = "새 코스 만들기";
-  document.getElementById("pSubmitBtn").textContent = "만들기";
-  ["pCancelBtn", "pDeleteBtn", "pPreview"].forEach(id => { document.getElementById(id).hidden = true; });
-  document.getElementById("pMessage").innerHTML = "";
+  $("pFormTitle").textContent = p ? p.title : "새 코스 만들기";
+  $("pSubmitBtn").textContent = p ? "저장" : "만들기";
+  $("pDeleteBtn").hidden = !p;
+  $("pPreview").hidden = !(p && p.published);
+  if (p) $("pPreview").href = `/path.html?key=custom:${id}`;
+  $("customList").hidden = true;
+  $("pEditor").hidden = false;
+  setHash(p ? `custom-${id}` : "new");
+  pSaved = formState();
   renderSteps();
   renderOptions();
+  window.scrollTo({ top: 0 });
+  if (!p) $("pTitle").focus();
 }
 
 async function submit() {
-  const msg = document.getElementById("pMessage");
+  const msg = $("pMessage");
   const body = {
-    title: document.getElementById("pTitle").value.trim(),
-    description: document.getElementById("pDesc").value.trim(),
-    sortOrder: Number(document.getElementById("pOrder").value) || 0,
+    title: $("pTitle").value.trim(),
+    description: $("pDesc").value.trim(),
+    sortOrder: Number($("pOrder").value) || 0,
     documentIds: picked.map(p => p.id),
-    published: document.getElementById("pPublished").checked,
+    published: $("pPublished").checked,
   };
   if (!body.title || !body.description) {
     showErrorAlert(msg, "제목과 설명을 적어 주세요");
+    (body.title ? $("pDesc") : $("pTitle")).focus();
     return;
   }
-  const btn = document.getElementById("pSubmitBtn");
+  // 서버도 막지만(PATH_003), 누르기 전에 이유를 보여 준다
+  if (body.published && !picked.some(p => !p.hidden)) {
+    showErrorAlert(msg, "공개하려면 사용자에게 보이는 단계가 하나 이상 있어야 해요. 문서를 넣거나 공개를 끄세요");
+    return;
+  }
+  const btn = $("pSubmitBtn");
   btn.disabled = true;
   try {
     const saved = await api(editingId ? `/api/admin/learning-paths/${editingId}` : "/api/admin/learning-paths",
       { method: editingId ? "PUT" : "POST", body: JSON.stringify(body) });
+    const created = !editingId;
     await loadPaths();
-    await edit(saved.id);
-    document.getElementById("pMessage").innerHTML = `<div class="alert info">저장했어요.</div>`;
+    await openEditor(saved.id);
+    $("pMessage").innerHTML = `<div class="alert info">${created ? "만들었어요." : "저장했어요."}${
+      body.published ? " 사용자 로드맵에 바로 보여요." : " 공개를 켜기 전까지는 사용자에게 안 보여요."}</div>`;
   } catch (e) {
     showErrorAlert(msg, e, "저장하지 못했습니다");
   } finally {
@@ -360,11 +565,11 @@ async function submit() {
 async function removePath() {
   try {
     await api(`/api/admin/learning-paths/${editingId}`, { method: "DELETE" });
-    resetForm();
-    document.getElementById("pFormPanel").open = false;
-    loadPaths();
+    resetEditorState();
+    await loadPaths();
+    showTab("custom");
   } catch (e) {
-    showErrorAlert(document.getElementById("pMessage"), e, "지우지 못했습니다");
+    showErrorAlert($("pMessage"), e, "지우지 못했습니다");
   }
 }
 </script>
