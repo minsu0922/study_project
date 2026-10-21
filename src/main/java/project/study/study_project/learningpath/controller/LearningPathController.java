@@ -6,9 +6,11 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.learningpath.dto.LearningPathDetail;
+import project.study.study_project.learningpath.dto.LearningPathRecommendation;
 import project.study.study_project.learningpath.dto.LearningPathSummary;
 import project.study.study_project.learningpath.service.LearningPathService;
 import project.study.study_project.quiz.dto.QuizResponse;
@@ -50,6 +52,13 @@ public class LearningPathController {
     @GetMapping("/api/me/learning-paths/current")
     public ApiResponse<LearningPathSummary> current(@AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(service.current(userId).orElse(null));
+    }
+
+    /** 홈의 추천 코스. 이어서 하기 카드에 나온 코스는 빠진다. size는 1~6 */
+    @GetMapping("/api/me/learning-paths/recommended")
+    public ApiResponse<List<LearningPathRecommendation>> recommended(@AuthenticationPrincipal Long userId,
+                                                                     @RequestParam(defaultValue = "3") int size) {
+        return ApiResponse.ok(service.recommend(userId, Math.max(1, Math.min(size, 6))));
     }
 
     @PostMapping("/api/me/learning-paths/{key}")

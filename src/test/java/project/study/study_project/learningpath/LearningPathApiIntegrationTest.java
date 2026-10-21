@@ -1,5 +1,6 @@
 package project.study.study_project.learningpath;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -130,6 +132,51 @@ class LearningPathApiIntegrationTest {
         mockMvc.perform(get("/api/learning-paths/domain:A/steps/1/problems")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/learning-paths/" + key + "/steps/9/problems")).andExpect(status().isNotFound());
         mockMvc.perform(post("/api/me/learning-paths/" + key)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("추천은 이어서 하기·다 푼 코스를 빼고, 시작한 코스 → 반쯤 푼 코스 → 추천 코스 → 새 코스 순이다")
+    void recommendOrdersByReason() throws Exception {
+        Document dStarted = doc(), dCurrent = doc(), dHalf = doc(), dCurated = doc(), dDone = doc();
+        problem(dStarted.getSlug(), Difficulty.BEGINNER);
+        problem(dCurrent.getSlug(), Difficulty.BEGINNER);
+        Problem half = problem(dHalf.getSlug(), Difficulty.BEGINNER);
+        problem(dHalf.getSlug(), Difficulty.BEGINNER);
+        problem(dCurated.getSlug(), Difficulty.BEGINNER);
+        Problem done = problem(dDone.getSlug(), Difficulty.BEGINNER);
+        String started = "custom:" + published(dStarted).getId();
+        String current = "custom:" + published(dCurrent).getId();
+        String halfKey = "custom:" + published(dHalf).getId();
+        String curated = "custom:" + published(dCurated).getId();
+        String doneKey = "custom:" + published(dDone).getId();
+
+        User me = fixtures.user(Role.USER);
+        String auth = fixtures.bearer(me);
+        quizService.submit(me.getId(), new QuizSubmitRequest(half.getId(), "O"));
+        quizService.submit(me.getId(), new QuizSubmitRequest(done.getId(), "O"));
+        mockMvc.perform(post("/api/me/learning-paths/" + started).header(HttpHeaders.AUTHORIZATION, auth));
+        mockMvc.perform(post("/api/me/learning-paths/" + current).header(HttpHeaders.AUTHORIZATION, auth));
+        // 같은 초에 시작하면 어느 쪽이 "이어서 하기"인지 정해지지 않는다. 실제 값으로 읽는다
+        String currentKey = JsonPath.read(mockMvc.perform(get("/api/me/learning-paths/current")
+                .header(HttpHeaders.AUTHORIZATION, auth)).andReturn().getResponse().getContentAsString(), "$.data.key");
+        String otherStarted = currentKey.equals(current) ? started : current;
+
+        String body = mockMvc.perform(get("/api/me/learning-paths/recommended?size=6")
+                        .header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        List<String> keys = JsonPath.read(body, "$.data[*].path.key");
+        List<String> reasons = JsonPath.read(body, "$.data[*].reason");
+
+        assertThat(keys).doesNotContain(currentKey, doneKey);
+        assertThat(keys.get(0)).isEqualTo(otherStarted);
+        assertThat(reasons.get(0)).isEqualTo("STARTED");
+        assertThat(reasons.get(keys.indexOf(halfKey))).isEqualTo("HALF_DONE");
+        List<String> order = List.of("STARTED", "HALF_DONE", "CURATED", "NEW");
+        assertThat(reasons.stream().map(order::indexOf).toList()).isSorted();
+        // 다른 테스트가 남긴 추천 코스가 앞을 채워 curated가 6개 밖으로 밀릴 수 있다. 들어 있으면 이유만 본다
+        if (keys.contains(curated)) assertThat(reasons.get(keys.indexOf(curated))).isEqualTo("CURATED");
+
+        mockMvc.perform(get("/api/me/learning-paths/recommended")).andExpect(status().isUnauthorized());
     }
 
     private LearningPath published(Document... docs) {

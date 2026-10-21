@@ -8,6 +8,8 @@ import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.learningpath.domain.PathKey;
 import project.study.study_project.learningpath.domain.UserLearningPath;
 import project.study.study_project.learningpath.dto.LearningPathDetail;
+import project.study.study_project.learningpath.dto.LearningPathRecommendation;
+import project.study.study_project.learningpath.dto.LearningPathRecommendation.RecommendReason;
 import project.study.study_project.learningpath.dto.LearningPathSummary;
 import project.study.study_project.learningpath.repository.LearningPathStatsRepository;
 import project.study.study_project.learningpath.repository.UserLearningPathRepository;
@@ -112,6 +114,29 @@ public class LearningPathService {
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * 홈의 "추천 코스" — 최대 {@code limit}개. 이어서 하기 카드(current)와 다 푼 코스, 문제가 없는 코스는 뺀다.
+     * 순서는 이유 순서와 같다(RecommendReason). 같은 이유 안에서는 목록 순서(최근 공부 순 → 카탈로그 순)다.
+     * 반쯤 푼 분야를 새 분야보다 앞에 둔다. 이미 쌓은 것을 마저 끝내는 쪽이 다시 오게 만든다(docs/26).
+     */
+    @Transactional(readOnly = true)
+    public List<LearningPathRecommendation> recommend(Long userId, int limit) {
+        String currentKey = current(userId).map(LearningPathSummary::key).orElse(null);
+        return list(userId).stream()
+                .filter(s -> !s.key().equals(currentKey) && s.nextSeq() != null && s.total() > 0)
+                .map(s -> new LearningPathRecommendation(s, reasonOf(s)))
+                .sorted(Comparator.comparing(r -> r.reason().ordinal()))
+                .limit(limit)
+                .toList();
+    }
+
+    private static RecommendReason reasonOf(LearningPathSummary s) {
+        if (s.started()) return RecommendReason.STARTED;
+        if (s.solved() > 0) return RecommendReason.HALF_DONE;
+        if ("CUSTOM".equals(s.kind())) return RecommendReason.CURATED;
+        return RecommendReason.NEW;
     }
 
     @Transactional
