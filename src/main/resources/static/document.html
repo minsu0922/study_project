@@ -36,6 +36,8 @@ try {
 <div id="shell"></div>
 
 <main class="container doc">
+  <!-- 로드맵 코스에서 들어왔을 때만 보인다(?course=…&step=N). 코스로 돌아가는 길 -->
+  <a class="lp-back" id="courseBack" hidden></a>
   <div id="message"></div>
   <article id="doc" hidden>
     <h1 id="title"></h1>
@@ -66,6 +68,35 @@ try {
 /* 문서 상세 페이지 — URL의 ?slug=... 로 문서 하나를 불러온다.
  * slug는 사람이 읽는 영문 식별자(예 osi-7-layer)라 URL 공유가 쉽다(docs/01). */
 renderShell({ active: "docs", title: "개념 문서" });
+
+/* 로드맵 코스의 "문서 읽기"로 들어오면 주소에 코스 키와 단계가 붙는다(path.html).
+   그때는 위에 코스로 돌아가는 줄을, 끝에 "이 단계 문제 풀기"를 둔다. 없으면 null이고 평소 화면이다 */
+const COURSE = (() => {
+  const q = new URLSearchParams(location.search);
+  const key = q.get("course"), step = Number(q.get("step"));
+  return key && Number.isInteger(step) && step > 0 ? { key, step } : null;
+})();
+const courseHref = extra => `/path.html?key=${encodeURIComponent(COURSE.key)}${extra}`;
+
+if (COURSE) {
+  const back = document.getElementById("courseBack");
+  back.href = courseHref("");
+  back.textContent = `← 코스로 돌아가기 · ${COURSE.step}단계`;
+  back.hidden = false;
+  // 코스 이름은 덤이다. 못 받아도 위 문구로 길은 남는다
+  api(`/api/learning-paths/${encodeURIComponent(COURSE.key)}`)
+    .then(c => { back.textContent = `← ${c.summary.title} · ${COURSE.step}단계로 돌아가기`; })
+    .catch(() => {});
+}
+
+/** 코스에서 온 사람의 다음 행동은 이 단계 문제다. path.html이 ?solve=N을 받아 바로 플레이어를 연다 */
+function renderCourseNext() {
+  const el = document.getElementById("practice");
+  el.innerHTML = `<div class="lp-actions">
+    <a class="btn" href="${courseHref(`&solve=${COURSE.step}`)}">다 읽었어요 · ${COURSE.step}단계 문제 풀기 →</a>
+    <a class="btn btn-outline" href="${courseHref("")}">코스로 돌아가기</a></div>`;
+  el.hidden = false;
+}
 
 /* 편(입문/심화) 부제와 짝으로 가는 링크.
  *
@@ -485,6 +516,7 @@ async function renderDiagrams(bodyEl) {
  * "이 문서로 만든 문제만 골라 풀려면 로그인".
  */
 async function renderPracticeLink(d) {
+  if (COURSE) return renderCourseNext();
   if (!isLoggedIn()) {
     document.getElementById("practice").innerHTML = `
       <a class="btn btn-outline" href="/quiz.html">문제 풀어보기 →</a>

@@ -45,7 +45,19 @@ const playerEl = document.getElementById("player");
 /** 마지막으로 받은 상세. 플레이어에서 돌아오면 다시 받는다(진도가 바뀌었다) */
 let detail = null;
 
-loadDetail();
+loadDetail().then(autoSolve);
+
+/* 문서 끝의 "이 단계 문제 풀기"로 오면 ?solve=N이 붙어 있다. 상세를 받은 뒤 그 단계를 바로 연다.
+   주소에서 지워 둔다 — 남아 있으면 새로 고침이나 뒤로 가기 때마다 플레이어가 다시 뜬다 */
+function autoSolve() {
+  const q = new URLSearchParams(location.search);
+  const seq = Number(q.get("solve"));
+  if (!q.has("solve")) return;
+  q.delete("solve");
+  history.replaceState(null, "", `${location.pathname}?${q}`);
+  const btn = overviewEl.querySelector(`.lp-step [data-solve="${seq}"]`);
+  if (btn) solveStep(seq, btn);
+}
 
 async function loadDetail() {
   const head = document.getElementById("head");
@@ -107,7 +119,8 @@ function renderSteps(d) {
           ${isLoggedIn() ? `<div class="bar" role="progressbar" aria-label="${s.seq}단계 진도" aria-valuemin="0"
                aria-valuemax="${s.total}" aria-valuenow="${s.solved}"><i style="width:${pct}%"></i></div>` : ""}
           <div class="lp-actions">
-            ${s.documentSlug ? `<a class="btn btn-outline" href="/document.html?slug=${encodeURIComponent(s.documentSlug)}">${
+            ${s.documentSlug ? `<a class="btn btn-outline" href="/document.html?slug=${encodeURIComponent(s.documentSlug)}&course=${
+              encodeURIComponent(key)}&step=${s.seq}">${
               icon("book")} 문서 읽기</a>` : ""}
             ${s.total > 0 ? `<button type="button" class="btn" data-solve="${s.seq}">문제 풀기 ${s.total}</button>`
               : `<span class="meta">아직 이 문서로 만든 문제가 없어요</span>`}
