@@ -89,12 +89,13 @@ try {
         <!-- 첫날에는 감춘다. 0이 넷 뜨는 것보다 히어로 안의 "여기 있는 것"이 맞는 정보다. -->
         <div class="stat-row" id="stats" hidden></div>
 
-        <!-- 학습 로드맵(docs/26). 시작한 코스가 있으면 "이어서 하기", 없으면 로드맵으로 가는 한 줄 -->
+        <!-- 학습 로드맵(docs/26). 시작한 코스가 있으면 "이어서 하기"를 맨 위에, 그 아래 추천 코스 카드 -->
         <div class="section-label" id="pathLabel" hidden>
           <span>학습 로드맵</span>
           <a href="/paths.html">전체 보기 →</a>
         </div>
         <div id="pathBox"></div>
+        <div class="lp-grid home-recs" id="pathRecs" hidden></div>
 
         <div class="section-label" id="progLabel" hidden>
           <span>분야별 진도</span>
@@ -527,35 +528,70 @@ function todayLabel() {
  * 날짜만 적는다 — 나중에 문서를 손보면 어긋날 표기라 문구로 약속하지 않는다.
  */
 /**
- * 학습 로드맵 칸 — 가장 최근에 공부한 코스의 "이어서 하기"(GET /api/me/learning-paths/current).
- * 시작한 코스가 없으면 로드맵으로 가는 한 줄만 둔다. 실패하면 칸을 통째로 비운다(첫 화면을 막지 않는다).
+ * 학습 로드맵 칸 — 위에 "이어서 하기"(GET /api/me/learning-paths/current), 아래에 추천 코스 카드.
+ * 추천은 이어서 하기가 있으면 둘, 없으면 셋이다. 둘 다 실패하면 칸을 통째로 비운다(첫 화면을 막지 않는다).
  */
 async function loadCurrentPath() {
   const box = document.getElementById("pathBox");
-  try {
-    const c = await api("/api/me/learning-paths/current");
-    document.getElementById("pathLabel").hidden = false;
-    if (!c) {
-      box.innerHTML = `<a class="card lp-card" href="/paths.html">
-          <b class="lp-title">순서대로 공부하고 싶다면</b>
-          <span class="meta">입문자 코스·분야별 코스를 골라 한 단계씩 읽고 풀어요.</span></a>`;
-      return;
-    }
-    const pct = c.total > 0 ? Math.round(c.solved / c.total * 100) : 0;
-    box.innerHTML = `
-      <a class="card lp-card" href="/path.html?key=${encodeURIComponent(c.key)}">
-        <span class="lp-foot">
-          <b class="lp-title">${escapeHtml(c.title)}</b>
-          <span class="num">${c.solved}<span class="of"> / ${c.total}</span></span>
-        </span>
-        <span class="bar" role="progressbar" aria-label="${escapeHtml(c.title)} 진도"
-          aria-valuemin="0" aria-valuemax="${c.total}" aria-valuenow="${c.solved}"><i style="width:${pct}%"></i></span>
-        <span class="meta lp-next">${c.nextStepTitle
-          ? `이어서 하기 · ${c.nextSeq}단계 ${escapeHtml(c.nextStepTitle)} →` : "모든 단계를 풀었어요 →"}</span>
-      </a>`;
-  } catch (e) {
-    box.innerHTML = "";
+  const [curRes, recRes] = await Promise.allSettled([
+    api("/api/me/learning-paths/current"),
+    api("/api/me/learning-paths/recommended?size=3"),
+  ]);
+  const c = curRes.status === "fulfilled" ? curRes.value : null;
+  const recs = recRes.status === "fulfilled" ? recRes.value : [];
+  if (curRes.status === "rejected" && recs.length === 0) return;
+  document.getElementById("pathLabel").hidden = false;
+  renderPathRecs(recs.slice(0, c ? 2 : 3));
+  if (!c) {
+    // 추천 카드가 있으면 그것이 곧 시작할 곳이다. 없을 때만 로드맵으로 가는 한 줄을 둔다
+    box.innerHTML = recs.length ? "" : `<a class="card lp-card" href="/paths.html">
+        <b class="lp-title">순서대로 공부하고 싶다면</b>
+        <span class="meta">입문자 코스·분야별 코스를 골라 한 단계씩 읽고 풀어요.</span></a>`;
+    return;
   }
+  const pct = c.total > 0 ? Math.round(c.solved / c.total * 100) : 0;
+  box.innerHTML = `
+    <a class="card lp-card" href="/path.html?key=${encodeURIComponent(c.key)}">
+      <span class="lp-foot">
+        <b class="lp-title">${escapeHtml(c.title)}</b>
+        <span class="num">${c.solved}<span class="of"> / ${c.total}</span></span>
+      </span>
+      <span class="bar" role="progressbar" aria-label="${escapeHtml(c.title)} 진도"
+        aria-valuemin="0" aria-valuemax="${c.total}" aria-valuenow="${c.solved}"><i style="width:${pct}%"></i></span>
+      <span class="meta lp-next">${c.nextStepTitle
+        ? `이어서 하기 · ${c.nextSeq}단계 ${escapeHtml(c.nextStepTitle)} →` : "모든 단계를 풀었어요 →"}</span>
+    </a>`;
+}
+
+/* 추천 이유 한 줄. 서버의 RecommendReason과 1:1이다. 숫자가 있으면 숫자로 말한다.
+   function으로 둔다 — loadCurrentPath는 이 줄보다 위에서 불리므로 const면 선언 전 읽기가 될 수 있다 */
+function recReason(reason, p) {
+  switch (reason) {
+    case "STARTED": return `하다 멈춘 코스 · ${p.solved} / ${p.total}문제`;
+    case "HALF_DONE": return `이미 ${p.solved}문제를 맞혔어요`;
+    case "CURATED": return "처음이라면 이 순서로";
+    default: return "아직 안 해 본 분야";
+  }
+}
+
+function renderPathRecs(recs) {
+  const el = document.getElementById("pathRecs");
+  if (!recs.length) { el.hidden = true; return; }
+  el.innerHTML = recs.map(({ path: p, reason }) => {
+    const pct = p.total > 0 ? Math.round(p.solved / p.total * 100) : 0;
+    return `
+      <a class="card lp-card" href="/path.html?key=${encodeURIComponent(p.key)}">
+        <span class="meta lp-reason">${escapeHtml(recReason(reason, p))}</span>
+        <b class="lp-title">${escapeHtml(p.title)}</b>
+        ${p.solved > 0 ? `<span class="bar" role="progressbar" aria-label="${escapeHtml(p.title)} 진도"
+          aria-valuemin="0" aria-valuemax="${p.total}" aria-valuenow="${p.solved}"><i style="width:${pct}%"></i></span>` : ""}
+        <span class="lp-foot">
+          <span class="meta">${p.stepCount}단계 · 문제 ${p.total}개</span>
+          <span class="meta lp-next">${p.solved > 0 ? "이어서" : "시작하기"} →</span>
+        </span>
+      </a>`;
+  }).join("");
+  el.hidden = false;
 }
 
 /**

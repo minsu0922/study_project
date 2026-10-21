@@ -3003,6 +3003,9 @@ a.user-line:hover .user-line-text { text-decoration: underline; }
 .lp-foot { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); margin-top: auto; }
 .lp-next { color: var(--primary); }
 .lp-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: var(--sp-3); }
+/* 홈의 추천 코스 카드 — 둘이든 셋이든 한 줄에 다 서게 칸 수를 카드 수에 맞춘다(셋을 2+1로 쌓으면 한 장만 처진다) */
+.home-recs { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-top: var(--sp-3); }
+.lp-reason { color: var(--primary); font-weight: 600; }
 .lp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
 .lp-actions .btn .i { margin-right: 4px; }
 /* 단계 목록 — 왼쪽 번호 동그라미, 오른쪽 내용. 다음 추천 단계는 테두리로, 다 맞힌 단계는 초록 표시로 가른다 */
