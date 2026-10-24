@@ -534,7 +534,7 @@ access 토큰 재발급. **refresh 토큰은 1회용**이라 쓰는 순간 새�
 | GET | `/api/learning-paths/{key}` | 공개. `summary` + `steps[]`(단계마다 `total`·`attempted`·`solved`·`done`) |
 | GET | `/api/learning-paths/{key}/steps/{seq}/problems` | 공개. `GET /api/quiz`와 같은 모양. 못 맞힌 문제 먼저, 그 안에서 쉬운 문제 먼저. 로그인했으면 코스를 시작한 것으로 적는다 |
 | GET | `/api/me/learning-paths/current` | 홈의 "이어서 하기". 시작한 코스가 없으면 `data: null` |
-| GET | `/api/me/learning-paths/recommended?size=3` | 홈의 추천 코스(1~6개). `[{path: 목록 한 줄, reason}]`. reason은 `STARTED`·`HALF_DONE`·`CURATED`·`NEW`이고 이 순서로 온다. 이어서 하기 코스·다 푼 코스는 빠진다 |
+| GET | `/api/me/learning-paths/recommended?size=3` | 홈의 추천 코스(1~6개). `[{path: 목록 한 줄, reason, afterTitle}]`. reason은 `NEXT_COURSE`·`STARTED`·`HALF_DONE`·`CURATED`·`NEW`이고 이 순서로 온다. `afterTitle`은 `NEXT_COURSE`일 때 끝낸 앞 코스 이름이다. 이어서 하기 코스·다 푼 코스는 빠진다 |
 | POST | `/api/me/learning-paths/{key}` | 시작(이미 시작했으면 마지막 학습 시각만 당긴다) |
 | DELETE | `/api/me/learning-paths/{key}` | "진행 중"에서 뺀다. 풀이 기록은 그대로다 |
 | GET | `/api/admin/learning-paths` · `/{id}` · `/documents` | 추천 코스 목록·상세·단계로 고를 문서 🛡️ |
