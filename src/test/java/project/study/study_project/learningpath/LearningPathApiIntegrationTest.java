@@ -171,12 +171,40 @@ class LearningPathApiIntegrationTest {
         assertThat(keys.get(0)).isEqualTo(otherStarted);
         assertThat(reasons.get(0)).isEqualTo("STARTED");
         assertThat(reasons.get(keys.indexOf(halfKey))).isEqualTo("HALF_DONE");
-        List<String> order = List.of("STARTED", "HALF_DONE", "CURATED", "NEW");
+        List<String> order = List.of("NEXT_COURSE", "STARTED", "HALF_DONE", "CURATED", "NEW");
         assertThat(reasons.stream().map(order::indexOf).toList()).isSorted();
         // 다른 테스트가 남긴 추천 코스가 앞을 채워 curated가 6개 밖으로 밀릴 수 있다. 들어 있으면 이유만 본다
         if (keys.contains(curated)) assertThat(reasons.get(keys.indexOf(curated))).isEqualTo("CURATED");
 
         mockMvc.perform(get("/api/me/learning-paths/recommended")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("추천 코스를 끝내면 관리자 순서로 다음 추천 코스가 맨 앞에 'NEXT_COURSE'로 온다")
+    void recommendNextCourseAfterFinishing() throws Exception {
+        Document dFirst = doc(), dSecond = doc();
+        Problem p1 = problem(dFirst.getSlug(), Difficulty.BEGINNER);
+        problem(dSecond.getSlug(), Difficulty.BEGINNER);
+        // 다른 테스트가 남긴 추천 코스(순서 0)가 사이에 끼지 않게 맨 뒤 순서를 쓴다
+        LearningPath first = ordered(9000, dFirst), second = ordered(9001, dSecond);
+
+        User me = fixtures.user(Role.USER);
+        String auth = fixtures.bearer(me);
+        mockMvc.perform(post("/api/me/learning-paths/custom:" + first.getId()).header(HttpHeaders.AUTHORIZATION, auth));
+        quizService.submit(me.getId(), new QuizSubmitRequest(p1.getId(), "O"));
+
+        mockMvc.perform(get("/api/me/learning-paths/recommended").header(HttpHeaders.AUTHORIZATION, auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].path.key").value("custom:" + second.getId()))
+                .andExpect(jsonPath("$.data[0].reason").value("NEXT_COURSE"))
+                .andExpect(jsonPath("$.data[0].afterTitle").value(first.getTitle()));
+    }
+
+    private LearningPath ordered(int sortOrder, Document... docs) {
+        LearningPath p = LearningPath.create("코스 " + UUID.randomUUID(), "설명", sortOrder);
+        p.addSteps(List.of(docs));
+        p.publish();
+        return pathRepository.save(p);
     }
 
     private LearningPath published(Document... docs) {

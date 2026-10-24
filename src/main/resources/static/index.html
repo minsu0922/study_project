@@ -569,8 +569,10 @@ async function loadCurrentPath() {
 
 /* 추천 이유 한 줄. 서버의 RecommendReason과 1:1이다. 숫자가 있으면 숫자로 말한다.
    function으로 둔다 — loadCurrentPath는 이 줄보다 위에서 불리므로 const면 선언 전 읽기가 될 수 있다 */
-function recReason(reason, p) {
+function recReason(reason, p, afterTitle) {
   switch (reason) {
+    // 조사를 붙이지 않는다. 코스 이름 끝 글자에 따라 을·를이 갈린다
+    case "NEXT_COURSE": return `${afterTitle} 다음 순서예요`;
     case "STARTED": return `하다 멈춘 코스 · ${p.solved} / ${p.total}문제`;
     case "HALF_DONE": return `이미 ${p.solved}문제를 맞혔어요`;
     case "CURATED": return "처음이라면 이 순서로";
@@ -581,11 +583,11 @@ function recReason(reason, p) {
 function renderPathRecs(recs) {
   const el = document.getElementById("pathRecs");
   if (!recs.length) { el.hidden = true; return; }
-  el.innerHTML = recs.map(({ path: p, reason }) => {
+  el.innerHTML = recs.map(({ path: p, reason, afterTitle }) => {
     const pct = p.total > 0 ? Math.round(p.solved / p.total * 100) : 0;
     return `
       <a class="card lp-card" href="/path.html?key=${encodeURIComponent(p.key)}">
-        <span class="meta lp-reason">${escapeHtml(recReason(reason, p))}</span>
+        <span class="meta lp-reason">${escapeHtml(recReason(reason, p, afterTitle))}</span>
         <b class="lp-title">${escapeHtml(p.title)}</b>
         ${p.solved > 0 ? `<span class="bar" role="progressbar" aria-label="${escapeHtml(p.title)} 진도"
           aria-valuemin="0" aria-valuemax="${p.total}" aria-valuenow="${p.solved}"><i style="width:${pct}%"></i></span>` : ""}

@@ -124,12 +124,41 @@ public class LearningPathService {
     @Transactional(readOnly = true)
     public List<LearningPathRecommendation> recommend(Long userId, int limit) {
         String currentKey = current(userId).map(LearningPathSummary::key).orElse(null);
-        return list(userId).stream()
+        List<LearningPathSummary> all = list(userId);
+        Map<String, String> nextAfter = nextCourses(all);
+        return all.stream()
                 .filter(s -> !s.key().equals(currentKey) && s.nextSeq() != null && s.total() > 0)
-                .map(s -> new LearningPathRecommendation(s, reasonOf(s)))
+                .map(s -> nextAfter.containsKey(s.key())
+                        ? new LearningPathRecommendation(s, RecommendReason.NEXT_COURSE, nextAfter.get(s.key()))
+                        : new LearningPathRecommendation(s, reasonOf(s), null))
                 .sorted(Comparator.comparing(r -> r.reason().ordinal()))
                 .limit(limit)
                 .toList();
+    }
+
+    /**
+     * 끝낸(모든 단계를 풀어 본) 추천 코스마다, 관리자 순서로 그 뒤에 오는 첫 미완료 추천 코스 → 끝낸 코스 이름.
+     * 입문자 코스를 마친 사람에게 중급자 코스가 분야 코스에 밀려 안 보이던 자리다(2026-10-24 실사용 점검).
+     * 이미 시작한 코스는 넣지 않는다. 그건 STARTED가 맡는다.
+     */
+    private Map<String, String> nextCourses(List<LearningPathSummary> all) {
+        Map<String, LearningPathSummary> byKey = all.stream()
+                .collect(Collectors.toMap(LearningPathSummary::key, Function.identity()));
+        List<LearningPathSummary> customs = catalog.all().stream()
+                .map(c -> byKey.get(c.key().toString()))
+                .filter(s -> s != null && "CUSTOM".equals(s.kind()))
+                .toList();
+        Map<String, String> next = new java.util.HashMap<>();
+        for (int i = 0; i < customs.size(); i++) {
+            LearningPathSummary done = customs.get(i);
+            if (!done.started() || done.nextSeq() != null) continue;
+            customs.stream().skip(i + 1)
+                    .filter(s -> s.nextSeq() != null && s.total() > 0)
+                    .findFirst()
+                    .filter(s -> !s.started())
+                    .ifPresent(s -> next.putIfAbsent(s.key(), done.title()));
+        }
+        return next;
     }
 
     private static RecommendReason reasonOf(LearningPathSummary s) {
