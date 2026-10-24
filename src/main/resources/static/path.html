@@ -65,7 +65,7 @@ async function loadDetail() {
   try {
     detail = await api(`/api/learning-paths/${encodeURIComponent(key)}`);
     document.title = `${detail.summary.title} — csquiz`;
-    renderHead(detail.summary);
+    renderHead(detail.summary, detail.steps);
     renderSteps(detail);
   } catch (e) {
     document.getElementById("steps").innerHTML = "";
@@ -75,11 +75,14 @@ async function loadDetail() {
   }
 }
 
-function renderHead(s) {
+function renderHead(s, steps) {
   const pct = s.total > 0 ? Math.round(s.solved / s.total * 100) : 0;
+  // 다 풀어 본 뒤에는 못 맞힌 문제가 남은 첫 단계로 보낸다. 단계 세트는 못 맞힌 문제를 앞에 낸다
+  const retry = !s.nextSeq && isLoggedIn() ? steps.find(st => st.total > 0 && st.solved < st.total) : null;
   const nextBtn = s.nextSeq
     ? `<button type="button" class="btn-lg" data-solve="${s.nextSeq}">${
         s.attempted > 0 ? "이어서 하기" : "첫 단계 시작"} · ${s.nextSeq}단계 →</button>`
+    : retry ? `<button type="button" class="btn-lg" data-solve="${retry.seq}">못 맞힌 문제 다시 풀기 · ${retry.seq}단계 →</button>`
     : "";
   // 시작 기록은 단계 문제를 받을 때 저절로 남는다. 단추는 "진행 중"에서 빼는 쪽만 둔다
   const stopBtn = s.started ? `<button type="button" class="btn-outline" id="stopBtn">진행 중에서 빼기</button>` : "";
@@ -96,7 +99,9 @@ function renderHead(s) {
       : `<p class="meta">로그인하면 단계마다 맞힌 문제가 쌓여요. 지금은 풀어도 기록이 남지 않아요.
            <a href="/login.html">로그인</a></p>`}
     <div class="lp-actions">${nextBtn}${stopBtn}</div>
-    ${!s.nextSeq && s.total > 0 ? `<p class="meta">모든 단계의 문제를 한 번씩 풀었어요. 틀린 문제는 복습에서 다시 만나요.</p>` : ""}`;
+    ${!s.nextSeq && s.total > 0 ? `<p class="meta">${s.solved < s.total
+      ? `모든 단계의 문제를 한 번씩 풀었어요. 못 맞힌 ${s.total - s.solved}문제는 여기서 다시 풀거나 복습에서 다시 만나요.`
+      : "모든 문제를 맞혔어요."}</p>` : ""}`;
   document.getElementById("stopBtn")?.addEventListener("click", stopCourse);
 }
 

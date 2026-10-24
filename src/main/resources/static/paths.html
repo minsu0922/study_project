@@ -35,7 +35,7 @@ renderShell({ active: "paths", title: "로드맵" });
 const GROUPS = [
   { title: "진행 중인 코스", pick: c => c.started },
   { title: "추천 코스", pick: c => !c.started && c.kind === "CUSTOM",
-    note: "분야를 넘나들며 입문자가 보기 좋은 순서로 골랐어요." },
+    note: "분야를 넘나드는 순서를 사람이 골랐어요. 입문자 코스부터 시작해 보세요." },
   { title: "분야별 코스", pick: c => !c.started && c.kind === "DOMAIN",
     note: "한 분야만 깊게. 주제마다 입문편 다음 심화편이에요." },
   { title: "코드 문제", pick: c => !c.started && c.kind === "CODE" },

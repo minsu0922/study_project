@@ -541,7 +541,8 @@ async function loadCurrentPath() {
   const recs = recRes.status === "fulfilled" ? recRes.value : [];
   if (curRes.status === "rejected" && recs.length === 0) return;
   document.getElementById("pathLabel").hidden = false;
-  renderPathRecs(recs.slice(0, c ? 2 : 3));
+  // 다 푼 코스는 이어서 할 것이 없어 추천 자리를 줄이지 않는다
+  renderPathRecs(recs.slice(0, c && c.nextSeq ? 2 : 3));
   if (!c) {
     // 추천 카드가 있으면 그것이 곧 시작할 곳이다. 없을 때만 로드맵으로 가는 한 줄을 둔다
     box.innerHTML = recs.length ? "" : `<a class="card lp-card" href="/paths.html">
@@ -559,7 +560,10 @@ async function loadCurrentPath() {
       <span class="bar" role="progressbar" aria-label="${escapeHtml(c.title)} 진도"
         aria-valuemin="0" aria-valuemax="${c.total}" aria-valuenow="${c.solved}"><i style="width:${pct}%"></i></span>
       <span class="meta lp-next">${c.nextStepTitle
-        ? `이어서 하기 · ${c.nextSeq}단계 ${escapeHtml(c.nextStepTitle)} →` : "모든 단계를 풀었어요 →"}</span>
+        ? `이어서 하기 · ${c.nextSeq}단계 ${escapeHtml(c.nextStepTitle)} →`
+        : c.solved < c.total
+          ? `모든 단계를 한 번씩 풀었어요 · 못 맞힌 ${c.total - c.solved}문제 다시 풀기 →`
+          : "모든 문제를 맞혔어요 ✓"}</span>
     </a>`;
 }
 
