@@ -9,7 +9,9 @@
   }, {
     "id" : 1083,
     "domain" : "LANGUAGE_RUNTIME",
-    "topic" : "오버로딩 선택 규칙과 오토박싱·가변 인자"
+    "topic" : "오버로딩 선택 규칙과 오토박싱·가변 인자",
+    "lastUsedAt" : "2026-10-25",
+    "usedCount" : 1
   }, {
     "id" : 1084,
     "domain" : "LANGUAGE_RUNTIME",

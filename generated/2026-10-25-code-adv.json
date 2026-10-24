@@ -1,0 +1,58 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-10-25",
+  "generatedAt" : "2026-10-24T20:38:16.387550204Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "ADVANCED",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행하면 무엇이 출력되는가?",
+    "answer" : "",
+    "explanation" : "오버로딩은 1단계(넓히기·하위 타입만), 2단계(박싱·언박싱 허용), 3단계(가변 인자) 순으로 찾고 앞 단계에서 찾으면 멈춘다. 13행 f('a')는 1단계에서 char가 long으로 넓혀질 수 있어 5행 f(long)이 선택되고 6행이 long을 출력한다. 14행 f(n)에서 n은 12행의 Integer다. 1단계에서 Integer는 Object의 하위 타입이므로 2행 f(Object)가 바로 맞고, 언박싱이 필요한 f(long)은 2단계라 고려되지 않는다. 그래서 3행이 Object를 출력한다. 15행 f(1, 2)는 인자가 둘이라 8행 가변 인자 메서드만 맞아 varargs가 출력된다.",
+    "choices" : [ {
+      "text" : "Object / Object / varargs",
+      "correct" : false,
+      "rationale" : "char가 Character로 박싱되어 f(Object)로 간다고 오해한 답으로, 넓히기 변환이 박싱보다 먼저다",
+      "matchText" : ""
+    }, {
+      "text" : "long / long / varargs",
+      "correct" : false,
+      "rationale" : "Integer를 언박싱해 long으로 넓히는 것이 먼저라고 오해한 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "long / Object / varargs",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "Object / long / varargs",
+      "correct" : false,
+      "rationale" : "char는 박싱되고 Integer는 언박싱된다고 순서를 거꾸로 생각한 답이다",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "넓히기·언박싱·가변 인자가 섞인 오버로딩 단계",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "13행 f('a')의 인자는 char다. 1단계에서 char를 long으로 넓히는 확장 변환이 가능해 f(long)이 적용되고 \"long\"이 출력된다. f(Object)는 박싱이 필요하므로 1단계 후보가 아니다. 14행 f(n)의 n은 Integer다. 1단계에서 Integer는 Object의 하위 타입이므로 f(Object)가 적용된다. f(long)은 언박싱이 필요한 2단계 후보라서 \"Object\"가 출력된다. 15행 f(1, 2)는 인자가 두 개라 가변인자 메서드만 적용되고 \"varargs\"가 출력된다. 결과는 long / Object / varargs이다.",
+    "suggestion" : null
+  } ],
+  "codeTopic" : "오버로딩 선택 규칙과 오토박싱·가변 인자",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "public class Main {\n    static void f(Object o) {\n        System.out.println(\"Object\");\n    }\n    static void f(long x) {\n        System.out.println(\"long\");\n    }\n    static void f(int... a) {\n        System.out.println(\"varargs\");\n    }\n    public static void main(String[] args) {\n        Integer n = 7;\n        f('a');\n        f(n);\n        f(1, 2);\n    }\n}",
+    "expectedOutput" : "long\nObject\nvarargs",
+    "targetLine" : 0,
+    "errorType" : ""
+  } ]
+}

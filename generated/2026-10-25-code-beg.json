@@ -1,0 +1,117 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-10-25",
+  "generatedAt" : "2026-10-24T20:38:16.344819634Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행하면 무엇이 출력되는가?",
+    "answer" : "",
+    "explanation" : "오버로딩은 박싱 없이 맞는 메서드를 먼저 찾고, 없을 때만 박싱을 허용한다. 9행의 f(5)는 int 인자다. 1단계에서 int는 long으로 넓혀질 수 있으므로 2행의 f(long)이 바로 선택되어 3행이 long을 출력한다. 박싱이 필요한 5행 f(Integer)는 고려되지 않는다. 10행에서 n은 Integer이고, 11행의 f(n)은 1단계에서 5행 f(Integer)가 그대로 맞는다. f(long)은 언박싱이 필요해 2단계로 밀리므로 6행이 Integer를 출력한다.",
+    "choices" : [ {
+      "text" : "Integer / Integer",
+      "correct" : false,
+      "rationale" : "int를 Integer로 박싱하는 쪽이 long으로 넓히는 쪽보다 먼저라고 오해한 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "long / Integer",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "long / long",
+      "correct" : false,
+      "rationale" : "Integer를 언박싱해 long으로 넓히는 것도 1단계에서 된다고 오해한 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "Integer / long",
+      "correct" : false,
+      "rationale" : "두 호출의 선택 결과를 서로 뒤바꿔 생각한 답이다",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "넓히기 변환과 박싱 사이의 오버로딩 선택",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "빈칸에 들어갈 코드를 고르면 실행 결과가 many:1이 된다. 알맞은 것은 무엇인가?",
+    "answer" : "",
+    "explanation" : "가변 인자 메서드는 고정 인자 메서드로 맞는 것이 하나도 없을 때만 선택된다. 9행에 g(new int[]{5})를 넣으면 인자 타입이 int[]이므로 2행 g(int)는 맞지 않고, 5행 g(int... a)가 int[]를 그대로 받는다. 배열 길이가 1이므로 6행이 many:1을 출력한다. g(5)를 넣으면 2행 g(int)가 정확히 맞아 one이 나오고, g()는 길이 0 배열이 만들어져 many:0, g(5, 6)은 many:2가 나온다.",
+    "choices" : [ {
+      "text" : "g(5)",
+      "correct" : false,
+      "rationale" : "인자 하나면 가변 인자 메서드가 불린다고 오해한 것으로, 고정 인자 g(int)가 먼저 선택되어 one이 출력된다",
+      "matchText" : ""
+    }, {
+      "text" : "g(new int[]{5})",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "g()",
+      "correct" : false,
+      "rationale" : "인자 없이 부르면 길이 1 배열이 만들어진다고 오해한 것으로, 실제로는 many:0이 출력된다",
+      "matchText" : ""
+    }, {
+      "text" : "g(5, 6)",
+      "correct" : false,
+      "rationale" : "가변 인자 개수를 잘못 센 것으로, 인자 둘이면 many:2가 출력된다",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "고정 인자와 가변 인자 오버로딩의 호출 선택",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 1,
+    "type" : "RATIONALE_MISMATCH",
+    "message" : "오답 이유가 그 보기의 실제 실행과 다릅니다",
+    "detail" : "4번 「g(5, 6)」: 이유는 '「2」 출력', 실제는 출력 「many:2」",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "9행 f(5)의 인자는 int다. 1단계(박싱·언박싱 없음)에서는 int를 long으로 넓히는 확장 변환으로 f(long)이 적용된다. f(Integer)는 박싱이 필요해 1단계 후보가 아니다. 따라서 \"long\"이 출력된다. 11행 f(n)의 n은 Integer다. 1단계에서 f(Integer)가 타입 그대로 일치한다. f(long)은 언박싱이 필요해 2단계에서나 고려된다. 따라서 \"Integer\"가 출력된다. 결과는 long / Integer이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "보기 1 g()는 길이 0 배열로 호출되어 many:0이 출력된다. 보기 3 g(5)는 1단계에서 g(int)가 정확히 일치해 one이 출력된다. 보기 4 g(5, 6)은 many:2가 출력된다. 보기 2 g(new int[]{5})는 int[] 타입이라 g(int)에는 맞지 않는다. 대신 g(int...)의 매개변수 타입 int[]와 일치하므로 a.length는 1이고 many:1이 출력된다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「가변 인자 메서드는 고정 인자 메서드로 맞는 것이 하나도 없을 때만 선택된다.」\n고치면: 가변 인자 매개변수 int... a는 실제로는 int[] 타입이므로, int[]를 넘기면 가변 인자 확장 없이 그대로 맞는다.",
+    "suggestion" : {
+      "target" : "EXPLANATION",
+      "choiceIndex" : null,
+      "text" : "가변 인자 매개변수 int... a는 실제로는 int[] 타입이므로, int[]를 넘기면 가변 인자 확장 없이 그대로 맞는다. 9행에 g(new int[]{5})를 넣으면 인자 타입이 int[]이므로 2행 g(int)는 맞지 않고, 5행 g(int... a)가 int[]를 그대로 받는다. 배열 길이가 1이므로 6행이 many:1을 출력한다. g(5)를 넣으면 2행 g(int)가 정확히 맞아 one이 나오고, g()는 길이 0 배열이 만들어져 many:0, g(5, 6)은 many:2가 나온다."
+    }
+  } ],
+  "codeTopic" : "오버로딩 선택 규칙과 오토박싱·가변 인자",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "public class Main {\n    static void f(long x) {\n        System.out.println(\"long\");\n    }\n    static void f(Integer x) {\n        System.out.println(\"Integer\");\n    }\n    public static void main(String[] args) {\n        f(5);\n        Integer n = 5;\n        f(n);\n    }\n}",
+    "expectedOutput" : "long\nInteger",
+    "targetLine" : 0,
+    "errorType" : ""
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_BLANK",
+    "language" : "java",
+    "code" : "public class Main {\n    static void g(int a) {\n        System.out.println(\"one\");\n    }\n    static void g(int... a) {\n        System.out.println(\"many:\" + a.length);\n    }\n    public static void main(String[] args) {\n        ____;\n    }\n}",
+    "expectedOutput" : "many:1",
+    "targetLine" : 0,
+    "errorType" : ""
+  } ]
+}

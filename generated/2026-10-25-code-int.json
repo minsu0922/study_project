@@ -1,0 +1,101 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-10-25",
+  "generatedAt" : "2026-10-24T20:38:16.384809319Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드는 컴파일되는가? 컴파일되지 않는다면 오류가 나는 줄은 어디인가?",
+    "answer" : "",
+    "explanation" : "2행, 5행, 8행은 매개변수 타입이 서로 달라 정상적인 오버로딩이다. 12행 f(1)은 박싱 없이 맞는 메서드가 없으므로 2단계에서 박싱을 허용하고, Integer로 박싱되어 8행 f(Integer)와 2행 f(Object)가 후보가 된다. 더 구체적인 f(Integer)가 선택되므로 문제없다. 13행 f(\"a\")는 5행 f(String)이 맞는다. 14행 f(null)은 null이 세 메서드 모두에 맞는데, String과 Integer는 서로 하위 타입 관계가 아니어서 어느 쪽이 더 구체적인지 정할 수 없다. 그래서 14행에서 모호한 호출로 컴파일 오류가 난다.",
+    "choices" : [ {
+      "text" : "12행에서 컴파일 오류가 난다",
+      "correct" : false,
+      "rationale" : "int 인자를 받는 f(int)가 없으면 호출할 수 없다고 오해한 답으로, 박싱으로 f(Integer)가 선택된다",
+      "matchText" : ""
+    }, {
+      "text" : "14행에서 컴파일 오류가 난다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "8행에서 컴파일 오류가 난다",
+      "correct" : false,
+      "rationale" : "Integer가 Object의 하위 타입이라 두 메서드가 겹친다고 오해한 답으로, 매개변수 타입이 다르면 오버로딩이 된다",
+      "matchText" : ""
+    }, {
+      "text" : "컴파일된다",
+      "correct" : false,
+      "rationale" : "null이면 가장 넓은 f(Object)가 고정으로 선택된다고 오해한 답이다",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "null 인자와 박싱이 얽힌 오버로딩 호출",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "리스트에서 값 1을 지워 [2, 3]을 출력하려 한다. 8행을 어떻게 고쳐야 하는가?",
+    "answer" : "",
+    "explanation" : "5~7행에서 list는 [1, 2, 3]이 된다. List에는 remove(int index)와 remove(Object o)가 오버로딩되어 있다. 원래 8행 list.remove(1)은 int 인자이므로 박싱 없이 맞는 remove(int)가 선택되어 인덱스 1의 값 2를 지우고 9행이 [1, 3]을 출력한다. 8행을 list.remove(Integer.valueOf(1))로 바꾸면 인자가 Integer이므로 remove(Object)가 선택되고 값 1을 찾아 지운다. 그 결과 9행은 [2, 3]을 출력한다.",
+    "choices" : [ {
+      "text" : "list.remove(Integer.valueOf(1));",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "list.remove((long) 1);",
+      "correct" : false,
+      "rationale" : "long이면 값으로 지운다고 기대했지만 Long으로 박싱되어 Integer 1과 같지 않으므로 아무것도 지우지 않는다",
+      "matchText" : ""
+    }, {
+      "text" : "list.remove((short) 1);",
+      "correct" : false,
+      "rationale" : "short도 박싱된다고 오해했지만 int로 넓혀져 remove(int)가 선택되어 인덱스 1을 지운다",
+      "matchText" : ""
+    }, {
+      "text" : "list.remove(2);",
+      "correct" : false,
+      "rationale" : "값 1이 있는 자리를 잘못 짚은 것으로, 인덱스 2의 값 3이 지워진다",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "List.remove 오버로딩과 박싱",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "12행 f(1)은 1단계에서 적용되는 메서드가 없다. 2단계에서 Integer로 박싱되면 f(Object)와 f(Integer)가 적용되고, 더 구체적인 f(Integer)가 선택되므로 문제없다. 13행 f(\"a\")는 f(String)이 선택된다. 14행 f(null)은 Object, String, Integer 모두에 대입할 수 있다. String과 Integer는 서로 하위 타입 관계가 아니어서 가장 구체적인 메서드를 정할 수 없다. 따라서 14행에서 모호한 호출(ambiguous) 컴파일 오류가 난다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "8행 remove(1)은 int 인자이므로 remove(int index)가 선택된다. 인덱스 1의 값 2가 지워져 [1, 3]이 출력된다. 보기 1 (long)1은 int로 좁힐 수 없으므로 remove(Object)가 선택되고 Long 1로 박싱된다. Integer 1과 equals가 거짓이라 아무것도 지워지지 않아 [1, 2, 3]이 출력된다. 보기 2 remove(2)는 인덱스 2를 지워 [1, 2]가 출력된다. 보기 4 (short)1은 int로 확장되어 인덱스 1을 지우므로 [1, 3]이 출력된다. 보기 3 Integer.valueOf(1)은 remove(Object)를 호출해 값 1을 지우므로 [2, 3]이 출력된다.",
+    "suggestion" : null
+  } ],
+  "codeTopic" : "오버로딩 선택 규칙과 오토박싱·가변 인자",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_COMPILE",
+    "language" : "java",
+    "code" : "public class Main {\n    static void f(Object o) {\n        System.out.println(\"Object\");\n    }\n    static void f(String s) {\n        System.out.println(\"String\");\n    }\n    static void f(Integer i) {\n        System.out.println(\"Integer\");\n    }\n    public static void main(String[] args) {\n        f(1);\n        f(\"a\");\n        f(null);\n    }\n}",
+    "expectedOutput" : "",
+    "targetLine" : 14,
+    "errorType" : ""
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_FIX",
+    "language" : "java",
+    "code" : "import java.util.*;\npublic class Main {\n    public static void main(String[] args) {\n        List<Integer> list = new ArrayList<>();\n        list.add(1);\n        list.add(2);\n        list.add(3);\n        list.remove(1);\n        System.out.println(list);\n    }\n}",
+    "expectedOutput" : "[2, 3]",
+    "targetLine" : 8,
+    "errorType" : ""
+  } ]
+}
