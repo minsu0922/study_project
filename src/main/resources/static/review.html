@@ -264,7 +264,7 @@ function rowHtml(r, w) {
       ${w.correctAnswer ? `<div style="color:var(--correct-fg)">정답: ${escapeHtml(w.correctAnswer)}</div>` : ""}
       ${w.myAnswerRationale ? `<div class="meta" style="margin-top:6px;color:var(--wrong-fg)">
         왜 틀렸나: ${escapeHtml(w.myAnswerRationale)}</div>` : ""}
-      ${w.explanation ? `<div class="meta" style="margin-top:6px">${escapeHtml(w.explanation)}</div>` : ""}
+      ${w.explanation ? `<div class="meta" style="margin-top:6px; white-space:pre-wrap">${escapeHtml(w.explanation)}</div>` : ""}
       ${w.documentSlug ? `<div class="meta" style="margin-top:6px">${icon("book")} <a href="/document.html?slug=${
         encodeURIComponent(w.documentSlug)}">이 문제의 개념 문서 읽기</a></div>` : ""}`
     : `<p class="wa-question">${escapeHtml(r.question)}</p>

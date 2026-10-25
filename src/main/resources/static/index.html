@@ -290,7 +290,7 @@ function wireSample(p) {
       });
       submitBtn.parentElement.remove();   // 다시 낼 수 없는 단추를 남기지 않는다
       hint.innerHTML = `<b class="${r.correct ? "sample-ok" : "sample-no"}">${r.correct ? "정답입니다" : "아쉽네요"}</b>
-        ${r.explanation ? `<div style="margin-top:var(--sp-2)">${escapeHtml(r.explanation)}</div>` : ""}
+        ${r.explanation ? `<div style="margin-top:var(--sp-2); white-space:pre-wrap">${escapeHtml(r.explanation)}</div>` : ""}
         <div style="margin-top:var(--sp-2)">가입하면 이런 문제가 매일 10개 오고, 틀린 것은 복습으로 돌아옵니다.</div>`;
     } catch (e) {
       buttons.forEach(b => b.disabled = false);   // 다시 눌러 볼 수 있게 되돌린다
