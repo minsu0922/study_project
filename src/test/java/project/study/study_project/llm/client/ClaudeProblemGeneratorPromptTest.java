@@ -320,6 +320,16 @@ class ClaudeProblemGeneratorPromptTest {
                 .contains("다시 읽을 절을 한 줄로 가리킨다");
     }
 
+    @Test
+    @DisplayName("해설은 규칙 → 구체적인 값으로 따라가는 예시 → 정답 확인 순서로 쓰라고 시킨다")
+    void asksForWalkthroughExplanation() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("1. 규칙:", "2. 예시로 따라가기:", "3. 정답 확인:")
+                .contains("\"무슨 일이 일어난다: 그때의 상태 → 결과\"")
+                .as("예시의 한 줄 대비를 허용해도 오답별 이유는 여전히 rationale 몫이다")
+                .contains("오답 하나하나가 왜 틀렸는지는 각 보기의 rationale에 적으므로");
+    }
+
     /**
      * "문제끼리 같은 개념을 다른 말로 물어보는 것" 금지는 무엇이 '다른 개념'인지 기준이 없어
      * 지킬 수가 없었다. {@code buildPrompt}의 중복 회피 목록은 <b>기존 문제</b>를 막을 뿐

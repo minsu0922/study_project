@@ -499,13 +499,14 @@ public final class ProblemItemRule {
      * 150에 그으면 6개(8%)만 남고 — 열둘에 하나라 읽힌다 — 그 여섯은 실제로 정답 근거 한 문단이
      * 안 되는 얇은 해설이다. 반대로 150~199 구간의 스물하나는 근거와 문서 안내가 다 들어 있다.
      *
-     * <p><b>상한 400은 건드리지 않았다.</b> 같은 77개 중 400자를 넘긴 것이 <b>하나도 없다</b>
-     * (개정 전에는 67%였다). 헛울리지 않으면서 되돌아갈 자리를 지키는 중이라 그대로 둔다.
+     * <p><b>상한 700은 예시로 따라가는 해설의 몫이다.</b> 해설이 규칙 한 줄 뒤에 장면 하나를
+     * 걸음마다 한 줄씩 따라가므로, 손으로 고쳐 본 16개(코드 15·개념 1)가 364~645자였다.
+     * 새 프롬프트로 나온 해설을 재 보고 다시 잡는다(docs/IMPROVEMENTS.md 2026-10-25).
      */
     public static final int EXPLANATION_MIN = 150;
 
     /** 해설 분량 위 한계 — {@link #EXPLANATION_MIN} 참고. */
-    public static final int EXPLANATION_MAX = 400;
+    public static final int EXPLANATION_MAX = 700;
 
     /**
      * 오답 설명 한 줄의 아래 한계 — <b>있는 것과 쓸모 있는 것은 다르다</b>.
