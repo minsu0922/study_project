@@ -41,6 +41,17 @@ class SearchKeywordTest {
     }
 
     @Test
+    @DisplayName("idOf — 숫자나 #숫자면 번호, 그 밖은 null")
+    void idOf() {
+        assertThat(SearchKeyword.idOf(" 7339 ")).isEqualTo(7339L);
+        assertThat(SearchKeyword.idOf("#7339")).isEqualTo(7339L);
+        assertThat(SearchKeyword.idOf("7339번")).isNull();
+        assertThat(SearchKeyword.idOf("#")).isNull();
+        assertThat(SearchKeyword.idOf(null)).isNull();
+        assertThat(SearchKeyword.idOf("9".repeat(19))).isNull();   // long을 넘을 수 있다
+    }
+
+    @Test
     @DisplayName("trimToNull — 공백뿐인 입력은 안 적은 것으로 본다")
     void trimToNull() {
         assertThat(Texts.trimToNull(null)).isNull();

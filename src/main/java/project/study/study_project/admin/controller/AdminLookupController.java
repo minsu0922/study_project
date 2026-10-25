@@ -68,7 +68,7 @@ public class AdminLookupController {
         }
         PageRequest top = PageRequest.of(0, PER_KIND);
         Page<GeneratedProblemDraft> drafts = draftRepository.findForReview(UNAPPROVED, null, null, null, null, null,
-                pattern, PageRequest.of(0, PER_KIND, Sort.by(Sort.Direction.DESC, "id")));
+                pattern, null, PageRequest.of(0, PER_KIND, Sort.by(Sort.Direction.DESC, "id")));
         return ApiResponse.ok(new AdminLookup(
                 section(adminProblemService.getProblems(null, null, null, null, word, top),
                         p -> new AdminLookup.Problem(p.id(), label(p.title(), p.question()))),

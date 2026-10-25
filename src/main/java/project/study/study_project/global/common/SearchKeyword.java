@@ -1,5 +1,7 @@
 package project.study.study_project.global.common;
 
+import java.util.regex.Pattern;
+
 /**
  * 검색어를 LIKE 패턴으로 바꾸는 한 곳. 검색 칸이 있는 목록은 모두 여기를 거친다.
  *
@@ -11,6 +13,7 @@ public final class SearchKeyword {
     /** 이보다 긴 검색어는 찾으려는 말이 아니라 붙여 넣은 글이다. 화면의 검색 칸도 50자까지 받는다. */
     public static final int MAX_LENGTH = 50;
     public static final char ESCAPE = '!';
+    private static final Pattern ID = Pattern.compile("#?\\d{1,18}");
 
     private SearchKeyword() {
     }
@@ -31,5 +34,17 @@ public final class SearchKeyword {
             word = word.substring(0, MAX_LENGTH);
         }
         return "%" + word.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+    }
+
+    /**
+     * 검색어가 번호(7339 또는 #7339)면 그 번호, 아니면 {@code null}. 관리 화면 검색 칸이 제목·지문과 함께
+     * id도 맞춰 보는 데 쓴다. 19자리부터는 long을 넘을 수 있어 번호로 보지 않는다.
+     */
+    public static Long idOf(String raw) {
+        String word = Texts.trimToNull(raw);
+        if (word == null || !ID.matcher(word).matches()) {
+            return null;
+        }
+        return Long.parseLong(word.startsWith("#") ? word.substring(1) : word);
     }
 }

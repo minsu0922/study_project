@@ -594,7 +594,7 @@ public class LlmProblemService {
                 Sort.by("createdAt", "id"));
         return PageResponse.from(draftRepository
                 .findForReview(List.of(target), domain, difficulty, Texts.trimToNull(documentSlug), code, id,
-                        SearchKeyword.likePattern(q), oldestFirst)
+                        SearchKeyword.likePattern(q), SearchKeyword.idOf(q), oldestFirst)
                 .map(this::toResponse));
     }
 

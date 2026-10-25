@@ -67,8 +67,13 @@ public class AdminProblemStatsService {
         }
         String keyword = SearchKeyword.likePattern(f.q());
         if (keyword != null) {
-            where.add("(LOWER(p.title) LIKE LOWER(:kw) ESCAPE '!' OR LOWER(p.question) LIKE LOWER(:kw) ESCAPE '!')");
+            Long keywordId = SearchKeyword.idOf(f.q());
+            where.add("(LOWER(p.title) LIKE LOWER(:kw) ESCAPE '!' OR LOWER(p.question) LIKE LOWER(:kw) ESCAPE '!'"
+                    + (keywordId == null ? "" : " OR p.id = :kwId") + ")");
             params.put("kw", keyword);
+            if (keywordId != null) {
+                params.put("kwId", keywordId);
+            }
         }
 
         List<String> having = new ArrayList<>();

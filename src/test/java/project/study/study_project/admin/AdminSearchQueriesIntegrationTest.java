@@ -9,6 +9,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import project.study.study_project.TestDomains;
+import project.study.study_project.admin.dto.AdminProblemStatItem;
+import project.study.study_project.admin.service.AdminProblemStatsService;
 import project.study.study_project.document.domain.Document;
 import project.study.study_project.document.dto.DocumentListItem;
 import project.study.study_project.document.repository.DocumentRepository;
@@ -50,6 +52,8 @@ class AdminSearchQueriesIntegrationTest {
     private DocumentService documentService;
     @Autowired
     private TagRepository tagRepository;
+    @Autowired
+    private AdminProblemStatsService statsService;
 
     @Test
     @DisplayName("문제 관리 목록의 검색어는 제목과 지문을 함께 보고, 대소문자를 가리지 않는다")
@@ -60,11 +64,33 @@ class AdminSearchQueriesIntegrationTest {
         save("상관없는 제목", "상관없는 지문");
 
         Page<Problem> page = problemRepository.findForAdmin(null, null, null, null,
-                SearchKeyword.likePattern(word.toUpperCase()), PageRequest.of(0, 20));
+                SearchKeyword.likePattern(word.toUpperCase()), null, PageRequest.of(0, 20));
 
         assertThat(page.getContent()).extracting(Problem::getId)
                 .containsExactly(byQuestion.getId(), byTitle.getId());
         assertThat(page.getTotalElements()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("검색어가 번호면 문제·초안·정답률 목록 모두 id로도 찾는다")
+    void numberKeywordMatchesId() {
+        Problem problem = save("번호 검색 제목", "번호 검색 지문");
+        String q = "#" + problem.getId();
+
+        Page<Problem> page = problemRepository.findForAdmin(null, null, null, null,
+                SearchKeyword.likePattern(q), SearchKeyword.idOf(q), PageRequest.of(0, 20));
+        assertThat(page.getContent()).extracting(Problem::getId).containsExactly(problem.getId());
+
+        assertThat(statsService.search(new AdminProblemStatsService.Filter(
+                String.valueOf(problem.getId()), null, null, null, null, null, null, null), 0, 20).content())
+                .extracting(AdminProblemStatItem::problemId).contains(problem.getId());
+
+        GeneratedProblemDraft draft = saveDraft("번호 검색 초안");
+        String draftQ = String.valueOf(draft.getId());
+        Page<GeneratedProblemDraft> found = draftRepository.findForReview(List.of(DraftStatus.PENDING),
+                null, null, null, null, null, SearchKeyword.likePattern(draftQ), SearchKeyword.idOf(draftQ),
+                PageRequest.of(0, 20));
+        assertThat(found.getContent()).extracting(GeneratedProblemDraft::getId).contains(draft.getId());
     }
 
     @Test
@@ -80,7 +106,7 @@ class AdminSearchQueriesIntegrationTest {
 
         Page<GeneratedProblemDraft> found = draftRepository.findForReview(
                 List.of(DraftStatus.PENDING, DraftStatus.REJECTED), null, null, null, null, null,
-                SearchKeyword.likePattern(word), PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "id")));
+                SearchKeyword.likePattern(word), null, PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "id")));
 
         assertThat(found.getContent()).extracting(GeneratedProblemDraft::getId)
                 .containsExactly(rejected.getId(), pending.getId());

@@ -71,7 +71,7 @@ public class AdminProblemService {
                                                         String documentSlug, String q, Pageable pageable) {
         // 빈 문자열은 "안 고름"이다 — 화면의 select가 빈 값을 보낼 수 있어 여기서 null로 맞춘다.
         Page<Problem> page = problemRepository.findForAdmin(domain, difficulty, type, Texts.trimToNull(documentSlug),
-                SearchKeyword.likePattern(q), pageable);
+                SearchKeyword.likePattern(q), SearchKeyword.idOf(q), pageable);
         return PageResponse.from(page.map(AdminProblemDetail::from));
     }
 

@@ -75,7 +75,7 @@ class AdminLookupControllerTest {
         when(problemService.getProblems(isNull(), isNull(), isNull(), isNull(), eq("tcp_"), any(Pageable.class)))
                 .thenReturn(page(List.of(problem), 12));
         when(drafts.findForReview(eq(List.of(DraftStatus.PENDING, DraftStatus.REJECTED)), isNull(), isNull(),
-                isNull(), isNull(), isNull(), eq("%tcp!_%"), any(Pageable.class)))
+                isNull(), isNull(), isNull(), eq("%tcp!_%"), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         DocumentListItem doc = mock(DocumentListItem.class);
         when(doc.id()).thenReturn(21L);

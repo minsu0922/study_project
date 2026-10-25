@@ -50,6 +50,7 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
      * @param id           그 번호 하나만. 상단 띠의 "번호로 이동"이 쓴다. null이면 거르지 않는다
      * @param statuses     이 상태들만. 검수함은 하나를, 통합 검색은 승인 아닌 둘을 넘긴다
      * @param keyword      제목·지문 검색. {@code SearchKeyword.likePattern}을 거친 패턴, null이면 거르지 않는다
+     * @param keywordId    검색어가 번호면 그 번호({@code SearchKeyword.idOf}). 제목·지문과 <b>또는</b>으로 묶인다
      * @param pageable     정렬은 여기에 담는다. 검수함은 오래된 순, 통합 검색은 최근 순이라 쿼리에 고정하지 않았다
      */
     @Query("""
@@ -58,7 +59,8 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
               and (:id is null or d.id = :id)
               and (:keyword is null
                    or lower(d.title) like lower(:keyword) escape '!'
-                   or lower(d.question) like lower(:keyword) escape '!')
+                   or lower(d.question) like lower(:keyword) escape '!'
+                   or d.id = :keywordId)
               and (:domain is null or d.domain = :domain)
               and (:difficulty is null or d.difficulty = :difficulty)
               and (:documentSlug is null or d.documentSlug = :documentSlug)
@@ -74,6 +76,7 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
             @Param("code") Boolean code,
             @Param("id") Long id,
             @Param("keyword") String keyword,
+            @Param("keywordId") Long keywordId,
             Pageable pageable);
 
     /**

@@ -72,7 +72,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
      * 실제로 자주 하는 질문은 "이 문서로 만든 문제가 몇 개고 난이도가 고른가"인데
      * 그 둘이 없으면 답할 수 없다.
      *
-     * <p>keyword는 제목과 지문을 본다(2026-10-17). 상단 띠의 통합 검색도 이 쿼리를 쓰므로, 띠에서 본
+     * <p>keyword는 제목과 지문을 보고, 검색어가 번호면 keywordId로 id도 본다({@code SearchKeyword.idOf}). 상단 띠의 통합 검색도 이 쿼리를 쓰므로, 띠에서 본
      * 결과와 "목록에서 모두 보기"로 간 결과가 같다. {@code SearchKeyword.likePattern}을 거친 패턴이다.
      */
     @Query("""
@@ -83,7 +83,8 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
               and (:documentSlug is null or p.documentSlug = :documentSlug)
               and (:keyword is null
                    or lower(p.title) like lower(:keyword) escape '!'
-                   or lower(p.question) like lower(:keyword) escape '!')
+                   or lower(p.question) like lower(:keyword) escape '!'
+                   or p.id = :keywordId)
             order by p.id desc
             """)
     Page<Problem> findForAdmin(
@@ -92,6 +93,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             @Param("type") ProblemType type,
             @Param("documentSlug") String documentSlug,
             @Param("keyword") String keyword,
+            @Param("keywordId") Long keywordId,
             Pageable pageable
     );
 
