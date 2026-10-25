@@ -95,7 +95,8 @@ public final class CodeProblem {
             @JsonPropertyDescription("보기 4개. 정답은 정확히 1개")
             List<Choice> choices,
 
-            @JsonPropertyDescription("왜 이 답인지. 코드의 줄을 'N행'으로 가리키며 실행 흐름을 따라 설명한다")
+            @JsonPropertyDescription("왜 이 답인지. 첫 줄에 규칙, 이어서 실행 순서대로 한 걸음씩 줄을 바꿔 "
+                    + "'N행 문장: 실제 값 → 일어나는 일 → 결과'로 쓰고, 마지막에 정답과 맞춰 본다")
             String explanation
     ) {
     }

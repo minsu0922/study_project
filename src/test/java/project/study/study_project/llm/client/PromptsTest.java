@@ -48,6 +48,14 @@ class PromptsTest {
     }
 
     @Test
+    @DisplayName("코드 문제 해설은 규칙 → 실제 값으로 따라가는 실행 흐름 → 정답 확인 순서로 쓰라고 시킨다")
+    void codeExplanationAsksForWalkthrough() {
+        assertThat(ClaudeCodeProblemGenerator.SYSTEM_PROMPT)
+                .contains("1. 규칙:", "2. 실행 흐름:", "3. 정답 확인:")
+                .contains("\"N행 문장: 그때의 실제 값 → 일어나는 일 → 결과\"");
+    }
+
+    @Test
     @DisplayName("없는 파일은 경로를 담아 실패한다")
     void missingFile() {
         assertThatThrownBy(() -> Prompts.load("nope/none.txt"))
