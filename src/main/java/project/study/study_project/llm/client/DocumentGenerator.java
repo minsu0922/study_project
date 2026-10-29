@@ -1,6 +1,7 @@
 package project.study.study_project.llm.client;
 
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.TopicBrief;
 
 import java.util.List;
 
@@ -27,6 +28,15 @@ public interface DocumentGenerator {
                                    List<String> avoidTitles, List<String> preferredTags);
 
     /**
+     * 작성 지시가 붙은 입문편 — 로드맵 주제(2026-10-29). {@code brief}가 있으면 주제를 범위로
+     * 보지 않고 그대로 쓴다. {@code null}이면 {@link #generate(DomainCode, String, List, List)}와 같다.
+     */
+    default GeneratedDocumentItem generate(DomainCode domain, String topic, TopicBrief brief,
+                                           List<String> avoidTitles, List<String> preferredTags) {
+        return generate(domain, topic, avoidTitles, preferredTags);
+    }
+
+    /**
      * <b>심화편</b> 한 편을 생성한다 — 같은 주제의 입문편을 읽고 온 사람이 읽는 글(2026-09-03).
      *
      * <p><b>왜 입문편을 인자로 받는가.</b> 두 편을 따로 뽑으면 심화편의 앞 절반이 입문편 요약이
@@ -43,4 +53,10 @@ public interface DocumentGenerator {
      */
     GeneratedDocumentItem generateAdvanced(DomainCode domain, GeneratedDocumentItem beginner,
                                            List<String> preferredTags);
+
+    /** 작성 지시가 붙은 심화편. 지시 중 "설명할 것"은 싣지 않는다({@link TopicBrief#forAdvanced}). */
+    default GeneratedDocumentItem generateAdvanced(DomainCode domain, GeneratedDocumentItem beginner,
+                                                   TopicBrief brief, List<String> preferredTags) {
+        return generateAdvanced(domain, beginner, preferredTags);
+    }
 }

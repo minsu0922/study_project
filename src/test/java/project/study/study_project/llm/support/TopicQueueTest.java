@@ -66,6 +66,16 @@ class TopicQueueTest {
         assertThat(TopicQueue.read(dir).next().topic()).isEqualTo("컨텍스트 스위칭");
     }
 
+    @Test
+    @DisplayName("고른 주제에 메모가 함께 실린다 — 메모가 작성 지시로 모델에 넘어간다")
+    void pickedCarriesMemo() throws Exception {
+        write("""
+                { "topics": [ { "domain": "OS", "topic": "컨텍스트 스위칭", "memo": "핵심 개념: 문맥" } ] }
+                """);
+
+        assertThat(TopicQueue.read(dir).next().memo()).isEqualTo("핵심 개념: 문맥");
+    }
+
     /* ── 고르기 ───────────────────────────────────────────────── */
 
     @Test

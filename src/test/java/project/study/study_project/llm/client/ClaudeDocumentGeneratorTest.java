@@ -6,6 +6,7 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.document.support.DocumentEditions;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.DocumentDraftValidator;
+import project.study.study_project.llm.support.TopicBrief;
 
 import java.util.List;
 
@@ -35,6 +36,46 @@ class ClaudeDocumentGeneratorTest {
         assertThat(prompt).contains("주제 범위: TCP 혼잡 제어");
         assertThat(prompt).as("범위일 때는 '이 주제로 써라'가 아니라 '이 안에서 골라라'여야 한다")
                 .contains("이 범위 안에서");
+    }
+
+    /**
+     * 로드맵 주제는 이미 한 편 크기다(2026-10-29). "범위 안에서 골라라"를 그대로 주면 모델이
+     * 한 번 더 좁혀 엉뚱한 세부 주제를 쓰고, 기존 문서와 겹치지 말라는 규칙에 밀려 피해 간다.
+     */
+    @Test
+    @DisplayName("작성 지시가 있으면 주제를 그대로 쓰라고 시키고, 네 칸을 싣는다")
+    void writesGivenTopicWhenBriefPresent() {
+        TopicBrief brief = TopicBrief.parse("""
+                핵심 개념: 인덱스, 풀 스캔
+                설명할 것: 없으면 어떻게 찾나 / 왜 쓰기는 느려지나
+                다루지 않을 것: B+트리 구조
+                """);
+
+        String prompt = generator.buildPrompt(TestDomains.DATABASE, "인덱스 — 1.8초가 16ms로", brief,
+                List.of("[데이터베이스] 인덱스 심화"), List.of());
+
+        assertThat(prompt).contains("주제: 인덱스 — 1.8초가 16ms로");
+        assertThat(prompt).contains("[작성 지시]").contains("핵심 개념: 인덱스, 풀 스캔")
+                .contains("설명할 것: 없으면").contains("다루지 않을 것: B+트리");
+        assertThat(prompt).as("범위에서 다시 고르면 안 된다").doesNotContain("이 범위 안에서");
+        assertThat(prompt).as("기존 문서가 있어도 이 주제를 쓴다").contains("그래도 이 주제를 쓴다");
+        assertThat(prompt).as("독자 수준은 공통 문구로 한 번").contains("비전공자");
+    }
+
+    @Test
+    @DisplayName("심화편 지시에는 '설명할 것'이 빠진다 — 입문편과 같은 글이 또 나오지 않게")
+    void advancedPromptCarriesBriefWithoutQuestions() {
+        TopicBrief brief = TopicBrief.parse("""
+                핵심 개념: 영속성 컨텍스트, 변경 감지
+                설명할 것: 어디에 보관되나
+                """);
+        GeneratedDocumentItem beginner = new GeneratedDocumentItem(
+                "영속성 컨텍스트", "persistence-context", "# 영속성 컨텍스트\n본문", List.of("jpa"));
+
+        String prompt = generator.buildAdvancedPrompt(TestDomains.BACKEND_FRAMEWORK, beginner, brief, List.of());
+
+        assertThat(prompt).contains("[작성 지시]").contains("핵심 개념: 영속성 컨텍스트, 변경 감지");
+        assertThat(prompt).doesNotContain("설명할 것");
     }
 
     @Test

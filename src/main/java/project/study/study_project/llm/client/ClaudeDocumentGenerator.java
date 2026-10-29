@@ -15,6 +15,7 @@ import project.study.study_project.domainsetting.support.DefaultDomains;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.domainsetting.support.DomainCatalog;
+import project.study.study_project.llm.support.TopicBrief;
 
 import java.util.List;
 
@@ -630,8 +631,14 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     @Override
     public GeneratedDocumentItem generate(DomainCode domain, String topic,
                                           List<String> avoidTitles, List<String> preferredTags) {
+        return generate(domain, topic, null, avoidTitles, preferredTags);
+    }
+
+    @Override
+    public GeneratedDocumentItem generate(DomainCode domain, String topic, TopicBrief brief,
+                                          List<String> avoidTitles, List<String> preferredTags) {
         return call(BEGINNER_SYSTEM_PROMPT,
-                buildPrompt(domain, topic, avoidTitles, preferredTags),
+                buildPrompt(domain, topic, brief, avoidTitles, preferredTags),
                 DocumentEdition.BEGINNER);
     }
 
@@ -651,11 +658,17 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     @Override
     public GeneratedDocumentItem generateAdvanced(DomainCode domain, GeneratedDocumentItem beginner,
                                                   List<String> preferredTags) {
+        return generateAdvanced(domain, beginner, null, preferredTags);
+    }
+
+    @Override
+    public GeneratedDocumentItem generateAdvanced(DomainCode domain, GeneratedDocumentItem beginner,
+                                                  TopicBrief brief, List<String> preferredTags) {
         if (beginner == null || beginner.contentMd() == null || beginner.contentMd().isBlank()) {
             throw new BusinessException(ErrorCode.LLM_003, "심화편을 만들려면 입문편 본문이 필요합니다.");
         }
         return call(ADVANCED_SYSTEM_PROMPT,
-                buildAdvancedPrompt(domain, beginner, preferredTags),
+                buildAdvancedPrompt(domain, beginner, brief, preferredTags),
                 DocumentEdition.ADVANCED);
     }
 
@@ -787,12 +800,34 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      */
     String buildPrompt(DomainCode domain, String topic,
                        List<String> avoidTitles, List<String> preferredTags) {
+        return buildPrompt(domain, topic, null, avoidTitles, preferredTags);
+    }
+
+    String buildPrompt(DomainCode domain, String topic, TopicBrief brief,
+                       List<String> avoidTitles, List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
         // 이름·힌트는 <지금> 읽는다 — 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다.
         sb.append("분야: ").append(domainCatalog.displayName(domain))
                 .append(domainCatalog.hints().hintFor(domain)).append('\n');
 
-        if (topic != null && !topic.isBlank()) {
+        boolean hasTopic = topic != null && !topic.isBlank();
+        if (hasTopic && brief != null) {
+            // 로드맵 주제는 이미 한 편 크기다. "범위 안에서 골라라"를 주면 한 번 더 좁혀
+            // 엉뚱한 세부 주제를 쓰고, 기존 문서와 겹치지 말라는 규칙에 밀려 주제를 피해 간다.
+            sb.append("주제: ").append(topic.trim()).append("\n\n");
+            sb.append("[작성 지시]\n").append(brief.forBeginner()).append('\n');
+            sb.append("""
+                    [주제 선정 원칙]
+                    1. 위 주제를 그대로 쓴다. 이 안에서 더 좁은 주제를 다시 고르지 마라.
+                    2. 독자는 컴퓨터 전공 지식 없이 이 분야를 순서대로 배워 가는 비전공자다.
+                    3. "핵심 개념"은 본문에서 반드시 정의하고 넘어간다.
+                    4. "설명할 것"의 질문들을 본문이 답하는 순서의 뼈대로 삼는다.
+                    5. "다루지 않을 것"은 이름만 꺼내고 깊게 들어가지 마라.
+                    6. "실물"의 사실과 수치는 바꾸지 말고 그대로 쓴다.
+                    7. 아래 목록에 같은 주제의 문서가 있어도 그래도 이 주제를 쓴다.
+                       다만 그 문서의 각도를 되풀이하지 말고 위 질문들을 따른다.
+                    """);
+        } else if (hasTopic) {
             // 이 값은 대개 "Spring", "JVM 메모리" 같은 <범위>다(주제 범위 목록에서 온다).
             // 그래서 "이 주제로 써라"가 아니라 "이 안에서 하나를 골라 써라"로 지시한다 —
             // 전자로 시키면 범위 전체를 개괄하는 문서가 나온다(분야만 던졌을 때와 같은 결함).
@@ -894,6 +929,11 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      * 주면 <b>같은 주제를 이어 쓰라는 지시와 정면으로 부딪친다</b>.
      */
     String buildAdvancedPrompt(DomainCode domain, GeneratedDocumentItem beginner, List<String> preferredTags) {
+        return buildAdvancedPrompt(domain, beginner, null, preferredTags);
+    }
+
+    String buildAdvancedPrompt(DomainCode domain, GeneratedDocumentItem beginner, TopicBrief brief,
+                               List<String> preferredTags) {
         StringBuilder sb = new StringBuilder();
         // 입문편과 같은 자리에서 <다시> 읽는다 — 두 편 사이에 이름·힌트가 바뀌었다면 심화편은 새 값을 따른다.
         sb.append("분야: ").append(domainCatalog.displayName(domain))
@@ -905,6 +945,15 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
         sb.append("이 글의 slug는 반드시 \"")
                 .append(beginner.slug()).append(DocumentEditions.ADVANCED_SUFFIX).append("\"다.\n");
         sb.append("본문 맨 위 H1도 위 제목과 같아야 한다.\n\n");
+
+        if (brief != null) {
+            sb.append("[작성 지시]\n").append(brief.forAdvanced());
+            sb.append("""
+                    "핵심 개념"은 입문편보다 한 단계 깊이 다룬다. "다루지 않을 것"은 깊게 들어가지 마라.
+                    "실물"의 사실과 수치는 바꾸지 말고 그대로 쓴다.
+
+                    """);
+        }
 
         sb.append("""
                 아래는 같은 주제의 입문편 전문이다. 독자는 이것을 읽고 왔다.

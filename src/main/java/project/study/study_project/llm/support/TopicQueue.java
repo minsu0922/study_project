@@ -83,8 +83,16 @@ public final class TopicQueue {
         this.problems = new ArrayList<>(problems);
     }
 
-    /** 꺼내 온 주제 한 건. {@code index}는 되쓸 때 어느 줄에 도장을 찍을지 가리킨다. */
-    public record Picked(int index, DomainCode domain, String topic) {
+    /**
+     * 꺼내 온 주제 한 건. {@code index}는 되쓸 때 어느 줄에 도장을 찍을지 가리킨다.
+     * {@code memo}는 작성 지시 후보다({@link TopicBrief#parse}가 형식을 판정한다).
+     */
+    public record Picked(int index, DomainCode domain, String topic, String memo) {
+
+        /** 메모가 없는 주제 — 코드 문제 주제가 이 모양이다. */
+        public Picked(int index, DomainCode domain, String topic) {
+            this(index, domain, topic, null);
+        }
     }
 
     /* ── 읽기 ─────────────────────────────────────────────────── */
@@ -149,7 +157,7 @@ public final class TopicQueue {
             return null;
         }
         TopicQueueFile.Entry picked = topics.get(best);
-        return new Picked(best, parseDomain(picked.domain()), picked.topic().trim());
+        return new Picked(best, parseDomain(picked.domain()), picked.topic().trim(), picked.memo());
     }
 
     /**

@@ -9,6 +9,7 @@ import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
+import project.study.study_project.llm.support.TopicBrief;
 import project.study.study_project.llm.support.TopicQueue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -92,6 +93,7 @@ final class DocumentBatch {
         // 뜻이지 줄 서 있는 주제를 소모하겠다는 뜻이 아니다.
         TopicQueue queue = TopicQueue.read(outDir);
         TopicQueue.Picked picked = null;
+        TopicBrief brief = null;
         if (topic == null) {
             picked = queue.next();
             if (picked != null) {
@@ -99,9 +101,16 @@ final class DocumentBatch {
                 // batchDomains를 함께 넘긴다 — 등록부 밖(또는 꺼진) 분야를 대기열에 적어 뒀을 때
                 // 경고를 남기는 잣대다(topicDomain Javadoc "등록부에 없는 분야는 알린다").
                 domain = topicDomain(domain, opts.get("domain"), picked, batchDomains);
+                brief = TopicBrief.parse(picked.memo());
             }
         }
         reportTopicQueue(queue, picked, topic);
+        if (picked != null) {
+            // 형식이 안 맞는 메모는 조용히 빠진다. 그대로 두면 지시가 실렸는지 아무도 모른다
+            System.out.println(brief != null
+                    ? "작성 지시: 메모를 실었습니다(주제를 그대로 씁니다)."
+                    : "작성 지시: 없음 — 메모에 '핵심 개념:'·'설명할 것:'이 없어 범위로 다룹니다.");
+        }
 
         ExistingDocuments snapshot = readExistingDocuments(outDir);
         List<String> avoidTitles = snapshot.titles();
@@ -111,7 +120,7 @@ final class DocumentBatch {
                 domain, topic == null ? "자동 선택" : topic, model, avoidTitles.size(), tags.size());
 
         ClaudeDocumentGenerator generator = new ClaudeDocumentGenerator(model, settings);
-        GeneratedDocumentItem document = generator.generate(domain, topic, avoidTitles, tags);
+        GeneratedDocumentItem document = generator.generate(domain, topic, brief, avoidTitles, tags);
 
         // 빈 응답은 성공이 아니다 — job을 실패시켜 메일을 받는 쪽이 낫다(문제 생성과 같은 판단)
         if (document == null || document.contentMd() == null || document.contentMd().isBlank()) {
@@ -126,7 +135,7 @@ final class DocumentBatch {
         // (findSourceDocument가 그 경로를 이미 갖고 있다) — 손해가 사흘에서 하루로 줄어든다.
         GeneratedDocumentItem advanced = null;
         try {
-            advanced = generator.generateAdvanced(domain, document, tags);
+            advanced = generator.generateAdvanced(domain, document, brief, tags);
         } catch (RuntimeException e) {
             System.out.println("⚠️ 심화편 생성에 실패했습니다(입문편은 그대로 저장합니다): " + e.getMessage());
         }
