@@ -44,16 +44,16 @@
     "displayName" : "스프링·백엔드",
     "hint" : "Spring DI/IoC·Bean 생명주기·AOP·@Transactional 전파·MVC 흐름, JPA 영속성 컨텍스트·지연 로딩·N+1, 커넥션 풀·서블릿 컨테이너. 순수 JVM/GC 주제는 제외"
   }, {
-    "domain" : "SOFTWARE_ENGINEERING",
-    "enabled" : false,
-    "sortOrder" : 8,
-    "displayName" : "소프트웨어공학",
-    "hint" : "요구사항 분석·UML·디자인 패턴·테스트 기법·형상관리·개발방법론. 즉 사람이 코드를 만들고 관리하는 절차. 부하·확장·장애처럼 돌아가는 시스템을 다루는 주제는 제외"
-  }, {
     "domain" : "CLOUD_INFRA",
     "enabled" : true,
-    "sortOrder" : 9,
+    "sortOrder" : 8,
     "displayName" : "클라우드·인프라"
+  }, {
+    "domain" : "SOFTWARE_ENGINEERING",
+    "enabled" : false,
+    "sortOrder" : 9,
+    "displayName" : "소프트웨어공학",
+    "hint" : "요구사항 분석·UML·디자인 패턴·테스트 기법·형상관리·개발방법론. 즉 사람이 코드를 만들고 관리하는 절차. 부하·확장·장애처럼 돌아가는 시스템을 다루는 주제는 제외"
   }, {
     "domain" : "INTEGRATED",
     "enabled" : false,
