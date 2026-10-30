@@ -295,3 +295,83 @@ async function renderRevisions(mountSelector, baseUrl, onRestored) {
     }, "정말 되돌리기?"));
   });
 }
+
+/**
+ * 검수함 그림 미리보기 — 초안 본문의 ```mermaid 블록만 그려 보인다(2026-10-30).
+ *
+ * <p>본문 전체는 원문 그대로 둔다(승인 전 글을 innerHTML로 렌더링하지 않는 판단).
+ * 그림만은 문서 화면(document.html)과 같은 방식으로 그린다. securityLevel strict라
+ * 그림 안의 태그·클릭 동작은 살아나지 않는다.
+ *
+ * <p>문법이 틀린 그림은 승인 뒤 문서 화면에서 원문 코드로 남는다. 그래서 여기서 몇 번째
+ * 그림이 깨졌는지 알려, 승인 전에 고칠 수 있게 한다.
+ */
+const DRAFT_MERMAID_SRC = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
+// document.html의 MERMAID_INTEGRITY와 같아야 한다. 버전을 올리면 두 곳을 함께 바꾼다
+const DRAFT_MERMAID_INTEGRITY = "sha384-rbtjAdnIQE/aQJGEgXrVUlMibdfTSa4PQju4HDhN3sR2PmaKFzhEafuePsl9H/9I";
+let draftMermaidLoading = null;
+let draftDiagramSeq = 0;
+
+function loadDraftMermaid() {
+  if (window.mermaid) return Promise.resolve();
+  if (!draftMermaidLoading) {
+    draftMermaidLoading = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = DRAFT_MERMAID_SRC;
+      s.integrity = DRAFT_MERMAID_INTEGRITY;
+      s.crossOrigin = "anonymous";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  return draftMermaidLoading;
+}
+
+function mermaidSourcesOf(contentMd) {
+  return [...(contentMd ?? "").matchAll(/```mermaid[ \t]*\r?\n([\s\S]*?)```/g)].map(m => m[1]);
+}
+
+async function renderDiagramPreviews(mount, contentMd) {
+  if (!mount) return;
+  const sources = mermaidSourcesOf(contentMd);
+  if (sources.length === 0) {
+    mount.innerHTML = `<div class="meta" style="margin:8px 0">그림 0개</div>`;
+    return;
+  }
+  mount.innerHTML = `<div class="meta" style="margin:8px 0">그림 ${sources.length}개 — 그리는 중…</div>`;
+  try {
+    await loadDraftMermaid();
+  } catch (e) {
+    mount.innerHTML = `<div class="meta" style="margin:8px 0">그림 ${sources.length}개 — mermaid를 받지 못해 미리 볼 수 없습니다</div>`;
+    return;
+  }
+  const t = document.documentElement.dataset.theme;
+  const dark = t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "neutral" });
+
+  const figures = [];
+  let broken = 0;
+  for (let i = 0; i < sources.length; i++) {
+    const figure = document.createElement("figure");
+    figure.className = "draft-diagram";
+    const ok = await mermaid.parse(sources[i], { suppressErrors: true });
+    if (ok) {
+      const id = "draft-diagram-" + (++draftDiagramSeq);
+      try {
+        figure.innerHTML = (await mermaid.render(id, sources[i])).svg;
+      } catch (e) {
+        document.getElementById("d" + id)?.remove();
+        figure.textContent = `${i + 1}번째 그림을 그리지 못했습니다`;
+        broken++;
+      }
+    } else {
+      figure.textContent = `${i + 1}번째 그림: 문법 오류 — 승인하면 문서 화면에 원문 코드로 보입니다`;
+      figure.classList.add("broken");
+      broken++;
+    }
+    figures.push(figure);
+  }
+  mount.innerHTML = `<div class="meta" style="margin:8px 0">그림 ${sources.length}개${broken ? ` · 깨짐 ${broken}개` : ""}</div>`;
+  figures.forEach(f => mount.appendChild(f));
+}

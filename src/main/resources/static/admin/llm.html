@@ -1173,6 +1173,7 @@ async function loadDocDrafts() {
         <div class="meta">/${escapeHtml(d.slug)}</div>
         ${blockingBox}${warningBox}
         ${sectionOutlineOf(d.contentMd)}
+        <div class="draft-diagrams" id="diag-${d.id}"></div>
         <div class="doc-preview-bar">
           <span class="meta">본문 원문 (마크다운)</span>
           <button class="btn-outline" data-action="expand" data-target="pre-${d.id}">전체 펼치기</button>
@@ -1193,6 +1194,11 @@ async function loadDocDrafts() {
     const expanded = pre.classList.toggle("expanded");
     btn.textContent = expanded ? "접기" : "전체 펼치기";
   };
+
+  // 그림만 그려 보인다. 본문 전체는 여전히 원문이다(sectionOutlineOf 주석의 XSS 판단).
+  for (const d of data.content) {
+    renderDiagramPreviews(document.getElementById(`diag-${d.id}`), d.contentMd);
+  }
 
   renderPager("dd", data);
 }

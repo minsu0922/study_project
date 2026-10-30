@@ -2500,6 +2500,9 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 .doc-preview.expanded { max-height: none; }
 .doc-preview-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .doc-preview-bar .meta { flex: 1; }
+.draft-diagram { margin: 8px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; text-align: center; }
+.draft-diagram svg { max-width: 100%; height: auto; }
+.draft-diagram.broken { color: var(--danger, #c0392b); text-align: left; }
 
 /* 접어 둔 생성 폼 손잡이 — 2026-08-29.
  *
