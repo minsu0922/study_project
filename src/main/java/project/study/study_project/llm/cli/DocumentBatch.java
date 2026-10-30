@@ -102,6 +102,9 @@ final class DocumentBatch {
                 // 경고를 남기는 잣대다(topicDomain Javadoc "등록부에 없는 분야는 알린다").
                 domain = topicDomain(domain, opts.get("domain"), picked, batchDomains);
                 brief = TopicBrief.parse(picked.memo());
+                if (brief != null) {
+                    brief = brief.withLaterTopics(queue.laterTopicsInBlock(picked));
+                }
             }
         }
         reportTopicQueue(queue, picked, topic);

@@ -76,6 +76,25 @@ class TopicQueueTest {
         assertThat(TopicQueue.read(dir).next().memo()).isEqualTo("핵심 개념: 문맥");
     }
 
+    @Test
+    @DisplayName("고른 주제 뒤로 이어지는 같은 분야 주제의 이름을 준다 — 분야가 바뀌면 멈춘다")
+    void laterTopicsInBlockStopAtDomainChange() throws Exception {
+        write("""
+                { "topics": [
+                  { "domain": "NETWORK", "topic": "패킷과 프로토콜 — 사진을 쪼개는 이유" },
+                  { "domain": "NETWORK", "topic": "공인 IP와 사설 IP — 공유기 뒤의 기기" },
+                  { "domain": "NETWORK", "topic": "포트" },
+                  { "domain": "OS", "topic": "프로세스" },
+                  { "domain": "NETWORK", "topic": "TCP와 UDP" }
+                ] }
+                """);
+        TopicQueue queue = TopicQueue.read(dir);
+
+        assertThat(queue.laterTopicsInBlock(queue.next()))
+                .as("줄표 뒤 출발 장면은 떼고 개념 이름만")
+                .containsExactly("공인 IP와 사설 IP", "포트");
+    }
+
     /* ── 고르기 ───────────────────────────────────────────────── */
 
     @Test

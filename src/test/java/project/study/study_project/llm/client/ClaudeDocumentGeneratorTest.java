@@ -78,6 +78,23 @@ class ClaudeDocumentGeneratorTest {
         assertThat(prompt).doesNotContain("설명할 것");
     }
 
+    /**
+     * 2026-10-29 실물: 심화편이 NAT·타임아웃·재시도로 넓어져 로드맵 뒤 주제와 겹쳤다.
+     * 질문 목록을 안 주는 대신 뒤 편 이름을 주고 깊게 들어가지 못하게 한다.
+     */
+    @Test
+    @DisplayName("심화편에 뒤 편 주제가 실리고, 이름만 꺼내라는 지시가 붙는다")
+    void advancedPromptFencesOffLaterTopics() {
+        TopicBrief brief = TopicBrief.parse("핵심 개념: 서버\n설명할 것: 어디에 있나")
+                .withLaterTopics(List.of("공인 IP와 사설 IP", "타임아웃과 서킷 브레이커"));
+        GeneratedDocumentItem beginner = new GeneratedDocumentItem("서버", "server", "# 서버\n본문", List.of());
+
+        String prompt = generator.buildAdvancedPrompt(TestDomains.CLOUD_INFRA, beginner, brief, List.of());
+
+        assertThat(prompt).contains("뒤 편이 다룰 주제: 공인 IP와 사설 IP, 타임아웃과 서킷 브레이커");
+        assertThat(prompt).contains("뒤 편이 다룰 주제는 이름만 꺼내고 설명하지 마라");
+    }
+
     @Test
     @DisplayName("범위를 비우면 분야 안에서 모델이 직접 고르도록 지시한다")
     void asksModelToPickWhenTopicOmitted() {

@@ -951,8 +951,11 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
             sb.append("""
                     "핵심 개념"은 입문편보다 한 단계 깊이 다룬다. "다루지 않을 것"은 깊게 들어가지 마라.
                     "실물"의 사실과 수치는 바꾸지 말고 그대로 쓴다.
-
                     """);
+            if (!brief.laterTopics().isEmpty()) {
+                sb.append("뒤 편이 다룰 주제는 이름만 꺼내고 설명하지 마라. 같은 흐름의 다음 글들이 따로 다룬다.\n");
+            }
+            sb.append('\n');
         }
 
         sb.append("""

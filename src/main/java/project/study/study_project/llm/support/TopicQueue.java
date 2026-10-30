@@ -215,6 +215,30 @@ public final class TopicQueue {
                 && parseDomain(entry.domain()) != null;
     }
 
+    /**
+     * 고른 주제 바로 뒤로 이어지는 같은 분야 주제들의 이름 — 분야가 바뀌는 줄에서 멈춘다.
+     *
+     * <p>대기열은 분야별 로드맵 블록으로 쌓여 있어, 이어지는 같은 분야 줄이 곧 "이 흐름의 뒤 편"이다.
+     * 줄표(—) 뒤의 출발 장면은 떼고 개념 이름만 준다. 모델에겐 경계만 알리면 된다.
+     */
+    public List<String> laterTopicsInBlock(Picked picked) {
+        List<String> later = new ArrayList<>();
+        if (picked == null) {
+            return later;
+        }
+        List<TopicQueueFile.Entry> topics = file.topics();
+        for (int i = picked.index() + 1; i < topics.size(); i++) {
+            TopicQueueFile.Entry entry = topics.get(i);
+            if (!isUsable(entry) || !picked.domain().equals(parseDomain(entry.domain()))) {
+                break;
+            }
+            String topic = entry.topic().trim();
+            int dash = topic.indexOf(" — ");
+            later.add(dash < 0 ? topic : topic.substring(0, dash).trim());
+        }
+        return later;
+    }
+
     /** 쓸 수 있는 범위 수 — "등록된 범위 3개"처럼 사람에게 알리는 용도. 형식 오류는 세지 않는다. */
     public int size() {
         return (int) file.topics().stream().filter(TopicQueue::isUsable).count();

@@ -52,6 +52,15 @@ class TopicBriefTest {
     }
 
     @Test
+    @DisplayName("뒤 편 주제는 심화편에만 실린다 — 질문 목록이 없는 심화편이 뒤 주제로 넓어지지 않게")
+    void laterTopicsGoToAdvancedOnly() {
+        TopicBrief brief = TopicBrief.parse(FULL).withLaterTopics(java.util.List.of("B+트리 인덱스의 생김새", "트랜잭션"));
+
+        assertThat(brief.forAdvanced()).contains("뒤 편이 다룰 주제: B+트리 인덱스의 생김새, 트랜잭션");
+        assertThat(brief.forBeginner()).doesNotContain("뒤 편이 다룰 주제");
+    }
+
+    @Test
     @DisplayName("입문편에는 네 칸이 모두, 심화편에는 '설명할 것'만 빠지고 실린다")
     void advancedOmitsQuestions() {
         TopicBrief brief = TopicBrief.parse(FULL);

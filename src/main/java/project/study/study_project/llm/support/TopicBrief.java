@@ -1,5 +1,7 @@
 package project.study.study_project.llm.support;
 
+import java.util.List;
+
 /**
  * 대기열 메모를 모델용 작성 지시로 읽은 것 — 2026-10-29.
  *
@@ -9,12 +11,26 @@ package project.study.study_project.llm.support;
  *
  * <p>칸 정의와 이유는 docs의 주제 로드맵 문서에 있다.
  */
-public record TopicBrief(String concepts, String questions, String outOfScope, String facts) {
+public record TopicBrief(String concepts, String questions, String outOfScope, String facts,
+                         List<String> laterTopics) {
 
     private static final String CONCEPTS = "핵심 개념:";
     private static final String QUESTIONS = "설명할 것:";
     private static final String OUT_OF_SCOPE = "다루지 않을 것:";
     private static final String FACTS = "실물:";
+    private static final String LATER = "뒤 편이 다룰 주제:";
+
+    public TopicBrief {
+        laterTopics = laterTopics == null ? List.of() : List.copyOf(laterTopics);
+    }
+
+    /**
+     * 같은 분야 블록에서 이 편 뒤에 오는 주제들 — 심화편 전용.
+     * 심화편은 질문 목록을 받지 않아 범위가 넓어지기 쉽고, 실제로 뒤 편 주제를 미리 썼다(2026-10-29).
+     */
+    public TopicBrief withLaterTopics(List<String> later) {
+        return new TopicBrief(concepts, questions, outOfScope, facts, later);
+    }
 
     /** 형식을 갖춘 메모면 지시를, 아니면 {@code null}을 돌려준다. */
     public static TopicBrief parse(String memo) {
@@ -37,7 +53,7 @@ public record TopicBrief(String concepts, String questions, String outOfScope, S
         if (concepts == null || questions == null) {
             return null;
         }
-        return new TopicBrief(concepts, questions, outOfScope, facts);
+        return new TopicBrief(concepts, questions, outOfScope, facts, List.of());
     }
 
     private static String value(String line, String label) {
@@ -61,6 +77,7 @@ public record TopicBrief(String concepts, String questions, String outOfScope, S
         append(sb, CONCEPTS, concepts);
         append(sb, OUT_OF_SCOPE, outOfScope);
         append(sb, FACTS, facts);
+        append(sb, LATER, laterTopics.isEmpty() ? null : String.join(", ", laterTopics));
         return sb.toString();
     }
 
