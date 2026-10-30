@@ -400,8 +400,14 @@ function memoBlockOf(memo) {
     return `<div class="memo-brief"><span class="badge gray">지시 아님 · 모델에 안 실림</span>
       <div class="meta" style="white-space:pre-line">${escapeHtml(memo)}</div></div>`;
   }
+  // "설명할 것"은 빗금으로 이은 질문들이고, 모델도 이 순서대로 다룬다. 번호를 매겨 보인다.
+  // 앞뒤 공백이 있는 빗금만 나눈다. 맨 빗금으로 나누면 "HTTP/2" 같은 질문이 잘린다.
+  const valueOf = l => l === "설명할 것"
+    ? `<ol class="memo-questions">${fields[l].split(/\s+\/\s+/).map(q => q.trim()).filter(Boolean)
+        .map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ol>`
+    : `<span>${escapeHtml(fields[l])}</span>`;
   const rows = MEMO_LABELS.filter(l => l !== "그림" && fields[l]).map(l =>
-    `<div class="memo-row"><span class="memo-label">${l}</span><span>${escapeHtml(fields[l])}</span></div>`);
+    `<div class="memo-row"><span class="memo-label">${l}</span>${valueOf(l)}</div>`);
   rows.push(fields["그림"]
     ? `<div class="memo-row memo-diagram"><span class="memo-label">그림</span><span>${escapeHtml(fields["그림"])}</span></div>`
     : `<div class="memo-row"><span class="memo-label">그림</span><span class="meta">지정 안 함 · 모델이 고름</span></div>`);
@@ -476,7 +482,7 @@ async function loadTopicQueue() {
   // 배치가 실제로 고르는 것과 화면 표시가 언젠가 어긋난다.
   // 순서 번호(order)도 서버가 준다 — 행 번호로 대신하면 3쪽 첫 줄이 "1번"으로 보인다.
   table.innerHTML =
-    `<tr><th></th><th>순서</th><th>분야</th><th>주제 범위</th><th>편수</th><th>마지막</th><th></th></tr>` +
+    `<tr><th></th><th>순서</th><th>분야</th><th>주제 범위</th><th>작성 지시</th><th>편수</th><th>마지막</th><th></th></tr>` +
     items.map(t => `
       <tr data-id="${t.id}">
         <!-- 고르기는 잠그지 않는다. 정렬·검색은 <어느 줄을 찾느냐>를 돕는 일이고,
@@ -486,13 +492,13 @@ async function loadTopicQueue() {
                    aria-label="맨 위로 옮길 범위 고르기"></td>
         <td>${t.order}</td>
         <td>${escapeHtml(t.domainLabel)}</td>
-        <td class="wrap">
+        <td class="wrap topic-cell">
           ${escapeHtml(t.topic)}
           ${t.next ? ` <span class="badge orange">다음 차례${
             // 날짜는 4일 주기의 다음 문서일이다. 코드 문제 주제는 주 1회 배치가 쓰므로 그 날짜가 아니다
             topicKind === "CONCEPT" && nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : ""}</span>` : ""}
-          ${memoBlockOf(t.memo)}
         </td>
+        <td class="wrap memo-cell">${t.memo ? memoBlockOf(t.memo) : `<span class="meta">—</span>`}</td>
         <td>${t.usedCount === 0 ? `<span class="meta">—</span>` : `${t.usedCount}편`}</td>
         <td class="meta">${t.lastUsedAt ? escapeHtml(t.lastUsedAt) : "아직 안 씀"}</td>
         <td class="row-actions">

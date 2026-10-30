@@ -2503,8 +2503,15 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 .draft-diagram { margin: 8px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; text-align: center; }
 .draft-diagram svg { max-width: 100%; height: auto; }
 .draft-diagram.broken { color: var(--danger, #c0392b); text-align: left; }
-.memo-brief { margin-top: 6px; font-size: 0.86em; display: grid; gap: 2px; }
+.topic-cell { min-width: 12em; max-width: 20em; }
+.memo-cell { min-width: 22em; }
+/* 작성 지시 칸이 생겨 줄이 넓어졌다. 버튼 다섯 개를 두 줄로 접어 가로 스크롤을 없앤다 */
+#topicTable td.row-actions { white-space: normal; width: 8.5em; }
+#topicTable td.row-actions button { margin: 2px; }
+.memo-brief { font-size: 0.86em; display: grid; gap: 4px; }
 .memo-row { display: grid; grid-template-columns: 7.5em 1fr; gap: 8px; }
+.memo-questions { margin: 0; padding-left: 1.4em; }
+.memo-questions li + li { margin-top: 1px; }
 .memo-label { color: var(--muted, #6b7280); white-space: nowrap; }
 .memo-diagram span:last-child { font-weight: 600; }
 
