@@ -734,10 +734,13 @@ class ClaudeDocumentGeneratorTest {
      * 문법(mermaid)과 종류를 정해 준다. 종류는 검증기의 {@code MERMAID_HEADER}와 같아야 한다.
      */
     @Test
-    @DisplayName("입문편은 그림 1개를 mermaid로 쓴다 — 허용만으로는 30편에 한 장도 안 나왔다")
+    @DisplayName("입문편은 그림을 1개 이상 mermaid로 쓴다 — 허용만으로는 30편에 한 장도 안 나왔다")
     void asksForOneMermaidDiagram() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
-                .contains("[그림] — 1개를 넣어라")
+                .contains("[그림] — 1개 이상 넣어라")
+                .as("상한에는 근거가 없었다(2026-10-30). 중복 그림은 아래 규칙이 막는다")
+                .doesNotContain("많아도")
+                .contains("표나 번호 목록으로 충분한 것을 그림으로 다시 그리지 마라")
                 .as("화면이 그리는 것은 이 펜스뿐이다")
                 .contains("```mermaid 펜스 안에 쓴다")
                 .as("검증기가 첫 줄로 세 종류만 통과시킨다")
@@ -749,8 +752,24 @@ class ClaudeDocumentGeneratorTest {
 
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("심화편은 선택이다 — 검증기도 심화편에는 없다고 울리지 않는다")
-                .contains("[그림] — 필요할 때만, 많아도 1개")
+                .contains("[그림] — 필요할 때만")
+                .doesNotContain("많아도")
                 .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2");
+    }
+
+    @Test
+    @DisplayName("메모의 '그림:' 칸은 입문편에 실리고, 지정한 그림은 꼭 그리라고 시킨다")
+    void beginnerPromptHonorsRequestedDiagram() {
+        TopicBrief brief = TopicBrief.parse("""
+                핵심 개념: 서버
+                설명할 것: 어디에 있나
+                그림: 휴대폰·공유기·라우터·서버·DB 배치도
+                """);
+
+        String prompt = generator.buildPrompt(TestDomains.CLOUD_INFRA, "서버와 클라이언트", brief, List.of(), List.of());
+
+        assertThat(prompt).contains("그림: 휴대폰·공유기·라우터·서버·DB 배치도");
+        assertThat(prompt).contains("\"그림\"에 적힌 그림은 반드시 mermaid로 그린다");
     }
 
     /**

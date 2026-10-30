@@ -52,6 +52,17 @@ class TopicBriefTest {
     }
 
     @Test
+    @DisplayName("'그림:' 칸은 선택이고 입문편에만 실린다 — 심화편은 입문편이 그린 그림을 다시 그리지 않는다")
+    void diagramLineGoesToBeginnerOnly() {
+        TopicBrief brief = TopicBrief.parse(FULL + "그림: 인덱스 유무에 따른 조회 경로\n");
+
+        assertThat(brief.diagram()).isEqualTo("인덱스 유무에 따른 조회 경로");
+        assertThat(brief.forBeginner()).contains("그림: 인덱스 유무에 따른 조회 경로");
+        assertThat(brief.forAdvanced()).doesNotContain("그림:");
+        assertThat(TopicBrief.parse(FULL).diagram()).isNull();
+    }
+
+    @Test
     @DisplayName("뒤 편 주제는 심화편에만 실린다 — 질문 목록이 없는 심화편이 뒤 주제로 넓어지지 않게")
     void laterTopicsGoToAdvancedOnly() {
         TopicBrief brief = TopicBrief.parse(FULL).withLaterTopics(java.util.List.of("B+트리 인덱스의 생김새", "트랜잭션"));

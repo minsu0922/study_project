@@ -794,7 +794,7 @@ public final class DocumentDraftValidator {
         }
         if (diagrams == 0 && edition == DocumentEdition.BEGINNER) {
             checks.add(DraftCheck.warning(
-                    "그림(```mermaid)이 없습니다(입문편 기준 1개). 구조나 흐름을 글로만 따라가야 합니다."));
+                    "그림(```mermaid)이 없습니다(입문편은 1개 이상). 구조나 흐름을 글로만 따라가야 합니다."));
         }
     }
 
