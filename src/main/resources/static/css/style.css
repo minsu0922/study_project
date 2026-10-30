@@ -2503,6 +2503,10 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 .draft-diagram { margin: 8px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; text-align: center; }
 .draft-diagram svg { max-width: 100%; height: auto; }
 .draft-diagram.broken { color: var(--danger, #c0392b); text-align: left; }
+.memo-brief { margin-top: 6px; font-size: 0.86em; display: grid; gap: 2px; }
+.memo-row { display: grid; grid-template-columns: 7.5em 1fr; gap: 8px; }
+.memo-label { color: var(--muted, #6b7280); white-space: nowrap; }
+.memo-diagram span:last-child { font-weight: 600; }
 
 /* 접어 둔 생성 폼 손잡이 — 2026-08-29.
  *

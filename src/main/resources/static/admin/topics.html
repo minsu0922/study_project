@@ -51,7 +51,13 @@ try {
         <div class="field"><label>분야</label><select id="tDomain"></select></div>
         <div class="field" style="flex:1 1 320px"><label>주제 범위</label><input type="text" id="tTopic" placeholder="Spring 트랜잭션 / JVM 메모리와 GC / 인덱스와 실행계획"></div>
       </div>
-      <div class="field"><label>메모 (선택 · 왜 이 범위인지. 배치는 읽지 않습니다)</label><input type="text" id="tMemo" style="width:100%"></div>
+      <!-- 줄바꿈이 곧 칸 구분이라 한 줄 input으로 두면 고칠 때 칸이 한 줄로 붙어 지시가 깨진다 -->
+      <div class="field"><label for="tMemo">작성 지시 (선택 · 모델에 전달됩니다. "핵심 개념:"과 "설명할 것:" 줄이 둘 다 있어야 실립니다)</label>
+        <textarea id="tMemo" rows="5" style="width:100%" placeholder="핵심 개념: 인덱스, 풀 스캔
+설명할 것: 없으면 어떻게 찾나 / 왜 쓰기는 느려지나
+다루지 않을 것: B+트리 구조 (선택)
+실물: 50만 건에서 1.8초가 16ms로 (선택)
+그림: 전체 훑기와 인덱스 경로 비교 (선택)"></textarea></div>
       <button id="tSubmitBtn">범위 추가</button>
       <!-- 수정 모드에서만 보인다. 나가는 문이 없으면 폼에 값이 채워진 채로 남아, 다음에
            "추가"를 누른 사람이 고치려던 줄을 한 벌 더 만든다. -->
@@ -373,6 +379,35 @@ function cancelEditTopic() {
  * <p>쪽이 갈린 것만으로는 잠그지 않는다 — 그때는 이동이 정상으로 동작하고, 다만 옮긴 줄이
  * 앞 쪽으로 사라질 뿐이다. 그건 화면이 말해 준다.
  */
+/**
+ * 메모를 칸별로 보여 준다 — 2026-10-30.
+ *
+ * <p>메모는 이름표 줄("핵심 개념:" 등)로 된 작성 지시다. 한 줄로 이어 붙여 보이면 어느 칸이
+ * 비었는지, 그림을 지정했는지 알 수 없다. 서버(TopicBrief.parse)와 같은 규칙으로
+ * "핵심 개념"과 "설명할 것"이 둘 다 있어야 모델에 실린다고 표시한다.
+ */
+const MEMO_LABELS = ["핵심 개념", "설명할 것", "다루지 않을 것", "실물", "그림"];
+
+function memoBlockOf(memo) {
+  if (!memo) return "";
+  const fields = {};
+  for (const raw of memo.split(/\r?\n/)) {
+    const line = raw.trim();
+    const label = MEMO_LABELS.find(l => line.startsWith(l + ":"));
+    if (label) fields[label] = line.slice(label.length + 1).trim();
+  }
+  if (!fields["핵심 개념"] || !fields["설명할 것"]) {
+    return `<div class="memo-brief"><span class="badge gray">지시 아님 · 모델에 안 실림</span>
+      <div class="meta" style="white-space:pre-line">${escapeHtml(memo)}</div></div>`;
+  }
+  const rows = MEMO_LABELS.filter(l => l !== "그림" && fields[l]).map(l =>
+    `<div class="memo-row"><span class="memo-label">${l}</span><span>${escapeHtml(fields[l])}</span></div>`);
+  rows.push(fields["그림"]
+    ? `<div class="memo-row memo-diagram"><span class="memo-label">그림</span><span>${escapeHtml(fields["그림"])}</span></div>`
+    : `<div class="memo-row"><span class="memo-label">그림</span><span class="meta">지정 안 함 · 모델이 고름</span></div>`);
+  return `<div class="memo-brief">${rows.join("")}</div>`;
+}
+
 async function loadTopicQueue() {
   const query = topicQuery ? `&q=${encodeURIComponent(topicQuery)}` : "";
   const filters = (topicDomain ? `&domain=${topicDomain}` : "") + `&usage=${topicUsage}&kind=${topicKind}`;
@@ -456,7 +491,7 @@ async function loadTopicQueue() {
           ${t.next ? ` <span class="badge orange">다음 차례${
             // 날짜는 4일 주기의 다음 문서일이다. 코드 문제 주제는 주 1회 배치가 쓰므로 그 날짜가 아니다
             topicKind === "CONCEPT" && nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : ""}</span>` : ""}
-          ${t.memo ? `<div class="meta">${escapeHtml(t.memo)}</div>` : ""}
+          ${memoBlockOf(t.memo)}
         </td>
         <td>${t.usedCount === 0 ? `<span class="meta">—</span>` : `${t.usedCount}편`}</td>
         <td class="meta">${t.lastUsedAt ? escapeHtml(t.lastUsedAt) : "아직 안 씀"}</td>
