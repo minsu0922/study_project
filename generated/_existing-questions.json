@@ -1,7 +1,106 @@
 {
   "note" : "정식 problem 테이블의 기존 지문 목록입니다. GitHub Actions 생성 배치가 중복 회피 목록으로 읽습니다(클라우드에는 DB가 없으므로). docs/14 참고. 앱이 기동할 때 자동 갱신되며, 커밋해야 다음 배치부터 반영됩니다.",
-  "exportedAt" : "2026-10-11",
+  "exportedAt" : "2026-10-25",
   "questions" : [ {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "리스트에서 값 1을 지워 [2, 3]을 출력하려 한다. 8행을 어떻게 고쳐야 하는가?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드는 컴파일되는가? 컴파일되지 않는다면 오류가 나는 줄은 어디인가?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "빈칸에 들어갈 코드를 고르면 실행 결과가 many:1이 된다. 알맞은 것은 무엇인가?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드를 실행하면 무엇이 출력되는가?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드를 실행하면 무엇이 출력되는가?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드를 실행했을 때 출력되는 결과로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "출력이 123|3이 되도록 5행을 고치려 한다. 5행을 대신할 코드로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "출력이 cbad가 되도록 빈칸에 들어갈 코드로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드를 실행했을 때 출력되는 결과로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드를 실행했을 때 출력되는 결과로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "사용자가 업로드한 JSON 문서를 재귀로 파싱하다 StackOverflowError가 나자, 재귀를 Deque(양쪽 끝에서 넣고 빼는 자료구조) 기반 반복으로 바꾸자는 제안이 나왔다. 입력은 외부에서 오고 중첩 깊이를 서버가 통제하지 못한다. 이 조건에서 이 전환이 얻는 것과 남기는 위험을 가장 바르게 설명한 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "요청 처리 스레드 수를 늘리려고 -Xss(스레드당 스택 크기)를 일괄로 낮췄더니, 카테고리 계층 내보내기 기능에서만 StackOverflowError가 난다. 늘린 스레드 수와 메모리 예산은 그대로 지켜야 하고, 계층 깊이는 내부 데이터라 상한이 알려져 있으며, 쓰는 JVM이 Thread 생성자에 준 스택 크기를 따른다는 것도 확인했다. 이 조건에서 고를 대응으로 가장 적절한 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "가맹점별 정산 배치는 집계 작업 200건을 스레드 풀의 submit(작업을 넘기고 그 결과를 담을 Future를 돌려받는 메서드)으로 넘기며, submit의 반환값은 따로 다루지 않는다(Future는 다른 스레드에서 돈 작업의 결과나 실패를 나중에 꺼내 보는 객체다). 다음 날 아침 37개 가맹점의 정산 행이 비어 있었지만 로그에는 오류가 한 줄도 없었다. 로그 레벨을 DEBUG로 올려 다시 돌렸는데도 역시 37건이 빠지고 기록은 비어 있다. 이때 가장 먼저 해야 할 조치는?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "많은 행을 조회해 파일로 내보내는 코드에서, 힙 사용량이 전체 데이터 양이 아니라 묶음 하나 크기 안에서 오르내리게 하려 한다. 처리 순서로 가장 적절한 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "-Xss(스레드당 스택 크기)와 -Xmx(힙 최대 크기) 같은 메모리 한도를 정하고 운영하는 방식에 관한 설명으로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "조회 결과를 static 맵에 담아 두는 캐시 코드라면, 몇 개까지 담을지를 코드가 직접 정해 두어야 한다. 그 이유로 가장 적절한 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "모든 행의 참조를 리스트 하나에 쥔 채 쌓는 코드에서 힙이 모자랄 때, -Xmx(힙 최대 크기 설정)를 키우는 대응과 일정 건수씩 나눠 읽고 처리한 묶음의 참조를 놓는 대응을 가르는 차이로 가장 적절한 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "지역 변수까지 모두 힙에 두고 GC가 치우게 하는 설계도 가능했다. 그 대신 호출 한 번 동안만 사는 값을 스택 프레임에 두는 설계가 얻는 이득으로 가장 적절한 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "자바에서 말하는 메모리 누수에 대한 설명으로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "StackOverflowError가 발생하는 조건으로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "스레드마다 하나씩 생기며, 그 스레드가 지금 실행 중인 명령의 위치를 적어 두는 JVM 메모리 영역은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "JVM 메모리 영역 가운데 힙(heap)에 대한 설명으로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "JVM의 GC(garbage collection)가 하는 일로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "자바에서 말하는 참조(reference)에 대한 설명으로 옳은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "메서드가 한 번 호출될 때마다 맨 위에 하나씩 쌓이고, 메서드가 끝나면 통째로 빠지는 칸을 부르는 용어는?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드를 실행하면 어떻게 되는가?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드를 실행했을 때 출력되는 결과로 알맞은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "실행했을 때 \"같다\"가 출력되도록 빈칸에 들어갈 코드로 알맞은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "다음 코드를 실행했을 때 출력되는 결과로 알맞은 것은?"
+  }, {
+    "domain" : "LANGUAGE_RUNTIME",
+    "question" : "이 코드는 이웃한 두 값이 같은 쌍의 개수로 2를 출력해야 하지만 1을 출력합니다. 12행을 어떻게 고쳐야 2가 출력되는가?"
+  }, {
+    "domain" : "DATABASE",
+    "question" : "창고별 '적재 합계가 창고 용량을 넘지 않는다'는 규칙을 입고 API와 관리자 일괄 조정 배치가 함께 다룬다. 충돌 감지형 SERIALIZABLE을 입고 API에만 걸었더니, 기본 격리 수준인 배치가 끼어든 변경이 걸러지지 않아 용량 초과가 났다. 배치까지 SERIALIZABLE로 올리는 대신 두 경로 모두 창고 행 하나를 잠금 읽기로 먼저 잡게 바꾸기로 했다. 이 선택이 얻는 것과 치르는 비용을 가장 잘 설명한 것은?"
+  }, {
+    "domain" : "DATABASE",
+    "question" : "선착순 쿠폰 발급은 '발급 합계가 쿠폰 한도를 넘지 않는다'는 규칙을 충돌 감지형 SERIALIZABLE과 직렬화 실패 재시도로 지킨다. 요청 대부분이 쿠폰 하나에 몰리는 오픈 직후에는 직렬화 실패율이 40%를 넘고, 재시도가 같은 범위를 다시 읽어 DB 부하가 평소의 3배가 된다. 조회 조건은 이미 쿠폰 ID 하나로 좁혀져 있다. 이 조건에서 처리량을 회복하는 대응으로 가장 적절한 것은?"
+  }, {
+    "domain" : "DATABASE",
+    "question" : "주문 결제 API는 충돌 감지형 SERIALIZABLE(읽은 범위를 기록해 두었다가 충돌하면 한쪽 트랜잭션을 실패시키는 방식) 트랜잭션 안에서 결제사 승인 API를 호출하고, 직렬화 실패가 나면 트랜잭션 전체를 최대 3번 다시 실행한다. 재시도 대상은 이미 직렬화 실패 오류로만 좁혀 두었다. 그런데 하루 주문 1,000건 중 12건에서 같은 주문이 두 번 결제 승인됐다. 승인 결과가 있어야 같은 트랜잭션에서 주문 상태를 확정할 수 있어, 승인 호출을 커밋 뒤로 옮길 수는 없다. 이때 가장 적절한 조치는?"
+  }, {
     "domain" : "DATABASE",
     "question" : "트랜잭션 격리와 잠금을 다루는 코드·설정에 관한 설명으로 옳은 것은?"
   }, {
