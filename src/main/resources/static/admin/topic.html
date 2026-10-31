@@ -78,7 +78,8 @@ function render(t) {
     armedAction(e.currentTarget, async () => {
       try {
         await api(`/api/admin/topic-queue/${t.id}`, { method: "DELETE" });
-        location.href = list;
+        // 목록이 "파일을 커밋하세요" 안내를 띄우게 표시를 달아 보낸다
+        location.href = list + (list.includes("?") ? "&" : "?") + "deleted=1";
       } catch (err) {
         showError(message, err);
       }
