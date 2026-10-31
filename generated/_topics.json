@@ -96,7 +96,9 @@
     "id" : 1105,
     "domain" : "NETWORK",
     "topic" : "TCP 연결 맺기 — 데이터를 보내기 전에 \"여보세요\"를 주고받는 3-way handshake",
-    "memo" : "핵심 개념: TCP, 3-way handshake, SYN·ACK\n설명할 것: 데이터를 보내기 전에 왜 먼저 인사를 주고받나 / 세 번의 인사는 각각 무엇을 확인하나 / 두 번이면 왜 부족한가 / 연결을 끊을 때는 어떻게 하나\n다루지 않을 것: TCP와 UDP 비교, 혼잡 제어\n그림: SYN → SYN-ACK → ACK 세 번의 인사(sequenceDiagram)"
+    "memo" : "핵심 개념: TCP, 3-way handshake, SYN·ACK\n설명할 것: 데이터를 보내기 전에 왜 먼저 인사를 주고받나 / 세 번의 인사는 각각 무엇을 확인하나 / 두 번이면 왜 부족한가 / 연결을 끊을 때는 어떻게 하나\n다루지 않을 것: TCP와 UDP 비교, 혼잡 제어\n그림: SYN → SYN-ACK → ACK 세 번의 인사(sequenceDiagram)",
+    "lastUsedAt" : "2026-11-01",
+    "usedCount" : 1
   }, {
     "id" : 1106,
     "domain" : "NETWORK",
