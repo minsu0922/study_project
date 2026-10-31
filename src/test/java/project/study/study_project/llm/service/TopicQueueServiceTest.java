@@ -117,8 +117,31 @@ class TopicQueueServiceTest {
         TopicQueueItemResponse got = service.get(2L);
 
         assertThat(got.topic()).isEqualTo("메모리 관리");
-        assertThat(got.order()).as("화면의 줄 번호가 아니라 전체 차례").isEqualTo(2);
+        assertThat(got.order()).as("내가 놓은 순서에서는 두 번째").isEqualTo(2);
+        assertThat(got.position()).as("배치는 안 쓴 이 줄을 먼저 꺼낸다").isEqualTo(1);
         assertThat(got.next()).as("안 쓴 범위가 다음 차례다").isTrue();
+    }
+
+    /**
+     * 화면의 숫자는 {@code position}이다. 쓴 주제가 뒤로 밀리므로 {@code order}를 보이면
+     * 첫 줄이 "2", 끝 줄이 "1"로 보였다(2026-10-31 실물).
+     */
+    @Test
+    @DisplayName("꺼낼 차례는 목록 순서와 같고 1부터 빈틈없이 매긴다")
+    void positionFollowsTheListOrder() {
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(
+                used(1L, TestDomains.OS, "최근에 씀", 1, LocalDate.of(2026, 10, 29)),
+                item(2L, TestDomains.OS, "안 씀 A", 2),
+                used(3L, TestDomains.OS, "오래전에 씀", 3, LocalDate.of(2026, 8, 23)),
+                item(4L, TestDomains.OS, "안 씀 B", 4)));
+
+        List<TopicQueueItemResponse> listed = service
+                .search(null, null, TopicQueueService.TopicUsage.ALL, PageRequest.of(0, 20))
+                .content();
+
+        assertThat(listed).extracting(TopicQueueItemResponse::topic)
+                .containsExactly("안 씀 A", "안 씀 B", "오래전에 씀", "최근에 씀");
+        assertThat(listed).extracting(TopicQueueItemResponse::position).containsExactly(1, 2, 3, 4);
     }
 
     @Test
@@ -434,6 +457,26 @@ class TopicQueueServiceTest {
 
         assertThat(second.getSortOrder()).isEqualTo(1);
         assertThat(first.getSortOrder()).isEqualTo(2);
+    }
+
+    /**
+     * 쓴 줄이 사이에 끼어 있어도 화면의 바로 위 줄과 바뀌어야 한다. 예전에는 쓴 줄과 맞바꿔
+     * ↑를 눌러도 목록이 그대로였다 — 쓴 줄은 어차피 안 쓴 줄들 뒤에 서기 때문이다.
+     */
+    @Test
+    @DisplayName("위로 이동은 같은 무리 안에서 한다 — 사이에 낀 쓴 줄과 바꾸면 화면이 그대로다")
+    void moveUpSkipsUsedRangesInBetween() {
+        TopicQueueItem first = item(1L, TestDomains.OS, "안 씀 A", 1);
+        TopicQueueItem usedOne = used(2L, TestDomains.OS, "쓴 것", 2, LocalDate.of(2026, 9, 1));
+        TopicQueueItem third = item(3L, TestDomains.OS, "안 씀 B", 3);
+        when(repository.findById(3L)).thenReturn(Optional.of(third));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(first, usedOne, third));
+
+        service.move(3L, TopicQueueService.Direction.UP);
+
+        assertThat(third.getSortOrder()).as("안 쓴 바로 위 줄의 자리로").isEqualTo(1);
+        assertThat(first.getSortOrder()).isEqualTo(3);
+        assertThat(usedOne.getSortOrder()).as("쓴 줄은 건드리지 않는다").isEqualTo(2);
     }
 
     @Test

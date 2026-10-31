@@ -28,6 +28,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 /**
  * 개념 문서 <b>주제 범위</b> 목록 — 관리자 화면의 입력을 받고, 배치가 남긴 사용 기록을 되돌려 받는다.
@@ -222,14 +223,30 @@ public class TopicQueueService {
      * 화면의 ↑↓가 여전히 뜻을 갖는 이유다.
      */
     private List<TopicQueueItemResponse> byNextUp(List<TopicQueueItemResponse> items) {
+        // 규칙은 positionsOf 한 곳에만 둔다. 여기서 다시 적으면 화면 숫자와 줄 순서가 갈라질 수 있다
         return items.stream()
-                // 안 쓴 것이 먼저다. LocalDate는 null을 비교할 수 없어 <안 썼는가>를 별도 축으로 뽑는다 —
-                // nullsFirst로 묶어도 되지만, 규칙 문장("안 쓴 것 먼저")이 코드에 그대로 보이는 편이 낫다.
-                .sorted(Comparator.comparing((TopicQueueItemResponse i) -> i.lastUsedAt() != null)
-                        .thenComparing(TopicQueueItemResponse::lastUsedAt,
-                                Comparator.nullsFirst(Comparator.naturalOrder()))
-                        .thenComparingInt(TopicQueueItemResponse::order))
+                .sorted(Comparator.comparingInt(TopicQueueItemResponse::position))
                 .toList();
+    }
+
+    /**
+     * 줄마다 <b>배치가 몇 번째로 꺼내나</b>(1부터) — 안 쓴 것 → 오래전에 쓴 것 → 내가 놓은 순서.
+     *
+     * <p>{@code items}는 내가 놓은 순서(sortOrder)로 들어온다. 그래서 마지막 기준은 목록의 자리다.
+     */
+    private int[] positionsOf(List<TopicQueueItem> items) {
+        List<Integer> ranked = IntStream.range(0, items.size()).boxed()
+                // LocalDate는 null을 비교할 수 없어 <안 썼는가>를 따로 뽑는다. 규칙 문장과 같은 모양이기도 하다
+                .sorted(Comparator.comparing((Integer i) -> !items.get(i).isNeverUsed())
+                        .thenComparing(i -> items.get(i).getLastUsedAt(),
+                                Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparingInt(i -> i))
+                .toList();
+        int[] positions = new int[items.size()];
+        for (int rank = 0; rank < ranked.size(); rank++) {
+            positions[ranked.get(rank)] = rank + 1;
+        }
+        return positions;
     }
 
     /**
@@ -256,11 +273,12 @@ public class TopicQueueService {
     /** 목록 → 응답. {@code next}와 {@code order}를 여기서 한 번에 붙인다(둘 다 전체가 있어야 한다). */
     private List<TopicQueueItemResponse> toResponses(List<TopicQueueItem> items) {
         TopicQueueItem next = pickNext(items);
+        int[] positions = positionsOf(items);
         List<TopicQueueItemResponse> responses = new ArrayList<>(items.size());
         for (int i = 0; i < items.size(); i++) {
             TopicQueueItem item = items.get(i);
             responses.add(TopicQueueItemResponse.from(
-                    item, domainCatalog.displayName(item.getDomain()), item == next, i + 1));
+                    item, domainCatalog.displayName(item.getDomain()), item == next, i + 1, positions[i]));
         }
         return responses;
     }
@@ -337,9 +355,9 @@ public class TopicQueueService {
         // 범위라 다음 차례를 곧바로 받지만, 그 판정은 목록 전체를 봐야 하고 화면은 추가 직후
         // 목록을 다시 불러 정확한 값을 받는다. 여기서 짐작해 true를 넣으면 그 순간만 맞고
         // 다른 안 쓴 범위가 앞에 있을 때 틀린다.
+        int last = (int) repository.countByKind(saved.getKind());
         return TopicQueueItemResponse.from(
-                saved, domainCatalog.displayName(saved.getDomain()), false,
-                (int) repository.countByKind(saved.getKind()));
+                saved, domainCatalog.displayName(saved.getDomain()), false, last, last);
     }
 
     /**
@@ -380,9 +398,9 @@ public class TopicQueueService {
 
         // add와 같은 이유로 next는 false다 — 판정에 목록 전체가 필요하고, 화면은 수정 직후
         // 목록을 다시 불러 정확한 값을 받는다.
+        int last = (int) repository.countByKind(item.getKind());
         return TopicQueueItemResponse.from(
-                item, domainCatalog.displayName(item.getDomain()), false,
-                (int) repository.countByKind(item.getKind()));
+                item, domainCatalog.displayName(item.getDomain()), false, last, last);
     }
 
     /**
@@ -479,12 +497,18 @@ public class TopicQueueService {
             return;
         }
 
-        int target = direction == Direction.UP ? index - 1 : index + 1;
-        if (index < 0 || target < 0 || target >= all.size()) {
+        // 이웃은 같은 무리(안 쓴 것끼리, 쓴 것끼리)에서 찾는다. 목록은 무리별로 갈려 서므로,
+        // 다른 무리의 줄과 맞바꾸면 화면에서는 한 칸도 안 움직인다
+        List<TopicQueueItem> group = all.stream()
+                .filter(i -> i.isNeverUsed() == item.isNeverUsed())
+                .toList();
+        int at = indexOf(group, id);
+        int target = direction == Direction.UP ? at - 1 : at + 1;
+        if (at < 0 || target < 0 || target >= group.size()) {
             return; // 이미 끝이다 — 할 일이 없다
         }
 
-        TopicQueueItem neighbor = all.get(target);
+        TopicQueueItem neighbor = group.get(target);
         // 두 값을 <바꾸기 전에> 붙잡아 둔다. 맞바꾼 뒤에 비교하면 neighbor는 이미 내 값이라
         // 아래 조건이 <항상> 참이 되어, 멀쩡한 이동에도 보정이 끼어든다(테스트가 잡은 버그).
         int mine = item.getSortOrder();

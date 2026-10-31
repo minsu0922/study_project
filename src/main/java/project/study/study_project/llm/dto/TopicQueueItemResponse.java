@@ -20,7 +20,9 @@ import java.time.LocalDate;
  * @param order     <b>전체 목록에서 몇 번째인가</b>(1부터). 화면이 행 번호로 대신 쓰던 값인데,
  *                  검색·쪽 나누기가 붙으면서(2026-08-29) 그 방식이 무너졌다 — 3쪽의 첫 줄이
  *                  "1번"으로 보이고, 검색 결과의 두 번째 줄이 "2번"으로 보인다.
- *                  이 숫자의 뜻은 "화면의 몇째 줄"이 아니라 "차례가 몇 번째"라 서버가 정해야 한다
+ *                  이 숫자의 뜻은 "화면의 몇째 줄"이 아니라 "내가 놓은 순서에서 몇 번째"다
+ * @param position  <b>배치가 몇 번째로 꺼내나</b>(1부터, 1이 다음 차례). 화면에 보이는 숫자는 이것이다.
+ *                  {@code order}를 보이면 쓴 주제가 뒤로 밀린 탓에 첫 줄이 "2", 끝 줄이 "1"로 보였다
  */
 public record TopicQueueItemResponse(
         Long id,
@@ -33,6 +35,7 @@ public record TopicQueueItemResponse(
         int usedCount,
         boolean next,
         int order,
+        int position,
         TopicKind kind
 ) {
 
@@ -40,10 +43,11 @@ public record TopicQueueItemResponse(
      * @param domainLabel 화면 표기 이름. DTO의 정적 팩터리는 스프링 빈({@code DomainCatalog})에
      *                    닿을 수 없으므로 부르는 서비스가 미리 찾아 넘긴다(Task 4 규칙)
      */
-    public static TopicQueueItemResponse from(TopicQueueItem item, String domainLabel, boolean next, int order) {
+    public static TopicQueueItemResponse from(TopicQueueItem item, String domainLabel, boolean next,
+                                              int order, int position) {
         return new TopicQueueItemResponse(
                 item.getId(), item.getDomain(), domainLabel,
                 item.getTopic(), item.getMemo(), item.getSortOrder(),
-                item.getLastUsedAt(), item.getUsedCount(), next, order, item.getKind());
+                item.getLastUsedAt(), item.getUsedCount(), next, order, position, item.getKind());
     }
 }
