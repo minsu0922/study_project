@@ -11,6 +11,12 @@
 - 8081로 확인할 때 하는 삭제·제거는 묻지 않는다. 확인용 계정·글·코스 지우기, 화면에서 삭제 버튼 눌러 보기,
   확인용 파일·캡처 정리가 여기에 든다. 확인이 끝나면 내가 만든 것은 지워 원래대로 돌려놓는다.
 
+## 설정 파일
+
+- 개발 전용 설정(SQL 로그, Swagger)은 `application-dev.yml`에 둔다. `bootRun`이 dev 프로필을 켠다.
+- `application-local.*`은 권한 규칙으로 막혀 있다. 만들지도 읽지도 않는다.
+- 로컬 API 키는 `<GRADLE_USER_HOME>\gradle.properties`의 `anthropicApiKey=`에 둔다. 저장소 밖이라 커밋될 일이 없다.
+
 ## 문서 위치
 
 - 개선 경위: `docs/IMPROVEMENTS.md`
