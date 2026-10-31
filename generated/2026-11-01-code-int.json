@@ -1,0 +1,103 @@
+{
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-11-01",
+  "generatedAt" : "2026-10-31T20:44:27.559429611Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행하면 무엇이 출력되는가?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 클래스 초기화(정적 블록)는 부모 클래스부터 먼저 끝난다. 객체 생성 때는 자식 생성자가 맨 먼저 super()로 부모 생성자를 부르고, 각 클래스의 인스턴스 블록은 그 클래스의 생성자 본문 직전에 돈다.\n13행 new Child(): Child를 초기화하려면 부모 Parent가 먼저 초기화되어 2행이 P-static을 출력한다.\n13행 이어서: Child 클래스가 초기화되어 7행이 C-static을 출력한다.\n9행 Child(): 맨 앞의 숨은 super()가 Parent 생성자로 간다.\n3행 Parent 인스턴스 블록: P-init을 출력한다.\n4행 Parent 생성자 본문: P-ctor를 출력하고 Child로 돌아온다.\n8행 Child 인스턴스 블록: C-init을 출력한다.\n9행 Child 생성자 본문: C-ctor를 출력한다.\n그래서 출력은 P-static / C-static / P-init / P-ctor / C-init / C-ctor다.",
+    "choices" : [ {
+      "text" : "P-static / C-static / P-init / P-ctor / C-init / C-ctor",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "P-static / P-init / P-ctor / C-static / C-init / C-ctor",
+      "correct" : false,
+      "rationale" : "부모 클래스의 정적·인스턴스 초기화가 한꺼번에 끝난 뒤 자식이 시작된다고 오해했다.",
+      "matchText" : ""
+    }, {
+      "text" : "P-static / C-static / P-init / C-init / P-ctor / C-ctor",
+      "correct" : false,
+      "rationale" : "자식의 인스턴스 블록이 부모 생성자보다 먼저 돈다고 오해했다.",
+      "matchText" : ""
+    }, {
+      "text" : "C-static / P-static / P-init / P-ctor / C-init / C-ctor",
+      "correct" : false,
+      "rationale" : "자식 클래스 정적 블록이 부모보다 먼저 돈다고 오해했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "상속 관계에서의 초기화 순서",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "출력이 B / A / 3(세 줄)이 되도록 빈칸에 들어갈 코드를 고르라.",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 생성자 안에서 this(인자)를 쓰면 같은 객체에 대해 같은 클래스의 다른 생성자를 먼저 실행한다. new는 전혀 다른 새 객체를 만든다.\n14행 new Cup(): 인자 없는 생성자 3행이 호출된다.\n4행 this(3): 같은 객체로 7행 Cup(int size)를 부르고, 인자는 int 3이다.\n8행 this.size = size: 현재 객체의 size가 3이 된다.\n9행: B를 출력하고 4행 다음으로 돌아온다.\n5행: A를 출력한다.\n15행 c.size: 3을 출력한다.\nnew Cup(3)을 넣으면 4행에서 별도의 객체만 size가 3이 되고 c의 size는 0으로 남아 마지막 줄이 갈린다.\n그래서 출력이 B / A / 3이 되는 빈칸은 this(3)이다.",
+    "choices" : [ {
+      "text" : "this(3)",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "new Cup(3)",
+      "correct" : false,
+      "rationale" : "new로 다른 객체를 만들면 현재 객체의 size가 바뀐다고 오해했다. 출력은 B / A / 0이다.",
+      "matchText" : ""
+    }, {
+      "text" : "super()",
+      "correct" : false,
+      "rationale" : "super()가 같은 클래스의 다른 생성자를 부른다고 오해했다. 출력은 A / 0이다.",
+      "matchText" : ""
+    }, {
+      "text" : "Cup(3)",
+      "correct" : false,
+      "rationale" : "생성자를 메서드처럼 이름으로 부를 수 있다고 오해했다. 컴파일 오류가 난다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "생성자 안에서 다른 생성자 부르기",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "13행에서 Child를 쓰려면 먼저 부모 Parent 클래스가 초기화되므로 P-static, 이어서 C-static이 출력된다. 객체 생성 시 Child 생성자는 먼저 super()를 호출한다. 그래서 Parent의 인스턴스 초기화 블록 P-init과 생성자 P-ctor가 먼저 실행된다. 그다음 Child의 인스턴스 초기화 블록 C-init과 생성자 본문 C-ctor가 실행된다. 결과는 P-static / C-static / P-init / P-ctor / C-init / C-ctor이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "출력이 B, A 순서이고 c.size가 3이어야 하므로, 4행에서 같은 객체에 대해 Cup(int) 생성자를 호출해야 한다. this(3)을 쓰면 8행에서 size가 3이 되고 B가 출력된 뒤, 돌아와 A가 출력되며, 15행에서 3이 출력된다. 보기 2 super()는 size를 설정하지 않아 B가 나오지 않는다. 보기 3 new Cup(3)은 별도 객체를 만들어 B는 나오지만 c.size는 0이 된다. 보기 4 Cup(3)은 이런 형태로 생성자를 호출할 수 없어 컴파일 오류가 난다.",
+    "suggestion" : null
+  } ],
+  "codeTopic" : "정적·인스턴스 초기화 순서와 생성자 호출",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "class Parent {\n    static { System.out.println(\"P-static\"); }\n    { System.out.println(\"P-init\"); }\n    Parent() { System.out.println(\"P-ctor\"); }\n}\nclass Child extends Parent {\n    static { System.out.println(\"C-static\"); }\n    { System.out.println(\"C-init\"); }\n    Child() { System.out.println(\"C-ctor\"); }\n}\npublic class Main {\n    public static void main(String[] args) {\n        new Child();\n    }\n}",
+    "expectedOutput" : "P-static\nC-static\nP-init\nP-ctor\nC-init\nC-ctor",
+    "targetLine" : 0,
+    "errorType" : ""
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_BLANK",
+    "language" : "java",
+    "code" : "class Cup {\n    int size;\n    Cup() {\n        ____;\n        System.out.println(\"A\");\n    }\n    Cup(int size) {\n        this.size = size;\n        System.out.println(\"B\");\n    }\n}\npublic class Main {\n    public static void main(String[] args) {\n        Cup c = new Cup();\n        System.out.println(c.size);\n    }\n}",
+    "expectedOutput" : "B\nA\n3",
+    "targetLine" : 0,
+    "errorType" : ""
+  } ]
+}

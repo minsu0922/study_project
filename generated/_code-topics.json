@@ -15,7 +15,9 @@
   }, {
     "id" : 1084,
     "domain" : "LANGUAGE_RUNTIME",
-    "topic" : "정적·인스턴스 초기화 순서와 생성자 호출"
+    "topic" : "정적·인스턴스 초기화 순서와 생성자 호출",
+    "lastUsedAt" : "2026-11-01",
+    "usedCount" : 1
   }, {
     "id" : 1085,
     "domain" : "LANGUAGE_RUNTIME",
