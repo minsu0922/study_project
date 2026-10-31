@@ -130,6 +130,10 @@ public final class ProblemReview {
             @JsonPropertyDescription("해설이나 오답 풀이가 표시된 정답·검수자 풀이와 어긋나는 점. 없으면 빈 문자열")
             String explanationIssue,
 
+            @JsonPropertyDescription("[자료](로그·표·그림)가 사실과 어긋나거나, 표시된 정답이 자료로 뒷받침되지 않는 점. "
+                    + "지문이 '잘못된 단계를 고르라'고 밝힌 그 한 곳은 어긋남이 아니다. 자료가 없거나 문제없으면 빈 문자열")
+            String exhibitIssue,
+
             @JsonPropertyDescription("고칠 대상. NONE=고칠 것 없음, QUESTION=질문 문장, CHOICE=보기 하나")
             AfterSolveFix fixTarget,
 
@@ -139,6 +143,11 @@ public final class ProblemReview {
             @JsonPropertyDescription("고쳐 쓴 문장 전체. 고칠 것이 없으면 빈 문자열")
             String fixText
     ) {
+        /** 자료 검토 없이 만드는 편의 생성자 — exhibitIssue를 붙이기 전의 전체 생성자다. */
+        public AfterSolve(int problemNo, String explanationIssue, AfterSolveFix fixTarget, int fixChoiceNo,
+                          String fixText) {
+            this(problemNo, explanationIssue, "", fixTarget, fixChoiceNo, fixText);
+        }
     }
 
     public record AfterSolveBatch(
@@ -164,6 +173,8 @@ public final class ProblemReview {
         /** AI가 낸 지적이 아니다. 문서 사실 검수 지적과 근거 인용을 코드가 대조한다({@code FlaggedSourceRule}). */
         SOURCE_FLAGGED("근거 문단에 사실 지적", Grade.DEFECT),
         EXPLANATION_MISMATCH("해설 어긋남", Grade.DEFECT),
+        /** 문제에 붙은 로그·표·그림이 사실과 어긋나거나 정답을 받치지 못한다. 틀린 그림은 학습자가 그대로 외운다. */
+        EXHIBIT_MISMATCH("자료 어긋남", Grade.DEFECT),
         /** 아래 셋은 AI가 아니라 코드 문제의 실행 결과를 코드가 대조한다({@code CodeFactChecker}). */
         QUESTION_MISMATCH("질문 어긋남", Grade.DEFECT),
         RATIONALE_MISMATCH("오답 이유 어긋남", Grade.DEFECT),

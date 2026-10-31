@@ -337,6 +337,11 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
                 result.add(new Finding(s.index(), FindingType.EXPLANATION_MISMATCH,
                         "해설이 표시된 정답이나 검수 AI의 풀이와 어긋납니다", a.explanationIssue().strip()));
             }
+            // 자료가 없는 문제에 낸 지적은 버린다. 없는 자료를 두고 쓴 말이라 근거가 없다
+            if (!isBlank(a.exhibitIssue()) && s.item().hasExhibit()) {
+                result.add(new Finding(s.index(), FindingType.EXHIBIT_MISMATCH,
+                        "문제에 붙은 자료가 사실과 어긋나거나 정답을 받치지 못합니다", a.exhibitIssue().strip()));
+            }
             Suggestion suggestion = suggestionOf(s.item(), a);
             if (suggestion == null) {
                 continue;

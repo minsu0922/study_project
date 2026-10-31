@@ -396,6 +396,30 @@ class ClaudeProblemReviewerTest {
     }
 
     @Test
+    @DisplayName("자료 어긋남은 자료가 붙은 문제에만 결함으로 남긴다 — 없는 자료를 두고 쓴 말은 버린다")
+    void exhibitIssueOnlyForProblemsWithExhibit() {
+        GeneratedProblemItem base = mc("아래 흐름에서 먼저 의심할 것은?");
+        GeneratedProblemItem diagram = new GeneratedProblemItem(base.question(),
+                "sequenceDiagram\n  C->>S: FIN\n  S->>C: FIN", base.answer(), base.explanation(), base.choices(),
+                "", "", null, "");
+        var issue = new ProblemReview.AfterSolveBatch(List.of(new ProblemReview.AfterSolve(1, "",
+                "FIN을 받은 쪽은 ACK를 먼저 보낸다", ProblemReview.AfterSolveFix.NONE, 0, "")));
+
+        var shownDiagram = ClaudeProblemReviewer.showable(List.of(diagram));
+        var judgedDiagram = new JudgementBatch(List.of(fine(1, shownDiagram.get(0).correctNo())));
+        assertThat(ClaudeProblemReviewer.applyAfterSolve(shownDiagram, judgedDiagram, List.of(), issue))
+                .singleElement().satisfies(f -> {
+                    assertThat(f.type()).isEqualTo(FindingType.EXHIBIT_MISMATCH);
+                    assertThat(f.type().grade()).isEqualTo(ProblemReview.Grade.DEFECT);
+                    assertThat(f.detail()).isEqualTo("FIN을 받은 쪽은 ACK를 먼저 보낸다");
+                });
+
+        var shownPlain = ClaudeProblemReviewer.showable(List.of(base));
+        var judgedPlain = new JudgementBatch(List.of(fine(1, shownPlain.get(0).correctNo())));
+        assertThat(ClaudeProblemReviewer.applyAfterSolve(shownPlain, judgedPlain, List.of(), issue)).isEmpty();
+    }
+
+    @Test
     @DisplayName("고친 뒤에도 정답이 1.3배 이상 길거나, 지적이 없는 문제의 제안은 버린다")
     void afterSolveDropsUselessSuggestions() {
         var shown = ClaudeProblemReviewer.showable(List.of(LONG_ANSWER));
