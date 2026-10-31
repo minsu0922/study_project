@@ -24,6 +24,22 @@ try {
     <div id="tdMessage"></div>
     <div class="card topic-head" id="head" hidden></div>
     <div class="card" id="brief" hidden></div>
+
+    <!-- 수정은 이 화면에서 한다. 목록으로 보내면 저장 뒤 보던 지시로 돌아올 길이 없었다 -->
+    <div class="card topic-edit" id="editCard" hidden>
+      <h2>주제 수정</h2>
+      <div class="filters">
+        <div class="field"><label for="eDomain">분야</label><select id="eDomain"></select></div>
+        <div class="field" style="flex:1 1 320px"><label for="eTopic">주제 범위</label><input type="text" id="eTopic"></div>
+      </div>
+      <!-- 줄바꿈이 곧 칸 구분이라 한 줄 input이면 지시가 깨진다 -->
+      <div class="field"><label for="eMemo">작성 지시 <span class="meta">("핵심 개념:"과 "설명할 것:" 줄이 둘 다 있어야 모델에 실립니다)</span></label>
+        <textarea id="eMemo" rows="9" style="width:100%"></textarea></div>
+      <div class="topic-actions">
+        <button id="eSaveBtn">저장</button>
+        <button id="eCancelBtn" class="btn-outline">취소</button>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -32,56 +48,81 @@ try {
 <script src="/admin/js/admin-shell.js"></script>
 <script src="/admin/js/admin-common.js"></script>
 <script>
-/* 주제 한 줄 — 작성 지시를 칸별로 넓게 본다(2026-10-31).
+/* 주제 한 줄 — 작성 지시를 칸별로 넓게 보고, 수정·복사·이력 지우기·삭제를 한다.
  *   GET    /api/admin/topic-queue/{id}
+ *   PATCH  /api/admin/topic-queue/{id}
+ *   POST   /api/admin/topic-queue/{id}/reset-usage
  *   DELETE /api/admin/topic-queue/{id}
- * 수정은 대기열 화면의 폼을 그대로 쓴다(?edit=). 폼을 두 벌 두면 검증 문구가 어긋난다. */
+ * 목록(topics.html)은 순서만 다룬다. */
 const topicId = param("id");
 const message = document.getElementById("tdMessage");
 
 /** mermaid 이름 → 화면 이름. 메모의 "그림:" 줄 끝 괄호에 적는다. */
 const DIAGRAM_KINDS = { "flowchart": "흐름도", "sequenceDiagram": "순서도", "stateDiagram-v2": "상태도" };
 
+/** 지금 보고 있는 주제. 수정 폼을 채우고 분야가 바뀌었는지 볼 때 쓴다. */
+let current = null;
+
+/** 다음 문서일. 다음 차례인 개념 주제에만 붙인다. 못 받아도 화면은 그대로 뜬다. */
+let nextDocumentDate = "";
+
 if (initAdminPage("topics")) {
   if (!/^\d+$/.test(topicId || "")) {
     showErrorAlert(message, "어느 주제인지 알 수 없습니다. 목록에서 다시 들어와 주세요.");
   } else {
-    api(`/api/admin/topic-queue/${topicId}`).then(render).catch(e => showError(message, e));
+    wireEditForm();
+    api("/api/admin/batch-status")
+      .then(s => { nextDocumentDate = s.nextDocumentDate || ""; })
+      .catch(() => {})
+      .finally(reload);
   }
 }
 
+function reload() {
+  return api(`/api/admin/topic-queue/${topicId}`).then(render).catch(e => showError(message, e));
+}
+
+function topicFile(t) {
+  return t.kind === "CODE" ? "generated/_code-topics.json" : "generated/_topics.json";
+}
+
 function render(t) {
+  current = t;
   const list = "/admin/topics.html" + (t.kind === "CODE" ? "?kind=CODE" : "");
   document.getElementById("backLink").href = list;
   document.title = `관리자 · ${t.topic} — csquiz`;
 
+  const used = !!t.lastUsedAt;
+  const when = t.next && t.kind === "CONCEPT" && nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : "";
   const head = document.getElementById("head");
   head.innerHTML = `
     <div>
       <span class="badge gray">${escapeHtml(t.domainLabel)}</span>
       ${t.kind === "CODE" ? `<span class="badge gray">코드 문제 주제</span>` : ""}
-      ${t.next ? `<span class="badge orange">다음 차례</span>` : ""}
+      ${t.next ? `<span class="badge orange">다음 차례${when}</span>` : ""}
     </div>
     <h1>${escapeHtml(t.topic)}</h1>
     <div class="topic-facts">
-      <span>차례 <b>${t.order}번</b></span>
-      <span>만든 문서 <b>${t.usedCount}편</b></span>
-      <span>마지막 사용 <b>${t.lastUsedAt ? escapeHtml(t.lastUsedAt) : "아직 안 씀"}</b></span>
+      <span>꺼낼 차례 <b>${t.position}번째</b></span>
+      <span>사용 <b>${used ? `${t.usedCount}편 · 마지막 ${escapeHtml(t.lastUsedAt)}` : "아직 안 씀"}</b></span>
     </div>
     <div class="topic-actions">
-      <a class="btn btn-outline" href="/admin/topics.html?edit=${t.id}${t.kind === "CODE" ? "&kind=CODE" : ""}">수정</a>
-      ${t.lastUsedAt || t.usedCount > 0
-        ? `<button class="btn-outline" id="resetBtn" title="사용 기록을 지워 '아직 안 씀'으로 되돌립니다">이력 지우기</button>` : ""}
+      <button class="btn-outline" id="editBtn">수정</button>
+      <button class="btn-outline" id="copyBtn" title="Actions 수동 실행에 넣을 값을 복사합니다">실행값 복사</button>
+      ${used ? `<button class="btn-outline" id="resetBtn" title="사용 기록을 지워 '아직 안 씀'으로 되돌립니다">이력 지우기</button>` : ""}
       <button class="danger" id="deleteBtn">삭제</button>
     </div>`;
   head.hidden = false;
+
+  document.getElementById("editBtn").addEventListener("click", openEdit);
+  document.getElementById("copyBtn").addEventListener("click", () => copyWorkflowInputs(t));
   // 배치는 문서를 만들기로 정한 때 기록을 찍는다. 그 문서가 거절되면 기록만 남아 차례가
   // 영영 안 돌아오므로 되돌릴 문이 필요하다. 잃는 것이 날짜 한 칸이라 2단계 확인은 걸지 않는다.
   document.getElementById("resetBtn")?.addEventListener("click", async () => {
     try {
       await api(`/api/admin/topic-queue/${t.id}/reset-usage`, { method: "POST" });
-      showOk(message, `사용 기록을 지웠습니다. ${t.kind === "CODE" ? "generated/_code-topics.json" : "generated/_topics.json"}을 커밋하세요.`);
-      render(await api(`/api/admin/topic-queue/${t.id}`));
+      showOk(message, `사용 기록을 지웠습니다. ${topicFile(t)}을 커밋하세요.`);
+      await reload();
     } catch (err) {
       showError(message, err);
     }
@@ -100,6 +141,91 @@ function render(t) {
 
   renderBrief(t.memo);
 }
+
+/* ═══════════ 수정 ═══════════ */
+
+function wireEditForm() {
+  // 분야 목록은 서버 응답을 기다렸다 다시 채운다. 폴백 목록에는 방금 추가한 분야가 없다
+  const fill = () => {
+    const sel = document.getElementById("eDomain");
+    const keep = sel.value;
+    fillDomainSelect(sel);
+    if (keep) sel.value = keep;
+  };
+  fill();
+  domainsReady.then(fill);
+  document.getElementById("eSaveBtn").addEventListener("click", saveEdit);
+  document.getElementById("eCancelBtn").addEventListener("click", closeEdit);
+}
+
+function openEdit() {
+  document.getElementById("eDomain").value = current.domain;
+  document.getElementById("eTopic").value = current.topic;
+  document.getElementById("eMemo").value = current.memo || "";
+  showEditing(true);
+  document.getElementById("eTopic").focus();
+}
+
+function closeEdit() {
+  showEditing(false);
+}
+
+/** 수정 중에는 위 카드 둘을 감춘다. 같은 값이 두 벌 보이면 어느 쪽이 저장될지 헷갈린다 */
+function showEditing(on) {
+  document.getElementById("editCard").hidden = !on;
+  document.getElementById("head").hidden = on;
+  document.getElementById("brief").hidden = on;
+}
+
+async function saveEdit() {
+  const topic = document.getElementById("eTopic").value.trim();
+  if (!topic) { showError(message, new Error("주제 범위를 입력해 주세요.")); return; }
+  const domain = document.getElementById("eDomain").value;
+
+  // 분야는 이 범위로 만들 문서와 그 문서를 근거로 삼는 사흘치 문제의 분야까지 정한다.
+  // 서버는 막지 않는다. 막으면 잘못 고른 분야를 고칠 길이 삭제 후 재등록뿐이고, 그러면 사용 기록이 날아간다
+  if (domain !== current.domain
+      && !confirm("분야를 바꾸면 이 범위로 만들 문서와 사흘치 문제의 분야가 함께 바뀝니다. 계속할까요?")) {
+    return;
+  }
+  try {
+    await api(`/api/admin/topic-queue/${current.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        domain,
+        topic,
+        memo: document.getElementById("eMemo").value.trim() || null,
+      }),
+    });
+    showOk(message, `수정했습니다. 사용 기록과 순서는 그대로입니다. ${topicFile(current)}을 커밋하세요.`);
+    showEditing(false);
+    await reload();
+  } catch (e) {
+    showError(message, e);   // 같은 범위가 이미 있으면 409(TOPIC_002)가 그대로 보인다
+  }
+}
+
+/* ═══════════ 실행값 복사 ═══════════
+ * 이 화면에서 워크플로를 직접 부르지 않는다. 앱이 GitHub 토큰을 들고 있어야 하는데,
+ * 없애려는 수고(세 칸 옮겨 적기)에 비해 값이 안 맞는다.
+ * type이 늘 document인 이유: 대기열은 문서일에만 쓰이고, 뒤따르는 문제일은 주제를 받지 않는다. */
+async function copyWorkflowInputs(t) {
+  const code = t.kind === "CODE";
+  const text = code
+    ? `topic=${t.topic}`
+    : [`type=document`, `domain=${t.domain}`, `topic=${t.topic}`].join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    showOk(message, code
+      ? "복사했습니다. Actions → LLM 코드 문제 → Run workflow 에 넣으세요."
+      : "복사했습니다. Actions → llm-daily → Run workflow 에 넣으세요.");
+  } catch (e) {
+    // 클립보드는 권한·보안 컨텍스트에 따라 막힌다. 그때는 눈으로 옮겨 적게 값을 보여 준다
+    showOk(message, `복사가 막혀 있습니다. 아래 값을 옮겨 적으세요:\n${text}`);
+  }
+}
+
+/* ═══════════ 작성 지시 ═══════════ */
 
 function renderBrief(memo) {
   const box = document.getElementById("brief");

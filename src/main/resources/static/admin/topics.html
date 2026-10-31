@@ -44,9 +44,8 @@ try {
          여기서 실제로 하는 일은 새 범위를 적는 것보다 있는 범위의 순서를 손보는 것이다. -->
     <details class="card form-panel" id="topicFormPanel">
       <summary id="topicFormSummary">새 범위 추가</summary>
-      <p class="meta">배치가 <b>문서일마다 범위 하나</b>를 골라 그 안에서 세부 주제를 정해 문서를 씁니다.
-        범위는 <b>쓴다고 없어지지 않고</b> 계속 돌아옵니다(다음 차례 = 아직 안 쓴 범위 먼저, 그다음은 가장 오래 안 쓴 범위).
-        분야보다는 좁고 한 편보다는 넓게 적으세요. (예: "스프링·백엔드"(분야) ✗ → "Spring 트랜잭션" ✓ → "@Transactional 전파 속성"(한 편) ✗)</p>
+      <p class="meta">새 범위는 아직 안 쓴 주제 중 맨 뒤에 붙습니다.
+        분야보다 좁고 한 편보다 넓게 적으세요. (예: "Spring 트랜잭션" ✓ · "스프링·백엔드" ✗ · "@Transactional 전파 속성" ✗)</p>
       <div class="filters">
         <div class="field"><label>분야</label><select id="tDomain"></select></div>
         <div class="field" style="flex:1 1 320px"><label>주제 범위</label><input type="text" id="tTopic" placeholder="Spring 트랜잭션 / JVM 메모리와 GC / 인덱스와 실행계획"></div>
@@ -59,9 +58,6 @@ try {
 실물: 50만 건에서 1.8초가 16ms로 (선택)
 그림: 전체 훑기와 인덱스 경로 비교 (선택)"></textarea></div>
       <button id="tSubmitBtn">범위 추가</button>
-      <!-- 수정 모드에서만 보인다. 나가는 문이 없으면 폼에 값이 채워진 채로 남아, 다음에
-           "추가"를 누른 사람이 고치려던 줄을 한 벌 더 만든다. -->
-      <button id="tCancelBtn" class="btn-outline" hidden>취소</button>
     </details>
 
     <!--
@@ -83,7 +79,7 @@ try {
       <b>그 파일을 커밋·푸시해야</b> 다음 배치부터 이 목록을 씁니다(배치는 원격 저장소를 내려받아 돕니다).
     </div>
 
-    <h3>등록된 범위 <span class="meta">(↑↓는 차례가 같을 때의 순서 · <b>편수</b>가 많아지면 그 범위가 마른다는 신호이니 갈아 끼우세요)</span></h3>
+    <h3>등록된 범위</h3>
     <!-- 검색·쪽 나누기(2026-08-29). 범위가 67개까지 늘어 한 화면에 담기지 않는다. -->
     <div class="filters" style="margin-bottom:10px">
       <div class="field field-search">
@@ -108,22 +104,10 @@ try {
       <div class="field field-reset"><label>&nbsp;</label><button id="tSearchClearBtn" class="btn-outline">필터 지우기</button></div>
     </div>
 
-    <!--
-      정렬 드롭다운이 있었다("내가 놓은 순서" / "먼저 나올 순서"). 2026-09-14에 없앴다.
-
-      [왜 없앴나] 이름만으로는 차이가 안 읽혔고, 더 중요하게는 <지금 거의 같다>. 여든 줄 중
-      일흔넷이 아직 안 쓴 것이라 규칙 ①②가 전부 동점이고, 그러면 ③(내가 놓은 순서)이
-      순서를 통째로 정한다. 같은 목록을 두 이름으로 보여 주면서 사람에게 고르라고 한 셈이다.
-
-      [그래서 무엇이 남았나] 목록은 늘 <먼저 나올 순서>다. ↑↓는 그대로 쓴다 — 안 쓴 줄
-      사이에서는 두 순서가 같으므로 누르면 실제로 움직인다. 쓴 적 있는 줄은 날짜가 순서를
-      정하므로 눌러도 제자리일 수 있는데, 그 사정은 아래 문단이 말한다.
-    -->
+    <!-- 목록은 늘 배치가 꺼낼 순서다. 쓴 주제는 날짜가 자리를 정하므로 이동 버튼을 잠근다. -->
     <p class="meta" style="margin:-4px 0 10px">
-      목록은 <b>배치가 꺼낼 순서</b>입니다 — 맨 위가 다음에 나올 것.
-      고르는 규칙은 ① 아직 안 쓴 것부터 → ② 가장 오래전에 쓴 것부터 → ③ 그것도 같으면 내가 놓은 순서.<br>
-      지금은 대부분이 아직 안 쓴 것이라 <b>③이 순서를 정합니다</b> — ↑↓⤒로 바꾸면 그대로 반영됩니다.
-      다만 <b>이미 쓴 주제는 안 쓴 것들 뒤로 밀리고</b>, 그 무리 안에서는 날짜가 순서를 정해 눌러도 제자리일 수 있습니다.
+      <b>배치가 꺼낼 순서</b>입니다. 맨 위가 다음 차례입니다.
+      쓴 주제는 안 쓴 주제 뒤에 마지막 사용일 순서로 서고, 순서를 바꿀 수 없습니다.
     </p>
 
     <!-- 여러 줄을 한꺼번에 맨 위로(2026-09-14). ⤒는 한 줄씩이라 스무 개를 당기려면
@@ -199,12 +183,6 @@ if (initAdminPage("topics")) {
   if (param("deleted") === "1") {
     showOk(document.getElementById("tMessage"), `삭제했습니다. ${topicFile()}을 커밋하세요.`);
   }
-  // 상세 화면의 "수정"이 ?edit=로 온다. 그 줄이 지금 쪽에 없을 수 있어 한 건을 따로 받는다
-  const editId = param("edit");
-  if (/^\d+$/.test(editId || "")) {
-    api(`/api/admin/topic-queue/${editId}`).then(startEditTopic)
-      .catch(e => showError(document.getElementById("tMessage"), e));
-  }
 }
 
 /** 주소의 ?kind=CODE를 탭에 반영한다. 다른 화면에서 "코드 문제 주제"로 바로 오게 하는 입구다. */
@@ -252,7 +230,6 @@ function initTopicForm() {
   fillTopicDomains();
   domainsReady.then(fillTopicDomains);
   document.getElementById("tSubmitBtn").addEventListener("click", submitTopic);
-  document.getElementById("tCancelBtn").addEventListener("click", cancelEditTopic);
   document.getElementById("tMoveTopBtn").addEventListener("click", moveSelectedToTop);
   document.getElementById("tSelectClearBtn").addEventListener("click", () => {
     selectedTopicIds.clear();
@@ -292,89 +269,30 @@ function initTopicForm() {
   topicPager = mountPager(document.getElementById("tPager"), p => { topicPage = p; loadTopicQueue(); });
 }
 
-/**
- * 수정 중인 줄의 id. {@code null}이면 추가 모드다 — 폼 하나를 두 일에 쓰는 유일한 상태값.
- *
- * <p>폼을 새로 만들지 않고 추가 폼을 재사용하는 이유: 필드가 분야·주제·메모로 똑같다.
- * 한 벌 더 만들면 검증 문구와 자리 배치가 두 곳이 되고, 다음에 한쪽만 고쳐서 어긋난다.
- */
-let editingTopicId = null;
-
-/** 수정 중인 줄의 원래 분야. 분야를 바꿨을 때만 경고하려고 들고 있는다. */
-let editingTopicDomain = null;
-
+/* 수정은 주제 상세 화면(topic.html)에서 한다. 이 폼은 추가만 한다. */
 async function submitTopic() {
   const msg = document.getElementById("tMessage");
   const topic = document.getElementById("tTopic").value.trim();
   if (!topic) { showError(msg, new Error("주제 범위를 입력해 주세요.")); return; }
 
-  const editing = editingTopicId !== null;
-  const domain = document.getElementById("tDomain").value;
-
-  // 분야는 이 범위로 만들 문서뿐 아니라 <그 문서를 근거로 삼는 사흘치 문제>의 분야까지
-  // 정한다. 이미 쓴 줄에서 바꾸면 과거와 앞으로가 갈리므로 한 번 묻는다. 서버는 막지
-  // 않는다 — 막으면 잘못 고른 분야를 고칠 길이 삭제 후 재등록뿐이고, 그러면 사용 기록이
-  // 날아가 그 줄이 곧바로 다음 차례가 된다(이 기능이 없애려던 바로 그 길).
-  if (editing && editingTopicDomain && domain !== editingTopicDomain
-      && !confirm("분야를 바꾸면 이 범위로 만들 문서와 사흘치 문제의 분야가 함께 바뀝니다. 계속할까요?")) {
-    return;
-  }
-
   try {
-    await api(editing ? `/api/admin/topic-queue/${editingTopicId}` : "/api/admin/topic-queue", {
-      method: editing ? "PATCH" : "POST",
+    await api("/api/admin/topic-queue", {
+      method: "POST",
       body: JSON.stringify({
-        domain,
+        domain: document.getElementById("tDomain").value,
         topic,
         memo: document.getElementById("tMemo").value.trim() || null,
-        kind: topicKind,   // 추가할 때만 쓰인다. 수정은 종류를 바꾸지 않는다
+        kind: topicKind,
       }),
     });
-    showOk(msg, editing
-      ? `범위를 수정했습니다. 사용 기록과 순서는 그대로입니다. ${topicFile()}을 커밋하세요.`
-      : `범위를 추가했습니다. ${topicFile()}을 커밋하세요.`);
-    cancelEditTopic();
+    showOk(msg, `범위를 추가했습니다. ${topicFile()}을 커밋하세요.`);
+    document.getElementById("tTopic").value = "";
+    document.getElementById("tMemo").value = "";
     loadTopicQueue();
     refreshAdminBadges();
   } catch (e) {
     showError(msg, e);   // 같은 범위가 이미 있으면 409(TOPIC_002)가 그대로 보인다
   }
-}
-
-/**
- * 수정 시작 — 그 줄의 값을 폼에 채우고 모드를 바꾼다.
- *
- * <p>값을 서버에서 다시 받지 않고 <b>방금 그린 목록에서</b> 꺼낸다. 한 번 더 부르면
- * 그 사이 바뀐 값을 가져올 수 있는데, 사람이 보고 누른 줄과 폼에 들어가는 값이 달라지면
- * 그게 더 나쁘다. 저장할 때 서버가 최신 상태로 검사하므로 안전하다.
- */
-function startEditTopic(item) {
-  editingTopicId = item.id;
-  editingTopicDomain = item.domain;
-
-  document.getElementById("tDomain").value = item.domain;
-  document.getElementById("tTopic").value = item.topic;
-  document.getElementById("tMemo").value = item.memo || "";
-  document.getElementById("tSubmitBtn").textContent = "수정 저장";
-  document.getElementById("tCancelBtn").hidden = false;
-  document.getElementById("topicFormSummary").textContent = `범위 수정 — #${item.id}`;
-
-  // 폼이 <details>라 접혀 있을 수 있다. 열어 주지 않으면 "눌렀는데 아무 일도 안 일어난다".
-  const panel = document.getElementById("topicFormPanel");
-  panel.open = true;
-  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  document.getElementById("tTopic").focus();
-}
-
-/** 추가 모드로 되돌린다. 저장에 성공했을 때와 취소를 눌렀을 때 둘 다 지난다. */
-function cancelEditTopic() {
-  editingTopicId = null;
-  editingTopicDomain = null;
-  document.getElementById("tTopic").value = "";
-  document.getElementById("tMemo").value = "";
-  document.getElementById("tSubmitBtn").textContent = "범위 추가";
-  document.getElementById("tCancelBtn").hidden = true;
-  document.getElementById("topicFormSummary").textContent = "새 범위 추가";
 }
 
 /**
@@ -466,19 +384,23 @@ async function loadTopicQueue() {
   // "맨 위"는 화면이 아니라 <전체 순서의> 맨 위라, 걸러진 목록에서 누르면 결과가 안 보인다.
   const lockHintTop = locked ? ` title="${lockWhy}" disabled` : ' title="맨 위로"';
 
-  // 다음 차례 판정(next)은 서버가 계산해 보낸다. 화면에서 다시 계산하면 규칙이 두 곳이 되고,
-  // 배치가 실제로 고르는 것과 화면 표시가 언젠가 어긋난다.
-  // 순서 번호(order)도 서버가 준다 — 행 번호로 대신하면 3쪽 첫 줄이 "1번"으로 보인다.
+  // 쓴 주제는 마지막 사용일이 자리를 정해 ↑↓⤒로 옮겨도 그대로다. 눌러도 안 움직이는 버튼을 두지 않는다
+  const usedWhy = ' title="쓴 주제는 마지막 사용일 순서로 섭니다. 순서를 바꿀 수 없습니다" disabled';
+
+  // 다음 차례(next)와 꺼낼 차례(position)는 서버가 계산해 보낸다. 화면에서 다시 계산하면
+  // 규칙이 두 곳이 되고, 배치가 실제로 고르는 것과 화면 표시가 언젠가 어긋난다.
   table.innerHTML =
-    `<tr><th></th><th>순서</th><th>분야</th><th>주제 범위</th><th>작성 지시</th><th>편수</th><th>마지막</th><th></th></tr>` +
-    items.map(t => `
+    `<tr><th></th><th>차례</th><th>분야</th><th>주제 범위</th><th>작성 지시</th><th>사용</th><th></th></tr>` +
+    items.map(t => {
+      const used = !!t.lastUsedAt;
+      const lock = used ? usedWhy : "";
+      return `
       <tr data-id="${t.id}">
-        <!-- 고르기는 잠그지 않는다. 정렬·검색은 <어느 줄을 찾느냐>를 돕는 일이고,
-             일괄 이동은 고른 것들의 상대 순서를 지금 대기열 순서로 잡으므로 화면이
-             무슨 순서든 결과가 같다. 오히려 고를 줄을 찾는 가장 빠른 길이 검색이다. -->
-        <td><input type="checkbox" data-pick="${t.id}"${selectedTopicIds.has(t.id) ? " checked" : ""}
+        <!-- 고르기는 검색 중에도 잠그지 않는다. 일괄 이동은 고른 것들의 상대 순서를 지금 대기열
+             순서로 잡으므로 화면이 무슨 순서든 결과가 같다. 고를 줄을 찾는 가장 빠른 길이 검색이다. -->
+        <td><input type="checkbox" data-pick="${t.id}"${selectedTopicIds.has(t.id) ? " checked" : ""}${lock}
                    aria-label="맨 위로 옮길 범위 고르기"></td>
-        <td>${t.order}</td>
+        <td>${t.position}</td>
         <td>${escapeHtml(t.domainLabel)}</td>
         <td class="wrap topic-cell">
           <a class="topic-link" href="/admin/topic.html?id=${t.id}">${escapeHtml(t.topic)}</a>
@@ -487,19 +409,15 @@ async function loadTopicQueue() {
             topicKind === "CONCEPT" && nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : ""}</span>` : ""}
         </td>
         <td class="wrap memo-cell">${memoSummaryOf(t.memo)}</td>
-        <td>${t.usedCount === 0 ? `<span class="meta">—</span>` : `${t.usedCount}편`}</td>
-        <td class="meta">${t.lastUsedAt ? escapeHtml(t.lastUsedAt) : "아직 안 씀"}</td>
+        <td class="meta">${used ? `${t.usedCount}편 · ${escapeHtml(t.lastUsedAt)}` : "—"}</td>
+        <!-- 수정·복사·이력 지우기·삭제는 주제 상세 화면(topic.html)에서 한다. 목록은 순서만 다룬다 -->
         <td class="row-actions">
-          <button class="btn-outline" data-action="top"${lockHintTop}>⤒</button>
-          <button class="btn-outline" data-action="up"${lockHint}>↑</button>
-          <button class="btn-outline" data-action="down"${lockHintDown}>↓</button>
-          <!-- 수정·삭제·이력 지우기는 주제 상세 화면(topic.html)에서 한다(2026-10-31). -->
-          <!-- 손으로 돌릴 때 쓸 값을 그대로 복사한다(2026-09-14). 이 화면에서 워크플로를
-               직접 부르지는 않는다 — 그러려면 GitHub 토큰을 앱이 들고 있어야 하고, 그건
-               이 기능이 없애려는 수고(세 칸 옮겨 적기)에 비해 값이 안 맞는다. -->
-          <button class="btn-outline" data-action="copy" title="Actions 수동 실행에 넣을 값을 복사합니다">복사</button>
+          <button class="btn-outline" data-action="top"${lock || lockHintTop}>⤒</button>
+          <button class="btn-outline" data-action="up"${lock || lockHint}>↑</button>
+          <button class="btn-outline" data-action="down"${lock || lockHintDown}>↓</button>
         </td>
-      </tr>`).join("");
+      </tr>`;
+    }).join("");
 
   // 체크박스는 click이 아니라 change로 받는다 — 키보드(스페이스)로도 켜지기 때문이다.
   table.onchange = e => {
@@ -514,46 +432,8 @@ async function loadTopicQueue() {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
     const id = Number(btn.closest("tr").dataset.id);
-    if (btn.dataset.action === "copy") {
-      const item = items.find(t => t.id === id);
-      if (item) copyWorkflowInputs(item);
-      return;
-    }
     moveTopic(id, { top: "TOP", up: "UP", down: "DOWN" }[btn.dataset.action]);
   };
-}
-
-/**
- * Actions 수동 실행에 넣을 값을 클립보드로 — 2026-09-14 신설.
- *
- * <p>이 화면에서 워크플로를 직접 부르지 않는 이유: 그러려면 앱이 GitHub 토큰을 들고 있어야
- * 하고, 그 키를 어디에 두고 누가 누를 수 있게 할지가 따라온다. 없애려는 수고가
- * <b>세 칸 옮겨 적기</b>인 것에 비하면 값이 안 맞는다.
- *
- * <p>붙여넣기 쉬운 형태가 아니라 <b>읽고 옮겨 적기 쉬운 형태</b>로 만든다. 워크플로 화면은
- * 칸이 따로따로라 한 덩어리를 통째로 붙여 넣을 데가 없다 — 칸 이름과 값을 나란히 둔다.
- *
- * <p>type이 늘 document인 이유: 대기열은 <b>문서일에만</b> 쓰인다. 문제는 그 문서를 근거로
- * 뒤따르는 사흘이 만들고, 거기엔 주제를 따로 주지 않는다.
- */
-async function copyWorkflowInputs(item) {
-  // 코드 문제 주제는 다른 워크플로가 쓰고, 그쪽 입력 칸은 주제 하나다
-  const code = topicKind === "CODE";
-  const text = code
-    ? `topic=${item.topic}`
-    : [`type=document`, `domain=${item.domain}`, `topic=${item.topic}`].join("\n");
-
-  const msg = document.getElementById("tMessage");
-  try {
-    await navigator.clipboard.writeText(text);
-    showOk(msg, code
-      ? "복사했습니다. Actions → LLM 코드 문제 → Run workflow 에 넣으세요."
-      : "복사했습니다. Actions → llm-daily → Run workflow 에 넣으세요.");
-  } catch (e) {
-    // 클립보드는 권한·보안 컨텍스트에 따라 막힌다. 그때 아무 일도 안 일어나면
-    // "눌렀는데 왜 안 되지"가 되므로, 눈으로 읽고 옮겨 적을 수 있게 그대로 보여 준다.
-    showOk(msg, `복사가 막혀 있습니다. 아래 값을 옮겨 적으세요:\n${text}`);
-  }
 }
 
 /**
