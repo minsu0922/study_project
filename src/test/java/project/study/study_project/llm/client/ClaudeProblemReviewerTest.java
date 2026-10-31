@@ -466,8 +466,11 @@ class ClaudeProblemReviewerTest {
     void slicesDifficultyDefinitionFromGeneratorPrompt() {
         String definition = ClaudeProblemReviewer.difficultyDefinition();
 
-        assertThat(definition).startsWith("[난이도가 뜻하는 것").contains("초급은", "중급은", "고급은")
-                .doesNotContain("[중급이 묻는 네 형태]");
+        // "고급은"만 보면 첫 줄 "초급·중급·고급은"에 걸려, 고급 정의가 잘려도 통과했다(2026-10-31)
+        assertThat(definition).startsWith("[난이도가 뜻하는 것")
+                .contains("- 초급은 <용어가", "- 중급은 <원리를", "- 고급은 <조건이 답을 가르는 판단>",
+                        "초급·중급에 붙은 5줄 이하의 짧은 [자료]")
+                .doesNotContain("\n[중급이 묻는 네 형태]");
         assertThat(ClaudeProblemReviewer.judgePrompt()).contains(definition);
     }
 }

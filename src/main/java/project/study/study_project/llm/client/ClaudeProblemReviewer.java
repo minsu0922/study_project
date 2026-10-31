@@ -197,7 +197,9 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
     static String difficultyDefinition() {
         String prompt = ClaudeProblemGenerator.SYSTEM_PROMPT;
         int start = prompt.indexOf("[난이도가 뜻하는 것");
-        int end = prompt.indexOf("[중급이 묻는 네 형태]");
+        // 줄 맨 앞의 절 제목만 찾는다. 정의 본문에도 "아래 [중급이 묻는 네 형태] 중 하나로"가 있어,
+        // 그냥 찾으면 거기서 잘려 고급 정의가 통째로 빠졌다(2026-10-31)
+        int end = prompt.indexOf("\n[중급이 묻는 네 형태]");
         if (start < 0 || end <= start) {
             throw new IllegalStateException("생성 프롬프트에서 난이도 정의 절을 찾지 못했습니다.");
         }
