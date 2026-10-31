@@ -1,0 +1,293 @@
+{
+  "note": "Claude Code가 대화 안에서 직접 쓴 중급 문제 초안입니다(Claude API 미사용). problem/system.txt의 중급 규칙과 [그림 자료]를 따랐고, 근거는 generated/documents/2026-10-26.json의 심화편과 입문편입니다. AI 문제 검수는 2026-10-31 API 대신 서브에이전트로 돌렸고(같은 프롬프트·대조 코드), 결과가 reviewFindings에 있습니다.",
+  "date": "2026-10-26",
+  "generatedAt": "2026-10-31T12:40:00Z",
+  "domain": "NETWORK",
+  "difficulty": "INTERMEDIATE",
+  "type": "MULTIPLE_CHOICE",
+  "model": "claude-code/claude-opus-5-5",
+  "documentSlug": "domain-name-resolution-process-advanced",
+  "problems": [
+    {
+      "question": "아래 조회에서 리졸버는 루트 서버와 권한 서버에 묻지 않고 바로 답했다. 그렇게 답할 수 있었던 이유로 가장 적절한 것은?",
+      "exhibit": "sequenceDiagram\n  participant B as 브라우저와 운영체제\n  participant R as 리졸버\n  B->>R: shop.example.com의 IP를 알려 달라\n  Note over R: 2분 전에 다른 사용자가 같은 이름을 물었다. TTL은 300초다\n  R-->>B: 203.0.113.10",
+      "answer": "",
+      "explanation": "규칙: 리졸버는 받은 답을 TTL 동안 저장해 두고, 그 사이에 같은 이름을 물으면 위층 서버에 묻지 않고 저장한 답을 준다.\n그림의 시각을 따라가 보자.\n2분 전: 다른 사용자의 질문으로 리졸버가 권한 서버에서 TTL 300초짜리 답을 받아 저장했다.\n지금: 300초 중 120초가 지나 180초가 남았다.\n같은 이름을 묻는다: 저장한 답이 아직 유효해 리졸버가 바로 203.0.113.10을 준다.\n300초가 지난 뒤였다면 권한 서버에 새로 물었을 것이다.\n그래서 바로 답한 이유는 앞서 받은 답의 TTL이 남아 저장한 답을 썼기 때문이다.\n(입문편의 '받은 답을 저장해 두는 곳과 저장 기간' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "앞서 받은 답의 TTL이 남아 저장한 답을 썼다",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "브라우저가 이미 번호를 알아 리졸버는 확인만 했다",
+          "correct": false,
+          "rationale": "브라우저가 번호를 알았다면 리졸버에 묻지도 않았다. 그림에서 브라우저가 물었으니 브라우저 쪽에는 답이 없었다.",
+          "matchText": ""
+        },
+        {
+          "text": "리졸버가 모든 이름의 번호를 원래 장부로 들고 있다",
+          "correct": false,
+          "rationale": "이름의 장부는 권한 있는 네임 서버만 들고 있다. 리졸버는 받아 온 답을 TTL 동안 잠시 저장할 뿐이다.",
+          "matchText": ""
+        },
+        {
+          "text": "루트 서버가 멈춰 리졸버가 가장 최근 번호로 대신했다",
+          "correct": false,
+          "rationale": "리졸버는 위층 서버가 멈췄다고 번호를 짐작해 주지 않는다. 그림의 답은 TTL이 남은 저장 답이라 위층에 물을 필요가 없었다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "리졸버는 남은 180초를 붙여 저장해 둔 답을 바로 준다.",
+      "title": "리졸버가 위층 서버에 묻지 않고 답한 이유",
+      "questionKind": "CAUSE",
+      "skipReason": ""
+    },
+    {
+      "question": "앱 설정 파일에 DB 접속 주소를 적을 때, 10.0.1.5 같은 IP 주소를 적는 것과 db.internal.example 같은 이름을 적는 것을 가르는 것으로 가장 적절한 것은?",
+      "exhibit": "",
+      "answer": "",
+      "explanation": "규칙: IP 주소를 적으면 이름 풀이가 없어 빠르지만 그 번호에 묶이고, 이름을 적으면 권한 서버의 장부가 번호를 정해 장부만 고치면 따라간다.\nDB를 10.0.1.5에서 10.0.2.8로 옮기는 장면을 따라가 보자.\nIP를 적은 앱: 설정을 10.0.2.8로 고치고 앱을 다시 배포해야 새 DB로 간다.\n이름을 적은 앱: 권한 서버의 장부만 10.0.2.8로 고친다.\n이름을 적은 앱은 저장한 답의 기간이 지나면 새 번호를 받아 새 DB로 간다.\n그래서 둘을 가르는 것은 DB를 옮길 때 앱을 다시 배포하느냐, 장부만 고치느냐다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "옮길 때 IP면 다시 배포하고, 이름이면 장부만 고친다",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "이름을 적으면 이름 풀이가 없어 IP보다 언제나 빠르다",
+          "correct": false,
+          "rationale": "이름을 적어야 이름 풀이가 생긴다. 이름 풀이가 없어 빠른 쪽은 IP를 적은 경우다.",
+          "matchText": ""
+        },
+        {
+          "text": "IP를 적으면 DNS 캐시 때문에 옛 주소가 한동안 남는다",
+          "correct": false,
+          "rationale": "IP를 적으면 이름 풀이를 하지 않아 DNS 캐시가 끼어들 자리가 없다. 저장 기간 때문에 옛 주소가 남는 쪽은 이름을 적은 경우다.",
+          "matchText": ""
+        },
+        {
+          "text": "이름을 적으면 DB의 포트 번호까지 장부가 대신 정한다",
+          "correct": false,
+          "rationale": "이름 풀이는 이름을 IP 주소로 바꿀 뿐이다. 포트 번호는 앱 설정에 따로 적는다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "IP를 적으면 조회가 없어 빠르지만 서버를 옮길 때 설정을 고쳐 배포해야 하고, 이름을 적으면 장부만 고치면 된다.",
+      "title": "앱 설정에 IP를 적을 때와 이름을 적을 때의 차이",
+      "questionKind": "COMPARISON",
+      "skipReason": ""
+    },
+    {
+      "question": "클라우드 로드 밸런서 앞에 내 도메인을 붙인다. 로드 밸런서의 IP에 A 레코드로 붙이는 것과, 로드 밸런서가 준 이름에 CNAME 레코드(이름이 다른 이름을 가리키게 적은 줄)로 붙이는 것을 가르는 것은?",
+      "exhibit": "",
+      "answer": "",
+      "explanation": "규칙: A 레코드는 이름을 IP 주소 하나에 묶고, CNAME 레코드는 이름을 다른 이름에 묶는다. CNAME 끝의 이름은 그 이름을 맡은 쪽이 번호를 관리한다.\n로드 밸런서의 IP가 198.51.100.20에서 198.51.100.40으로 바뀌는 장면을 따라가 보자.\nA 레코드로 붙였을 때: 내 장부에는 여전히 198.51.100.20이 적혀 있다. 내가 고칠 때까지 옛 IP로 간다.\nCNAME으로 붙였을 때: 내 이름은 로드 밸런서 이름을 가리킨다.\n클라우드가 로드 밸런서 이름의 장부를 198.51.100.40으로 고친다: 그 줄의 TTL이 지나면 내 이름도 새 IP로 풀린다.\n그래서 IP가 바뀔 때 CNAME 쪽만 저절로 따라간다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "로드 밸런서 IP가 바뀌면 CNAME 쪽만 저절로 따라간다",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "A 레코드로 붙여야 로드 밸런서가 요청을 나눠 준다",
+          "correct": false,
+          "rationale": "요청을 서버들에 나누는 일은 로드 밸런서가 레코드 종류와 상관없이 한다. 어느 쪽으로 붙여도 요청은 로드 밸런서에 닿는다.",
+          "matchText": ""
+        },
+        {
+          "text": "CNAME으로 붙이면 내 이름 줄의 TTL이 없어진다",
+          "correct": false,
+          "rationale": "CNAME 줄도 자기 TTL을 갖고 따로 저장된다. 내 이름 줄과 로드 밸런서 이름 줄은 TTL이 각자 있다.",
+          "matchText": ""
+        },
+        {
+          "text": "두 방법은 적는 꼴만 다르고 IP가 바뀔 때도 같다",
+          "correct": false,
+          "rationale": "IP가 바뀌면 A 레코드는 내가 고칠 때까지 옛 IP를 가리킨다. CNAME은 로드 밸런서 이름의 장부를 따라가 둘의 동작이 갈린다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "로드 밸런서의 IP는 바뀔 수 있어, 내 이름을 IP가 아니라 로드 밸런서가 준 이름에 CNAME으로 붙인다.",
+      "title": "로드 밸런서에 A 레코드와 CNAME으로 붙일 때의 차이",
+      "questionKind": "COMPARISON",
+      "skipReason": ""
+    },
+    {
+      "question": "이름 장부를 층으로 나누고, 길을 도는 일은 리졸버가 대신 맡게 한 DNS 설계에 관한 설명으로 옳은 것은?",
+      "exhibit": "",
+      "answer": "",
+      "explanation": "규칙: 장부를 층으로 나누면 회사는 자기 권한 서버에서 이름을 바로 고치고, 리졸버가 대신 돌며 답을 저장하면 같은 질문이 위층 서버에 몰리지 않는다.\n같은 리졸버를 쓰는 사용자 1만 명이 같은 이름을 묻는 장면을 따라가 보자.\n첫 사용자의 질문: 리졸버가 루트·com·권한 서버를 돌아 답과 TTL을 받아 저장한다.\n나머지 사용자의 질문: TTL이 남은 동안 리졸버가 저장한 답으로 바로 답한다.\n위층 서버가 받은 질문: 1만 번이 아니라 TTL마다 한 번이다.\n그래서 리졸버가 답을 저장해 같은 질문이 위층에 몰리지 않는다는 설명이 옳다.\n(입문편의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "리졸버가 답을 저장해 같은 질문이 위층 서버에 몰리지 않는다",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "루트 서버가 모든 이름을 들고 있어 한 번 물으면 답이 나온다",
+          "correct": false,
+          "rationale": "루트 서버는 끝자리 갈래 서버의 위치만 안다. 이름의 IP 주소는 각 이름의 권한 서버만 들고 있다.",
+          "matchText": ""
+        },
+        {
+          "text": "회사가 이름을 고치려면 최상위 도메인 서버의 장부를 고친다",
+          "correct": false,
+          "rationale": "층으로 나눈 덕분에 회사는 자기 권한 서버의 장부만 고친다. 최상위 도메인 서버는 그 권한 서버의 위치만 들고 있다.",
+          "matchText": ""
+        },
+        {
+          "text": "컴퓨터마다 루트부터 돌아 리졸버가 멈춰도 이름 풀이가 된다",
+          "correct": false,
+          "rationale": "컴퓨터는 리졸버에 한 번 묻기만 하고 직접 돌지 않는다. 그래서 리졸버가 멈추면 그 리졸버를 쓰는 사람들은 이름을 풀지 못한다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "리졸버가 대신 돌고 답을 저장해 두면, 같은 리졸버를 쓰는 사람들은 위층에 다시 묻지 않는다.",
+      "title": "층으로 나눈 장부와 리졸버 설계가 얻는 것",
+      "questionKind": "JUDGMENT",
+      "skipReason": ""
+    },
+    {
+      "question": "쇼핑몰 서버를 새 곳으로 옮긴다. 이름의 TTL은 평소 3600초다. 옛 서버로 가는 사용자를 줄이며 옮기는 순서로 가장 적절한 것은?",
+      "exhibit": "",
+      "answer": "",
+      "explanation": "규칙: 장부를 고쳐도 저장된 옛 답은 TTL이 끝날 때까지 쓰인다. 그래서 TTL을 먼저 낮춰 옛 TTL만큼 기다리고, 장부를 고친 뒤에도 남은 사람이 사라질 때까지 옛 서버를 둔다.\n전날 12시에 시작한다고 따라가 보자.\nTTL을 3600초에서 300초로 낮춘다: 늦어도 전날 13시면 저장된 답이 모두 300초짜리가 된다.\n당일 13시에 장부를 새 번호로 고친다: 옛 번호를 받은 사람은 늦어도 13시 5분이면 사라진다.\n여러 리졸버로 새 번호가 나오는지 확인한다.\n옛 서버의 접속 기록이 0에 가까워진 뒤 옛 서버를 끈다.\n장부부터 고치면 그 순간 저장된 답은 3600초짜리라, 뒤늦게 TTL을 낮춰도 1시간 동안 옛 서버로 간다.\n(입문편의 '실무에서는 이렇게 쓴다' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "TTL 낮추기 → 장부를 새 번호로 고치기 → 새 번호 확인 → 옛 서버 끄기",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "장부를 새 번호로 고치기 → 옛 서버 끄기 → TTL 낮추기 → 새 번호 확인",
+          "correct": false,
+          "rationale": "장부를 고친 직후 옛 서버를 끄면 옛 번호를 저장한 사람은 최대 1시간 동안 접속조차 못 한다. TTL도 이미 늦게 낮췄다.",
+          "matchText": ""
+        },
+        {
+          "text": "옛 서버 끄기 → TTL 낮추기 → 장부를 새 번호로 고치기 → 새 번호 확인",
+          "correct": false,
+          "rationale": "옛 서버를 맨 먼저 끄면, 장부를 고치기 전까지 모든 사용자가 꺼진 서버로 간다. 서비스가 통째로 멈춘다.",
+          "matchText": ""
+        },
+        {
+          "text": "장부를 새 번호로 고치기 → TTL 낮추기 → 새 번호 확인 → 옛 서버 끄기",
+          "correct": false,
+          "rationale": "장부를 고친 순간 저장된 옛 답은 3600초짜리다. 그 뒤에 TTL을 낮춰도 이미 저장된 답에는 소용이 없어 1시간 동안 옛 서버로 간다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "전날 12시에 권한 서버에서 TTL을 3600초에서 300초로 낮춘다.",
+      "title": "서버를 옮길 때 DNS 쪽 작업 순서",
+      "questionKind": "SEQUENCE",
+      "skipReason": ""
+    }
+  ],
+  "shortfallReasons": null,
+  "reviewFindings": [
+    {
+      "problemIndex": 0,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "메모에 2분 전 같은 이름을 다른 사용자가 물었고 TTL이 300초라 했다. 120초가 지났으니 저장 기간이 180초 남아, 리졸버는 저장한 답을 바로 돌려줬다. 1번이 맞다. 2번은 브라우저가 알았다면 리졸버에 묻지 않았을 것이고, 3번은 리졸버가 장부를 원래 들고 있다는 틀린 설명이다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 0,
+      "type": "READABILITY",
+      "message": "읽다가 막히는 곳이 있습니다",
+      "detail": "시퀀스 그림이 짧고 메모가 조건을 분명히 준다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 0,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "TTL 계산 한 번으로 풀리는 깔끔한 적용 문제다. 4번은 문서 밖 지식으로 약하게 방어될 여지가 있지만 이의를 받아들일 수준은 아니다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 1,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "문서는 IP를 적으면 서버를 옮길 때 설정을 고쳐 배포해야 하고, 이름을 적으면 장부만 고치면 된다고 한다. 1번이 맞다. 3번은 DNS 캐시가 이름 쪽 이야기라 거꾸로이고, 2번은 IP가 조회가 없어 빠르다는 문서와 반대다. 4번은 A 레코드가 포트를 정하지 않는다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 1,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "두 방식의 차이를 원리로 가르는 비교 문제다. 오답이 모두 IP와 이름의 역할을 뒤바꾼 판단이라 중급 의도에 맞다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 2,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "CNAME으로 붙이면 내 이름은 로드 밸런서 이름을 가리키고, 로드 밸런서 쪽 A 줄이 바뀐 IP를 따라간다. A 레코드로 IP에 직접 붙이면 IP가 바뀌어도 옛 IP를 계속 내준다. 1번이 맞다. 2번은 분배와 무관하고, 4번은 IP가 바뀔 때 다르게 움직인다. 3번은 CNAME 줄에도 TTL이 있다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 2,
+      "type": "AWKWARD_SENTENCE",
+      "message": "어색하거나 뜻이 흐린 문장이 있습니다",
+      "detail": "지금: 「로드 밸런서 IP가 바뀌면 CNAME 쪽만 저절로 따라간다」\n고치면: 로드 밸런서 IP가 바뀌면 CNAME으로 붙인 쪽만 새 IP를 따라간다",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 2,
+      "type": "READABILITY",
+      "message": "읽다가 막히는 곳이 있습니다",
+      "detail": "질문 속 괄호 풀이가 길어 한 문장이 무겁다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 2,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "원리 적용 문제로 알맞다. '저절로'가 무엇이 바꾸는지 흐려서 조금 고치면 더 정확하다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 3,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "문서는 리졸버가 대신 돌고 답을 저장하면 같은 리졸버를 쓰는 사람들이 위층에 다시 묻지 않는다고 한다. 1번이 맞다. 2번은 루트가 다음 층 위치만 알고, 3번은 회사가 자기 권한 서버에서 고친다. 4번은 리졸버가 멈추면 이름을 풀지 못한다는 문서와 반대다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 3,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "설계 이유를 묻는 문제라 정의 문제는 아니다. 다만 오답이 모두 구조를 틀리게 적은 문장이라 초급에 가깝게 느껴질 수 있다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 4,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "TTL 3600초로 저장된 옛 답이 남아 있으니 먼저 TTL을 낮춰 옛 답이 짧게 저장되게 한다. 그 뒤 장부를 고치고, 여러 리졸버로 새 번호를 확인하고, 옛 서버는 마지막에 끈다. 1번이 맞다. 2번·3번은 옛 서버를 먼저 꺼 접속이 끊기고, 4번은 장부를 고친 뒤 TTL을 낮춰 이미 저장된 옛 답이 1시간 남는다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 4,
+      "type": "READABILITY",
+      "message": "읽다가 막히는 곳이 있습니다",
+      "detail": "보기 네 개가 같은 단계의 순서만 달라 비교하기 쉽다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 4,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "순서를 원리로 판단하는 좋은 문제다. 1번에 '옛 TTL이 지난 뒤'를 덧붙이면 옛 서버 끄는 시점이 더 분명해진다.",
+      "suggestion": null
+    }
+  ]
+}

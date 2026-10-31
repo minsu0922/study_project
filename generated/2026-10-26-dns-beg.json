@@ -1,0 +1,293 @@
+{
+  "note": "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙과 [자료를 붙이는 법]을 따랐고, 근거는 generated/documents/2026-10-26.json의 입문편입니다. AI 문제 검수는 2026-10-31 API 대신 서브에이전트로 돌렸고(같은 프롬프트·대조 코드), 결과가 reviewFindings에 있습니다.",
+  "date": "2026-10-26",
+  "generatedAt": "2026-10-31T12:30:00Z",
+  "domain": "NETWORK",
+  "difficulty": "BEGINNER",
+  "type": "MULTIPLE_CHOICE",
+  "model": "claude-code/claude-opus-5-5",
+  "documentSlug": "domain-name-resolution-process",
+  "problems": [
+    {
+      "question": "아래는 nslookup으로 shop.example.com을 조회한 결과다. 이 결과에 관한 설명으로 옳은 것은?",
+      "exhibit": "Server:   router\nAddress:  192.168.0.1\nNon-authoritative answer:\nName:     shop.example.com\nAddress:  203.0.113.10",
+      "answer": "",
+      "explanation": "규칙: nslookup은 먼저 질문에 대신 답해 준 리졸버를 Server 줄과 바로 아래 Address 줄로 보여 주고, 그다음 Name 줄 아래 Address 줄에 찾은 IP 주소를 보여 준다.\n자료를 위에서부터 따라가 보자.\nServer router, Address 192.168.0.1: 내 컴퓨터가 질문을 보낸 리졸버다. 이름의 주인이 아니다.\nNon-authoritative answer: 권한 서버가 아니라 리졸버가 전해 준 답이라는 표시다.\nName shop.example.com, Address 203.0.113.10: 리졸버가 받아 온 이 이름의 IP 주소다.\n브라우저는 이 번호로 패킷을 보내 쇼핑몰에 접속한다.\n그래서 이 이름의 IP 주소는 203.0.113.10이라는 설명이 옳다.\n(입문편의 '이름 하나를 번호로 바꾸기까지 거치는 곳' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "이 이름의 IP 주소는 203.0.113.10이다",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "192.168.0.1은 이 이름의 IP 주소다",
+          "correct": false,
+          "rationale": "Server 줄 바로 아래의 192.168.0.1은 질문에 대신 답해 준 리졸버의 주소다. 이름의 IP 주소는 Name 줄 아래 Address 줄에 나온다.",
+          "matchText": ""
+        },
+        {
+          "text": "192.168.0.1은 이 이름의 권한 있는 네임 서버다",
+          "correct": false,
+          "rationale": "권한 있는 네임 서버는 이름을 등록한 쪽이 운영하는 서버다. 192.168.0.1은 내 쪽에서 대신 물어 준 리졸버일 뿐 장부의 주인이 아니다.",
+          "matchText": ""
+        },
+        {
+          "text": "203.0.113.10은 대신 물어 준 리졸버의 주소다",
+          "correct": false,
+          "rationale": "리졸버의 주소는 Server 줄 바로 아래 Address 줄의 192.168.0.1이다. Name 줄 아래의 203.0.113.10은 리졸버가 찾아 온 이름의 IP 주소다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "`Server` 줄은 이름의 주인이 아니라 대신 물어 준 리졸버다.",
+      "title": "nslookup 결과의 Server 줄과 Address 줄",
+      "questionKind": "JUDGMENT",
+      "skipReason": ""
+    },
+    {
+      "question": "리졸버에 관한 설명으로 옳은 것은?",
+      "exhibit": "",
+      "answer": "",
+      "explanation": "규칙: 리졸버는 사용자를 대신해 여러 네임 서버를 차례로 돌며 답을 찾아 주는 서버다. 받은 답은 TTL 동안 저장해 두고 다음 사람에게 내준다.\nshop.example.com을 처음 묻는 장면을 따라가 보자.\n내 컴퓨터가 리졸버에 한 번 묻는다.\n리졸버가 루트 서버에 묻는다: com 서버에 물으라는 답을 받는다.\n리졸버가 com 서버에 묻는다: example.com 권한 서버에 물으라는 답을 받는다.\n리졸버가 권한 서버에 묻는다: 203.0.113.10을 받아 저장하고 내 컴퓨터에 돌려준다.\n그래서 사용자 대신 여러 서버를 돌며 답을 찾는 쪽이 리졸버다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "사용자 대신 여러 네임 서버를 돌며 답을 찾아 준다",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "이름의 IP 주소를 최종으로 정해 장부에 들고 있다",
+          "correct": false,
+          "rationale": "이름의 장부를 들고 최종으로 답하는 것은 권한 있는 네임 서버다. 리졸버는 그 서버까지 찾아가 답을 받아 오는 쪽이다.",
+          "matchText": ""
+        },
+        {
+          "text": "com·kr 같은 끝자리 갈래를 맡아 다음 서버를 알려 준다",
+          "correct": false,
+          "rationale": "끝자리 갈래를 맡는 것은 최상위 도메인 서버다. 리졸버는 그 서버에 묻는 쪽이지 갈래를 맡지 않는다.",
+          "matchText": ""
+        },
+        {
+          "text": "받은 답을 저장하지 않고 매번 루트부터 다시 묻는다",
+          "correct": false,
+          "rationale": "리졸버는 받은 답을 TTL 동안 저장해 같은 질문에 바로 답한다. 매번 루트부터 묻는다면 위층 서버에 질문이 쏟아진다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "사용자를 대신해 여러 네임 서버를 차례로 돌며 답을 찾아 주는 서버다.",
+      "title": "대신 여러 네임 서버를 돌며 답을 찾는 서버",
+      "questionKind": "JUDGMENT",
+      "skipReason": ""
+    },
+    {
+      "question": "TTL에 관한 설명으로 옳은 것은?",
+      "exhibit": "",
+      "answer": "",
+      "explanation": "규칙: TTL은 받은 답을 몇 초 동안 저장해 두고 다시 써도 되는지 적은 값이다. 권한 있는 네임 서버가 답에 붙여 보낸다.\nTTL 300초짜리 답을 따라가 보자.\n9시 00분에 리졸버가 권한 서버에서 답을 받아 저장한다.\n9시 02분에 누가 같은 이름을 묻는다: 남은 180초를 붙여 저장한 답을 바로 준다.\n9시 05분에 300초가 지나 리졸버가 답을 버린다.\n9시 06분에 누가 다시 물으면 권한 서버에 새로 묻는다.\n그래서 TTL은 받은 답을 몇 초 동안 저장해 둬도 되는지 적은 값이다.\n(입문편의 '받은 답을 저장해 두는 곳과 저장 기간' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "받은 답을 몇 초 동안 저장해 둬도 되는지 적은 값이다",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "리졸버가 권한 서버까지 가는 데 걸린 시간을 적은 값이다",
+          "correct": false,
+          "rationale": "TTL은 걸린 시간이 아니라 저장해 둬도 되는 기간이다. 조회가 빨랐든 느렸든 권한 서버가 정한 값이 그대로 붙는다.",
+          "matchText": ""
+        },
+        {
+          "text": "브라우저가 저장 기간을 정해 리졸버에 알려 주는 값이다",
+          "correct": false,
+          "rationale": "저장 기간은 이름의 주인인 권한 있는 네임 서버가 정해 답에 붙인다. 브라우저는 그 값을 받아 따르는 쪽이다.",
+          "matchText": ""
+        },
+        {
+          "text": "답을 받은 뒤 다음 질문까지 꼭 기다려야 하는 시간이다",
+          "correct": false,
+          "rationale": "TTL 동안에도 질문은 언제든 할 수 있다. 그 기간에는 저장한 답으로 바로 답할 뿐, 질문을 막지는 않는다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "받은 답을 몇 초 동안 저장해 두고 다시 써도 되는지 적은 값이다.",
+      "title": "이름 풀이 답에 붙는 저장 유효 시간",
+      "questionKind": "JUDGMENT",
+      "skipReason": ""
+    },
+    {
+      "question": "shop.example.com에서 example.com을 등록한 회사가 장부를 들고, 이 이름의 IP 주소를 최종으로 답하는 네임 서버는?",
+      "exhibit": "",
+      "answer": "",
+      "explanation": "규칙: 이름의 IP 주소는 그 이름을 등록한 쪽의 권한 있는 네임 서버만 장부로 들고 있다. 위층 서버들은 다음에 물을 곳만 알려 준다.\nshop.example.com을 찾는 길을 따라가 보자.\n루트 서버에 묻는다: com 서버에 물으라고만 답한다.\ncom 서버에 묻는다: example.com의 권한 서버에 물으라고만 답한다.\nexample.com 권한 서버에 묻는다: 회사가 적어 둔 장부에서 203.0.113.10을 답한다.\n리졸버는 이 답을 받아 사용자에게 전할 뿐이다.\n그래서 최종으로 IP 주소를 답하는 서버는 권한 있는 네임 서버다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "권한 있는 네임 서버",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "com을 맡은 최상위 서버",
+          "correct": false,
+          "rationale": "com 서버는 example.com을 누가 맡는지만 알려 준다. 그 이름 아래의 shop이 어느 번호인지는 회사의 권한 서버만 안다.",
+          "matchText": ""
+        },
+        {
+          "text": "맨 위의 루트 서버",
+          "correct": false,
+          "rationale": "루트 서버는 com 같은 끝자리 갈래 서버의 위치만 안다. 이름의 IP 주소를 장부로 들고 있지 않다.",
+          "matchText": ""
+        },
+        {
+          "text": "대신 물어 주는 리졸버",
+          "correct": false,
+          "rationale": "리졸버는 권한 서버까지 찾아가 답을 받아 오는 쪽이다. 저장해 둔 답을 내주기는 해도 장부의 주인은 아니다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "등록한 이름의 실제 장부를 들고, 그 이름의 IP 주소를 최종으로 답하는 네임 서버다.",
+      "title": "이름의 IP 주소를 최종으로 답하는 서버",
+      "questionKind": "JUDGMENT",
+      "skipReason": ""
+    },
+    {
+      "question": "윈도우에서 ipconfig /flushdns를 실행하면 지워지는 것은?",
+      "exhibit": "",
+      "answer": "",
+      "explanation": "규칙: 이름 풀이 답은 브라우저·운영체제·프로그램·리졸버에 따로 저장된다. ipconfig /flushdns는 그중 이 컴퓨터 운영체제에 저장된 답만 지운다.\n명령을 실행한 뒤를 따라가 보자.\n운영체제 캐시가 비워진다: 같은 이름을 다시 물으면 운영체제가 리졸버에 묻는다.\n리졸버는 자기 캐시를 그대로 들고 있다: 옛 답이 남아 있으면 그 답을 다시 준다.\n권한 서버의 장부는 아무 영향이 없다.\n그래서 이 명령이 지우는 것은 운영체제에 저장된 이름 풀이 답이다.\n(입문편의 '받은 답을 저장해 두는 곳과 저장 기간' 절을 다시 읽어 보라)",
+      "choices": [
+        {
+          "text": "운영체제에 저장된 이름 풀이 답",
+          "correct": true,
+          "rationale": "",
+          "matchText": ""
+        },
+        {
+          "text": "리졸버에 저장된 이름 풀이 답",
+          "correct": false,
+          "rationale": "리졸버 캐시는 리졸버를 운영하는 쪽만 지운다. 내 컴퓨터 명령은 리졸버까지 닿지 않는다.",
+          "matchText": ""
+        },
+        {
+          "text": "권한 서버 장부의 이름과 번호",
+          "correct": false,
+          "rationale": "권한 서버의 장부는 이름을 등록한 쪽이 고친다. 사용자 컴퓨터의 명령으로 남의 장부가 지워지지 않는다.",
+          "matchText": ""
+        },
+        {
+          "text": "브라우저가 저장한 웹 페이지",
+          "correct": false,
+          "rationale": "이 명령은 이름 풀이 답만 다룬다. 브라우저가 저장한 웹 페이지는 브라우저 설정에서 따로 지운다.",
+          "matchText": ""
+        }
+      ],
+      "sourceQuote": "| 운영체제 캐시 | 그 컴퓨터의 모든 프로그램 | 윈도우는 `ipconfig /flushdns` |",
+      "title": "flushdns 명령이 지우는 이름 풀이 답",
+      "questionKind": "JUDGMENT",
+      "skipReason": ""
+    }
+  ],
+  "shortfallReasons": null,
+  "reviewFindings": [
+    {
+      "problemIndex": 0,
+      "type": "DIFFICULTY_MISMATCH",
+      "message": "초급으로 냈지만 중급으로 보입니다",
+      "detail": "지문에 답을 가르는 조건: 없음\n조건이 달랐다면 정답이 되는 오답: 0개\n보기별 판단: 2번: 없음(Server 줄은 리졸버라 이름의 주소가 아니다). 4번: 없음(Address와 Server를 뒤바꾼 오해). 3번: 없음(Server 줄은 권한 서버가 아니라 리졸버).",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 0,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "nslookup 결과에서 Server 줄은 대신 물어 준 리졸버이고, Address 줄이 찾은 IP 주소다. 그래서 이 이름의 IP 주소는 203.0.113.10이고 1번이 옳다. 2번과 3번은 Server 줄을 이름의 주소나 권한 서버로 잘못 읽었고, 4번은 Address와 Server를 뒤바꿨다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 0,
+      "type": "READABILITY",
+      "message": "읽다가 막히는 곳이 있습니다",
+      "detail": "자료가 짧고 문서 예시와 같아 읽기 쉽다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 0,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "문서가 '자주 하는 오해'로 짚은 Server 줄 혼동을 그대로 보기로 만들어 초급 확인용으로 알맞다. 자료는 개념을 눈으로 보게 하는 그림이라 조건이 아니다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 1,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "문서는 리졸버를 사용자를 대신해 여러 네임 서버를 차례로 돌며 답을 찾아 주는 서버라고 정의한다. 1번이 이 정의다. 2번은 권한 있는 네임 서버, 3번은 최상위 도메인 서버의 정의이고, 4번은 리졸버가 답을 저장한다는 문서 내용과 반대다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 1,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "오답이 다른 네임 서버의 정의로 짜여 있어 개념을 아는 사람에게 명백히 갈린다. 초급에 맞다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 2,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "문서는 TTL을 받은 답을 몇 초 동안 저장해 두고 다시 써도 되는지 적은 값이라고 정의한다. 1번이 이 정의다. 2번은 왕복 시간으로, 4번은 기다리는 시간으로 잘못 풀었고, 3번은 TTL을 정하는 쪽이 권한 있는 네임 서버라는 문서 내용과 어긋난다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 2,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "정의를 그대로 묻는 초급 문제로 문제없다. 1번이 정의 문장을 거의 그대로 옮겨 문서를 읽은 사람에게는 쉽게 보인다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 3,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "등록한 이름의 실제 장부를 들고 그 이름의 IP 주소를 최종으로 답하는 서버는 권한 있는 네임 서버다. 리졸버는 대신 묻기만 하고, 최상위 서버와 루트 서버는 다음 서버의 위치만 알려 준다. 그래서 1번이다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 3,
+      "type": "AWKWARD_SENTENCE",
+      "message": "어색하거나 뜻이 흐린 문장이 있습니다",
+      "detail": "지금: 「shop.example.com에서 example.com을 등록한 회사가 장부를 들고, 이 이름의 IP 주소를 최종으로 답하는 네임 서버는?」\n고치면: shop.example.com의 IP 주소를 최종으로 답하는 네임 서버는? 이 서버는 example.com을 등록한 회사의 장부를 들고 있다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 3,
+      "type": "READABILITY",
+      "message": "읽다가 막히는 곳이 있습니다",
+      "detail": "질문 한 문장에 주어가 둘 엉켜 '회사가 장부를 들고 … 답하는 네임 서버'처럼 회사가 답하는 것처럼 읽힌다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 3,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "뜻에 맞는 용어를 고르는 초급 문제로 정답은 분명하다. 질문 문장만 끊어 쓰면 더 잘 읽힌다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 4,
+      "type": "SOLUTION",
+      "message": "검수 AI가 문서를 보고 푼 과정입니다",
+      "detail": "문서 표와 명령 예시에서 ipconfig /flushdns는 윈도우 운영체제에 저장된 이름 풀이 답을 모두 지우는 명령이다. 리졸버 캐시는 리졸버 운영 쪽만 지울 수 있고, 지운 뒤에도 리졸버에 저장된 답은 남는다. 그래서 1번이다.",
+      "suggestion": null
+    },
+    {
+      "problemIndex": 4,
+      "type": "OVERALL",
+      "message": "풀어 본 총평입니다",
+      "detail": "명령이 무엇을 하는지 묻는 초급 문제로 알맞다. 2번이 문서의 '자주 하는 오해'를 잘 겨냥한다.",
+      "suggestion": null
+    }
+  ]
+}
