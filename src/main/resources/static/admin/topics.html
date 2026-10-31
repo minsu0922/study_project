@@ -397,21 +397,26 @@ function memoBlockOf(memo) {
     if (label) fields[label] = line.slice(label.length + 1).trim();
   }
   if (!fields["핵심 개념"] || !fields["설명할 것"]) {
-    return `<div class="memo-brief"><span class="badge gray">지시 아님 · 모델에 안 실림</span>
-      <div class="meta" style="white-space:pre-line">${escapeHtml(memo)}</div></div>`;
+    return `<details class="memo-fold"><summary><span class="badge gray">지시 아님 · 모델에 안 실림</span></summary>
+      <div class="memo-brief meta" style="white-space:pre-line">${escapeHtml(memo)}</div></details>`;
   }
   // "설명할 것"은 빗금으로 이은 질문들이고, 모델도 이 순서대로 다룬다. 번호를 매겨 보인다.
   // 앞뒤 공백이 있는 빗금만 나눈다. 맨 빗금으로 나누면 "HTTP/2" 같은 질문이 잘린다.
+  const questions = fields["설명할 것"].split(/\s+\/\s+/).map(q => q.trim()).filter(Boolean);
   const valueOf = l => l === "설명할 것"
-    ? `<ol class="memo-questions">${fields[l].split(/\s+\/\s+/).map(q => q.trim()).filter(Boolean)
-        .map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ol>`
+    ? `<ol class="memo-questions">${questions.map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ol>`
     : `<span>${escapeHtml(fields[l])}</span>`;
-  const rows = MEMO_LABELS.filter(l => l !== "그림" && fields[l]).map(l =>
+  // "핵심 개념"은 접힌 요약 줄에 이미 보이므로 펼친 칸에서는 뺀다
+  const rows = MEMO_LABELS.filter(l => l !== "그림" && l !== "핵심 개념" && fields[l]).map(l =>
     `<div class="memo-row"><span class="memo-label">${l}</span>${valueOf(l)}</div>`);
   rows.push(fields["그림"]
     ? `<div class="memo-row memo-diagram"><span class="memo-label">그림</span><span>${escapeHtml(fields["그림"])}</span></div>`
     : `<div class="memo-row"><span class="memo-label">그림</span><span class="meta">지정 안 함 · 모델이 고름</span></div>`);
-  return `<div class="memo-brief">${rows.join("")}</div>`;
+  // 목록에서는 접어 두고 요약 한 줄만 보인다. 다 펼치면 한 줄이 200px을 넘어 한 화면에 서너 줄뿐이다.
+  const summary = `<span class="memo-concepts">${escapeHtml(fields["핵심 개념"])}</span>
+    <span class="memo-counts">질문 ${questions.length} · 그림 ${fields["그림"] ? "✓" : "—"}</span>`;
+  return `<details class="memo-fold"><summary>${summary}</summary>
+    <div class="memo-brief">${rows.join("")}</div></details>`;
 }
 
 async function loadTopicQueue() {
@@ -505,6 +510,10 @@ async function loadTopicQueue() {
           <button class="btn-outline" data-action="top"${lockHintTop}>⤒</button>
           <button class="btn-outline" data-action="up"${lockHint}>↑</button>
           <button class="btn-outline" data-action="down"${lockHintDown}>↓</button>
+          <!-- 자주 누르는 순서 버튼만 밖에 두고 나머지는 메뉴 하나로 묶는다(2026-10-31).
+               버튼 여섯 개가 줄마다 붙어 있으면 목록을 읽는 눈을 어지럽힌다. -->
+          <details class="row-menu"><summary class="btn-outline" title="수정·복사·삭제">⋯</summary>
+          <div class="row-menu-list">
           <!-- 수정은 검색 중에도 열어 둔다. 순서 이동과 달리 이 줄 하나만 건드리므로
                걸러진 목록에서도 결과가 눈에 보인다. 오히려 고칠 줄을 찾는 가장 빠른
                길이 검색이라, 여기서 잠그면 기능이 반쪽이 된다. -->
@@ -519,6 +528,7 @@ async function loadTopicQueue() {
             ? ""
             : `<button class="btn-outline" data-action="reset" title="사용 기록을 지워 '아직 안 씀'으로 되돌립니다">이력 지우기</button>`}
           <button class="danger" data-action="delete">삭제</button>
+          </div></details>
         </td>
       </tr>`).join("");
 
@@ -535,6 +545,8 @@ async function loadTopicQueue() {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
     const id = Number(btn.closest("tr").dataset.id);
+    // 삭제는 두 번 눌러야 해서 메뉴를 열어 둔다. 나머지는 눌렀으면 메뉴를 닫는다
+    if (btn.dataset.action !== "delete") btn.closest("details.row-menu")?.removeAttribute("open");
     if (btn.dataset.action === "edit") {
       // 방금 그린 목록에서 값을 꺼낸다(startEditTopic 주석 참고)
       const item = items.find(t => t.id === id);
