@@ -1147,7 +1147,19 @@ public final class ProblemItemRule {
             return List.of();
         }
         List<String> warnings = new ArrayList<>();
-        if (difficulty == Difficulty.BEGINNER || difficulty == Difficulty.INTERMEDIATE) {
+        boolean lowerLevel = difficulty == Difficulty.BEGINNER || difficulty == Difficulty.INTERMEDIATE;
+        if (ChartExhibitRule.isChart(item.normalizedExhibit())) {
+            ChartExhibitRule.Chart chart = ChartExhibitRule.parse(item.normalizedExhibit());
+            int max = lowerLevel ? LOWER_LEVEL_EXHIBIT_MAX : ChartExhibitRule.ADVANCED_MAX_POINTS;
+            if (chart.points() > max) {
+                warnings.add("차트 점이 많음 (%d개, 기준 %d개 — 폰 폭에서 가로축 라벨이 겹친다)"
+                        .formatted(chart.points(), max));
+            }
+            if (lowerLevel && chart.series().size() > 1) {
+                warnings.add("%s 차트에 계열이 %d개 (초·중급은 선이나 막대 하나만 — 둘을 견주는 것은 고급의 일이다)"
+                        .formatted(difficulty.getDisplayName(), chart.series().size()));
+            }
+        } else if (lowerLevel) {
             boolean diagram = item.hasDiagramExhibit();
             int size = diagram ? DiagramExhibitRule.arrowCountOf(item.normalizedExhibit())
                     : (int) item.normalizedExhibit().lines().count();

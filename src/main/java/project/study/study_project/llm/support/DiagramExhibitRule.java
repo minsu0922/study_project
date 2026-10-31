@@ -51,10 +51,17 @@ public final class DiagramExhibitRule {
         return OTHER_DIAGRAM.matcher(first).matches();
     }
 
-    /** 흐름도·시퀀스 자료의 경고. 그림 자료가 아니면 빈 목록. */
+    /** 흐름도·시퀀스·차트 자료의 경고. 그림 자료가 아니면 빈 목록. */
     public static List<String> warningsOf(GeneratedProblemItem item) {
         if (!item.hasDiagramExhibit()) {
             return List.of();
+        }
+        // 설정 줄(%%{init}%%)은 화면의 색·글꼴 설정을 덮어쓴다. 자료는 내용만 담는다
+        if (item.normalizedExhibit().contains("%%{")) {
+            return List.of("그림에 mermaid 설정 줄(%%{...}%%)이 있음 (화면 설정을 덮어쓴다 — 지워라)");
+        }
+        if (ChartExhibitRule.isChart(item.normalizedExhibit())) {
+            return ChartExhibitRule.parse(item.normalizedExhibit()).problems();
         }
         List<String> lines = item.normalizedExhibit().lines().toList();
         boolean sequence = lines.get(0).strip().startsWith("sequenceDiagram");

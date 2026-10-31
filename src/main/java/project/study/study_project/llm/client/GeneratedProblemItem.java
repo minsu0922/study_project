@@ -31,7 +31,7 @@ public record GeneratedProblemItem(
         // 저장할 때 초안의 code 칸에 언어 EXHIBIT_LANGUAGE로 들어가 화면이 고정폭·줄 번호로 그린다.
         @JsonPropertyDescription("지문에 딸린 자료. 로그 몇 줄, 실행 계획, 설정 일부, HTTP 헤더, 명령 출력, "
                 + "시각별 지표 표처럼 학습자가 읽고 판단할 평문이다. 첫 줄을 sequenceDiagram이나 "
-                + "flowchart TD로 쓰면 mermaid 그림으로 그린다. 문제에 맞게 새로 만든다. "
+                + "flowchart TD로 쓰면 mermaid 그림으로, xychart-beta로 쓰면 차트로 그린다. 문제에 맞게 새로 만든다. "
                 + "고급은 20줄 이내, 초급·중급은 5줄(그림은 화살표 5개) 이내에 한 번에 1개 문제까지. "
                 + "한 줄 80자 이내, 마크다운 금지. 자료가 없으면 빈 문자열")
         String exhibit,
@@ -83,7 +83,7 @@ public record GeneratedProblemItem(
     /** 자료를 문제의 code 칸에 담을 때 쓰는 언어 값. java가 아니어야 자바 코스 통계에 섞이지 않는다. */
     public static final String EXHIBIT_LANGUAGE = "text";
 
-    /** 그림 자료(mermaid 흐름도·시퀀스)의 언어 값. 화면이 이 자료만 그림으로 그린다. */
+    /** 그림 자료(mermaid 흐름도·시퀀스·차트)의 언어 값. 화면이 이 자료만 그림으로 그린다. */
     public static final String EXHIBIT_DIAGRAM_LANGUAGE = "mermaid";
 
     /**
@@ -91,7 +91,7 @@ public record GeneratedProblemItem(
      * 한쪽만 바꾸면 서버는 그림이라 하고 화면은 글자로 보인다.
      */
     public static final java.util.regex.Pattern DIAGRAM_HEADER = java.util.regex.Pattern.compile(
-            "^(?:(?:flowchart|graph)\\s+(?:TD|TB|BT|LR|RL)\\b|sequenceDiagram\\b).*");
+            "^(?:(?:flowchart|graph)\\s+(?:TD|TB|BT|LR|RL)\\b|sequenceDiagram\\b|xychart-beta\\b).*");
 
     /** 저장할 언어 값. 자료가 없으면 null. */
     public String exhibitLanguage() {
