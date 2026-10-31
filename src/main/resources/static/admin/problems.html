@@ -55,11 +55,14 @@ try {
                placeholder="예: static 필드에 여러 쓰레드가 동시에 쓸 때의 값 유실">
       </div>
       <div class="field"><label>문제 지문</label><textarea id="pQuestion" rows="3" style="width:100%"></textarea></div>
-      <!-- 코드 문제에만 채운다(V39). 지문과 칸을 나눈 이유: 화면이 코드만 고정폭·줄 번호로 그린다. -->
-      <div class="field"><label>코드 (선택 · Java)</label><textarea id="pCode" rows="6" spellcheck="false"
+      <!-- 코드 문제의 코드나 개념 문제의 자료(로그·표)를 채운다(V39). 화면이 이 칸만 고정폭·줄 번호로 그린다. -->
+      <div class="field"><label>코드·자료 (선택)</label><textarea id="pCode" rows="6" spellcheck="false"
         style="width:100%; font-family:var(--font-mono, ui-monospace, Consolas, monospace); white-space:pre; overflow-x:auto"></textarea></div>
       <!-- 코드 문제의 표시 방식(V42). 폼이 문제를 통째로 다시 보내므로, 이 칸이 없으면 수정할 때마다 값이 지워진다. -->
       <div class="filters">
+        <!-- 자료(text)를 java로 저장하면 그 문제가 자바 코스에 섞인다. 수정할 때 원래 값을 되채운다. -->
+        <div class="field"><label>칸 종류</label><select id="pCodeLanguage">
+          <option value="java">Java 코드</option><option value="text">자료 (로그·표)</option></select></div>
         <div class="field"><label>강조할 줄 (선택)</label><input type="number" id="pCodeFocusLine" min="1" style="width:110px" placeholder="예: 12"></div>
         <div class="field"><label style="display:block">&nbsp;</label><label><input type="checkbox" id="pCodeChoices"> 보기가 코드다 (고정폭으로 그린다)</label></div>
       </div>
@@ -326,6 +329,7 @@ function collectProblemBody() {
     explanation: document.getElementById("pExplanation").value || null,
     // trim하지 않는다 — 줄 앞의 들여쓰기가 코드의 일부다. 앞뒤 빈 줄은 서버가 걷는다.
     code: document.getElementById("pCode").value || null,
+    codeLanguage: document.getElementById("pCodeLanguage").value,
     codeFocusLine: Number(document.getElementById("pCodeFocusLine").value) || null,
     codeChoices: document.getElementById("pCodeChoices").checked,
     choices: [],
@@ -377,6 +381,7 @@ function resetProblemForm() {
   document.getElementById("pTitle").value = "";
   document.getElementById("pQuestion").value = "";
   document.getElementById("pCode").value = "";
+  document.getElementById("pCodeLanguage").value = "java";
   document.getElementById("pCodeFocusLine").value = "";
   document.getElementById("pCodeChoices").checked = false;
   document.getElementById("pAnswer").value = "";
@@ -471,6 +476,7 @@ async function editProblem(id) {
   document.getElementById("pTitle").value = p.title ?? "";
   document.getElementById("pQuestion").value = p.question;
   document.getElementById("pCode").value = p.code ?? "";
+  document.getElementById("pCodeLanguage").value = p.codeLanguage === "text" ? "text" : "java";
   document.getElementById("pCodeFocusLine").value = p.codeFocusLine ?? "";
   document.getElementById("pCodeChoices").checked = !!p.codeChoices;
   document.getElementById("pAnswer").value = p.answer ?? "";
