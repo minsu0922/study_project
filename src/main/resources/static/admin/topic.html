@@ -70,9 +70,22 @@ function render(t) {
     </div>
     <div class="topic-actions">
       <a class="btn btn-outline" href="/admin/topics.html?edit=${t.id}${t.kind === "CODE" ? "&kind=CODE" : ""}">수정</a>
+      ${t.lastUsedAt || t.usedCount > 0
+        ? `<button class="btn-outline" id="resetBtn" title="사용 기록을 지워 '아직 안 씀'으로 되돌립니다">이력 지우기</button>` : ""}
       <button class="danger" id="deleteBtn">삭제</button>
     </div>`;
   head.hidden = false;
+  // 배치는 문서를 만들기로 정한 때 기록을 찍는다. 그 문서가 거절되면 기록만 남아 차례가
+  // 영영 안 돌아오므로 되돌릴 문이 필요하다. 잃는 것이 날짜 한 칸이라 2단계 확인은 걸지 않는다.
+  document.getElementById("resetBtn")?.addEventListener("click", async () => {
+    try {
+      await api(`/api/admin/topic-queue/${t.id}/reset-usage`, { method: "POST" });
+      showOk(message, `사용 기록을 지웠습니다. ${t.kind === "CODE" ? "generated/_code-topics.json" : "generated/_topics.json"}을 커밋하세요.`);
+      render(await api(`/api/admin/topic-queue/${t.id}`));
+    } catch (err) {
+      showError(message, err);
+    }
+  });
   // 2단계 확인 — 다시 적으면 그만이지만, 몇 편 썼는지의 기록은 되살릴 수 없다
   document.getElementById("deleteBtn").addEventListener("click", e =>
     armedAction(e.currentTarget, async () => {

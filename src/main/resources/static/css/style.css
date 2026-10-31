@@ -2510,13 +2510,6 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 /* 한 줄로 고정하면 칸이 글 길이만큼 넓어져 가로 스크롤이 생긴다. 두 줄까지 보이고 자른다 */
 .memo-concepts { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.9em; }
 .memo-counts { display: block; font-size: 0.8em; color: var(--muted); }
-/* 메뉴는 칸 안에서 아래로 펼친다. 떠 있는 상자로 띄우면 표를 감싼 가로 스크롤 상자에 잘린다 */
-.row-menu { display: inline-block; vertical-align: middle; margin-left: 6px; }
-.row-menu > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center;
-  min-height: 44px; padding: 0 12px; font-size: .8rem; border-radius: 8px; }
-.row-menu > summary::-webkit-details-marker { display: none; }
-.row-menu-list { display: grid; gap: 4px; margin-top: 6px; }
-.row-menu-list button { margin-left: 0 !important; }
 /* 주제 상세(topic.html) */
 .topic-head h1 { margin: 4px 0 10px; line-height: 1.4; }
 .topic-facts { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: .9rem; }

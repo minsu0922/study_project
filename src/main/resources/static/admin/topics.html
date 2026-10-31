@@ -493,20 +493,11 @@ async function loadTopicQueue() {
           <button class="btn-outline" data-action="top"${lockHintTop}>⤒</button>
           <button class="btn-outline" data-action="up"${lockHint}>↑</button>
           <button class="btn-outline" data-action="down"${lockHintDown}>↓</button>
-          <!-- 자주 누르는 순서 버튼만 밖에 두고 나머지는 메뉴 하나로 묶는다(2026-10-31).
-               수정·삭제는 주제 상세 화면(topic.html)에서 한다. -->
-          <details class="row-menu"><summary class="btn-outline" title="복사·이력 지우기">⋯</summary>
-          <div class="row-menu-list">
+          <!-- 수정·삭제·이력 지우기는 주제 상세 화면(topic.html)에서 한다(2026-10-31). -->
           <!-- 손으로 돌릴 때 쓸 값을 그대로 복사한다(2026-09-14). 이 화면에서 워크플로를
                직접 부르지는 않는다 — 그러려면 GitHub 토큰을 앱이 들고 있어야 하고, 그건
                이 기능이 없애려는 수고(세 칸 옮겨 적기)에 비해 값이 안 맞는다. -->
           <button class="btn-outline" data-action="copy" title="Actions 수동 실행에 넣을 값을 복사합니다">복사</button>
-          <!-- 이력 지우기는 <쓴 줄에만> 뜬다. 안 쓴 줄에 두면 눌러도 아무 일이 없는
-               버튼이 63줄에 붙는데, 그런 버튼은 목록을 읽는 눈만 어지럽힌다. -->
-          ${t.usedCount === 0 && !t.lastUsedAt
-            ? ""
-            : `<button class="btn-outline" data-action="reset" title="사용 기록을 지워 '아직 안 씀'으로 되돌립니다">이력 지우기</button>`}
-          </div></details>
         </td>
       </tr>`).join("");
 
@@ -523,16 +514,9 @@ async function loadTopicQueue() {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
     const id = Number(btn.closest("tr").dataset.id);
-    btn.closest("details.row-menu")?.removeAttribute("open");
     if (btn.dataset.action === "copy") {
       const item = items.find(t => t.id === id);
       if (item) copyWorkflowInputs(item);
-      return;
-    }
-    if (btn.dataset.action === "reset") {
-      // 2단계 확인을 걸지 않는다. 잘못 눌러도 잃는 것은 날짜 한 칸이고,
-      // 그 줄이 "안 쓴 범위" 무리에 합류할 뿐이다 — 되돌리려면 다시 쓰이면 된다.
-      resetTopicUsage(id);
       return;
     }
     moveTopic(id, { top: "TOP", up: "UP", down: "DOWN" }[btn.dataset.action]);
@@ -626,24 +610,6 @@ async function moveTopic(id, direction) {
     showOk(document.getElementById("tMessage"), `맨 위로 옮겼습니다. ${topicFile()}을 커밋하세요.`);
   }
   loadTopicQueue();
-}
-
-/**
- * 사용 기록 지우기 — 그 줄을 "아직 안 씀"으로 되돌린다.
- *
- * <p>배치는 문서를 <b>만들기로 정한 시점</b>에 기록을 찍으므로, 그 뒤 문서가 거절되거나
- * 지워지면 실물 없이 기록만 남는다. 그러면 다음 차례 규칙("안 쓴 것 먼저")에 밀려
- * 그 범위는 차례가 영영 안 돌아온다. 되돌릴 문이 필요한 이유다.
- */
-async function resetTopicUsage(id) {
-  const msg = document.getElementById("tMessage");
-  try {
-    await api(`/api/admin/topic-queue/${id}/reset-usage`, { method: "POST" });
-    showOk(msg, `사용 기록을 지웠습니다. ${topicFile()}을 커밋하세요.`);
-    loadTopicQueue();
-  } catch (e) {
-    showError(msg, e);
-  }
 }
 
 </script>
