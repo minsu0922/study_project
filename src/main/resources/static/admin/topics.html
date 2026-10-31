@@ -196,6 +196,12 @@ if (initAdminPage("topics")) {
   initTopicForm();
   applyKindParam();
   loadTopicQueue();
+  // 상세 화면의 "수정"이 ?edit=로 온다. 그 줄이 지금 쪽에 없을 수 있어 한 건을 따로 받는다
+  const editId = param("edit");
+  if (/^\d+$/.test(editId || "")) {
+    api(`/api/admin/topic-queue/${editId}`).then(startEditTopic)
+      .catch(e => showError(document.getElementById("tMessage"), e));
+  }
 }
 
 /** 주소의 ?kind=CODE를 탭에 반영한다. 다른 화면에서 "코드 문제 주제"로 바로 오게 하는 입구다. */
@@ -380,43 +386,17 @@ function cancelEditTopic() {
  * 앞 쪽으로 사라질 뿐이다. 그건 화면이 말해 준다.
  */
 /**
- * 메모를 칸별로 보여 준다 — 2026-10-30.
+ * 목록의 작성 지시 칸 — 요약만 보인다(2026-10-31).
  *
- * <p>메모는 이름표 줄("핵심 개념:" 등)로 된 작성 지시다. 한 줄로 이어 붙여 보이면 어느 칸이
- * 비었는지, 그림을 지정했는지 알 수 없다. 서버(TopicBrief.parse)와 같은 규칙으로
- * "핵심 개념"과 "설명할 것"이 둘 다 있어야 모델에 실린다고 표시한다.
+ * <p>지시 전체는 상세 화면(topic.html)에서 본다. 목록에서 펼치면 한 줄이 200px을 넘어
+ * 한 화면에 서너 줄뿐이고, 좁은 칸에 질문이 몇 번씩 꺾여 읽기도 어렵다.
  */
-const MEMO_LABELS = ["핵심 개념", "설명할 것", "다루지 않을 것", "실물", "그림"];
-
-function memoBlockOf(memo) {
-  if (!memo) return "";
-  const fields = {};
-  for (const raw of memo.split(/\r?\n/)) {
-    const line = raw.trim();
-    const label = MEMO_LABELS.find(l => line.startsWith(l + ":"));
-    if (label) fields[label] = line.slice(label.length + 1).trim();
-  }
-  if (!fields["핵심 개념"] || !fields["설명할 것"]) {
-    return `<details class="memo-fold"><summary><span class="badge gray">지시 아님 · 모델에 안 실림</span></summary>
-      <div class="memo-brief meta" style="white-space:pre-line">${escapeHtml(memo)}</div></details>`;
-  }
-  // "설명할 것"은 빗금으로 이은 질문들이고, 모델도 이 순서대로 다룬다. 번호를 매겨 보인다.
-  // 앞뒤 공백이 있는 빗금만 나눈다. 맨 빗금으로 나누면 "HTTP/2" 같은 질문이 잘린다.
-  const questions = fields["설명할 것"].split(/\s+\/\s+/).map(q => q.trim()).filter(Boolean);
-  const valueOf = l => l === "설명할 것"
-    ? `<ol class="memo-questions">${questions.map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ol>`
-    : `<span>${escapeHtml(fields[l])}</span>`;
-  // "핵심 개념"은 접힌 요약 줄에 이미 보이므로 펼친 칸에서는 뺀다
-  const rows = MEMO_LABELS.filter(l => l !== "그림" && l !== "핵심 개념" && fields[l]).map(l =>
-    `<div class="memo-row"><span class="memo-label">${l}</span>${valueOf(l)}</div>`);
-  rows.push(fields["그림"]
-    ? `<div class="memo-row memo-diagram"><span class="memo-label">그림</span><span>${escapeHtml(fields["그림"])}</span></div>`
-    : `<div class="memo-row"><span class="memo-label">그림</span><span class="meta">지정 안 함 · 모델이 고름</span></div>`);
-  // 목록에서는 접어 두고 요약 한 줄만 보인다. 다 펼치면 한 줄이 200px을 넘어 한 화면에 서너 줄뿐이다.
-  const summary = `<span class="memo-concepts">${escapeHtml(fields["핵심 개념"])}</span>
+function memoSummaryOf(memo) {
+  if (!memo) return `<span class="meta">—</span>`;
+  const { valid, fields, questions } = parseTopicMemo(memo);
+  if (!valid) return `<span class="badge gray">지시 아님 · 모델에 안 실림</span>`;
+  return `<span class="memo-concepts">${escapeHtml(fields["핵심 개념"])}</span>
     <span class="memo-counts">질문 ${questions.length} · 그림 ${fields["그림"] ? "✓" : "—"}</span>`;
-  return `<details class="memo-fold"><summary>${summary}</summary>
-    <div class="memo-brief">${rows.join("")}</div></details>`;
 }
 
 async function loadTopicQueue() {
@@ -498,12 +478,12 @@ async function loadTopicQueue() {
         <td>${t.order}</td>
         <td>${escapeHtml(t.domainLabel)}</td>
         <td class="wrap topic-cell">
-          ${escapeHtml(t.topic)}
+          <a class="topic-link" href="/admin/topic.html?id=${t.id}">${escapeHtml(t.topic)}</a>
           ${t.next ? ` <span class="badge orange">다음 차례${
             // 날짜는 4일 주기의 다음 문서일이다. 코드 문제 주제는 주 1회 배치가 쓰므로 그 날짜가 아니다
             topicKind === "CONCEPT" && nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : ""}</span>` : ""}
         </td>
-        <td class="wrap memo-cell">${t.memo ? memoBlockOf(t.memo) : `<span class="meta">—</span>`}</td>
+        <td class="wrap memo-cell">${memoSummaryOf(t.memo)}</td>
         <td>${t.usedCount === 0 ? `<span class="meta">—</span>` : `${t.usedCount}편`}</td>
         <td class="meta">${t.lastUsedAt ? escapeHtml(t.lastUsedAt) : "아직 안 씀"}</td>
         <td class="row-actions">

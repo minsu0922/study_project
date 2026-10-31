@@ -84,6 +84,12 @@ public class AdminTopicQueueController {
         return ApiResponse.ok(Map.of("count", topicQueueService.count(kind)));
     }
 
+    /** 범위 한 줄 — 상세 화면용. 없는 id면 404(TOPIC_001). */
+    @GetMapping("/{id}")
+    public ApiResponse<TopicQueueItemResponse> get(@PathVariable Long id) {
+        return ApiResponse.ok(topicQueueService.get(id));
+    }
+
     /** 범위 추가 — 맨 뒤에 붙는다. 같은 분야에 같은 범위가 이미 있으면 409(TOPIC_002). */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

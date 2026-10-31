@@ -87,6 +87,28 @@ function param(name) {
 
 /* 검색 칸·필터 줄(wireFilterBar, wireSearchInput)은 학습 화면과 함께 쓰므로 /js/api.js에 있다. */
 
+/**
+ * 주제 메모(작성 지시)를 칸별로 나눈다. 대기열 목록과 상세 화면이 함께 쓴다.
+ *
+ * <p>서버 TopicBrief.parse와 같은 규칙이다. "핵심 개념"과 "설명할 것"이 둘 다 있어야
+ * 모델에 실린다(valid). "설명할 것"은 앞뒤 공백이 있는 빗금으로만 나눈다.
+ * 맨 빗금으로 나누면 "HTTP/2" 같은 질문이 잘린다.
+ */
+const TOPIC_MEMO_LABELS = ["핵심 개념", "설명할 것", "다루지 않을 것", "실물", "그림"];
+
+function parseTopicMemo(memo) {
+  const fields = {};
+  for (const raw of (memo || "").split(/\r?\n/)) {
+    const line = raw.trim();
+    const label = TOPIC_MEMO_LABELS.find(l => line.startsWith(l + ":"));
+    if (label) fields[label] = line.slice(label.length + 1).trim();
+  }
+  const valid = Boolean(fields["핵심 개념"] && fields["설명할 것"]);
+  const questions = valid
+    ? fields["설명할 것"].split(/\s+\/\s+/).map(q => q.trim()).filter(Boolean) : [];
+  return { valid, fields, questions };
+}
+
 /* ── 되돌리기 어려운 동작의 2단계 확인 ──
  * confirm() 같은 브라우저 팝업 대신 "버튼을 한 번 더 누르면 실행" 방식.
  * 팝업은 흐름을 끊고, 자동화 도구·테스트도 막는다. 3초 지나면 원래대로 돌아간다.

@@ -132,6 +132,20 @@ public class TopicQueueService {
     }
 
     /**
+     * 범위 한 줄 — 상세 화면용(2026-10-31). 없는 id면 404(TOPIC_001).
+     *
+     * <p>{@code next}와 {@code order}는 같은 종류 전체를 봐야 정해지므로 목록을 만든 뒤 고른다.
+     */
+    @Transactional(readOnly = true)
+    public TopicQueueItemResponse get(Long id) {
+        TopicQueueItem item = find(id);
+        return getAll(item.getKind()).stream()
+                .filter(r -> r.id().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.TOPIC_001));
+    }
+
+    /**
      * 검색·쪽 나누기를 얹은 목록 — 2026-08-29 신설. 범위가 67개까지 늘어 한 화면에 다 담기지 않는다.
      *
      * <h2>왜 DB가 아니라 메모리에서 자르나</h2>

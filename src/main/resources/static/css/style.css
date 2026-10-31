@@ -2504,15 +2504,12 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 .draft-diagram svg { max-width: 100%; height: auto; }
 .draft-diagram.broken { color: var(--danger, #c0392b); text-align: left; }
 .topic-cell { min-width: 13em; max-width: 26em; }
+.topic-link { color: inherit; text-decoration: none; }
+.topic-link:hover { color: var(--primary); text-decoration: underline; }
 .memo-cell { min-width: 14em; max-width: 22em; }
-.memo-fold > summary { cursor: pointer; list-style: none; display: block; padding-left: 1.1em; position: relative; }
-.memo-fold > summary::-webkit-details-marker { display: none; }
-.memo-fold > summary::before { content: "▸"; position: absolute; left: 0; top: 0; color: var(--muted, #6b7280); }
-.memo-fold[open] > summary::before { content: "▾"; }
 /* 한 줄로 고정하면 칸이 글 길이만큼 넓어져 가로 스크롤이 생긴다. 두 줄까지 보이고 자른다 */
 .memo-concepts { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.9em; }
-.memo-counts { display: block; font-size: 0.8em; color: var(--muted, #6b7280); }
-.memo-fold[open] .memo-brief { margin-top: 8px; }
+.memo-counts { display: block; font-size: 0.8em; color: var(--muted); }
 /* 메뉴는 칸 안에서 아래로 펼친다. 떠 있는 상자로 띄우면 표를 감싼 가로 스크롤 상자에 잘린다 */
 .row-menu { display: inline-block; vertical-align: middle; margin-left: 6px; }
 .row-menu > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center;
@@ -2520,12 +2517,19 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 .row-menu > summary::-webkit-details-marker { display: none; }
 .row-menu-list { display: grid; gap: 4px; margin-top: 6px; }
 .row-menu-list button { margin-left: 0 !important; }
-.memo-brief { font-size: 0.86em; display: grid; gap: 4px; }
-.memo-row { display: grid; grid-template-columns: 7.5em 1fr; gap: 8px; }
-.memo-questions { margin: 0; padding-left: 1.4em; }
-.memo-questions li + li { margin-top: 1px; }
-.memo-label { color: var(--muted, #6b7280); white-space: nowrap; }
-.memo-diagram span:last-child { font-weight: 600; }
+/* 주제 상세(topic.html) */
+.topic-head h1 { margin: 4px 0 10px; line-height: 1.4; }
+.topic-facts { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: .9rem; }
+.topic-facts b { color: inherit; font-weight: 600; }
+.topic-actions { display: flex; gap: 8px; margin-top: 16px; }
+.brief-section + .brief-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+.brief-section h3 { margin: 0 0 8px; font-size: .85rem; color: var(--muted); font-weight: 600; }
+.brief-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.brief-chips span { padding: 4px 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-dark); font-size: .9rem; }
+.brief-questions { margin: 0; padding-left: 1.6em; display: grid; gap: 8px; line-height: 1.6; }
+.brief-text { margin: 0; line-height: 1.7; }
+.brief-diagram { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.brief-raw { white-space: pre-line; margin: 0; }
 
 /* 접어 둔 생성 폼 손잡이 — 2026-08-29.
  *

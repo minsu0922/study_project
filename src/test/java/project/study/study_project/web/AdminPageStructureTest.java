@@ -53,6 +53,7 @@ class AdminPageStructureTest {
             "quality.html",
             "reports.html",
             "settings.html",
+            "topic.html",
             "topics.html",
             "user.html",
             "users.html");

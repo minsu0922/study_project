@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 주제 상세 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-shell">
+<div id="shell"></div>
+
+<main class="container admin">
+  <p class="meta"><a id="backLink" href="/admin/topics.html">← 주제 대기열</a></p>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <div id="tdMessage"></div>
+    <div class="card topic-head" id="head" hidden></div>
+    <div class="card" id="brief" hidden></div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script>
+/* 주제 한 줄 — 작성 지시를 칸별로 넓게 본다(2026-10-31).
+ *   GET    /api/admin/topic-queue/{id}
+ *   DELETE /api/admin/topic-queue/{id}
+ * 수정은 대기열 화면의 폼을 그대로 쓴다(?edit=). 폼을 두 벌 두면 검증 문구가 어긋난다. */
+const topicId = param("id");
+const message = document.getElementById("tdMessage");
+
+/** mermaid 이름 → 화면 이름. 메모의 "그림:" 줄 끝 괄호에 적는다. */
+const DIAGRAM_KINDS = { "flowchart": "흐름도", "sequenceDiagram": "순서도", "stateDiagram-v2": "상태도" };
+
+if (initAdminPage("topics")) {
+  if (!/^\d+$/.test(topicId || "")) {
+    showErrorAlert(message, "어느 주제인지 알 수 없습니다. 목록에서 다시 들어와 주세요.");
+  } else {
+    api(`/api/admin/topic-queue/${topicId}`).then(render).catch(e => showError(message, e));
+  }
+}
+
+function render(t) {
+  const list = "/admin/topics.html" + (t.kind === "CODE" ? "?kind=CODE" : "");
+  document.getElementById("backLink").href = list;
+  document.title = `관리자 · ${t.topic} — csquiz`;
+
+  const head = document.getElementById("head");
+  head.innerHTML = `
+    <div>
+      <span class="badge gray">${escapeHtml(t.domainLabel)}</span>
+      ${t.kind === "CODE" ? `<span class="badge gray">코드 문제 주제</span>` : ""}
+      ${t.next ? `<span class="badge orange">다음 차례</span>` : ""}
+    </div>
+    <h1>${escapeHtml(t.topic)}</h1>
+    <div class="topic-facts">
+      <span>차례 <b>${t.order}번</b></span>
+      <span>만든 문서 <b>${t.usedCount}편</b></span>
+      <span>마지막 사용 <b>${t.lastUsedAt ? escapeHtml(t.lastUsedAt) : "아직 안 씀"}</b></span>
+    </div>
+    <div class="topic-actions">
+      <a class="btn btn-outline" href="/admin/topics.html?edit=${t.id}${t.kind === "CODE" ? "&kind=CODE" : ""}">수정</a>
+      <button class="danger" id="deleteBtn">삭제</button>
+    </div>`;
+  head.hidden = false;
+  // 2단계 확인 — 다시 적으면 그만이지만, 몇 편 썼는지의 기록은 되살릴 수 없다
+  document.getElementById("deleteBtn").addEventListener("click", e =>
+    armedAction(e.currentTarget, async () => {
+      try {
+        await api(`/api/admin/topic-queue/${t.id}`, { method: "DELETE" });
+        location.href = list;
+      } catch (err) {
+        showError(message, err);
+      }
+    }));
+
+  renderBrief(t.memo);
+}
+
+function renderBrief(memo) {
+  const box = document.getElementById("brief");
+  box.hidden = false;
+  if (!memo) {
+    box.innerHTML = `<h2>작성 지시</h2>
+      <p class="meta">작성 지시가 없습니다. 모델이 주제 문장만 보고 범위를 정합니다.</p>`;
+    return;
+  }
+  const { valid, fields, questions } = parseTopicMemo(memo);
+  if (!valid) {
+    box.innerHTML = `<h2>작성 지시 <span class="badge gray">지시 아님 · 모델에 안 실림</span></h2>
+      <p class="meta">"핵심 개념:"과 "설명할 것:" 줄이 둘 다 있어야 모델에 실립니다. 지금은 메모로만 남습니다.</p>
+      <p class="brief-raw">${escapeHtml(memo)}</p>`;
+    return;
+  }
+
+  const section = (title, body, note = "") => `
+    <section class="brief-section">
+      <h3>${title}${note ? ` <span class="meta">· ${note}</span>` : ""}</h3>
+      ${body}
+    </section>`;
+
+  let html = `<h2>작성 지시 <span class="badge green">모델에 실림</span></h2>`;
+  html += section("핵심 개념", `<div class="brief-chips">${
+    splitTopLevel(fields["핵심 개념"]).map(c => `<span>${escapeHtml(c)}</span>`).join("")}</div>`);
+  html += section("설명할 것", `<ol class="brief-questions">${
+    questions.map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ol>`, "입문편에만 실림 · 이 순서대로 다룸");
+  if (fields["다루지 않을 것"]) html += section("다루지 않을 것", text(fields["다루지 않을 것"]), "이름만 꺼냄");
+  if (fields["실물"]) html += section("실물", text(fields["실물"]));
+  html += section("그림", diagramOf(fields["그림"]), "입문편에만 실림");
+  box.innerHTML = html;
+}
+
+/** "그림:" 줄 — 끝 괄호의 mermaid 이름을 배지로 뗀다. 비었으면 모델이 고른다. */
+function diagramOf(value) {
+  if (!value) return `<p class="brief-text meta">지정 안 함 · 모델이 고름</p>`;
+  const m = value.match(/^(.*)\((flowchart|sequenceDiagram|stateDiagram-v2)\)\s*$/);
+  if (!m) return text(value);
+  return `<div class="brief-diagram"><span class="badge">${DIAGRAM_KINDS[m[2]]}</span>
+    <span class="brief-text">${escapeHtml(m[1].trim())}</span></div>`;
+}
+
+function text(s) { return `<p class="brief-text">${escapeHtml(s)}</p>`; }
+
+/** 쉼표로 나누되 괄호 안의 쉼표는 지나친다. 예: "가상 서버(인스턴스, VM), 요금" → 두 개 */
+function splitTopLevel(s) {
+  const out = [];
+  let depth = 0, cur = "";
+  for (const ch of s) {
+    if (ch === "(") depth++;
+    if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) { out.push(cur.trim()); cur = ""; continue; }
+    cur += ch;
+  }
+  out.push(cur.trim());
+  return out.filter(Boolean);
+}
+</script>
+</body>
+</html>

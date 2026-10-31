@@ -104,6 +104,31 @@ class TopicQueueServiceTest {
         verify(repository, never()).save(any());
     }
 
+    /* ── 한 줄 조회 (2026-10-31) ─────────────────────────────── */
+
+    @Test
+    @DisplayName("한 줄 조회도 목록과 같은 차례 번호와 다음 차례 표시를 준다")
+    void getCarriesOrderAndNext() {
+        TopicQueueItem first = used(1L, TestDomains.DATABASE, "인덱스", 1, LocalDate.of(2026, 8, 15));
+        TopicQueueItem second = item(2L, TestDomains.OS, "메모리 관리", 2);
+        when(repository.findById(2L)).thenReturn(Optional.of(second));
+        when(repository.findAllByKindOrderBySortOrderAsc(any())).thenReturn(List.of(first, second));
+
+        TopicQueueItemResponse got = service.get(2L);
+
+        assertThat(got.topic()).isEqualTo("메모리 관리");
+        assertThat(got.order()).as("화면의 줄 번호가 아니라 전체 차례").isEqualTo(2);
+        assertThat(got.next()).as("안 쓴 범위가 다음 차례다").isTrue();
+    }
+
+    @Test
+    @DisplayName("없는 범위를 조회하면 404 오류를 낸다")
+    void getRejectsMissingId() {
+        when(repository.findById(9L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.get(9L)).isInstanceOf(BusinessException.class);
+    }
+
     /* ── 수정 (2026-09-14) ────────────────────────────────────── */
 
     /**
