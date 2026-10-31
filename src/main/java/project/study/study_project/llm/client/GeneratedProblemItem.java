@@ -24,8 +24,15 @@ import java.util.List;
 @JsonClassDescription("CS 학습 퀴즈 문제 목록")
 public record GeneratedProblemItem(
 
-        @JsonPropertyDescription("문제 지문. 한국어. 코드가 필요하면 지문 안에 포함")
+        @JsonPropertyDescription("문제 지문. 한국어. 여러 줄짜리 로그·표·명령 출력은 지문에 넣지 말고 exhibit에 적는다")
         String question,
+
+        // 지문 바로 뒤에 둔다. 지문이 장면과 물음을 세우고, 자료는 그 장면에서 관찰한 값을 댄다.
+        // 저장할 때 초안의 code 칸에 언어 EXHIBIT_LANGUAGE로 들어가 화면이 고정폭·줄 번호로 그린다.
+        @JsonPropertyDescription("지문에 딸린 자료. 로그 몇 줄, 실행 계획, 설정 일부, HTTP 헤더, 명령 출력, "
+                + "시각별 지표 표처럼 학습자가 읽고 판단할 평문이다. 고급 문제에서 자료 없이는 풀 수 없을 때만 "
+                + "채운다. 20줄·한 줄 80자 이내, 마크다운 금지. 자료가 없으면 빈 문자열")
+        String exhibit,
 
         @JsonPropertyDescription("채점 기준값. 객관식·짝짓기면 빈 문자열, OX면 O 또는 X, "
                 + "단답형이면 정답(복수 정답은 |로 구분), 순서 배열이면 정답 순서를 choices의 번호로 "
@@ -71,6 +78,36 @@ public record GeneratedProblemItem(
                 + "허용된 형태로는 만들 수 없었는지, 이미 낸 문제와 겹쳐서인지를 구체적으로 적는다")
         String skipReason
 ) {
+    /** 자료를 문제의 code 칸에 담을 때 쓰는 언어 값. java가 아니어야 자바 코스 통계에 섞이지 않는다. */
+    public static final String EXHIBIT_LANGUAGE = "text";
+
+    /** 자료 없이 만드는 편의 생성자 — 자료 칸을 붙이기 전의 전체 생성자다. */
+    public GeneratedProblemItem(String question, String answer, String explanation,
+                                List<GeneratedChoice> choices, String sourceQuote, String title,
+                                QuestionKind questionKind, String skipReason) {
+        this(question, "", answer, explanation, choices, sourceQuote, title, questionKind, skipReason);
+    }
+
+    public boolean hasExhibit() {
+        return exhibit != null && !exhibit.isBlank();
+    }
+
+    /**
+     * 저장할 자료. 앞뒤 빈 줄과 모든 줄에 공통인 들여쓰기만 뺀다.
+     * strip()을 쓰면 첫 줄 들여쓰기만 사라져 표의 열이 어긋난다. 자료가 없으면 null.
+     */
+    public String normalizedExhibit() {
+        if (!hasExhibit()) {
+            return null;
+        }
+        return exhibit.replaceFirst("^(?:[ \\t]*\\r?\\n)+", "").stripTrailing().stripIndent();
+    }
+
+    /** 검수 AI처럼 문제를 처음 보는 쪽에 넘길 지문. 자료가 있으면 지문 아래에 붙인다. */
+    public String questionWithExhibit() {
+        return hasExhibit() ? question + "\n[자료]\n" + normalizedExhibit() : question;
+    }
+
     /**
      * 사유 없이 만드는 편의 생성자 — 2026-09-19에 {@code skipReason}을 붙이기 전의 전체 생성자다.
      * 문제를 <b>만든</b> 쪽(테스트, DB 초안을 되살리는 {@code LlmProblemService})은 사유가 늘 빈 값이라

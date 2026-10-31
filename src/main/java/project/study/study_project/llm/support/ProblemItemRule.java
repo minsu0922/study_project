@@ -1082,8 +1082,9 @@ public final class ProblemItemRule {
             // 상황형 지문 하한은 고급에만 건다(2026-09-17). 유형이 null이면(옛 초안, 테스트)
             // 조용히 넘어간다 — 유형을 도입하기 전에 만들어진 초안이 갑자기 경고를 달고 나오면
             // 검수자가 경고를 안 보게 된다.
+            // 자료가 붙으면 숫자로 된 증상은 자료가 댄다. 지문에 다시 적으라고 하면 같은 값이 두 번 나온다
             if (difficulty == Difficulty.ADVANCED && item.questionKind() == QuestionKind.SITUATION
-                    && question.trim().length() < SITUATION_QUESTION_MIN) {
+                    && !item.hasExhibit() && question.trim().length() < SITUATION_QUESTION_MIN) {
                 warnings.add("상황형 지문이 짧음 (%d자, 기준 %d자 — 기능 이름과 어긋난 증상을 숫자로 적었는지 보라)"
                         .formatted(question.trim().length(), SITUATION_QUESTION_MIN));
             }
@@ -1120,6 +1121,43 @@ public final class ProblemItemRule {
         String markdown = markdownTraceOf(item);
         if (markdown != null) {
             warnings.add(markdown);
+        }
+        warnings.addAll(exhibitWarningsOf(item, difficulty));
+        return warnings;
+    }
+
+    /** 자료 줄 수 상한. 폰 한 화면에 지문·자료·보기가 함께 들어가는 정도다. */
+    public static final int EXHIBIT_MAX_LINES = 20;
+
+    /** 자료 한 줄 글자 수 상한. 넘으면 폰에서 가로로 밀어야 읽힌다. */
+    public static final int EXHIBIT_MAX_LINE_LENGTH = 80;
+
+    /**
+     * 자료(로그·표) 경고. 고급에만 연 형태라 초·중급에 붙으면 알린다 —
+     * 자료를 읽는 일 자체가 장면을 읽는 부담이라, 중급에서 상황형을 뺀 이유와 같다.
+     * 경고로 두는 이유: 좋은 문제면 사람이 난이도를 고급으로 바꿔 살릴 수 있다.
+     */
+    static List<String> exhibitWarningsOf(GeneratedProblemItem item, Difficulty difficulty) {
+        if (!item.hasExhibit()) {
+            return List.of();
+        }
+        List<String> warnings = new ArrayList<>();
+        if (difficulty == Difficulty.BEGINNER || difficulty == Difficulty.INTERMEDIATE) {
+            warnings.add("%s 문제에 자료가 붙음 (자료는 고급에만 쓴다 — 자료를 읽는 것이 장면을 읽는 부담이다)"
+                    .formatted(difficulty.getDisplayName()));
+        }
+        List<String> lines = item.normalizedExhibit().lines().toList();
+        if (lines.size() > EXHIBIT_MAX_LINES) {
+            warnings.add("자료가 김 (%d줄, 기준 %d줄 — 답을 가르는 줄만 남겨라)"
+                    .formatted(lines.size(), EXHIBIT_MAX_LINES));
+        }
+        int widest = lines.stream().mapToInt(String::length).max().orElse(0);
+        if (widest > EXHIBIT_MAX_LINE_LENGTH) {
+            warnings.add("자료의 한 줄이 김 (%d자, 기준 %d자 — 폰에서 가로로 밀어야 읽힌다)"
+                    .formatted(widest, EXHIBIT_MAX_LINE_LENGTH));
+        }
+        if (item.exhibit().contains("```")) {
+            warnings.add("자료에 마크다운 코드 울타리(```)가 있음 (화면에 글자 그대로 보인다)");
         }
         return warnings;
     }

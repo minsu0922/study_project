@@ -157,8 +157,8 @@ public final class ProblemReviewEvalCli {
                 choices.set(m.choice(), new GeneratedChoice(m.text(), c.correct(), c.rationale(), c.matchText()));
             }
         }
-        return new GeneratedProblemItem(p.question(), p.answer(), p.explanation(), choices, p.sourceQuote(),
-                p.title(), p.questionKind(), p.skipReason());
+        return new GeneratedProblemItem(p.question(), p.exhibit(), p.answer(), p.explanation(), choices,
+                p.sourceQuote(), p.title(), p.questionKind(), p.skipReason());
     }
 
     /* ── 채점 ── */

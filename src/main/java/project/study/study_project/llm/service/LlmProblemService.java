@@ -547,10 +547,14 @@ public class LlmProblemService {
             quoteCheck = quoteCheck.substring(0, QUOTE_CHECK_MAX - 1) + "…";
         }
 
-        return java.util.Optional.of(GeneratedProblemDraft.pending(
+        GeneratedProblemDraft draft = GeneratedProblemDraft.pending(
                 domain, difficulty, type, Texts.trimToNull(item.title()), Texts.trimToNull(item.question()), answer,
                 Texts.trimToNull(item.explanation()), choicesJson, model, Texts.trimToNull(documentSlug),
-                item.questionKind(), quoteCheck));
+                item.questionKind(), quoteCheck);
+        if (item.hasExhibit()) {
+            draft.attachExhibit(item.normalizedExhibit(), GeneratedProblemItem.EXHIBIT_LANGUAGE);
+        }
+        return java.util.Optional.of(draft);
     }
 
     /* ── 검수(목록·승인·거절) ─────────────────────────────── */
@@ -916,7 +920,8 @@ public class LlmProblemService {
                 .map(c -> new GeneratedProblemItem.GeneratedChoice(
                         c.text(), c.correct(), c.rationale(), c.matchText()))
                 .toList();
-        return new GeneratedProblemItem(d.getQuestion(), d.getAnswer(), d.getExplanation(),
-                items, "", d.getTitle(), d.getQuestionKind());
+        String exhibit = d.exhibitOrNull();
+        return new GeneratedProblemItem(d.getQuestion(), exhibit == null ? "" : exhibit, d.getAnswer(),
+                d.getExplanation(), items, "", d.getTitle(), d.getQuestionKind(), "");
     }
 }

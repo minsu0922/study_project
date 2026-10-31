@@ -334,6 +334,40 @@ class DraftImportServiceTest {
         return file;
     }
 
+    @Test
+    @DisplayName("파일의 자료(exhibit)는 초안의 코드 칸에 text 언어로 들어간다 — java면 자바 코스에 섞인다")
+    void carriesExhibitToDraftCodeAsText() throws Exception {
+        GeneratedProblemItem base = validItem("아래 연결 상태 집계에서 먼저 의심할 것으로 적절한 것은?");
+        GeneratedProblemItem withExhibit = new GeneratedProblemItem(base.question(),
+                "\n  State       Count\n  TIME-WAIT   28211\n    (ss -tan 집계)\n", base.answer(), base.explanation(), base.choices(),
+                "", "", null, "");
+        Path file = writeBatchFile("2026-10-31.json", "claude-opus-5", withExhibit);
+
+        service.importFile(file);
+
+        GeneratedProblemDraft draft = capturedDrafts().get(0);
+        // 앞뒤 빈 줄과 공통 들여쓰기(2칸)만 걷는다. 그보다 더 들인 줄은 그만큼 남는다
+        assertThat(draft.getCode()).isEqualTo("State       Count\nTIME-WAIT   28211\n  (ss -tan 집계)");
+        assertThat(draft.getCodeLanguage()).isEqualTo(GeneratedProblemItem.EXHIBIT_LANGUAGE);
+        assertThat(draft.getCodeKind()).isNull();
+        assertThat(draft.exhibitOrNull()).isEqualTo(draft.getCode());
+    }
+
+    @Test
+    @DisplayName("exhibit 칸이 없는 옛 파일도 그대로 흡수되고 코드 칸은 비어 있다")
+    void importsOldFileWithoutExhibitField() throws Exception {
+        Path file = writeBatchFile("2026-10-30.json", "claude-opus-5", validItem("옛 파일의 문제"));
+        String json = Files.readString(file).replace("\"exhibit\":\"\",", "");
+        assertThat(json).doesNotContain("exhibit");
+        Files.writeString(file, json);
+
+        service.importFile(file);
+
+        GeneratedProblemDraft draft = capturedDrafts().get(0);
+        assertThat(draft.getCode()).isNull();
+        assertThat(draft.getCodeLanguage()).isNull();
+    }
+
     /** 저장된 초안 목록을 잡아낸다(saveAll 인자). */
     @SuppressWarnings("unchecked")
     private List<GeneratedProblemDraft> capturedDrafts() {

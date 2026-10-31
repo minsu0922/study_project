@@ -238,6 +238,20 @@ public class GeneratedProblemDraft {
         this.codeFocusLine = part.focusLine();
     }
 
+    /**
+     * 개념 문제의 자료(로그·표)를 코드 칸에 붙인다. codeKind는 비워 둔다 —
+     * 실행 검증도, 코드 보기도 없는 문제라서다. 승인하면 code·codeLanguage가 문제로 그대로 옮겨 간다.
+     */
+    public void attachExhibit(String exhibit, String language) {
+        this.code = exhibit;
+        this.codeLanguage = language;
+    }
+
+    /** 코드 칸에 든 것이 자료면 돌려준다. 코드 문제의 코드는 자료가 아니다. */
+    public String exhibitOrNull() {
+        return codeKind == null && code != null && !CodeProblem.LANGUAGE_JAVA.equals(codeLanguage) ? code : null;
+    }
+
     public void recordAiFindings(String aiFindingsJson) {
         this.aiFindingsJson = aiFindingsJson;
     }

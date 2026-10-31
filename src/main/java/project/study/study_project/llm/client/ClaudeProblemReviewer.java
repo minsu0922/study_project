@@ -179,7 +179,8 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
     static String buildJudgePrompt(List<Shown> shown, SourceDocument source) {
         StringBuilder sb = new StringBuilder("# 근거 문서\n").append(source.contentMd()).append("\n\n# 문제\n\n");
         for (int k = 0; k < shown.size(); k++) {
-            sb.append("[problemNo ").append(k + 1).append("]\n").append(shown.get(k).item().question()).append('\n');
+            sb.append("[problemNo ").append(k + 1).append("]\n").append(shown.get(k).item().questionWithExhibit())
+                    .append('\n');
             appendChoices(sb, shown.get(k));
         }
         return sb.toString();
@@ -290,7 +291,7 @@ public class ClaudeProblemReviewer implements ProblemReviewer {
         for (int k = 0; k < shown.size(); k++) {
             Shown s = shown.get(k);
             GeneratedProblemItem item = s.item();
-            sb.append("[problemNo ").append(k + 1).append("]\n질문: ").append(item.question()).append('\n');
+            sb.append("[problemNo ").append(k + 1).append("]\n질문: ").append(item.questionWithExhibit()).append('\n');
             for (int n = 0; n < item.choices().size(); n++) {
                 GeneratedProblemItem.GeneratedChoice c = item.choices().get(n);
                 sb.append(n + 1).append(") ").append(c.text()).append(c.correct() ? "  ← 표시된 정답" : "").append('\n');

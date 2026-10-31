@@ -1085,4 +1085,81 @@ class ProblemItemRuleTest {
                     .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
         }
     }
+
+    @Nested
+    @DisplayName("자료(exhibit)는 고급에만, 폰 한 화면 크기로")
+    class ExhibitWarnings {
+
+        private static final String SHORT_SITUATION = "주문 목록 API가 점심마다 2초를 넘긴다. 아래는 느린 쿼리의 "
+                + "실행 계획이다. 응답을 줄이는 조치로 가장 적절한 것은?";
+
+        private GeneratedProblemItem withExhibit(String question, String exhibit, QuestionKind kind) {
+            GeneratedProblemItem base = item(question, goodExplanation(), kind);
+            return new GeneratedProblemItem(base.question(), exhibit, base.answer(), base.explanation(),
+                    base.choices(), "", base.title(), kind, "");
+        }
+
+        private List<String> warnings(GeneratedProblemItem item, Difficulty difficulty) {
+            return ProblemItemRule.qualityWarningsOf(item, difficulty, true);
+        }
+
+        @Test
+        @DisplayName("고급에 알맞은 크기의 자료는 경고가 없다")
+        void acceptsAdvancedExhibit() {
+            GeneratedProblemItem item = withExhibit(SHORT_SITUATION,
+                    "type  key          rows   Extra\nref   idx_user_id  48210  Using filesort", QuestionKind.SITUATION);
+
+            assertThat(warnings(item, Difficulty.ADVANCED)).noneSatisfy(w -> assertThat(w).contains("자료"));
+        }
+
+        @Test
+        @DisplayName("자료가 붙은 고급 상황형은 지문이 150자보다 짧아도 된다 — 숫자 증상을 자료가 댄다")
+        void skipsSituationMinimumWhenExhibitPresent() {
+            assertThat(SHORT_SITUATION.length()).isLessThan(ProblemItemRule.SITUATION_QUESTION_MIN);
+            GeneratedProblemItem withData = withExhibit(SHORT_SITUATION, "rows  48210", QuestionKind.SITUATION);
+            GeneratedProblemItem without = item(SHORT_SITUATION, goodExplanation(), QuestionKind.SITUATION);
+
+            assertThat(warnings(withData, Difficulty.ADVANCED)).noneSatisfy(w -> assertThat(w).contains("상황형 지문이 짧음"));
+            assertThat(warnings(without, Difficulty.ADVANCED)).anySatisfy(w -> assertThat(w).contains("상황형 지문이 짧음"));
+        }
+
+        @Test
+        @DisplayName("초급·중급에 붙은 자료는 경고한다")
+        void warnsExhibitBelowAdvanced() {
+            GeneratedProblemItem item = withExhibit("지문", "rows  48210", QuestionKind.CAUSE);
+
+            assertThat(warnings(item, Difficulty.INTERMEDIATE)).anySatisfy(w -> assertThat(w).contains("중급 문제에 자료가 붙음"));
+            assertThat(warnings(item, Difficulty.BEGINNER)).anySatisfy(w -> assertThat(w).contains("초급 문제에 자료가 붙음"));
+        }
+
+        @Test
+        @DisplayName("20줄을 넘거나 한 줄이 80자를 넘으면 경고한다")
+        void warnsOversizedExhibit() {
+            String tall = String.join("\n", java.util.Collections.nCopies(21, "line"));
+            String wide = "x".repeat(81);
+
+            assertThat(warnings(withExhibit("지문", tall, QuestionKind.CAUSE), Difficulty.ADVANCED))
+                    .anySatisfy(w -> assertThat(w).contains("자료가 김 (21줄"));
+            assertThat(warnings(withExhibit("지문", wide, QuestionKind.CAUSE), Difficulty.ADVANCED))
+                    .anySatisfy(w -> assertThat(w).contains("자료의 한 줄이 김 (81자"));
+        }
+
+        @Test
+        @DisplayName("마크다운 코드 울타리가 든 자료는 경고한다")
+        void warnsMarkdownFence() {
+            GeneratedProblemItem item = withExhibit("지문", "```\nrows 1\n```", QuestionKind.CAUSE);
+
+            assertThat(warnings(item, Difficulty.ADVANCED)).anySatisfy(w -> assertThat(w).contains("코드 울타리"));
+        }
+
+        @Test
+        @DisplayName("빈 자료는 자료가 없는 것으로 본다")
+        void treatsBlankExhibitAsNone() {
+            GeneratedProblemItem item = withExhibit("지문", "  \n ", QuestionKind.CAUSE);
+
+            assertThat(item.hasExhibit()).isFalse();
+            assertThat(item.questionWithExhibit()).isEqualTo("지문");
+            assertThat(warnings(item, Difficulty.BEGINNER)).noneSatisfy(w -> assertThat(w).contains("자료"));
+        }
+    }
 }

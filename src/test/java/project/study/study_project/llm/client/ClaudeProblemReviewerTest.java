@@ -38,6 +38,19 @@ class ClaudeProblemReviewerTest {
     }
 
     @Test
+    @DisplayName("자료가 붙은 문제는 검수 AI에게 자료까지 보여 준다 — 빠뜨리면 풀 수 없어 정답 의심이 쏟아진다")
+    void judgePromptCarriesExhibit() {
+        GeneratedProblemItem base = mc("아래 연결 상태 집계에서 먼저 의심할 것은?");
+        GeneratedProblemItem withExhibit = new GeneratedProblemItem(base.question(), "State      Count\nTIME-WAIT  28211",
+                base.answer(), base.explanation(), base.choices(), "", "", null, "");
+
+        String prompt = ClaudeProblemReviewer.buildJudgePrompt(
+                ClaudeProblemReviewer.showable(List.of(withExhibit)), new SourceDocument("s", "t", DOC));
+
+        assertThat(prompt).contains("먼저 의심할 것은?\n[자료]\nState      Count\nTIME-WAIT  28211");
+    }
+
+    @Test
     @DisplayName("보기 4개·정답 1개인 객관식만 검수하고, 같은 문제는 늘 같은 순서로 섞는다")
     void showsOnlyWellFormedMultipleChoice() {
         GeneratedProblemItem ox = new GeneratedProblemItem("OX 문제", "O", "해설", List.of());
