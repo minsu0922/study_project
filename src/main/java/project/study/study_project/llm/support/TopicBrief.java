@@ -9,7 +9,7 @@ import java.util.List;
  * 앞의 두 칸이 모두 있어야 지시로 본다. 이름표 없는 옛 메모는 사람용 작업 기록이라
  * (대기열 id·날짜가 섞여 있다) 모델에 실으면 문서로 새어 나온다.
  *
- * <p>칸 정의와 이유는 docs의 주제 로드맵 문서에 있다.
+ * <p>칸 정의와 이유는 docs/27-topic-roadmap.md에 있다.
  */
 public record TopicBrief(String concepts, String questions, String outOfScope, String facts,
                          String diagram, List<String> laterTopics) {
