@@ -27,12 +27,13 @@ public record GeneratedProblemItem(
         @JsonPropertyDescription("문제 지문. 한국어. 여러 줄짜리 로그·표·명령 출력은 지문에 넣지 말고 exhibit에 적는다")
         String question,
 
-        // 지문 바로 뒤에 둔다. 지문이 장면과 물음을 세우고, 자료는 그 장면에서 관찰한 값을 댄다.
+        // 지문 바로 뒤에 둔다. 지문이 물음을 세우고, 자료는 그 물음이 가리키는 값이나 그림을 댄다.
         // 저장할 때 초안의 code 칸에 언어 EXHIBIT_LANGUAGE로 들어가 화면이 고정폭·줄 번호로 그린다.
         @JsonPropertyDescription("지문에 딸린 자료. 로그 몇 줄, 실행 계획, 설정 일부, HTTP 헤더, 명령 출력, "
                 + "시각별 지표 표처럼 학습자가 읽고 판단할 평문이다. 첫 줄을 sequenceDiagram이나 "
-                + "flowchart TD로 쓰면 mermaid 그림으로 그린다. 고급 문제에서 자료 없이는 풀 수 없을 때만 "
-                + "채운다. 20줄·한 줄 80자 이내, 마크다운 금지. 자료가 없으면 빈 문자열")
+                + "flowchart TD로 쓰면 mermaid 그림으로 그린다. 문제에 맞게 새로 만든다. "
+                + "고급은 20줄 이내, 초급·중급은 5줄(그림은 화살표 5개) 이내에 한 번에 1개 문제까지. "
+                + "한 줄 80자 이내, 마크다운 금지. 자료가 없으면 빈 문자열")
         String exhibit,
 
         @JsonPropertyDescription("채점 기준값. 객관식·짝짓기면 빈 문자열, OX면 O 또는 X, "

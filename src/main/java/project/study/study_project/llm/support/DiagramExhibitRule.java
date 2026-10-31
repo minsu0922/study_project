@@ -34,6 +34,17 @@ public final class DiagramExhibitRule {
     private DiagramExhibitRule() {
     }
 
+    /** 화살표가 있는 줄. 시퀀스 메시지(->>, -->>)와 흐름도 연결(-->, ---, ==>, -.->)을 모두 센다. */
+    private static final Pattern ARROW = Pattern.compile("--|->|==>|-\\.");
+
+    /** 그림의 화살표 수. 첫 줄·주석은 세지 않는다. 초·중급 자료의 크기를 이것으로 잰다. */
+    public static int arrowCountOf(String exhibit) {
+        return (int) exhibit.lines().skip(1)
+                .map(String::strip)
+                .filter(line -> !line.startsWith("%%") && ARROW.matcher(line).find())
+                .count();
+    }
+
     /** 첫 줄이 열지 않은 그림 종류인가. 그 자료는 그림이 아니라 글자로 저장되고 보인다. */
     public static boolean isUnsupportedDiagram(String exhibit) {
         String first = exhibit.lines().findFirst().orElse("").strip();

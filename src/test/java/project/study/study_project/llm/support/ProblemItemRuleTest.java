@@ -1124,12 +1124,51 @@ class ProblemItemRuleTest {
         }
 
         @Test
-        @DisplayName("초급·중급에 붙은 자료는 경고한다")
-        void warnsExhibitBelowAdvanced() {
-            GeneratedProblemItem item = withExhibit("지문", "rows  48210", QuestionKind.CAUSE);
+        @DisplayName("초급·중급도 5줄 이하 자료는 경고 없이 받는다")
+        void acceptsShortExhibitBelowAdvanced() {
+            GeneratedProblemItem item = withExhibit("지문", "a\nb\nc\nd\ne", QuestionKind.CAUSE);
 
-            assertThat(warnings(item, Difficulty.INTERMEDIATE)).anySatisfy(w -> assertThat(w).contains("중급 문제에 자료가 붙음"));
-            assertThat(warnings(item, Difficulty.BEGINNER)).anySatisfy(w -> assertThat(w).contains("초급 문제에 자료가 붙음"));
+            assertThat(warnings(item, Difficulty.INTERMEDIATE)).noneSatisfy(w -> assertThat(w).contains("자료"));
+            assertThat(warnings(item, Difficulty.BEGINNER)).noneSatisfy(w -> assertThat(w).contains("자료"));
+        }
+
+        @Test
+        @DisplayName("초급·중급 자료가 6줄을 넘으면 경고한다 — 고급에는 같은 자료가 괜찮다")
+        void warnsLongExhibitBelowAdvanced() {
+            GeneratedProblemItem item = withExhibit("지문", "a\nb\nc\nd\ne\nf", QuestionKind.CAUSE);
+
+            assertThat(warnings(item, Difficulty.BEGINNER)).anySatisfy(w -> assertThat(w).contains("초급 자료가 김 (줄 6개"));
+            assertThat(warnings(item, Difficulty.INTERMEDIATE)).anySatisfy(w -> assertThat(w).contains("중급 자료가 김"));
+            assertThat(warnings(item, Difficulty.ADVANCED)).noneSatisfy(w -> assertThat(w).contains("자료가 김"));
+        }
+
+        @Test
+        @DisplayName("초급·중급 그림은 줄이 아니라 화살표 수로 잰다")
+        void measuresDiagramByArrows() {
+            // 참가자 선언 두 줄이 있어 7줄이지만 화살표는 4개다
+            String fourArrows = "sequenceDiagram\n participant C as 클라이언트\n participant S as 서버\n"
+                    + " C->>S: FIN\n S-->>C: ACK\n S->>C: FIN\n C-->>S: ACK";
+            String sixArrows = fourArrows + "\n C->>S: 다시\n S-->>C: 응답";
+
+            assertThat(warnings(withExhibit("지문", fourArrows, QuestionKind.CAUSE), Difficulty.INTERMEDIATE))
+                    .noneSatisfy(w -> assertThat(w).contains("자료가 김"));
+            assertThat(warnings(withExhibit("지문", sixArrows, QuestionKind.CAUSE), Difficulty.INTERMEDIATE))
+                    .anySatisfy(w -> assertThat(w).contains("화살표 6개"));
+        }
+
+        @Test
+        @DisplayName("초급·중급에서 자료가 붙은 문제가 한 번에 2개면 경고한다")
+        void warnsTwoExhibitsInLowerLevelBatch() {
+            GeneratedProblemItem one = withExhibit("지문 하나", "a", QuestionKind.CAUSE);
+            GeneratedProblemItem two = withExhibit("지문 둘", "b", QuestionKind.COMPARISON);
+            GeneratedProblemItem none = item("지문 셋", goodExplanation(), QuestionKind.JUDGMENT);
+
+            assertThat(ProblemItemRule.batchWarningsOf(List.of(one, none), Difficulty.INTERMEDIATE))
+                    .noneSatisfy(w -> assertThat(w).contains("자료가 붙은 문제"));
+            assertThat(ProblemItemRule.batchWarningsOf(List.of(one, two, none), Difficulty.BEGINNER))
+                    .anySatisfy(w -> assertThat(w).contains("초급에 자료가 붙은 문제가 2개"));
+            assertThat(ProblemItemRule.batchWarningsOf(List.of(one, two, none), Difficulty.ADVANCED))
+                    .noneSatisfy(w -> assertThat(w).contains("자료가 붙은 문제"));
         }
 
         @Test

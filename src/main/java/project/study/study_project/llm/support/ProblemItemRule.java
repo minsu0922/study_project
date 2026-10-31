@@ -1133,18 +1133,29 @@ public final class ProblemItemRule {
     public static final int EXHIBIT_MAX_LINE_LENGTH = 80;
 
     /**
-     * 자료(로그·표) 경고. 고급에만 연 형태라 초·중급에 붙으면 알린다 —
-     * 자료를 읽는 일 자체가 장면을 읽는 부담이라, 중급에서 상황형을 뺀 이유와 같다.
-     * 경고로 두는 이유: 좋은 문제면 사람이 난이도를 고급으로 바꿔 살릴 수 있다.
+     * 초·중급 자료의 크기 상한. 글자 자료는 줄 수, 그림은 화살표 수로 잰다.
+     * 그보다 길면 자료를 읽는 일이 묻는 개념보다 무거워져, 틀린 이유가 개념인지 읽기인지 갈리지 않는다.
      */
+    public static final int LOWER_LEVEL_EXHIBIT_MAX = 5;
+
+    /** 초·중급에서 한 번에 만드는 문제 가운데 자료를 붙일 수 있는 개수. */
+    public static final int LOWER_LEVEL_EXHIBIT_MAX_PER_BATCH = 1;
+
+    /** 자료(로그·표·그림) 경고. 초·중급은 크기를 더 좁게 잰다. */
     static List<String> exhibitWarningsOf(GeneratedProblemItem item, Difficulty difficulty) {
         if (!item.hasExhibit()) {
             return List.of();
         }
         List<String> warnings = new ArrayList<>();
         if (difficulty == Difficulty.BEGINNER || difficulty == Difficulty.INTERMEDIATE) {
-            warnings.add("%s 문제에 자료가 붙음 (자료는 고급에만 쓴다 — 자료를 읽는 것이 장면을 읽는 부담이다)"
-                    .formatted(difficulty.getDisplayName()));
+            boolean diagram = item.hasDiagramExhibit();
+            int size = diagram ? DiagramExhibitRule.arrowCountOf(item.normalizedExhibit())
+                    : (int) item.normalizedExhibit().lines().count();
+            if (size > LOWER_LEVEL_EXHIBIT_MAX) {
+                warnings.add("%s 자료가 김 (%s %d개, 기준 %d개 — 초·중급 자료는 개념을 알아보게 하는 데서 그친다)"
+                        .formatted(difficulty.getDisplayName(), diagram ? "화살표" : "줄", size,
+                                LOWER_LEVEL_EXHIBIT_MAX));
+            }
         }
         List<String> lines = item.normalizedExhibit().lines().toList();
         if (lines.size() > EXHIBIT_MAX_LINES) {
@@ -1227,6 +1238,15 @@ public final class ProblemItemRule {
         //
         // 고급 프롬프트에는 "셋을 낸다면 SITUATION 1개"가 전부터 적혀 있었는데 아무도 재지
         // 않았다. 프롬프트에만 있고 검사가 없는 규칙은 조용히 무너진다.
+        // 초·중급의 자료는 한 번에 하나까지다. 여럿이면 "원리를 묻는" 칸이 "자료를 읽는" 칸으로 바뀐다
+        if (difficulty == Difficulty.BEGINNER || difficulty == Difficulty.INTERMEDIATE) {
+            long exhibits = items.stream().filter(GeneratedProblemItem::hasExhibit).count();
+            if (exhibits > LOWER_LEVEL_EXHIBIT_MAX_PER_BATCH) {
+                warnings.add("%s에 자료가 붙은 문제가 %d개 (상한 %d개 — 나머지는 자료 없이 묻는다)"
+                        .formatted(difficulty.getDisplayName(), exhibits, LOWER_LEVEL_EXHIBIT_MAX_PER_BATCH));
+            }
+        }
+
         if (difficulty == Difficulty.ADVANCED
                 && items.stream().anyMatch(i -> i.questionKind() != null)) {
             long situations = items.stream().filter(i -> i.questionKind() == QuestionKind.SITUATION).count();
