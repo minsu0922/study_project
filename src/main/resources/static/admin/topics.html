@@ -273,7 +273,7 @@ function initTopicForm() {
 
   // 엔터로 추가 — 범위를 여러 개 몰아서 적는 화면이라 매번 버튼까지 가면 손이 많이 간다.
   document.getElementById("tTopic").addEventListener("keydown", e => {
-    if (e.key === "Enter") addTopic();
+    if (e.key === "Enter") submitTopic();
   });
 
 
