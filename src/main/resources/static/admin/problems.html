@@ -62,7 +62,8 @@ try {
       <div class="filters">
         <!-- 자료(text)를 java로 저장하면 그 문제가 자바 코스에 섞인다. 수정할 때 원래 값을 되채운다. -->
         <div class="field"><label>칸 종류</label><select id="pCodeLanguage">
-          <option value="java">Java 코드</option><option value="text">자료 (로그·표)</option></select></div>
+          <option value="java">Java 코드</option><option value="text">자료 (로그·표)</option>
+          <option value="mermaid">그림 (흐름도·시퀀스)</option></select></div>
         <div class="field"><label>강조할 줄 (선택)</label><input type="number" id="pCodeFocusLine" min="1" style="width:110px" placeholder="예: 12"></div>
         <div class="field"><label style="display:block">&nbsp;</label><label><input type="checkbox" id="pCodeChoices"> 보기가 코드다 (고정폭으로 그린다)</label></div>
       </div>
@@ -476,7 +477,8 @@ async function editProblem(id) {
   document.getElementById("pTitle").value = p.title ?? "";
   document.getElementById("pQuestion").value = p.question;
   document.getElementById("pCode").value = p.code ?? "";
-  document.getElementById("pCodeLanguage").value = p.codeLanguage === "text" ? "text" : "java";
+  document.getElementById("pCodeLanguage").value =
+    ["text", "mermaid"].includes(p.codeLanguage) ? p.codeLanguage : "java";
   document.getElementById("pCodeFocusLine").value = p.codeFocusLine ?? "";
   document.getElementById("pCodeChoices").checked = !!p.codeChoices;
   document.getElementById("pAnswer").value = p.answer ?? "";

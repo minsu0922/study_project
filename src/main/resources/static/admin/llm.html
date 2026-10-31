@@ -495,6 +495,7 @@ const AI_FINDING_COLUMNS = [
   ["NO_SUPPORT", "근거 없음"],
   ["SOURCE_FLAGGED", "문서 지적"],
   ["EXPLANATION_MISMATCH", "해설"],
+  ["EXHIBIT_MISMATCH", "자료"],
   ["DIFFICULTY_MISMATCH", "난이도"],
 ];
 
@@ -875,6 +876,7 @@ async function loadDrafts(jumpToLast = false) {
   else renderKindBalance(data.content, status);
   renderAiSummary(data.content);
   renderPager("d", data);
+  drawProblemDiagrams(box);
 
   // 목록을 다시 그리면 체크 상태는 사라진다(카드가 통째로 새로 만들어지므로).
   // 일부러 복원하지 않는다 — 방금 승인·거절로 목록이 바뀐 직후인데 예전 선택이 되살아나면

@@ -168,6 +168,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         </div>
         ${keyHint(shortcutHint(p.type))}
       </div>`;
+    drawProblemDiagrams(mountEl);
 
     // 보기 버튼/입력에 이벤트 연결 (innerHTML로 그린 뒤라 여기서 바인딩)
     if (p.type === "SHORT_ANSWER") {

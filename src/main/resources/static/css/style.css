@@ -1659,6 +1659,13 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
   background: var(--primary-soft); border-left: 4px solid var(--primary); font-weight: 700;
 }
 .q-code-line.is-focus .q-code-no { color: var(--primary); }
+/* 그림 자료(mermaid) — drawProblemDiagrams가 원문 상자를 이 상자로 갈아 끼운다.
+   넓은 그림은 상자 안에서만 옆으로 굴린다. 카드 전체가 옆으로 밀리지 않게 한다. */
+.q-diagram {
+  margin: 12px 0 16px; padding: 12px; overflow-x: auto; text-align: center;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--card, transparent);
+}
+.q-diagram svg { max-width: 100%; height: auto; }
 /* 코드로 된 보기. 같은 부분은 흐리게, 서로 다른 부분은 진하게(codeChoicesHtml) */
 .code-choice {
   font-family: ui-monospace, "Cascadia Code", Consolas, "D2Coding", monospace;
@@ -2503,6 +2510,11 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 .draft-diagram { margin: 8px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; text-align: center; }
 .draft-diagram svg { max-width: 100%; height: auto; }
 .draft-diagram.broken { color: var(--danger, #c0392b); text-align: left; }
+/* 검수함에서만: 그림 자료의 문법이 틀려 원문으로 남은 상자. 학습자 화면에는 안내 없이 원문만 보인다 */
+.draft-card .q-code[data-diagram-broken]::before {
+  content: "그림 문법 오류 — 승인하면 학습자에게 원문으로 보입니다";
+  display: block; margin-bottom: 6px; color: var(--danger, #c0392b); font-family: inherit; font-weight: 700;
+}
 .topic-cell { min-width: 13em; max-width: 26em; }
 .topic-link { color: inherit; text-decoration: none; }
 .topic-link:hover { color: var(--primary); text-decoration: underline; }

@@ -309,6 +309,7 @@ async function loadStatus() {
     } else {
       list.innerHTML = data.content.map(r => rowHtml(r, cards.get(r.problemId))).join("");
       hydrateBookmarks(list);
+      drawProblemDiagrams(list);
     }
     pager.update(data);
     if (scrollToListOnce) {

@@ -669,10 +669,81 @@ function showRecoveryCode(box, code) {
 function codeBlockHtml(code, focusLine) {
   if (!code) return "";
   const lines = String(code).replaceAll("\r\n", "\n").split("\n");
-  return `<pre class="q-code"><code>${lines.map((line, i) =>
+  // 그림 자료는 원문 상자를 먼저 그리고 drawProblemDiagrams가 그림으로 갈아 끼운다.
+  // 못 그리면 원문이 그대로 남는다. 화살표가 적힌 원문은 읽을 수라도 있다.
+  const diagram = isDiagramSource(code) ? ` data-diagram="${escapeHtml(code)}"` : "";
+  return `<pre class="q-code"${diagram}><code>${lines.map((line, i) =>
     `<span class="q-code-line${i + 1 === focusLine ? " is-focus" : ""}"><span class="q-code-no">${i + 1}</span>${
       escapeHtml(line) || " "}</span>`
   ).join("\n")}</code></pre>`;
+}
+
+/**
+ * 자료가 그림(mermaid)인가 — 첫 줄로 가린다. 서버 GeneratedProblemItem.exhibitLanguage와 같은 규칙이다.
+ * 언어 칸을 보지 않는 이유: 오답 복습·검수함 응답에는 그 칸이 없다.
+ */
+function isDiagramSource(code) {
+  const first = String(code ?? "").trimStart().split("\n")[0].trim();
+  return /^(flowchart|graph)\s+(TD|TB|BT|LR|RL)\b/.test(first) || /^sequenceDiagram\b/.test(first);
+}
+
+// document.html·admin-common.js와 같은 판이어야 한다. 버전을 올리면 세 곳의 해시를 함께 바꾼다
+const PROBLEM_MERMAID_SRC = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
+const PROBLEM_MERMAID_INTEGRITY = "sha384-rbtjAdnIQE/aQJGEgXrVUlMibdfTSa4PQju4HDhN3sR2PmaKFzhEafuePsl9H/9I";
+let problemMermaidLoading = null;
+let problemDiagramSeq = 0;
+
+function loadProblemMermaid() {
+  if (window.mermaid) return Promise.resolve();
+  if (!problemMermaidLoading) {
+    problemMermaidLoading = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = PROBLEM_MERMAID_SRC;
+      s.integrity = PROBLEM_MERMAID_INTEGRITY;
+      s.crossOrigin = "anonymous";
+      s.onload = resolve;
+      s.onerror = () => { problemMermaidLoading = null; reject(); };
+      document.head.appendChild(s);
+    });
+  }
+  return problemMermaidLoading;
+}
+
+/**
+ * root 안의 그림 자료 상자를 그림으로 바꾼다. codeBlockHtml을 innerHTML로 넣은 뒤 부른다.
+ * 라이브러리(2.5MB)는 그림이 있을 때만 받는다. 문법이 틀리거나 못 받으면 원문 상자를 그대로 둔다.
+ * securityLevel strict: 자료는 모델이 쓴 글이라 그림 안의 태그·클릭 동작을 살리지 않는다.
+ */
+async function drawProblemDiagrams(root) {
+  const boxes = [...(root ?? document).querySelectorAll("pre.q-code[data-diagram]")];
+  if (boxes.length === 0) return;
+  try {
+    await loadProblemMermaid();
+  } catch (e) {
+    return;
+  }
+  const t = document.documentElement.dataset.theme;
+  const dark = t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "neutral",
+    fontFamily: getComputedStyle(document.body).fontFamily });
+  for (const box of boxes) {
+    const source = box.dataset.diagram;
+    if (!(await mermaid.parse(source, { suppressErrors: true }))) {
+      box.dataset.diagramBroken = "1";   // 검수함이 이 표시로 문법 오류를 알린다(style.css)
+      continue;
+    }
+    const id = "q-diagram-" + (++problemDiagramSeq);
+    try {
+      const { svg } = await mermaid.render(id, source);
+      if (!box.isConnected) continue;   // 그리는 사이 다음 문제로 넘어갔다
+      const figure = document.createElement("figure");
+      figure.className = "q-diagram";
+      figure.innerHTML = svg;
+      box.replaceWith(figure);
+    } catch (e) {
+      document.getElementById("d" + id)?.remove();   // 실패하면 남는 임시 상자
+    }
+  }
 }
 
 /**
