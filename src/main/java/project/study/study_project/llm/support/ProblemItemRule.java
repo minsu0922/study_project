@@ -1159,6 +1159,10 @@ public final class ProblemItemRule {
         if (item.exhibit().contains("```")) {
             warnings.add("자료에 마크다운 코드 울타리(```)가 있음 (화면에 글자 그대로 보인다)");
         }
+        if (DiagramExhibitRule.isUnsupportedDiagram(item.normalizedExhibit())) {
+            warnings.add("열지 않은 그림 종류 (흐름도·시퀀스만 그림으로 그린다 — 이 자료는 글자로 보인다)");
+        }
+        warnings.addAll(DiagramExhibitRule.warningsOf(item));
         return warnings;
     }
 

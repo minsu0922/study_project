@@ -354,6 +354,22 @@ class DraftImportServiceTest {
     }
 
     @Test
+    @DisplayName("그림 자료(sequenceDiagram)는 mermaid 언어로 저장한다 — 화면과 관리 화면이 이 값으로 그림을 안다")
+    void storesDiagramExhibitAsMermaid() throws Exception {
+        GeneratedProblemItem base = validItem("아래 흐름에서 중복 결제를 막는 조치는?");
+        GeneratedProblemItem diagram = new GeneratedProblemItem(base.question(),
+                "sequenceDiagram\n  A->>P: 결제 요청\n  P-->>A: 승인", base.answer(), base.explanation(),
+                base.choices(), "", "", null, "");
+        Path file = writeBatchFile("2026-11-01.json", "claude-opus-5", diagram);
+
+        service.importFile(file);
+
+        GeneratedProblemDraft draft = capturedDrafts().get(0);
+        assertThat(draft.getCodeLanguage()).isEqualTo(GeneratedProblemItem.EXHIBIT_DIAGRAM_LANGUAGE);
+        assertThat(draft.exhibitOrNull()).startsWith("sequenceDiagram");
+    }
+
+    @Test
     @DisplayName("exhibit 칸이 없는 옛 파일도 그대로 흡수되고 코드 칸은 비어 있다")
     void importsOldFileWithoutExhibitField() throws Exception {
         Path file = writeBatchFile("2026-10-30.json", "claude-opus-5", validItem("옛 파일의 문제"));

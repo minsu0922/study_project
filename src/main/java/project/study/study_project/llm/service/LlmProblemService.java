@@ -552,7 +552,7 @@ public class LlmProblemService {
                 Texts.trimToNull(item.explanation()), choicesJson, model, Texts.trimToNull(documentSlug),
                 item.questionKind(), quoteCheck);
         if (item.hasExhibit()) {
-            draft.attachExhibit(item.normalizedExhibit(), GeneratedProblemItem.EXHIBIT_LANGUAGE);
+            draft.attachExhibit(item.normalizedExhibit(), item.exhibitLanguage());
         }
         return java.util.Optional.of(draft);
     }

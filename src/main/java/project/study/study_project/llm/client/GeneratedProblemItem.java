@@ -30,7 +30,8 @@ public record GeneratedProblemItem(
         // 지문 바로 뒤에 둔다. 지문이 장면과 물음을 세우고, 자료는 그 장면에서 관찰한 값을 댄다.
         // 저장할 때 초안의 code 칸에 언어 EXHIBIT_LANGUAGE로 들어가 화면이 고정폭·줄 번호로 그린다.
         @JsonPropertyDescription("지문에 딸린 자료. 로그 몇 줄, 실행 계획, 설정 일부, HTTP 헤더, 명령 출력, "
-                + "시각별 지표 표처럼 학습자가 읽고 판단할 평문이다. 고급 문제에서 자료 없이는 풀 수 없을 때만 "
+                + "시각별 지표 표처럼 학습자가 읽고 판단할 평문이다. 첫 줄을 sequenceDiagram이나 "
+                + "flowchart TD로 쓰면 mermaid 그림으로 그린다. 고급 문제에서 자료 없이는 풀 수 없을 때만 "
                 + "채운다. 20줄·한 줄 80자 이내, 마크다운 금지. 자료가 없으면 빈 문자열")
         String exhibit,
 
@@ -80,6 +81,29 @@ public record GeneratedProblemItem(
 ) {
     /** 자료를 문제의 code 칸에 담을 때 쓰는 언어 값. java가 아니어야 자바 코스 통계에 섞이지 않는다. */
     public static final String EXHIBIT_LANGUAGE = "text";
+
+    /** 그림 자료(mermaid 흐름도·시퀀스)의 언어 값. 화면이 이 자료만 그림으로 그린다. */
+    public static final String EXHIBIT_DIAGRAM_LANGUAGE = "mermaid";
+
+    /**
+     * 그림으로 그리는 첫 줄. 흐름도와 시퀀스만 연다. api.js의 isDiagramSource와 같은 규칙이다 —
+     * 한쪽만 바꾸면 서버는 그림이라 하고 화면은 글자로 보인다.
+     */
+    public static final java.util.regex.Pattern DIAGRAM_HEADER = java.util.regex.Pattern.compile(
+            "^(?:(?:flowchart|graph)\\s+(?:TD|TB|BT|LR|RL)\\b|sequenceDiagram\\b).*");
+
+    /** 저장할 언어 값. 자료가 없으면 null. */
+    public String exhibitLanguage() {
+        if (!hasExhibit()) {
+            return null;
+        }
+        String first = normalizedExhibit().lines().findFirst().orElse("").strip();
+        return DIAGRAM_HEADER.matcher(first).matches() ? EXHIBIT_DIAGRAM_LANGUAGE : EXHIBIT_LANGUAGE;
+    }
+
+    public boolean hasDiagramExhibit() {
+        return EXHIBIT_DIAGRAM_LANGUAGE.equals(exhibitLanguage());
+    }
 
     /** 자료 없이 만드는 편의 생성자 — 자료 칸을 붙이기 전의 전체 생성자다. */
     public GeneratedProblemItem(String question, String answer, String explanation,
