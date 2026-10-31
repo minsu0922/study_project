@@ -1,5 +1,5 @@
 {
-  "note" : "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙과 [자료를 붙이는 법]을 따랐고, 근거는 generated/documents/2026-10-28.json의 입문편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+  "note" : "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙과 [자료를 붙이는 법]을 따랐고, 근거는 generated/documents/2026-10-28.json의 입문편입니다. AI 문제 검수는 2026-10-31 API 대신 서브에이전트로 돌렸고(같은 프롬프트·대조 코드), 결과가 reviewFindings에 있습니다.",
   "date" : "2026-10-28",
   "generatedAt" : "2026-10-31T09:40:00Z",
   "domain" : "NETWORK",
@@ -157,5 +157,97 @@
     "title" : "서로 다른 무리 사이를 잇는 장비의 동작",
     "questionKind" : "JUDGMENT",
     "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "첫 줄은 default via 192.168.0.1이다. via가 붙은 default 줄은 다른 줄에 걸리지 않는 모든 주소를 맡기는 곳이니 192.168.0.1은 기본 게이트웨이다. PC 주소는 src 192.168.0.10이고 네트워크 주소는 192.168.0.0이며 마스크는 /24라서 나머지 보기는 다른 값이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "자료를 읽게 하지만 결국 default via 줄이 무엇인지 아는지만 본다. 표의 다른 값이 오답과 짝을 이뤄 오답이 그럴듯하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "정답이 하나로 갈리고 문서 근거도 분명하다. 초급 범위 안이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "네트워크 부분 자리를 1, 호스트 부분 자리를 0으로 채운 32비트 값은 서브넷 마스크다. CIDR 표기는 그 마스크를 1의 개수로 줄여 쓰는 방식이고, 네트워크 주소는 호스트 부분을 0으로 지운 값이며, 호스트 부분은 주소의 뒤쪽 자리다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "질문이 문서의 정의 문장을 거의 그대로 옮겼다. CIDR 표기와 헷갈릴 만해 오답 구성이 좋다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "전형적인 초급 정의 문제이고 정답이 분명하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "ARP는 로컬 네트워크 안에서 IP 주소를 쓰는 기기의 MAC 주소를 묻는 규칙이다. 1은 서브넷 마스크, 2는 라우팅 테이블 설명이다. 3은 ARP 질문이 라우터를 넘지 못한다는 문서 내용과 어긋나는 오해다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "2번이 문서의 '자주 하는 오해' 성격을 잘 살린 오답이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "정답이 하나로 갈린다. 초급 범위 안이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "호스트 부분을 0으로 지운 값은 네트워크 주소다. 서브넷 마스크는 씌운 255.255.255.0 쪽이고, 기본 게이트웨이는 라우터 주소, 호스트 부분은 지워진 자리다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "질문에 '호스트 부분'이 나와 4번을 끌리게 하지만 지운 자리일 뿐 값의 이름이 아니라서 헷갈림이 적당하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "정답이 분명한 초급 정의 문제다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "라우터는 서로 다른 로컬 네트워크 사이에서 받는 쪽 IP 주소를 보고 다음 네트워크로 넘긴다. 1은 받는 쪽 IP 주소가 끝까지 최종 상대를 가리킨다는 문서와 어긋난다. 2는 스위치 설명이고, 4는 라우터의 역할과 반대다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "4번 오답의 '자기 주소로 바꿔'는 NAT를 아는 학습자에게 잠깐 걸릴 수 있으나 문서 기준으로는 명백한 오답이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "정답이 하나로 갈리고 스위치와 라우터를 가르는 좋은 초급 문제다.",
+    "suggestion" : null
   } ]
 }
