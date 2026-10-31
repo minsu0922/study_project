@@ -1666,6 +1666,9 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
   border: 1px solid var(--border); border-radius: 10px; background: var(--card, transparent);
 }
 .q-diagram svg { max-width: 100%; height: auto; }
+/* 차트는 줄이지 않는다. 폰 폭으로 줄이면 가로축 라벨이 읽을 수 없게 작아진다.
+   대신 그림 상자 안에서만 옆으로 넘긴다(.q-diagram의 overflow-x). */
+.q-diagram svg[aria-roledescription="xychart"] { min-width: 440px; }
 /* 코드로 된 보기. 같은 부분은 흐리게, 서로 다른 부분은 진하게(codeChoicesHtml) */
 .code-choice {
   font-family: ui-monospace, "Cascadia Code", Consolas, "D2Coding", monospace;

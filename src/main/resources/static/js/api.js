@@ -684,7 +684,7 @@ function codeBlockHtml(code, focusLine) {
  */
 function isDiagramSource(code) {
   const first = String(code ?? "").trimStart().split("\n")[0].trim();
-  return /^(flowchart|graph)\s+(TD|TB|BT|LR|RL)\b/.test(first) || /^sequenceDiagram\b/.test(first);
+  return /^(flowchart|graph)\s+(TD|TB|BT|LR|RL)\b/.test(first) || /^(sequenceDiagram|xychart-beta)\b/.test(first);
 }
 
 // document.html·admin-common.js와 같은 판이어야 한다. 버전을 올리면 세 곳의 해시를 함께 바꾼다
@@ -724,10 +724,25 @@ async function drawProblemDiagrams(root) {
   }
   const t = document.documentElement.dataset.theme;
   const dark = t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "neutral",
-    fontFamily: getComputedStyle(document.body).fontFamily });
+  // 차트 색: neutral 테마의 기본 선은 연회색이라 흰 바탕에서 거의 안 보였다(8081 확인).
+  // 첫 계열은 사이트 주 색, 둘째는 그와 갈리는 주황이다. 막대+선 차트에서 둘이 한눈에 갈린다.
+  // 바탕·글자도 사이트 색을 따른다. 차트는 다크 테마에서도 흰 바탕을 깔아 다크 화면에서 혼자 튀었다.
+  const css = getComputedStyle(document.documentElement);
+  const primary = css.getPropertyValue("--primary").trim() || "#4f46e5";
+  const text = css.getPropertyValue("--text").trim() || (dark ? "#e5e7eb" : "#1f2937");
+  const axis = { titleColor: text, xAxisLabelColor: text, xAxisTitleColor: text, xAxisLineColor: text,
+    xAxisTickColor: text, yAxisLabelColor: text, yAxisTitleColor: text, yAxisLineColor: text, yAxisTickColor: text };
+  const configure = (chartWidth) => mermaid.initialize({ startOnLoad: false, securityLevel: "strict",
+    theme: dark ? "dark" : "neutral", fontFamily: getComputedStyle(document.body).fontFamily,
+    // 기본 700px로 그리면 폰에서 40%로 줄어 라벨이 6px이 된다. 480px로 그리고 폰에서는 줄이지 않는다(style.css)
+    xyChart: { width: chartWidth, height: 320 },
+    themeVariables: { xyChart: { ...axis, backgroundColor: "transparent",
+      plotColorPalette: `${primary}, ${dark ? "#fbbf24" : "#f59e0b"}` } } });
   for (const box of boxes) {
     const source = box.dataset.diagram;
+    // 가로축 라벨 하나에 60px. 그보다 좁으면 "12:0012:05"처럼 라벨이 붙는다(8081 확인)
+    const labels = (source.match(/^\s*x-axis[^\[]*\[(.*)\]/m)?.[1].match(/"[^"]*"/g) ?? []).length;
+    configure(Math.max(480, labels * 60));
     if (!(await mermaid.parse(source, { suppressErrors: true }))) {
       box.dataset.diagramBroken = "1";   // 검수함이 이 표시로 문법 오류를 알린다(style.css)
       continue;
