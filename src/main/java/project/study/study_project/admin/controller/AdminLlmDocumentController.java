@@ -1,5 +1,6 @@
 package project.study.study_project.admin.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -16,7 +17,10 @@ import project.study.study_project.document.dto.DocumentDetailResponse;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.dto.LlmBulkApproveRequest;
+import project.study.study_project.llm.dto.LlmDocumentBulkApproveResponse;
 import project.study.study_project.llm.dto.LlmDocumentDraftResponse;
+import project.study.study_project.llm.service.LlmDocumentBulkApprover;
 import project.study.study_project.llm.service.LlmDocumentService;
 
 import java.util.Map;
@@ -38,6 +42,7 @@ import java.util.Map;
 public class AdminLlmDocumentController {
 
     private final LlmDocumentService llmDocumentService;
+    private final LlmDocumentBulkApprover llmDocumentBulkApprover;
 
     /** 초안 목록 — 기본 PENDING, 오래된 순. 각 건에 자동 검증 결과가 실려 온다. */
     @GetMapping
@@ -67,6 +72,15 @@ public class AdminLlmDocumentController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<DocumentDetailResponse> approve(@PathVariable Long id) {
         return ApiResponse.ok(llmDocumentService.approve(id));
+    }
+
+    /**
+     * 일괄 승인 — 검수함에서 체크한 문서 초안들을 한 요청으로 승인한다.
+     * 성패가 건마다 달라 200으로 두고 결과를 본문에 적는다(문제 쪽 approve-batch와 같은 판단).
+     */
+    @PostMapping("/approve-batch")
+    public ApiResponse<LlmDocumentBulkApproveResponse> approveBatch(@Valid @RequestBody LlmBulkApproveRequest request) {
+        return ApiResponse.ok(llmDocumentBulkApprover.approveAll(request.ids()));
     }
 
     /** 거절 — 사유(선택)를 바디로 받는다: {@code {"reason": "..."} } (없으면 빈 바디 허용). */

@@ -128,6 +128,18 @@ try {
       </div>
       <div class="field field-reset"><label>&nbsp;</label><button id="gdResetBtn" class="btn-outline">필터 지우기</button></div>
     </div>
+    <!-- 문서 일괄 승인 바 — 문제 쪽과 같은 모양. 차단 항목이 걸린 초안에는 체크박스를 달지 않는다 -->
+    <div id="docBulkBar" class="card" hidden style="margin-bottom:12px">
+      <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px">
+        <label style="display:flex; align-items:center; gap:6px; margin:0">
+          <input type="checkbox" id="docBulkAll"> <span>전체 선택</span>
+        </label>
+        <span class="meta" id="docBulkCount">0건 선택됨</span>
+        <span style="flex:1"></span>
+        <button id="docBulkApproveBtn" disabled>선택 승인</button>
+      </div>
+      <div id="docBulkResult"></div>
+    </div>
     <div id="docDraftList"></div>
     <div class="pager" id="ddPager" hidden></div>
     </section>
@@ -203,6 +215,7 @@ if (initAdminPage("llm")) {
   initReviewTabs();
   initReviewControls();
   initBulkApprove();
+  initDocBulkApprove();
   applyDeepLink();
   loadDocumentSlugFilter();
   loadDrafts();
@@ -1004,12 +1017,13 @@ function markCardDone(btn, resultHtml) {
   if (!card) return;
   card.classList.add("draft-done");
   // 체크박스만 걷어낸다(배지 #12는 남긴다). 처리한 것을 다시 고르면 일괄 승인이 409로 실패한다.
-  card.querySelector(".bulk-pick")?.remove();
+  card.querySelector(".bulk-pick, .doc-bulk-pick")?.remove();
   // 버튼 줄과 거절 폼을 결과 한 줄로 갈아 끼운다.
   card.querySelectorAll(".row-actions, [id^=rejectForm-]").forEach(el => el.remove());
   card.insertAdjacentHTML("beforeend",
     `<div class="meta" style="margin-top:10px">${resultHtml}</div>`);
   syncBulkBar();   // 선택 가능한 카드가 줄었으니 "n건 선택됨"도 다시 센다
+  syncDocBulkBar();
 }
 
 async function approveDraft(btn, id) {
@@ -1116,6 +1130,7 @@ async function loadDocDrafts() {
       개념 문서는 4일에 한 편만 만들어집니다(1일차 문서 → 2~4일차 그 문서로 문제).</div>`;
     box.onclick = null;
     renderPager("dd", data);
+    syncDocBulkBar();
     return;
   }
   box.innerHTML = data.content.map(d => {
@@ -1166,7 +1181,12 @@ async function loadDocDrafts() {
     return `
       <div class="card" style="margin-bottom:12px">
         <div>
-          <span class="badge gray">#${d.id}</span>
+          ${d.status === "PENDING" && !d.blocked
+            ? `<label style="display:inline-flex; align-items:center; gap:6px; margin-right:6px">
+                 <input type="checkbox" class="doc-bulk-pick" value="${d.id}">
+                 <span class="badge gray">#${d.id}</span>
+               </label>`
+            : `<span class="badge gray">#${d.id}</span>`}
           <span class="badge gray">${escapeHtml(d.domainName)}</span>
           ${d.tags.map(t => `<span class="badge gray">${escapeHtml(t)}</span>`).join("")}
           <span class="meta">${escapeHtml(d.model)} · ${d.contentLength}자</span>
@@ -1203,6 +1223,78 @@ async function loadDocDrafts() {
   }
 
   renderPager("dd", data);
+  syncDocBulkBar();   // 다시 그리면 체크가 풀린다. 이유는 loadDrafts 끝 주석과 같다
+}
+
+/* ═══════════ 문서 일괄 승인 ═══════════
+ * 문제 쪽 일괄 승인과 같은 규칙이다. 화면에서 체크한 것만 보내고, 일괄 거절은 두지 않는다.
+ * 문서는 입문편·심화편이 함께 들어와 두 편을 한 번에 승인하는 일이 잦다. */
+function initDocBulkApprove() {
+  document.getElementById("docDraftList").addEventListener("change", e => {
+    if (e.target.classList.contains("doc-bulk-pick")) syncDocBulkBar();
+  });
+  document.getElementById("docBulkAll").addEventListener("change", e => {
+    docPickBoxes().forEach(cb => { cb.checked = e.target.checked; });
+    syncDocBulkBar();
+  });
+  document.getElementById("docBulkApproveBtn").addEventListener("click", e => {
+    armedAction(e.target, docBulkApprove, `${docPickedIds().length}건 정말 승인?`);
+  });
+}
+
+function docPickBoxes() {
+  return Array.from(document.querySelectorAll("#docDraftList .doc-bulk-pick"));
+}
+
+function docPickedIds() {
+  return docPickBoxes().filter(cb => cb.checked).map(cb => Number(cb.value));
+}
+
+function syncDocBulkBar() {
+  const boxes = docPickBoxes();
+  const picked = boxes.filter(cb => cb.checked).length;
+  const btn = document.getElementById("docBulkApproveBtn");
+  document.getElementById("docBulkBar").hidden = boxes.length === 0;
+  document.getElementById("docBulkCount").textContent = `${picked}건 선택됨 (전체 ${boxes.length}건)`;
+  btn.disabled = picked === 0;
+  btn.textContent = picked === 0 ? "선택 승인" : `선택 ${picked}건 승인`;
+  document.getElementById("docBulkAll").checked = boxes.length > 0 && picked === boxes.length;
+}
+
+async function docBulkApprove() {
+  const ids = docPickedIds();
+  if (ids.length === 0) return;
+
+  const btn = document.getElementById("docBulkApproveBtn");
+  const result = document.getElementById("docBulkResult");
+  btn.disabled = true;
+  btn.textContent = `승인 중… (${ids.length}건)`;
+  result.innerHTML = "";
+
+  try {
+    const res = await api("/api/admin/llm-documents/approve-batch", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
+    if (res.failed.length === 0) {
+      showOk(result, `${res.approved.length}건 승인 완료 — 정식 문서로 등록됐습니다.`);
+    } else {
+      // 실패 목록은 사라지지 않게 둔다 — slug 중복처럼 손봐야 할 정보다
+      result.innerHTML = `
+        <div class="alert error" style="margin-top:10px">
+          <b>${res.approved.length}건 승인, ${res.failed.length}건 실패</b>
+          <ul style="margin:6px 0 0; padding-left:18px">
+            ${res.failed.map(f => `<li>#${f.draftId} — ${escapeHtml(f.message)}</li>`).join("")}
+          </ul>
+        </div>`;
+    }
+    loadDocDrafts();
+    refreshAdminBadges();
+  } catch (e) {
+    showError(result, e);
+  } finally {
+    syncDocBulkBar();
+  }
 }
 
 /**
