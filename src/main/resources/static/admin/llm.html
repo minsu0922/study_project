@@ -1271,7 +1271,7 @@ async function loadDocDrafts() {
         </div>
         <h3 style="margin:10px 0 2px">${escapeHtml(d.title)}</h3>
         <div class="meta">/${escapeHtml(d.slug)}</div>
-        ${blockingBox}${warningBox}
+        ${blockingBox}${warningBox}${factFindingsBoxOf(d)}
         ${sectionOutlineOf(d.contentMd)}
         <div class="draft-diagrams" id="diag-${d.id}"></div>
         <div class="doc-preview-bar">
@@ -1302,6 +1302,33 @@ async function loadDocDrafts() {
 
   renderPager("dd", data);
   syncDocBulkBar();   // 다시 그리면 체크가 풀린다. 이유는 loadDrafts 끝 주석과 같다
+}
+
+/**
+ * 문서 초안의 AI 사실 검수 지적 상자. 문제 쪽 aiFindingsBoxOf와 같은 규칙이다.
+ * null(검수 안 돌림)이면 아무것도 안 그리고, 빈 목록이면 "지적 없음"을 한 줄로 적는다.
+ * 고치는 버튼은 없다. 승인한 뒤 문서 관리에서 고친다.
+ */
+function factFindingsBoxOf(d) {
+  if (d.factFindings == null) return "";
+  if (d.factFindings.length === 0) {
+    return `<div class="meta" style="margin-top:6px">AI 사실 검수: 지적 없음</div>`;
+  }
+  return `
+    <div class="alert info ai-findings" style="margin:10px 0">
+      <div class="ai-findings-head"><b>AI 사실 검수 지적 ${d.factFindings.length}건</b> · 틀릴 수 있으니 직접 확인하세요</div>
+      ${d.factFindings.map(f => `
+      <div class="ai-finding">
+        <div><span class="badge gray">${escapeHtml(f.label)}</span> <span class="badge gray">${f.confident ? "확신" : "의심"}</span>
+          <b>「${escapeHtml(f.quote ?? "")}」</b></div>
+        <ul>
+          ${f.reason ? `<li>이유: ${escapeHtml(f.reason)}</li>` : ""}
+          ${f.correction ? `<li>바로잡으면: ${escapeHtml(f.correction)}</li>` : ""}
+          ${/^https?:\/\//.test(f.sourceUrl ?? "")
+            ? `<li>출처: <a href="${escapeHtml(f.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.sourceUrl)}</a></li>` : ""}
+        </ul>
+      </div>`).join("")}
+    </div>`;
 }
 
 /* ═══════════ 문서 일괄 승인 ═══════════

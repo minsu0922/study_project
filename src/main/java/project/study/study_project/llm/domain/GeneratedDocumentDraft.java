@@ -92,6 +92,11 @@ public class GeneratedDocumentDraft {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    /** AI 사실 검수 지적 {@code FactCheckFinding} 목록 JSON(V45). 검수를 안 돌렸으면 {@code null}. */
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    @Column(name = "fact_findings_json")
+    private String factFindingsJson;
+
     private GeneratedDocumentDraft(DomainCode domain, String title, String slug,
                                    String contentMd, String tagsJson, String model) {
         this.domain = domain;
@@ -107,6 +112,11 @@ public class GeneratedDocumentDraft {
     public static GeneratedDocumentDraft pending(DomainCode domain, String title, String slug,
                                                  String contentMd, String tagsJson, String model) {
         return new GeneratedDocumentDraft(domain, title, slug, contentMd, tagsJson, model);
+    }
+
+    /** 흡수할 때 배치 파일의 사실 검수 지적 중 이 편 것을 담는다. 처리 상태와 상관없이 기록이다. */
+    public void recordFactFindings(String factFindingsJson) {
+        this.factFindingsJson = factFindingsJson;
     }
 
     /** 승인 처리 — 생성된 document.id를 이력으로 남긴다. 이미 처리된 초안이면 LLM_002. */

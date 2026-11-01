@@ -154,4 +154,7 @@ public interface GeneratedDocumentDraftRepository extends JpaRepository<Generate
             group by d.model, d.status
             """)
     List<GeneratedProblemDraftRepository.ModelStatusCount> countGroupByModelAndStatus();
+
+    /** V45 전에 흡수한 초안에 사실 검수 지적을 채워 넣을 때, 아직 빈 초안을 찾는다. */
+    List<GeneratedDocumentDraft> findBySlugAndFactFindingsJsonIsNull(String slug);
 }

@@ -20,6 +20,7 @@ import java.util.List;
  *                      정하는 쪽과 세는 쪽이 같아야 숫자가 어긋나지 않는다
  * @param checks        자동 검증에서 걸린 항목 전부(없으면 빈 목록)
  * @param blocked       {@code checks}에 BLOCKING이 하나라도 있어 승인이 막힌 상태인지
+ * @param factFindings  AI 사실 검수 지적. 검수를 안 돌렸으면 {@code null}, 돌렸는데 없으면 빈 목록
  */
 public record LlmDocumentDraftResponse(
         Long id,
@@ -37,6 +38,18 @@ public record LlmDocumentDraftResponse(
         LocalDateTime createdAt,
         LocalDateTime reviewedAt,
         List<DraftCheck> checks,
-        boolean blocked
+        boolean blocked,
+        List<FactFinding> factFindings
 ) {
+
+    /**
+     * @param kind       FACT_ERROR·INTERNAL_MISMATCH·UNDEFINED_TERM
+     * @param label      화면 표기용 한글 이름
+     * @param confident  검수기가 틀렸다고 확신하면 true, 의심만 하면 false
+     * @param quote      문서에서 그대로 옮긴 문장
+     * @param sourceUrl  확인한 공식 문서 주소. 없으면 빈 문자열
+     */
+    public record FactFinding(String kind, String label, boolean confident, String quote, String reason,
+                              String correction, String sourceUrl) {
+    }
 }

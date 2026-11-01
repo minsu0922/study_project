@@ -22,6 +22,7 @@ import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
@@ -284,7 +285,41 @@ public class LlmDocumentService {
                 d.getContentMd() == null ? 0 : d.getContentMd().length(),
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedDocumentId(),
                 d.getCreatedAt(), d.getReviewedAt(),
-                checks, DocumentDraftValidator.hasBlocking(checks));
+                checks, DocumentDraftValidator.hasBlocking(checks), readFactFindings(d));
+    }
+
+    /**
+     * 저장된 사실 검수 지적을 화면용으로 읽는다. 검수를 안 돌렸으면 {@code null}.
+     * 읽다 실패해도 {@code null}로 넘긴다 — 지적 한 칸 때문에 검수 목록 전체가 안 열리면 안 된다.
+     */
+    private List<LlmDocumentDraftResponse.FactFinding> readFactFindings(GeneratedDocumentDraft d) {
+        if (d.getFactFindingsJson() == null) {
+            return null;
+        }
+        try {
+            List<FactCheckFinding> stored = objectMapper.readValue(d.getFactFindingsJson(), new TypeReference<>() {
+            });
+            return stored.stream()
+                    .map(f -> new LlmDocumentDraftResponse.FactFinding(
+                            f.kind() == null ? null : f.kind().name(), factKindLabel(f.kind()),
+                            f.confidence() == FactCheckFinding.Confidence.HIGH,
+                            f.quote(), f.reason(), f.correction(), f.sourceUrl() == null ? "" : f.sourceUrl()))
+                    .toList();
+        } catch (JsonProcessingException | RuntimeException e) {
+            log.warn("문서 초안 #{}의 사실 검수 지적을 읽지 못함: {}", d.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    private static String factKindLabel(FactCheckFinding.Kind kind) {
+        if (kind == null) {
+            return "지적";
+        }
+        return switch (kind) {
+            case FACT_ERROR -> "사실 오류";
+            case INTERNAL_MISMATCH -> "문서 안 어긋남";
+            case UNDEFINED_TERM -> "풀지 않은 용어";
+        };
     }
 
     private String writeTagsJson(List<String> tags) {

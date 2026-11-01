@@ -71,8 +71,8 @@ class DocumentImportServiceTest {
         // domainCatalog는 실물(DefaultDomains.catalog())을 쓴다 — 11개 기본 분야만 "등록됨"으로
         // 본다. 이 파일들이 쓰는 TestDomains.SYSTEM_DESIGN은 그 안에 있으므로 기존 테스트는
         // 그대로 통과하고, 아래 rejectsUnregisteredDomain은 그 밖의 코드로 거부를 확인한다.
-        service = new DocumentImportService(llmDocumentService, importedFileRepository, objectMapper,
-                DefaultDomains.catalog());
+        service = new DocumentImportService(llmDocumentService, importedFileRepository, draftRepository,
+                objectMapper, DefaultDomains.catalog());
 
         // save는 받은 엔티티를 그대로 돌려준다 — 실제 JPA의 동작과 같게 흉내
         lenient().when(draftRepository.save(any()))
@@ -317,5 +317,77 @@ class DocumentImportServiceTest {
                 item("캐시 전략", "cache-strategy", List.of("cache")), null);
 
         assertThat(service.importFile(file)).isEqualTo(1);
+    }
+
+    /* ── 2026-11-01: 사실 검수 지적을 편마다 담는다(V45) ─────────────── */
+
+    @Test
+    @DisplayName("사실 검수 지적은 인용이 그 편 본문에 있는 것만 그 초안에 담긴다")
+    void splitsFactFindingsByEdition() throws Exception {
+        GeneratedDocumentItem beginner = itemWith("캐시 전략", "cache-strategy", "입문편에만 있는 문장이다.");
+        GeneratedDocumentItem advanced = itemWith("캐시 심화", "cache-strategy-advanced", "심화편에만 있는 문장이다.");
+        Path file = writeFileWithFacts("2026-11-01.json", beginner, advanced, List.of(
+                fact("입문편에만 있는 문장이다."), fact("심화편에만 있는 문장이다."), fact("어디에도 없는 문장")));
+
+        service.importFile(file);
+
+        ArgumentCaptor<GeneratedDocumentDraft> captor = ArgumentCaptor.forClass(GeneratedDocumentDraft.class);
+        verify(draftRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(0).getFactFindingsJson())
+                .contains("입문편에만").doesNotContain("심화편에만").doesNotContain("어디에도");
+        assertThat(captor.getAllValues().get(1).getFactFindingsJson())
+                .contains("심화편에만").doesNotContain("입문편에만");
+    }
+
+    @Test
+    @DisplayName("파일에 사실 검수 결과가 없으면 지적은 null, 있는데 그 편 것이 없으면 빈 목록이다")
+    void distinguishesUncheckedFromNoFindings() throws Exception {
+        service.importFile(writeDocumentFile("2026-08-12.json", "claude-opus-5",
+                item("캐시 전략", "cache-strategy", List.of())));
+        assertThat(capturedDraft().getFactFindingsJson()).isNull();
+
+        org.mockito.Mockito.clearInvocations(draftRepository);
+        service.importFile(writeFileWithFacts("2026-11-02.json",
+                itemWith("캐시 전략", "cache-strategy", "본문."), null, List.of(fact("다른 문장"))));
+        assertThat(capturedDraft().getFactFindingsJson()).isEqualTo("[]");
+    }
+
+    @Test
+    @DisplayName("이미 흡수한 파일은 slug와 본문이 같은 빈 초안에만 지적을 채운다")
+    void backfillsOnlyMatchingDraft() throws Exception {
+        GeneratedDocumentItem beginner = itemWith("캐시 전략", "cache-strategy", "틀린 문장이다.");
+        GeneratedDocumentDraft same = GeneratedDocumentDraft.pending(TestDomains.SYSTEM_DESIGN, "캐시 전략",
+                "cache-strategy", beginner.contentMd(), null, "m");
+        GeneratedDocumentDraft retried = GeneratedDocumentDraft.pending(TestDomains.SYSTEM_DESIGN, "캐시 전략",
+                "cache-strategy", "다시 뽑은 다른 본문", null, "m");
+        lenient().when(draftRepository.findBySlugAndFactFindingsJsonIsNull("cache-strategy"))
+                .thenReturn(List.of(same, retried));
+
+        int filled = service.backfillFactFindings(
+                writeFileWithFacts("2026-10-30.json", beginner, null, List.of(fact("틀린 문장이다."))));
+
+        assertThat(filled).isEqualTo(1);
+        assertThat(same.getFactFindingsJson()).contains("틀린 문장이다.");
+        assertThat(retried.getFactFindingsJson()).isNull();
+    }
+
+    private GeneratedDocumentItem itemWith(String title, String slug, String sentence) {
+        return new GeneratedDocumentItem(title, slug, "# %s\n\n## 왜 필요한가\n%s\n".formatted(title, sentence), List.of());
+    }
+
+    private project.study.study_project.llm.client.FactCheckFinding fact(String quote) {
+        return new project.study.study_project.llm.client.FactCheckFinding(quote,
+                project.study.study_project.llm.client.FactCheckFinding.Kind.FACT_ERROR, "이유", "바로잡은 문장",
+                project.study.study_project.llm.client.FactCheckFinding.Confidence.HIGH);
+    }
+
+    private Path writeFileWithFacts(String filename, GeneratedDocumentItem document, GeneratedDocumentItem advanced,
+                                    List<project.study.study_project.llm.client.FactCheckFinding> facts) throws Exception {
+        GeneratedDocumentFile file = new GeneratedDocumentFile(
+                "테스트용", filename.replace(".json", ""), "2026-11-01T00:00:00Z",
+                TestDomains.SYSTEM_DESIGN, "claude-opus-5", document, advanced).withFactFindings(facts);
+        Path path = tempDir.resolve(filename);
+        objectMapper.writeValue(path.toFile(), file);
+        return path;
     }
 }

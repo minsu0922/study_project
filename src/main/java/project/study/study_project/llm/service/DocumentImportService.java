@@ -10,6 +10,8 @@ import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
+import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
+import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
 import project.study.study_project.llm.repository.ImportedDraftFileRepository;
 import project.study.study_project.domainsetting.support.DomainCatalog;
 
@@ -47,6 +49,7 @@ public class DocumentImportService {
 
     private final LlmDocumentService llmDocumentService;
     private final ImportedDraftFileRepository importedFileRepository;
+    private final GeneratedDocumentDraftRepository draftRepository;
     private final ObjectMapper objectMapper;
     /** 분야 존재 확인용(5번 작업) — 아래 {@link #importFile} 주석의 "등록되지 않은 분야" 문단 참고. */
     private final DomainCatalog domainCatalog;
@@ -121,10 +124,51 @@ public class DocumentImportService {
         return saved;
     }
 
+    /**
+     * V45 전에 흡수한 파일의 사실 검수 지적을 그 초안에 채워 넣는다. 이미 채운 초안은 건드리지 않는다.
+     *
+     * <p>초안은 slug와 본문이 같은 것으로 찾는다. 같은 slug로 다시 뽑은 초안은 본문이 달라 섞이지 않는다.
+     *
+     * @return 채운 초안 수
+     */
+    @Transactional
+    public int backfillFactFindings(Path file) throws IOException {
+        GeneratedDocumentFile parsed = objectMapper.readValue(file.toFile(), GeneratedDocumentFile.class);
+        if (parsed.factFindings() == null) {
+            return 0;
+        }
+        int filled = 0;
+        for (GeneratedDocumentItem item : java.util.Arrays.asList(parsed.document(), parsed.advancedDocument())) {
+            if (item == null || item.contentMd() == null || item.slug() == null) {
+                continue;
+            }
+            for (GeneratedDocumentDraft draft : draftRepository.findBySlugAndFactFindingsJsonIsNull(item.slug().strip())) {
+                if (item.contentMd().equals(draft.getContentMd())) {
+                    draft.recordFactFindings(factFindingsJsonOf(parsed, item));
+                    filled++;
+                }
+            }
+        }
+        return filled;
+    }
+
+    /**
+     * 두 편의 지적이 한 목록으로 오므로 인용이 이 편 본문에 있는 것만 담는다.
+     * 파일에 검수 결과가 없으면 {@code null}(검수 안 돌림), 있는데 이 편 것이 없으면 빈 목록이다.
+     */
+    private String factFindingsJsonOf(GeneratedDocumentFile parsed, GeneratedDocumentItem item) throws IOException {
+        if (parsed.factFindings() == null) {
+            return null;
+        }
+        return objectMapper.writeValueAsString(
+                ClaudeDocumentFactChecker.keepQuotedInDocument(parsed.factFindings(), item.contentMd()));
+    }
+
     /** 한 편을 초안으로 저장하고 로그를 남긴다 — 두 편의 처리가 갈리지 않도록 한 곳에 둔다. */
     private int saveOne(GeneratedDocumentFile parsed, GeneratedDocumentItem item,
-                        String model, String key) {
+                        String model, String key) throws IOException {
         GeneratedDocumentDraft draft = llmDocumentService.saveDraft(parsed.domain(), item, model);
+        draft.recordFactFindings(factFindingsJsonOf(parsed, item));
         log.info("문서 초안 흡수: {} — \"{}\" ({}, {}, 본문 {}자)",
                 key, draft.getTitle(), parsed.domain(),
                 ClaudeDocumentGenerator.editionOf(draft.getContentMd()).getDisplayName(),

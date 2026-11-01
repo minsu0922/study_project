@@ -80,8 +80,10 @@ public class DraftImportRunner implements ApplicationRunner {
 
         // 문서: generated/documents/*.json — 열쇠에 폴더를 붙인다(DocumentImportService.importKey 주석).
         // 문제 파일과 이름이 같아서, 파일명만 쓰면 문서가 통째로 건너뛰어진다.
-        Result documents = importAll(scan(dir.resolve(DocumentImportService.DOCUMENT_SUBDIR)),
+        List<Path> documentFiles = scan(dir.resolve(DocumentImportService.DOCUMENT_SUBDIR));
+        Result documents = importAll(documentFiles,
                 documentImportService::importFile, DocumentImportService::importKey);
+        backfillFactFindings(documentFiles);
 
         int files = problems.files() + documents.files();
         if (files > 0) {
@@ -143,6 +145,24 @@ public class DraftImportRunner implements ApplicationRunner {
             }
         }
         return new Result(importedFiles, importedDrafts);
+    }
+
+    /**
+     * V45 전에 흡수한 문서 초안에 사실 검수 지적을 채운다. 채운 초안은 다음 부팅부터 찾지 않는다.
+     * 실패해도 흡수는 이미 끝났으니 경고만 남긴다.
+     */
+    private void backfillFactFindings(List<Path> files) {
+        int filled = 0;
+        for (Path file : files) {
+            try {
+                filled += documentImportService.backfillFactFindings(file);
+            } catch (Exception e) {
+                log.warn("사실 검수 지적 채우기 실패(이 파일만 건너뜁니다): {} — {}", file.getFileName(), e.getMessage());
+            }
+        }
+        if (filled > 0) {
+            log.info("문서 초안 {}건에 사실 검수 지적을 채웠습니다", filled);
+        }
     }
 
     /**
