@@ -43,10 +43,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {"ratelimit.enabled=false", "admin.audit.enabled=true"})
 @AutoConfigureMockMvc
 @Transactional
+@org.springframework.test.context.event.RecordApplicationEvents
 class AdminAuditAndRevisionIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private org.springframework.test.context.event.ApplicationEvents events;
     @Autowired
     private TestFixtures fixtures;
     @Autowired
@@ -264,6 +267,20 @@ class AdminAuditAndRevisionIntegrationTest {
                 List.of(new AdminProblemRequest.ChoiceItem(correct, true),
                         new AdminProblemRequest.ChoiceItem("오답", false, "틀린 이유")),
                 null);
+    }
+
+    @Test
+    @DisplayName("문서를 고치거나 되돌리면 배치 파일을 맞추라는 사건이 옛 slug와 함께 나간다")
+    void documentEditPublishesContentChanged() {
+        String slug = "revision-event-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+        Long id = adminDocumentService.create(docRequest(slug, "옛 본문이다.")).id();
+        events.clear();
+
+        adminDocumentService.update(id, docRequest(slug + "-renamed", "새 본문이다."));
+
+        assertThat(events.stream(project.study.study_project.global.event.DocumentContentChanged.class))
+                .containsExactly(new project.study.study_project.global.event.DocumentContentChanged(
+                        slug, slug + "-renamed", "수정 이력 테스트 문서", "새 본문이다."));
     }
 
     private AdminDocumentRequest docRequest(String slug, String contentMd) {

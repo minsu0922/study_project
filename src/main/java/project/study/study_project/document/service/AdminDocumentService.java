@@ -8,6 +8,8 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.ApplicationEventPublisher;
+import project.study.study_project.global.event.DocumentContentChanged;
 import org.springframework.cache.Cache;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +47,8 @@ public class AdminDocumentService {
     private final DomainCatalog domainCatalog; // 응답의 분야 표기 이름 — 관리자가 화면에서 고친 이름을 그대로(Task 4)
     private final DocumentService documentService;
     private final ContentRevisionService revisionService;
+    /** 고친 본문을 배치 파일에도 옮기라는 사건을 낸다(DocumentContentChanged). */
+    private final ApplicationEventPublisher events;
 
     /** 관리 화면 목록 — 내려 둔 문서 포함. */
     public PageResponse<DocumentListItem> list(Pageable pageable) {
@@ -138,6 +142,8 @@ public class AdminDocumentService {
         evictDocumentCache(oldSlug, request.slug(),
                 DocumentEditions.counterpartSlugOf(oldSlug),
                 DocumentEditions.counterpartSlugOf(request.slug()));
+        events.publishEvent(new DocumentContentChanged(oldSlug, document.getSlug(), document.getTitle(),
+                document.getContentMd()));
         return DocumentDetailResponse.from(document, domainCatalog.displayName(document.getDomain())); // 변경 감지로 커밋 시 UPDATE
     }
 
