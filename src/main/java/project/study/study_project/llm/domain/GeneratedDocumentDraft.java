@@ -156,6 +156,18 @@ public class GeneratedDocumentDraft {
         this.reviewedAt = null;
     }
 
+    /**
+     * 사실 검수 지적을 처리한다. 대기 중인 초안만 고칠 수 있다 —
+     * 승인한 초안은 이미 정식 문서가 됐고, 그쪽은 문서 관리에서 고친다.
+     *
+     * @param contentMd 본문을 고치지 않았으면 지금 값 그대로 넘긴다
+     */
+    public void resolveFactFinding(String contentMd, String factFindingsJson) {
+        requirePending();
+        this.contentMd = contentMd;
+        this.factFindingsJson = factFindingsJson;
+    }
+
     private void requirePending() {
         if (this.status != DraftStatus.PENDING) {
             throw new BusinessException(ErrorCode.LLM_002);

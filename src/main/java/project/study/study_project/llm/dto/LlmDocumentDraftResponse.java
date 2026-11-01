@@ -48,8 +48,10 @@ public record LlmDocumentDraftResponse(
      * @param confident  검수기가 틀렸다고 확신하면 true, 의심만 하면 false
      * @param quote      문서에서 그대로 옮긴 문장
      * @param sourceUrl  확인한 공식 문서 주소. 없으면 빈 문자열
+     * @param paragraph  지적된 문장이 든 문단(마크다운 원문). 고치기 칸에 채운다. 처리했거나 본문에서 사라졌으면 {@code null}
+     * @param resolution 검수자가 처리한 기록. 아직 안 봤으면 {@code null}
      */
     public record FactFinding(String kind, String label, boolean confident, String quote, String reason,
-                              String correction, String sourceUrl) {
+                              String correction, String sourceUrl, String paragraph, String resolution) {
     }
 }

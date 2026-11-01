@@ -9,6 +9,7 @@ import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
+import project.study.study_project.llm.dto.DraftFactFinding;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
@@ -161,7 +162,8 @@ public class DocumentImportService {
             return null;
         }
         return objectMapper.writeValueAsString(
-                ClaudeDocumentFactChecker.keepQuotedInDocument(parsed.factFindings(), item.contentMd()));
+                ClaudeDocumentFactChecker.keepQuotedInDocument(parsed.factFindings(), item.contentMd()).stream()
+                        .map(DraftFactFinding::of).toList());
     }
 
     /** 한 편을 초안으로 저장하고 로그를 남긴다 — 두 편의 처리가 갈리지 않도록 한 곳에 둔다. */

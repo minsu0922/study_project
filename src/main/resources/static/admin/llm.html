@@ -1307,17 +1307,31 @@ async function loadDocDrafts() {
 /**
  * 문서 초안의 AI 사실 검수 지적 상자. 문제 쪽 aiFindingsBoxOf와 같은 규칙이다.
  * null(검수 안 돌림)이면 아무것도 안 그리고, 빈 목록이면 "지적 없음"을 한 줄로 적는다.
- * 고치는 버튼은 없다. 승인한 뒤 문서 관리에서 고친다.
+ * 대기 중인 초안은 지적된 문단을 바로 고칠 수 있다. 승인한 문서는 문서 관리에서 고친다.
  */
 function factFindingsBoxOf(d) {
   if (d.factFindings == null) return "";
-  if (d.factFindings.length === 0) {
-    return `<div class="meta" style="margin-top:6px">AI 사실 검수: 지적 없음</div>`;
+  // 고치기 버튼이 서버에 보낼 번호는 전체 목록 안의 위치라, 가르기 전에 먼저 매긴다.
+  const all = d.factFindings.map((f, index) => ({ ...f, index }));
+  const open = all.filter(f => !f.resolution);
+  const resolved = all.filter(f => f.resolution);
+  const resolvedBox = resolved.length === 0 ? "" : `
+    <details class="ai-opinions">
+      <summary>반영한 사실 지적 ${resolved.length}건 (지적 수에 세지 않습니다)</summary>
+      ${resolved.map(f => factFindingItemOf(d, f)).join("")}
+    </details>`;
+  if (open.length === 0) {
+    return `<div class="meta" style="margin-top:6px">AI 사실 검수: ${resolved.length ? "남은 지적 없음" : "지적 없음"}</div>${resolvedBox}`;
   }
   return `
     <div class="alert info ai-findings" style="margin:10px 0">
-      <div class="ai-findings-head"><b>AI 사실 검수 지적 ${d.factFindings.length}건</b> · 틀릴 수 있으니 직접 확인하세요</div>
-      ${d.factFindings.map(f => `
+      <div class="ai-findings-head"><b>AI 사실 검수 지적 ${open.length}건</b> · 틀릴 수 있으니 직접 확인하세요</div>
+      ${open.map(f => factFindingItemOf(d, f)).join("")}
+    </div>${resolvedBox}`;
+}
+
+function factFindingItemOf(d, f) {
+  return `
       <div class="ai-finding">
         <div><span class="badge gray">${escapeHtml(f.label)}</span> <span class="badge gray">${f.confident ? "확신" : "의심"}</span>
           <b>「${escapeHtml(f.quote ?? "")}」</b></div>
@@ -1327,8 +1341,59 @@ function factFindingsBoxOf(d) {
           ${/^https?:\/\//.test(f.sourceUrl ?? "")
             ? `<li>출처: <a href="${escapeHtml(f.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.sourceUrl)}</a></li>` : ""}
         </ul>
-      </div>`).join("")}
-    </div>`;
+        ${f.resolution ? `<div class="meta"><b>처리</b> ${escapeHtml(f.resolution)}</div>` : factResolveOf(d, f)}
+      </div>`;
+}
+
+/**
+ * 고치기 칸에는 지적된 문장이 든 문단을 마크다운 원문 그대로 채운다. 문장만 주면 강조 표시 때문에
+ * 본문에서 그 자리를 못 찾을 때가 많다. 서버가 문단을 못 찾으면(paragraph가 null) 고치기는 숨긴다.
+ */
+function factResolveOf(d, f) {
+  if (d.status !== "PENDING") return "";
+  const key = `${d.id}-${f.index}`;
+  factEditTexts.set(key, { paragraph: f.paragraph ?? "", correction: f.correction ?? "" });
+  return `
+        <div class="row-actions" style="margin-top:6px">
+          ${f.paragraph != null
+            ? `<button class="btn-outline" onclick="openFactResolve('${key}')">문단 고치기</button>`
+            : `<span class="meta">지적된 문장이 본문에 없습니다</span>`}
+          <button class="btn-outline" onclick="resolveFactFinding(this, ${d.id}, ${f.index}, null)">고치지 않음</button>
+        </div>
+        <div id="factResolve-${key}" hidden style="margin-top:6px">
+          <textarea id="factResolveText-${key}" rows="6" maxlength="20000" style="width:100%"></textarea>
+          <div class="row-actions" style="margin-top:6px">
+            <button onclick="resolveFactFinding(this, ${d.id}, ${f.index}, '${key}')">고친 문단 적용</button>
+            ${f.correction ? `<button class="btn-outline" onclick="appendFactCorrection('${key}')">바로잡은 문장 붙여 넣기</button>` : ""}
+            <button onclick="document.getElementById('factResolve-${key}').hidden = true">취소</button>
+          </div>
+        </div>`;
+}
+
+/** 고치기 칸에 채울 글. HTML 속성에 긴 마크다운을 넣지 않으려고 따로 둔다. */
+const factEditTexts = new Map();
+
+function openFactResolve(key) {
+  document.getElementById(`factResolve-${key}`).hidden = false;
+  document.getElementById(`factResolveText-${key}`).value = factEditTexts.get(key).paragraph;
+}
+
+/** "바로잡으면" 문장을 문단 끝에 붙인다. 틀린 문장은 검수자가 지운다. 어디를 바꿀지는 사람이 정한다. */
+function appendFactCorrection(key) {
+  const ta = document.getElementById(`factResolveText-${key}`);
+  ta.value = ta.value.trimEnd() + "\n" + factEditTexts.get(key).correction;
+}
+
+async function resolveFactFinding(btn, id, index, key) {
+  const body = key ? { text: document.getElementById(`factResolveText-${key}`).value } : {};
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/llm-documents/${id}/fact-findings/${index}/resolve`, { method: "POST", body: JSON.stringify(body) });
+    await loadDocDrafts();
+  } catch (e) {
+    btn.disabled = false;
+    alertDocError(e);
+  }
 }
 
 /* ═══════════ 문서 일괄 승인 ═══════════

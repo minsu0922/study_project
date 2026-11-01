@@ -22,7 +22,9 @@ import project.study.study_project.global.common.Texts;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.global.response.PageResponse;
+import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.FactCheckFinding;
+import project.study.study_project.llm.dto.DraftFactFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
@@ -297,18 +299,104 @@ public class LlmDocumentService {
             return null;
         }
         try {
-            List<FactCheckFinding> stored = objectMapper.readValue(d.getFactFindingsJson(), new TypeReference<>() {
-            });
-            return stored.stream()
+            return storedFactFindingsOf(d).stream()
                     .map(f -> new LlmDocumentDraftResponse.FactFinding(
                             f.kind() == null ? null : f.kind().name(), factKindLabel(f.kind()),
                             f.confidence() == FactCheckFinding.Confidence.HIGH,
-                            f.quote(), f.reason(), f.correction(), f.sourceUrl() == null ? "" : f.sourceUrl()))
+                            f.quote(), f.reason(), f.correction(), f.sourceUrl() == null ? "" : f.sourceUrl(),
+                            f.resolution() == null ? paragraphOf(d.getContentMd(), f.quote()) : null,
+                            f.resolution()))
                     .toList();
         } catch (JsonProcessingException | RuntimeException e) {
             log.warn("문서 초안 #{}의 사실 검수 지적을 읽지 못함: {}", d.getId(), e.getMessage());
             return null;
         }
+    }
+
+    private List<DraftFactFinding> storedFactFindingsOf(GeneratedDocumentDraft d) throws JsonProcessingException {
+        return objectMapper.readValue(d.getFactFindingsJson(), new TypeReference<>() {
+        });
+    }
+
+    /**
+     * 사실 검수 지적을 처리한다(docs/22 §3.1). {@code text}가 있으면 지적된 문장이 든 문단을 그 글로
+     * 바꾸고, 없으면 "고치지 않음"으로만 남긴다. 어느 쪽이든 지적에 처리 기록이 남는다.
+     *
+     * <p>문장이 아니라 문단을 바꾸는 이유: 지적의 인용은 강조·백틱을 걷어 낸 글이라 본문에서
+     * 글자 그대로 안 찾아질 때가 많다. 문단은 본문의 마크다운 원문 그대로라 바꿀 자리가 정확하다.
+     */
+    @Transactional
+    public LlmDocumentDraftResponse resolveFactFinding(Long draftId, int findingIndex, String text) {
+        GeneratedDocumentDraft draft = findDraft(draftId);
+        if (draft.getStatus() != DraftStatus.PENDING) {
+            throw new BusinessException(ErrorCode.LLM_002);
+        }
+        List<DraftFactFinding> findings;
+        try {
+            findings = draft.getFactFindingsJson() == null ? null : storedFactFindingsOf(draft);
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(ErrorCode.COMMON_001, "사실 검수 지적을 읽지 못했습니다.");
+        }
+        if (findings == null || findingIndex < 0 || findingIndex >= findings.size()) {
+            throw new BusinessException(ErrorCode.COMMON_001, "그런 지적이 없습니다.");
+        }
+        DraftFactFinding finding = findings.get(findingIndex);
+        if (finding.resolution() != null) {
+            throw new BusinessException(ErrorCode.COMMON_001, "이미 처리한 지적입니다.");
+        }
+
+        String content = draft.getContentMd();
+        String resolution;
+        if (text == null) {
+            resolution = "고치지 않음";
+        } else {
+            String paragraph = paragraphOf(content, finding.quote());
+            if (paragraph == null) {
+                throw new BusinessException(ErrorCode.COMMON_001, "지적된 문장이 본문에 없습니다. 이미 고친 문단입니다.");
+            }
+            String replaced = text.strip();
+            if (replaced.isEmpty()) {
+                throw new BusinessException(ErrorCode.COMMON_001, "고친 문단이 비어 있습니다.");
+            }
+            int at = content.indexOf(paragraph);
+            content = content.substring(0, at) + replaced + content.substring(at + paragraph.length());
+            resolution = "직접 수정: 「%s」 → 「%s」".formatted(oneLine(paragraph), oneLine(replaced));
+        }
+        List<DraftFactFinding> updated = new ArrayList<>(findings);
+        updated.set(findingIndex, finding.resolvedWith(resolution));
+        try {
+            draft.resolveFactFinding(content, objectMapper.writeValueAsString(updated));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("사실 검수 지적 직렬화 실패", e);
+        }
+        log.info("문서 초안 #{}: 사실 검수 지적 처리({})", draft.getId(), text == null ? "고치지 않음" : "직접 수정");
+        return toResponse(draft);
+    }
+
+    /**
+     * 지적된 문장이 든 문단(마크다운 원문 그대로). 본문에서 사라졌으면 {@code null}.
+     * 한 줄 안에 있으면 그 줄만 준다 — 빈 줄로만 나누면 바로 위 제목 줄이나 이웃 목록 항목까지 딸려 온다.
+     */
+    static String paragraphOf(String contentMd, String quote) {
+        String q = ClaudeDocumentFactChecker.normalize(quote);
+        if (contentMd == null || q.isEmpty()) {
+            return null;
+        }
+        for (String line : contentMd.split("\\R")) {
+            if (ClaudeDocumentFactChecker.normalize(line).contains(q)) {
+                return line.strip();
+            }
+        }
+        for (String paragraph : contentMd.split("\\n\\s*\\n")) {
+            if (ClaudeDocumentFactChecker.normalize(paragraph).contains(q)) {
+                return paragraph.strip();
+            }
+        }
+        return null;
+    }
+
+    private static String oneLine(String s) {
+        return s.replaceAll("\\s*\\R\\s*", " ");
     }
 
     private static String factKindLabel(FactCheckFinding.Kind kind) {

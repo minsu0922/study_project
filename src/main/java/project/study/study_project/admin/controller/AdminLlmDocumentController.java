@@ -102,4 +102,14 @@ public class AdminLlmDocumentController {
         llmDocumentService.restore(id);
         return ApiResponse.ok();
     }
+
+    /**
+     * 사실 검수 지적 처리 — 바디 {@code {"text": "고친 문단"}}이면 지적된 문단을 바꾸고,
+     * text가 없거나 빈 바디면 "고치지 않음"으로 둔다.
+     */
+    @PostMapping("/{id}/fact-findings/{index}/resolve")
+    public ApiResponse<LlmDocumentDraftResponse> resolveFactFinding(@PathVariable Long id, @PathVariable int index,
+                                                                    @RequestBody(required = false) Map<String, String> body) {
+        return ApiResponse.ok(llmDocumentService.resolveFactFinding(id, index, body != null ? body.get("text") : null));
+    }
 }

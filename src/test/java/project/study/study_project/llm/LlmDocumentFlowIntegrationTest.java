@@ -293,6 +293,54 @@ class LlmDocumentFlowIntegrationTest {
                 .as("되돌린 초안이 검수 대기 목록으로 돌아와야 한다").isNotNull();
     }
 
+    @Test
+    @DisplayName("사실 지적을 고치면 그 문단만 바뀌고 지적은 처리 기록을 남긴다 — 강조 표시가 있어도 문단을 찾는다")
+    void resolvesFactFindingByParagraph() throws Exception {
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(),
+                validContent("캐시 전략", "캐시는 **항상** 빠르다. 그래서 늘 쓴다."));
+        draft.recordFactFindings("""
+                [{"quote":"캐시는 항상 빠르다.","kind":"FACT_ERROR","reason":"틀림","correction":"맞는 문장",
+                  "sourceUrl":"","confidence":"HIGH"},
+                 {"quote":"상위 개념을 처음부터 설명한다.","kind":"UNDEFINED_TERM","reason":"뜻풀이 없음",
+                  "correction":"","sourceUrl":"","confidence":"LOW"}]
+                """);
+        draftRepository.flush();
+
+        var before = llmDocumentService.getDrafts(null, "캐시 전략", org.springframework.data.domain.PageRequest.of(0, 100))
+                .content().stream().filter(d -> d.id().equals(draft.getId())).findFirst().orElseThrow();
+        assertThat(before.factFindings().get(0).paragraph()).isEqualTo("캐시는 **항상** 빠르다. 그래서 늘 쓴다.");
+
+        llmDocumentService.resolveFactFinding(draft.getId(), 0, "캐시는 대개 빠르지만 항상은 아니다.");
+        var after = llmDocumentService.resolveFactFinding(draft.getId(), 1, null);
+
+        assertThat(after.contentMd()).contains("캐시는 대개 빠르지만 항상은 아니다.")
+                .doesNotContain("그래서 늘 쓴다.").contains("## 무엇인가");
+        assertThat(after.factFindings().get(0).resolution())
+                .isEqualTo("직접 수정: 「캐시는 **항상** 빠르다. 그래서 늘 쓴다.」 → 「캐시는 대개 빠르지만 항상은 아니다.」");
+        assertThat(after.factFindings().get(0).paragraph()).as("처리한 지적엔 고칠 문단을 싣지 않는다").isNull();
+        assertThat(after.factFindings().get(1).resolution()).isEqualTo("고치지 않음");
+        assertThat(after.contentMd()).as("고치지 않음은 본문을 건드리지 않는다").contains("상위 개념을 처음부터 설명한다.");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.resolveFactFinding(draft.getId(), 1, null))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("빈 글이나 승인한 초안의 사실 지적은 고칠 수 없다")
+    void rejectsBlankOrApprovedFactFix() {
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(), validContent("캐시 전략", "캐시는 항상 빠르다."));
+        draft.recordFactFindings("""
+                [{"quote":"캐시는 항상 빠르다.","kind":"FACT_ERROR","reason":"틀림","correction":"",
+                  "sourceUrl":"","confidence":"HIGH"}]
+                """);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.resolveFactFinding(draft.getId(), 0, "  "))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+        llmDocumentService.approve(draft.getId());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.resolveFactFinding(draft.getId(), 0, null))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+    }
+
     /* ── 도우미 ──────────────────────────────────────────────── */
 
     private String adminToken() {
