@@ -1,0 +1,194 @@
+{
+    "note":  "Claude Code가 대화 안에서 직접 쓴 중급 문제 초안입니다(Claude API 미사용). problem/system.txt의 중급 규칙을 따랐고, 근거는 generated/documents/2026-10-20.json의 심화편과 입문편 중급 절입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+    "date":  "2026-11-01",
+    "generatedAt":  "2026-11-01T10:00:00Z",
+    "domain":  "NETWORK",
+    "difficulty":  "INTERMEDIATE",
+    "type":  "MULTIPLE_CHOICE",
+    "model":  "claude-code/claude-opus-5-5",
+    "documentSlug":  "http-cookie-stateless-set-cookie-advanced",
+    "problems":  [
+        {
+            "question":  "shop.example.com과 pay.example.com이 같은 상위 도메인을 쓴다. shop에서만 쓰는 화면 설정 쿠키를 맡길 때 고를 범위로 가장 적절한 것은?",
+            "exhibit":  "",
+            "answer":  "",
+            "explanation":  "규칙: Domain 속성 없이 맡긴 쿠키는 맡긴 호스트 하나에만 가는 호스트 전용 쿠키다. Domain=example.com을 붙이면 그 아래 모든 하위 도메인으로 간다.\n두 하위 사이트를 오가는 사용자를 따라가 보자.\nDomain 없이 맡긴다: 쿠키는 shop.example.com 요청에만 실린다.\nDomain=example.com으로 맡긴다: pay.example.com 요청에도 실려, 쓰지도 않는 사이트로 새어 나간다.\n__Host- 접두사에 Domain을 함께 적는다: 이 접두사는 Domain이 없어야 해서 브라우저가 저장하지 않는다.\n만료를 없애 세션 쿠키로 둔다: 수명이 바뀔 뿐 보내는 범위는 그대로다.\n그래서 나눌 까닭이 없는 쿠키는 Domain 없이 호스트 전용으로 맡긴다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+            "choices":  [
+                {
+                    "text":  "Domain 속성 없이 호스트 전용 쿠키로 맡긴다",
+                    "correct":  true,
+                    "rationale":  "",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "Domain=example.com을 붙여 상위 도메인에 맡긴다",
+                    "correct":  false,
+                    "rationale":  "상위 도메인에 맡기면 pay.example.com 요청에도 실린다. 두 사이트가 함께 써야 하는 쿠키일 때 고르는 범위다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "이름에 __Host-를 붙이고 Domain=example.com을 적는다",
+                    "correct":  false,
+                    "rationale":  "__Host- 접두사는 Domain 속성이 없어야 한다. 브라우저는 이 둘을 함께 적은 쿠키를 받아 주지 않는다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "만료 시각을 빼 브라우저를 닫으면 사라지게 맡긴다",
+                    "correct":  false,
+                    "rationale":  "만료를 빼면 쿠키의 수명만 바뀐다. 어느 사이트로 보낼지는 그대로라 다른 하위 사이트로 새는 문제와 관계가 없다.",
+                    "matchText":  ""
+                }
+            ],
+            "sourceQuote":  "`Domain` 속성을 붙일지가 갈림길이며, 나눌 까닭이 없는 쿠키는 속성 없이 호스트 전용으로 두어 다른 하위 사이트로 새지 않게 한다.",
+            "title":  "한 하위 사이트에서만 쓰는 쿠키의 범위",
+            "questionKind":  "COMPARISON",
+            "skipReason":  ""
+        },
+        {
+            "question":  "서버 저장소 없이 서명 쿠키에 작은 상태를 두려 한다. 다음 값 가운데 서명 쿠키에 두는 것으로 충분한 것은?",
+            "exhibit":  "",
+            "answer":  "",
+            "explanation":  "규칙: 서명은 사용자가 값을 고치는 것은 막지만, 예전에 받은 진짜 쿠키를 다시 보내는 것은 막지 못한다. 그래서 옛 값을 다시 보내도 손해가 없는 값만 서명 쿠키에 둔다.\n네 값을 사용자가 옛 쿠키로 되돌려 보낼 때를 따라가 보자.\n최근 본 상품 목록: 어제 목록을 다시 보내도 화면에 옛 목록이 뜰 뿐 손해가 없다.\n쿠폰을 이미 썼는지: 쓰기 전 쿠키를 다시 보내면 쿠폰을 또 쓴다.\n남은 무료 이용 횟수: 횟수가 많던 옛 쿠키를 다시 보내면 무료로 더 쓴다.\n회원 전화번호: 서명은 값을 숨기지 않아 그대로 읽힌다.\n그래서 서명 쿠키로 충분한 것은 최근 본 상품 목록이다.\n(심화편의 '쿠키 하나에 담을 수 있는 것의 한계' 절을 다시 읽어 보라)",
+            "choices":  [
+                {
+                    "text":  "최근 본 상품 목록",
+                    "correct":  true,
+                    "rationale":  "",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "쿠폰을 이미 썼는지",
+                    "correct":  false,
+                    "rationale":  "쓰기 전의 진짜 쿠키는 서명도 진짜다. 그 쿠키를 다시 보내면 서명 검사를 통과해 쿠폰을 또 쓴다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "남은 무료 이용 횟수",
+                    "correct":  false,
+                    "rationale":  "횟수가 많던 옛 쿠키를 저장해 두었다가 다시 보낼 수 있다. 서명이 진짜라 서버는 옛 횟수를 믿는다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "회원 전화번호",
+                    "correct":  false,
+                    "rationale":  "서명은 값을 고치는 것만 막고 숨기지 않는다. 사용자 컴퓨터에서 누구든 서명 앞의 번호를 그대로 읽는다.",
+                    "matchText":  ""
+                }
+            ],
+            "sourceQuote":  "| 최근 본 상품 목록 | 서명이면 충분하다 | 옛 목록을 다시 보내도 손해가 없다 |",
+            "title":  "서명 쿠키에 두어도 되는 값",
+            "questionKind":  "COMPARISON",
+            "skipReason":  ""
+        },
+        {
+            "question":  "원래 www.example.com의 언어 쿠키는 lang=en; Path=/로 맡겨져 있었다. 새 코드가 언어를 바꾸며 Set-Cookie: lang=ko; Path=/shop을 보냈는데, /shop 화면이 계속 영어로 뜬다. 이 서버 프레임워크는 같은 이름의 쿠키가 여럿이면 마지막 값을 읽는다. 아래는 그 뒤 /shop/list로 간 요청이다. 원인으로 가장 적절한 것은?",
+            "exhibit":  "GET /shop/list HTTP/1.1\nHost: www.example.com\nCookie: lang=ko; lang=en",
+            "answer":  "",
+            "explanation":  "규칙: 브라우저는 쿠키를 이름·도메인·경로 세 값으로 구별한다. 세 값이 모두 같아야 옛 쿠키를 덮어쓰고, 하나라도 다르면 쿠키를 하나 더 저장한다.\n자료의 요청을 따라가 보자.\n옛 쿠키: lang=en, Path=/.\n새 Set-Cookie: lang=ko, Path=/shop. 경로가 달라 덮어쓰지 않고 하나 더 저장한다.\n/shop/list 요청: 두 쿠키의 경로에 모두 맞아 lang=ko와 lang=en이 함께 실린다.\n서버는 같은 이름이면 마지막 값을 읽는다: 옛 값 en을 읽어 영어로 띄운다.\n그래서 원인은 경로가 달라 옛 쿠키가 남고 두 값이 함께 실린 것이다.\n(심화편의 '브라우저가 쿠키를 구별하고 덮어쓰는 규칙' 절을 다시 읽어 보라)",
+            "choices":  [
+                {
+                    "text":  "경로가 달라 옛 쿠키가 남고, 두 값이 함께 실려 en이 읽혔다",
+                    "correct":  true,
+                    "rationale":  "",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "브라우저가 새 쿠키를 저장하지 않고 버려 en만 남았다",
+                    "correct":  false,
+                    "rationale":  "자료의 요청에 lang=ko가 실려 있다. 새 쿠키는 저장됐고, 옛 쿠키가 함께 남은 것이 문제다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "Max-Age가 없어 새 쿠키가 세션 쿠키로 저장됐다",
+                    "correct":  false,
+                    "rationale":  "세션 쿠키도 브라우저를 닫기 전까지는 실린다. 수명이 아니라 같은 이름 둘이 함께 실린 것이 영어가 뜬 까닭이다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "다른 도메인의 쿠키가 섞여 www.example.com에 실렸다",
+                    "correct":  false,
+                    "rationale":  "두 쿠키 모두 www.example.com에 맡겨진 것이다. 도메인이 아니라 경로가 달라 둘로 갈라졌다.",
+                    "matchText":  ""
+                }
+            ],
+            "sourceQuote":  "세 값이 모두 같은 `Set-Cookie`가 오면 옛 쿠키를 덮어쓰고, 하나라도 다르면 새 쿠키로 하나 더 저장한다.",
+            "title":  "경로를 바꿔 맡긴 쿠키에 옛 값이 읽히는 원인",
+            "questionKind":  "CAUSE",
+            "skipReason":  ""
+        },
+        {
+            "question":  "쿠키의 크기·개수 한도와 값에 쓰는 글자를 다루는 설명으로 옳은 것은?",
+            "exhibit":  "",
+            "answer":  "",
+            "explanation":  "규칙: 세미콜론은 쿠키 사이를 가르는 글자라, 값에 들어가면 그 자리에서 값이 끊긴다. 쉼표·빈칸·한글도 브라우저와 서버마다 다르게 다루므로, 그런 글자가 들 수 있는 값은 URL 인코딩한다.\n최근 본 상품 이름을 쿠키에 담는 장면을 따라가 보자.\n값을 그대로 넣는다: 무선 마우스; 키보드 → 세미콜론에서 값이 끊겨 첫 상품만 남는다.\nURL 인코딩해 넣는다: 세미콜론과 한글이 %와 16진수로 바뀌어 끊기지 않는다.\n서버가 읽을 때 되돌린다: 원래 이름이 그대로 나온다.\n한도를 넘긴 쿠키는 오류 없이 사라지고, 서명은 값을 숨기지 않는다.\n그래서 그런 글자가 들 수 있는 값은 URL 인코딩한다는 설명이 옳다.\n(심화편의 '쿠키 하나에 담을 수 있는 것의 한계' 절을 다시 읽어 보라)",
+            "choices":  [
+                {
+                    "text":  "세미콜론이나 한글이 들 수 있는 값은 URL 인코딩해 넣는다",
+                    "correct":  true,
+                    "rationale":  "",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "한도를 넘긴 쿠키는 브라우저가 오류로 알려 줘 서버가 다시 보낸다",
+                    "correct":  false,
+                    "rationale":  "한도를 넘긴 쿠키는 대개 오류 없이 사라진다. 서버는 Set-Cookie를 보냈으니 저장됐다고 믿는다는 점이 빠졌다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "서명한 쿠키는 사용자가 값을 읽을 수 없어 개인정보를 담아도 된다",
+                    "correct":  false,
+                    "rationale":  "서명은 고친 값을 알아챌 뿐 값을 숨기지 않는다. 사용자는 서명 앞의 값을 그대로 읽는다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "브라우저는 도메인 하나에 쿠키를 몇 개든 받아 주므로 개수는 따지지 않는다",
+                    "correct":  false,
+                    "rationale":  "표준은 도메인당 적어도 50개를 받아 주라고 정했을 뿐이다. 넘치면 브라우저가 오래된 쿠키부터 지운다.",
+                    "matchText":  ""
+                }
+            ],
+            "sourceQuote":  "그래서 그런 글자가 들 수 있는 값은 URL 인코딩한다.",
+            "title":  "쿠키 한도와 값 글자 다루기",
+            "questionKind":  "JUDGMENT",
+            "skipReason":  ""
+        },
+        {
+            "question":  "서버가 값 뒤에 서명을 붙여 맡긴 서명 쿠키가 요청에 실려 왔다. 서버가 이 쿠키의 값을 쓰기 전에 검사하는 순서로 옳은 것은?",
+            "exhibit":  "",
+            "answer":  "",
+            "explanation":  "규칙: 서명 쿠키는 서버가 값과 비밀 키로 서명을 만들어 값 뒤에 붙인 것이다. 요청이 오면 서버가 같은 비밀 키로 서명을 다시 계산해, 붙어 온 서명과 같을 때만 값을 믿는다.\n최근 본 상품 쿠키 recent=17,42.sig가 온 장면을 따라가 보자.\n값과 서명을 나눈다: 점 앞의 17,42가 값, 뒤의 sig가 붙어 온 서명이다.\n비밀 키로 17,42의 서명을 다시 만든다: 서버만 아는 키라 사용자는 이 계산을 흉내 내지 못한다.\n두 서명을 견준다: 같으면 값을 쓰고, 다르면 누가 값을 고친 것이라 버린다.\n서명을 견주기 전에 값을 쓰면 고친 값까지 믿게 된다.\n그래서 나누고, 다시 만들고, 견준 뒤에 쓴다.\n(심화편의 '쿠키 하나에 담을 수 있는 것의 한계' 절을 다시 읽어 보라)",
+            "choices":  [
+                {
+                    "text":  "값과 서명을 나눈다 → 비밀 키로 값의 서명을 다시 만든다 → 같을 때만 값을 쓴다",
+                    "correct":  true,
+                    "rationale":  "",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "값을 먼저 쓴다 → 값과 서명을 나눈다 → 서명이 다르면 기록만 남긴다",
+                    "correct":  false,
+                    "rationale":  "값을 쓴 뒤에 견주면 고친 값이 이미 쓰인 다음이다. 서명은 값을 쓰기 전에 걸러야 쓸모가 있다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "붙어 온 서명을 비밀 키로 푼다 → 원래 값을 꺼낸다 → 꺼낸 값을 쓴다",
+                    "correct":  false,
+                    "rationale":  "서명은 값을 감춘 암호가 아니라 값에서 만든 확인용 값이다. 값은 서명 앞에 그대로 있고, 서버는 서명을 다시 만들어 견준다.",
+                    "matchText":  ""
+                },
+                {
+                    "text":  "값과 서명을 나눈다 → 서명이 비어 있지 않은지만 본다 → 값을 쓴다",
+                    "correct":  false,
+                    "rationale":  "사용자는 아무 글자나 서명 자리에 넣을 수 있다. 서버가 서명을 다시 계산해 견주지 않으면 고친 값을 막지 못한다.",
+                    "matchText":  ""
+                }
+            ],
+            "sourceQuote":  "서버가 값과 비밀 키로 서명을 만들어 값 뒤에 붙이고, 요청이 오면 서명을 다시 계산해 견준다.",
+            "title":  "서명 쿠키를 검사하는 순서",
+            "questionKind":  "SEQUENCE",
+            "skipReason":  ""
+        }
+    ],
+    "shortfallReasons":  null,
+    "reviewFindings":  null
+}

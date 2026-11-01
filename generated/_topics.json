@@ -117,7 +117,9 @@
     "id" : 1107,
     "domain" : "NETWORK",
     "topic" : "쿠키 — HTTP는 앞 요청을 기억하지 못하는데, 새로고침해도 장바구니가 남는 이유",
-    "memo" : "핵심 개념: 무상태(stateless), 쿠키, Set-Cookie\n설명할 것: HTTP는 왜 앞 요청을 기억하지 못하나 / 서버는 브라우저에 쪽지를 어떻게 맡기나 / 브라우저는 그 쪽지를 언제 다시 보내나 / 쿠키에 무엇을 담으면 안 되나\n다루지 않을 것: 세션과 토큰 비교, CSRF\n그림: 첫 응답의 Set-Cookie → 다음 요청마다 Cookie가 실려 가는 순서(sequenceDiagram)"
+    "memo" : "핵심 개념: 무상태(stateless), 쿠키, Set-Cookie\n설명할 것: HTTP는 왜 앞 요청을 기억하지 못하나 / 서버는 브라우저에 쪽지를 어떻게 맡기나 / 브라우저는 그 쪽지를 언제 다시 보내나 / 쿠키에 무엇을 담으면 안 되나\n다루지 않을 것: 세션과 토큰 비교, CSRF\n그림: 첫 응답의 Set-Cookie → 다음 요청마다 Cookie가 실려 가는 순서(sequenceDiagram)",
+    "lastUsedAt" : "2026-10-20",
+    "usedCount" : 1
   }, {
     "id" : 12,
     "domain" : "SECURITY",
