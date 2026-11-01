@@ -96,9 +96,10 @@ public record LlmDraftResponse(
      * @param message    결론 한 문장
      * @param details    그렇게 본 근거, 한 줄씩. 없으면 빈 목록
      * @param suggestion 고친 문장 제안. 없으면 {@code null}
+     * @param resolution 검수자가 처리한 기록. 아직 안 봤으면 {@code null}. 화면은 처리한 지적을 지적 수에 세지 않는다
      */
     public record AiFinding(String type, String label, String grade, String message, List<String> details,
-                            AiSuggestion suggestion) {
+                            AiSuggestion suggestion, String resolution) {
     }
 
     /**

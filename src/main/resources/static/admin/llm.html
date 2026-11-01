@@ -424,9 +424,11 @@ function warningBoxOf(d) {
  */
 function aiFindingsBoxOf(d) {
   if (d.aiFindings == null) return "";
+  aiEditDrafts.set(d.id, d);
   // 적용 버튼이 서버에 보낼 번호는 전체 목록 안의 위치라, 가르기 전에 먼저 매긴다.
   const all = d.aiFindings.map((f, index) => ({ ...f, index }));
-  const findings = all.filter(f => !isOpinion(f));
+  const findings = all.filter(isOpenFinding);
+  const resolved = all.filter(f => !isOpinion(f) && f.resolution);
   const opinions = all.filter(isOpinion);
   // 의견(풀이·총평 등)은 문제마다 달린다. 지적과 한 상자에 두면 지적이 묻혀서 접어 둔다.
   const opinionBox = opinions.length === 0 ? "" : `
@@ -434,8 +436,14 @@ function aiFindingsBoxOf(d) {
       <summary>AI 의견 ${opinions.length}건 · 풀이와 총평 (지적 수에 세지 않습니다)</summary>
       ${opinions.map(f => aiFindingItemOf(d, f)).join("")}
     </details>`;
+  // 처리한 지적은 지적 칸에서 뺀다. 지우지 않는 것은 승인 뒤에도 지적이 맞았는지 견줘 보려는 것이다
+  const resolvedBox = resolved.length === 0 ? "" : `
+    <details class="ai-opinions">
+      <summary>반영한 지적 ${resolved.length}건 (지적 수에 세지 않습니다)</summary>
+      ${resolved.map(f => aiFindingItemOf(d, f)).join("")}
+    </details>`;
   if (findings.length === 0) {
-    return `<div class="meta" style="margin-top:6px">AI 검수: 지적 없음</div>${opinionBox}`;
+    return `<div class="meta" style="margin-top:6px">AI 검수: ${resolved.length ? "남은 지적 없음" : "지적 없음"}</div>${resolvedBox}${opinionBox}`;
   }
   // 지적 하나는 [종류] 결론 한 줄 + 근거 줄들이다. 결론은 서버가 정한 문장이라 훑어 읽히고,
   // AI가 쓴 긴 글은 근거로 내려 들여 쓴다. 한 문장에 다 넣으면 어디까지가 결론인지 안 보인다.
@@ -444,18 +452,85 @@ function aiFindingsBoxOf(d) {
     <div class="alert info ai-findings" style="margin:10px 0">
       <div class="ai-findings-head"><b>AI 검수 지적 ${findings.length}건</b> · 틀릴 수 있으니 직접 확인하세요</div>
       ${findings.map(f => aiFindingItemOf(d, f)).join("")}
-    </div>${opinionBox}`;
+    </div>${resolvedBox}${opinionBox}`;
 }
 
 const isOpinion = f => f.grade === "OPINION";
+/** 아직 처리 안 한 지적. 요약 표와 지적 수는 이것만 센다. */
+const isOpenFinding = f => !isOpinion(f) && !f.resolution;
+
+/** 직접 고치기 칸이 지금 글을 채워 넣을 때 쓴다. 목록을 다시 그릴 때마다 새로 담긴다. */
+const aiEditDrafts = new Map();
 
 function aiFindingItemOf(d, f) {
   return `
       <div class="ai-finding">
         <div><span class="badge gray">${escapeHtml(f.label)}</span> <b>${escapeHtml(f.message)}</b></div>
         ${(f.details ?? []).length ? `<ul>${f.details.map(l => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}
-        ${aiSuggestionOf(d, f)}
+        ${f.resolution ? `<div class="meta"><b>처리</b> ${escapeHtml(f.resolution)}</div>` : ""}
+        ${f.resolution ? "" : aiSuggestionOf(d, f)}
+        ${aiResolveOf(d, f)}
       </div>`;
+}
+
+/**
+ * 제안이 없거나 제안이 마음에 안 들 때, 검수자가 고칠 칸을 골라 직접 고치거나 "영향 없음"으로 둔다.
+ * 문서 지적(SOURCE_FLAGGED)은 AI가 제안을 달지 않아, 이 칸이 없으면 거절 말고는 할 일이 없었다.
+ */
+function aiResolveOf(d, f) {
+  if (d.status !== "PENDING" || !isOpenFinding(f)) return "";
+  const key = `${d.id}-${f.index}`;
+  const options = [["QUESTION", "", "질문"], ["EXPLANATION", "", "해설"]];
+  (d.choices ?? []).forEach((c, i) => {
+    options.push(["CHOICE", i, `${i + 1}번 보기`], ["RATIONALE", i, `${i + 1}번 오답 설명`]);
+  });
+  return `
+        <div class="row-actions" style="margin-top:6px">
+          <button class="btn-outline" onclick="openAiResolve('${key}')">직접 고치기</button>
+          <button class="btn-outline" onclick="resolveAiFinding(this, ${d.id}, ${f.index}, null)">문제 영향 없음</button>
+        </div>
+        <div id="aiResolve-${key}" hidden style="margin-top:6px">
+          <select id="aiResolveTarget-${key}" onchange="fillAiResolve('${key}', ${d.id})">
+            ${options.map(([t, i, label]) => `<option value="${t}:${i}">${label}</option>`).join("")}
+          </select>
+          <textarea id="aiResolveText-${key}" rows="4" maxlength="5000" style="width:100%; margin-top:6px"></textarea>
+          <div class="row-actions" style="margin-top:6px">
+            <button onclick="resolveAiFinding(this, ${d.id}, ${f.index}, '${key}')">고친 글 적용</button>
+            <button onclick="document.getElementById('aiResolve-${key}').hidden = true">취소</button>
+          </div>
+        </div>`;
+}
+
+function openAiResolve(key) {
+  document.getElementById(`aiResolve-${key}`).hidden = false;
+  fillAiResolve(key, Number(key.split("-")[0]));
+}
+
+/** 고를 칸을 바꾸면 그 칸의 지금 글을 채운다. 빈칸에서 새로 쓰지 않고 고쳐 쓰게 한다. */
+function fillAiResolve(key, id) {
+  const d = aiEditDrafts.get(id);
+  const [target, i] = document.getElementById(`aiResolveTarget-${key}`).value.split(":");
+  const c = d.choices?.[Number(i)];
+  const now = { QUESTION: d.question, EXPLANATION: d.explanation, CHOICE: c?.text, RATIONALE: c?.rationale }[target];
+  document.getElementById(`aiResolveText-${key}`).value = now ?? "";
+}
+
+async function resolveAiFinding(btn, id, index, key) {
+  let body = { target: null, choiceIndex: null, text: null };
+  if (key) {
+    const [target, i] = document.getElementById(`aiResolveTarget-${key}`).value.split(":");
+    body = { target, choiceIndex: i === "" ? null : Number(i), text: document.getElementById(`aiResolveText-${key}`).value };
+  }
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/llm-problems/${id}/ai-findings/${index}/resolve`, { method: "POST", body: JSON.stringify(body) });
+    await loadDrafts();
+    document.getElementById(`draft-${id}`)?.scrollIntoView({ block: "start" });
+  } catch (e) {
+    btn.disabled = false;
+    showError(document.getElementById("reviewMessage"), e);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 }
 
 /**
@@ -540,8 +615,8 @@ function renderAiSummary(drafts) {
     box.hidden = true;
     return;
   }
-  // 의견은 세지 않는다. 문제마다 풀이와 총평이 달려, 세면 모든 행이 "지적 있음"이 된다.
-  const countOf = d => d.aiFindings.filter(f => !isOpinion(f)).length;
+  // 의견과 처리한 지적은 세지 않는다. 의견은 문제마다 달려, 세면 모든 행이 "지적 있음"이 된다.
+  const countOf = d => d.aiFindings.filter(isOpenFinding).length;
   const total = reviewed.reduce((n, d) => n + countOf(d), 0);
   const skipped = drafts.length - reviewed.length;
   const concept = reviewed.filter(d => !d.codeKind);
@@ -560,11 +635,14 @@ function renderAiSummary(drafts) {
 
 function aiSummaryTable(drafts, columns, title, countOf) {
   if (drafts.length === 0) return "";
-  const has = (d, type) => d.aiFindings.some(f => f.type === type);
+  const has = (d, type) => d.aiFindings.some(f => f.type === type && isOpenFinding(f));
+  // 반영한 지적은 ○로 남긴다. 승인 탭에서 지적이 맞았는지 견줘 볼 때 쓴다
+  const mark = (d, type) => has(d, type) ? "●"
+    : d.aiFindings.some(f => f.type === type && f.resolution) ? "○" : "";
   const rows = drafts.map(d => `
         <tr>
           <td class="wrap"><a href="#draft-${d.id}">#${d.id} ${escapeHtml(d.title ?? d.question.slice(0, 30))}</a></td>
-          ${columns.map(([type]) => `<td style="text-align:center">${has(d, type) ? "●" : ""}</td>`).join("")}
+          ${columns.map(([type]) => `<td style="text-align:center">${mark(d, type)}</td>`).join("")}
           <td style="text-align:center"${countOf(d) ? "" : ` class="zero"`}>${countOf(d) || "없음"}</td>
         </tr>`).join("");
   const sums = columns.map(([type]) => drafts.filter(d => has(d, type)).length);

@@ -63,13 +63,13 @@ class AiFindingsWiringTest {
         assertThat(drafts.get(0).aiFindings()).isEmpty();
         assertThat(drafts.get(1).aiFindings()).containsExactly(
                 new LlmDraftResponse.AiFinding("CHOICE_CUE_LEAK", "보기 단서 누설", "POLISH", "보기만 봐도 고른다",
-                        List.of("4번만 길다", "나머지는 짧다"), null),
+                        List.of("4번만 길다", "나머지는 짧다"), null, null),
                 new LlmDraftResponse.AiFinding("NO_SUPPORT", "문서에 근거 없음", "DEFECT", "근거 없음", List.of(),
-                        null));
+                        null, null));
     }
 
     @Test
-    @DisplayName("고친 문장 제안을 적용하면 그 보기만 바뀌고, 지적은 제안을 떼고 바꾼 내용을 근거에 남긴다")
+    @DisplayName("고친 문장 제안을 적용하면 그 보기만 바뀌고, 지적은 제안을 떼고 바꾼 내용을 처리 기록에 남긴다")
     void appliesSuggestionToPendingDraft() throws Exception {
         draftImportService.importFile(writeFile(List.of(
                 new ProblemReview.Finding(1, ProblemReview.FindingType.SOLUTION, "풀이", "1번이 맞다"),
@@ -86,8 +86,9 @@ class AiFindingsWiringTest {
                 .containsExactly("짧은 정답", "오답 보기 1", "오답 보기 2", "오답 보기 3");
         assertThat(after.choices().get(0).correct()).isTrue();
         assertThat(after.aiFindings().get(1).suggestion()).isNull();
-        assertThat(after.aiFindings().get(1).details())
-                .containsExactly("1번만 길다", "제안 적용: 「정답 보기」 → 「짧은 정답」");
+        assertThat(after.aiFindings().get(1).details()).containsExactly("1번만 길다");
+        assertThat(after.aiFindings().get(1).resolution()).isEqualTo("제안 적용: 「정답 보기」 → 「짧은 정답」");
+        assertThat(after.aiFindings().get(0).resolution()).as("다른 지적은 그대로").isNull();
         assertThat(reviewList().get(1).choices().get(0).text()).as("저장됐다").isEqualTo("짧은 정답");
     }
 
@@ -105,8 +106,8 @@ class AiFindingsWiringTest {
         LlmDraftResponse after = llmProblemService.applyAiSuggestion(id, 1);
 
         assertThat(after.explanation()).isEqualTo("고친 해설\n둘째 줄");
-        assertThat(after.aiFindings().get(0).details()).as("여러 줄 해설도 적용 기록은 한 항목이다")
-                .containsExactly("근거", "제안 적용: 「해설: 왜 정답인지와 오답의 오해를 설명한다.」 → 「고친 해설 둘째 줄」");
+        assertThat(after.aiFindings().get(0).resolution()).as("여러 줄 해설도 적용 기록은 한 줄이다")
+                .isEqualTo("제안 적용: 「해설: 왜 정답인지와 오답의 오해를 설명한다.」 → 「고친 해설 둘째 줄」");
         assertThat(after.choices().get(2).rationale()).isEqualTo("고친 오답 이유");
         assertThat(after.choices()).extracting(c -> c.text())
                 .containsExactly("정답 보기", "오답 보기 1", "오답 보기 2", "오답 보기 3");
@@ -133,6 +134,43 @@ class AiFindingsWiringTest {
         llmProblemService.reject(id, "테스트");
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmProblemService.applyAiSuggestion(id, 0))
                 .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("제안 없는 문서 지적은 검수자가 고친 글로 반영하거나 영향 없음으로 처리하고, 두 번은 못 한다")
+    void resolvesFindingWithoutSuggestion() throws Exception {
+        draftImportService.importFile(writeFile(List.of(
+                new ProblemReview.Finding(1, ProblemReview.FindingType.SOURCE_FLAGGED, "근거 문단 지적", "지적된 문장"),
+                new ProblemReview.Finding(1, ProblemReview.FindingType.NO_SUPPORT, "근거 없음"))));
+        Long id = reviewList().get(1).id();
+
+        llmProblemService.resolveAiFinding(id, 0, ProblemReview.FixTarget.RATIONALE, 1, "  고친 오답 이유  ");
+        LlmDraftResponse after = llmProblemService.resolveAiFinding(id, 1, null, null, null);
+
+        assertThat(after.choices().get(1).rationale()).isEqualTo("고친 오답 이유");
+        assertThat(after.choices().get(1).text()).isEqualTo("오답 보기 1");
+        assertThat(after.aiFindings()).extracting(LlmDraftResponse.AiFinding::resolution)
+                .containsExactly("직접 수정: 「」 → 「고친 오답 이유」", "문제 영향 없음");
+        assertThat(after.aiFindings().get(0).details()).containsExactly("지적된 문장");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmProblemService.resolveAiFinding(id, 1, null, null, null))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("고칠 칸을 골랐는데 글이 비었거나 보기 번호가 없으면 막는다")
+    void rejectsBlankOrOutOfRangeEdit() throws Exception {
+        draftImportService.importFile(writeFile(List.of(
+                new ProblemReview.Finding(1, ProblemReview.FindingType.SOURCE_FLAGGED, "근거 문단 지적", "지적된 문장"))));
+        Long id = reviewList().get(1).id();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> llmProblemService.resolveAiFinding(id, 0, ProblemReview.FixTarget.QUESTION, null, " "))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> llmProblemService.resolveAiFinding(id, 0, ProblemReview.FixTarget.CHOICE, 9, "글"))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+        assertThat(reviewList().get(1).aiFindings().get(0).resolution()).isNull();
     }
 
     @Test

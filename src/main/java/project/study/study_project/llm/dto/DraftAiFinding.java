@@ -11,12 +11,24 @@ import project.study.study_project.llm.client.ProblemReview;
  *
  * @param detail     근거(여러 줄). 없으면 {@code null}
  * @param suggestion 고친 문장 제안. 없거나 이미 적용했으면 {@code null}
+ * @param resolution 검수자가 처리한 기록(제안 적용·직접 수정·영향 없음). 아직 안 봤으면 {@code null}
  */
 public record DraftAiFinding(ProblemReview.FindingType type, String message, String detail,
                              // 제안은 드물다. 없는 지적마다 null을 적으면 저장된 JSON이 칸 이름으로 채워진다
-                             @JsonInclude(JsonInclude.Include.NON_NULL) ProblemReview.Suggestion suggestion) {
+                             @JsonInclude(JsonInclude.Include.NON_NULL) ProblemReview.Suggestion suggestion,
+                             @JsonInclude(JsonInclude.Include.NON_NULL) String resolution) {
 
     public DraftAiFinding(ProblemReview.FindingType type, String message, String detail) {
-        this(type, message, detail, null);
+        this(type, message, detail, null, null);
+    }
+
+    public DraftAiFinding(ProblemReview.FindingType type, String message, String detail,
+                          ProblemReview.Suggestion suggestion) {
+        this(type, message, detail, suggestion, null);
+    }
+
+    /** 처리한 지적. 제안은 뗀다 — 같은 제안을 두 번 누를 수 없게 한다. */
+    public DraftAiFinding resolvedWith(String resolution) {
+        return new DraftAiFinding(type, message, detail, null, resolution);
     }
 }

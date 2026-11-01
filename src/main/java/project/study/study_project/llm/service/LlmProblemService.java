@@ -672,68 +672,129 @@ public class LlmProblemService {
     /**
      * AI 검수 지적에 붙은 고친 문장을 초안에 적용한다(docs/22 §6).
      *
-     * <p>적용한 지적은 제안을 떼고 근거에 바꾼 내용을 남긴다. 같은 제안을 두 번 누를 수 없고,
-     * 옛 문장이 남아 있어 손으로 되돌릴 수 있다. 원본은 {@code generated/} 파일에도 있다.
+     * <p>적용한 지적은 제안을 떼고 처리 기록(resolution)에 바꾼 내용을 남긴다. 화면은 처리한 지적을
+     * 지적 칸에서 빼 접어 둔다. 옛 문장이 기록에 남아 손으로 되돌릴 수 있다.
      *
      * @param findingIndex 초안의 지적 목록 안 위치(0부터)
      */
     @Transactional
     public LlmDraftResponse applyAiSuggestion(Long draftId, int findingIndex) {
+        GeneratedProblemDraft draft = findPendingDraft(draftId);
+        List<DraftAiFinding> findings = openFindingsOf(draft, findingIndex);
+        DraftAiFinding finding = findings.get(findingIndex);
+        ProblemReview.Suggestion suggestion = finding.suggestion();
+        if (suggestion == null) {
+            throw new BusinessException(ErrorCode.COMMON_001, "적용할 제안이 없습니다.");
+        }
+        editAndResolve(draft, findings, findingIndex, suggestion.target(), suggestion.choiceIndex(),
+                suggestion.text(), "제안 적용");
+        log.info("문제 초안 #{}: AI 제안 적용({})", draft.getId(), finding.type());
+        return toResponse(draft);
+    }
+
+    /**
+     * 제안이 없는 지적(예: 문서 지적)을 검수자가 처리한다.
+     *
+     * <p>{@code target}이 있으면 그 칸을 검수자가 쓴 글로 바꾸고, 없으면 "문제 영향 없음"으로만 남긴다.
+     * 아무 칸이나 고치는 수정 API가 아니다 — 지적 하나에 묶여 있고, 무엇을 바꿨는지 그 지적에 남는다.
+     *
+     * @param target      고칠 칸. {@code null}이면 고치지 않고 처리만 한다
+     * @param choiceIndex 보기·오답 이유를 고칠 때 그 보기 위치(0부터)
+     */
+    @Transactional
+    public LlmDraftResponse resolveAiFinding(Long draftId, int findingIndex, ProblemReview.FixTarget target,
+                                             Integer choiceIndex, String text) {
+        GeneratedProblemDraft draft = findPendingDraft(draftId);
+        List<DraftAiFinding> findings = openFindingsOf(draft, findingIndex);
+        if (target == null) {
+            List<DraftAiFinding> updated = new ArrayList<>(findings);
+            updated.set(findingIndex, findings.get(findingIndex).resolvedWith("문제 영향 없음"));
+            draft.applyAiSuggestion(draft.getQuestion(), draft.getExplanation(), draft.getChoicesJson(),
+                    writeJson(updated));
+        } else {
+            if (text == null || text.isBlank()) {
+                throw new BusinessException(ErrorCode.COMMON_001, "고친 글이 비어 있습니다.");
+            }
+            editAndResolve(draft, findings, findingIndex, target, choiceIndex, text.strip(), "직접 수정");
+        }
+        log.info("문제 초안 #{}: AI 지적 처리({}, {})", draft.getId(), findings.get(findingIndex).type(),
+                target == null ? "영향 없음" : target);
+        return toResponse(draft);
+    }
+
+    private GeneratedProblemDraft findPendingDraft(Long draftId) {
         GeneratedProblemDraft draft = findDraft(draftId);
         if (draft.getStatus() != DraftStatus.PENDING) {
             throw new BusinessException(ErrorCode.LLM_002);
         }
+        return draft;
+    }
+
+    /** 지적 목록을 읽고, 그 번호가 아직 처리 안 한 지적인지 본다. */
+    private List<DraftAiFinding> openFindingsOf(GeneratedProblemDraft draft, int findingIndex) {
         List<DraftAiFinding> findings;
         try {
             findings = storedFindingsOf(draft);
         } catch (JsonProcessingException e) {
             throw new BusinessException(ErrorCode.COMMON_001, "AI 검수 지적을 읽지 못했습니다.");
         }
-        if (findings == null || findingIndex < 0 || findingIndex >= findings.size() || findings.get(findingIndex).suggestion() == null) {
-            throw new BusinessException(ErrorCode.COMMON_001, "적용할 제안이 없습니다.");
+        if (findings == null || findingIndex < 0 || findingIndex >= findings.size()) {
+            throw new BusinessException(ErrorCode.COMMON_001, "그런 지적이 없습니다.");
         }
-        DraftAiFinding finding = findings.get(findingIndex);
-        ProblemReview.Suggestion suggestion = finding.suggestion();
+        if (resolutionOf(findings.get(findingIndex)) != null) {
+            throw new BusinessException(ErrorCode.COMMON_001, "이미 처리한 지적입니다.");
+        }
+        return findings;
+    }
 
+    /** 칸 하나를 {@code text}로 바꾸고, 그 지적에 "무엇을 무엇으로 바꿨는지"를 남긴다. */
+    private void editAndResolve(GeneratedProblemDraft draft, List<DraftAiFinding> findings, int findingIndex,
+                                ProblemReview.FixTarget target, Integer choiceIndex, String text, String how) {
         String question = draft.getQuestion();
         String explanation = draft.getExplanation();
         String choicesJson = draft.getChoicesJson();
         String before;
-        switch (suggestion.target()) {
+        switch (target) {
             case QUESTION -> {
                 before = question;
-                question = suggestion.text();
+                question = text;
             }
             case EXPLANATION -> {
                 before = explanation;
-                explanation = suggestion.text();
+                explanation = text;
             }
             case CHOICE, RATIONALE -> {
                 List<AdminProblemRequest.ChoiceItem> choices = new ArrayList<>(readChoices(choicesJson));
-                Integer index = suggestion.choiceIndex();
-                if (index == null || index < 0 || index >= choices.size()) {
-                    throw new BusinessException(ErrorCode.COMMON_001, "제안이 가리키는 보기가 없습니다.");
+                if (choiceIndex == null || choiceIndex < 0 || choiceIndex >= choices.size()) {
+                    throw new BusinessException(ErrorCode.COMMON_001, "고칠 보기가 없습니다.");
                 }
-                AdminProblemRequest.ChoiceItem c = choices.get(index);
-                boolean onRationale = suggestion.target() == ProblemReview.FixTarget.RATIONALE;
+                AdminProblemRequest.ChoiceItem c = choices.get(choiceIndex);
+                boolean onRationale = target == ProblemReview.FixTarget.RATIONALE;
                 before = onRationale ? c.rationale() : c.text();
-                choices.set(index, new AdminProblemRequest.ChoiceItem(
-                        onRationale ? c.text() : suggestion.text(), c.correct(),
-                        onRationale ? suggestion.text() : c.rationale(), c.matchText()));
+                choices.set(choiceIndex, new AdminProblemRequest.ChoiceItem(
+                        onRationale ? c.text() : text, c.correct(),
+                        onRationale ? text : c.rationale(), c.matchText()));
                 choicesJson = writeJson(choices);
             }
-            default -> throw new BusinessException(ErrorCode.COMMON_001, "적용할 수 없는 제안입니다.");
+            default -> throw new BusinessException(ErrorCode.COMMON_001, "고칠 수 없는 칸입니다.");
         }
-
         List<DraftAiFinding> updated = new ArrayList<>(findings);
-        // 근거 칸은 줄마다 한 항목으로 그려진다. 해설처럼 여러 줄인 글은 한 줄로 펴서 적는다
-        String applied = "제안 적용: 「%s」 → 「%s」".formatted(
-                before == null ? "" : before.replaceAll("\\s*\\R\\s*", " "), suggestion.text().replaceAll("\\s*\\R\\s*", " "));
-        updated.set(findingIndex, new DraftAiFinding(finding.type(), finding.message(),
-                finding.detail() == null ? applied : finding.detail() + "\n" + applied, null));
+        // 기록은 화면에 한 줄로 그린다. 해설처럼 여러 줄인 글은 한 줄로 펴서 적는다
+        String record = "%s: 「%s」 → 「%s」".formatted(how,
+                before == null ? "" : before.replaceAll("\\s*\\R\\s*", " "), text.replaceAll("\\s*\\R\\s*", " "));
+        updated.set(findingIndex, findings.get(findingIndex).resolvedWith(record));
         draft.applyAiSuggestion(question, explanation, choicesJson, writeJson(updated));
-        log.info("문제 초안 #{}: AI 제안 적용({})", draft.getId(), finding.type());
-        return toResponse(draft);
+    }
+
+    /** 처리 칸이 생기기 전(2026-11-01 전)에 적용한 제안은 근거 끝줄에 "제안 적용:"으로 남아 있다. */
+    private static final String LEGACY_APPLIED = "제안 적용: ";
+
+    private static String resolutionOf(DraftAiFinding f) {
+        if (f.resolution() != null) {
+            return f.resolution();
+        }
+        return f.detail() == null ? null
+                : f.detail().lines().filter(l -> l.startsWith(LEGACY_APPLIED)).findFirst().orElse(null);
     }
 
     /** 저장된 지적 목록. 검수를 안 돌린 초안이면 {@code null}. */
@@ -865,10 +926,12 @@ public class LlmProblemService {
             return stored.stream()
                     .map(f -> new LlmDraftResponse.AiFinding(
                             f.type().name(), f.type().label(), f.type().grade().name(), f.message(),
-                            detailLinesOf(f.detail()),
+                            detailLinesOf(f.detail()).stream()
+                                    .filter(l -> f.resolution() != null || !l.startsWith(LEGACY_APPLIED)).toList(),
                             f.suggestion() == null ? null : new LlmDraftResponse.AiSuggestion(
                                     f.suggestion().target().name(), f.suggestion().choiceIndex(),
-                                    f.suggestion().text())))
+                                    f.suggestion().text()),
+                            resolutionOf(f)))
                     .toList();
         } catch (JsonProcessingException | RuntimeException e) {
             log.warn("초안 #{}의 AI 검수 지적을 읽지 못함: {}", d.getId(), e.getMessage());

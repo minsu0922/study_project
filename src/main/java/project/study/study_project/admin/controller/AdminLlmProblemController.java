@@ -24,6 +24,7 @@ import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.dto.AiFindingResolveRequest;
 import project.study.study_project.llm.dto.LlmBulkApproveRequest;
 import project.study.study_project.llm.dto.LlmBulkApproveResponse;
 import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
@@ -193,6 +194,14 @@ public class AdminLlmProblemController {
     @PostMapping("/{id}/ai-findings/{index}/apply-suggestion")
     public ApiResponse<LlmDraftResponse> applyAiSuggestion(@PathVariable Long id, @PathVariable int index) {
         return ApiResponse.ok(llmProblemService.applyAiSuggestion(id, index));
+    }
+
+    /** 제안 없는 AI 지적(문서 지적 등)을 처리한다 — 검수자가 고친 글로 바꾸거나, 영향 없음으로 둔다. */
+    @PostMapping("/{id}/ai-findings/{index}/resolve")
+    public ApiResponse<LlmDraftResponse> resolveAiFinding(@PathVariable Long id, @PathVariable int index,
+                                                          @Valid @RequestBody AiFindingResolveRequest request) {
+        return ApiResponse.ok(llmProblemService.resolveAiFinding(id, index, request.target(),
+                request.choiceIndex(), request.text()));
     }
 
     /** 거절 — 사유(선택)를 바디로 받는다: {@code {"reason": "..."} } (없으면 빈 바디 허용). */
