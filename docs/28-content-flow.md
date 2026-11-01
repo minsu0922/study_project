@@ -179,13 +179,14 @@ flowchart TB
 
 ## 6. 흐름 C: 앱이 뜰 때 (내 PC)
 
-앱은 기동할 때 정해진 순서로 아홉 가지 일을 한다. 숫자는 코드의 `@Order` 값이다.
+앱은 기동할 때 정해진 순서로 열 가지 일을 한다. 숫자는 코드의 `@Order` 값이다.
 
 | 순서 | 클래스 | 방향 | 하는 일 |
 |---|---|---|---|
 | 4 | `DomainSettingSyncRunner` | — | 분야 표가 비었으면 기본 분야 11개로 채운다 |
 | 5 | `TopicQueueSyncRunner` | 파일 → DB | 주제 대기열 파일에서 배치가 찍은 사용 날짜와, 손으로 적은 새 주제를 DB로 가져온다 |
 | 10 | `DraftImportRunner` | 파일 → DB | 새 문제·문서 파일을 초안으로 들여온다. 이미 들여온 파일은 건너뛴다 |
+| 15 | `ApprovedDocumentFileSync` | DB → 파일 | 정식 문서와 다른 원문 문서 파일의 제목·slug·본문을 정식 문서에 맞춘다 |
 | 20 | `RejectionNotesExporter` | DB → 파일 | `_rejection-notes.json` |
 | 30 | `ExistingDocumentsExporter` | DB → 파일 | `_existing-documents.json` |
 | 40 | `ExistingQuestionsExporter` | DB → 파일 | `_existing-questions.json` |
@@ -229,6 +230,7 @@ flowchart LR
 - 처리한 AI 지적은 지우지 않고 처리 기록과 함께 접힌 칸으로 옮긴다.
 - 문서 초안의 문단을 고치면 앱이 원문 문서 파일(`documents/<날짜>.json`)의 같은 본문도 고친다.
 - 승인된 뒤에는 검수함에서 고칠 수 없다. 문제 관리·문서 관리 화면에서 고친다.
+- 문서 관리에서 정식 문서를 고치거나 옛 판으로 되돌리면 `DocumentContentChanged` 사건이 나가고, 앱이 원문 문서 파일도 맞춘다.
 
 코드 위치: `llm/service/LlmProblemService.java`, `llm/service/LlmDocumentService.java`
 
@@ -273,7 +275,7 @@ flowchart LR
 
 | 내용 | 있는 곳 | 지금 맞추는 방법 |
 |---|---|---|
-| 개념 문서 본문 | ① `document` 표 (학습자가 읽음) ② `generated_document_draft` 표 ③ `generated/documents/<날짜>.json` (문제 배치가 읽음) | 승인 전: 검수함 문단 고치기가 ②③을 함께 고친다. 승인 후: 문서 관리가 ①만 고친다 |
+| 개념 문서 본문 | ① `document` 표 (학습자가 읽음) ② `generated_document_draft` 표 ③ `generated/documents/<날짜>.json` (문제 배치가 읽음) | ③은 늘 최신본을 따른다. 승인 전: 검수함 문단 고치기가 ②③을 함께 고친다. 승인 후: 문서 관리가 ①을 고치면 ③도 맞춘다. 앱이 뜰 때도 ①에 맞춰 ③을 고친다. ②는 승인 뒤 그대로 남는다 |
 | 문제 본문 | ① `problem` 표 ② `generated_problem_draft` 표 ③ `generated/<날짜>.json` | 승인 전: 검수함 지적 처리가 ②만 고친다. 승인 후: 문제 관리가 ①만 고친다 |
 | 주제 대기열 | ① DB `topic_queue` 표 ② `_topics.json`·`_code-topics.json` | 양쪽이 서로 쓴다. 앱이 기동 때 파일 → DB를 먼저 읽고, 그다음 DB → 파일로 쓴다 |
 | 분야 목록 | ① DB `domain_setting` ② `_domain-settings.json` | 앱이 DB → 파일로만 쓴다 |
