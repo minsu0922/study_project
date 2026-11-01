@@ -1,161 +1,293 @@
 {
-  "note" : "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙을 따랐고, 근거는 generated/documents/2026-11-01.json의 입문편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
-  "date" : "2026-11-01",
-  "generatedAt" : "2026-11-01T03:00:00Z",
-  "domain" : "NETWORK",
-  "difficulty" : "BEGINNER",
-  "type" : "MULTIPLE_CHOICE",
-  "model" : "claude-code/claude-opus-5-5",
-  "documentSlug" : "tcp-connection-establishment-three-way-handshake",
-  "problems" : [ {
-    "question" : "아래는 TCP 연결을 여는 세 번의 인사다. 첫 번째 화살표처럼, 연결을 열자며 자기 시작 번호를 알리는 조각에 켜는 플래그의 이름은?",
-    "exhibit" : "sequenceDiagram\n  participant C as 클라이언트\n  participant S as 서버\n  C->>S: 연결을 열자, 내 시작 번호는 1000\n  S-->>C: 1000까지 받았다, 내 시작 번호는 5000\n  C->>S: 5000까지 받았다",
-    "answer" : "",
-    "explanation" : "규칙: SYN은 \"연결을 열자, 내 번호는 여기서 시작한다\"는 신호다. 플래그(TCP 조각 앞머리의 켜고 끄는 신호 칸) 가운데 연결을 여는 첫 인사에 켜는 것이 SYN이다.\n그림의 세 화살표를 차례로 따라가 보자.\n첫 화살표: 클라이언트가 시작 번호 1000을 알린다 → SYN을 켠 조각이다.\n둘째 화살표: 서버가 1000을 받았다고 답하며 자기 번호 5000을 알린다 → SYN과 ACK를 함께 켠 SYN-ACK다.\n셋째 화살표: 클라이언트가 5000을 받았다고 답한다 → ACK만 켠 조각이다.\n둘째 화살표에도 SYN이 켜지지만, 연결을 처음 여는 쪽이 보내는 조각은 첫 화살표다.\n그래서 첫 화살표에 켜는 플래그는 SYN이다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
-    "choices" : [ {
-      "text" : "SYN",
-      "correct" : true,
-      "rationale" : "",
-      "matchText" : ""
-    }, {
-      "text" : "ACK",
-      "correct" : false,
-      "rationale" : "ACK는 상대가 보낸 것을 이 번호 앞까지 받았다는 답이다. 첫 화살표는 아직 받은 것이 없어 답할 대상이 없다.",
-      "matchText" : ""
-    }, {
-      "text" : "FIN",
-      "correct" : false,
-      "rationale" : "FIN은 더 보낼 것이 없다며 연결을 닫을 때 쓰는 신호다. 연결을 여는 인사와는 반대쪽 끝에서 쓰인다.",
-      "matchText" : ""
-    }, {
-      "text" : "RST",
-      "correct" : false,
-      "rationale" : "RST는 이 연결은 없으니 당장 끊는다는 신호다. 닫힌 포트로 SYN이 왔을 때 돌아오는 답이지 연결을 여는 신호가 아니다.",
-      "matchText" : ""
-    } ],
-    "sourceQuote" : "| SYN | \"연결을 열자, 내 번호는 여기서 시작한다\"는 신호 | 전화를 걸어 \"여보세요\"라고 하는 말 |",
-    "title" : "연결을 여는 첫 인사에 켜는 플래그",
-    "questionKind" : "JUDGMENT",
-    "skipReason" : ""
-  }, {
-    "question" : "연결을 열 때 각자 고르는 첫 순서 번호로, 연결마다 다른 값을 골라 지난 연결의 조각과 헷갈리지 않게 하는 것은?",
-    "exhibit" : "",
-    "answer" : "",
-    "explanation" : "규칙: 시작 번호(ISN, Initial Sequence Number)는 연결을 열 때 양쪽이 각자 고르는 첫 순서 번호다. 연결마다 다른 값을 골라, 지난 연결에서 늦게 도착한 조각이 새 연결에 섞이지 않게 한다.\n같은 두 주소와 포트로 연결을 끊고 곧바로 다시 여는 장면을 따라가 보자.\n앞 연결이 시작 번호 1000으로 1000~1499번 바이트를 보냈다: 그중 한 조각이 길에서 늦어진다.\n새 연결이 시작 번호 80000을 고른다: 새 연결의 바이트는 80000번대부터 매겨진다.\n늦은 조각이 1200번으로 도착한다: 새 연결의 번호 범위와 맞지 않아 버려진다.\n두 연결이 모두 0부터 셌다면 늦은 조각이 새 연결의 번호 범위에 그대로 들어맞았을 것이다.\n그래서 연결마다 고르는 첫 순서 번호의 이름은 시작 번호(ISN)다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
-    "choices" : [ {
-      "text" : "시작 번호(ISN)",
-      "correct" : true,
-      "rationale" : "",
-      "matchText" : ""
-    }, {
-      "text" : "확인 응답(ACK)",
-      "correct" : false,
-      "rationale" : "확인 응답은 상대가 보낸 것을 어느 번호 앞까지 받았는지 알리는 답이다. 내가 처음 고르는 번호가 아니라 상대 번호에 답하는 값이다.",
-      "matchText" : ""
-    }, {
-      "text" : "왕복 시간(RTT)",
-      "correct" : false,
-      "rationale" : "왕복 시간은 신호를 보내고 답이 올 때까지 걸리는 시간이다. 번호가 아니라 시간을 재는 값이다.",
-      "matchText" : ""
-    }, {
-      "text" : "플래그(flag)",
-      "correct" : false,
-      "rationale" : "플래그는 SYN·ACK·FIN·RST처럼 켜고 끄는 신호 칸이다. 숫자를 담는 순서 번호 칸과는 다른 자리다.",
-      "matchText" : ""
-    } ],
-    "sourceQuote" : "- **시작 번호(ISN, Initial Sequence Number)** — 연결을 열 때 각자 고르는 첫 순서 번호다. 연결마다 다른 값을 골라, 지난 연결의 조각과 헷갈리지 않게 한다.",
-    "title" : "연결마다 각자 고르는 첫 순서 번호",
-    "questionKind" : "JUDGMENT",
-    "skipReason" : ""
-  }, {
-    "question" : "신호 하나를 보내고 그 답이 돌아올 때까지 걸리는 시간으로, 거리가 멀수록 길어지는 것을 부르는 이름은?",
-    "exhibit" : "",
-    "answer" : "",
-    "explanation" : "규칙: 왕복 시간(RTT, Round Trip Time)은 신호 하나를 보내고 그 답이 돌아올 때까지 걸리는 시간이다. 연결을 열 때 세 번의 인사를 마치려면 이 시간만큼 한 번 기다린다.\n서울 서버가 미국 서버에 연결하는 장면을 따라가 보자.\n서울 서버가 SYN을 보낸다: 0ms.\n미국 서버의 SYN-ACK가 돌아온다: 150ms, 이 값이 왕복 시간이다.\n서울 서버가 ACK와 함께 첫 데이터를 보낸다: 데이터는 150ms를 기다린 뒤에야 나간다.\n같은 데이터 센터 안의 서버끼리라면 같은 걸음이 1ms에도 못 미친다.\n그래서 보낸 신호의 답이 돌아올 때까지의 시간을 왕복 시간(RTT)이라 한다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
-    "choices" : [ {
-      "text" : "왕복 시간(RTT)",
-      "correct" : true,
-      "rationale" : "",
-      "matchText" : ""
-    }, {
-      "text" : "시작 번호(ISN)",
-      "correct" : false,
-      "rationale" : "시작 번호는 연결을 열 때 고르는 첫 순서 번호다. 시간이 아니라 바이트에 매기는 번호다.",
-      "matchText" : ""
-    }, {
-      "text" : "확인 응답(ACK)",
-      "correct" : false,
-      "rationale" : "확인 응답은 돌아오는 답 그 자체를 가리키는 말이다. 답이 오기까지 걸린 시간을 부르는 이름은 따로 있다.",
-      "matchText" : ""
-    }, {
-      "text" : "TIME_WAIT",
-      "correct" : false,
-      "rationale" : "TIME_WAIT는 연결을 먼저 끊은 쪽이 기록을 잠시 붙잡고 기다리는 상태다. 이름에 시간이 들어 있어 헷갈리지만 왕복에 걸린 시간이 아니다.",
-      "matchText" : ""
-    } ],
-    "sourceQuote" : "- **왕복 시간(RTT, Round Trip Time)** — 신호 하나를 보내고 그 답이 돌아올 때까지 걸리는 시간이다. 거리가 멀수록 길다.",
-    "title" : "보낸 신호의 답이 오기까지의 시간",
-    "questionKind" : "JUDGMENT",
-    "skipReason" : ""
-  }, {
-    "question" : "프로그램이 연결 하나를 읽고 쓰는 창구로, 운영체제가 연결마다 하나씩 만들어 프로그램에 내주는 것은?",
-    "exhibit" : "",
-    "answer" : "",
-    "explanation" : "규칙: 소켓(socket)은 프로그램이 연결 하나를 읽고 쓰는 창구다. 세 번의 인사는 운영체제가 끝내고, 프로그램은 운영체제가 내준 소켓으로 데이터를 쓰고 읽는다.\n서버 앱이 연결 하나를 받는 장면을 따라가 보자.\n서버 앱이 8080번 포트에서 기다린다: 인사를 기다리는 소켓 하나가 열린다.\n클라이언트와 운영체제 사이에 세 번의 인사가 끝난다: 연결이 하나 생긴다.\n서버 앱이 accept를 부른다: 운영체제가 그 연결을 위한 소켓을 새로 만들어 앱에 건넨다.\n앱은 이 소켓에 쓰고 읽어 그 클라이언트와만 주고받는다.\n그래서 연결마다 하나씩 받는 읽고 쓰는 창구의 이름은 소켓이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
-    "choices" : [ {
-      "text" : "소켓",
-      "correct" : true,
-      "rationale" : "",
-      "matchText" : ""
-    }, {
-      "text" : "패킷",
-      "correct" : false,
-      "rationale" : "패킷은 네트워크로 보내려고 나눈 데이터 조각 하나다. 프로그램이 읽고 쓰는 창구가 아니라 그 창구로 오가는 조각이다.",
-      "matchText" : ""
-    }, {
-      "text" : "플래그",
-      "correct" : false,
-      "rationale" : "플래그는 TCP 조각 앞머리의 켜고 끄는 신호 칸이다. 프로그램에 내주는 창구가 아니다.",
-      "matchText" : ""
-    }, {
-      "text" : "연결",
-      "correct" : false,
-      "rationale" : "연결은 두 컴퓨터가 서로의 시작 번호를 알고 주고받기로 약속한 상태다. 프로그램은 그 연결을 소켓이라는 창구로 다룬다.",
-      "matchText" : ""
-    } ],
-    "sourceQuote" : "- **소켓(socket)** — 프로그램이 연결 하나를 읽고 쓰는 창구다. 운영체제가 연결마다 하나씩 만들어 프로그램에 내준다.",
-    "title" : "프로그램이 연결을 읽고 쓰는 창구",
-    "questionKind" : "JUDGMENT",
-    "skipReason" : ""
-  }, {
-    "question" : "TCP 조각에 켜는 FIN 플래그가 뜻하는 것으로 옳은 것은?",
-    "exhibit" : "",
-    "answer" : "",
-    "explanation" : "규칙: FIN은 \"나는 더 보낼 것이 없다\"는 신호다. 보내는 방향이 둘이라, FIN을 보낸 쪽은 자기 방향만 닫고 상대는 남은 데이터를 계속 보낼 수 있다.\n클라이언트가 먼저 끊는 장면을 따라가 보자.\n클라이언트가 FIN을 보낸다: 클라이언트에서 서버로 가는 방향이 닫힌다.\n서버가 ACK로 답한다: 서버는 아직 남은 응답을 계속 보낸다.\n서버도 다 보내고 FIN을 보낸다: 서버에서 클라이언트로 가는 방향도 닫힌다.\n클라이언트가 ACK로 답한다: 두 방향이 모두 닫혀 4-way 종료가 끝난다.\n당장 버리라는 RST와 달리, FIN 뒤에도 가는 중인 데이터는 끝까지 닿는다.\n그래서 FIN은 더 보낼 것이 없다는 뜻이다.\n(입문편의 '연결을 끊을 때 오가는 신호' 절을 다시 읽어 보라)",
-    "choices" : [ {
-      "text" : "나는 더 보낼 것이 없다는 뜻이다",
-      "correct" : true,
-      "rationale" : "",
-      "matchText" : ""
-    }, {
-      "text" : "이 연결은 없으니 상대가 당장 버리라는 뜻이다",
-      "correct" : false,
-      "rationale" : "RST의 뜻이다. FIN은 정상적으로 일을 마쳤을 때 쓰고, 가는 중인 데이터를 버리지 않는다.",
-      "matchText" : ""
-    }, {
-      "text" : "연결을 열자며 내 시작 번호를 알린다는 뜻이다",
-      "correct" : false,
-      "rationale" : "SYN의 뜻이다. FIN은 연결을 여는 인사가 아니라 닫을 때 보내는 신호다.",
-      "matchText" : ""
-    }, {
-      "text" : "네가 보낸 것을 이 번호 앞까지 받았다는 뜻이다",
-      "correct" : false,
-      "rationale" : "ACK의 뜻이다. 끊을 때도 ACK가 함께 오가지만, 받았다는 답과 더 보낼 것이 없다는 신호는 다른 플래그다.",
-      "matchText" : ""
-    } ],
-    "sourceQuote" : "| FIN | \"나는 더 보낼 것이 없다\"는 신호 | \"저는 할 말 다 했어요\"라는 말 |",
-    "title" : "연결을 닫을 때 켜는 플래그의 뜻",
-    "questionKind" : "JUDGMENT",
-    "skipReason" : ""
-  } ]
+    "note":  "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙을 따랐고, 근거는 generated/documents/2026-11-01.json의 입문편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+    "date":  "2026-11-01",
+    "generatedAt":  "2026-11-01T03:00:00Z",
+    "domain":  "NETWORK",
+    "difficulty":  "BEGINNER",
+    "type":  "MULTIPLE_CHOICE",
+    "model":  "claude-code/claude-opus-5-5",
+    "documentSlug":  "tcp-connection-establishment-three-way-handshake",
+    "problems":  [
+                     {
+                         "question":  "아래는 TCP 연결을 여는 세 번의 인사다. 첫 번째 화살표처럼, 연결을 열자며 자기 시작 번호를 알리는 조각에 켜는 플래그의 이름은?",
+                         "exhibit":  "sequenceDiagram\n  participant C as 클라이언트\n  participant S as 서버\n  C-\u003e\u003eS: 연결을 열자, 내 시작 번호는 1000\n  S--\u003e\u003eC: 1000까지 받았다, 내 시작 번호는 5000\n  C-\u003e\u003eS: 5000까지 받았다",
+                         "answer":  "",
+                         "explanation":  "규칙: SYN은 \"연결을 열자, 내 번호는 여기서 시작한다\"는 신호다. 플래그(TCP 조각 앞머리의 켜고 끄는 신호 칸) 가운데 연결을 여는 첫 인사에 켜는 것이 SYN이다.\n그림의 세 화살표를 차례로 따라가 보자.\n첫 화살표: 클라이언트가 시작 번호 1000을 알린다 → SYN을 켠 조각이다.\n둘째 화살표: 서버가 1000을 받았다고 답하며 자기 번호 5000을 알린다 → SYN과 ACK를 함께 켠 SYN-ACK다.\n셋째 화살표: 클라이언트가 5000을 받았다고 답한다 → ACK만 켠 조각이다.\n둘째 화살표에도 SYN이 켜지지만, 연결을 처음 여는 쪽이 보내는 조각은 첫 화살표다.\n그래서 첫 화살표에 켜는 플래그는 SYN이다.\n(입문편의 \u0027바탕이 되는 개념\u0027 절을 다시 읽어 보라)",
+                         "choices":  [
+                                         {
+                                             "text":  "SYN",
+                                             "correct":  true,
+                                             "rationale":  "",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "ACK",
+                                             "correct":  false,
+                                             "rationale":  "ACK는 상대가 보낸 것을 이 번호 앞까지 받았다는 답이다. 첫 화살표는 아직 받은 것이 없어 답할 대상이 없다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "FIN",
+                                             "correct":  false,
+                                             "rationale":  "FIN은 더 보낼 것이 없다며 연결을 닫을 때 쓰는 신호다. 연결을 여는 인사와는 반대쪽 끝에서 쓰인다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "RST",
+                                             "correct":  false,
+                                             "rationale":  "RST는 이 연결은 없으니 당장 끊는다는 신호다. 닫힌 포트로 SYN이 왔을 때 돌아오는 답이지 연결을 여는 신호가 아니다.",
+                                             "matchText":  ""
+                                         }
+                                     ],
+                         "sourceQuote":  "| SYN | \"연결을 열자, 내 번호는 여기서 시작한다\"는 신호 | 전화를 걸어 \"여보세요\"라고 하는 말 |",
+                         "title":  "연결을 여는 첫 인사에 켜는 플래그",
+                         "questionKind":  "JUDGMENT",
+                         "skipReason":  ""
+                     },
+                     {
+                         "question":  "연결을 열 때 각자 고르는 첫 순서 번호로, 연결마다 다른 값을 골라 지난 연결의 조각과 헷갈리지 않게 하는 것은?",
+                         "exhibit":  "",
+                         "answer":  "",
+                         "explanation":  "규칙: 시작 번호(ISN, Initial Sequence Number)는 연결을 열 때 양쪽이 각자 고르는 첫 순서 번호다. 연결마다 다른 값을 골라, 지난 연결에서 늦게 도착한 조각이 새 연결에 섞이지 않게 한다.\n같은 두 주소와 포트로 연결을 끊고 곧바로 다시 여는 장면을 따라가 보자.\n앞 연결이 시작 번호 1000으로 1001~1500번 바이트를 보냈다: 그중 한 조각이 길에서 늦어진다.\n새 연결이 시작 번호 80000을 고른다: 새 연결의 바이트는 80000번대부터 매겨진다.\n늦은 조각이 1200번으로 도착한다: 새 연결의 번호 범위와 맞지 않아 버려진다.\n두 연결이 모두 0부터 셌다면 늦은 조각이 새 연결의 번호 범위에 그대로 들어맞았을 것이다.\n그래서 연결마다 고르는 첫 순서 번호의 이름은 시작 번호(ISN)다.\n(입문편의 \u0027바탕이 되는 개념\u0027 절을 다시 읽어 보라)",
+                         "choices":  [
+                                         {
+                                             "text":  "시작 번호(ISN)",
+                                             "correct":  true,
+                                             "rationale":  "",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "확인 응답(ACK)",
+                                             "correct":  false,
+                                             "rationale":  "확인 응답은 상대가 보낸 것을 어느 번호 앞까지 받았는지 알리는 답이다. 내가 처음 고르는 번호가 아니라 상대 번호에 답하는 값이다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "왕복 시간(RTT)",
+                                             "correct":  false,
+                                             "rationale":  "왕복 시간은 신호를 보내고 답이 올 때까지 걸리는 시간이다. 번호가 아니라 시간을 재는 값이다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "플래그(flag)",
+                                             "correct":  false,
+                                             "rationale":  "플래그는 SYN·ACK·FIN·RST처럼 켜고 끄는 신호 칸이다. 숫자를 담는 순서 번호 칸과는 다른 자리다.",
+                                             "matchText":  ""
+                                         }
+                                     ],
+                         "sourceQuote":  "- **시작 번호(ISN, Initial Sequence Number)** — 연결을 열 때 각자 고르는 첫 순서 번호다. 연결마다 다른 값을 골라, 지난 연결의 조각과 헷갈리지 않게 한다.",
+                         "title":  "연결마다 각자 고르는 첫 순서 번호",
+                         "questionKind":  "JUDGMENT",
+                         "skipReason":  ""
+                     },
+                     {
+                         "question":  "신호 하나를 보내고 그 답이 돌아올 때까지 걸리는 시간으로, 거리가 멀수록 길어지는 것을 부르는 이름은?",
+                         "exhibit":  "",
+                         "answer":  "",
+                         "explanation":  "규칙: 왕복 시간(RTT, Round Trip Time)은 신호 하나를 보내고 그 답이 돌아올 때까지 걸리는 시간이다. 연결을 열 때 세 번의 인사를 마치려면 이 시간만큼 한 번 기다린다.\n서울 서버가 미국 서버에 연결하는 장면을 따라가 보자.\n서울 서버가 SYN을 보낸다: 0ms.\n미국 서버의 SYN-ACK가 돌아온다: 150ms, 이 값이 왕복 시간이다.\n서울 서버가 ACK와 함께 첫 데이터를 보낸다: 데이터는 150ms를 기다린 뒤에야 나간다.\n같은 데이터 센터 안의 서버끼리라면 같은 걸음이 1ms에도 못 미친다.\n그래서 보낸 신호의 답이 돌아올 때까지의 시간을 왕복 시간(RTT)이라 한다.\n(입문편의 \u0027무엇인가\u0027 절을 다시 읽어 보라)",
+                         "choices":  [
+                                         {
+                                             "text":  "왕복 시간(RTT)",
+                                             "correct":  true,
+                                             "rationale":  "",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "시작 번호(ISN)",
+                                             "correct":  false,
+                                             "rationale":  "시작 번호는 연결을 열 때 고르는 첫 순서 번호다. 시간이 아니라 바이트에 매기는 번호다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "확인 응답(ACK)",
+                                             "correct":  false,
+                                             "rationale":  "확인 응답은 돌아오는 답 그 자체를 가리키는 말이다. 답이 오기까지 걸린 시간을 부르는 이름은 따로 있다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "TIME_WAIT",
+                                             "correct":  false,
+                                             "rationale":  "TIME_WAIT는 연결을 먼저 끊은 쪽이 기록을 잠시 붙잡고 기다리는 상태다. 이름에 시간이 들어 있어 헷갈리지만 왕복에 걸린 시간이 아니다.",
+                                             "matchText":  ""
+                                         }
+                                     ],
+                         "sourceQuote":  "- **왕복 시간(RTT, Round Trip Time)** — 신호 하나를 보내고 그 답이 돌아올 때까지 걸리는 시간이다. 거리가 멀수록 길다.",
+                         "title":  "보낸 신호의 답이 오기까지의 시간",
+                         "questionKind":  "JUDGMENT",
+                         "skipReason":  ""
+                     },
+                     {
+                         "question":  "프로그램이 연결 하나를 읽고 쓰는 창구로, 운영체제가 연결마다 하나씩 만들어 프로그램에 내주는 것은?",
+                         "exhibit":  "",
+                         "answer":  "",
+                         "explanation":  "규칙: 소켓(socket)은 프로그램이 연결 하나를 읽고 쓰는 창구다. 세 번의 인사는 운영체제가 끝내고, 프로그램은 운영체제가 내준 소켓으로 데이터를 쓰고 읽는다.\n서버 앱이 연결 하나를 받는 장면을 따라가 보자.\n서버 앱이 8080번 포트에서 기다린다: 인사를 기다리는 소켓 하나가 열린다.\n클라이언트와 운영체제 사이에 세 번의 인사가 끝난다: 연결이 하나 생긴다.\n서버 앱이 accept를 부른다: 운영체제가 그 연결을 위한 소켓을 새로 만들어 앱에 건넨다.\n앱은 이 소켓에 쓰고 읽어 그 클라이언트와만 주고받는다.\n그래서 연결마다 하나씩 받는 읽고 쓰는 창구의 이름은 소켓이다.\n(입문편의 \u0027무엇인가\u0027 절을 다시 읽어 보라)",
+                         "choices":  [
+                                         {
+                                             "text":  "소켓",
+                                             "correct":  true,
+                                             "rationale":  "",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "패킷",
+                                             "correct":  false,
+                                             "rationale":  "패킷은 네트워크로 보내려고 나눈 데이터 조각 하나다. 프로그램이 읽고 쓰는 창구가 아니라 그 창구로 오가는 조각이다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "플래그",
+                                             "correct":  false,
+                                             "rationale":  "플래그는 TCP 조각 앞머리의 켜고 끄는 신호 칸이다. 프로그램에 내주는 창구가 아니다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "연결",
+                                             "correct":  false,
+                                             "rationale":  "연결은 두 컴퓨터가 서로의 시작 번호를 알고 주고받기로 약속한 상태다. 프로그램은 그 연결을 소켓이라는 창구로 다룬다.",
+                                             "matchText":  ""
+                                         }
+                                     ],
+                         "sourceQuote":  "- **소켓(socket)** — 프로그램이 연결 하나를 읽고 쓰는 창구다. 운영체제가 연결마다 하나씩 만들어 프로그램에 내준다.",
+                         "title":  "프로그램이 연결을 읽고 쓰는 창구",
+                         "questionKind":  "JUDGMENT",
+                         "skipReason":  ""
+                     },
+                     {
+                         "question":  "TCP 조각에 켜는 FIN 플래그가 뜻하는 것으로 옳은 것은?",
+                         "exhibit":  "",
+                         "answer":  "",
+                         "explanation":  "규칙: FIN은 \"나는 더 보낼 것이 없다\"는 신호다. 보내는 방향이 둘이라, FIN을 보낸 쪽은 자기 방향만 닫고 상대는 남은 데이터를 계속 보낼 수 있다.\n클라이언트가 먼저 끊는 장면을 따라가 보자.\n클라이언트가 FIN을 보낸다: 클라이언트에서 서버로 가는 방향이 닫힌다.\n서버가 ACK로 답한다: 서버는 아직 남은 응답을 계속 보낸다.\n서버도 다 보내고 FIN을 보낸다: 서버에서 클라이언트로 가는 방향도 닫힌다.\n클라이언트가 ACK로 답한다: 두 방향이 모두 닫혀 4-way 종료가 끝난다.\n당장 버리라는 RST와 달리, FIN 뒤에도 가는 중인 데이터는 끝까지 닿는다.\n그래서 FIN은 더 보낼 것이 없다는 뜻이다.\n(입문편의 \u0027연결을 끊을 때 오가는 신호\u0027 절을 다시 읽어 보라)",
+                         "choices":  [
+                                         {
+                                             "text":  "나는 더 보낼 것이 없다는 뜻이다",
+                                             "correct":  true,
+                                             "rationale":  "",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "이 연결은 없으니 당장 끊는다는 뜻이다",
+                                             "correct":  false,
+                                             "rationale":  "RST의 뜻이다. FIN은 정상적으로 일을 마쳤을 때 쓰고, 가는 중인 데이터를 버리지 않는다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "연결을 열자며 내 시작 번호를 알린다는 뜻이다",
+                                             "correct":  false,
+                                             "rationale":  "SYN의 뜻이다. FIN은 연결을 여는 인사가 아니라 닫을 때 보내는 신호다.",
+                                             "matchText":  ""
+                                         },
+                                         {
+                                             "text":  "네가 보낸 것을 이 번호 앞까지 받았다는 뜻이다",
+                                             "correct":  false,
+                                             "rationale":  "ACK의 뜻이다. 끊을 때도 ACK가 함께 오가지만, 받았다는 답과 더 보낼 것이 없다는 신호는 다른 플래그다.",
+                                             "matchText":  ""
+                                         }
+                                     ],
+                         "sourceQuote":  "| FIN | \"나는 더 보낼 것이 없다\"는 신호 | \"저는 할 말 다 했어요\"라는 말 |",
+                         "title":  "연결을 닫을 때 켜는 플래그의 뜻",
+                         "questionKind":  "JUDGMENT",
+                         "skipReason":  ""
+                     }
+                 ],
+    "shortfallReasons":  null,
+    "reviewFindings":  [
+                           {
+                               "problemIndex":  0,
+                               "type":  "SOLUTION",
+                               "message":  "검수 AI가 문서를 보고 푼 과정입니다",
+                               "detail":  "첫 번째 화살표는 클라이언트가 연결을 열자며 시작 번호 1000을 알리는 첫 인사다. 문서에서 이 신호는 SYN이다. ACK는 받았다는 답, FIN은 더 보낼 것이 없다는 신호, RST는 당장 끊는 신호라 맞지 않는다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  0,
+                               "type":  "READABILITY",
+                               "message":  "읽다가 막히는 곳이 있습니다",
+                               "detail":  "자료의 화살표 글이 플래그 이름 없이 뜻만 적혀 있어, 뜻을 보고 이름을 고르게 한 점이 좋다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  0,
+                               "type":  "OVERALL",
+                               "message":  "풀어 본 총평입니다",
+                               "detail":  "문서를 읽은 학습자라면 바로 SYN을 고른다. 두 번째 화살표도 시작 번호를 알리지만 질문이 첫 번째 화살표로 못박아 헷갈리지 않는다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  1,
+                               "type":  "SOLUTION",
+                               "message":  "검수 AI가 문서를 보고 푼 과정입니다",
+                               "detail":  "연결을 열 때 각자 고르는 첫 순서 번호는 문서가 정의한 시작 번호(ISN)다. 플래그는 신호 칸, ACK는 받았다는 답, RTT는 왕복 시간이라 다른 개념이다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  1,
+                               "type":  "READABILITY",
+                               "message":  "읽다가 막히는 곳이 있습니다",
+                               "detail":  "질문이 문서 정의 문장을 거의 그대로 옮겼다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  1,
+                               "type":  "OVERALL",
+                               "message":  "풀어 본 총평입니다",
+                               "detail":  "정의를 그대로 확인하는 초급 문제로 무난하다. 질문의 \u0027첫 순서 번호\u0027와 보기의 \u0027시작 번호\u0027가 뜻으로 이어져 약간의 힌트가 되지만 문장 비교만으로 풀리는 수준은 아니다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  2,
+                               "type":  "SOLUTION",
+                               "message":  "검수 AI가 문서를 보고 푼 과정입니다",
+                               "detail":  "신호를 보내고 답이 돌아올 때까지의 시간은 왕복 시간(RTT)이다. 문서는 거리가 멀수록 길다고도 적는다. ACK는 답 신호, ISN은 첫 순서 번호, TIME_WAIT는 끊은 뒤 기다리는 상태다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  2,
+                               "type":  "OVERALL",
+                               "message":  "풀어 본 총평입니다",
+                               "detail":  "용어 정의를 바로 묻는 문제로 명확하다. TIME_WAIT가 \u0027기다림\u0027이라 시간처럼 보여 오답으로 쓸모가 있다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  3,
+                               "type":  "SOLUTION",
+                               "message":  "검수 AI가 문서를 보고 푼 과정입니다",
+                               "detail":  "프로그램이 연결 하나를 읽고 쓰는 창구로 운영체제가 연결마다 내주는 것은 소켓이다. 플래그는 앞머리의 신호 칸, 연결은 양쪽이 시작 번호를 알고 약속한 상태, 패킷은 데이터 조각이다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  3,
+                               "type":  "OVERALL",
+                               "message":  "풀어 본 총평입니다",
+                               "detail":  "\u0027연결\u0027이 소켓과 가까운 개념이라 적당히 헷갈리지만, 문서의 정의를 읽었으면 소켓으로 갈린다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  4,
+                               "type":  "SOLUTION",
+                               "message":  "검수 AI가 문서를 보고 푼 과정입니다",
+                               "detail":  "문서 표에서 FIN은 \"나는 더 보낼 것이 없다\"는 신호다. 4번은 ACK, 2번은 RST, 3번은 SYN의 뜻이다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  4,
+                               "type":  "AWKWARD_SENTENCE",
+                               "message":  "어색하거나 뜻이 흐린 문장이 있습니다",
+                               "detail":  "지금: 「이 연결은 없으니 상대가 당장 버리라는 뜻이다」\n고치면: 이 연결은 없으니 당장 끊는다는 뜻이다",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  4,
+                               "type":  "READABILITY",
+                               "message":  "읽다가 막히는 곳이 있습니다",
+                               "detail":  "2번 보기의 \u0027상대가 당장 버리라는\u0027은 문서의 RST 설명(당장 끊는다)과 표현이 조금 달라 읽을 때 걸린다.",
+                               "suggestion":  null
+                           },
+                           {
+                               "problemIndex":  4,
+                               "type":  "OVERALL",
+                               "message":  "풀어 본 총평입니다",
+                               "detail":  "네 플래그의 정의를 보기로 깔아 놓아 개념을 아는 학습자에게 명확히 갈린다. 4번 문제와 오답 구성이 겹쳐 같은 표를 두 번 묻는 느낌은 있다.",
+                               "suggestion":  null
+                           }
+                       ]
 }
