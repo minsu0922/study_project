@@ -316,7 +316,8 @@ class LlmDocumentFlowIntegrationTest {
         assertThat(after.contentMd()).contains("캐시는 대개 빠르지만 항상은 아니다.")
                 .doesNotContain("그래서 늘 쓴다.").contains("## 무엇인가");
         assertThat(after.factFindings().get(0).resolution())
-                .isEqualTo("직접 수정: 「캐시는 **항상** 빠르다. 그래서 늘 쓴다.」 → 「캐시는 대개 빠르지만 항상은 아니다.」");
+                .as("이 테스트의 slug는 배치 파일에 없다")
+                .isEqualTo("직접 수정(배치 파일은 못 찾아 그대로): 「캐시는 **항상** 빠르다. 그래서 늘 쓴다.」 → 「캐시는 대개 빠르지만 항상은 아니다.」");
         assertThat(after.factFindings().get(0).paragraph()).as("처리한 지적엔 고칠 문단을 싣지 않는다").isNull();
         assertThat(after.factFindings().get(1).resolution()).isEqualTo("고치지 않음");
         assertThat(after.contentMd()).as("고치지 않음은 본문을 건드리지 않는다").contains("상위 개념을 처음부터 설명한다.");

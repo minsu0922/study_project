@@ -67,7 +67,8 @@ class DocumentImportServiceTest {
         LlmDocumentService llmDocumentService =
                 new LlmDocumentService(
                         draftRepository, documentRepository, adminDocumentService,
-                        objectMapper, event -> { }, DefaultDomains.catalog());
+                        objectMapper, event -> { }, DefaultDomains.catalog(),
+                        new DocumentFileSync(tempDir.toString()));
         // domainCatalog는 실물(DefaultDomains.catalog())을 쓴다 — 11개 기본 분야만 "등록됨"으로
         // 본다. 이 파일들이 쓰는 TestDomains.SYSTEM_DESIGN은 그 안에 있으므로 기존 테스트는
         // 그대로 통과하고, 아래 rejectsUnregisteredDomain은 그 밖의 코드로 거부를 확인한다.

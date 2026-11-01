@@ -71,6 +71,8 @@ public class LlmDocumentService {
 
     /** 초안 응답의 분야 표기 이름 — 관리 화면이 고친 이름을 그대로 싣는다(Task 4). */
     private final DomainCatalog domainCatalog;
+    /** 검수함에서 고친 본문을 배치 파일에도 옮긴다. 문제 배치는 DB가 아니라 그 파일을 읽는다. */
+    private final DocumentFileSync documentFileSync;
 
     /* ── 흡수(저장) ───────────────────────────────────────────── */
 
@@ -359,8 +361,13 @@ public class LlmDocumentService {
                 throw new BusinessException(ErrorCode.COMMON_001, "고친 문단이 비어 있습니다.");
             }
             int at = content.indexOf(paragraph);
+            String before = content;
             content = content.substring(0, at) + replaced + content.substring(at + paragraph.length());
-            resolution = "직접 수정: 「%s」 → 「%s」".formatted(oneLine(paragraph), oneLine(replaced));
+            // 어느 파일을 고쳤는지 기록에 남긴다. 검수자가 그 파일을 커밋해야 배치에 반영된다
+            String synced = documentFileSync.replaceContent(draft.getSlug(), before, content)
+                    .map(name -> "배치 파일 " + name + "도 고침")
+                    .orElse("배치 파일은 못 찾아 그대로");
+            resolution = "직접 수정(%s): 「%s」 → 「%s」".formatted(synced, oneLine(paragraph), oneLine(replaced));
         }
         List<DraftFactFinding> updated = new ArrayList<>(findings);
         updated.set(findingIndex, finding.resolvedWith(resolution));
