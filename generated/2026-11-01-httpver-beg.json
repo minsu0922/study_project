@@ -1,194 +1,235 @@
 {
-    "note":  "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙을 따랐고, 근거는 generated/documents/2026-10-23.json의 입문편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
-    "date":  "2026-11-01",
-    "generatedAt":  "2026-11-01T14:00:00Z",
-    "domain":  "NETWORK",
-    "difficulty":  "BEGINNER",
-    "type":  "MULTIPLE_CHOICE",
-    "model":  "claude-code/claude-opus-5-5",
-    "documentSlug":  "http-versions-connection-reuse-multiplexing",
-    "problems":  [
-        {
-            "question":  "줄 맨 앞의 것이 막히면, 뒤의 것들이 자기와 상관없는데도 함께 기다리는 현상을 부르는 이름은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: HOL 블로킹(Head-of-Line blocking)은 줄 맨 앞의 것이 막히면 뒤의 것들이 함께 기다리는 현상이다. HTTP/1.1에서는 연결 위 요청 줄에서, HTTP/2에서는 그 아래 TCP 조각 줄에서 생긴다.\nHTTP/1.1 연결 하나로 사진 넷을 받는 장면을 따라가 보자.\n사진 1을 요청한다: 서버가 이 사진을 늦게 만든다.\n사진 2·3·4는 이미 준비돼 있다: 그래도 사진 1의 응답이 끝나야 다음 요청을 보낸다.\n사진 1이 끝난 뒤에야 사진 2가 출발한다.\n맨 앞 하나의 지각이 상관없는 뒤 셋까지 붙잡았다.\n그래서 이 현상의 이름은 HOL 블로킹이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "HOL 블로킹",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "다중화(multiplexing)",
-                    "correct":  false,
-                    "rationale":  "다중화는 연결 하나에 여러 요청을 섞어 보내는 방식이다. 줄 서기로 생기는 기다림을 줄이려고 쓰는 쪽이다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "연결 재사용(keep-alive)",
-                    "correct":  false,
-                    "rationale":  "연결 재사용은 응답 뒤에도 연결을 닫지 않고 다시 쓰는 일이다. 인사 비용을 줄일 뿐 기다리는 현상을 가리키지 않는다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "왕복 시간(RTT)",
-                    "correct":  false,
-                    "rationale":  "왕복 시간은 신호를 보내고 답이 오기까지의 시간이다. 앞이 막혀 뒤가 기다리는 현상과는 다른 말이다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "- **HOL 블로킹(Head-of-Line blocking)** — 줄 맨 앞의 것이 막히면 뒤의 것들이 상관없이 함께 기다리는 현상이다.",
-            "title":  "앞이 막히면 뒤가 함께 기다리는 현상",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "HTTP/1.1이 연결 하나로 요청을 보내는 방식으로 옳은 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: HTTP/1.1은 연결을 다시 쓰지만, 연결 하나에서는 요청을 하나씩 보낸다. 앞 응답이 끝까지 와야 다음 요청을 보내서, 브라우저는 사이트당 연결을 6개 안팎 연다.\n사진 50장을 HTTP/1.1로 받는 장면을 따라가 보자.\n연결 6개를 연다: 인사 비용은 연결마다 한 번만 든다.\n연결마다 사진 하나씩, 6장을 동시에 요청한다.\n응답이 오면 같은 연결로 다음 사진을 요청한다: 50장이면 9번 되풀이한다.\n한 연결 위에서 요청이 섞여 가는 일은 없다.\n그래서 HTTP/1.1은 연결을 다시 쓰되 앞 응답이 끝나야 다음 요청을 보낸다.\n(입문편의 'HTTP/1.1: 연결을 다시 쓰되 한 번에 하나씩' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "앞 응답이 끝나야 다음 요청을 보낸다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "요청마다 연결을 새로 열고 응답을 받으면 닫는다",
-                    "correct":  false,
-                    "rationale":  "HTTP/1.1은 연결 재사용을 기본으로 켰다. 요청마다 새 연결을 열면 인사 비용이 요청 수만큼 든다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "연결 하나에 여러 요청을 번호 붙여 섞어 보낸다",
-                    "correct":  false,
-                    "rationale":  "번호 붙인 스트림으로 섞어 보내는 것은 HTTP/2의 다중화다. 1.1은 한 연결에 한 번에 하나씩이다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "TCP 대신 UDP 위에서 요청을 줄마다 따로 보낸다",
-                    "correct":  false,
-                    "rationale":  "UDP 위의 QUIC으로 줄마다 따로 보내는 것은 HTTP/3다. HTTP/1.1은 TCP 연결 위에서 간다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "다만 연결 하나에서는 요청을 하나씩 보낸다. 앞 응답이 끝까지 와야 다음 요청을 보낸다.",
-            "title":  "HTTP/1.1이 연결 하나를 쓰는 방식",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "HTTP/2로 받은 아래 응답의 alt-svc 헤더가 브라우저에 알리는 것으로 옳은 것은?",
-            "exhibit":  "HTTP/2 200\ncontent-type: text/html\nalt-svc: h3=\":443\"; ma=86400",
-            "answer":  "",
-            "explanation":  "규칙: alt-svc는 이 사이트를 다른 방식으로도 쓸 수 있다는 안내다. 서버는 이 헤더로 HTTP/3를 할 줄 안다고 알리고, 브라우저는 다음 연결부터 HTTP/3로 붙어 본다.\n자료의 헤더를 칸마다 따라가 보자.\nh3: HTTP/3라는 뜻이다.\n\":443\": 443번 포트에서 받는다는 뜻이다.\nma=86400: 이 안내를 86,400초, 곧 하루 동안 기억하라는 뜻이다.\n브라우저는 지금 연결은 HTTP/2로 두고, 다음 연결에서 UDP 443으로 HTTP/3를 시도한다.\n그래서 이 헤더는 443번 포트에서 HTTP/3로도 받는다는 안내다.\n(입문편의 'HTTP/3: TCP를 버리고 UDP 위로' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "443번 포트에서 HTTP/3로도 받는다는 안내다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "86400초 뒤에 이 연결을 끊겠다는 알림이다",
-                    "correct":  false,
-                    "rationale":  "ma=86400은 안내를 하루 동안 기억하라는 값이다. 지금 연결을 언제 끊을지와는 관계가 없다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "앞으로 이 사이트에서 HTTP/2를 쓰지 말라는 지시다",
-                    "correct":  false,
-                    "rationale":  "다른 방식도 된다는 안내일 뿐 HTTP/2를 막지 않는다. HTTP/3가 안 되면 브라우저는 HTTP/2로 돌아간다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "이 페이지를 하루 동안 저장해 두라는 지시다",
-                    "correct":  false,
-                    "rationale":  "하루라는 값은 HTTP/3 안내를 기억할 기간이다. 페이지 내용을 저장하라는 뜻이 아니다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "`h3=\":443\"`은 443번 포트에서 HTTP/3를 받는다는 뜻이고, `ma=86400`은 이 안내를 하루 동안 기억하라는 뜻이다.",
-            "title":  "alt-svc 헤더가 알리는 것",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "HTTP/2의 다중화에서, 요청 하나와 그 응답이 오가는 한 줄로 번호가 붙는 것을 부르는 이름은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 스트림(stream)은 다중화에서 요청 하나와 그 응답이 오가는 한 줄이다. 줄마다 번호가 붙어, 받는 쪽이 섞여 온 조각을 번호별로 다시 모은다.\n사진 넷을 HTTP/2로 받는 장면을 따라가 보자.\n연결 하나를 연다.\n사진 넷을 한꺼번에 요청한다: 브라우저가 스트림 1·3·5·7을 연다.\n응답 조각들이 섞여 돌아온다: 조각마다 앞머리에 스트림 번호가 적혀 있다.\n브라우저가 번호별로 조각을 모아 사진 넷을 따로 완성한다.\n그래서 요청 하나가 오가는 번호 붙은 한 줄의 이름은 스트림이다.\n(입문편의 'HTTP/2: 연결 하나를 여러 줄로 나눠 쓴다' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "스트림",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "프레임",
-                    "correct":  false,
-                    "rationale":  "프레임은 요청과 응답을 자른 작은 조각이고, 앞머리에 스트림 번호가 적힌다. 여러 프레임이 모여 한 줄을 이룬다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "패킷",
-                    "correct":  false,
-                    "rationale":  "패킷은 네트워크로 보내려고 데이터를 나눈 조각이다. HTTP/2의 요청 한 줄이 아니라 그 아래 전송 단위다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "TCP 연결",
-                    "correct":  false,
-                    "rationale":  "TCP 연결은 스트림 여러 개를 싣는 통로 전체다. 그 안에서 요청 하나가 오가는 줄은 따로 부른다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "- **스트림(stream)** — 다중화에서 요청 하나와 그 응답이 오가는 한 줄이다. 줄마다 번호가 붙는다.",
-            "title":  "다중화에서 요청 하나가 오가는 한 줄",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "HTTP/3가 TCP를 고쳐 쓰지 않고 UDP 위에 새 규칙을 얹은 이유로 옳은 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: TCP는 세상의 모든 운영체제와 중간 장비에 들어 있어, 동작을 바꾸려면 그것들을 모두 새로 바꿔야 한다. UDP는 보내기만 하는 단순한 규칙이라 중간 장비가 대부분 그대로 통과시키고, 그 위의 장치는 프로그램이 직접 얹는다.\n두 길을 따라가 보자.\nTCP를 고친다: 운영체제, 공유기, 방화벽이 모두 새 동작을 알아야 해 몇십 년이 걸린다.\nUDP 위에 QUIC을 얹는다: 순서 맞추기, 다시 보내기, 암호화를 브라우저와 서버 프로그램이 한다.\n프로그램만 업데이트하면 새 규칙을 쓴다.\n데이터가 빠지지 않는 것은 UDP가 아니라 QUIC이 다시 보내 주기 때문이다.\n그래서 TCP는 바꾸기 어렵고 UDP 위에는 프로그램이 새 규칙을 얹을 수 있어서다.\n(입문편의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "TCP는 바꾸기 어렵고 UDP 위엔 새 규칙을 얹기 쉬워서",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "UDP는 TCP와 달리 빠진 조각을 스스로 다시 보내 줘서",
-                    "correct":  false,
-                    "rationale":  "UDP는 순서도 확인도 없이 보내기만 한다. 빠진 조각을 다시 보내는 일은 그 위의 QUIC이 한다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "UDP 위에서는 암호화를 따로 하지 않아도 되어서",
-                    "correct":  false,
-                    "rationale":  "QUIC은 암호화를 규칙 안에 넣었다. 암호화를 빼려고 UDP로 간 것이 아니다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "HTTP 메서드와 상태 코드의 뜻을 새로 정하려고",
-                    "correct":  false,
-                    "rationale":  "판이 바뀌어도 메서드와 상태 코드의 뜻은 그대로다. 바뀐 것은 요청과 응답을 나르는 방식이다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "TCP는 세상의 모든 컴퓨터 운영체제와 중간 장비에 들어 있다.",
-            "title":  "HTTP/3가 UDP 위로 간 이유",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        }
-    ],
-    "shortfallReasons":  null,
-    "reviewFindings":  null
+  "note" : "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙을 따랐고, 근거는 generated/documents/2026-10-23.json의 입문편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+  "date" : "2026-11-01",
+  "generatedAt" : "2026-11-01T14:00:00Z",
+  "domain" : "NETWORK",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "http-versions-connection-reuse-multiplexing",
+  "problems" : [ {
+    "question" : "줄 맨 앞의 것이 막히면, 뒤의 것들이 자기와 상관없는데도 함께 기다리는 현상을 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: HOL 블로킹(Head-of-Line blocking)은 줄 맨 앞의 것이 막히면 뒤의 것들이 함께 기다리는 현상이다. HTTP/1.1에서는 연결 위 요청 줄에서, HTTP/2에서는 그 아래 TCP 조각 줄에서 생긴다.\nHTTP/1.1 연결 하나로 사진 넷을 받는 장면을 따라가 보자.\n사진 1을 요청한다: 서버가 이 사진을 늦게 만든다.\n사진 2·3·4는 이미 준비돼 있다: 그래도 사진 1의 응답이 끝나야 다음 요청을 보낸다.\n사진 1이 끝난 뒤에야 사진 2가 출발한다.\n맨 앞 하나의 지각이 상관없는 뒤 셋까지 붙잡았다.\n그래서 이 현상의 이름은 HOL 블로킹이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "HOL 블로킹",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "다중화(multiplexing)",
+      "correct" : false,
+      "rationale" : "다중화는 연결 하나에 여러 요청을 섞어 보내는 방식이다. 줄 서기로 생기는 기다림을 줄이려고 쓰는 쪽이다.",
+      "matchText" : ""
+    }, {
+      "text" : "연결 재사용(keep-alive)",
+      "correct" : false,
+      "rationale" : "연결 재사용은 응답 뒤에도 연결을 닫지 않고 다시 쓰는 일이다. 인사 비용을 줄일 뿐 기다리는 현상을 가리키지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "왕복 시간(RTT)",
+      "correct" : false,
+      "rationale" : "왕복 시간은 신호를 보내고 답이 오기까지의 시간이다. 앞이 막혀 뒤가 기다리는 현상과는 다른 말이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **HOL 블로킹(Head-of-Line blocking)** — 줄 맨 앞의 것이 막히면 뒤의 것들이 상관없이 함께 기다리는 현상이다.",
+    "title" : "앞이 막히면 뒤가 함께 기다리는 현상",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "HTTP/1.1이 연결 하나로 요청을 보내는 방식으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: HTTP/1.1은 연결을 다시 쓰지만, 연결 하나에서는 요청을 하나씩 보낸다. 앞 응답이 끝까지 와야 다음 요청을 보내서, 브라우저는 사이트당 연결을 6개 안팎 연다.\n사진 50장을 HTTP/1.1로 받는 장면을 따라가 보자.\n연결 6개를 연다: 인사 비용은 연결마다 한 번만 든다.\n연결마다 사진 하나씩, 6장을 동시에 요청한다.\n응답이 오면 같은 연결로 다음 사진을 요청한다: 50장이면 9번 되풀이한다.\n한 연결 위에서 요청이 섞여 가는 일은 없다.\n그래서 HTTP/1.1은 연결을 다시 쓰되 앞 응답이 끝나야 다음 요청을 보낸다.\n(입문편의 'HTTP/1.1: 연결을 다시 쓰되 한 번에 하나씩' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "앞 응답이 끝나야 다음 요청을 보낸다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "요청마다 연결을 새로 열고 응답을 받으면 닫는다",
+      "correct" : false,
+      "rationale" : "HTTP/1.1은 연결 재사용을 기본으로 켰다. 요청마다 새 연결을 열면 인사 비용이 요청 수만큼 든다.",
+      "matchText" : ""
+    }, {
+      "text" : "연결 하나에 여러 요청을 번호 붙여 섞어 보낸다",
+      "correct" : false,
+      "rationale" : "번호 붙인 스트림으로 섞어 보내는 것은 HTTP/2의 다중화다. 1.1은 한 연결에 한 번에 하나씩이다.",
+      "matchText" : ""
+    }, {
+      "text" : "TCP 대신 UDP 위에서 요청을 줄마다 따로 보낸다",
+      "correct" : false,
+      "rationale" : "UDP 위의 QUIC으로 줄마다 따로 보내는 것은 HTTP/3다. HTTP/1.1은 TCP 연결 위에서 간다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "다만 연결 하나에서는 요청을 하나씩 보낸다. 앞 응답이 끝까지 와야 다음 요청을 보낸다.",
+    "title" : "HTTP/1.1이 연결 하나를 쓰는 방식",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "HTTP/2로 받은 아래 응답의 alt-svc 헤더가 브라우저에 알리는 것으로 옳은 것은?",
+    "exhibit" : "HTTP/2 200\ncontent-type: text/html\nalt-svc: h3=\":443\"; ma=86400",
+    "answer" : "",
+    "explanation" : "규칙: alt-svc는 이 사이트를 다른 방식으로도 쓸 수 있다는 안내다. 서버는 이 헤더로 HTTP/3를 할 줄 안다고 알리고, 브라우저는 다음 연결부터 HTTP/3로 붙어 본다.\n자료의 헤더를 칸마다 따라가 보자.\nh3: HTTP/3라는 뜻이다.\n\":443\": 443번 포트에서 받는다는 뜻이다.\nma=86400: 이 안내를 86,400초, 곧 하루 동안 기억하라는 뜻이다.\n브라우저는 지금 연결은 HTTP/2로 두고, 다음 연결에서 UDP 443으로 HTTP/3를 시도한다.\n그래서 이 헤더는 443번 포트에서 HTTP/3로도 받는다는 안내다.\n(입문편의 'HTTP/3: TCP를 버리고 UDP 위로' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "443번 포트에서 HTTP/3로도 받는다는 안내다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "86400초 뒤에 이 연결을 끊겠다는 알림이다",
+      "correct" : false,
+      "rationale" : "ma=86400은 안내를 하루 동안 기억하라는 값이다. 지금 연결을 언제 끊을지와는 관계가 없다.",
+      "matchText" : ""
+    }, {
+      "text" : "앞으로 이 사이트에서 HTTP/2를 쓰지 말라는 지시다",
+      "correct" : false,
+      "rationale" : "다른 방식도 된다는 안내일 뿐 HTTP/2를 막지 않는다. HTTP/3가 안 되면 브라우저는 HTTP/2로 돌아간다.",
+      "matchText" : ""
+    }, {
+      "text" : "이 페이지를 하루 동안 저장해 두라는 지시다",
+      "correct" : false,
+      "rationale" : "하루라는 값은 HTTP/3 안내를 기억할 기간이다. 페이지 내용을 저장하라는 뜻이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "`h3=\":443\"`은 443번 포트에서 HTTP/3를 받는다는 뜻이고, `ma=86400`은 이 안내를 하루 동안 기억하라는 뜻이다.",
+    "title" : "alt-svc 헤더가 알리는 것",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "HTTP/2의 다중화에서, 요청 하나와 그 응답이 오가는 한 줄로 번호가 붙는 것을 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 스트림(stream)은 다중화에서 요청 하나와 그 응답이 오가는 한 줄이다. 줄마다 번호가 붙어, 받는 쪽이 섞여 온 조각을 번호별로 다시 모은다.\n사진 넷을 HTTP/2로 받는 장면을 따라가 보자.\n연결 하나를 연다.\n사진 넷을 한꺼번에 요청한다: 브라우저가 스트림 1·3·5·7을 연다.\n응답 조각들이 섞여 돌아온다: 조각마다 앞머리에 스트림 번호가 적혀 있다.\n브라우저가 번호별로 조각을 모아 사진 넷을 따로 완성한다.\n그래서 요청 하나가 오가는 번호 붙은 한 줄의 이름은 스트림이다.\n(입문편의 'HTTP/2: 연결 하나를 여러 줄로 나눠 쓴다' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "스트림",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "프레임",
+      "correct" : false,
+      "rationale" : "프레임은 요청과 응답을 자른 작은 조각이고, 앞머리에 스트림 번호가 적힌다. 여러 프레임이 모여 한 줄을 이룬다.",
+      "matchText" : ""
+    }, {
+      "text" : "패킷",
+      "correct" : false,
+      "rationale" : "패킷은 네트워크로 보내려고 데이터를 나눈 조각이다. HTTP/2의 요청 한 줄이 아니라 그 아래 전송 단위다.",
+      "matchText" : ""
+    }, {
+      "text" : "TCP 연결",
+      "correct" : false,
+      "rationale" : "TCP 연결은 스트림 여러 개를 싣는 통로 전체다. 그 안에서 요청 하나가 오가는 줄은 따로 부른다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **스트림(stream)** — 다중화에서 요청 하나와 그 응답이 오가는 한 줄이다. 줄마다 번호가 붙는다.",
+    "title" : "다중화에서 요청 하나가 오가는 한 줄",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "HTTP/3가 TCP를 고쳐 쓰지 않고 UDP 위에 새 규칙을 얹은 이유로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: TCP는 세상의 모든 운영체제와 중간 장비에 들어 있어, 동작을 바꾸려면 그것들을 모두 새로 바꿔야 한다. UDP는 보내기만 하는 단순한 규칙이라 중간 장비가 대부분 그대로 통과시키고, 그 위의 장치는 프로그램이 직접 얹는다.\n두 길을 따라가 보자.\nTCP를 고친다: 운영체제, 공유기, 방화벽이 모두 새 동작을 알아야 해 몇십 년이 걸린다.\nUDP 위에 QUIC을 얹는다: 순서 맞추기, 다시 보내기, 암호화를 브라우저와 서버 프로그램이 한다.\n프로그램만 업데이트하면 새 규칙을 쓴다.\n데이터가 빠지지 않는 것은 UDP가 아니라 QUIC이 다시 보내 주기 때문이다.\n그래서 TCP는 바꾸기 어렵고 UDP 위에는 프로그램이 새 규칙을 얹을 수 있어서다.\n(입문편의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "TCP는 바꾸기 어렵고 UDP 위엔 새 규칙을 얹기 쉬워서",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "UDP는 TCP와 달리 빠진 조각을 스스로 다시 보내 줘서",
+      "correct" : false,
+      "rationale" : "UDP는 순서도 확인도 없이 보내기만 한다. 빠진 조각을 다시 보내는 일은 그 위의 QUIC이 한다.",
+      "matchText" : ""
+    }, {
+      "text" : "UDP 위에서는 암호화를 따로 하지 않아도 되어서",
+      "correct" : false,
+      "rationale" : "QUIC은 암호화를 규칙 안에 넣었다. 암호화를 빼려고 UDP로 간 것이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "HTTP 메서드와 상태 코드의 뜻을 새로 정하려고",
+      "correct" : false,
+      "rationale" : "판이 바뀌어도 메서드와 상태 코드의 뜻은 그대로다. 바뀐 것은 요청과 응답을 나르는 방식이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "TCP는 세상의 모든 컴퓨터 운영체제와 중간 장비에 들어 있다.",
+    "title" : "HTTP/3가 UDP 위로 간 이유",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 4,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "초급으로 냈지만 중급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 없음\n조건이 달랐다면 정답이 되는 오답: 0개\n보기별 판단: 1) UDP가 다시 보낸다는 오해, 없음. 2) 암호화가 필요 없다는 오해, 없음. 3) HTTP 뜻이 바뀐다는 오해, 없음.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "줄 맨 앞이 막히면 뒤가 상관없이 함께 기다리는 현상은 HOL 블로킹이다. 다중화는 섞어 보내는 방식, RTT는 왕복 시간, keep-alive는 연결을 다시 쓰는 일이라 뜻이 다르다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "문서의 정의를 그대로 묻는 전형적인 초급 문제다. 오답이 모두 문서에 나온 다른 용어라 갈림이 명확하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "HTTP/1.1은 연결을 다시 쓰되 한 연결에서 앞 응답이 끝까지 와야 다음 요청을 보낸다. 1은 HTTP/2 다중화, 2는 HTTP/3, 4는 연결 재사용 이전 방식이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "세 판과 요청마다 새 연결 방식을 한 줄씩 가르는 좋은 초급 문제다. 파이프라이닝을 아는 학습자도 문서상 꺼 두었다고 했으니 이의 여지는 적다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 h3=\":443\"을 443번 포트에서 HTTP/3를 받는다는 뜻, ma=86400을 안내를 하루 동안 기억하라는 뜻으로 풀었다. 1은 ma를 연결 종료로, 2는 페이지 캐시로 잘못 읽었고, 3은 반대로 읽었다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "자료가 문서 예시와 글자까지 같아 눈으로 알아보는 보기 그림 역할만 한다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "헤더 뜻을 묻는 초급 문제로 적절하다. 4번 '하루 동안 저장'은 ma=86400의 하루와 엮인 그럴듯한 함정이라 학습에 도움이 된다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "다중화에서 요청 하나와 그 응답이 오가는 번호 붙은 한 줄은 스트림이다. 프레임은 그 스트림의 조각, 패킷은 네트워크 조각, TCP 연결은 그 아래 통로다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "프레임과 스트림을 가르는 좋은 정의 문제다. 질문이 문서 정의 문장을 거의 그대로 옮겨 문서를 읽었으면 바로 푼다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 TCP가 운영체제와 중간 장비에 박혀 있어 바꾸려면 몇십 년이 걸리고, UDP는 중간 장비가 그대로 통과시키며 프로그램 업데이트만으로 새 규칙을 쓸 수 있다고 했다. 1은 UDP가 아니라 QUIC이 다시 보낸다, 2는 QUIC이 암호화를 한다, 3은 HTTP 뜻은 바뀌지 않는다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "설계 이유를 묻는 문제라 순수 정의 문제보다 한 걸음 위다. 오답이 모두 '자주 하는 오해'에서 나와 오해를 바로잡기 좋다.",
+    "suggestion" : null
+  } ]
 }

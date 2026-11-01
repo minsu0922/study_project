@@ -1,194 +1,265 @@
 {
-    "note":  "Claude Code가 대화 안에서 직접 쓴 중급 문제 초안입니다(Claude API 미사용). problem/system.txt의 중급 규칙을 따랐고, 근거는 generated/documents/2026-10-24.json의 심화편과 입문편 중급 절입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
-    "date":  "2026-11-01",
-    "generatedAt":  "2026-11-01T16:00:00Z",
-    "domain":  "NETWORK",
-    "difficulty":  "INTERMEDIATE",
-    "type":  "MULTIPLE_CHOICE",
-    "model":  "claude-code/claude-opus-5-5",
-    "documentSlug":  "url-to-page-load-dns-tcp-tls-http-advanced",
-    "problems":  [
-        {
-            "question":  "사이트의 정식 주소를 https://www.example.com/ko/로 정했다. 사용자가 http://example.com처럼 다른 모양으로 들어올 때 넘기는 규칙으로 가장 적절한 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 리다이렉트마다 요청 왕복이 더 들고, 방식이나 도메인이 바뀌면 TCP·TLS와 DNS를 다시 한다. 그래서 어떤 주소로 들어오든 정식 주소로 한 번에 넘긴다.\nhttp://example.com으로 들어온 사용자를 따라가 보자.\n단계마다 따로 넘기면: https로, 다시 www로, 다시 /ko/로 세 번 넘기며 연결과 이름 찾기를 되풀이한다.\n한 번에 넘기면: 첫 응답이 곧바로 https://www.example.com/ko/를 가리켜 넘기기가 한 번에 끝난다.\n넘기지 않고 두 주소에서 같은 페이지를 주면: 정식 주소가 갈라져 캐시와 검색 결과가 둘로 나뉜다.\n그래서 정식 주소로 한 번에 넘긴다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "어떤 주소로 들어오든 정식 주소로 한 번에 넘긴다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "http는 https로, 그다음 www로, 그다음 /ko/로 차례로 넘긴다",
-                    "correct":  false,
-                    "rationale":  "넘길 때마다 요청 왕복이 더 들고, 방식과 도메인이 바뀔 때마다 연결과 이름 찾기를 다시 한다. 첫 화면이 그만큼 늦다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "넘기지 않고 들어온 주소마다 같은 페이지를 그대로 준다",
-                    "correct":  false,
-                    "rationale":  "http로 들어온 사용자는 평문으로 계속 쓰고, 같은 페이지의 주소가 여럿으로 갈라진다. 정식 주소를 정한 뜻이 사라진다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "페이지를 연 뒤 스크립트로 정식 주소로 옮겨 간다",
-                    "correct":  false,
-                    "rationale":  "스크립트로 옮기면 첫 페이지를 다 받고 실행한 뒤에야 넘어간다. 서버의 넘기기보다 더 많은 단계를 거친다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "단계마다 따로 넘길지 한 번에 넘길지가 갈림길이며, 어떤 주소로 들어오든 정식 주소로 한 번에 넘긴다.",
-            "title":  "정식 주소로 넘기는 규칙",
-            "questionKind":  "COMPARISON",
-            "skipReason":  ""
-        },
-        {
-            "question":  "빌드 도구가 app.3f9a2c.js처럼 내용 지문을 넣은 파일 이름을 만들고, HTML이 그 이름을 적어 부른다. 두 응답에 거는 캐시로 가장 적절한 조합은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 내용 지문을 넣은 파일은 내용이 바뀌면 이름도 바뀌어, 오래 캐시해도 옛 파일을 다시 쓸 일이 없다. 그 이름을 적은 HTML은 매번 확인해야 새 이름을 알게 된다.\n배포 하루 뒤 손님이 다시 오는 장면을 따라가 보자.\nHTML에 no-cache: 브라우저가 서버에 바뀌었는지 묻고, 새 HTML에서 app.7c21e0.js라는 새 이름을 받는다.\n새 이름은 저장된 적이 없어 새로 받는다.\n바뀌지 않은 파일은 이름이 같아, 1년 캐시와 immutable 덕에 다시 묻지도 않는다.\nHTML까지 오래 캐시하면 옛 HTML이 옛 이름만 부른다.\n그래서 지문 파일은 1년과 immutable, HTML은 no-cache를 건다.\n(심화편의 '첫 화면을 막는 파일과 캐시 나누기' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "지문 파일은 1년과 immutable, HTML은 no-cache",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "지문 파일과 HTML 모두 1년 동안 캐시한다",
-                    "correct":  false,
-                    "rationale":  "HTML을 오래 두면 배포 뒤에도 옛 HTML이 옛 파일 이름을 부른다. 새 파일을 만들어도 손님에게 닿지 않는다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "지문 파일은 no-cache, HTML은 1년 동안 캐시한다",
-                    "correct":  false,
-                    "rationale":  "거꾸로 걸었다. 바뀌지 않는 지문 파일을 매번 확인하고, 자주 바뀌는 HTML은 옛 판을 오래 쓴다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "지문 파일과 HTML 모두 저장하지 않게 no-store를 건다",
-                    "correct":  false,
-                    "rationale":  "개인 정보처럼 남기면 안 되는 응답이라면 맞는 값이다. 여기서는 바뀌지 않는 파일까지 매번 새로 받아 두 번째 방문이 처음만큼 느려진다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "파일마다 같은 기간을 걸지 나눠 걸지가 갈림길이며, 내용 지문 파일은 1년과 `immutable`을, HTML은 `no-cache`를 건다.",
-            "title":  "지문 파일과 HTML의 캐시 나누기",
-            "questionKind":  "COMPARISON",
-            "skipReason":  ""
-        },
-        {
-            "question":  "사용자가 주소창에 example.com만 쳐서 들어올 때 첫 화면이 유독 늦다. 서버가 HTML을 만드는 시간은 0.1초 안팎이고, 사용자와 서버 사이 왕복은 150ms다. 아래는 같은 주소를 curl로 따라가며 잰 결과다. 늦어지는 까닭으로 가장 적절한 것은?",
-            "exhibit":  "redirects: 3\nredirect time: 0.912\ntotal: 1.205",
-            "answer":  "",
-            "explanation":  "규칙: 리다이렉트를 따라갈 때마다 요청 왕복이 더 들고, 방식이나 도메인이 바뀌면 TCP·TLS와 DNS를 다시 한다. 왕복이 긴 사용자일수록 넘기기마다 붙는 시간이 크다.\n자료의 숫자를 따라가 보자.\nredirects 3: 정식 주소에 닿기까지 세 번 넘겨졌다.\nredirect time 0.912: 넘기기에만 0.9초 남짓이 들었다.\ntotal 1.205: 전체 1.2초 가운데 넘기기를 빼면 0.3초 남짓이다. 서버의 HTML 만들기는 그 안의 0.1초다.\n왕복 150ms에서 넘기기마다 요청과 새 연결이 붙어 1초 가까이가 쌓였다.\n그래서 늦어지는 까닭은 넘기기 세 번에 왕복과 새 연결이 더 든 것이다.\n(심화편의 '첫 바이트까지의 왕복 세기' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "넘기기 세 번마다 왕복과 새 연결이 더 들었다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "서버가 HTML을 만드는 데 1초 넘게 걸렸다",
-                    "correct":  false,
-                    "rationale":  "지문에서 서버는 0.1초 안팎에 HTML을 만든다. 자료에서도 시간 대부분이 넘기기에 들었다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "머리의 바깥 스크립트가 화면 그리기를 막았다",
-                    "correct":  false,
-                    "rationale":  "curl은 화면을 그리지 않고 스크립트도 실행하지 않는다. 자료의 1.2초는 화면을 막는 파일과 상관없는 시간이다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "DNS가 기억한 답이 없어 한 번 오래 물었다",
-                    "correct":  false,
-                    "rationale":  "이름 찾기 한 번은 왕복 한 번 남짓이다. 0.9초가 넘기기에 들었다는 자료와 맞지 않는다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "왕복 150ms인 사용자라면 넘기기 세 번에만 1초 가까이 쓴다.",
-            "title":  "도메인만 쳐서 들어온 첫 화면이 늦는 까닭",
-            "questionKind":  "CAUSE",
-            "skipReason":  ""
-        },
-        {
-            "question":  "Cache-Control의 no-cache와 ETag·304 응답을 다루는 설명으로 옳은 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: no-cache는 저장하지 말라는 뜻이 아니라, 저장하되 쓰기 전마다 서버에 바뀌었는지 묻게 하는 값이다. 바뀌지 않았으면 서버가 본문 없이 304로 답한다.\n저장해 둔 HTML을 다시 여는 장면을 따라가 보자.\n브라우저가 저장해 둔 HTML의 ETag v-81f2를 If-None-Match로 보낸다: 왕복이 한 번 든다.\n서버가 지금 판과 견준다: 같다.\n서버가 본문 없이 304 Not Modified로 답한다.\n브라우저가 저장해 둔 HTML을 그대로 쓴다: 본문을 다시 받지 않는다.\n그래서 no-cache는 저장하되 쓰기 전마다 묻는다는 설명이 옳다.\n(심화편의 '첫 화면을 막는 파일과 캐시 나누기' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "no-cache는 저장하되 쓰기 전마다 서버에 바뀌었는지 묻게 한다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "no-cache를 받은 브라우저는 그 응답을 아예 저장하지 않는다",
-                    "correct":  false,
-                    "rationale":  "아예 저장하지 않게 하는 값은 no-store다. no-cache는 저장은 하고 쓰기 전에 확인만 한다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "304로 답하면 요청을 보내지 않아 왕복이 하나도 들지 않는다",
-                    "correct":  false,
-                    "rationale":  "304를 받으려면 바뀌었는지 묻는 요청을 보내야 해서 왕복이 한 번 든다. 아끼는 것은 본문을 다시 받는 양이다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "ETag는 응답 본문을 어떤 방식으로 압축했는지 알리는 값이다",
-                    "correct":  false,
-                    "rationale":  "ETag는 파일의 판을 가리키는 값이다. 압축 방식을 알리는 것은 Content-Encoding 헤더다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "`no-cache`는 저장하지 말라는 뜻이 아니다.",
-            "title":  "no-cache와 304 응답의 뜻",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "HTML에 Cache-Control: no-cache와 ETag가 붙어 있어, 브라우저가 그 HTML을 저장해 두었다. 같은 주소를 다시 열 때 저장해 둔 HTML을 쓰기까지의 순서로 옳은 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: no-cache인 응답은 쓰기 전에 서버에 묻는다. 브라우저가 저장해 둔 판의 ETag를 보내면, 서버는 지금 판과 견주어 같을 때 본문 없이 304로 답한다.\n같은 주소를 다시 여는 장면을 따라가 보자.\n브라우저가 저장해 둔 HTML의 ETag v-81f2를 If-None-Match에 실어 보낸다.\n서버가 지금 HTML의 판과 견준다: 둘 다 v-81f2다.\n서버가 본문 없이 304로 답한다.\n브라우저가 저장해 둔 HTML을 그대로 쓴다.\n묻기 전에 저장한 것을 쓰면 no-cache의 뜻을 어긴다.\n그래서 ETag를 보내고, 서버가 견주고, 304를 받고 저장한 것을 쓰는 순서다.\n(심화편의 '첫 화면을 막는 파일과 캐시 나누기' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "ETag를 보낸다 → 서버가 판을 견준다 → 304를 받고 저장한 HTML을 쓴다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "저장한 HTML을 먼저 쓴다 → ETag를 보낸다 → 304면 그대로 둔다",
-                    "correct":  false,
-                    "rationale":  "no-cache는 쓰기 전에 확인하라는 값이다. 먼저 써 버리면 바뀐 HTML이었을 때 옛 화면이 뜬다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "서버가 304를 먼저 보낸다 → 브라우저가 ETag를 보낸다 → 저장한 HTML을 쓴다",
-                    "correct":  false,
-                    "rationale":  "서버는 브라우저가 무엇을 저장했는지 모른다. ETag를 받아 견준 뒤에야 304로 답할 수 있다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "ETag를 보낸다 → 서버가 본문을 다시 보낸다 → 브라우저가 둘을 견준다",
-                    "correct":  false,
-                    "rationale":  "판을 견주는 쪽은 서버다. 같으면 본문을 보내지 않는 것이 304의 이득인데, 본문을 다시 받으면 그 이득이 사라진다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "브라우저가 저장해 둔 HTML의 ETag를 보내면, 서버는 바뀌지 않았을 때 본문 없이 304로 답한다.",
-            "title":  "no-cache HTML을 다시 쓰는 순서",
-            "questionKind":  "SEQUENCE",
-            "skipReason":  ""
-        }
-    ],
-    "shortfallReasons":  null,
-    "reviewFindings":  null
+  "note" : "Claude Code가 대화 안에서 직접 쓴 중급 문제 초안입니다(Claude API 미사용). problem/system.txt의 중급 규칙을 따랐고, 근거는 generated/documents/2026-10-24.json의 심화편과 입문편 중급 절입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+  "date" : "2026-11-01",
+  "generatedAt" : "2026-11-01T16:00:00Z",
+  "domain" : "NETWORK",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "url-to-page-load-dns-tcp-tls-http-advanced",
+  "problems" : [ {
+    "question" : "사이트의 정식 주소를 https://www.example.com/ko/로 정했다. 사용자가 http://example.com처럼 다른 모양으로 들어올 때 넘기는 규칙으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 리다이렉트마다 요청 왕복이 더 들고, 방식이 바뀌면 TCP·TLS를, 도메인까지 바뀌면 DNS도 다시 한다. 그래서 어떤 주소로 들어오든 정식 주소로 한 번에 넘긴다.\nhttp://example.com으로 들어온 사용자를 따라가 보자.\n단계마다 따로 넘기면: https로, 다시 www로, 다시 /ko/로 세 번 넘기며 연결과 이름 찾기를 되풀이한다.\n한 번에 넘기면: 첫 응답이 곧바로 https://www.example.com/ko/를 가리켜 넘기기가 한 번에 끝난다.\n넘기지 않고 두 주소에서 같은 페이지를 주면: 정식 주소가 갈라져 캐시와 검색 결과가 둘로 나뉜다.\n그래서 정식 주소로 한 번에 넘긴다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "어떤 주소로 들어오든 정식 주소로 한 번에 넘긴다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "http는 https로, 그다음 www로, 그다음 /ko/로 차례로 넘긴다",
+      "correct" : false,
+      "rationale" : "넘길 때마다 요청 왕복이 더 들고, 방식과 도메인이 바뀔 때마다 연결과 이름 찾기를 다시 한다. 첫 화면이 그만큼 늦다.",
+      "matchText" : ""
+    }, {
+      "text" : "넘기지 않고 들어온 주소마다 같은 페이지를 그대로 준다",
+      "correct" : false,
+      "rationale" : "http로 들어온 사용자는 평문으로 계속 쓰고, 같은 페이지의 주소가 여럿으로 갈라진다. 정식 주소를 정한 뜻이 사라진다.",
+      "matchText" : ""
+    }, {
+      "text" : "페이지를 연 뒤 스크립트로 정식 주소로 옮겨 간다",
+      "correct" : false,
+      "rationale" : "스크립트로 옮기면 첫 페이지를 다 받고 실행한 뒤에야 넘어간다. 서버의 넘기기보다 더 많은 단계를 거친다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "단계마다 따로 넘길지 한 번에 넘길지가 갈림길이며, 어떤 주소로 들어오든 정식 주소로 한 번에 넘긴다.",
+    "title" : "정식 주소로 넘기는 규칙",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "빌드 도구가 app.3f9a2c.js처럼 내용 지문을 넣은 파일 이름을 만들고, HTML이 그 이름을 적어 부른다. 두 응답에 거는 캐시로 가장 적절한 조합은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 내용 지문을 넣은 파일은 내용이 바뀌면 이름도 바뀌어, 오래 캐시해도 옛 파일을 다시 쓸 일이 없다. 그 이름을 적은 HTML은 매번 확인해야 새 이름을 알게 된다.\n배포 하루 뒤 손님이 다시 오는 장면을 따라가 보자.\nHTML에 no-cache: 브라우저가 서버에 바뀌었는지 묻고, 새 HTML에서 app.7c21e0.js라는 새 이름을 받는다.\n새 이름은 저장된 적이 없어 새로 받는다.\n바뀌지 않은 파일은 이름이 같아, 1년 캐시와 immutable 덕에 다시 묻지도 않는다.\nHTML까지 오래 캐시하면 옛 HTML이 옛 이름만 부른다.\n그래서 지문 파일은 1년과 immutable, HTML은 no-cache를 건다.\n(심화편의 '첫 화면을 막는 파일과 캐시 나누기' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "지문 파일은 1년과 immutable, HTML은 no-cache",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "지문 파일과 HTML 모두 1년 동안 캐시한다",
+      "correct" : false,
+      "rationale" : "HTML을 오래 두면 배포 뒤에도 옛 HTML이 옛 파일 이름을 부른다. 새 파일을 만들어도 손님에게 닿지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "지문 파일은 no-cache, HTML은 1년 동안 캐시한다",
+      "correct" : false,
+      "rationale" : "거꾸로 걸었다. 바뀌지 않는 지문 파일을 매번 확인하고, 자주 바뀌는 HTML은 옛 판을 오래 쓴다.",
+      "matchText" : ""
+    }, {
+      "text" : "지문 파일과 HTML 모두 저장하지 않게 no-store를 건다",
+      "correct" : false,
+      "rationale" : "개인 정보처럼 남기면 안 되는 응답이라면 맞는 값이다. 여기서는 바뀌지 않는 파일까지 매번 새로 받아 두 번째 방문이 처음만큼 느려진다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "파일마다 같은 기간을 걸지 나눠 걸지가 갈림길이며, 내용 지문 파일은 1년과 `immutable`을, HTML은 `no-cache`를 건다.",
+    "title" : "지문 파일과 HTML의 캐시 나누기",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "사용자가 주소창에 example.com만 쳐서 들어올 때 첫 화면이 유독 늦다. 서버가 HTML을 만드는 시간은 0.1초 안팎이고, 사용자와 서버 사이 왕복은 100ms다. 아래는 같은 주소를 curl로 따라가며 잰 결과다. 늦어지는 까닭으로 가장 적절한 것은?",
+    "exhibit" : "redirects: 3\nredirect time: 0.912\ntotal: 1.205",
+    "answer" : "",
+    "explanation" : "규칙: 리다이렉트를 따라갈 때마다 요청 왕복이 더 들고, 방식이 바뀌면 TCP·TLS를, 도메인까지 바뀌면 DNS도 다시 한다. 왕복이 긴 사용자일수록 넘기기마다 붙는 시간이 크다.\n자료의 숫자를 따라가 보자.\nredirects 3: 정식 주소에 닿기까지 세 번 넘겨졌다.\nredirect time 0.912: 넘기기에만 0.9초 남짓이 들었다.\ntotal 1.205: 전체 1.2초 가운데 넘기기를 빼면 0.3초 남짓이다. 서버의 HTML 만들기는 그 안의 0.1초다.\n왕복 100ms에서 넘기기마다 요청과 새 연결이 붙어 1초 가까이가 쌓였다.\n그래서 늦어지는 까닭은 넘기기 세 번에 왕복과 새 연결이 더 든 것이다.\n(심화편의 '첫 바이트까지의 왕복 세기' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "넘기기 세 번마다 왕복과 새 연결이 더 들었다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "서버가 HTML을 만드는 데 1초 넘게 걸렸다",
+      "correct" : false,
+      "rationale" : "지문에서 서버는 0.1초 안팎에 HTML을 만든다. 자료에서도 시간 대부분이 넘기기에 들었다.",
+      "matchText" : ""
+    }, {
+      "text" : "머리의 바깥 스크립트가 화면 그리기를 막았다",
+      "correct" : false,
+      "rationale" : "curl은 화면을 그리지 않고 스크립트도 실행하지 않는다. 자료의 1.2초는 화면을 막는 파일과 상관없는 시간이다.",
+      "matchText" : ""
+    }, {
+      "text" : "DNS가 기억한 답이 없어 한 번 오래 물었다",
+      "correct" : false,
+      "rationale" : "이름 찾기 한 번은 왕복 한 번 남짓이다. 0.9초가 넘기기에 들었다는 자료와 맞지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "왕복 100ms인 사용자라면 넘기기 세 번에만 1초 가까이 쓴다.",
+    "title" : "도메인만 쳐서 들어온 첫 화면이 늦는 까닭",
+    "questionKind" : "CAUSE",
+    "skipReason" : ""
+  }, {
+    "question" : "Cache-Control의 no-cache와 ETag·304 응답을 다루는 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: no-cache는 저장하지 말라는 뜻이 아니라, 저장하되 쓰기 전마다 서버에 바뀌었는지 묻게 하는 값이다. 바뀌지 않았으면 서버가 본문 없이 304로 답한다.\n저장해 둔 HTML을 다시 여는 장면을 따라가 보자.\n브라우저가 저장해 둔 HTML의 ETag v-81f2를 If-None-Match로 보낸다: 왕복이 한 번 든다.\n서버가 지금 판과 견준다: 같다.\n서버가 본문 없이 304 Not Modified로 답한다.\n브라우저가 저장해 둔 HTML을 그대로 쓴다: 본문을 다시 받지 않는다.\n그래서 no-cache는 저장하되 쓰기 전마다 묻는다는 설명이 옳다.\n(심화편의 '첫 화면을 막는 파일과 캐시 나누기' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "no-cache는 저장하되 쓰기 전마다 서버에 바뀌었는지 묻게 한다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "no-cache를 받은 브라우저는 그 응답을 아예 저장하지 않는다",
+      "correct" : false,
+      "rationale" : "아예 저장하지 않게 하는 값은 no-store다. no-cache는 저장은 하고 쓰기 전에 확인만 한다.",
+      "matchText" : ""
+    }, {
+      "text" : "304로 답하면 요청을 보내지 않아 왕복이 하나도 들지 않는다",
+      "correct" : false,
+      "rationale" : "304를 받으려면 바뀌었는지 묻는 요청을 보내야 해서 왕복이 한 번 든다. 아끼는 것은 본문을 다시 받는 양이다.",
+      "matchText" : ""
+    }, {
+      "text" : "ETag는 응답 본문을 어떤 방식으로 압축했는지 알리는 값이다",
+      "correct" : false,
+      "rationale" : "ETag는 파일의 판을 가리키는 값이다. 압축 방식을 알리는 것은 Content-Encoding 헤더다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "`no-cache`는 저장하지 말라는 뜻이 아니다.",
+    "title" : "no-cache와 304 응답의 뜻",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "HTML에 Cache-Control: no-cache와 ETag가 붙어 있어, 브라우저가 그 HTML을 저장해 두었다. 같은 주소를 다시 열 때 저장해 둔 HTML을 쓰기까지의 순서로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: no-cache인 응답은 쓰기 전에 서버에 묻는다. 브라우저가 저장해 둔 판의 ETag를 보내면, 서버는 지금 판과 견주어 같을 때 본문 없이 304로 답한다.\n같은 주소를 다시 여는 장면을 따라가 보자.\n브라우저가 저장해 둔 HTML의 ETag v-81f2를 If-None-Match에 실어 보낸다.\n서버가 지금 HTML의 판과 견준다: 둘 다 v-81f2다.\n서버가 본문 없이 304로 답한다.\n브라우저가 저장해 둔 HTML을 그대로 쓴다.\n묻기 전에 저장한 것을 쓰면 no-cache의 뜻을 어긴다.\n그래서 ETag를 보내고, 서버가 견주고, 304를 받고 저장한 것을 쓰는 순서다.\n(심화편의 '첫 화면을 막는 파일과 캐시 나누기' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "ETag를 보낸다 → 서버가 판을 견준다 → 304를 받고 저장한 HTML을 쓴다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "저장한 HTML을 먼저 쓴다 → ETag를 보낸다 → 304면 그대로 둔다",
+      "correct" : false,
+      "rationale" : "no-cache는 쓰기 전에 확인하라는 값이다. 먼저 써 버리면 바뀐 HTML이었을 때 옛 화면이 뜬다.",
+      "matchText" : ""
+    }, {
+      "text" : "서버가 304를 먼저 보낸다 → 브라우저가 ETag를 보낸다 → 저장한 HTML을 쓴다",
+      "correct" : false,
+      "rationale" : "서버는 브라우저가 무엇을 저장했는지 모른다. ETag를 받아 견준 뒤에야 304로 답할 수 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "ETag를 보낸다 → 서버가 본문을 다시 보낸다 → 브라우저가 둘을 견준다",
+      "correct" : false,
+      "rationale" : "판을 견주는 쪽은 서버다. 같으면 본문을 보내지 않는 것이 304의 이득인데, 본문을 다시 받으면 그 이득이 사라진다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "브라우저가 저장해 둔 HTML의 ETag를 보내면, 서버는 바뀌지 않았을 때 본문 없이 304로 답한다.",
+    "title" : "no-cache HTML을 다시 쓰는 순서",
+    "questionKind" : "SEQUENCE",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 2,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "중급으로 냈지만 고급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 「서버가 HTML을 만드는 시간은 0.1초 안팎이고, 사용자와 서버 사이 왕복은 150ms다.」\n조건이 달랐다면 정답이 되는 오답: 3개\n보기별 판단: 3번은 브라우저에서 첫 화면만 늦고 curl 시간이 짧으면 정답이다. 4번은 DNS 서버가 느려 조회 하나가 오래 걸리면 정답이다. 2번은 서버 처리 시간이 1초 넘게 찍혔다면 정답이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "중급으로 냈지만 초급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 없음\n조건이 달랐다면 정답이 되는 오답: 0개\n보기별 판단: 1·2·4번은 문서가 직접 바로잡는 틀린 정의라 어떤 조건에서도 정답이 되지 않는다. 없음",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "넘길 때마다 요청 왕복이 들고 도메인이 바뀌면 DNS·TCP·TLS를 다시 하니, 넘기기 횟수를 하나로 줄여야 한다. 그래서 어떤 주소로 오든 정식 주소로 한 번에 넘기는 1번이다. 2번은 사슬을 만들고, 4번은 HTML을 다 받은 뒤 또 접속하며, 3번은 정식 주소를 하나로 정한 취지에 어긋난다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「사용자가 http://example.com처럼 다른 모양으로 들어올 때」\n고치면: 사용자가 http://example.com처럼 정식 주소가 아닌 주소로 들어올 때",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "리다이렉트 비용 원리를 적용하는 중급 문제로 알맞다. 2번이 실제로 흔한 잘못이라 오답으로 좋다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "지문 파일은 내용이 바뀌면 이름이 바뀌니 1년과 immutable로 오래 둬도 안전하다. HTML은 새 이름을 알려 주니 no-cache로 매번 확인해야 한다. 3번은 거꾸로, 2번은 HTML이 옛 이름을 계속 부르고, 4번은 캐시 이득을 모두 버린다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "보기 1·3은 '캐시한다'로 끝나고 1번만 명사로 끝나 문장 끝이 들쭉날쭉하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "지문 파일과 HTML의 역할 차이를 이해했는지 잘 가른다. 문서 표와 정답이 그대로 겹쳐 외운 사람도 맞힌다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "자료에서 넘기기가 1번이고 넘기기에만 0.912초를 썼다. 서버 처리는 0.1초 안팎이니 2번이 아니고, curl은 화면을 그리지 않으니 3번 스크립트 차단은 이 숫자에 들지 않는다. DNS 한 번은 왕복 하나 수준이라 0.9초를 설명하지 못한다. 넘길 때마다 왕복과 새 연결이 더 든 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "자료와 조건으로 원인을 가르는 좋은 문제다. 다만 장면과 명세가 답을 가르는 구조라 중급보다 고급 형태에 가깝다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "no-cache는 저장은 하되 쓰기 전마다 서버에 바뀌었는지 묻게 한다. 304에도 왕복은 한 번 들고(3번 틀림), 아예 저장하지 않는 것은 no-store이며(2번 틀림), ETag는 판을 가리키는 값이지 압축 방식이 아니다(4번 틀림).",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「Cache-Control의 no-cache와 ETag·304 응답을 다루는 설명으로 옳은 것은?」\n고치면: Cache-Control의 no-cache와 ETag·304 응답 설명으로 옳은 것은?",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "용어의 뜻만 묻는 문제라 중급보다 초급 칸에 가깝다. 정답 보기가 문서 문장과 거의 같다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "no-cache라 쓰기 전에 먼저 묻는다. 브라우저가 ETag를 If-None-Match로 보내고, 서버가 판을 견주어 같으면 본문 없이 304로 답하고, 브라우저는 저장한 HTML을 쓴다. 3번은 요청 전에 304가 오고, 2번은 묻기 전에 쓰며, 4번은 서버가 아니라 브라우저가 견준다고 했다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "보기마다 주어가 바뀌어 처음엔 누가 무엇을 하는지 한 번 더 읽게 된다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "재검증 흐름의 순서를 묻는 중급 문제로 알맞다. 3번 오답은 너무 어색해 금방 지워진다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOURCE_FLAGGED",
+    "message" : "근거로 삼은 문단을 문서 사실 검수가 지적했습니다",
+    "detail" : "지적된 문장: 「왕복 150ms인 사용자라면 넘기기 세 번에만 1초 가까이 쓴다.」\n이유: 문서가 든 사슬대로 세면 넘기기 세 번까지 1번(DNS·TCP·요청 3왕복), 2번(TCP·TLS·요청 3왕복), 3번(DNS·TCP·TLS·요청 4왕복)으로 약 10왕복, DNS를 빼도 8왕복이다. 왕복 150ms면 1.2~1.5초로 1초를 넘는다.\n바로잡으면: 왕복 150ms인 사용자라면 넘기기 세 번에만 1초를 훌쩍 넘게(1.2~1.5초) 쓴다.",
+    "suggestion" : null
+  } ]
 }

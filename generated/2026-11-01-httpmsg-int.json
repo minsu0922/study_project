@@ -1,194 +1,265 @@
 {
-    "note":  "Claude Code가 대화 안에서 직접 쓴 중급 문제 초안입니다(Claude API 미사용). problem/system.txt의 중급 규칙을 따랐고, 근거는 generated/documents/2026-10-18.json의 심화편과 입문편 중급 절입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
-    "date":  "2026-11-01",
-    "generatedAt":  "2026-11-01T06:00:00Z",
-    "domain":  "NETWORK",
-    "difficulty":  "INTERMEDIATE",
-    "type":  "MULTIPLE_CHOICE",
-    "model":  "claude-code/claude-opus-5-5",
-    "documentSlug":  "http-message-start-line-headers-body-advanced",
-    "problems":  [
-        {
-            "question":  "DB에서 읽는 대로 수백 MB짜리 CSV 보고서를 내려보내는 API를 만든다. 보내기 시작할 때는 전체 크기를 모른다. 이 응답의 본문 끝을 알리는 방법으로 가장 적절한 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: Content-Length는 보내기 전에 크기를 알아야 적을 수 있다. 청크 전송은 조각마다 크기를 붙여 보내고 크기 0인 조각으로 끝을 알려, 전체 크기를 몰라도 바로 보내기 시작한다.\n보고서 API가 응답을 보내는 장면을 따라가 보자.\nContent-Length를 쓰려면: 수백 MB를 메모리에 다 모아 크기를 잰 뒤에야 첫 바이트를 보낸다.\n연결 닫기로 끝을 알리면: 네트워크가 중간에 끊겨도 받는 쪽은 완성된 보고서로 읽는다.\n청크 전송을 쓰면: DB에서 읽은 만큼 조각으로 바로 보내고, 다 읽으면 크기 0인 조각을 보낸다.\n메모리에는 조각 하나 크기만 머문다.\n그래서 이 API는 Transfer-Encoding: chunked로 보낸다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "청크 전송으로 조각마다 크기를 붙여 보낸다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "결과를 메모리에 모두 모아 크기를 잰 뒤 Content-Length를 적는다",
-                    "correct":  false,
-                    "rationale":  "크기가 작은 응답이라면 맞는 방법이다. 수백 MB를 다 모으면 요청 하나가 메모리를 그만큼 쥐고, 첫 바이트도 다 모을 때까지 늦어진다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "길이 헤더 없이 보내고, 다 보내면 연결을 닫아 끝을 알린다",
-                    "correct":  false,
-                    "rationale":  "연결 닫기로 끝을 알리면 정상 종료와 도중에 끊긴 것을 구분하지 못한다. 반만 온 보고서도 완성본으로 읽힌다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "예상 크기를 넉넉히 잡아 Content-Length에 큰 값을 적는다",
-                    "correct":  false,
-                    "rationale":  "받는 쪽은 적힌 바이트 수만큼 읽으려고 기다린다. 실제 본문이 더 짧으면 오지 않을 바이트를 기다리다 실패한다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "전체를 메모리에 모아 `Content-Length`를 적을지, 청크 전송으로 바로 흘려보낼지가 갈림길이며, 결과가 수백 MB면 청크 전송으로 메모리를 아낀다.",
-            "title":  "크기를 모르는 큰 응답의 본문 끝 알리기",
-            "questionKind":  "COMPARISON",
-            "skipReason":  ""
-        },
-        {
-            "question":  "리버스 프록시에서 응답 압축을 켜며 압축할 대상을 고른다. 압축 대상에서 빼 두는 것이 가장 적절한 응답은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 압축은 글자처럼 되풀이가 많은 본문을 크게 줄인다. 이미 압축된 사진이나 아주 작은 응답은 압축해도 줄지 않아, 압축하는 데 드는 일만 남는다.\n네 응답을 압축했을 때를 차례로 따라가 보자.\n2MB짜리 상품 목록 JSON: 같은 이름이 되풀이돼 크게 줄어든다.\n300KB짜리 HTML 페이지: 태그와 글이 되풀이돼 크게 줄어든다.\n5MB짜리 CSV 보고서: 숫자와 쉼표가 되풀이돼 크게 줄어든다.\n이미 압축된 PNG 사진: 더 줄일 되풀이가 거의 없어 크기가 그대로다.\n그래서 압축 대상에서 빼 두는 것은 이미 압축된 사진이다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "이미 압축된 PNG 상품 사진",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "2MB짜리 상품 목록 JSON 응답",
-                    "correct":  false,
-                    "rationale":  "JSON은 같은 이름이 되풀이되는 글자라 압축으로 크게 줄어든다. 압축을 켜는 가장 큰 이유가 되는 응답이다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "300KB짜리 HTML 페이지",
-                    "correct":  false,
-                    "rationale":  "HTML은 태그와 글이 되풀이되는 글자 형식이라 압축 효과가 크다. 빼 둘 까닭이 없다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "5MB짜리 CSV 보고서 내려받기",
-                    "correct":  false,
-                    "rationale":  "CSV도 글자 형식이라 압축하면 크게 줄어든다. 큰 보고서일수록 전송량을 줄이는 이득이 크다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "어떤 형식과 크기부터 압축할지가 갈림길이며, 이미 압축된 사진이나 1KB도 안 되는 응답은 압축해도 줄지 않아 빼 둔다.",
-            "title":  "응답 압축에서 빼 두는 대상",
-            "questionKind":  "COMPARISON",
-            "skipReason":  ""
-        },
-        {
-            "question":  "직접 만든 HTTP 클라이언트가 연결 재사용을 켠 채 서버를 부른다. 응답 본문 100바이트 가운데 앞 60바이트만 읽고 연결을 풀에 돌려줬더니, 같은 연결로 보낸 다음 요청의 응답 해석이 실패했다. 실패의 원인으로 가장 적절한 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 연결 하나에 메시지를 이어 보내면, 받는 쪽은 앞 메시지의 끝을 정확히 세어야 다음 메시지의 시작을 찾는다. 앞 본문을 덜 읽으면 남은 바이트가 다음 메시지 앞에 붙는다.\n지문의 연결을 따라가 보자.\n서버가 Content-Length: 100과 본문 100바이트를 보낸다.\n클라이언트가 60바이트만 읽고 연결을 돌려준다: 40바이트가 연결에 남는다.\n같은 연결로 다음 요청을 보내고 응답을 읽는다: 먼저 나오는 것은 앞 본문의 남은 40바이트다.\n클라이언트는 그 40바이트를 시작줄로 읽으려다 해석하지 못한다.\n그래서 원인은 앞 응답의 남은 본문이 다음 응답의 시작줄 자리에서 읽힌 것이다.\n(심화편의 '연결 하나에 이어 보낸 메시지의 경계' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "앞 응답의 남은 40바이트가 다음 응답의 시작줄 자리에서 먼저 읽혔다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "서버가 Content-Length를 글자 수로 적어 다음 응답 본문이 잘렸다",
-                    "correct":  false,
-                    "rationale":  "서버는 100바이트를 적고 100바이트를 보냈다. 문제는 서버의 숫자가 아니라 그 숫자만큼 읽지 않은 클라이언트에 있다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "풀이 연결을 새로 열다 인사가 실패해 다음 요청이 나가지 못했다",
-                    "correct":  false,
-                    "rationale":  "다음 요청은 돌려준 그 연결을 다시 써서 보냈다. 새 연결을 열지 않았고, 응답도 왔으나 해석에서 실패했다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "다음 응답에 Content-Type이 빠져 본문 형식을 알 수 없었다",
-                    "correct":  false,
-                    "rationale":  "형식을 몰라 생기는 실패는 본문을 읽는 단계에서 난다. 여기서는 그보다 앞인 시작줄부터 해석하지 못했다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "다음 요청의 응답을 읽을 때, 그 40바이트가 시작줄 자리에 먼저 나온다.",
-            "title":  "본문을 덜 읽고 돌려준 연결이 다음 응답을 깨뜨리는 원인",
-            "questionKind":  "CAUSE",
-            "skipReason":  ""
-        },
-        {
-            "question":  "응답 본문 하나를 읽을 때 쓰는 헤더들을 다루는 설명으로 옳은 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 본문을 읽는 헤더는 세 겹이다. Content-Encoding으로 압축을 먼저 풀고, Content-Type의 형식으로 무엇인지 정하고, 글자라면 charset으로 바이트를 글자로 바꾼다.\ngzip으로 압축한 한글 JSON 응답을 받는 장면을 따라가 보자.\nContent-Encoding: gzip을 본다: 받은 바이트를 gzip으로 풀어 원래 바이트를 얻는다.\nContent-Type: application/json을 본다: 푼 바이트를 JSON으로 읽기로 한다.\ncharset=UTF-8을 본다: 바이트를 UTF-8 규칙으로 글자로 바꿔 한글이 제대로 나온다.\n순서를 바꿔 압축을 풀기 전에 글자로 바꾸면 알아볼 수 없는 바이트만 나온다.\n그래서 압축을 먼저 풀고 형식을 정한다는 설명이 옳다.\n(심화편의 '본문을 읽는 법을 정하는 헤더들' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "압축된 본문은 압축을 먼저 푼 뒤 형식에 맞춰 읽는다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "charset이 없어도 받는 쪽은 보낸 쪽의 규칙을 알아서 찾아 한글을 맞게 푼다",
-                    "correct":  false,
-                    "rationale":  "charset이 없으면 받는 쪽은 자기 기본값으로 바이트를 푼다. 보낸 규칙과 다르면 한글이 깨진다는 점이 빠졌다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "서버가 압축을 켜면 Accept-Encoding이 없는 요청에도 압축해 보낸다",
-                    "correct":  false,
-                    "rationale":  "서버는 요청의 Accept-Encoding에 적힌 방식만 골라 압축한다. 그 헤더가 없으면 압축하지 않은 본문을 보낸다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "Content-Type을 text/plain으로 적어도 본문이 JSON이면 객체로 읽힌다",
-                    "correct":  false,
-                    "rationale":  "받는 쪽은 Content-Type을 보고 읽는 법을 고른다. text/plain이면 JSON도 긴 글자 한 덩어리로 읽힌다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "`Content-Encoding`: 본문이 압축돼 있으면 먼저 푼다.",
-            "title":  "본문을 읽는 세 겹의 헤더",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "아래는 청크 전송으로 온 응답의 본문이다. 받는 쪽이 이 본문을 읽는 순서로 옳은 것은?",
-            "exhibit":  "7\norder-1\n7\norder-2\n0",
-            "answer":  "",
-            "explanation":  "규칙: 청크 전송은 조각마다 16진수로 적은 크기 줄을 앞에 붙인다. 받는 쪽은 크기 줄을 읽고 그만큼 조각을 읽기를 되풀이하다가, 크기 0이 오면 본문을 끝낸다.\n자료의 본문을 윗줄부터 따라가 보자.\n첫 줄 7: 다음 조각이 7바이트라는 크기 줄이다.\n둘째 줄 order-1: 7바이트를 조각으로 읽는다.\n셋째·넷째 줄: 다시 크기 7을 읽고 order-2 7바이트를 읽는다.\n다섯째 줄 0: 크기 0인 조각이라 본문이 여기서 끝나고, 뒤따르는 빈 줄 다음 바이트는 다음 응답이다.\n그래서 크기 줄을 읽고, 그만큼 조각을 읽고, 0이 나올 때까지 되풀이한다.\n(심화편의 '연결 하나에 이어 보낸 메시지의 경계' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "크기 줄을 읽는다 → 그 바이트만큼 조각을 읽는다 → 크기 0이 나올 때까지 되풀이한다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "조각을 먼저 읽는다 → 뒤따르는 크기 줄로 맞는지 잰다 → 연결이 닫힐 때까지 되풀이한다",
-                    "correct":  false,
-                    "rationale":  "크기 줄은 조각 앞에 온다. 크기를 먼저 알아야 어디까지가 조각인지 끊을 수 있다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "크기 줄을 모두 더한다 → Content-Length로 적는다 → 그만큼 한 번에 읽는다",
-                    "correct":  false,
-                    "rationale":  "청크 전송은 전체 크기를 모를 때 쓰는 방식이다. 받는 쪽이 크기를 미리 더할 수 없어 조각 단위로 읽는다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "빈 줄이 나올 때까지 읽는다 → 그 앞을 조각으로 담는다 → 크기 0이 나오면 멈춘다",
-                    "correct":  false,
-                    "rationale":  "본문 조각에는 줄바꿈 문자가 아무 데나 섞일 수 있다. 그래서 조각의 끝은 빈 줄이 아니라 크기 줄의 숫자로 센다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "받는 쪽은 크기 줄을 읽고 그 바이트만큼 조각을 읽기를 되풀이한다.",
-            "title":  "청크 전송 본문을 읽는 순서",
-            "questionKind":  "SEQUENCE",
-            "skipReason":  ""
-        }
-    ],
-    "shortfallReasons":  null,
-    "reviewFindings":  null
+  "note" : "Claude Code가 대화 안에서 직접 쓴 중급 문제 초안입니다(Claude API 미사용). problem/system.txt의 중급 규칙을 따랐고, 근거는 generated/documents/2026-10-18.json의 심화편과 입문편 중급 절입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+  "date" : "2026-11-01",
+  "generatedAt" : "2026-11-01T06:00:00Z",
+  "domain" : "NETWORK",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "http-message-start-line-headers-body-advanced",
+  "problems" : [ {
+    "question" : "DB에서 읽는 대로 수백 MB짜리 CSV 보고서를 내려보내는 API를 만든다. 보내기 시작할 때는 전체 크기를 모른다. 이 응답의 본문 끝을 알리는 방법으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: Content-Length는 보내기 전에 크기를 알아야 적을 수 있다. 청크 전송은 조각마다 크기를 붙여 보내고 크기 0인 조각으로 끝을 알려, 전체 크기를 몰라도 바로 보내기 시작한다.\n보고서 API가 응답을 보내는 장면을 따라가 보자.\nContent-Length를 쓰려면: 수백 MB를 메모리에 다 모아 크기를 잰 뒤에야 첫 바이트를 보낸다.\n연결 닫기로 끝을 알리면: 네트워크가 중간에 끊겨도 받는 쪽은 완성된 보고서로 읽는다.\n청크 전송을 쓰면: DB에서 읽은 만큼 조각으로 바로 보내고, 다 읽으면 크기 0인 조각을 보낸다.\n메모리에는 조각 하나 크기만 머문다.\n그래서 이 API는 Transfer-Encoding: chunked로 보낸다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "청크 전송으로 조각마다 크기를 붙여 보낸다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "결과를 메모리에 모두 모아 크기를 잰 뒤 Content-Length를 적는다",
+      "correct" : false,
+      "rationale" : "크기가 작은 응답이라면 맞는 방법이다. 수백 MB를 다 모으면 요청 하나가 메모리를 그만큼 쥐고, 첫 바이트도 다 모을 때까지 늦어진다.",
+      "matchText" : ""
+    }, {
+      "text" : "길이 헤더 없이 보내고, 다 보내면 연결을 닫아 끝을 알린다",
+      "correct" : false,
+      "rationale" : "연결 닫기로 끝을 알리면 정상 종료와 도중에 끊긴 것을 구분하지 못한다. 반만 온 보고서도 완성본으로 읽힌다.",
+      "matchText" : ""
+    }, {
+      "text" : "예상 크기를 넉넉히 잡아 Content-Length에 큰 값을 적는다",
+      "correct" : false,
+      "rationale" : "받는 쪽은 적힌 바이트 수만큼 읽으려고 기다린다. 실제 본문이 더 짧으면 오지 않을 바이트를 기다리다 실패한다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "전체를 메모리에 모아 `Content-Length`를 적을지, 청크 전송으로 바로 흘려보낼지가 갈림길이며, 결과가 수백 MB면 청크 전송으로 메모리를 아낀다.",
+    "title" : "크기를 모르는 큰 응답의 본문 끝 알리기",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "리버스 프록시에서 응답 압축을 켜며 압축할 대상을 고른다. 압축 대상에서 빼 두는 것이 가장 적절한 응답은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 압축은 글자처럼 되풀이가 많은 본문을 크게 줄인다. 이미 압축된 사진이나 아주 작은 응답은 압축해도 줄지 않아, 압축하는 데 드는 일만 남는다.\n네 응답을 압축했을 때를 차례로 따라가 보자.\n2MB짜리 상품 목록 JSON: 같은 이름이 되풀이돼 크게 줄어든다.\n300KB짜리 HTML 페이지: 태그와 글이 되풀이돼 크게 줄어든다.\n5MB짜리 CSV 보고서: 숫자와 쉼표가 되풀이돼 크게 줄어든다.\n이미 압축된 PNG 사진: 더 줄일 되풀이가 거의 없어 크기가 그대로다.\n그래서 압축 대상에서 빼 두는 것은 이미 압축된 사진이다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "이미 압축된 PNG 상품 사진",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "2MB짜리 상품 목록 JSON 응답",
+      "correct" : false,
+      "rationale" : "JSON은 같은 이름이 되풀이되는 글자라 압축으로 크게 줄어든다. 압축을 켜는 가장 큰 이유가 되는 응답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "300KB짜리 HTML 페이지",
+      "correct" : false,
+      "rationale" : "HTML은 태그와 글이 되풀이되는 글자 형식이라 압축 효과가 크다. 빼 둘 까닭이 없다.",
+      "matchText" : ""
+    }, {
+      "text" : "5MB짜리 CSV 보고서 내려받기",
+      "correct" : false,
+      "rationale" : "CSV도 글자 형식이라 압축하면 크게 줄어든다. 큰 보고서일수록 전송량을 줄이는 이득이 크다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "어떤 형식과 크기부터 압축할지가 갈림길이며, 이미 압축된 사진이나 1KB도 안 되는 응답은 압축해도 줄지 않아 빼 둔다.",
+    "title" : "응답 압축에서 빼 두는 대상",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "직접 만든 HTTP 클라이언트가 연결 재사용을 켠 채 서버를 부른다. 응답 본문 100바이트 가운데 앞 60바이트만 읽고 연결을 풀에 돌려줬더니, 같은 연결로 보낸 다음 요청의 응답 해석이 실패했다. 실패의 원인으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 연결 하나에 메시지를 이어 보내면, 받는 쪽은 앞 메시지의 끝을 정확히 세어야 다음 메시지의 시작을 찾는다. 앞 본문을 덜 읽으면 남은 바이트가 다음 메시지 앞에 붙는다.\n지문의 연결을 따라가 보자.\n서버가 Content-Length: 100과 본문 100바이트를 보낸다.\n클라이언트가 60바이트만 읽고 연결을 돌려준다: 40바이트가 연결에 남는다.\n같은 연결로 다음 요청을 보내고 응답을 읽는다: 먼저 나오는 것은 앞 본문의 남은 40바이트다.\n클라이언트는 그 40바이트를 시작줄로 읽으려다 해석하지 못한다.\n그래서 원인은 앞 응답의 남은 본문이 다음 응답의 시작줄 자리에서 읽힌 것이다.\n(심화편의 '연결 하나에 이어 보낸 메시지의 경계' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "앞 응답의 남은 40바이트가 다음 응답의 시작줄 자리에서 먼저 읽혔다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "서버가 Content-Length를 글자 수로 적어 다음 응답 본문이 잘렸다",
+      "correct" : false,
+      "rationale" : "서버는 100바이트를 적고 100바이트를 보냈다. 문제는 서버의 숫자가 아니라 그 숫자만큼 읽지 않은 클라이언트에 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "풀이 연결을 새로 열다 인사가 실패해 다음 요청이 나가지 못했다",
+      "correct" : false,
+      "rationale" : "다음 요청은 돌려준 그 연결을 다시 써서 보냈다. 새 연결을 열지 않았고, 응답도 왔으나 해석에서 실패했다.",
+      "matchText" : ""
+    }, {
+      "text" : "다음 응답에 Content-Type이 빠져 본문 형식을 알 수 없었다",
+      "correct" : false,
+      "rationale" : "형식을 몰라 생기는 실패는 본문을 읽는 단계에서 난다. 여기서는 그보다 앞인 시작줄부터 해석하지 못했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "다음 요청의 응답을 읽을 때, 그 40바이트가 시작줄 자리에 먼저 나온다.",
+    "title" : "본문을 덜 읽고 돌려준 연결이 다음 응답을 깨뜨리는 원인",
+    "questionKind" : "CAUSE",
+    "skipReason" : ""
+  }, {
+    "question" : "응답 본문 하나를 읽을 때 쓰는 헤더들을 다루는 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 본문을 읽는 헤더는 세 겹이다. Content-Encoding으로 압축을 먼저 풀고, Content-Type의 형식으로 무엇인지 정하고, 글자라면 charset으로 바이트를 글자로 바꾼다.\ngzip으로 압축한 한글 JSON 응답을 받는 장면을 따라가 보자.\nContent-Encoding: gzip을 본다: 받은 바이트를 gzip으로 풀어 원래 바이트를 얻는다.\nContent-Type: application/json을 본다: 푼 바이트를 JSON으로 읽기로 한다.\ncharset=UTF-8을 본다: 바이트를 UTF-8 규칙으로 글자로 바꿔 한글이 제대로 나온다.\n순서를 바꿔 압축을 풀기 전에 글자로 바꾸면 알아볼 수 없는 바이트만 나온다.\n그래서 압축을 먼저 풀고 형식을 정한다는 설명이 옳다.\n(심화편의 '본문을 읽는 법을 정하는 헤더들' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "압축된 본문은 압축을 먼저 푼 뒤 형식에 맞춰 읽는다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "charset이 없어도 받는 쪽은 보낸 쪽의 규칙을 알아서 찾아 한글을 맞게 푼다",
+      "correct" : false,
+      "rationale" : "charset이 없으면 받는 쪽은 자기 기본값으로 바이트를 푼다. 보낸 규칙과 다르면 한글이 깨진다는 점이 빠졌다.",
+      "matchText" : ""
+    }, {
+      "text" : "서버가 압축을 켜면 Accept-Encoding이 없는 요청에도 압축해 보낸다",
+      "correct" : false,
+      "rationale" : "서버는 요청의 Accept-Encoding에 적힌 방식만 골라 압축한다. 그 헤더가 없으면 흔한 서버는 압축하지 않은 본문을 보낸다.",
+      "matchText" : ""
+    }, {
+      "text" : "Content-Type을 text/plain으로 적어도 본문이 JSON이면 객체로 읽힌다",
+      "correct" : false,
+      "rationale" : "받는 쪽은 Content-Type을 보고 읽는 법을 고른다. text/plain이면 JSON도 긴 글자 한 덩어리로 읽힌다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "`Content-Encoding`: 본문이 압축돼 있으면 먼저 푼다.",
+    "title" : "본문을 읽는 세 겹의 헤더",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "아래는 청크 전송으로 온 응답의 본문이다. 받는 쪽이 이 본문을 읽는 순서로 옳은 것은?",
+    "exhibit" : "7\norder-1\n7\norder-2\n0",
+    "answer" : "",
+    "explanation" : "규칙: 청크 전송은 조각마다 16진수로 적은 크기 줄을 앞에 붙인다. 받는 쪽은 크기 줄을 읽고 그만큼 조각을 읽기를 되풀이하다가, 크기 0이 오면 본문을 끝낸다.\n자료의 본문을 윗줄부터 따라가 보자.\n첫 줄 7: 다음 조각이 7바이트라는 크기 줄이다.\n둘째 줄 order-1: 7바이트를 조각으로 읽는다.\n셋째·넷째 줄: 다시 크기 7을 읽고 order-2 7바이트를 읽는다.\n다섯째 줄 0: 크기 0인 조각이라 본문이 여기서 끝나고, 뒤따르는 빈 줄 다음 바이트는 다음 응답이다.\n그래서 크기 줄을 읽고, 그만큼 조각을 읽고, 0이 나올 때까지 되풀이한다.\n(심화편의 '연결 하나에 이어 보낸 메시지의 경계' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "크기 줄을 읽는다 → 그 바이트만큼 조각을 읽는다 → 크기 0이 나올 때까지 되풀이한다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "조각을 먼저 읽는다 → 뒤따르는 크기 줄로 맞는지 잰다 → 연결이 닫힐 때까지 되풀이한다",
+      "correct" : false,
+      "rationale" : "크기 줄은 조각 앞에 온다. 크기를 먼저 알아야 어디까지가 조각인지 끊을 수 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "크기 줄을 모두 더한다 → Content-Length로 적는다 → 그만큼 한 번에 읽는다",
+      "correct" : false,
+      "rationale" : "청크 전송은 전체 크기를 모를 때 쓰는 방식이다. 받는 쪽이 크기를 미리 더할 수 없어 조각 단위로 읽는다.",
+      "matchText" : ""
+    }, {
+      "text" : "빈 줄이 나올 때까지 읽는다 → 그 앞을 조각으로 담는다 → 크기 0이 나오면 멈춘다",
+      "correct" : false,
+      "rationale" : "본문 조각에는 줄바꿈 문자가 아무 데나 섞일 수 있다. 그래서 조각의 끝은 빈 줄이 아니라 크기 줄의 숫자로 센다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "받는 쪽은 크기 줄을 읽고 그 바이트만큼 조각을 읽기를 되풀이한다.",
+    "title" : "청크 전송 본문을 읽는 순서",
+    "questionKind" : "SEQUENCE",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "중급으로 냈지만 고급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 「보내기 시작할 때는 전체 크기를 모른다.」\n조건이 달랐다면 정답이 되는 오답: 2개\n보기별 판단: 2번: 응답이 작고 크기를 미리 알면 정답. 3번: 옛 클라이언트와 호환해야 하면 고를 수 있음. 4번: 실제 크기와 다른 값이라 어떤 조건에서도 틀림.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "QUESTION_REVEALS",
+    "message" : "내용을 몰라도 질문과 보기의 문장만 견줘 답을 좁힐 수 있습니다",
+    "detail" : "보기 1번만 '이미 압축된'이라는 말을 담아, 압축을 다시 할 필요가 없다는 걸 문장만 보고도 짐작할 수 있다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "중급으로 냈지만 고급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 「응답 본문 100바이트 가운데 앞 60바이트만 읽고 연결을 풀에 돌려줬더니, 같은 연결로 보낸 다음 요청의 응답 해석이 실패했다.」\n조건이 달랐다면 정답이 되는 오답: 3개\n보기별 판단: 4번: 다음 응답에 Content-Type이 빠진 상황이면 본문 해석 실패 원인. 3번: 새 연결을 열다 실패한 상황이면 원인. 2번: 서버가 길이를 글자 수로 적은 상황이면 경계가 어긋나는 원인.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "보내기 시작할 때 전체 크기를 모르고 결과가 수백 MB다. 그래서 만들면서 바로 보내는 청크 전송이 맞다. 2번은 메모리를 다 쓰고, 4번은 실제 크기와 어긋나 경계가 깨지고, 3번은 중간에 끊긴 것과 정상 종료를 구분하지 못한다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "중급인데 실무 장면(CSV 보고서 API)이 지문에 들어 있다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "원리는 잘 묻지만 장면과 조건이 있어 고급 형태에 가깝다. 중급 칸을 넘었는지 확인이 필요하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "이미 압축된 사진은 다시 압축해도 줄지 않으니 압축 대상에서 뺀다. 300KB HTML, 5MB CSV, 2MB JSON은 글자 형식이고 크기가 커서 압축 효과가 크다. 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "압축 대상을 고르는 원리 적용 문제다. '이미 압축된'이 답을 드러내 너무 쉽다. 1KB 미만 작은 응답을 보기로 넣으면 판단이 더 필요해진다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "Content-Length 100바이트 중 60바이트만 읽고 연결을 돌려주면 남은 40바이트가 연결에 남는다. 다음 응답을 읽을 때 그 40바이트가 시작줄 자리에서 먼저 나와 해석이 실패한다. 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "지문이 문서의 1~5단계 예시를 거의 그대로 옮겼다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "경계 오염 원리를 확인하는 좋은 문제다. 수치까지 문서 예시와 같아 외운 사람도 바로 맞힌다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "Content-Encoding으로 압축을 먼저 푼 뒤 Content-Type 형식에 맞춰 읽는 순서가 문서와 같다. 2번은 charset이 없으면 받는 쪽 기본값으로 풀어 깨지고, 3번은 Accept-Encoding이 없으면 압축하지 않으며, 4번은 text/plain이면 긴 글자 한 덩어리로 읽힌다. 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「응답 본문 하나를 읽을 때 쓰는 헤더들을 다루는 설명으로 옳은 것은?」\n고치면: 응답 본문을 읽을 때 쓰는 헤더에 맞는 설명은?",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "세 겹 헤더의 역할과 오해를 한 번에 점검한다. 오답이 모두 문서의 오해와 표에서 나와 깔끔하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "청크 전송은 16진수 크기 줄을 먼저 읽고 그 바이트만큼 조각을 읽기를 되풀이하다가 크기 0이 오면 끝난다. 1번이다. 2번은 순서가 거꾸로이고, 4번은 빈 줄로 조각을 끊고, 3번은 Content-Length 방식과 섞었다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "자료가 5줄짜리 보기 그림이라 순서를 눈으로 따라가기 좋다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "순서를 묻는 중급 형태에 잘 맞는다. 오답이 각각 다른 경계 방식과 헷갈리게 만들어 원리 이해를 확인한다.",
+    "suggestion" : null
+  } ]
 }

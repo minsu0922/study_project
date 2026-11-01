@@ -1,194 +1,259 @@
 {
-    "note":  "Claude Code가 대화 안에서 직접 쓴 중급 문제 초안입니다(Claude API 미사용). problem/system.txt의 중급 규칙을 따랐고, 근거는 generated/documents/2026-10-23.json의 심화편과 입문편 중급 절입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
-    "date":  "2026-11-01",
-    "generatedAt":  "2026-11-01T14:00:00Z",
-    "domain":  "NETWORK",
-    "difficulty":  "INTERMEDIATE",
-    "type":  "MULTIPLE_CHOICE",
-    "model":  "claude-code/claude-opus-5-5",
-    "documentSlug":  "http-versions-connection-reuse-multiplexing-advanced",
-    "problems":  [
-        {
-            "question":  "클라이언트들이 HTTP/2 연결 몇 개를 몇 시간씩 쓰는 서비스 앞에 로드 밸런서를 둔다. 서버를 늘렸을 때 새 서버에도 요청이 고르게 가게 하려면 고를 방식으로 가장 적절한 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: L4 로드 밸런서는 연결이 맺힐 때 한 번만 서버를 고른다. HTTP/2 클라이언트는 연결 몇 개를 오래 써서, 연결 단위로 나누면 그 연결이 박힌 서버에만 요청이 간다. 요청 단위로 고르는 L7 로드 밸런서는 연결 하나의 요청을 여러 서버에 나눈다.\n서버를 둘에서 여섯으로 늘린 장면을 따라가 보자.\nL4라면: 이미 맺힌 연결 둘은 옛 서버 두 대에 남는다. 새 서버 넷은 요청을 받지 못한다.\nL7라면: 연결 둘로 들어온 요청을 하나씩 보고 여섯 대에 나눈다.\n서버 수만 늘리면 L4 아래에서는 같은 일이 되풀이된다.\n그래서 요청 단위로 나누는 L7 로드 밸런서를 둔다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "요청 단위로 서버를 고르는 L7 로드 밸런서를 둔다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "연결이 맺힐 때 서버를 고르는 L4 로드 밸런서를 둔다",
-                    "correct":  false,
-                    "rationale":  "연결이 많고 짧은 HTTP/1.1이라면 고르게 나뉜다. 연결 몇 개를 오래 쓰는 HTTP/2에서는 그 연결이 박힌 서버에만 요청이 간다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "로드 밸런서는 그대로 두고 서버 수만 더 늘린다",
-                    "correct":  false,
-                    "rationale":  "이미 맺힌 연결은 새 서버로 옮겨 가지 않는다. 늘린 서버는 새 연결이 맺히기 전까지 놀게 된다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "클라이언트마다 연결을 하나로 묶어 두게 한다",
-                    "correct":  false,
-                    "rationale":  "연결이 적을수록 연결 단위 분산에서는 쏠림이 더 심해진다. 요청이 고르게 가는 것과 반대쪽으로 간다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "연결 단위로 나눌지 요청 단위로 나눌지가 갈림길이며, 클라이언트가 연결 몇 개를 오래 쓰는 HTTP/2라면 요청 단위로 나누는 L7 로드 밸런서를 둔다.",
-            "title":  "HTTP/2 서비스 앞의 로드 밸런서 고르기",
-            "questionKind":  "COMPARISON",
-            "skipReason":  ""
-        },
-        {
-            "question":  "앞단 서버에서 HTTP/3를 켜려 한다. 손님 가운데 일부는 UDP를 막아 둔 회사 망에서 접속한다. 이때 고를 구성으로 가장 적절한 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: HTTP/3는 UDP 443으로 가서, UDP가 막힌 망에서는 연결이 맺히지 않는다. 그래서 TCP 443의 HTTP/2를 그대로 두고, 그 응답에 alt-svc를 붙여 HTTP/3를 알린다.\n두 손님을 따라가 보자.\n집에서 붙는 손님: 처음엔 TCP로 HTTP/2 응답과 alt-svc를 받고, 다음 연결부터 UDP로 HTTP/3를 쓴다.\n회사 망 손님: UDP가 막혀 HTTP/3가 맺히지 않는다. TCP 443의 HTTP/2로 그대로 쓴다.\nTCP 443을 닫았다면: 회사 망 손님은 들어오지 못한다.\nalt-svc가 없다면: 브라우저는 HTTP/3가 된다는 것을 모른다.\n그래서 HTTP/2를 함께 열어 두고 alt-svc로 HTTP/3를 알린다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "TCP의 HTTP/2를 두고, alt-svc로 HTTP/3를 알린다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "TCP 443을 닫고 UDP 443의 HTTP/3만 연다",
-                    "correct":  false,
-                    "rationale":  "UDP가 막힌 회사 망의 손님은 돌아갈 길이 없어 아예 접속하지 못한다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "HTTP/3를 열되 브라우저에 알리는 alt-svc 헤더는 붙이지 않는다",
-                    "correct":  false,
-                    "rationale":  "브라우저는 alt-svc를 보고 HTTP/3가 된다는 것을 안다. 안내가 없으면 열어 둔 HTTP/3를 아무도 쓰지 않는다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "회사 망 손님 때문에 HTTP/3는 켜지 않는다",
-                    "correct":  false,
-                    "rationale":  "손님 모두가 UDP 막힌 망이라면 고를 만하다. 일부만 막혀 있으면 나머지 손님이 얻을 이득을 버린다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "HTTP/3만 열지 HTTP/2와 함께 열지가 갈림길이며, UDP가 막힌 손님을 위해 TCP 443의 HTTP/2를 그대로 두고 `alt-svc`로 HTTP/3를 알린다.",
-            "title":  "HTTP/3를 켤 때의 구성",
-            "questionKind":  "COMPARISON",
-            "skipReason":  ""
-        },
-        {
-            "question":  "주문 서비스가 HTTP/2 클라이언트로 결제 서비스를 부르며, 연결은 하나만 쓰도록 설정돼 있다. 결제 서버는 동시 스트림 상한을 100으로 알려 준다. 바쁜 시간에 동시 요청이 200개로 늘자, 결제 서비스의 처리 시간은 그대로인데 주문 쪽 응답 시간만 계단처럼 뛰었다. 두 서비스는 손실이 거의 없는 사설망에 있다. 원인으로 가장 적절한 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 연결 하나는 서버가 정한 동시 스트림 상한까지만 스트림을 싣는다. 상한을 넘는 요청은 연결 안에서 앞 스트림이 끝나기를 기다린다.\n지문의 바쁜 시간을 따라가 보자.\n동시 요청 200개가 연결 하나로 간다.\n상한이 100이라 100개만 스트림으로 열린다: 나머지 100개는 클라이언트 안에서 줄을 선다.\n앞 스트림이 끝날 때마다 하나씩 들어간다: 기다린 시간만큼 응답 시간이 더해져 계단처럼 뛴다.\n결제 서버의 처리 시간은 그대로고 손실도 없으니, 서버나 TCP 손실 탓이 아니다.\n그래서 원인은 동시 스트림 상한을 넘은 요청이 연결 안에서 줄을 선 것이다.\n(심화편의 '연결을 몇 개 두고 어떻게 나누는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "상한 100을 넘은 요청이 연결 안에서 줄을 섰다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "TCP 조각 하나가 사라져 모든 스트림이 기다렸다",
-                    "correct":  false,
-                    "rationale":  "손실이 잦은 망이라면 그럴 수 있다. 두 서비스는 손실이 거의 없는 사설망에 있고, 응답 시간은 요청 수에 맞춰 뛰었다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "결제 서버가 늦게 처리해 응답이 밀렸다",
-                    "correct":  false,
-                    "rationale":  "지문에서 결제 서비스의 처리 시간은 그대로다. 늦어진 것은 요청이 서버에 닿기 전의 대기다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "L4 로드 밸런서가 연결을 한 서버에만 보냈다",
-                    "correct":  false,
-                    "rationale":  "그랬다면 그 서버의 처리 시간이 늘었을 것이다. 결제 쪽 처리 시간은 그대로라, 막힌 곳은 클라이언트의 연결 안이다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "클라이언트가 동시에 200개를 보내려 하면, 100개는 연결 안에서 앞 스트림이 끝나기를 기다린다.",
-            "title":  "HTTP/2 연결 하나에서 응답 시간이 뛰는 원인",
-            "questionKind":  "CAUSE",
-            "skipReason":  ""
-        },
-        {
-            "question":  "HTTP/2·3에서 판을 고르는 방법을 다루는 설명으로 옳은 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: HTTP/2는 TLS 인사 안의 ALPN으로 고른다. 그래서 브라우저는 TLS 위에서만 HTTP/2를 쓰고, 평문 HTTP/2인 h2c는 서버끼리 쓴다. HTTP/3는 UDP 위라 TLS 인사로 고르지 못해 alt-svc로 알린다.\n브라우저가 사이트에 붙는 장면을 따라가 보자.\nTLS 인사: 브라우저가 h2와 http/1.1을 ALPN으로 내밀고, 서버가 h2를 고른다.\n평문으로 붙는 사내 서버: TLS 인사가 없어 브라우저는 1.1로만 붙는다.\nHTTP/3: 첫 응답의 alt-svc를 보고 다음 연결에서 UDP로 붙어 본다.\nUDP 443과 TCP 443은 다른 문이라 방화벽에서 따로 연다.\n그래서 브라우저는 TLS 위에서만 HTTP/2를 쓴다는 설명이 옳다.\n(심화편의 '연결을 닫을 때와 판을 고를 때' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "브라우저는 TLS 인사의 ALPN으로만 HTTP/2를 고른다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "서버에 h2c를 켜면 브라우저도 TLS 없이 HTTP/2로 붙는다",
-                    "correct":  false,
-                    "rationale":  "브라우저는 평문 HTTP/2를 쓰지 않는다. h2c는 클라이언트와 서버를 모두 맞춘 서버끼리의 호출에 쓴다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "HTTP/3도 TLS 인사의 ALPN으로 첫 연결부터 바로 고른다",
-                    "correct":  false,
-                    "rationale":  "HTTP/3는 UDP 위라 TCP 위 TLS 인사로 고르지 못한다. 서버가 alt-svc로 먼저 알리고 브라우저가 다음 연결에서 시도한다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "같은 443번이면 TCP와 UDP는 한 문이라 방화벽은 하나만 연다",
-                    "correct":  false,
-                    "rationale":  "같은 번호라도 TCP와 UDP는 다른 문이다. UDP 443을 열지 않으면 HTTP/3 연결은 맺히지 않는다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "그래서 브라우저는 TLS 위에서만 HTTP/2를 쓴다.",
-            "title":  "HTTP/2·3의 판 고르기",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "HTTP/2로 요청을 받는 서버를 배포 중에 내린다. 진행 중인 요청을 잃지 않고, 다시 보내는 요청이 두 번 처리되지 않게 하는 순서로 옳은 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 서버는 GOAWAY에 마지막으로 받은 스트림 번호를 적어 보낸다. 그보다 큰 번호의 스트림은 서버가 손대지 않아, 클라이언트가 새 연결로 다시 보내도 두 번 처리되지 않는다.\n서버가 스트림 57까지 받은 장면을 따라가 보자.\n서버가 GOAWAY를 보낸다: 마지막 번호로 57을 적는다.\n클라이언트는 이 연결로 새 요청을 보내지 않는다: 59, 61처럼 57보다 큰 스트림은 다른 연결로 다시 보낸다.\n57 이하의 스트림은 서버가 마저 끝낸다.\n다 끝나면 서버가 연결을 닫는다.\n연결을 먼저 끊으면, 클라이언트는 어느 요청이 처리됐는지 모른 채 남는다.\n그래서 GOAWAY를 보내고, 큰 번호만 다시 보내고, 끝난 뒤 닫는다.\n(심화편의 '연결을 닫을 때와 판을 고를 때' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "GOAWAY를 보낸다 → 큰 번호 스트림만 다시 보낸다 → 끝나면 닫는다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "연결을 닫는다 → GOAWAY를 보낸다 → 클라이언트가 모든 스트림을 다시 보낸다",
-                    "correct":  false,
-                    "rationale":  "닫은 연결로는 GOAWAY가 가지 않는다. 클라이언트는 어느 스트림이 처리됐는지 모른 채 모두 다시 보내 두 번 처리될 수 있다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "GOAWAY를 보낸다 → 곧바로 연결을 닫는다 → 클라이언트가 모든 스트림을 다시 보낸다",
-                    "correct":  false,
-                    "rationale":  "번호 이하의 스트림은 서버가 처리 중이라, 곧바로 닫으면 그 응답을 잃는다. 다시 보내면 이미 처리한 요청이 두 번 처리될 수 있다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "진행 중인 스트림을 끝낸다 → 연결을 닫는다 → GOAWAY를 보낸다",
-                    "correct":  false,
-                    "rationale":  "GOAWAY 없이 스트림을 끝내는 동안 클라이언트는 이 연결로 새 요청을 계속 보낸다. 연결을 닫은 뒤에 보내는 신호는 닿지 않는다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "그보다 큰 번호의 스트림은 서버가 손대지 않았다는 뜻이라, 클라이언트가 새 연결로 다시 보내도 안전하다.",
-            "title":  "HTTP/2 서버를 내리는 순서",
-            "questionKind":  "SEQUENCE",
-            "skipReason":  ""
-        }
-    ],
-    "shortfallReasons":  null,
-    "reviewFindings":  null
+  "note" : "Claude Code가 대화 안에서 직접 쓴 중급 문제 초안입니다(Claude API 미사용). problem/system.txt의 중급 규칙을 따랐고, 근거는 generated/documents/2026-10-23.json의 심화편과 입문편 중급 절입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+  "date" : "2026-11-01",
+  "generatedAt" : "2026-11-01T14:00:00Z",
+  "domain" : "NETWORK",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "http-versions-connection-reuse-multiplexing-advanced",
+  "problems" : [ {
+    "question" : "클라이언트들이 HTTP/2 연결 몇 개를 몇 시간씩 쓰는 서비스 앞에 로드 밸런서를 둔다. 서버를 늘렸을 때 새 서버에도 요청이 고르게 가게 하려면 고를 방식으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: L4 로드 밸런서는 연결이 맺힐 때 한 번만 서버를 고른다. HTTP/2 클라이언트는 연결 몇 개를 오래 써서, 연결 단위로 나누면 그 연결이 박힌 서버에만 요청이 간다. 요청 단위로 고르는 L7 로드 밸런서는 연결 하나의 요청을 여러 서버에 나눈다.\n서버를 둘에서 여섯으로 늘린 장면을 따라가 보자.\nL4라면: 이미 맺힌 연결 둘은 옛 서버 두 대에 남는다. 새 서버 넷은 요청을 받지 못한다.\nL7라면: 연결 둘로 들어온 요청을 하나씩 보고 여섯 대에 나눈다.\n서버 수만 늘리면 L4 아래에서는 같은 일이 되풀이된다.\n그래서 요청 단위로 나누는 L7 로드 밸런서를 둔다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "요청 단위로 서버를 고르는 L7 로드 밸런서를 둔다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "연결이 맺힐 때 서버를 고르는 L4 로드 밸런서를 둔다",
+      "correct" : false,
+      "rationale" : "연결이 많고 짧은 HTTP/1.1이라면 고르게 나뉜다. 연결 몇 개를 오래 쓰는 HTTP/2에서는 그 연결이 박힌 서버에만 요청이 간다.",
+      "matchText" : ""
+    }, {
+      "text" : "로드 밸런서는 그대로 두고 서버 수만 더 늘린다",
+      "correct" : false,
+      "rationale" : "이미 맺힌 연결은 새 서버로 옮겨 가지 않는다. 늘린 서버는 새 연결이 맺히기 전까지 놀게 된다.",
+      "matchText" : ""
+    }, {
+      "text" : "클라이언트마다 연결을 하나로 묶어 두게 한다",
+      "correct" : false,
+      "rationale" : "연결이 적을수록 연결 단위 분산에서는 쏠림이 더 심해진다. 요청이 고르게 가는 것과 반대쪽으로 간다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "연결 단위로 나눌지 요청 단위로 나눌지가 갈림길이며, 클라이언트가 연결 몇 개를 오래 쓰는 HTTP/2라면 요청 단위로 나누는 L7 로드 밸런서를 둔다.",
+    "title" : "HTTP/2 서비스 앞의 로드 밸런서 고르기",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "앞단 서버에서 HTTP/3를 켜려 한다. 손님 가운데 일부는 UDP를 막아 둔 회사 망에서 접속한다. 이때 고를 구성으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: HTTP/3는 UDP 443으로 가서, UDP가 막힌 망에서는 연결이 맺히지 않는다. 그래서 TCP 443의 HTTP/2를 그대로 두고, 그 응답에 alt-svc를 붙여 HTTP/3를 알린다.\n두 손님을 따라가 보자.\n집에서 붙는 손님: 처음엔 TCP로 HTTP/2 응답과 alt-svc를 받고, 다음 연결부터 UDP로 HTTP/3를 쓴다.\n회사 망 손님: UDP가 막혀 HTTP/3가 맺히지 않는다. TCP 443의 HTTP/2로 그대로 쓴다.\nTCP 443을 닫았다면: 회사 망 손님은 들어오지 못한다.\nalt-svc가 없다면: 브라우저는 HTTP/3가 된다는 것을 모른다.\n그래서 HTTP/2를 함께 열어 두고 alt-svc로 HTTP/3를 알린다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "TCP의 HTTP/2를 두고, alt-svc로 HTTP/3를 알린다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "TCP 443을 닫고 UDP 443의 HTTP/3만 연다",
+      "correct" : false,
+      "rationale" : "UDP가 막힌 회사 망의 손님은 돌아갈 길이 없어 아예 접속하지 못한다.",
+      "matchText" : ""
+    }, {
+      "text" : "HTTP/3를 열되 브라우저에 알리는 alt-svc 헤더는 붙이지 않는다",
+      "correct" : false,
+      "rationale" : "브라우저는 alt-svc를 보고 HTTP/3가 된다는 것을 안다. 안내가 없으면 열어 둔 HTTP/3를 아무도 쓰지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "회사 망 손님 때문에 HTTP/3는 켜지 않는다",
+      "correct" : false,
+      "rationale" : "손님 모두가 UDP 막힌 망이라면 고를 만하다. 일부만 막혀 있으면 나머지 손님이 얻을 이득을 버린다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "HTTP/3만 열지 HTTP/2와 함께 열지가 갈림길이며, UDP가 막힌 손님을 위해 TCP 443의 HTTP/2를 그대로 두고 `alt-svc`로 HTTP/3를 알린다.",
+    "title" : "HTTP/3를 켤 때의 구성",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "주문 서비스가 HTTP/2 클라이언트로 결제 서비스를 부르며, 연결은 하나만 쓰도록 설정돼 있다. 결제 서버는 동시 스트림 상한을 100으로 알려 준다. 바쁜 시간에 동시 요청이 200개로 늘자, 결제 서비스의 처리 시간은 그대로인데 주문 쪽 응답 시간만 계단처럼 뛰었다. 두 서비스는 손실이 거의 없는 사설망에 있다. 원인으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 연결 하나는 서버가 정한 동시 스트림 상한까지만 스트림을 싣는다. 상한을 넘는 요청은 연결 안에서 앞 스트림이 끝나기를 기다린다.\n지문의 바쁜 시간을 따라가 보자.\n동시 요청 200개가 연결 하나로 간다.\n상한이 100이라 100개만 스트림으로 열린다: 나머지 100개는 클라이언트 안에서 줄을 선다.\n앞 스트림이 끝날 때마다 하나씩 들어간다: 기다린 시간만큼 응답 시간이 더해져 계단처럼 뛴다.\n결제 서버의 처리 시간은 그대로고 손실도 없으니, 서버나 TCP 손실 탓이 아니다.\n그래서 원인은 동시 스트림 상한을 넘은 요청이 연결 안에서 줄을 선 것이다.\n(심화편의 '연결을 몇 개 두고 어떻게 나누는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "상한 100을 넘은 요청이 연결 안에서 줄을 섰다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "TCP 조각 하나가 사라져 모든 스트림이 기다렸다",
+      "correct" : false,
+      "rationale" : "손실이 잦은 망이라면 그럴 수 있다. 두 서비스는 손실이 거의 없는 사설망에 있고, 응답 시간은 요청 수에 맞춰 뛰었다.",
+      "matchText" : ""
+    }, {
+      "text" : "결제 서버가 늦게 처리해 응답이 밀렸다",
+      "correct" : false,
+      "rationale" : "지문에서 결제 서비스의 처리 시간은 그대로다. 늦어진 것은 요청이 서버에 닿기 전의 대기다.",
+      "matchText" : ""
+    }, {
+      "text" : "L4 로드 밸런서가 연결을 한 서버에만 보냈다",
+      "correct" : false,
+      "rationale" : "그랬다면 그 서버의 처리 시간이 늘었을 것이다. 결제 쪽 처리 시간은 그대로라, 막힌 곳은 클라이언트의 연결 안이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "클라이언트가 동시에 200개를 보내려 하면, 100개는 연결 안에서 앞 스트림이 끝나기를 기다린다.",
+    "title" : "HTTP/2 연결 하나에서 응답 시간이 뛰는 원인",
+    "questionKind" : "CAUSE",
+    "skipReason" : ""
+  }, {
+    "question" : "HTTP/2·3에서 판을 고르는 방법을 다루는 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: HTTP/2는 TLS 인사 안의 ALPN으로 고른다. 그래서 브라우저는 TLS 위에서만 HTTP/2를 쓰고, 평문 HTTP/2인 h2c는 서버끼리 쓴다. HTTP/3는 UDP 위라 TLS 인사로 고르지 못해 alt-svc로 알린다.\n브라우저가 사이트에 붙는 장면을 따라가 보자.\nTLS 인사: 브라우저가 h2와 http/1.1을 ALPN으로 내밀고, 서버가 h2를 고른다.\n평문으로 붙는 사내 서버: TLS 인사가 없어 브라우저는 1.1로만 붙는다.\nHTTP/3: 첫 응답의 alt-svc를 보고 다음 연결에서 UDP로 붙어 본다.\nUDP 443과 TCP 443은 다른 문이라 방화벽에서 따로 연다.\n그래서 브라우저는 TLS 위에서만 HTTP/2를 쓴다는 설명이 옳다.\n(심화편의 '연결을 닫을 때와 판을 고를 때' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "브라우저는 TLS 인사의 ALPN으로만 HTTP/2를 고른다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "서버에 h2c를 켜면 브라우저도 TLS 없이 HTTP/2로 붙는다",
+      "correct" : false,
+      "rationale" : "브라우저는 평문 HTTP/2를 쓰지 않는다. h2c는 클라이언트와 서버를 모두 맞춘 서버끼리의 호출에 쓴다.",
+      "matchText" : ""
+    }, {
+      "text" : "HTTP/3도 TLS 인사의 ALPN으로 첫 연결부터 바로 고른다",
+      "correct" : false,
+      "rationale" : "HTTP/3는 UDP 위라 TCP 위 TLS 인사로 고르지 못한다. 서버가 alt-svc로 먼저 알리고 브라우저가 다음 연결에서 시도한다.",
+      "matchText" : ""
+    }, {
+      "text" : "같은 443번이면 TCP와 UDP는 한 문이라 방화벽은 하나만 연다",
+      "correct" : false,
+      "rationale" : "같은 번호라도 TCP와 UDP는 다른 문이다. UDP 443을 열지 않으면 HTTP/3 연결은 맺히지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "그래서 브라우저는 TLS 위에서만 HTTP/2를 쓴다.",
+    "title" : "HTTP/2·3의 판 고르기",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "HTTP/2로 요청을 받는 서버를 배포 중에 내린다. 진행 중인 요청을 잃지 않고, 다시 보내는 요청이 두 번 처리되지 않게 하는 순서로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 서버는 GOAWAY에 마지막으로 받은 스트림 번호를 적어 보낸다. 그보다 큰 번호의 스트림은 서버가 손대지 않아, 클라이언트가 새 연결로 다시 보내도 두 번 처리되지 않는다.\n서버가 스트림 57까지 받은 장면을 따라가 보자.\n서버가 GOAWAY를 보낸다: 마지막 번호로 57을 적는다.\n클라이언트는 이 연결로 새 요청을 보내지 않는다: 59, 61처럼 57보다 큰 스트림은 다른 연결로 다시 보낸다.\n57 이하의 스트림은 서버가 마저 끝낸다.\n다 끝나면 서버가 연결을 닫는다.\n연결을 먼저 끊으면, 클라이언트는 어느 요청이 처리됐는지 모른 채 남는다.\n그래서 GOAWAY를 보내고, 큰 번호만 다시 보내고, 끝난 뒤 닫는다.\n(심화편의 '연결을 닫을 때와 판을 고를 때' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "GOAWAY를 보낸다 → 큰 번호 스트림만 다시 보낸다 → 끝나면 닫는다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "연결을 닫는다 → GOAWAY를 보낸다 → 클라이언트가 모든 스트림을 다시 보낸다",
+      "correct" : false,
+      "rationale" : "닫은 연결로는 GOAWAY가 가지 않는다. 클라이언트는 어느 스트림이 처리됐는지 모른 채 모두 다시 보내 두 번 처리될 수 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "GOAWAY를 보낸다 → 곧바로 연결을 닫는다 → 클라이언트가 모든 스트림을 다시 보낸다",
+      "correct" : false,
+      "rationale" : "번호 이하의 스트림은 서버가 처리 중이라, 곧바로 닫으면 그 응답을 잃는다. 다시 보내면 이미 처리한 요청이 두 번 처리될 수 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "진행 중인 스트림을 끝낸다 → 연결을 닫는다 → GOAWAY를 보낸다",
+      "correct" : false,
+      "rationale" : "GOAWAY 없이 스트림을 끝내는 동안 클라이언트는 이 연결로 새 요청을 계속 보낸다. 연결을 닫은 뒤에 보내는 신호는 닿지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "그보다 큰 번호의 스트림은 서버가 손대지 않았다는 뜻이라, 클라이언트가 새 연결로 다시 보내도 안전하다.",
+    "title" : "HTTP/2 서버를 내리는 순서",
+    "questionKind" : "SEQUENCE",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 1,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "중급으로 냈지만 고급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 「손님 가운데 일부는 UDP를 막아 둔 회사 망에서 접속한다.」\n조건이 달랐다면 정답이 되는 오답: 2개\n보기별 판단: 1) 없음. 3) 손님 거의 전부가 UDP 막힌 망이고 이득 볼 손님이 없다면 켜지 않는 판단도 성립한다. 4) 모든 클라이언트가 UDP가 열린 통제된 망이라면 성립할 수 있다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "중급으로 냈지만 고급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 「바쁜 시간에 동시 요청이 200개로 늘자, 결제 서비스의 처리 시간은 그대로인데 주문 쪽 응답 시간만 계단처럼 뛰었다.」\n조건이 달랐다면 정답이 되는 오답: 3개\n보기별 판단: 1) 손실이 잦은 망이라면 정답이 된다. 3) 상대 서버 처리 시간이 늘었다면 정답이 된다. 4) 서버를 늘렸는데 일부만 바쁘다면 정답이 된다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "HTTP/2 클라이언트가 연결 몇 개를 오래 쓰면 L4는 연결이 맺힐 때만 서버를 골라 새 서버로 요청이 가지 않는다. 요청 단위로 고르는 L7을 두면 기존 연결의 요청도 새 서버로 나뉜다. 2는 원인 그대로, 3은 쏠림을 키우고, 4는 새 서버가 놀기만 한다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "L4와 L7의 차이를 HTTP/2 연결 특성에 적용하게 하는 중급다운 문제다. 문서의 다른 해법인 연결 최대 수명이 보기에 없어 정답이 하나로 깔끔하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "UDP가 막힌 손님은 HTTP/3로 붙지 못하니 TCP 443의 HTTP/2를 그대로 두고 alt-svc로 HTTP/3를 알린다. 1은 브라우저가 HTTP/3를 알 길이 없고, 3은 UDP가 열린 손님의 이득을 버리며, 4는 막힌 손님이 접속하지 못한다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "문서의 'HTTP/3 켜기' 갈림길을 그대로 옮긴 문제라 문서를 읽었으면 쉽게 푼다. 조건 한 줄이 답을 가르는 구조라 고급 형태에 가깝다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "연결 하나에 상한 100이고 동시 요청이 200이면 100개는 연결 안에서 줄을 선다. 상대 처리 시간이 그대로라 3은 아니고, 손실 없는 사설망이라 1도 아니며, 연결이 하나라 L4 쏠림은 증상과 맞지 않는다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "원리 적용은 잘 되지만 지문이 구체적 실무 장면이고 조건이 오답을 하나씩 지우는 구조라 중급보다 고급 형태에 가깝다. 문서 '동시 스트림 상한에 걸려' 사례와 거의 같아 기억만으로도 풀린다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "브라우저는 TLS 인사의 ALPN으로만 HTTP/2를 고르고 평문 h2c는 쓰지 않는다. 1은 브라우저가 h2c를 쓰지 않으니 틀렸고, 2는 HTTP/3는 alt-svc로 알린 뒤 다음 연결에서 붙으니 틀렸으며, 3은 TCP와 UDP는 다른 문이라 틀렸다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「HTTP/2·3에서 판을 고르는 방법을 다루는 설명으로 옳은 것은?」\n고치면: HTTP/2·3에서 판을 고르는 방법으로 옳은 것은?",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "정답 보기가 문서 문장을 거의 그대로 옮겨 문장 대조로도 고를 수 있다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "ALPN·h2c·alt-svc·포트를 한꺼번에 점검하는 문제로 오답마다 오해가 분명하다. 다만 원리 적용보다 사실 확인에 가까워 초급과 중급 사이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "GOAWAY를 먼저 보내 마지막 처리 번호를 알리고, 클라이언트는 그보다 큰 번호만 새 연결로 다시 보내며, 진행 중인 스트림이 끝나면 서버가 연결을 닫는다. 1·4는 모두 다시 보내 이중 처리가 생기고, 3은 GOAWAY가 닫은 뒤라 쓸모가 없다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「GOAWAY를 보낸다 → 큰 번호 스트림만 다시 보낸다 → 끝나면 닫는다」\n고치면: 서버가 GOAWAY를 보낸다 → 클라이언트가 GOAWAY 번호보다 큰 스트림만 새 연결로 다시 보낸다 → 진행 중인 스트림이 끝나면 서버가 닫는다",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "정답 보기만 주어가 빠져 누가 다시 보내고 무엇이 끝나는지 흐리다. 다른 보기는 '클라이언트가'를 적어 비대칭이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "순서를 묻는 중급 형태로 적절하고 오답이 모두 원리를 잘못 적용한 판단이다. 정답 보기의 주어만 채우면 더 분명해진다.",
+    "suggestion" : null
+  } ]
 }

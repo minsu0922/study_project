@@ -1,194 +1,247 @@
 {
-    "note":  "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙을 따랐고, 근거는 generated/documents/2026-10-22.json의 입문편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
-    "date":  "2026-11-01",
-    "generatedAt":  "2026-11-01T12:00:00Z",
-    "domain":  "NETWORK",
-    "difficulty":  "BEGINNER",
-    "type":  "MULTIPLE_CHOICE",
-    "model":  "claude-code/claude-opus-5-5",
-    "documentSlug":  "https-tls-handshake-certificate-scope",
-    "problems":  [
-        {
-            "question":  "아무 처리도 하지 않아 누구나 그대로 읽을 수 있는 글을 부르는 이름은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 평문(plaintext)은 아무 처리도 하지 않아 누구나 그대로 읽을 수 있는 글이다. HTTP 요청과 응답은 평문 그대로 패킷에 실린다.\n로그인 요청이 거쳐 가는 길을 따라가 보자.\n노트북이 id와 password가 적힌 요청을 보낸다.\n카페 공유기가 패킷을 넘기며 내용까지 읽을 수 있다: 글자 그대로라서다.\n같은 와이파이의 공격자도 엿보는 프로그램으로 같은 글을 읽는다.\n키로 뒤섞은 글이었다면 뜻 없는 바이트만 보였을 것이다.\n그래서 누구나 그대로 읽는 글의 이름은 평문이다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "평문",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "암호화",
-                    "correct":  false,
-                    "rationale":  "암호화는 글을 키로 뒤섞어 못 읽게 만드는 일이다. 누구나 읽는 글과는 정반대 상태를 만든다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "인증서",
-                    "correct":  false,
-                    "rationale":  "인증서는 공개 키와 도메인의 짝을 인증 기관이 확인한 문서다. 글이 읽히는지와는 다른 이야기다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "패킷",
-                    "correct":  false,
-                    "rationale":  "패킷은 데이터를 작게 나눈 조각이다. 평문도 암호문도 패킷에 실려 가므로, 읽히는 글을 가리키는 이름이 아니다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "- **평문(plaintext)** — 아무 처리도 하지 않아 누구나 그대로 읽을 수 있는 글이다.",
-            "title":  "누구나 그대로 읽는 글의 이름",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "카페 와이파이에서 아래 로그인 요청을 HTTP로 보냈다. 같은 와이파이에 붙어 패킷을 엿보는 사람이 읽을 수 있는 것으로 옳은 것은?",
-            "exhibit":  "POST /login HTTP/1.1\nHost: shop.example.com\nContent-Type: application/x-www-form-urlencoded\n\nid=minsu&password=sunny2026",
-            "answer":  "",
-            "explanation":  "규칙: HTTP는 아무것도 감추지 않아, 요청과 응답이 글자 그대로 패킷에 실린다. 같은 망에서 엿보는 사람은 시작줄과 헤더와 본문을 모두 읽는다.\n자료의 요청을 엿보는 사람 쪽에서 따라가 보자.\n첫 줄과 Host: 어느 사이트의 어느 주소로 가는지 보인다.\n빈 줄 뒤의 본문: id=minsu와 password=sunny2026이 그대로 보인다.\n비밀번호 칸만 따로 잠그는 장치는 HTTP에 없다.\nHTTPS였다면 요청 전체가 키로 잠겨 뜻 없는 바이트만 보였을 것이다.\n그래서 엿보는 사람은 아이디와 비밀번호를 포함한 요청 전체를 읽는다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "아이디와 비밀번호를 포함한 요청 전체",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "주소와 헤더만 보이고 본문은 보이지 않는다",
-                    "correct":  false,
-                    "rationale":  "HTTP는 본문도 글자 그대로 싣는다. 헤더와 본문을 가르는 빈 줄은 읽는 순서일 뿐 무엇을 감추지 않는다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "비밀번호 칸만 따로 잠겨 비밀번호는 보이지 않는다",
-                    "correct":  false,
-                    "rationale":  "HTTP에는 칸을 골라 잠그는 장치가 없다. 비밀번호도 다른 글자와 똑같이 평문으로 간다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "무엇을 보냈는지 하나도 보이지 않는다",
-                    "correct":  false,
-                    "rationale":  "그렇게 되려면 연결이 잠겨 있어야 한다. 자료의 요청은 HTTP라 잠그는 단계가 없다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "엿보는 프로그램을 돌린 사람은 이 글을 읽고 아이디와 비밀번호를 그대로 적어 간다.",
-            "title":  "HTTP 로그인 요청에서 엿보이는 것",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "HTTPS 연결에서 서버가 보내는 인증서가 증명하는 것으로 옳은 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 인증서는 이 공개 키의 주인이 이 도메인의 주인이라는 한 문장을 증명한다. 인증 기관이 도메인을 그 사람이 다루는지 확인하고 서명했다.\n가짜 와이파이가 끼어든 장면을 따라가 보자.\n중간자가 shop.example.com인 척 연결을 받는다.\n진짜 인증서를 보여도 짝이 되는 비밀 키가 없어 확인 값을 만들지 못한다.\n가짜 인증서를 보이면 믿는 인증 기관의 서명이 없다.\n어느 쪽이든 브라우저가 경고를 띄워, 가짜 서버를 가려낸다.\n사이트가 착한지, 서버 안이 안전한지는 이 검사에 들어 있지 않다.\n그래서 인증서는 공개 키와 도메인 주인의 짝을 증명한다.\n(입문편의 '인증서가 증명하는 것' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "이 공개 키가 이 도메인 주인의 것이다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "이 사이트는 사기 사이트가 아니다",
-                    "correct":  false,
-                    "rationale":  "사기 사이트도 자기 도메인의 인증서를 받아 자물쇠가 뜬다. 인증 기관은 도메인을 다루는지만 확인한다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "서버가 받은 비밀번호를 안전하게 저장한다",
-                    "correct":  false,
-                    "rationale":  "서버가 받은 비밀번호를 어떻게 저장하는지는 인증서가 말해 주지 않는다. 인증서는 통로 앞에서 상대를 확인할 뿐이다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "내가 어느 사이트에 붙었는지 아무도 모른다",
-                    "correct":  false,
-                    "rationale":  "첫 인사에 사이트 이름이 평문으로 실린다. 같은 망 사람과 통신사는 어느 사이트에 붙었는지 안다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "인증서는 \"이 공개 키의 주인이 `shop.example.com`의 주인이다\"라는 한 문장을 증명한다.",
-            "title":  "인증서가 증명하는 것",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "도메인 주인을 확인하고 인증서를 내주는 기관으로, 브라우저와 운영체제가 믿을 목록을 미리 들고 있는 곳은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 인증 기관(CA, Certificate Authority)은 도메인 주인을 확인하고 인증서를 내주는 기관이다. 브라우저는 믿는 인증 기관의 서명이 있는 인증서만 받아들인다.\n인증서를 받은 브라우저가 서명을 따라 올라가는 장면을 따라가 보자.\n사이트 인증서: 중간 인증서가 서명했다.\n중간 인증서: 뿌리 인증서가 서명했다.\n뿌리 인증서: 브라우저와 운영체제에 미리 들어 있는 믿는 기관의 것이다.\n끝까지 올라가 믿는 곳에 닿으면 인증서를 받아들인다.\n그래서 인증서를 내주고 믿을 목록에 오르는 곳은 인증 기관이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "인증 기관(CA)",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "도메인 등록 업체",
-                    "correct":  false,
-                    "rationale":  "도메인 이름을 빌려주는 곳이라 주인과 가깝지만, 인증서에 서명하는 곳은 아니다. 브라우저가 믿을 목록으로 들고 있는 것은 인증 기관의 뿌리 인증서다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "인터넷 통신사",
-                    "correct":  false,
-                    "rationale":  "통신사는 패킷을 나르는 길을 맡는다. 데이터가 거쳐 가는 곳일 뿐, 도메인 주인을 확인해 인증서를 내주지 않는다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "TLS 규칙",
-                    "correct":  false,
-                    "rationale":  "TLS는 연결을 암호화하고 상대를 확인하는 규칙이다. 인증서를 검사하는 방법을 정할 뿐 인증서를 내주는 기관이 아니다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "- **인증 기관(CA, Certificate Authority)** — 도메인 주인을 확인하고 인증서를 내주는 기관이다. 브라우저와 운영체제는 믿을 인증 기관 목록을 미리 들고 있다.",
-            "title":  "인증서를 내주는 기관",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        },
-        {
-            "question":  "카페 와이파이에서 HTTPS로 쇼핑몰의 장바구니 화면을 열었다. 같은 와이파이에 붙은 사람이 알 수 있는 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: HTTPS는 HTTP 요청과 응답을 잠그지만, 첫 인사에 실리는 사이트 이름과 패킷 앞머리의 서버 IP 주소는 평문으로 간다. 숨겨지는 것은 그 사이트 안의 주소와 주고받은 내용이다.\n장바구니 화면을 여는 연결을 엿보는 쪽에서 따라가 보자.\n첫 인사: 사이트 이름 shop.example.com이 평문으로 보인다.\n패킷 앞머리: 서버 IP 주소가 보인다.\n그 뒤의 HTTP 요청: /cart 같은 주소와 쿠키가 키로 잠겨 보이지 않는다.\n응답 본문: 장바구니에 담긴 상품도 잠겨 보이지 않는다.\n그래서 알 수 있는 것은 어느 사이트에 붙었는지 정도다.\n(입문편의 '인증서가 증명하지 못하는 것' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "어느 사이트에 붙었는지",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "장바구니 화면의 주소 경로",
-                    "correct":  false,
-                    "rationale":  "사이트 안의 어떤 주소를 열었는지는 HTTP 요청의 시작줄에 있고, 그 요청은 잠겨 간다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "요청에 실린 로그인 쿠키",
-                    "correct":  false,
-                    "rationale":  "쿠키는 HTTP 요청 헤더에 실린다. HTTPS에서는 헤더까지 잠겨 엿보는 사람이 읽지 못한다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "장바구니에 담긴 상품 목록",
-                    "correct":  false,
-                    "rationale":  "상품 목록은 응답 본문에 실린다. 본문도 키로 잠겨 뜻 없는 바이트로만 보인다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "숨겨지는 것은 그 사이트 안의 어떤 주소를 열었는지, 무엇을 보내고 받았는지다.",
-            "title":  "HTTPS를 써도 드러나는 것",
-            "questionKind":  "JUDGMENT",
-            "skipReason":  ""
-        }
-    ],
-    "shortfallReasons":  null,
-    "reviewFindings":  null
+  "note" : "Claude Code가 대화 안에서 직접 쓴 초급 문제 초안입니다(Claude API 미사용). problem/system.txt의 초급 규칙을 따랐고, 근거는 generated/documents/2026-10-22.json의 입문편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+  "date" : "2026-11-01",
+  "generatedAt" : "2026-11-01T12:00:00Z",
+  "domain" : "NETWORK",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "https-tls-handshake-certificate-scope",
+  "problems" : [ {
+    "question" : "아무 처리도 하지 않아 누구나 그대로 읽을 수 있는 글을 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 평문(plaintext)은 아무 처리도 하지 않아 누구나 그대로 읽을 수 있는 글이다. HTTP 요청과 응답은 평문 그대로 패킷에 실린다.\n로그인 요청이 거쳐 가는 길을 따라가 보자.\n노트북이 id와 password가 적힌 요청을 보낸다.\n카페 공유기가 패킷을 넘기며 내용까지 읽을 수 있다: 글자 그대로라서다.\n같은 와이파이의 공격자도 엿보는 프로그램으로 같은 글을 읽는다.\n키로 뒤섞은 글이었다면 뜻 없는 바이트만 보였을 것이다.\n그래서 누구나 그대로 읽는 글의 이름은 평문이다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "평문",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "암호화",
+      "correct" : false,
+      "rationale" : "암호화는 글을 키로 뒤섞어 못 읽게 만드는 일이다. 누구나 읽는 글과는 정반대 상태를 만든다.",
+      "matchText" : ""
+    }, {
+      "text" : "인증서",
+      "correct" : false,
+      "rationale" : "인증서는 공개 키와 도메인의 짝을 인증 기관이 확인한 문서다. 글이 읽히는지와는 다른 이야기다.",
+      "matchText" : ""
+    }, {
+      "text" : "패킷",
+      "correct" : false,
+      "rationale" : "패킷은 데이터를 작게 나눈 조각이다. 평문도 암호문도 패킷에 실려 가므로, 읽히는 글을 가리키는 이름이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **평문(plaintext)** — 아무 처리도 하지 않아 누구나 그대로 읽을 수 있는 글이다.",
+    "title" : "누구나 그대로 읽는 글의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "카페 와이파이에서 아래 로그인 요청을 HTTP로 보냈다. 같은 와이파이에 붙어 패킷을 엿보는 사람이 읽을 수 있는 것으로 옳은 것은?",
+    "exhibit" : "POST /login HTTP/1.1\nHost: shop.example.com\nContent-Type: application/x-www-form-urlencoded\n\nid=minsu&password=sunny2026",
+    "answer" : "",
+    "explanation" : "규칙: HTTP는 아무것도 감추지 않아, 요청과 응답이 글자 그대로 패킷에 실린다. 같은 망에서 엿보는 사람은 시작줄과 헤더와 본문을 모두 읽는다.\n자료의 요청을 엿보는 사람 쪽에서 따라가 보자.\n첫 줄과 Host: 어느 사이트의 어느 주소로 가는지 보인다.\n빈 줄 뒤의 본문: id=minsu와 password=sunny2026이 그대로 보인다.\n비밀번호 칸만 따로 잠그는 장치는 HTTP에 없다.\nHTTPS였다면 요청 전체가 키로 잠겨 뜻 없는 바이트만 보였을 것이다.\n그래서 엿보는 사람은 아이디와 비밀번호를 포함한 요청 전체를 읽는다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "아이디와 비밀번호를 포함한 요청 전체",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "주소와 헤더만 보이고 본문은 보이지 않는다",
+      "correct" : false,
+      "rationale" : "HTTP는 본문도 글자 그대로 싣는다. 헤더와 본문을 가르는 빈 줄은 읽는 순서일 뿐 무엇을 감추지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "비밀번호 칸만 따로 잠겨 비밀번호는 보이지 않는다",
+      "correct" : false,
+      "rationale" : "HTTP에는 칸을 골라 잠그는 장치가 없다. 비밀번호도 다른 글자와 똑같이 평문으로 간다.",
+      "matchText" : ""
+    }, {
+      "text" : "무엇을 보냈는지 하나도 보이지 않는다",
+      "correct" : false,
+      "rationale" : "그렇게 되려면 연결이 잠겨 있어야 한다. 자료의 요청은 HTTP라 잠그는 단계가 없다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "엿보는 프로그램을 돌린 사람은 이 글을 읽고 아이디와 비밀번호를 그대로 적어 간다.",
+    "title" : "HTTP 로그인 요청에서 엿보이는 것",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "HTTPS 연결에서 서버가 보내는 인증서가 증명하는 것으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 인증서는 이 공개 키의 주인이 이 도메인의 주인이라는 한 문장을 증명한다. 인증 기관이 도메인을 그 사람이 다루는지 확인하고 서명했다.\n가짜 와이파이가 끼어든 장면을 따라가 보자.\n중간자가 shop.example.com인 척 연결을 받는다.\n진짜 인증서를 보여도 짝이 되는 비밀 키가 없어 확인 값을 만들지 못한다.\n가짜 인증서를 보이면 믿는 인증 기관의 서명이 없다.\n어느 쪽이든 브라우저가 경고를 띄워, 가짜 서버를 가려낸다.\n사이트가 착한지, 서버 안이 안전한지는 이 검사에 들어 있지 않다.\n그래서 인증서는 공개 키와 도메인 주인의 짝을 증명한다.\n(입문편의 '인증서가 증명하는 것' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "이 공개 키가 이 도메인 주인의 것이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "이 사이트는 사기 사이트가 아니다",
+      "correct" : false,
+      "rationale" : "사기 사이트도 자기 도메인의 인증서를 받아 자물쇠가 뜬다. 인증 기관은 도메인을 다루는지만 확인한다.",
+      "matchText" : ""
+    }, {
+      "text" : "서버가 받은 비밀번호를 안전하게 저장한다",
+      "correct" : false,
+      "rationale" : "서버가 받은 비밀번호를 어떻게 저장하는지는 인증서가 말해 주지 않는다. 인증서는 통로 앞에서 상대를 확인할 뿐이다.",
+      "matchText" : ""
+    }, {
+      "text" : "내가 어느 사이트에 붙었는지 아무도 모른다",
+      "correct" : false,
+      "rationale" : "첫 인사에 사이트 이름이 평문으로 실린다. 같은 망 사람과 통신사는 어느 사이트에 붙었는지 안다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "인증서는 \"이 공개 키의 주인이 `shop.example.com`의 주인이다\"라는 한 문장을 증명한다.",
+    "title" : "인증서가 증명하는 것",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "도메인 주인을 확인하고 인증서를 내주는 기관으로, 브라우저와 운영체제가 믿을 목록을 미리 들고 있는 곳은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 인증 기관(CA, Certificate Authority)은 도메인 주인을 확인하고 인증서를 내주는 기관이다. 브라우저는 믿는 인증 기관의 서명이 있는 인증서만 받아들인다.\n인증서를 받은 브라우저가 서명을 따라 올라가는 장면을 따라가 보자.\n사이트 인증서: 중간 인증서가 서명했다.\n중간 인증서: 뿌리 인증서가 서명했다.\n뿌리 인증서: 브라우저와 운영체제에 미리 들어 있는 믿는 기관의 것이다.\n끝까지 올라가 믿는 곳에 닿으면 인증서를 받아들인다.\n그래서 인증서를 내주고 믿을 목록에 오르는 곳은 인증 기관이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "인증 기관(CA)",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "도메인 등록 업체",
+      "correct" : false,
+      "rationale" : "도메인 이름을 빌려주는 곳이라 주인과 가깝지만, 인증서에 서명하는 곳은 아니다. 브라우저가 믿을 목록으로 들고 있는 것은 인증 기관의 뿌리 인증서다.",
+      "matchText" : ""
+    }, {
+      "text" : "인터넷 통신사",
+      "correct" : false,
+      "rationale" : "통신사는 패킷을 나르는 길을 맡는다. 데이터가 거쳐 가는 곳일 뿐, 도메인 주인을 확인해 인증서를 내주지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "TLS 규칙",
+      "correct" : false,
+      "rationale" : "TLS는 연결을 암호화하고 상대를 확인하는 규칙이다. 인증서를 검사하는 방법을 정할 뿐 인증서를 내주는 기관이 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **인증 기관(CA, Certificate Authority)** — 도메인 주인을 확인하고 인증서를 내주는 기관이다. 브라우저와 운영체제는 믿을 인증 기관 목록을 미리 들고 있다.",
+    "title" : "인증서를 내주는 기관",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "카페 와이파이에서 HTTPS로 쇼핑몰의 장바구니 화면을 열었다. 같은 와이파이에 붙은 사람이 알 수 있는 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: HTTPS는 HTTP 요청과 응답을 잠그지만, 첫 인사에 실리는 사이트 이름과 패킷 앞머리의 서버 IP 주소는 평문으로 간다. 숨겨지는 것은 그 사이트 안의 주소와 주고받은 내용이다.\n장바구니 화면을 여는 연결을 엿보는 쪽에서 따라가 보자.\n첫 인사: 사이트 이름 shop.example.com이 평문으로 보인다.\n패킷 앞머리: 서버 IP 주소가 보인다.\n그 뒤의 HTTP 요청: /cart 같은 주소와 쿠키가 키로 잠겨 보이지 않는다.\n응답 본문: 장바구니에 담긴 상품도 잠겨 보이지 않는다.\n그래서 알 수 있는 것은 어느 사이트에 붙었는지 정도다.\n(입문편의 '인증서가 증명하지 못하는 것' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "어느 사이트에 붙었는지",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "장바구니 화면의 주소 경로",
+      "correct" : false,
+      "rationale" : "사이트 안의 어떤 주소를 열었는지는 HTTP 요청의 시작줄에 있고, 그 요청은 잠겨 간다.",
+      "matchText" : ""
+    }, {
+      "text" : "요청에 실린 로그인 쿠키",
+      "correct" : false,
+      "rationale" : "쿠키는 HTTP 요청 헤더에 실린다. HTTPS에서는 헤더까지 잠겨 엿보는 사람이 읽지 못한다.",
+      "matchText" : ""
+    }, {
+      "text" : "장바구니에 담긴 상품 목록",
+      "correct" : false,
+      "rationale" : "상품 목록은 응답 본문에 실린다. 본문도 키로 잠겨 뜻 없는 바이트로만 보인다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "숨겨지는 것은 그 사이트 안의 어떤 주소를 열었는지, 무엇을 보내고 받았는지다.",
+    "title" : "HTTPS를 써도 드러나는 것",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 1,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "초급으로 냈지만 중급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 「카페 와이파이에서 아래 로그인 요청을 HTTP로 보냈다.」\n조건이 달랐다면 정답이 되는 오답: 0개\n보기별 판단: 1) 없음 3) 없음 4) 없음. HTTPS라도 어느 사이트에 붙었는지는 보이므로 '하나도 보이지 않는다'는 맞지 않는다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "초급으로 냈지만 고급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 「카페 와이파이에서 HTTPS로 쇼핑몰의 장바구니 화면을 열었다.」\n조건이 달랐다면 정답이 되는 오답: 3개\n보기별 판단: 1) HTTP로 열었다면 주소 경로도 보인다 2) HTTP로 열었다면 로그인 쿠키도 보인다 4) HTTP로 열었다면 상품 목록도 보인다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서의 평문 정의가 '아무 처리도 하지 않아 누구나 그대로 읽을 수 있는 글'이라 1번이다. 인증서는 공개 키와 도메인의 짝을 확인한 문서, 암호화는 키로 글을 뒤섞는 일, 패킷은 데이터를 나눈 조각이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "문서를 읽었으면 바로 푸는 용어 문제다. 오답이 모두 문서에 나온 다른 용어라 깔끔하게 갈린다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "HTTP 요청은 글자 그대로 패킷에 실리므로 엿보는 사람은 주소·헤더·본문의 아이디와 비밀번호까지 요청 전체를 읽는다. 그래서 1번이다. 비밀번호 칸만 잠그는 기능은 HTTP에 없고, 본문이 숨거나 전부 숨는 것은 HTTP가 아니다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "초급인데 카페 와이파이 장면이 붙었다. 다만 장면이 답을 가르지 않고 HTTP가 평문이라는 사실만 확인해서 초급 칸을 크게 넘지 않는다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "자료로 실제 요청 글을 보여 줘서 평문이 무엇인지 눈으로 알게 된다. 쉽고 명확하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 인증서를 '이 공개 키가 이 도메인 주인의 것이라고 인증 기관이 확인해 적어 준 전자 문서'라 정의한다. 그래서 1번이다. 2·3·2번은 문서의 '인증서가 증명하지 못하는 것' 표에 나온 항목이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "인증서가 증명하는 범위를 정확히 짚는다. 오답이 '자주 하는 오해'와 겹쳐 학습 효과가 좋다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "도메인 주인을 확인하고 인증서를 내주며 브라우저와 운영체제가 목록을 미리 들고 있는 곳은 인증 기관(CA)이라 1번이다. TLS는 규칙이지 기관이 아니고, 도메인 등록 업체와 통신사는 문서에서 인증서를 내주는 곳으로 나오지 않는다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "정의를 그대로 묻는 문제라 쉽다. 도메인 등록 업체가 그럴듯한 함정 역할을 한다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "HTTPS에서는 첫 인사의 사이트 이름이 평문으로 가고 서버 IP도 패킷 앞머리에 보여서, 같은 망 사람은 어느 사이트에 붙었는지 안다. 그래서 1번이다. 사이트 안의 주소 경로, 쿠키, 응답 내용은 잠겨 숨겨진다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "HTTP와 HTTPS 조건에 따라 답이 갈려 초급보다 한 칸 위에 가깝다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "HTTPS가 숨기지 못하는 것을 묻는 좋은 문제다. 다만 HTTP 조건이면 오답 셋이 맞게 되니 초급으로는 조건 판단이 들어간다.",
+    "suggestion" : null
+  } ]
 }

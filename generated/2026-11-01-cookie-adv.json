@@ -1,122 +1,167 @@
 {
-    "note":  "Claude Code가 대화 안에서 직접 쓴 고급 문제 초안입니다(Claude API 미사용). problem/system.txt의 고급 규칙을 따랐고, 근거는 generated/documents/2026-10-20.json의 심화편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
-    "date":  "2026-11-01",
-    "generatedAt":  "2026-11-01T10:00:00Z",
-    "domain":  "NETWORK",
-    "difficulty":  "ADVANCED",
-    "type":  "MULTIPLE_CHOICE",
-    "model":  "claude-code/claude-opus-5-5",
-    "documentSlug":  "http-cookie-stateless-set-cookie-advanced",
-    "problems":  [
-        {
-            "question":  "매장 픽업 서비스가 www.example.com과 order.example.com에서 함께 쓰는 선택 매장 쿠키를 둔다. 사용자가 매장 선택 초기화 버튼을 누르면 응답이 성공으로 오는데, 새로고침하면 전에 고른 매장이 그대로 뜬다는 문의가 이어진다. 개발자 도구로 보면 store 쿠키가 지워지지 않고 남아 있다. 아래는 두 응답의 Set-Cookie다. 가장 먼저 해야 할 조치는?",
-            "exhibit":  "선택 응답:   Set-Cookie: store=gangnam; Domain=example.com; Path=/; Max-Age=2592000\n초기화 응답: Set-Cookie: store=; Path=/; Max-Age=0",
-            "answer":  "",
-            "explanation":  "규칙: 브라우저는 쿠키를 이름·도메인·경로로 구별한다. 지우는 응답도 맡길 때와 같은 범위로 적어야 같은 쿠키로 보고 지운다.\n자료의 두 응답을 따라가 보자.\n매장 선택: store 쿠키를 Domain=example.com, Path=/로 맡겼다.\n초기화: Domain 없이 store를 Max-Age=0으로 보냈다. 브라우저는 이것을 호스트 전용 store 쿠키의 삭제로 본다.\n지울 호스트 전용 쿠키가 없으니 아무것도 지워지지 않는다: 상위 도메인의 store=gangnam이 그대로 남는다.\n초기화 응답에 Domain=example.com을 맞춰 적으면: 같은 쿠키로 보고 지운다.\n그래서 맡기기와 지우기가 같은 범위를 쓰게 고친다.\n(심화편의 '어떤 때 통하지 않는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "초기화 응답에도 Domain=example.com을 적는다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "초기화 응답의 Max-Age=0을 지난 날짜의 Expires로 바꾼다",
-                    "correct":  false,
-                    "rationale":  "만료를 적는 방식이 문제였다면 맞는 조치다. 여기서는 범위가 달라 다른 쿠키를 지우려 한 것이라, 만료 표기를 바꿔도 남는다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "쿠키 이름을 store2로 바꿔 새로 맡긴다",
-                    "correct":  false,
-                    "rationale":  "다른 팀 쿠키와 이름이 겹친 경우라면 고를 만한 조치다. 이름을 바꿔도 옛 store=gangnam은 30일 동안 남아 계속 실린다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "사용자에게 브라우저 쿠키를 직접 지우라고 안내한다",
-                    "correct":  false,
-                    "rationale":  "문의한 몇 사람만 당장 풀어 주려는 경우라면 임시로 쓸 수 있다. 응답이 그대로라 버튼을 누르는 모든 사용자에게 같은 일이 계속 난다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "맡기기와 지우기를 한 함수에서 만들어, 같은 이름·도메인·경로를 쓰게 한다.",
-            "title":  "초기화해도 쿠키가 지워지지 않는 장애",
-            "questionKind":  "SITUATION",
-            "skipReason":  ""
-        },
-        {
-            "question":  "결제 화면에서 30분 동안 유지할 임시 쿠키를 맡기며, 서버가 자기 시각으로 30분 뒤를 계산해 Expires에 적는다. 대부분의 사용자는 문제가 없는데, 일부 사용자만 쿠키를 맡기자마자 다음 요청에 쿠키가 실리지 않는다. 그 사용자들은 쿠키 개수가 적고, 다른 브라우저로 바꿔도 같은 일이 생긴다. 이 일의 원인으로 가장 적절한 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: Expires는 정해진 날짜와 시각이라, 브라우저는 사용자 컴퓨터 시계로 만료를 견준다. 시계가 서버보다 빠르면 서버가 30분 뒤로 적은 시각이 이미 지난 것으로 보인다.\n지문의 사용자를 따라가 보자.\n서버가 14:00에 Expires를 14:30으로 적어 보낸다.\n그 사용자의 컴퓨터 시계는 15:00을 가리킨다: 브라우저는 14:30이 이미 지났다고 보고 쿠키를 바로 지운다.\n다음 요청에는 쿠키가 실리지 않는다: 브라우저를 바꿔도 같은 컴퓨터 시계를 쓰니 같다.\nMax-Age=1800으로 적었다면: 받은 때부터 1,800초라 시계와 상관없이 30분 남는다.\n그래서 원인은 사용자 컴퓨터 시계가 빨라 Expires가 이미 지난 시각으로 판단된 것이다.\n(심화편의 '어떤 때 통하지 않는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "사용자 컴퓨터 시계가 빨라 Expires가 지난 시각이 됐다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "도메인당 쿠키 개수 한도를 넘어 브라우저가 새 쿠키를 버렸다",
-                    "correct":  false,
-                    "rationale":  "쿠키가 많이 쌓인 오래된 사용자에게만 생겼다면 그렇게 보인다. 이 사용자들은 쿠키가 적어 한도와 거리가 멀다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "쿠키 값에 세미콜론이 들어가 값이 중간에서 잘렸다",
-                    "correct":  false,
-                    "rationale":  "값이 잘린 것이라면 쿠키는 실리되 값이 짧아졌을 것이다. 지문에서는 쿠키 자체가 실리지 않는다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "Path가 결제 화면 주소와 맞지 않아 쿠키가 실리지 않았다",
-                    "correct":  false,
-                    "rationale":  "경로가 어긋났다면 모든 사용자에게 똑같이 실리지 않았을 것이다. 일부 사용자에게만 생긴 것은 사용자 쪽 조건이 다르다는 뜻이다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "서버 시각으로 30분 뒤를 `Expires`에 적었는데, 그 사용자의 컴퓨터 시계가 한 시간 빨라 브라우저가 이미 지난 시각으로 판단했다.",
-            "title":  "일부 사용자에게만 쿠키가 바로 사라지는 원인",
-            "questionKind":  "CAUSE",
-            "skipReason":  ""
-        },
-        {
-            "question":  "문서 변환 서비스가 비회원에게 하루 3번까지 무료 변환을 준다. 변환 한 번에 드는 서버 비용이 커서 남용을 막아야 하고, 팀은 이미 Redis를 운영하고 있다. 한 개발자가 서버 저장소 없이 남은 횟수를 서명 쿠키에 적자고 제안했다. 이 조건에서 남은 횟수를 둘 곳으로 가장 적절한 것은?",
-            "exhibit":  "",
-            "answer":  "",
-            "explanation":  "규칙: 서명은 값을 고치는 것은 막지만, 예전에 받은 진짜 쿠키를 다시 보내는 것은 막지 못한다. 한 번 쓰면 줄어야 하는 상태는 서버에 두고, 쿠키에는 그 기록을 찾는 번호만 담는다.\n남은 횟수를 서명 쿠키에 둔 경우를 따라가 보자.\n아침에 남은 횟수 3이 적힌 서명 쿠키를 받는다: 사용자가 이 쿠키를 저장해 둔다.\n세 번 변환해 횟수가 0인 쿠키를 받는다.\n저장해 둔 3짜리 쿠키를 다시 보낸다: 서명이 진짜라 서버가 믿고 또 세 번 변환해 준다.\n횟수를 Redis에 두고 쿠키에는 번호만 담으면: 옛 쿠키를 보내도 서버의 횟수는 이미 0이다.\n그래서 남은 횟수는 서버 저장소에 둔다.\n(심화편의 '어떤 때 통하지 않는가' 절을 다시 읽어 보라)",
-            "choices":  [
-                {
-                    "text":  "횟수는 Redis에 두고 쿠키엔 번호만 담는다",
-                    "correct":  true,
-                    "rationale":  "",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "남은 횟수를 서명 쿠키에 적어, 고친 값만 걸러 낸다",
-                    "correct":  false,
-                    "rationale":  "옛 값을 다시 보내도 손해가 없는 값이라면 서명이면 충분하다. 횟수는 3이던 옛 쿠키를 다시 보내면 서명이 진짜라 그대로 통한다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "__Host- 접두사를 붙인 서명 쿠키로 범위를 묶어 적는다",
-                    "correct":  false,
-                    "rationale":  "쿠키가 다른 하위 사이트로 새거나 가려지는 문제라면 맞는 대응이다. 범위를 묶어도 같은 사이트로 옛 쿠키를 다시 보내는 것은 그대로다.",
-                    "matchText":  ""
-                },
-                {
-                    "text":  "서명 없는 쿠키에 횟수를 적고 Max-Age를 하루로 둔다",
-                    "correct":  false,
-                    "rationale":  "사용자가 고쳐도 손해가 없는 값이라면 이렇게 둬도 된다. 남용을 막아야 하는 횟수는 3을 99로 고쳐 보내면 그만이다.",
-                    "matchText":  ""
-                }
-            ],
-            "sourceQuote":  "한 번만 써야 하는 상태는 서버 DB에 두고, 쿠키에는 그 기록을 찾는 번호만 담는다.",
-            "title":  "남용을 막아야 하는 횟수를 둘 곳",
-            "questionKind":  "COMPARISON",
-            "skipReason":  ""
-        }
-    ],
-    "shortfallReasons":  null,
-    "reviewFindings":  null
+  "note" : "Claude Code가 대화 안에서 직접 쓴 고급 문제 초안입니다(Claude API 미사용). problem/system.txt의 고급 규칙을 따랐고, 근거는 generated/documents/2026-10-20.json의 심화편입니다. AI 문제 검수(reviewFindings)는 돌리지 않았습니다.",
+  "date" : "2026-11-01",
+  "generatedAt" : "2026-11-01T10:00:00Z",
+  "domain" : "NETWORK",
+  "difficulty" : "ADVANCED",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "http-cookie-stateless-set-cookie-advanced",
+  "problems" : [ {
+    "question" : "매장 픽업 서비스가 www.example.com과 order.example.com에서 함께 쓰는 선택 매장 쿠키를 둔다. 사용자가 매장 선택 초기화 버튼을 누르면 응답이 성공으로 오는데, 새로고침하면 전에 고른 매장이 그대로 뜬다는 문의가 이어진다. 개발자 도구로 보면 store 쿠키가 지워지지 않고 남아 있다. 아래는 두 응답의 Set-Cookie다. 가장 먼저 해야 할 조치는?",
+    "exhibit" : "선택 응답:   Set-Cookie: store=gangnam; Domain=example.com; Path=/; Max-Age=2592000\n초기화 응답: Set-Cookie: store=; Path=/; Max-Age=0",
+    "answer" : "",
+    "explanation" : "규칙: 브라우저는 쿠키를 이름·도메인·경로로 구별한다. 지우는 응답도 맡길 때와 같은 범위로 적어야 같은 쿠키로 보고 지운다.\n자료의 두 응답을 따라가 보자.\n매장 선택: store 쿠키를 Domain=example.com, Path=/로 맡겼다.\n초기화: Domain 없이 store를 Max-Age=0으로 보냈다. 브라우저는 이것을 호스트 전용 store 쿠키의 삭제로 본다.\n지울 호스트 전용 쿠키가 없으니 아무것도 지워지지 않는다: 상위 도메인의 store=gangnam이 그대로 남는다.\n초기화 응답에 Domain=example.com을 맞춰 적으면: 같은 쿠키로 보고 지운다.\n그래서 맡기기와 지우기가 같은 범위를 쓰게 고친다.\n(심화편의 '어떤 때 통하지 않는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "초기화 응답에도 Domain=example.com을 적는다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "초기화 응답의 Max-Age=0을 지난 날짜의 Expires로 바꾼다",
+      "correct" : false,
+      "rationale" : "만료를 적는 방식이 문제였다면 맞는 조치다. 여기서는 범위가 달라 다른 쿠키를 지우려 한 것이라, 만료 표기를 바꿔도 남는다.",
+      "matchText" : ""
+    }, {
+      "text" : "쿠키 이름을 store2로 바꿔 새로 맡긴다",
+      "correct" : false,
+      "rationale" : "다른 팀 쿠키와 이름이 겹친 경우라면 고를 만한 조치다. 이름을 바꿔도 옛 store=gangnam은 30일 동안 남아 계속 실린다.",
+      "matchText" : ""
+    }, {
+      "text" : "사용자에게 브라우저 쿠키를 직접 지우라고 안내한다",
+      "correct" : false,
+      "rationale" : "문의한 몇 사람만 당장 풀어 주려는 경우라면 임시로 쓸 수 있다. 응답이 그대로라 버튼을 누르는 모든 사용자에게 같은 일이 계속 난다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "맡기기와 지우기를 한 함수에서 만들어, 같은 이름·도메인·경로를 쓰게 한다.",
+    "title" : "초기화해도 쿠키가 지워지지 않는 장애",
+    "questionKind" : "SITUATION",
+    "skipReason" : ""
+  }, {
+    "question" : "결제 화면에서 30분 동안 유지할 임시 쿠키를 맡기며, 서버가 자기 시각으로 30분 뒤를 계산해 Expires에 적는다. 대부분의 사용자는 문제가 없는데, 일부 사용자만 쿠키를 맡기자마자 다음 요청에 쿠키가 실리지 않는다. 그 사용자들은 쿠키 개수가 적고, 같은 사용자에게 Max-Age로 맡긴 다른 쿠키는 멀쩡히 남는다. 이 일의 원인으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: Expires는 정해진 날짜와 시각이라, 시계 차이를 보정하지 않는 브라우저는 사용자 컴퓨터 시계로 만료를 견준다. 시계가 서버보다 빠르면 서버가 30분 뒤로 적은 시각이 이미 지난 것으로 보인다.\n지문의 사용자를 따라가 보자.\n서버가 14:00에 Expires를 14:30으로 적어 보낸다.\n그 사용자의 컴퓨터 시계는 15:00을 가리킨다: 브라우저는 14:30이 이미 지났다고 보고 쿠키를 바로 지운다.\n다음 요청에는 쿠키가 실리지 않는다: Max-Age로 맡긴 쿠키는 받은 때부터 세니 멀쩡하다.\nMax-Age=1800으로 적었다면: 받은 때부터 1,800초라 시계와 상관없이 30분 남는다.\n그래서 원인은 사용자 컴퓨터 시계가 빨라 Expires가 이미 지난 시각으로 판단된 것이다.\n(심화편의 '어떤 때 통하지 않는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "사용자 컴퓨터 시계가 빨라 Expires가 지난 시각이 됐다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "도메인당 쿠키 개수 한도를 넘어 브라우저가 새 쿠키를 버렸다",
+      "correct" : false,
+      "rationale" : "쿠키가 많이 쌓인 오래된 사용자에게만 생겼다면 그렇게 보인다. 이 사용자들은 쿠키가 적어 한도와 거리가 멀다.",
+      "matchText" : ""
+    }, {
+      "text" : "쿠키 값에 세미콜론이 들어가 값이 중간에서 잘렸다",
+      "correct" : false,
+      "rationale" : "값이 잘린 것이라면 쿠키는 실리되 값이 짧아졌을 것이다. 지문에서는 쿠키 자체가 실리지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "Path가 결제 화면 주소와 맞지 않아 쿠키가 실리지 않았다",
+      "correct" : false,
+      "rationale" : "경로가 어긋났다면 모든 사용자에게 똑같이 실리지 않았을 것이다. 일부 사용자에게만 생긴 것은 사용자 쪽 조건이 다르다는 뜻이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "서버 시각으로 30분 뒤를 `Expires`에 적었는데, 그 사용자의 컴퓨터 시계가 한 시간 빨라 브라우저가 이미 지난 시각으로 판단했다.",
+    "title" : "일부 사용자에게만 쿠키가 바로 사라지는 원인",
+    "questionKind" : "CAUSE",
+    "skipReason" : ""
+  }, {
+    "question" : "문서 변환 서비스가 비회원에게 하루 3번까지 무료 변환을 준다. 변환 한 번에 드는 서버 비용이 커서 남용을 막아야 하고, 팀은 이미 Redis를 운영하고 있다. 한 개발자가 서버 저장소 없이 남은 횟수를 서명 쿠키에 적자고 제안했다. 이 조건에서 남은 횟수를 둘 곳으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 서명은 값을 고치는 것은 막지만, 예전에 받은 진짜 쿠키를 다시 보내는 것은 막지 못한다. 한 번 쓰면 줄어야 하는 상태는 서버에 두고, 쿠키에는 그 기록을 찾는 번호만 담는다.\n남은 횟수를 서명 쿠키에 둔 경우를 따라가 보자.\n아침에 남은 횟수 3이 적힌 서명 쿠키를 받는다: 사용자가 이 쿠키를 저장해 둔다.\n세 번 변환해 횟수가 0인 쿠키를 받는다.\n저장해 둔 3짜리 쿠키를 다시 보낸다: 서명이 진짜라 서버가 믿고 또 세 번 변환해 준다.\n횟수를 Redis에 두고 쿠키에는 번호만 담으면: 옛 쿠키를 보내도 서버의 횟수는 이미 0이다.\n그래서 남은 횟수는 서버 저장소에 둔다.\n(심화편의 '어떤 때 통하지 않는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "횟수는 Redis에 두고 쿠키엔 번호만 담는다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "남은 횟수를 서명 쿠키에 적어, 고친 값만 걸러 낸다",
+      "correct" : false,
+      "rationale" : "옛 값을 다시 보내도 손해가 없는 값이라면 서명이면 충분하다. 횟수는 3이던 옛 쿠키를 다시 보내면 서명이 진짜라 그대로 통한다.",
+      "matchText" : ""
+    }, {
+      "text" : "__Host- 접두사를 붙인 서명 쿠키로 범위를 묶어 적는다",
+      "correct" : false,
+      "rationale" : "쿠키가 다른 하위 사이트로 새거나 가려지는 문제라면 맞는 대응이다. 범위를 묶어도 같은 사이트로 옛 쿠키를 다시 보내는 것은 그대로다.",
+      "matchText" : ""
+    }, {
+      "text" : "서명 없는 쿠키에 횟수를 적고 Max-Age를 하루로 둔다",
+      "correct" : false,
+      "rationale" : "사용자가 고쳐도 손해가 없는 값이라면 이렇게 둬도 된다. 남용을 막아야 하는 횟수는 3을 99로 고쳐 보내면 그만이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "한 번만 써야 하는 상태는 서버 DB에 두고, 쿠키에는 그 기록을 찾는 번호만 담는다.",
+    "title" : "남용을 막아야 하는 횟수를 둘 곳",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "고급으로 냈지만 중급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 없음 (AI가 든 문장 「초기화 응답: Set-Cookie: store=; Path=/; Max-Age=0」은 지문에 그대로 없거나 너무 짧아 버림)\n조건이 달랐다면 정답이 되는 오답: 1개\n보기별 판단: 2) Max-Age를 이해하지 못하는 옛 브라우저 사용자만 남는 문제였다면 정답 3) 없음 4) 없음(옛 쿠키가 그대로 남는다)",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "QUESTION_REVEALS",
+    "message" : "내용을 몰라도 질문과 보기의 문장만 견줘 답을 좁힐 수 있습니다",
+    "detail" : "지문이 'Redis를 운영하고 있다'고 밝히고 보기 중 1번만 Redis를 되받아, 원리를 몰라도 지문과 보기를 맞대 보면 1번으로 좁혀진다.",
+    "suggestion" : {
+      "target" : "QUESTION",
+      "choiceIndex" : null,
+      "text" : "문서 변환 서비스가 비회원에게 하루 3번까지 무료 변환을 준다. 변환 한 번에 드는 서버 비용이 커서 남용을 막아야 한다. 한 개발자가 서버 저장소 없이 남은 횟수를 서명 쿠키에 적자고 제안했다. 이 조건에서 남은 횟수를 둘 곳으로 가장 적절한 것은?"
+    }
+  }, {
+    "problemIndex" : 2,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "고급으로 냈지만 중급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 「변환 한 번에 드는 서버 비용이 커서 남용을 막아야 하고, 팀은 이미 Redis를 운영하고 있다.」\n조건이 달랐다면 정답이 되는 오답: 1개\n보기별 판단: 1) 남용 비용이 작아 옛 쿠키를 다시 보내도 괜찮고 서버 저장소를 둘 수 없다면 정답 2) 없음 4) 없음(__Host-는 범위만 묶을 뿐 되돌려 보내기를 막지 못한다)",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "선택 응답은 Domain=example.com으로 맡겼는데 초기화 응답은 Domain 없이 보내, 브라우저는 이것을 호스트 전용 store라는 다른 쿠키의 삭제로 본다. 그래서 옛 쿠키가 남는다. 맡길 때와 같은 Domain=example.com을 적어야 지워진다. 2번은 만료 표기만 바꿀 뿐 범위가 그대로라 안 지워지고, 4번은 근본 원인을 그대로 두며, 3번은 옛 store 쿠키를 남긴 채 새 쿠키를 만든다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "자료를 견줘 원인을 찾게 해 고급다운 판단 문제다. 다만 오답 3·4는 어떤 조건에서도 먼저 할 조치가 되기 어려워 변별력이 약하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "서버 시각으로 계산한 Expires를 사용자 컴퓨터 시계로 견주니, 시계가 빠른 일부 사용자에게는 맡기자마자 지난 시각이 된다. 쿠키 개수가 적다는 조건이 2번을 지우고, 브라우저를 바꿔도 같다는 조건이 브라우저 고유 동작을 지운다. 3번은 값이 잘려도 쿠키는 실리고, 4번 Path 불일치는 일부가 아니라 모든 사용자에게 생긴다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "조건 두 개가 오답을 하나씩 지우도록 짜여 있어 좋은 고급 문제다. 지문의 'Expires' 언급이 정답 쪽으로 눈을 끌긴 하지만 원리를 알아야 확신할 수 있다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "서명 쿠키는 고친 값만 막고, 횟수가 많던 옛 진짜 쿠키를 다시 보내는 것은 막지 못한다. 변환 비용이 커서 남용을 막아야 하고 Redis가 이미 있으니, 횟수는 Redis에 두고 쿠키에는 그 기록을 찾는 번호만 담는다. 2번과 3번은 되돌려 보내기를 못 막고, 4번은 사용자가 횟수를 바로 고친다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "서명 쿠키의 한계를 조건에 묶어 판단하게 해 좋다. Redis가 지문과 정답 보기에만 나와 답이 드러나기 쉬우니, 오답 하나에도 서버 저장소를 쓰는 다른 방식을 넣으면 낫다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOURCE_FLAGGED",
+    "message" : "근거로 삼은 문단을 문서 사실 검수가 지적했습니다",
+    "detail" : "지적된 문장: 「서버 시각으로 30분 뒤를 `Expires`에 적었는데, 그 사용자의 컴퓨터 시계가 한 시간 빨라 브라우저가 이미 지난 시각으로 판단했다.」\n이유: Chromium은 Expires를 그대로 사용자 시계와 견주지 않는다. 응답의 Date 헤더(server_time)와 사용자 시각의 차이만큼 만료 시각을 보정한다(adjusted_expiry = parsed_expiry + (current - server_time)). 그래서 Date 헤더가 있으면 크롬에서는 이 장면이 생기지 않는다. 핵심 요약과 면접 답의 'Expires는 사용자 컴퓨터 시계로 견주어진다'도 모든 브라우저의 사실처럼 단정했다.\n바로잡으면: 표준(RFC 6265)은 Expires를 브라우저의 현재 시각과 견주라고 하지만, 크롬은 Date 헤더로 시계 차이를 보정한다. 시계가 틀린 사용자에게 수명이 어긋나는 일은 보정하지 않는 브라우저나 Date 헤더가 없을 때 생긴다. 상대 수명은 여전히 Max-Age로 적는 편이 안전하다.",
+    "suggestion" : null
+  } ]
 }
