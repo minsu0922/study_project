@@ -136,7 +136,9 @@
     "id" : 1074,
     "domain" : "NETWORK",
     "topic" : "HTTP/1.1·2·3 — 연결 하나를 나눠 쓰는 방식이 바뀌어 온 이유",
-    "memo" : "핵심 개념: 연결 재사용(keep-alive), 다중화, HOL 블로킹, QUIC\n설명할 것: 사진 50장짜리 페이지는 왜 느리게 뜨나 / HTTP/1.1은 연결을 어떻게 아꼈나 / HTTP/2는 연결 하나를 어떻게 나눠 쓰나 / HTTP/3는 왜 TCP를 버리고 UDP 위로 갔나\n다루지 않을 것: TCP 혼잡 제어\n그림: 1.1의 줄 서기와 2의 연결 하나 나눠 쓰기를 나란히(flowchart)"
+    "memo" : "핵심 개념: 연결 재사용(keep-alive), 다중화, HOL 블로킹, QUIC\n설명할 것: 사진 50장짜리 페이지는 왜 느리게 뜨나 / HTTP/1.1은 연결을 어떻게 아꼈나 / HTTP/2는 연결 하나를 어떻게 나눠 쓰나 / HTTP/3는 왜 TCP를 버리고 UDP 위로 갔나\n다루지 않을 것: TCP 혼잡 제어\n그림: 1.1의 줄 서기와 2의 연결 하나 나눠 쓰기를 나란히(flowchart)",
+    "lastUsedAt" : "2026-10-23",
+    "usedCount" : 1
   }, {
     "id" : 1108,
     "domain" : "NETWORK",
