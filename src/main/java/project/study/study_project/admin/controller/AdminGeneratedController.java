@@ -4,6 +4,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import project.study.study_project.llm.dto.GeneratedDiff;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.llm.dto.GeneratedPending;
@@ -41,6 +43,20 @@ public class AdminGeneratedController {
             return ApiResponse.ok(p.pending());
         } catch (RuntimeException e) {
             return ApiResponse.ok(GeneratedPending.unavailable("보낼 변경을 세지 못했습니다: " + e.getMessage()));
+        }
+    }
+
+    /** 보낼 파일 하나의 바뀐 줄. 보낼 파일 목록에 없는 경로는 이유만 돌려준다 */
+    @GetMapping("/diff")
+    public ApiResponse<GeneratedDiff> diff(@RequestParam String path) {
+        GeneratedPublisher p = publisher.getIfAvailable();
+        if (p == null) {
+            return ApiResponse.ok(GeneratedDiff.error(path, DISABLED));
+        }
+        try {
+            return ApiResponse.ok(p.diff(path));
+        } catch (RuntimeException e) {
+            return ApiResponse.ok(GeneratedDiff.error(path, "바뀐 줄을 읽지 못했습니다: " + e.getMessage()));
         }
     }
 

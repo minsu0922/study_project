@@ -3,6 +3,7 @@ package project.study.study_project.llm.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import project.study.study_project.llm.dto.GeneratedDiff;
 import project.study.study_project.llm.dto.GeneratedPending;
 import project.study.study_project.llm.dto.GeneratedPublishResult;
 import project.study.study_project.llm.dto.GeneratedPublishResult.Status;
@@ -241,6 +242,51 @@ class GeneratedPublisherTest {
 
         assertThat(timed.publish().status()).isEqualTo(Status.PUBLISHED);
         assertThat(timed.summary().count()).isZero();
+    }
+
+    @Test
+    void 고친_파일의_바뀐_줄을_보여_준다() throws IOException {
+        write(local, "generated/_topics.json", "{\"topics\":[1]}\n{\"memo\":\"새 주제\"}\n");
+
+        GeneratedDiff diff = publisher.diff("generated/_topics.json");
+
+        assertThat(diff.error()).isEmpty();
+        assertThat(diff.lines().get(0)).startsWith("@@");
+        assertThat(diff.lines()).contains("+{\"memo\":\"새 주제\"}");
+        assertThat(diff.truncated()).isFalse();
+    }
+
+    @Test
+    void 새_파일은_모든_줄을_더한_줄로_보여_준다() throws IOException {
+        write(local, "generated/_code-topics.json", "{\n\"a\":1\n}\n");
+
+        assertThat(publisher.diff("generated/_code-topics.json").lines()).containsExactly("+{", "+\"a\":1", "+}");
+    }
+
+    @Test
+    void 보낼_파일_목록에_없는_경로는_읽지_않는다() throws IOException {
+        write(local, "src/A.java", "class A { String secret; }\n");
+
+        GeneratedDiff outside = publisher.diff("src/A.java");
+        GeneratedDiff unchanged = publisher.diff("generated/_existing-questions.json");
+
+        assertThat(outside.lines()).isEmpty();
+        assertThat(outside.error()).contains("보낼 파일 목록에 없습니다");
+        assertThat(unchanged.error()).isNotEmpty();
+    }
+
+    @Test
+    void 너무_길면_앞부분만_싣는다() throws IOException {
+        StringBuilder big = new StringBuilder();
+        for (int i = 0; i < GeneratedPublisher.DIFF_MAX_LINES + 50; i++) {
+            big.append("line ").append(i).append('\n');
+        }
+        write(local, "generated/_rejection-notes.json", big.toString());
+
+        GeneratedDiff diff = publisher.diff("generated/_rejection-notes.json");
+
+        assertThat(diff.truncated()).isTrue();
+        assertThat(diff.lines()).hasSize(GeneratedPublisher.DIFF_MAX_LINES);
     }
 
     @Test

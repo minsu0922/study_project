@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import project.study.study_project.llm.dto.GeneratedDiff;
 import project.study.study_project.llm.dto.GeneratedPending;
 import project.study.study_project.llm.dto.GeneratedPending.Change;
 import project.study.study_project.llm.dto.GeneratedPending.Kind;
@@ -117,6 +118,52 @@ public class GeneratedPublisher {
         Unpushed unpushed = unpushed(repo);
         blockers.addAll(unpushed.blockers());
         return new GeneratedPending(true, "", scopeFiles(repo), unpushed.own(), blockers);
+    }
+
+    // ---------------------------------------------------------------- 내용 보기
+
+    /** 화면에 싣는 줄 수 상한. 현황 파일은 수백 줄이 바뀌기도 해 다 실으면 화면이 멈춘다 */
+    static final int DIFF_MAX_LINES = 400;
+
+    /**
+     * 보낼 파일 하나의 바뀐 줄. 경로는 보낼 파일 목록에 있어야 한다 — 화면이 넘긴 경로로
+     * 저장소의 아무 파일이나 읽지 못하게 한다.
+     */
+    public GeneratedDiff diff(String path) {
+        Resolved resolved = resolve();
+        if (resolved.repo() == null) {
+            return GeneratedDiff.error(path, resolved.unavailableReason());
+        }
+        Repo repo = resolved.repo();
+        GeneratedPending.File file = scopeFiles(repo).stream()
+                .filter(f -> f.path().equals(path))
+                .findFirst().orElse(null);
+        if (file == null) {
+            return GeneratedDiff.error(path, "보낼 파일 목록에 없습니다. 이미 보냈거나 다시 바뀌었을 수 있습니다.");
+        }
+        List<String> lines;
+        if (file.change() == Change.ADDED && !tracked(repo, path)) {
+            try {
+                lines = Files.readString(repo.git().dir().resolve(path), StandardCharsets.UTF_8)
+                        .lines().map(l -> "+" + l).toList();
+            } catch (IOException e) {
+                return GeneratedDiff.error(path, "파일을 읽지 못했습니다: " + e.getMessage());
+            }
+        } else {
+            String out = repo.git().runOrThrow("diff", "HEAD", "--no-color", "--no-ext-diff", "-U1", "--", path).out();
+            // diff --git·index·---·+++ 머리는 화면에 쓸모가 없다. 첫 @@부터 싣는다
+            lines = out.lines()
+                    .map(l -> l.endsWith("\r") ? l.substring(0, l.length() - 1) : l)
+                    .dropWhile(l -> !l.startsWith("@@"))
+                    .filter(l -> !l.startsWith("\\ No newline"))
+                    .toList();
+        }
+        boolean truncated = lines.size() > DIFF_MAX_LINES;
+        return new GeneratedDiff(path, truncated ? lines.subList(0, DIFF_MAX_LINES) : lines, truncated, "");
+    }
+
+    private static boolean tracked(Repo repo, String path) {
+        return repo.git().run("ls-files", "--error-unmatch", "--", path).ok();
     }
 
     // ---------------------------------------------------------------- 보내기

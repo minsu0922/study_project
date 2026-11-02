@@ -1986,6 +1986,20 @@ body.admin-shell {
 }
 .admin-bar a.bar-chip.off { background: #fbbf24; color: #1e1b4b; }
 .admin-bar a.bar-chip.off b { font-weight: 800; }
+/* 배치 현황의 "내용 보기" — 보낼 파일의 바뀐 줄. 현황 파일은 한 줄이 긴 JSON이라 줄을 접는다 */
+.diff-view {
+  max-height: 420px; overflow: auto; margin: 0; padding: 6px 0;
+  background: var(--fill); border: 1px solid var(--border); border-radius: 8px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, "D2Coding", monospace; font-size: 12px; line-height: 1.55;
+}
+.diff-view > div { padding: 0 10px; white-space: pre-wrap; word-break: break-all; }
+.diff-view .add { background: var(--correct-bg); color: var(--correct-fg); }
+.diff-view .del { background: var(--wrong-bg); color: var(--wrong-fg); }
+.diff-view .hunk { color: var(--muted); padding-top: 6px; }
+/* 짝지은 줄에서 실제로 달라진 글자. 배경을 진하게 하지 않고 테두리로 짚어 두 테마 모두에서 읽힌다 */
+.diff-view mark { background: transparent; color: inherit; font-weight: 700; outline: 1.5px solid currentColor; border-radius: 2px; }
+.diff-sum { margin: 0 0 6px; }
+
 /* 보낼 변경 — 꺼진 배치와 같은 호박색. 둘 다 "이대로 두면 배치가 모른다"는 뜻이다 */
 .admin-bar a.bar-chip.warn { background: #fbbf24; color: #1e1b4b; }
 .admin-bar a.bar-chip.warn b { font-weight: 800; }
