@@ -1,6 +1,7 @@
 package project.study.study_project.admin.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,7 +9,9 @@ import project.study.study_project.admin.dto.AdminBadgeCounts;
 import project.study.study_project.discussion.service.CommentReportService;
 import project.study.study_project.discussion.service.PostService;
 import project.study.study_project.llm.domain.TopicKind;
+import project.study.study_project.llm.dto.GeneratedPublishSummary;
 import project.study.study_project.llm.service.ChoiceRationaleBackfillService;
+import project.study.study_project.llm.service.GeneratedPublisher;
 import project.study.study_project.llm.service.LlmDocumentService;
 import project.study.study_project.llm.service.LlmProblemService;
 import project.study.study_project.llm.service.ProblemTitleBackfillService;
@@ -34,6 +37,8 @@ public class AdminBadgeService {
     private final PostService postService;
     private final ProblemTitleBackfillService titleBackfillService;
     private final ChoiceRationaleBackfillService rationaleBackfillService;
+    /** 설정으로 끄면 빈이 없다. 그때 칩은 숨는다 */
+    private final ObjectProvider<GeneratedPublisher> generatedPublisher;
 
     // 배치 현황 화면(AdminBatchService)과 같은 키·기본값이다. 어긋나면 띠와 화면이 다른 말을 한다
     @Value("${llm.generation.batch-enabled:true}")
@@ -54,6 +59,12 @@ public class AdminBadgeService {
                 rationaleBackfillService.missingRationaleCount(),
                 batchEnabled,
                 topicQueueService.count(TopicKind.CODE),
-                AdminCodeBatchService.nextRunAt(LocalDateTime.now(ZoneId.of("Asia/Seoul"))));
+                AdminCodeBatchService.nextRunAt(LocalDateTime.now(ZoneId.of("Asia/Seoul"))),
+                publishSummary());
+    }
+
+    private GeneratedPublishSummary publishSummary() {
+        GeneratedPublisher publisher = generatedPublisher.getIfAvailable();
+        return publisher == null ? GeneratedPublishSummary.UNAVAILABLE : publisher.summary();
     }
 }

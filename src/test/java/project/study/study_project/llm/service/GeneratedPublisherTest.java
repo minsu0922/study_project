@@ -225,6 +225,47 @@ class GeneratedPublisherTest {
         assertThat(outside.publish().status()).isEqualTo(Status.UNAVAILABLE);
     }
 
+    @Test
+    void 배지_요약은_15초_동안_다시_세지_않고_보낸_뒤에는_새로_센다() throws IOException {
+        MutableClock clock = new MutableClock();
+        GeneratedPublisher timed = new GeneratedPublisher(local.resolve("generated"), clock);
+        write(local, "generated/_topics.json", "{\"topics\":[2]}\n");
+        assertThat(timed.summary().count()).isEqualTo(1);
+        assertThat(timed.summary().oldestAt()).isNotNull();
+
+        write(local, "generated/_existing-questions.json", "{\"q\":[9]}\n");
+        assertThat(timed.summary().count()).isEqualTo(1);
+
+        clock.advance(GeneratedPublisher.SUMMARY_TTL.plusSeconds(1));
+        assertThat(timed.summary().count()).isEqualTo(2);
+
+        assertThat(timed.publish().status()).isEqualTo(Status.PUBLISHED);
+        assertThat(timed.summary().count()).isZero();
+    }
+
+    private static final class MutableClock extends java.time.Clock {
+        private java.time.Instant now = java.time.Instant.parse("2026-11-02T00:00:00Z");
+
+        void advance(java.time.Duration d) {
+            now = now.plus(d);
+        }
+
+        @Override
+        public java.time.ZoneId getZone() {
+            return java.time.ZoneOffset.UTC;
+        }
+
+        @Override
+        public java.time.Clock withZone(java.time.ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public java.time.Instant instant() {
+            return now;
+        }
+    }
+
     // ---------------------------------------------------------------- 도우미
 
     private GeneratedPublishResult assertBlockedWithoutCommit() {

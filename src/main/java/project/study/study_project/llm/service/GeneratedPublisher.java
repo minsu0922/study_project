@@ -10,12 +10,15 @@ import project.study.study_project.llm.dto.GeneratedPending.Change;
 import project.study.study_project.llm.dto.GeneratedPending.Kind;
 import project.study.study_project.llm.dto.GeneratedPublishResult;
 import project.study.study_project.llm.dto.GeneratedPublishResult.Status;
+import project.study.study_project.llm.dto.GeneratedPublishSummary;
 import project.study.study_project.llm.support.GitWorkspace;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -47,8 +50,16 @@ public class GeneratedPublisher {
     private static final List<String> IN_PROGRESS_MARKERS =
             List.of("rebase-merge", "rebase-apply", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD");
 
+    /** 배지 요약을 다시 쓰는 시간. 화면을 옮길 때마다 git status가 돌지 않게 한다 */
+    static final Duration SUMMARY_TTL = Duration.ofSeconds(15);
+
     private final Path importDir;
+    private final Clock clock;
     private final ReentrantLock lock = new ReentrantLock();
+    private volatile CachedSummary cachedSummary;
+
+    private record CachedSummary(GeneratedPublishSummary summary, Instant at) {
+    }
 
     @Autowired
     public GeneratedPublisher(@Value("${llm.import.dir:generated}") String importDir) {
@@ -56,7 +67,31 @@ public class GeneratedPublisher {
     }
 
     GeneratedPublisher(Path importDir) {
+        this(importDir, Clock.systemUTC());
+    }
+
+    GeneratedPublisher(Path importDir, Clock clock) {
         this.importDir = importDir;
+        this.clock = clock;
+    }
+
+    /** 배지용 요약. {@link #SUMMARY_TTL} 동안은 앞서 센 값을 돌려주고, 보낸 뒤에는 새로 센다. */
+    public GeneratedPublishSummary summary() {
+        CachedSummary cached = cachedSummary;
+        Instant now = clock.instant();
+        if (cached != null && cached.at().plus(SUMMARY_TTL).isAfter(now)) {
+            return cached.summary();
+        }
+        GeneratedPublishSummary summary;
+        try {
+            summary = GeneratedPublishSummary.of(pending());
+        } catch (GitWorkspace.TimeoutException | IllegalStateException e) {
+            // 배지는 모든 화면이 부른다. git이 막혀도 다른 배지는 떠야 한다
+            log.warn("보낼 변경을 세지 못했습니다: {}", e.getMessage());
+            summary = GeneratedPublishSummary.UNAVAILABLE;
+        }
+        cachedSummary = new CachedSummary(summary, now);
+        return summary;
     }
 
     /** 저장소 루트에서 도는 git과, 루트 기준 {@code generated/} 경로. */
@@ -100,6 +135,7 @@ public class GeneratedPublisher {
             log.warn("배치로 보내기 실패: {}", e.getMessage());
             return GeneratedPublishResult.of(Status.FAILED, e.getMessage(), List.of());
         } finally {
+            cachedSummary = null;
             lock.unlock();
         }
     }

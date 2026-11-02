@@ -48,7 +48,8 @@ final class AdminActionLabels {
             Map.entry("POST /api/admin/llm-problems/{id}/ai-findings/{index}/resolve", "문제 AI 지적 처리"),
             Map.entry("POST /api/admin/llm-documents/{id}/fact-findings/{index}/resolve", "문서 사실 지적 처리"),
             Map.entry("POST /api/admin/problems/backfill-titles", "제목 채우기"),
-            Map.entry("POST /api/admin/problems/backfill-rationales", "오답 설명 채우기")
+            Map.entry("POST /api/admin/problems/backfill-rationales", "오답 설명 채우기"),
+            Map.entry("POST /api/admin/generated/publish", "배치로 보내기")
     );
 
     private AdminActionLabels() {

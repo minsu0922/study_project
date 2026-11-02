@@ -19,9 +19,11 @@ package project.study.study_project.admin.dto;
  * @param batchEnabled     일일 배치 스위치({@code llm.generation.batch-enabled}). 상단 띠의 배치 칩
  * @param codeTopics       코드 문제 주제 수. 0이면 주간 코드 배치가 건너뛴다
  * @param codeNextRunAt    주간 코드 배치의 다음 실행 시각(KST)
+ * @param publish          배치로 보낼 변경(docs/29). 상단 띠의 "보낼 변경" 칩
  */
 public record AdminBadgeCounts(long problems, long conceptProblems, long codeProblems, long documents,
                                long topics, long reports, long commentReports, long errata,
                                long untitled, long missingRationale,
-                               boolean batchEnabled, long codeTopics, java.time.LocalDateTime codeNextRunAt) {
+                               boolean batchEnabled, long codeTopics, java.time.LocalDateTime codeNextRunAt,
+                               project.study.study_project.llm.dto.GeneratedPublishSummary publish) {
 }
