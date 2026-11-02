@@ -97,6 +97,8 @@ function renderAdminShell(active = "") {
       <a class="brand" href="/admin/llm.html"><span class="brand-site">csquiz&nbsp;</span>관리</a>
       <!-- 배치 칩 — 어느 화면에서든 알아야 하는 기계 상태. 배지가 세는 응답에서 채운다 -->
       <a class="bar-chip" id="barBatch" href="/admin/batch.html" hidden></a>
+      <!-- 보낼 변경 칩(docs/29) — 앱이 고친 파일은 보내야 배치에 닿는다. 잊지 않게 있을 때만 띄운다 -->
+      <a class="bar-chip warn" id="barPublish" href="/admin/batch.html#publish" hidden></a>
       <span class="spacer"></span>
       <!-- 통합 검색. 검수·제보·대화에서 문제를 번호나 제목으로 부르는데 목록을 넘겨 찾아야 했다 -->
       <form class="bar-jump" id="barJump" role="search">
@@ -439,6 +441,31 @@ function renderBatchChip(c) {
 }
 
 /**
+ * 띠의 보낼 변경 칩. 보낼 것이 있을 때만 호박색으로 띄운다.
+ * 운영 서버처럼 저장소가 없는 곳에서는 늘 숨는다(available=false).
+ */
+function renderPublishChip(p) {
+  const chip = document.getElementById("barPublish");
+  if (!chip) return;
+  if (!p || !p.available || p.count === 0) {
+    chip.hidden = true;
+    return;
+  }
+  chip.innerHTML = `<span><span class="bar-wide">보낼&nbsp;</span>변경 <b>${p.count}</b></span>`;
+  const oldest = p.oldestAt ? formatPublishTime(p.oldestAt) + "부터 쌓였습니다. " : "";
+  chip.title = `앱이 고친 파일 ${p.count}개가 아직 배치에 닿지 않았습니다. ${oldest}`
+    + "다음 일일 배치는 한국 시각 01:17입니다. 누르면 보내기 화면";
+  chip.hidden = false;
+}
+
+/** ISO 시각을 "11/02 21:03"으로. 보낼 변경 칩과 배치 화면이 같이 쓴다 */
+function formatPublishTime(iso) {
+  const d = new Date(iso);
+  const two = n => String(n).padStart(2, "0");
+  return `${d.getMonth() + 1}/${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
+}
+
+/**
  * 기둥의 배지를 갱신한다 — <b>셋의 뜻이 서로 다르다</b>.
  *
  * <p>배지를 <b>모든 화면</b>에서 부르는 것은 의도다. "검수할 게 남았다"는 지금 보고 있는
@@ -477,6 +504,7 @@ async function refreshAdminBadges() {
   setBadge("reports", reports + errata, reports + errata > 0);
   setBadge("comments", commentReports, commentReports > 0);
   renderBatchChip(c);
+  renderPublishChip(c.publish);
 
   /* 센 숫자를 화면 쪽에도 흘린다.
    *

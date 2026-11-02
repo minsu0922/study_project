@@ -7,12 +7,13 @@ import java.util.List;
  *
  * @param status  결과 종류
  * @param message 사람이 읽을 한 줄 설명. 실패면 이유와 할 일
- * @param commit  push한 커밋 번호. 보내지 못했으면 빈 문자열
- * @param files   이번에 커밋한 파일
- * @param details 막힌 이유·겹친 파일·충돌 파일 같은 목록
+ * @param commit    push한 커밋 번호. 보내지 못했으면 빈 문자열
+ * @param commitUrl 그 커밋의 GitHub 주소. origin이 GitHub가 아니거나 못 보냈으면 빈 문자열
+ * @param files     이번에 커밋한 파일
+ * @param details   막힌 이유·겹친 파일·충돌 파일 같은 목록
  */
-public record GeneratedPublishResult(Status status, String message, String commit, List<String> files,
-                                     List<String> details) {
+public record GeneratedPublishResult(Status status, String message, String commit, String commitUrl,
+                                     List<String> files, List<String> details) {
 
     public enum Status {
         /** 커밋하고 push했다 */
@@ -34,7 +35,7 @@ public record GeneratedPublishResult(Status status, String message, String commi
     }
 
     public static GeneratedPublishResult of(Status status, String message, List<String> details) {
-        return new GeneratedPublishResult(status, message, "", List.of(), details);
+        return new GeneratedPublishResult(status, message, "", "", List.of(), details);
     }
 
     public boolean published() {

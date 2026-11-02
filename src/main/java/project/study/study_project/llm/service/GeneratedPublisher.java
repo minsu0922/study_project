@@ -225,14 +225,23 @@ public class GeneratedPublisher {
                 log.info("배치로 보냄: {} 파일 {}개", hash, paths.size());
                 return new GeneratedPublishResult(Status.PUBLISHED,
                         paths.isEmpty() ? "앞서 남은 커밋을 보냈습니다." : "파일 " + paths.size() + "개를 보냈습니다.",
-                        hash, paths, List.of());
+                        hash, commitUrl(git.run("remote", "get-url", REMOTE).out().strip(), hash), paths, List.of());
             }
             lastError = push.lastErrorLine();
         }
         log.warn("배치로 보내기: push 실패, 커밋은 남김 — {}", lastError);
         return new GeneratedPublishResult(Status.PUSH_FAILED,
                 "커밋은 남기고 push만 실패했습니다. 다시 누르면 push만 합니다." + (lastError.isEmpty() ? "" : " (" + lastError + ")"),
-                "", paths, List.of());
+                "", "", paths, List.of());
+    }
+
+    private static final java.util.regex.Pattern GITHUB_REMOTE =
+            java.util.regex.Pattern.compile("github\\.com[:/]([^/]+/[^/]+?)(?:\\.git)?/?$");
+
+    /** origin 주소(https·ssh 둘 다)에서 GitHub 커밋 주소를 만든다. GitHub가 아니면 빈 문자열. */
+    static String commitUrl(String remoteUrl, String hash) {
+        java.util.regex.Matcher m = GITHUB_REMOTE.matcher(remoteUrl);
+        return m.find() ? "https://github.com/" + m.group(1) + "/commit/" + hash : "";
     }
 
     /** 그 파일만 커밋한다. 사람이 스테이지해 둔 다른 파일은 {@code --only}가 커밋에서 뺀다. */

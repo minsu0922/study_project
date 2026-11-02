@@ -21,6 +21,9 @@ import project.study.study_project.global.response.ApiResponse;
  * <p>경로가 {@code /batch-status}인 이유도 같다. {@code /batch}로 두면 나중에
  * {@code POST /batch/run} 같은 것이 자연스러워 보이는데, 이 앱에서는 만들 수 없는 것이라
  * 이름부터 <b>"상태"</b>로 못 박는다.
+ *
+ * <p>같은 화면의 "배치로 보내기" 버튼은 {@link AdminGeneratedController}다. 배치를 돌리지 않고
+ * 앱이 고친 파일을 저장소에 올리기만 해서, 이 컨트롤러와 나눴다.
  */
 @RestController
 @RequestMapping("/api/admin/batch-status")

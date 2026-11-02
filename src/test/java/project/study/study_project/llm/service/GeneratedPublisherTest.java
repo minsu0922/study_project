@@ -243,6 +243,17 @@ class GeneratedPublisherTest {
         assertThat(timed.summary().count()).isZero();
     }
 
+    @Test
+    void GitHub_원격이면_커밋_주소를_만든다() {
+        assertThat(GeneratedPublisher.commitUrl("https://github.com/minsu/study_project.git", "abc"))
+                .isEqualTo("https://github.com/minsu/study_project/commit/abc");
+        assertThat(GeneratedPublisher.commitUrl("git@github.com:minsu/study_project.git", "abc"))
+                .isEqualTo("https://github.com/minsu/study_project/commit/abc");
+        assertThat(GeneratedPublisher.commitUrl("https://github.com/minsu/study_project", "abc"))
+                .isEqualTo("https://github.com/minsu/study_project/commit/abc");
+        assertThat(GeneratedPublisher.commitUrl(tmp.resolve("remote.git").toString(), "abc")).isEmpty();
+    }
+
     private static final class MutableClock extends java.time.Clock {
         private java.time.Instant now = java.time.Instant.parse("2026-11-02T00:00:00Z");
 
