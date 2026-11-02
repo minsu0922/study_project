@@ -45,6 +45,7 @@ import project.study.study_project.llm.support.GenerationLimits;
  *                   중급에 다섯 형태를 열었더니 실물이 세 번 연속 상황형으로만 나와서 붙였다 —
  *                   재료가 가장 풍부한 쪽으로 모델이 늘 돌아가므로, 다른 형태는 사람이 지목해야 한다.
  *                   검수 뒤 한두 건을 메워 넣을 때 특히 그렇다(개수가 적으면 섞을 여지가 없다)
+ * @param aiReview   생성 직후 AI 검수를 돌릴지. 객관식에만 쓰인다. 검수 1회에 요금이 더 나간다
  */
 public record LlmDocumentGenerateRequest(
 
@@ -65,6 +66,9 @@ public record LlmDocumentGenerateRequest(
 
         String slug,
 
-        QuestionKind questionKind
+        QuestionKind questionKind,
+
+        // null이면 켠다. 화면 체크박스를 끄면 false가 온다(REVIEW 2026-11-01 순위 4)
+        Boolean aiReview
 ) {
 }

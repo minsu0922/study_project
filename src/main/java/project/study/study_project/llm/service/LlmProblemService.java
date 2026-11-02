@@ -32,6 +32,8 @@ import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.client.ProblemReview;
+import project.study.study_project.llm.client.ProblemReviewer;
+import org.springframework.beans.factory.ObjectProvider;
 import project.study.study_project.llm.dto.DraftAiFinding;
 import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmDraftResponse;
@@ -128,6 +130,8 @@ public class LlmProblemService {
      * 다음 생성부터 반영되게 한다.
      */
     private final DomainSettingService domainSettingService;
+    /** 문서로 만든 객관식을 생성 직후 검수한다(REVIEW 순위 4). 부를 때마다 새 검수기를 받는다 */
+    private final ObjectProvider<ProblemReviewer> problemReviewers;
 
     public LlmProblemService(ProblemGenerator problemGenerator,
                              GeneratedProblemDraftRepository draftRepository,
@@ -138,7 +142,9 @@ public class LlmProblemService {
                              ObjectMapper objectMapper,
                              ApplicationEventPublisher events,
                              @org.springframework.beans.factory.annotation.Value("${llm.generation.model:claude-opus-5}") String model,
-                             DomainSettingService domainSettingService) {
+                             DomainSettingService domainSettingService,
+                             ObjectProvider<ProblemReviewer> problemReviewers) {
+        this.problemReviewers = problemReviewers;
         this.problemGenerator = problemGenerator;
         this.draftRepository = draftRepository;
         this.problemRepository = problemRepository;
@@ -316,9 +322,49 @@ public class LlmProblemService {
         // 등록 문서만 근거 slug를 남긴다(위 주석). 올린 파일은 가리킬 문서가 없어 비운다.
         String documentSlug = document.kind() == SourceDocument.Kind.GENERATED ? document.slug() : null;
 
+        // 저장 전에 검수한다. 검수가 보는 것은 모델이 낸 원본이라 저장 단계의 걸러냄과 무관하다
+        List<ProblemReview.Finding> findings = shouldReview(request, type) ? review(items, difficulty, document) : null;
+
         // 문서를 손에 쥔 유일한 경로다 — 그대로 넘겨 인용 대조까지 걸리게 한다(V18).
-        return saveDrafts(domain, difficulty, type, items, model, documentSlug, document)
-                .stream().map(this::toResponse).toList();
+        List<GeneratedProblemDraft> drafts = saveDrafts(domain, difficulty, type, items, model, documentSlug, document);
+        if (findings != null) {
+            attachFindings(items, drafts, findings);
+        }
+        return drafts.stream().map(this::toResponse).toList();
+    }
+
+    /** 배치와 같은 조건이다: 객관식만. 문서는 이 경로에 늘 있다. 요청이 끄지 않았으면 켠다 */
+    private static boolean shouldReview(LlmDocumentGenerateRequest request, ProblemType type) {
+        return type == ProblemType.MULTIPLE_CHOICE && !Boolean.FALSE.equals(request.aiReview());
+    }
+
+    /**
+     * @return 지적 목록. 검수가 실패하면 {@code null} — 초안은 지적 없이 그대로 저장한다.
+     *         요금을 낸 생성 결과를 검수 실패 때문에 버리면 손해가 더 크다(배치와 같은 판단)
+     */
+    private List<ProblemReview.Finding> review(List<GeneratedProblemItem> items, Difficulty difficulty,
+                                               SourceDocument document) {
+        try {
+            return problemReviewers.getObject().review(items, difficulty, document);
+        } catch (RuntimeException e) {
+            log.warn("관리 화면 생성: AI 검수 실패, 지적 없이 저장 — {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** 지적을 질문으로 짝지어 초안에 적는다. 지적이 없는 초안에도 빈 목록을 적어 "검수함"을 남긴다 */
+    private void attachFindings(List<GeneratedProblemItem> items, List<GeneratedProblemDraft> drafts,
+                                List<ProblemReview.Finding> findings) {
+        DraftAiFinding.Grouped grouped = DraftAiFinding.groupByQuestion(items, findings);
+        try {
+            for (GeneratedProblemDraft draft : drafts) {
+                draft.recordAiFindings(objectMapper.writeValueAsString(grouped.of(draft.getQuestion())));
+            }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.warn("관리 화면 생성: AI 검수 지적을 적지 못함 — {}", e.getMessage());
+            return;
+        }
+        draftRepository.saveAll(drafts);
     }
 
     /**

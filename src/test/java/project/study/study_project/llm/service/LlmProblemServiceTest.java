@@ -22,6 +22,9 @@ import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemGenerator;
+import project.study.study_project.llm.client.ProblemReview;
+import project.study.study_project.llm.client.ProblemReviewer;
+import org.springframework.beans.factory.ObjectProvider;
 import project.study.study_project.llm.client.QuestionKind;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
@@ -67,6 +70,28 @@ class LlmProblemServiceTest {
 
     private FakeGenerator fakeGenerator;
     private LlmProblemService service;
+    /** 생성 직후 검수(REVIEW 순위 4). 검수 경로를 보는 테스트만 쓰고, 나머지는 요청에서 끈다 */
+    private FakeReviewer fakeReviewer;
+    private ObjectProvider<ProblemReviewer> reviewers;
+
+    /** 정해진 지적을 돌려주거나 던지는 가짜 검수기. 받은 인자를 기록한다 */
+    static class FakeReviewer implements ProblemReviewer {
+        List<ProblemReview.Finding> toReturn = List.of();
+        RuntimeException toThrow;
+        int calls;
+        SourceDocument calledSource;
+
+        @Override
+        public List<ProblemReview.Finding> review(List<GeneratedProblemItem> problems, Difficulty labeled,
+                                                  SourceDocument source) {
+            calls++;
+            calledSource = source;
+            if (toThrow != null) {
+                throw toThrow;
+            }
+            return toReturn;
+        }
+    }
 
     /** 정해진 결과를 돌려주고 호출 인자를 기록하는 가짜 생성기 — Mockito mock보다 인자 검증이 읽기 쉽다. */
     static class FakeGenerator implements ProblemGenerator {
@@ -105,6 +130,11 @@ class LlmProblemServiceTest {
     @BeforeEach
     void setUp() {
         fakeGenerator = new FakeGenerator();
+        fakeReviewer = new FakeReviewer();
+        @SuppressWarnings("unchecked")
+        ObjectProvider<ProblemReviewer> provider = mock(ObjectProvider.class);
+        lenient().when(provider.getObject()).thenAnswer(inv -> fakeReviewer);
+        reviewers = provider;
         service = newService(DEFAULT_BATCH_DOMAINS);
         // saveAll은 받은 것을 그대로 돌려준다 — 저장 결과 검증은 인자 캡처로 한다
         lenient().when(draftRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -140,7 +170,7 @@ class LlmProblemServiceTest {
         // 경로는 ProblemReportFeedbackTest가 진짜 DB로 따로 본다(합류 지점이 여기라는 것까지).
         return new LlmProblemService(fakeGenerator, draftRepository, problemRepository,
                 adminProblemService, documentRepository, null, new ObjectMapper(), event -> { },
-                "test-model", domainSettingService);
+                "test-model", domainSettingService, reviewers);
     }
 
     /** 거절 사례 조회 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */
@@ -171,6 +201,80 @@ class LlmProblemServiceTest {
      * 재사용하면서 어긋나기 쉬운 세 가지를 못 박는다: ① 칸을 자동으로 고르지 않는가,
      * ② 근거 문서가 그대로 생성기까지 가는가, ③ 중복 회피·거절 되먹임이 빠지지 않았는가.
      */
+    /** REVIEW 2026-11-01 순위 4 — 문서로 만든 객관식을 생성 직후 배치와 같은 검수기로 본다. */
+    @Nested
+    @DisplayName("관리 화면 생성 직후 AI 검수")
+    class ReviewAfterGenerate {
+
+        private final SourceDocument uploaded = new SourceDocument(
+                "uploaded", "운영 가이드", "# 운영 가이드\n\n본문이다.", SourceDocument.Kind.UPLOADED);
+
+        private LlmDocumentGenerateRequest request(ProblemType type, Boolean aiReview) {
+            return new LlmDocumentGenerateRequest(TestDomains.NETWORK, Difficulty.BEGINNER, type, 2,
+                    null, null, null, aiReview);
+        }
+
+        @Test
+        @DisplayName("요청이 검수를 끄지 않았으면 근거 문서와 함께 검수하고 지적을 질문에 짝지어 적는다")
+        void reviewsAndAttachesFindings() {
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0), mcItem("문제2", 1));
+            fakeReviewer.toReturn = List.of(new ProblemReview.Finding(1, ProblemReview.FindingType.ANSWER_MISMATCH, "정답이 다르다"));
+
+            List<GeneratedProblemDraft> saved = savedDrafts(() ->
+                    service.generateFromDocument(request(ProblemType.MULTIPLE_CHOICE, null), uploaded));
+
+            assertThat(fakeReviewer.calls).isEqualTo(1);
+            assertThat(fakeReviewer.calledSource).isSameAs(uploaded);
+            assertThat(saved).extracting(GeneratedProblemDraft::getQuestion).containsExactly("문제1", "문제2");
+            assertThat(saved.get(0).getAiFindingsJson()).isEqualTo("[]");
+            assertThat(saved.get(1).getAiFindingsJson()).contains("ANSWER_MISMATCH").contains("정답이 다르다");
+        }
+
+        @Test
+        @DisplayName("체크박스를 끄면 검수하지 않고 지적 칸을 비운다(검수 안 함)")
+        void skipsWhenTurnedOff() {
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+
+            List<GeneratedProblemDraft> saved = savedDrafts(() ->
+                    service.generateFromDocument(request(ProblemType.MULTIPLE_CHOICE, false), uploaded));
+
+            assertThat(fakeReviewer.calls).isZero();
+            assertThat(saved.get(0).getAiFindingsJson()).isNull();
+        }
+
+        @Test
+        @DisplayName("객관식이 아니면 검수하지 않는다 — 검수기가 보기 넷을 가리고 푸는 객관식 전용이다")
+        void skipsNonMultipleChoice() {
+            fakeGenerator.toReturn = List.of(new GeneratedProblemItem("정답은?", "TCP", "해설입니다.", List.of()));
+
+            service.generateFromDocument(request(ProblemType.SHORT_ANSWER, null), uploaded);
+
+            assertThat(fakeReviewer.calls).isZero();
+        }
+
+        @Test
+        @DisplayName("검수가 실패해도 초안은 지적 없이 저장한다 — 요금을 낸 생성 결과를 버리지 않는다")
+        void keepsDraftsWhenReviewFails() {
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+            fakeReviewer.toThrow = new IllegalStateException("API 오류");
+
+            List<GeneratedProblemDraft> saved = savedDrafts(() ->
+                    service.generateFromDocument(request(ProblemType.MULTIPLE_CHOICE, true), uploaded));
+
+            assertThat(saved).hasSize(1);
+            assertThat(saved.get(0).getAiFindingsJson()).isNull();
+        }
+
+        /** 마지막으로 저장한 초안 목록. 지적은 첫 저장 뒤에 적고 다시 저장한다 */
+        @SuppressWarnings("unchecked")
+        private List<GeneratedProblemDraft> savedDrafts(Runnable action) {
+            action.run();
+            ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
+            org.mockito.Mockito.verify(draftRepository, org.mockito.Mockito.atLeastOnce()).saveAll(captor.capture());
+            return captor.getValue();
+        }
+    }
+
     @Nested
     @DisplayName("업로드 문서 기반 생성")
     class GenerateFromUpload {
@@ -190,7 +294,7 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null, null, null), uploaded);
+                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 3, null, null, null, false), uploaded);
 
             assertThat(fakeGenerator.calledDomain).isEqualTo(TestDomains.NETWORK);
             assertThat(fakeGenerator.calledDifficulty).isEqualTo(Difficulty.ADVANCED);
@@ -204,7 +308,7 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
+                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null, false), uploaded);
 
             assertThat(fakeGenerator.calledSourceDocument).isSameAs(uploaded);
             assertThat(fakeGenerator.calledSourceDocument.kind()).isEqualTo(SourceDocument.Kind.UPLOADED);
@@ -221,7 +325,7 @@ class LlmProblemServiceTest {
             fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
+                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null, false), uploaded);
 
             assertThat(fakeGenerator.calledAvoid).contains("이미 있는 문제");
             assertThat(fakeGenerator.calledRejectionNotes).isNotNull();
@@ -239,7 +343,7 @@ class LlmProblemServiceTest {
             ArgumentCaptor<List<GeneratedProblemDraft>> captor = ArgumentCaptor.forClass(List.class);
 
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null), uploaded);
+                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.MULTIPLE_CHOICE, 1, null, null, null, false), uploaded);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
             assertThat(captor.getValue()).singleElement()
@@ -250,7 +354,7 @@ class LlmProblemServiceTest {
         @DisplayName("서술형은 업로드 경로에서도 거부한다 — 자동채점이 안 되는 건 출처와 무관하다")
         void rejectsEssayOnThisPathToo() {
             assertThatThrownBy(() -> service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null, null, null), uploaded))
+                    TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.ESSAY, 1, null, null, null, false), uploaded))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("자동채점");
         }
@@ -300,7 +404,7 @@ class LlmProblemServiceTest {
 
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source);
+                    TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null, false), source);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(captor.capture());
             assertThat(captor.getValue()).singleElement()
@@ -342,7 +446,7 @@ class LlmProblemServiceTest {
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
                     TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG,
-                    QuestionKind.JUDGMENT), source);
+                    QuestionKind.JUDGMENT, false), source);
 
             assertThat(fakeGenerator.calledRequestedKind).isEqualTo(QuestionKind.JUDGMENT);
         }
@@ -357,7 +461,7 @@ class LlmProblemServiceTest {
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
                     TestDomains.NETWORK, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG,
-                    null), source);
+                    null, false), source);
 
             assertThat(fakeGenerator.calledRequestedKind).isNull();
         }
@@ -392,7 +496,7 @@ class LlmProblemServiceTest {
             SourceDocument source = service.findRegisteredDocument(SLUG);
 
             assertThatThrownBy(() -> service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source))
+                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null, false), source))
                     .isInstanceOf(BusinessException.class)
                     .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.QUIZ_004))
                     .as("무엇을 고쳐야 하는지까지 말해야 문서가 아니라 드롭다운을 고치러 간다")
@@ -419,7 +523,7 @@ class LlmProblemServiceTest {
 
             SourceDocument source = service.findRegisteredDocument(SLUG);
             service.generateFromDocument(new LlmDocumentGenerateRequest(
-                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null), source);
+                    TestDomains.NETWORK, Difficulty.ADVANCED, ProblemType.MULTIPLE_CHOICE, 1, null, SLUG, null, false), source);
 
             org.mockito.Mockito.verify(draftRepository).saveAll(any());
         }

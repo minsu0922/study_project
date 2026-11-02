@@ -189,21 +189,10 @@ public class DraftImportService {
      */
     private void attachAiFindings(GeneratedBatchFile batch, List<GeneratedProblemDraft> drafts)
             throws IOException {
-        Map<String, List<DraftAiFinding>> byQuestion = new HashMap<>();
-        for (ProblemReview.Finding finding : batch.reviewFindings()) {
-            if (finding == null || finding.type() == null
-                    || finding.problemIndex() < 0 || finding.problemIndex() >= batch.problems().size()) {
-                log.warn("초안 흡수: 짝을 찾을 수 없는 AI 검수 지적을 버림 — {}", finding);
-                continue;
-            }
-            String question = Texts.trimToNull(batch.problems().get(finding.problemIndex()).question());
-            byQuestion.computeIfAbsent(question, q -> new ArrayList<>())
-                    .add(new DraftAiFinding(finding.type(), finding.message(), finding.detail(),
-                            finding.suggestion()));
-        }
+        DraftAiFinding.Grouped grouped = DraftAiFinding.groupByQuestion(batch.problems(), batch.reviewFindings());
+        grouped.dropped().forEach(f -> log.warn("초안 흡수: 짝을 찾을 수 없는 AI 검수 지적을 버림 — {}", f));
         for (GeneratedProblemDraft draft : drafts) {
-            draft.recordAiFindings(objectMapper.writeValueAsString(
-                    byQuestion.getOrDefault(draft.getQuestion(), List.of())));
+            draft.recordAiFindings(objectMapper.writeValueAsString(grouped.of(draft.getQuestion())));
         }
     }
 }
