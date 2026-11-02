@@ -264,6 +264,10 @@ llm:
     # 저장소 루트 기준 상대 경로. GitHub Actions가 커밋하는 위치와 반드시 같아야 한다.
     # 앱을 다른 작업 디렉터리에서 띄운다면 절대 경로로 바꿔야 파일을 찾는다.
     dir: generated
+  # 관리 콘솔에서 바뀐 generated/ 파일을 커밋·push하는 기능(docs/29). 저장소가 없는 운영 컨테이너에서는
+  # 켜져 있어도 "쓸 수 없음"만 돌려준다. 테스트는 꺼 둔다 — 켜면 실제 저장소에 커밋한다.
+  publish:
+    enabled: true
 
 # 운영 점검 창구 (Actuator) — 의존성 추가 배경은 build.gradle 주석.
 #

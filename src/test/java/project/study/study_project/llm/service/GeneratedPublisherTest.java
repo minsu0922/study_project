@@ -1,0 +1,281 @@
+package project.study.study_project.llm.service;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import project.study.study_project.llm.dto.GeneratedPending;
+import project.study.study_project.llm.dto.GeneratedPublishResult;
+import project.study.study_project.llm.dto.GeneratedPublishResult.Status;
+import project.study.study_project.llm.support.GitWorkspace;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * 배치로 보내기(docs/29 9장). 실제 저장소는 건드리지 않는다 — 임시 폴더에 원격 역할의 빈 저장소와
+ * 복제본 둘(내 PC, 배치)을 만들어 쓴다.
+ */
+class GeneratedPublisherTest {
+
+    @TempDir
+    Path tmp;
+
+    Path remote;
+    Path local;
+    Path other;
+    GitWorkspace localGit;
+    GitWorkspace otherGit;
+    GeneratedPublisher publisher;
+
+    @BeforeEach
+    void setUp() throws IOException {
+        remote = tmp.resolve("remote.git");
+        Files.createDirectories(remote);
+        new GitWorkspace(remote).runOrThrow("init", "-q", "--bare", "--initial-branch=main");
+
+        local = clone("local");
+        localGit = new GitWorkspace(local);
+        write(local, "generated/_topics.json", "{\"topics\":[1]}\n");
+        write(local, "generated/_existing-questions.json", "{\"q\":[]}\n");
+        write(local, "generated/documents/2026-10-29.json", "{\"doc\":\"v1\"}\n");
+        write(local, "generated/2026-11-02.json", "{\"batch\":1}\n");
+        write(local, "src/A.java", "class A {}\n");
+        write(local, "src/B.java", "class B {}\n");
+        localGit.runOrThrow("add", "-A");
+        localGit.runOrThrow("commit", "-q", "-m", "init");
+        localGit.runOrThrow("push", "-q", "-u", "origin", "main");
+
+        other = clone("other");
+        otherGit = new GitWorkspace(other);
+
+        publisher = new GeneratedPublisher(local.resolve("generated"));
+    }
+
+    @Test
+    void 범위_밖_파일은_보내지_않는다() throws IOException {
+        write(local, "generated/_topics.json", "{\"topics\":[2]}\n");
+        write(local, "generated/2026-11-02.json", "{\"batch\":\"손으로 고침\"}\n");
+        write(local, "src/A.java", "class A { int x; }\n");
+
+        GeneratedPublishResult result = publisher.publish();
+
+        assertThat(result.status()).isEqualTo(Status.PUBLISHED);
+        assertThat(result.files()).containsExactly("generated/_topics.json");
+        assertThat(committedFiles("origin/main")).containsExactly("generated/_topics.json");
+        assertThat(dirtyFiles()).containsExactlyInAnyOrder("generated/2026-11-02.json", "src/A.java");
+        assertThat(subject("origin/main")).isEqualTo(GeneratedPublisher.SUBJECT_PREFIX + "1개를 배치로 보낸다");
+    }
+
+    @Test
+    void 스테이지해_둔_다른_파일은_커밋에_섞이지_않고_스테이지에_남는다() throws IOException {
+        write(local, "src/A.java", "class A { int staged; }\n");
+        localGit.runOrThrow("add", "src/A.java");
+        write(local, "generated/_existing-questions.json", "{\"q\":[1]}\n");
+
+        GeneratedPublishResult result = publisher.publish();
+
+        assertThat(result.status()).isEqualTo(Status.PUBLISHED);
+        assertThat(committedFiles("HEAD")).containsExactly("generated/_existing-questions.json");
+        assertThat(GitWorkspace.splitNul(localGit.runOrThrow("diff", "--cached", "--name-only", "-z").out()))
+                .containsExactly("src/A.java");
+    }
+
+    @Test
+    void 새_파일도_보내고_종류와_줄_수를_알려_준다() throws IOException {
+        write(local, "generated/_code-topics.json", "{\n\"a\":1\n}\n");
+        write(local, "generated/documents/2026-10-29.json", "{\"doc\":\"v2\"}\n");
+
+        GeneratedPending pending = publisher.pending();
+
+        assertThat(pending.available()).isTrue();
+        assertThat(pending.blockers()).isEmpty();
+        assertThat(pending.files()).extracting(GeneratedPending.File::path)
+                .containsExactly("generated/_code-topics.json", "generated/documents/2026-10-29.json");
+        GeneratedPending.File added = pending.files().get(0);
+        assertThat(added.kind()).isEqualTo(GeneratedPending.Kind.SNAPSHOT);
+        assertThat(added.change()).isEqualTo(GeneratedPending.Change.ADDED);
+        assertThat(added.added()).isEqualTo(3);
+        GeneratedPending.File doc = pending.files().get(1);
+        assertThat(doc.kind()).isEqualTo(GeneratedPending.Kind.SOURCE_DOCUMENT);
+        assertThat(doc.added()).isEqualTo(1);
+        assertThat(doc.deleted()).isEqualTo(1);
+        assertThat(doc.modifiedAt()).isNotNull();
+
+        assertThat(publisher.publish().status()).isEqualTo(Status.PUBLISHED);
+        assertThat(publisher.pending().files()).isEmpty();
+    }
+
+    @Test
+    void 원격이_앞서_있으면_rebase한_뒤_보내고_사람이_고치던_파일은_그대로다() throws IOException {
+        pushFromOther("generated/2026-11-03.json", "{\"batch\":2}\n");
+        write(local, "src/B.java", "class B { int dirty; }\n");
+        write(local, "src/A.java", "class A { int staged; }\n");
+        localGit.runOrThrow("add", "src/A.java");
+        write(local, "generated/_topics.json", "{\"topics\":[3]}\n");
+
+        GeneratedPublishResult result = publisher.publish();
+
+        assertThat(result.status()).isEqualTo(Status.PUBLISHED);
+        assertThat(GitWorkspace.splitNul(localGit.runOrThrow("diff", "--cached", "--name-only", "-z").out()))
+                .containsExactly("src/A.java");
+        assertThat(localGit.runOrThrow("stash", "list").out()).isBlank();
+        assertThat(localGit.runOrThrow("rev-parse", "HEAD~1").out().strip())
+                .isEqualTo(otherGit.runOrThrow("rev-parse", "HEAD").out().strip());
+        assertThat(Files.readString(local.resolve("src/B.java"))).isEqualTo("class B { int dirty; }\n");
+        assertThat(Files.exists(local.resolve("generated/2026-11-03.json"))).isTrue();
+    }
+
+    @Test
+    void rebase가_충돌하면_누르기_전_상태로_돌아온다() throws IOException {
+        pushFromOther("generated/_topics.json", "{\"topics\":[\"배치\"]}\n");
+        String before = head();
+        write(local, "generated/_topics.json", "{\"topics\":[\"앱\"]}\n");
+        write(local, "src/A.java", "class A { int staged; }\n");
+        localGit.runOrThrow("add", "src/A.java");
+
+        GeneratedPublishResult result = publisher.publish();
+
+        assertThat(result.status()).as(result.toString()).isEqualTo(Status.CONFLICT);
+        assertThat(result.details()).contains("generated/_topics.json");
+        assertThat(head()).isEqualTo(before);
+        assertThat(Files.readString(local.resolve("generated/_topics.json"))).isEqualTo("{\"topics\":[\"앱\"]}\n");
+        assertThat(dirtyFiles()).containsExactlyInAnyOrder("generated/_topics.json", "src/A.java");
+        assertThat(GitWorkspace.splitNul(localGit.runOrThrow("diff", "--cached", "--name-only", "-z").out()))
+                .containsExactly("src/A.java");
+        assertThat(Files.exists(local.resolve(".git/rebase-merge"))).isFalse();
+    }
+
+    @Test
+    void main이_아니면_멈춘다() throws IOException {
+        localGit.runOrThrow("checkout", "-q", "-b", "work");
+        write(local, "generated/_topics.json", "{\"topics\":[2]}\n");
+
+        assertBlockedWithoutCommit();
+    }
+
+    @Test
+    void 진행_중인_git_작업이_있으면_멈춘다() throws IOException {
+        Files.createDirectories(local.resolve(".git/rebase-merge"));
+        write(local, "generated/_topics.json", "{\"topics\":[2]}\n");
+
+        assertThat(publisher.pending().blockers()).anyMatch(b -> b.contains("rebase-merge"));
+        assertBlockedWithoutCommit();
+    }
+
+    @Test
+    void 사람이_안_올린_커밋이_있으면_멈춘다() throws IOException {
+        write(local, "src/A.java", "class A { int mine; }\n");
+        localGit.runOrThrow("commit", "-q", "-am", "feat: 작업 중");
+        write(local, "generated/_topics.json", "{\"topics\":[2]}\n");
+
+        GeneratedPublishResult result = assertBlockedWithoutCommit();
+        assertThat(result.details()).anyMatch(d -> d.contains("feat: 작업 중"));
+    }
+
+    @Test
+    void 원격이_바꾼_파일을_사람도_고치고_있으면_멈춘다() throws IOException {
+        pushFromOther("src/A.java", "class A { int remote; }\n");
+        write(local, "src/A.java", "class A { int local; }\n");
+        write(local, "generated/_topics.json", "{\"topics\":[2]}\n");
+
+        GeneratedPublishResult result = assertBlockedWithoutCommit();
+        assertThat(result.details()).containsExactly("src/A.java");
+    }
+
+    @Test
+    void push가_실패하면_커밋을_남기고_다음에_push만_한다() throws IOException {
+        write(local, "generated/_topics.json", "{\"topics\":[2]}\n");
+        // fetch는 되고 push만 거부되게 한다. 원격의 push 주소만 없는 곳으로 바꾼다
+        localGit.runOrThrow("remote", "set-url", "--push", "origin", tmp.resolve("nowhere.git").toString());
+
+        GeneratedPublishResult failed = publisher.publish();
+
+        assertThat(failed.status()).isEqualTo(Status.PUSH_FAILED);
+        assertThat(subject("HEAD")).startsWith(GeneratedPublisher.SUBJECT_PREFIX);
+        assertThat(publisher.pending().unpushedCommits()).isEqualTo(1);
+        assertThat(publisher.pending().blockers()).isEmpty();
+
+        localGit.runOrThrow("remote", "set-url", "--push", "origin", remote.toString());
+        GeneratedPublishResult retried = publisher.publish();
+
+        assertThat(retried.status()).isEqualTo(Status.PUBLISHED);
+        assertThat(retried.files()).isEmpty();
+        assertThat(subject("origin/main")).startsWith(GeneratedPublisher.SUBJECT_PREFIX);
+    }
+
+    @Test
+    void 보낼_것이_없으면_아무것도_하지_않는다() {
+        String before = head();
+
+        assertThat(publisher.publish().status()).isEqualTo(Status.NOTHING);
+        assertThat(head()).isEqualTo(before);
+    }
+
+    @Test
+    void 저장소가_아니면_쓸_수_없다고_답한다() throws IOException {
+        Path plain = Files.createDirectories(tmp.resolve("plain/generated"));
+        GeneratedPublisher outside = new GeneratedPublisher(plain);
+
+        assertThat(outside.pending().available()).isFalse();
+        assertThat(outside.publish().status()).isEqualTo(Status.UNAVAILABLE);
+    }
+
+    // ---------------------------------------------------------------- 도우미
+
+    private GeneratedPublishResult assertBlockedWithoutCommit() {
+        String before = head();
+        GeneratedPublishResult result = publisher.publish();
+        assertThat(result.status()).isEqualTo(Status.BLOCKED);
+        assertThat(head()).isEqualTo(before);
+        assertThat(dirtyFiles()).contains("generated/_topics.json");
+        return result;
+    }
+
+    private Path clone(String name) {
+        Path dir = tmp.resolve(name);
+        // 줄바꿈 설정은 복제할 때 넘긴다. 복제 뒤에 바꾸면 이미 CRLF로 풀린 파일이 전부 바뀐 것으로 잡힌다
+        new GitWorkspace(tmp).runOrThrow("clone", "-q", "-c", "core.autocrlf=false", remote.toString(), dir.toString());
+        GitWorkspace git = new GitWorkspace(dir);
+        git.runOrThrow("config", "user.name", "tester");
+        git.runOrThrow("config", "user.email", "tester@example.com");
+        git.runOrThrow("config", "commit.gpgsign", "false");
+        return dir;
+    }
+
+    private void pushFromOther(String path, String content) throws IOException {
+        otherGit.runOrThrow("pull", "-q", "origin", "main");
+        write(other, path, content);
+        otherGit.runOrThrow("add", "-A");
+        otherGit.runOrThrow("commit", "-q", "-m", "chore(llm): 배치");
+        otherGit.runOrThrow("push", "-q", "origin", "main");
+    }
+
+    private String head() {
+        return localGit.runOrThrow("rev-parse", "HEAD").out().strip();
+    }
+
+    private String subject(String rev) {
+        return localGit.runOrThrow("log", "-1", "--format=%s", rev).out().strip();
+    }
+
+    private List<String> committedFiles(String rev) {
+        return GitWorkspace.splitNul(localGit.runOrThrow("show", "--name-only", "-z", "--format=", rev).out())
+                .stream().map(String::strip).filter(s -> !s.isEmpty()).toList();
+    }
+
+    private List<String> dirtyFiles() {
+        return GitWorkspace.splitNul(localGit.runOrThrow("status", "--porcelain=v1", "-z", "--untracked-files=all").out())
+                .stream().map(s -> s.substring(3)).toList();
+    }
+
+    private static void write(Path root, String path, String content) throws IOException {
+        Path file = root.resolve(path);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, content, StandardCharsets.UTF_8);
+    }
+}

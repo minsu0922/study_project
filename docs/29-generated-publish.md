@@ -67,7 +67,7 @@ sequenceDiagram
     앱->>git: 그 파일만 커밋
     앱->>원격: fetch
     alt 원격이 앞서 있음
-        앱->>git: rebase --autostash origin/main
+        앱->>git: stash push → rebase origin/main → stash pop --index
     end
     앱->>원격: push HEAD:main
     앱-->>화면: 커밋 번호 또는 실패 이유
@@ -95,14 +95,15 @@ chore(generated): 관리 콘솔에서 바뀐 파일 3개를 배치로 보낸다
 | 원격의 새 커밋이 바꾼 파일을 사람도 고치고 있지 않다 | rebase 뒤 사람의 변경을 되돌릴 때 충돌한다 | 멈춤. "먼저 pull하세요"와 겹친 파일 |
 
 커밋할 때는 파일을 지정한다(`git commit --only -- <파일>`). 사람이 미리 스테이지해 둔 다른 파일은 커밋에 들어가지 않는다.
-사람이 고치던 다른 파일은 `--autostash`가 잠시 치웠다가 rebase 뒤 되돌린다.
+사람이 고치던 다른 파일은 앱이 `git stash push`로 잠시 치웠다가 rebase 뒤 `git stash pop --index`로 되돌린다.
+`rebase --autostash`는 쓰지 않는다. 되돌릴 때 스테이지 상태를 살리지 않아, 사람이 `git add`해 둔 파일이 풀린다(모듈 1 테스트에서 확인).
 겹친 파일은 위 넷째 점검이 미리 막는다. 그래서 되돌릴 때 충돌하지 않는다.
 
 ### 실패하면
 
 | 실패 | 앱이 하는 일 | 그 뒤 상태 |
 |---|---|---|
-| rebase 충돌 (배치가 같은 파일을 바꿈) | `rebase --abort` 뒤 `reset --mixed HEAD~1` | 누르기 전과 같다. 파일은 고친 채 커밋 전 |
+| rebase 충돌 (배치가 같은 파일을 바꿈) | `rebase --abort`, `stash pop --index` 뒤 `reset --soft HEAD~1`로 커밋을 풀고 보낸 파일만 스테이지에서 내린다. `--mixed`로 풀면 사람이 스테이지한 파일까지 풀린다 | 누르기 전과 같다. 파일은 고친 채 커밋 전 |
 | push 거부 (그 사이 배치가 push함) | fetch·rebase·push를 한 번 더 한다 | 두 번째도 거부되면 커밋은 남기고 "다시 누르세요" |
 | 인증 실패·네트워크 끊김 | 커밋은 남긴다 | 다음에 누르면 push만 다시 한다 |
 | 명령이 60초를 넘김 | 프로세스를 끝낸다 | 위 셋 중 하나로 정리 |
