@@ -278,7 +278,7 @@ function renderSummary(s) {
     cls: s.enabled ? "" : "bad",
     label: "일일 배치",
     value: s.enabled ? "켜짐" : "꺼짐",
-    sub: s.enabled ? "매일 06:17 (KST)" : "예약 실행이 아무것도 만들지 않습니다",
+    sub: s.enabled ? "매일 01:17 (KST)" : "예약 실행이 아무것도 만들지 않습니다",
   }));
 
   const p = s.plan;
@@ -526,7 +526,7 @@ function renderState(s) {
   // 켜짐/꺼짐을 색으로도 구분한다. 이 화면을 여는 가장 흔한 이유가 "왜 문제가 안 들어오지"인데,
   // 그 답이 꺼져 있는 것일 때가 많아서 한눈에 보여야 한다.
   const state = s.enabled
-    ? `<span class="batch-state on">일일 배치 켜짐 — 매일 06:17(KST)</span>`
+    ? `<span class="batch-state on">일일 배치 켜짐 — 매일 01:17(KST)</span>`
     : `<span class="batch-state off">일일 배치 꺼짐 — 예약 실행이 아무것도 만들지 않습니다</span>`;
   document.getElementById("bState").innerHTML = `
     <p>${state}</p>
