@@ -33,6 +33,7 @@ CS(컴퓨터 과학) 개념을 정리해 두고 문제로 풀어 보는 학습 �
 | [25-admin-menu-reorg](25-admin-menu-reorg.md) | 관리 메뉴 개편 — 한 메뉴에 한 기능, 여섯 묶음 열다섯 화면, 배지 요청을 하나로 |
 | [26-learning-paths](26-learning-paths.md) | 학습 로드맵 — 추천·분야별·자바 코드 코스, 문서 한 편이 한 단계, 진도는 제출 기록에서 |
 | [28-content-flow](28-content-flow.md) | **콘텐츠 흐름도 (인수인계용)** — 문서·문제가 배치에서 검수를 거쳐 학습자에게 닿는 길, 판단 없이 사실만 |
+| [29-generated-publish](29-generated-publish.md) | 앱이 고친 파일을 배치로 보내기 (설계) — 관리 콘솔 버튼으로 현황 파일·원문 문서만 커밋·push, 사용자 작업을 건드리지 않는 점검 넷 |
 | [GLOSSARY](GLOSSARY.md) | **용어집** — 이 저장소에서 쓰는 말과 쓰지 않는 말 (빠진 값 채우기·들여오기·현황 파일…) |
 | [adr/](adr/README.md) | 기술 결정 기록 (Architecture Decision Records) |
 
