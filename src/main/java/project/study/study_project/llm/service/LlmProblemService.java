@@ -323,13 +323,14 @@ public class LlmProblemService {
         // 등록 문서만 근거 slug를 남긴다(위 주석). 올린 파일은 가리킬 문서가 없어 비운다.
         String documentSlug = document.kind() == SourceDocument.Kind.GENERATED ? document.slug() : null;
 
-        // 저장 전에 검수한다. 검수가 보는 것은 모델이 낸 원본이라 저장 단계의 걸러냄과 무관하다
-        List<ProblemReview.Finding> findings = shouldReview(request, type) ? review(items, difficulty, document) : null;
-
         // 문서를 손에 쥔 유일한 경로다 — 그대로 넘겨 인용 대조까지 걸리게 한다(V18).
+        // 검수보다 먼저 저장한다. 검수(30초~1분) 중에 앱이 꺼져도 요금을 낸 생성 결과는 남는다
         List<GeneratedProblemDraft> drafts = saveDrafts(domain, difficulty, type, items, model, documentSlug, document);
-        if (findings != null) {
-            attachFindings(items, drafts, findings);
+        if (shouldReview(request, type)) {
+            List<ProblemReview.Finding> findings = review(items, difficulty, document);
+            if (findings != null) {
+                attachFindings(items, drafts, findings);
+            }
         }
         return drafts.stream().map(this::toResponse).toList();
     }

@@ -80,12 +80,15 @@ class LlmProblemServiceTest {
         RuntimeException toThrow;
         int calls;
         SourceDocument calledSource;
+        /** 검수 직전에 할 일. 저장이 먼저 끝났는지 볼 때 쓴다 */
+        Runnable beforeReview = () -> { };
 
         @Override
         public List<ProblemReview.Finding> review(List<GeneratedProblemItem> problems, Difficulty labeled,
                                                   SourceDocument source) {
             calls++;
             calledSource = source;
+            beforeReview.run();
             if (toThrow != null) {
                 throw toThrow;
             }
@@ -228,6 +231,17 @@ class LlmProblemServiceTest {
             assertThat(saved).extracting(GeneratedProblemDraft::getQuestion).containsExactly("문제1", "문제2");
             assertThat(saved.get(0).getAiFindingsJson()).isEqualTo("[]");
             assertThat(saved.get(1).getAiFindingsJson()).contains("ANSWER_MISMATCH").contains("정답이 다르다");
+        }
+
+        @Test
+        @DisplayName("초안을 먼저 저장하고 검수한다 — 검수 중 앱이 꺼져도 요금을 낸 생성 결과가 남는다")
+        void savesBeforeReview() {
+            fakeGenerator.toReturn = List.of(mcItem("문제1", 0));
+            fakeReviewer.beforeReview = () -> org.mockito.Mockito.verify(draftRepository).saveAll(any());
+
+            service.generateFromDocument(request(ProblemType.MULTIPLE_CHOICE, null), uploaded);
+
+            assertThat(fakeReviewer.calls).isEqualTo(1);
         }
 
         @Test
