@@ -33,6 +33,7 @@ import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.client.ProblemReviewer;
+import project.study.study_project.llm.support.FindingList;
 import org.springframework.beans.factory.ObjectProvider;
 import project.study.study_project.llm.dto.DraftAiFinding;
 import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
@@ -753,10 +754,8 @@ public class LlmProblemService {
         GeneratedProblemDraft draft = findPendingDraft(draftId);
         List<DraftAiFinding> findings = openFindingsOf(draft, findingIndex);
         if (target == null) {
-            List<DraftAiFinding> updated = new ArrayList<>(findings);
-            updated.set(findingIndex, findings.get(findingIndex).resolvedWith("문제 영향 없음"));
             draft.applyAiSuggestion(draft.getQuestion(), draft.getExplanation(), draft.getChoicesJson(),
-                    writeJson(updated));
+                    FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, "문제 영향 없음")));
         } else {
             if (text == null || text.isBlank()) {
                 throw new BusinessException(ErrorCode.COMMON_001, "고친 글이 비어 있습니다.");
@@ -778,18 +777,10 @@ public class LlmProblemService {
 
     /** 지적 목록을 읽고, 그 번호가 아직 처리 안 한 지적인지 본다. */
     private List<DraftAiFinding> openFindingsOf(GeneratedProblemDraft draft, int findingIndex) {
-        List<DraftAiFinding> findings;
-        try {
-            findings = storedFindingsOf(draft);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCode.COMMON_001, "AI 검수 지적을 읽지 못했습니다.");
-        }
-        if (findings == null || findingIndex < 0 || findingIndex >= findings.size()) {
-            throw new BusinessException(ErrorCode.COMMON_001, "그런 지적이 없습니다.");
-        }
-        if (resolutionOf(findings.get(findingIndex)) != null) {
-            throw new BusinessException(ErrorCode.COMMON_001, "이미 처리한 지적입니다.");
-        }
+        List<DraftAiFinding> findings = FindingList.read(objectMapper, draft.getAiFindingsJson(),
+                new TypeReference<>() {
+                }, "AI 검수 지적");
+        FindingList.requireOpen(findings, findingIndex, LlmProblemService::resolutionOf);
         return findings;
     }
 
@@ -824,12 +815,11 @@ public class LlmProblemService {
             }
             default -> throw new BusinessException(ErrorCode.COMMON_001, "고칠 수 없는 칸입니다.");
         }
-        List<DraftAiFinding> updated = new ArrayList<>(findings);
         // 기록은 화면에 한 줄로 그린다. 해설처럼 여러 줄인 글은 한 줄로 펴서 적는다
         String record = "%s: 「%s」 → 「%s」".formatted(how,
                 before == null ? "" : before.replaceAll("\\s*\\R\\s*", " "), text.replaceAll("\\s*\\R\\s*", " "));
-        updated.set(findingIndex, findings.get(findingIndex).resolvedWith(record));
-        draft.applyAiSuggestion(question, explanation, choicesJson, writeJson(updated));
+        draft.applyAiSuggestion(question, explanation, choicesJson,
+                FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, record)));
     }
 
     /** 처리 칸이 생기기 전(2026-11-01 전)에 적용한 제안은 근거 끝줄에 "제안 적용:"으로 남아 있다. */

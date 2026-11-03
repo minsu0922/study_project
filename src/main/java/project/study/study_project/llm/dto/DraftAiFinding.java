@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import project.study.study_project.global.common.Texts;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemReview;
+import project.study.study_project.llm.support.FindingList;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,7 +24,8 @@ import java.util.Map;
 public record DraftAiFinding(ProblemReview.FindingType type, String message, String detail,
                              // 제안은 드물다. 없는 지적마다 null을 적으면 저장된 JSON이 칸 이름으로 채워진다
                              @JsonInclude(JsonInclude.Include.NON_NULL) ProblemReview.Suggestion suggestion,
-                             @JsonInclude(JsonInclude.Include.NON_NULL) String resolution) {
+                             @JsonInclude(JsonInclude.Include.NON_NULL) String resolution)
+        implements FindingList.Resolvable<DraftAiFinding> {
 
     public DraftAiFinding(ProblemReview.FindingType type, String message, String detail) {
         this(type, message, detail, null, null);

@@ -70,31 +70,13 @@ public class DraftImportService {
         if (batch.domain() == null || batch.difficulty() == null || batch.type() == null) {
             throw new IllegalArgumentException("분야·난이도·유형이 모두 있어야 합니다: " + file.getFileName());
         }
-        // 5번 작업: 파일의 domain은 형식만 맞으면(DomainCode 값 타입) Jackson 역직렬화를 그냥
-        // 통과한다 — 그 분야가 지금도 등록돼 있는지는 별개다. 배치가 도는 클라우드와 이 앱은
-        // domain_setting을 공유하지 않으므로(배치는 스냅샷 파일을 읽는다, DomainCatalog 클래스
-        // 주석), 배치를 돌린 시점 이후 관리자가 화면에서 그 분야를 지웠다면 이 파일은 "한때는
-        // 맞았지만 지금은 아닌" 상태로 도착한다. 여기서 막지 않으면 아래 saveDrafts가 그대로
-        // 저장을 시도하고, 외래키(V20)가 막아 <b>파일 전체가 IOException 없는 알 수 없는 예외로
-        // 죽는다</b> — 무엇이 문제인지 로그만 봐서는 알기 어렵다.
-        //
-        // 위 null 검사와 같은 모양(IllegalArgumentException)으로 던지는 이유: 흡수 이력을
-        // 남기지 않아야 하기 때문이다. DraftImportRunner.importAll은 파일 단위로 예외를 잡아
-        // 그 파일만 건너뛰고 "들여온 것"으로 표시하지 않는다 — 관리자가 화면에서 그 분야를
-        // 다시 켜거나 새로 등록하면, 다음 부팅에 이 파일이 자동으로 재시도된다. 이력을 남기면
-        // 분야를 고쳐도 영영 다시 안 읽힌다(위 null 검사 주석과 같은 이유).
-        if (!domainCatalog.exists(batch.domain())) {
-            throw new IllegalArgumentException(
-                    "등록되지 않은 분야입니다: " + batch.domain() + " (" + file.getFileName() + ")");
-        }
+        DraftFileChecks.requireRegisteredDomain(domainCatalog, batch.domain(), file);
         List<?> problems = batch.problems();
         if (problems == null || problems.isEmpty()) {
             throw new IllegalArgumentException("문제 목록이 비어 있습니다: " + file.getFileName());
         }
 
-        // 생성 당시의 모델을 그대로 기록한다 — 현재 설정값을 쓰면 모델 교체 후 흡수한 옛 파일이
-        // 새 모델 이름으로 둔갑해 승인율 비교가 오염된다. 값이 없는 파일은 정직하게 unknown.
-        String model = (batch.model() == null || batch.model().isBlank()) ? "unknown" : batch.model();
+        String model = DraftFileChecks.modelOf(batch.model());
 
         // documentSlug는 2단계에서 추가된 필드라 옛 파일에는 없다 — Jackson이 null로 채우고
         // 그대로 초안에 기록된다. "근거 문서 없이 만든 문제"와 같은 값이므로 특별 취급이 필요 없다.

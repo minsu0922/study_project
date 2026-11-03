@@ -92,24 +92,12 @@ public class DocumentImportService {
         if (parsed.domain() == null) {
             throw new IllegalArgumentException("domain이 없습니다: " + file.getFileName());
         }
-        // 5번 작업: DraftImportService.importFile과 같은 이유·같은 모양이다 — 배치는 스냅샷
-        // 파일(generated/_domain-settings.json)로 분야 목록을 보므로, 배치를 돌린 뒤 관리자가
-        // 화면에서 그 분야를 지우면 이 파일은 "한때는 맞았지만 지금은 아닌" 채로 도착한다.
-        // 여기서 안 막으면 흡수는 성공하고 외래키(V20)가 뒤늦게 막아 원인이 안 보이는 예외로
-        // 죽는다. IllegalArgumentException으로 던져 흡수 이력을 남기지 않는다 — DraftImportRunner가
-        // 파일 단위로 잡아 이 파일만 건너뛰고 "들여온 것"으로 표시하지 않으므로, 분야를 다시
-        // 등록하면 다음 부팅에 자동으로 재시도된다.
-        if (!domainCatalog.exists(parsed.domain())) {
-            throw new IllegalArgumentException(
-                    "등록되지 않은 분야입니다: " + parsed.domain() + " (" + file.getFileName() + ")");
-        }
+        DraftFileChecks.requireRegisteredDomain(domainCatalog, parsed.domain(), file);
         if (document == null || document.contentMd() == null || document.contentMd().isBlank()) {
             throw new IllegalArgumentException("문서 본문이 비어 있습니다: " + file.getFileName());
         }
 
-        // 생성 당시의 모델을 그대로 기록한다 — 현재 설정값을 쓰면 모델 교체 후 흡수한 옛 파일이
-        // 새 모델 이름으로 둔갑해 승인율 비교가 오염된다. 값이 없는 파일은 정직하게 unknown.
-        String model = (parsed.model() == null || parsed.model().isBlank()) ? "unknown" : parsed.model();
+        String model = DraftFileChecks.modelOf(parsed.model());
 
         String key = importKey(file.getFileName().toString());
         int saved = saveOne(parsed, document, model, key);

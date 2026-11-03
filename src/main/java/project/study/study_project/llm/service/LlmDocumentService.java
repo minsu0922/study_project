@@ -3,6 +3,7 @@ package project.study.study_project.llm.service;
 import project.study.study_project.global.event.ReviewCompleted;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import project.study.study_project.llm.support.FindingList;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -333,19 +334,10 @@ public class LlmDocumentService {
         if (draft.getStatus() != DraftStatus.PENDING) {
             throw new BusinessException(ErrorCode.LLM_002);
         }
-        List<DraftFactFinding> findings;
-        try {
-            findings = draft.getFactFindingsJson() == null ? null : storedFactFindingsOf(draft);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCode.COMMON_001, "사실 검수 지적을 읽지 못했습니다.");
-        }
-        if (findings == null || findingIndex < 0 || findingIndex >= findings.size()) {
-            throw new BusinessException(ErrorCode.COMMON_001, "그런 지적이 없습니다.");
-        }
-        DraftFactFinding finding = findings.get(findingIndex);
-        if (finding.resolution() != null) {
-            throw new BusinessException(ErrorCode.COMMON_001, "이미 처리한 지적입니다.");
-        }
+        List<DraftFactFinding> findings = FindingList.read(objectMapper, draft.getFactFindingsJson(),
+                new TypeReference<>() {
+                }, "사실 검수 지적");
+        DraftFactFinding finding = FindingList.requireOpen(findings, findingIndex, DraftFactFinding::resolution);
 
         String content = draft.getContentMd();
         String resolution;
@@ -369,13 +361,8 @@ public class LlmDocumentService {
                     .orElse("배치 파일은 못 찾아 그대로");
             resolution = "직접 수정(%s): 「%s」 → 「%s」".formatted(synced, oneLine(paragraph), oneLine(replaced));
         }
-        List<DraftFactFinding> updated = new ArrayList<>(findings);
-        updated.set(findingIndex, finding.resolvedWith(resolution));
-        try {
-            draft.resolveFactFinding(content, objectMapper.writeValueAsString(updated));
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("사실 검수 지적 직렬화 실패", e);
-        }
+        draft.resolveFactFinding(content,
+                FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, resolution)));
         log.info("문서 초안 #{}: 사실 검수 지적 처리({})", draft.getId(), text == null ? "고치지 않음" : "직접 수정");
         return toResponse(draft);
     }
