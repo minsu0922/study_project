@@ -1,0 +1,166 @@
+{
+  "note" : "배치가 주제를 쓸 때마다 마지막 사용일과 횟수를 적는 파일입니다. 앱은 이 파일을 쓰지 않고, 기동할 때 읽어 관리 화면에 반영합니다. 대기열 파일(_topics.json·_code-topics.json)은 앱만 씁니다. 둘이 한 파일을 쓰면 '배치로 보내기'가 충돌하기 때문입니다. 관리 화면에서 사용 기록을 초기화하면 대기열 파일에 초기화한 날(usageResetAt)이 실리고, 그날까지의 기록은 무시합니다.",
+  "usage" : [ {
+    "id" : 9,
+    "domain" : "NETWORK",
+    "topic" : "OSI 7계층 — 장애가 어느 계층에서 났는지 가려내는 법",
+    "lastUsedAt" : "2026-08-23",
+    "usedCount" : 1
+  }, {
+    "id" : 10,
+    "domain" : "NETWORK",
+    "topic" : "TCP와 UDP — 신뢰성을 포기해서 얻는 것",
+    "lastUsedAt" : "2026-10-05",
+    "usedCount" : 1
+  }, {
+    "id" : 11,
+    "domain" : "NETWORK",
+    "topic" : "서브넷 마스크와 게이트웨이 — 같은 네트워크면 바로 보내고 아니면 라우터에 맡기는 기준, 잘못 잡았을 때의 증상",
+    "lastUsedAt" : "2026-10-28",
+    "usedCount" : 1
+  }, {
+    "id" : 17,
+    "domain" : "DS_ALGORITHM",
+    "topic" : "스택과 큐 — 재귀 호출이 호출 스택을 쓰는 방식과 스택이 넘치는 지점",
+    "lastUsedAt" : "2026-09-07",
+    "usedCount" : 1
+  }, {
+    "id" : 18,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "오버로딩과 오버라이딩 — 컴파일 시점과 실행 시점에 정해지는 것",
+    "lastUsedAt" : "2026-09-20",
+    "usedCount" : 1
+  }, {
+    "id" : 20,
+    "domain" : "OS",
+    "topic" : "프로세스와 스레드 — 무엇을 공유하고 무엇을 따로 갖는가",
+    "lastUsedAt" : "2026-09-03",
+    "usedCount" : 1
+  }, {
+    "id" : 23,
+    "domain" : "DATABASE",
+    "topic" : "트랜잭션 ACID와 격리 수준 — 팬텀 리드가 실제로 보이는 자리",
+    "lastUsedAt" : "2026-10-09",
+    "usedCount" : 1
+  }, {
+    "id" : 47,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "스택과 힙 — OutOfMemory와 StackOverflow가 갈리는 자리",
+    "lastUsedAt" : "2026-10-13",
+    "usedCount" : 1
+  }, {
+    "id" : 56,
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "DI와 IoC — 객체를 직접 만들지 않고 받아 쓴다는 것이 무슨 뜻인가",
+    "lastUsedAt" : "2026-09-11",
+    "usedCount" : 1
+  }, {
+    "id" : 70,
+    "domain" : "DATABASE",
+    "topic" : "Flyway — 코드는 깃으로 맞추는데, 데이터베이스 구조는 무엇으로 맞추나",
+    "lastUsedAt" : "2026-09-15",
+    "usedCount" : 1
+  }, {
+    "id" : 71,
+    "domain" : "SECURITY",
+    "topic" : "세션과 토큰 — 서버가 로그인한 사람을 다시 알아보는 두 방법과, 서버를 두 대로 늘리면 갈리는 지점",
+    "lastUsedAt" : "2026-09-19",
+    "usedCount" : 1
+  }, {
+    "id" : 72,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "Redis — 데이터를 창고(디스크) 대신 책상 위(메모리)에 두는 저장소, 무엇을 맡기고 무엇은 안 맡기나",
+    "lastUsedAt" : "2026-09-27",
+    "usedCount" : 1
+  }, {
+    "id" : 73,
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "QueryDSL — 쿼리를 글자로 쓰면 오타를 실행해 봐야 알고, 자바 코드로 쓰면 컴파일에서 걸린다",
+    "lastUsedAt" : "2026-09-23",
+    "usedCount" : 1
+  }, {
+    "id" : 74,
+    "domain" : "SECURITY",
+    "topic" : "JWT — 도장 찍힌 출입증이 위조는 막지만, 안에 적힌 내용은 누구나 열어 볼 수 있다",
+    "lastUsedAt" : "2026-10-01",
+    "usedCount" : 1
+  }, {
+    "id" : 1070,
+    "domain" : "NETWORK",
+    "topic" : "HTTP 메서드와 상태 코드 — 재시도해도 되는 요청과 안 되는 요청이 갈리는 기준",
+    "lastUsedAt" : "2026-10-19",
+    "usedCount" : 1
+  }, {
+    "id" : 1073,
+    "domain" : "NETWORK",
+    "topic" : "DNS — 주소창에 도메인을 친 뒤 IP를 얻기까지 거치는 자리들",
+    "lastUsedAt" : "2026-10-26",
+    "usedCount" : 1
+  }, {
+    "id" : 1074,
+    "domain" : "NETWORK",
+    "topic" : "HTTP/1.1·2·3 — 연결 하나를 나눠 쓰는 방식이 바뀌어 온 이유",
+    "lastUsedAt" : "2026-10-23",
+    "usedCount" : 1
+  }, {
+    "id" : 1076,
+    "domain" : "NETWORK",
+    "topic" : "HTTPS와 TLS 핸드셰이크 — 인증서가 증명하는 것과 증명하지 못하는 것",
+    "lastUsedAt" : "2026-10-22",
+    "usedCount" : 1
+  }, {
+    "id" : 1092,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "서버와 클라이언트 — 휴대폰 앱이 IP 주소로 서버 한 대를 찾아가 글을 받아 오기까지(요청과 응답)",
+    "lastUsedAt" : "2026-10-29",
+    "usedCount" : 1
+  }, {
+    "id" : 1094,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "클라우드 — 서버 컴퓨터를 사는 대신 빌려 쓰는 이유와, 켜 두기만 해도 요금이 나가는 구조",
+    "lastUsedAt" : "2026-11-02",
+    "usedCount" : 1
+  }, {
+    "id" : 1102,
+    "domain" : "NETWORK",
+    "topic" : "패킷과 프로토콜 — 큰 사진 한 장을 잘게 쪼개 보내는 이유와, 서로 말이 통하려면 필요한 약속",
+    "lastUsedAt" : "2026-10-31",
+    "usedCount" : 1
+  }, {
+    "id" : 1103,
+    "domain" : "NETWORK",
+    "topic" : "공인 IP와 사설 IP — 집 공유기 뒤의 기기 다섯 대가 인터넷 주소 하나를 나눠 쓰는 법(NAT)",
+    "lastUsedAt" : "2026-10-30",
+    "usedCount" : 1
+  }, {
+    "id" : 1104,
+    "domain" : "NETWORK",
+    "topic" : "포트 — 한 컴퓨터에서 카톡과 브라우저가 동시에 통신해도 서로 섞이지 않는 이유",
+    "lastUsedAt" : "2026-10-27",
+    "usedCount" : 1
+  }, {
+    "id" : 1105,
+    "domain" : "NETWORK",
+    "topic" : "TCP 연결 맺기 — 데이터를 보내기 전에 \"여보세요\"를 주고받는 3-way handshake",
+    "lastUsedAt" : "2026-11-01",
+    "usedCount" : 1
+  }, {
+    "id" : 1106,
+    "domain" : "NETWORK",
+    "topic" : "HTTP 요청과 응답의 생김새 — 개발자 도구로 연 요청 하나에 적힌 시작줄·헤더·본문",
+    "lastUsedAt" : "2026-10-18",
+    "usedCount" : 1
+  }, {
+    "id" : 1107,
+    "domain" : "NETWORK",
+    "topic" : "쿠키 — HTTP는 앞 요청을 기억하지 못하는데, 새로고침해도 장바구니가 남는 이유",
+    "lastUsedAt" : "2026-10-20",
+    "usedCount" : 1
+  }, {
+    "id" : 1108,
+    "domain" : "NETWORK",
+    "topic" : "주소창에 URL을 치면 생기는 일 — DNS·TCP·TLS·HTTP가 한 번의 접속에서 차례로 일하는 순서",
+    "lastUsedAt" : "2026-10-24",
+    "usedCount" : 1
+  } ]
+}
