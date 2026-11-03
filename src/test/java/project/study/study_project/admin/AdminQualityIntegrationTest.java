@@ -1,6 +1,7 @@
 package project.study.study_project.admin;
 
 import org.junit.jupiter.api.DisplayName;
+import project.study.study_project.llm.domain.RejectType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -76,23 +77,24 @@ class AdminQualityIntegrationTest {
     }
 
     @Test
-    @DisplayName("거절 사유는 같은 문장끼리 묶고, 사유 없는 거절은 따로 센다")
-    void groupsRejectReasons() {
+    @DisplayName("거절은 유형별로 세고, 유형 없이 거절한 옛 초안은 미분류로 따로 센다")
+    void groupsRejectTypes() {
         AdminQualityResponse before = qualityService.summary();
-        String reason = "테스트 사유 " + UUID.randomUUID();
 
-        draft(null).reject(reason);
-        draft(null).reject(reason);
-        draft(null).reject(null);
+        draft(null).reject(RejectType.ANSWER_LEAK, "문장이 달라도");
+        draft(null).reject(RejectType.ANSWER_LEAK, "같은 유형으로 센다");
+        draft(null).reject("유형 없는 옛 거절");
         draftRepository.flush();
 
         AdminQualityResponse after = qualityService.summary();
 
         assertThat(after.noReasonCount()).isEqualTo(before.noReasonCount() + 1);
-        long listed = after.rejectReasons().stream()
-                .filter(r -> r.reason().equals(reason)).mapToLong(AdminQualityResponse.ReasonCount::count).sum();
-        assertThat(listed + (after.otherReasonCount() - before.otherReasonCount()))
-                .as("상위 목록에 2건으로 들거나, 상위 밖이면 '그 외'가 2 늘어난다").isEqualTo(2);
+        assertThat(countOf(after, "정답 단서 누설") - countOf(before, "정답 단서 누설")).isEqualTo(2);
+    }
+
+    private static long countOf(AdminQualityResponse q, String label) {
+        return q.rejectReasons().stream().filter(r -> r.reason().equals(label))
+                .mapToLong(AdminQualityResponse.ReasonCount::count).sum();
     }
 
     @Test

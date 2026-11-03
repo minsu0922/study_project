@@ -179,11 +179,24 @@ try {
  * 보기 겹침, 암기 확인, 문서 밖 내용, 오답 설명이 반박이 아닌 재설명.
  */
 const REJECT_REASONS = [
-  "정답이 유독 길어 지문을 읽지 않고도 찍힌다",
-  "오답 보기가 서로 겹쳐 정답이 둘로 읽힌다",
-  "단순 암기 확인이라 실무 판단을 묻지 않는다",
-  "근거 문서에 없는 내용을 지어냈다",
-  "오답 설명이 왜 틀렸는지가 아니라 보기를 다시 설명한다",
+  ["정답이 유독 길어 지문을 읽지 않고도 찍힌다", "ANSWER_LEAK"],
+  ["오답 보기가 서로 겹쳐 정답이 둘로 읽힌다", "WRONG_ANSWER"],
+  ["단순 암기 확인이라 실무 판단을 묻지 않는다", "DIFFICULTY_OR_FORM"],
+  ["근거 문서에 없는 내용을 지어냈다", "OUT_OF_SOURCE"],
+  ["오답 설명이 왜 틀렸는지가 아니라 보기를 다시 설명한다", "WEAK_EXPLANATION"],
+];
+
+/* 거절 유형(V47). 서버의 RejectType과 이름이 같아야 한다. 유형을 고르지 않으면 거절되지 않는다 —
+ * 글을 비운 거절이 되먹임을 끊던 것(32건 중 19건)을 막는다. 칩은 문구와 함께 유형도 고른다. */
+const REJECT_TYPES = [
+  ["ANSWER_LEAK", "정답 단서 누설"],
+  ["WRONG_ANSWER", "정답 오류"],
+  ["OUT_OF_SOURCE", "근거 문서 밖 내용"],
+  ["FORMAT", "형식 위반"],
+  ["DIFFICULTY_OR_FORM", "난이도·출제 형태 안 맞음"],
+  ["WEAK_EXPLANATION", "해설·오답 설명 부실"],
+  ["DUPLICATE", "이미 있는 문제와 중복"],
+  ["OTHER", "기타"],
 ];
 
 /* 한 판에 보여 줄 초안 수. 문제는 카드가 짧아 20장까지 훑을 만하고, 문서는 본문 미리보기가
@@ -883,6 +896,10 @@ async function loadDrafts(jumpToLast = false) {
         <button class="danger" onclick="openReject(${d.id})">거절</button>
       </div>
       <div id="rejectForm-${d.id}" hidden style="margin-top:10px">
+        <select id="rejectType-${d.id}" aria-label="거절 유형" style="margin-bottom:6px">
+          <option value="">거절 유형 고르기 (필수)</option>
+          ${REJECT_TYPES.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}
+        </select>
         <input id="rejectReason-${d.id}" type="text" maxlength="500"
                placeholder="거절 사유 (선택) — 아래에서 고르거나 직접 적으세요"
                onkeydown="if (event.key === 'Enter') confirmReject(document.getElementById('rejectConfirm-${d.id}'), ${d.id})"
@@ -890,11 +907,11 @@ async function loadDrafts(jumpToLast = false) {
         <!-- 사유 문구는 버튼의 글자에서 직접 읽는다(fillReason). 문자열을 onclick 인자로
              끼워 넣으면 따옴표가 든 문구 하나에 화면이 깨진다 — 문제 목록에서 겪은 사고와 같다. -->
         <div class="reject-chips">
-          ${REJECT_REASONS.map(r =>
-            `<button type="button" class="chip" onclick="fillReason(${d.id}, this)">${escapeHtml(r)}</button>`).join("")}
+          ${REJECT_REASONS.map(([r, t]) =>
+            `<button type="button" class="chip" data-type="${t}" onclick="fillReason(${d.id}, this)">${escapeHtml(r)}</button>`).join("")}
         </div>
         <div class="meta" style="margin:4px 0 6px">
-          사유는 다음 문제 생성 프롬프트에 그대로 반영됩니다(docs/14). 비워도 거절은 되지만, 되먹임에는 쓰이지 않습니다.
+          유형과 사유는 다음 문제 생성 프롬프트에 "[유형] 사유"로 반영됩니다(docs/14). 사유 글은 비워도 됩니다.
         </div>
         <div class="row-actions">
           <button id="rejectConfirm-${d.id}" class="danger" onclick="confirmReject(this, ${d.id})">거절 확정</button>
@@ -1142,10 +1159,18 @@ function closeReject(id) {
 function fillReason(id, btn) {
   const input = document.getElementById(`rejectReason-${id}`);
   input.value = btn.textContent.trim();
+  document.getElementById(`rejectType-${id}`).value = btn.dataset.type;
   input.focus();
 }
 
 async function confirmReject(btn, id) {
+  const typeSelect = document.getElementById(`rejectType-${id}`);
+  const type = typeSelect.value;
+  if (!type) {
+    showError(document.getElementById("reviewMessage"), new Error("거절 유형을 골라 주세요."));
+    typeSelect.focus();
+    return;
+  }
   btn.disabled = true;
   const reason = document.getElementById(`rejectReason-${id}`).value.trim();
   try {
@@ -1153,11 +1178,12 @@ async function confirmReject(btn, id) {
     // "안 적었다"를 빈 문자열로 보내는 것보다 필드를 빼는 쪽이 의도가 분명하다.
     await api(`/api/admin/llm-problems/${id}/reject`, {
       method: "POST",
-      body: JSON.stringify(reason ? { reason } : {}),
+      body: JSON.stringify(reason ? { type, reason } : { type }),
     });
     // 거절 이력은 남는다(초안을 지우지 않는다, docs/13). 카드도 그 자리에 남겨
     // 무엇을 왜 버렸는지 보이게 둔다 — 사유를 적어 놓고 사라지면 확인할 길이 없다.
-    markCardDone(btn, `거절됨${reason ? " — " + escapeHtml(reason) : " <b>(사유 없음 — 되먹임에 쓰이지 않습니다)</b>"}`);
+    const label = REJECT_TYPES.find(([v]) => v === type)[1];
+    markCardDone(btn, `거절됨 — [${escapeHtml(label)}]${reason ? " " + escapeHtml(reason) : ""}`);
     refreshAdminBadges();
   } catch (e) {
     btn.disabled = false;

@@ -131,7 +131,7 @@ class AiFindingsWiringTest {
                 .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
 
         assertThat(llmProblemService.applyAiSuggestion(id, 0).question()).isEqualTo("고친 질문");
-        llmProblemService.reject(id, "테스트");
+        llmProblemService.reject(id, project.study.study_project.llm.domain.RejectType.OTHER, "테스트");
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmProblemService.applyAiSuggestion(id, 0))
                 .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
     }

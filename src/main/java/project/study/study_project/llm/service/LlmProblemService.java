@@ -30,6 +30,7 @@ import project.study.study_project.llm.client.ProblemGenerator;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.domain.RejectType;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.client.ProblemReviewer;
@@ -532,9 +533,21 @@ public class LlmProblemService {
      * {@link #generate}가 호출하는데, 자기 클래스 메서드 호출은 프록시를 거치지 않아
      * 애너테이션이 <b>조용히 무시된다</b> — 효과 없는 애너테이션은 붙이지 않는 편이 정직하다.
      */
+    /**
+     * 되먹임에 싣는 사유 글. 유형을 앞에 붙여 "[정답 단서 누설] 정답만 길다"처럼 만든다.
+     * 형식(RejectionNote)은 그대로라 거절 사례 파일과 배치 코드는 바뀌지 않는다.
+     */
+    static String noteReason(RejectType type, String reason) {
+        String text = Texts.trimToNull(reason);
+        if (type == null) {
+            return text;
+        }
+        return text == null ? "[" + type.label() + "]" : "[" + type.label() + "] " + text;
+    }
+
     public List<RejectionNote> findRecentRejectionNotes() {
         List<RejectionNote> rejected = draftRepository.findRecentRejectionNotes(PageRequest.of(0, REJECTION_NOTE_SIZE)).stream()
-                .map(v -> new RejectionNote(v.getQuestion(), v.getReason()))
+                .map(v -> new RejectionNote(v.getQuestion(), noteReason(v.getType(), v.getReason())))
                 .toList();
 
         // 학습자 제보(V17)를 같은 목록에 합친다. 되먹임 통로를 하나로 유지하면 수동 생성·배치
@@ -696,8 +709,12 @@ public class LlmProblemService {
     }
 
     @Transactional
-    public void reject(Long draftId, String reason) {
-        findDraft(draftId).reject(Texts.trimToNull(reason));
+    public void reject(Long draftId, RejectType type, String reason) {
+        // 유형 없는 거절은 받지 않는다. 글을 비운 거절이 되먹임을 끊던 것을 막는다(V47)
+        if (type == null) {
+            throw new BusinessException(ErrorCode.COMMON_001, "거절 유형을 골라 주세요.");
+        }
+        findDraft(draftId).reject(type, Texts.trimToNull(reason));
         events.publishEvent(ReviewCompleted.problem());
     }
 
@@ -944,7 +961,7 @@ public class LlmProblemService {
         return new LlmDraftResponse(
                 d.getId(), d.getDomain(), domainSettingService.displayName(d.getDomain()), d.getDifficulty(), d.getType(),
                 d.getTitle(), d.getQuestion(), d.getAnswer(), d.getExplanation(), choices,
-                d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedProblemId(),
+                d.getStatus(), d.getModel(), noteReason(d.getRejectType(), d.getRejectReason()), d.getApprovedProblemId(),
                 d.getDocumentSlug(), d.getQuestionKind(),
                 d.getQuestionKind() == null ? null : d.getQuestionKind().getLabel(),
                 checks, readAiFindings(d), d.getCreatedAt(), d.getReviewedAt(),

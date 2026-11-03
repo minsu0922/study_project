@@ -49,22 +49,28 @@ public class AdminQualityService {
         return summary(LocalDate.now());
     }
 
+    private static String rejectTypeLabel(String name) {
+        try {
+            return project.study.study_project.llm.domain.RejectType.valueOf(name).label();
+        } catch (IllegalArgumentException e) {
+            return name;
+        }
+    }
+
     private AdminQualityResponse summary(LocalDate today) {
-        // ── 거절 사유 ──
+        // ── 거절 유형(V47) ── 문장으로 묶으면 같은 실수가 표현마다 따로 세여 유형으로 센다
         List<ReasonCount> reasons = new ArrayList<>();
         long noReason = 0;
         long other = 0;
         for (ReasonCount r : jdbcClient.sql("""
-                        SELECT reject_reason AS reason, COUNT(*) AS cnt FROM generated_problem_draft
-                        WHERE status = 'REJECTED' GROUP BY reject_reason ORDER BY cnt DESC, reject_reason
+                        SELECT reject_type AS reason, COUNT(*) AS cnt FROM generated_problem_draft
+                        WHERE status = 'REJECTED' GROUP BY reject_type ORDER BY cnt DESC, reject_type
                         """)
                 .query((rs, n) -> new ReasonCount(rs.getString("reason"), rs.getLong("cnt"))).list()) {
             if (r.reason() == null || r.reason().isBlank()) {
-                noReason += r.count();
-            } else if (reasons.size() < TOP_REASONS) {
-                reasons.add(r);
+                noReason += r.count();   // 유형을 받기 전에 거절한 초안
             } else {
-                other += r.count();
+                reasons.add(new ReasonCount(rejectTypeLabel(r.reason()), r.count()));
             }
         }
 

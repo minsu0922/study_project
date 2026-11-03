@@ -156,10 +156,11 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
      * <p>최근 처리 순으로 정렬 — 프롬프트를 개선한 뒤의 최신 판단이 앞에 오게 한다.
      * 개수 제한은 {@link Pageable}로 호출부가 정한다(입력 토큰 비용과의 균형).
      */
+    // 유형이 있으면 글이 없어도 싣는다(V47). 유형 자체가 "왜 나쁜가"를 말해 준다
     @Query("""
-            select d.question as question, d.rejectReason as reason
+            select d.question as question, d.rejectReason as reason, d.rejectType as type
             from GeneratedProblemDraft d
-            where d.status = 'REJECTED' and d.rejectReason is not null
+            where d.status = 'REJECTED' and (d.rejectReason is not null or d.rejectType is not null)
             order by d.reviewedAt desc
             """)
     List<RejectionNoteView> findRecentRejectionNotes(Pageable pageable);
@@ -172,6 +173,9 @@ public interface GeneratedProblemDraftRepository extends JpaRepository<Generated
         String getQuestion();
 
         String getReason();
+
+        /** 거절 유형(V47). 유형을 받기 전에 거절한 초안은 null */
+        project.study.study_project.llm.domain.RejectType getType();
     }
 
     /**

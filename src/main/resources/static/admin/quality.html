@@ -39,7 +39,7 @@ try {
     </div>
 
     <div class="card">
-      <h3>왜 거절됐나 <span class="meta">(거절 사유 · 같은 문장끼리 묶음)</span></h3>
+      <h3>왜 거절됐나 <span class="meta">(거절 유형별)</span></h3>
       <div id="qReasons" class="meta">불러오는 중…</div>
     </div>
 
@@ -171,7 +171,7 @@ function renderWeekly(weeks) {
   });
 }
 
-/** 거절 사유 — 많은 순. 사유 없는 거절은 막대에 넣지 않고 따로 적는다(되먹임이 안 되는 거절이다). */
+/** 거절 유형 — 많은 순. 유형을 받기 전에 거절한 초안(미분류)은 막대에 넣지 않고 따로 적는다. */
 function renderReasons(q) {
   const box = document.getElementById("qReasons");
   const total = q.rejectReasons.reduce((a, r) => a + r.count, 0) + q.otherReasonCount + q.noReasonCount;
@@ -188,8 +188,7 @@ function renderReasons(q) {
         <div class="hbar-value">${r.count}건</div>
       </div>`).join("")
     + `<div class="meta" style="margin-top:8px">거절 ${total}건 중
-        ${q.otherReasonCount ? `그 외 사유 ${q.otherReasonCount}건 · ` : ""}
-        <b>사유 없이 거절 ${q.noReasonCount}건</b>. 사유가 없으면 다음 생성 프롬프트에 되먹임되지 않습니다.</div>`;
+        ${q.noReasonCount ? `유형을 받기 전에 거절한 미분류 ${q.noReasonCount}건은 막대에 없습니다.` : "모두 유형이 있습니다."}</div>`;
 }
 
 /**

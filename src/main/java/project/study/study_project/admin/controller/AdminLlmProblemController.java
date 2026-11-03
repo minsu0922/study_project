@@ -1,6 +1,7 @@
 package project.study.study_project.admin.controller;
 
 import jakarta.validation.Valid;
+import project.study.study_project.llm.domain.RejectType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -205,10 +206,23 @@ public class AdminLlmProblemController {
     }
 
     /** 거절 — 사유(선택)를 바디로 받는다: {@code {"reason": "..."} } (없으면 빈 바디 허용). */
+    /** 화면이 보낸 거절 유형. 비었으면 null(서비스가 거절한다), 모르는 값이면 400 */
+    private static RejectType rejectTypeOf(Map<String, String> body) {
+        String raw = body == null ? null : body.get("type");
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return RejectType.valueOf(raw.strip());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "모르는 거절 유형입니다: " + raw);
+        }
+    }
+
     @PostMapping("/{id}/reject")
     public ApiResponse<Void> reject(@PathVariable Long id,
                                     @RequestBody(required = false) Map<String, String> body) {
-        llmProblemService.reject(id, body != null ? body.get("reason") : null);
+        llmProblemService.reject(id, rejectTypeOf(body), body != null ? body.get("reason") : null);
         return ApiResponse.ok();
     }
 

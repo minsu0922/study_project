@@ -148,6 +148,11 @@ public class GeneratedProblemDraft {
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
+    /** 거절 유형(V47). 유형을 받기 전에 거절한 초안은 {@code null}(미분류) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reject_type", length = 30)
+    private RejectType rejectType;
+
     /**
      * 근거가 된 개념 문서의 slug — 없으면 {@code null}(V9, 2단계).
      *
@@ -278,10 +283,16 @@ public class GeneratedProblemDraft {
         this.reviewedAt = LocalDateTime.now();
     }
 
-    /** 거절 처리 — 사유(선택)는 프롬프트 개선 참고용으로 남긴다. */
+    /** 거절 처리 — 사유(선택)는 프롬프트 개선 참고용으로 남긴다. 유형 없는 거절은 통계 테스트용이다 */
     public void reject(String reason) {
+        reject(null, reason);
+    }
+
+    /** @param type 거절 유형. 관리 화면은 반드시 넘긴다({@code LlmProblemService.reject}) */
+    public void reject(RejectType type, String reason) {
         requirePending();
         this.status = DraftStatus.REJECTED;
+        this.rejectType = type;
         this.rejectReason = reason;
         this.reviewedAt = LocalDateTime.now();
     }

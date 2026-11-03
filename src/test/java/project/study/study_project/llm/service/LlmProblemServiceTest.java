@@ -29,6 +29,7 @@ import project.study.study_project.llm.client.QuestionKind;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.domain.DraftStatus;
+import project.study.study_project.llm.domain.RejectType;
 import project.study.study_project.llm.domain.GeneratedProblemDraft;
 import project.study.study_project.llm.dto.LlmDocumentGenerateRequest;
 import project.study.study_project.llm.dto.LlmGenerateRequest;
@@ -177,9 +178,13 @@ class LlmProblemServiceTest {
     }
 
     /** 거절 사례 조회 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */
-    private record NoteRow(String q, String r) implements GeneratedProblemDraftRepository.RejectionNoteView {
+    private record NoteRow(String q, String r, RejectType t) implements GeneratedProblemDraftRepository.RejectionNoteView {
+        NoteRow(String q, String r) {
+            this(q, r, null);
+        }
         @Override public String getQuestion() { return q; }
         @Override public String getReason() { return r; }
+        @Override public RejectType getType() { return t; }
     }
 
     /** GROUP BY 집계 결과 행 — 인터페이스 프로젝션을 테스트에서 record로 흉내 낸다. */
@@ -812,15 +817,36 @@ class LlmProblemServiceTest {
         }
 
         @Test
-        @DisplayName("거절하면 REJECTED + 사유가 남는다")
+        @DisplayName("거절하면 REJECTED + 유형과 사유가 남는다")
         void rejectKeepsReason() {
             GeneratedProblemDraft draft = mcDraft();
             when(draftRepository.findById(2L)).thenReturn(Optional.of(draft));
 
-            service.reject(2L, "보기 3번이 사실과 다름");
+            service.reject(2L, RejectType.WRONG_ANSWER, "보기 3번이 사실과 다름");
 
             assertThat(draft.getStatus()).isEqualTo(DraftStatus.REJECTED);
+            assertThat(draft.getRejectType()).isEqualTo(RejectType.WRONG_ANSWER);
             assertThat(draft.getRejectReason()).isEqualTo("보기 3번이 사실과 다름");
+        }
+
+        @Test
+        @DisplayName("유형 없이는 거절하지 않는다 — 글을 비운 거절이 되먹임을 끊던 것을 막는다")
+        void rejectRequiresType() {
+            assertThatThrownBy(() -> service.reject(2L, null, "사유만 있음"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("거절 유형");
+        }
+
+        @Test
+        @DisplayName("거절 사례에는 유형을 앞에 붙이고, 글이 없어도 유형만으로 싣는다")
+        void rejectionNotesCarryType() {
+            when(draftRepository.findRecentRejectionNotes(any())).thenReturn(List.of(
+                    new NoteRow("질문1", "정답만 길다", RejectType.ANSWER_LEAK),
+                    new NoteRow("질문2", null, RejectType.FORMAT),
+                    new NoteRow("질문3", "옛 거절", null)));
+
+            assertThat(service.findRecentRejectionNotes()).extracting(RejectionNote::reason)
+                    .containsExactly("[정답 단서 누설] 정답만 길다", "[형식 위반]", "옛 거절");
         }
 
         @Test

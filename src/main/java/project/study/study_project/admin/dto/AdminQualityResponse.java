@@ -7,9 +7,9 @@ import java.util.List;
  * AI 품질 화면 — 문제 초안이 <b>왜</b> 떨어지고 <b>어디서</b> 약한지.
  * 승인율 합계만으로는 프롬프트의 어느 곳을 고칠지 정해지지 않는다.
  *
- * @param rejectReasons         같은 문장끼리 묶은 거절 사유, 많은 순 상위 몇 개
- * @param otherReasonCount      상위 밖 사유가 붙은 거절 수
- * @param noReasonCount         사유 없이 거절한 수. 사유가 없으면 다음 생성에 되먹임되지 않는다
+ * @param rejectReasons         거절 유형별 수, 많은 순(V47). reason 칸에 유형 이름이 온다
+ * @param otherReasonCount      늘 0. 유형은 여덟 가지라 다 싣는다(화면과 응답 모양을 지키려고 남겼다)
+ * @param noReasonCount         유형을 받기 전에 거절한 수(미분류)
  * @param aiBuckets             AI 검수 결과로 나눈 초안 묶음별 검수 결과
  * @param findingTypes          지적 종류별로, 그 지적이 붙은 초안의 검수 결과(의견 등급은 뺀다)
  * @param byDomain              분야별 검수 결과
