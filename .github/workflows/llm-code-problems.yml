@@ -90,6 +90,7 @@ jobs:
           path: |
             generated/*-code-*.json
             generated/_code-topics.json
+            generated/_code-topic-usage.json
             build/code-problems/code-runs.json
           if-no-files-found: error
           retention-days: 3
