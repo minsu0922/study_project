@@ -230,6 +230,7 @@ flowchart LR
 - 처리한 AI 지적은 지우지 않고 처리 기록과 함께 접힌 칸으로 옮긴다.
 - 문서 초안의 문단을 고치면 앱이 원문 문서 파일(`documents/<날짜>.json`)의 같은 본문도 고친다.
 - 승인된 뒤에는 검수함에서 고칠 수 없다. 문제 관리·문서 관리 화면에서 고친다.
+- 코드 문제 초안은 보기 글을 고칠 수 없고, 거절 사유가 개념 문제의 거절 사례로 들어간다. 자세한 처리는 [24 코드 문제](24-java-code-problems.md) 5장 "검수함에서 처리하기"에 있다.
 - 문서 관리에서 정식 문서를 고치거나 옛 판으로 되돌리면 `DocumentContentChanged` 사건이 나가고, 앱이 원문 문서 파일도 맞춘다.
 
 코드 위치: `llm/service/LlmProblemService.java`, `llm/service/LlmDocumentService.java`
