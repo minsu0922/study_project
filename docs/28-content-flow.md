@@ -246,7 +246,7 @@ flowchart LR
 | `_existing-questions.json` | 이미 있는 문제의 질문 | 기동 · 검수 직후 | 문제 배치 (중복 회피) |
 | `_rejection-notes.json` | 최근 거절 사례와 사유 | 기동 · 검수 직후 | 문제 배치 (같은 실수 피하기) |
 | `_existing-documents.json` | 문서 제목·태그, 거절된 문서 slug | 기동 · 검수 직후 | 문서 배치 (중복 회피), 문제 배치 (거절 문서 건너뛰기) |
-| `_topics.json` | 문서 주제 대기열, 사용 기록을 초기화한 날(`usageResetAt`) | 기동 · 대기열을 고친 직후 | 문서 배치. 앱만 쓴다 |
+| `_topics.json` | 문서 주제 대기열, 사용 기록을 초기화한 날(`usageResetAt`). 사용일·횟수는 싣지 않는다 | 기동 · 대기열을 고친 직후 | 문서 배치. 앱만 쓴다 |
 | `_code-topics.json` | 코드 문제 주제 대기열 | 기동 · 대기열을 고친 직후 | 코드 문제 배치. 앱만 쓴다 |
 | `_topic-usage.json`·`_code-topic-usage.json` | 주제마다 마지막 사용일·횟수 | 배치가 주제를 쓸 때 | **배치만 쓴다.** 앱은 기동할 때 읽어 DB에 반영한다 |
 | `_domain-settings.json` | 켜 둔 분야와 순서·이름·힌트 | 기동 · 분야 설정을 고친 직후 | 세 배치 모두 |
