@@ -802,6 +802,11 @@ public class LlmProblemService {
                 explanation = text;
             }
             case CHOICE, RATIONALE -> {
+                // 코드 문제의 보기 글은 배치가 실행해서 정답을 확인한 값이다. 앱은 다시 실행하지 않으므로 고치지 못하게 한다
+                if (target == ProblemReview.FixTarget.CHOICE && draft.getCodeKind() != null) {
+                    throw new BusinessException(ErrorCode.COMMON_001,
+                            "코드 문제는 보기 글을 고칠 수 없습니다. 보기를 바꾸면 실행 검증을 다시 해야 합니다. 보기가 틀렸으면 거절해 주세요.");
+                }
                 List<AdminProblemRequest.ChoiceItem> choices = new ArrayList<>(readChoices(choicesJson));
                 if (choiceIndex == null || choiceIndex < 0 || choiceIndex >= choices.size()) {
                     throw new BusinessException(ErrorCode.COMMON_001, "고칠 보기가 없습니다.");

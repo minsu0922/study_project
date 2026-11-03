@@ -129,6 +129,30 @@ class CodeProblemWiringTest {
     }
 
     @Test
+    @DisplayName("코드 문제는 직접 고치기로 보기 글을 못 고친다 — 배치가 실행해 확인한 값이다. 오답 설명은 고친다")
+    void codeDraftRejectsChoiceTextEdit() throws Exception {
+        Path file = writeFile(List.of(
+                new CodeProblem.Part(0, CodeProblem.Kind.CODE_OUTPUT, "java", CODE_A, "1", 0, ""),
+                new CodeProblem.Part(1, CodeProblem.Kind.CODE_OUTPUT, "java", CODE_B, "2", 0, "")));
+        ObjectMapper mapper = new ObjectMapper();
+        GeneratedBatchFile batch = mapper.readValue(file.toFile(), GeneratedBatchFile.class);
+        mapper.writeValue(file.toFile(), batch.withReviewFindings(List.of(
+                new ProblemReview.Finding(0, ProblemReview.FindingType.RATIONALE_MISMATCH, "오답 이유가 실제와 다르다"),
+                new ProblemReview.Finding(0, ProblemReview.FindingType.RATIONALE_MISMATCH, "다른 오답 이유도 다르다"))));
+        draftImportService.importFile(file);
+        Long id = myDrafts().get(0).id();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> llmProblemService.resolveAiFinding(id, 0, ProblemReview.FixTarget.CHOICE, 1, "100"))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class)
+                .hasMessageContaining("보기 글을 고칠 수 없습니다");
+        assertThat(myDrafts().get(0).choices().get(1).text()).isEqualTo("10");
+
+        LlmDraftResponse after = llmProblemService.resolveAiFinding(id, 1, ProblemReview.FixTarget.RATIONALE, 1, "고친 오답 이유");
+        assertThat(after.choices().get(1).rationale()).isEqualTo("고친 오답 이유");
+    }
+
+    @Test
     @DisplayName("실행 대조 지적은 질문이 같아도 번호로 제 초안에 붙고, 지적 없는 초안은 '대조함, 지적 없음'이 된다")
     void factFindingsReachTheirOwnDraft() throws Exception {
         Path file = writeFile(List.of(

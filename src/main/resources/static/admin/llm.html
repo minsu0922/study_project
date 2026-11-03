@@ -481,8 +481,10 @@ function aiResolveOf(d, f) {
   if (d.status !== "PENDING" || !isOpenFinding(f)) return "";
   const key = `${d.id}-${f.index}`;
   const options = [["QUESTION", "", "질문"], ["EXPLANATION", "", "해설"]];
+  // 코드 문제의 보기 글은 배치가 실행해서 확인한 값이라 고를 칸에서 뺀다. 서버도 거절한다
   (d.choices ?? []).forEach((c, i) => {
-    options.push(["CHOICE", i, `${i + 1}번 보기`], ["RATIONALE", i, `${i + 1}번 오답 설명`]);
+    if (!d.codeKind) options.push(["CHOICE", i, `${i + 1}번 보기`]);
+    options.push(["RATIONALE", i, `${i + 1}번 오답 설명`]);
   });
   return `
         <div class="row-actions" style="margin-top:6px">
