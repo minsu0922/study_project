@@ -348,6 +348,29 @@ llm:
 .\gradlew.bat generateDrafts -PdraftArgs="--domain=NETWORK --count=1"
 ```
 
+## 형식 버전
+
+앱(내 PC)과 배치(GitHub Actions)는 서로 다른 시점의 코드로 `generated/` 파일을 쓰고 읽는다.
+pull하지 않은 옛 앱이 새 배치 파일을 읽으면 새 칸이 조용히 버려졌다. 앱이 새 칸을 넣은 현황 파일을 보내면 배치가 읽다 멈출 수 있었다.
+그래서 쓰는 쪽이 파일 맨 앞에 `formatVersion`을 찍고 읽는 쪽이 먼저 확인한다(`llm/support/FileFormats`, 2026-11-03).
+
+| 파일 | 종류(`FileFormats.Kind`) | 쓰는 쪽 | 읽는 쪽 |
+|---|---|---|---|
+| `<날짜>.json`, `<날짜>-code-*.json` | `BATCH_PROBLEMS` | 배치 | 앱(들여오기), 배치(회피 목록) |
+| `documents/<날짜>.json` | `DOCUMENTS` | 배치, 앱(본문 맞추기) | 앱(들여오기), 배치(근거 문서) |
+| `_existing-questions.json` | `EXISTING_QUESTIONS` | 앱 | 배치 |
+| `_existing-documents.json` | `EXISTING_DOCUMENTS` | 앱 | 배치 |
+| `_rejection-notes.json` | `REJECTION_NOTES` | 앱 | 배치 |
+| `_domain-settings.json` | `DOMAIN_SETTINGS` | 앱 | 배치 |
+| `_topics.json`, `_code-topics.json` | `TOPIC_QUEUE` | 앱 | 앱(손으로 적은 줄), 배치 |
+| `_topic-usage.json`, `_code-topic-usage.json` | `TOPIC_USAGE` | 배치 | 앱, 배치 |
+
+- 지금은 모두 버전 1이다. 버전이 없는 옛 파일도 1로 본다.
+- 읽는 쪽보다 새 버전이면 읽지 않는다. 앱은 그 결과 파일을 들여오지 않고 이력도 남기지 않는다. 그래서 pull한 뒤 앱을 다시 띄우면 그 파일을 다시 시도한다. 앱은 새 형식의 원문 문서 파일을 고쳐 쓰지도 않는다. 모르는 칸을 버린 채 다시 쓰면 그 칸이 사라지기 때문이다.
+- 배치는 새 형식의 현황 파일을 없는 것으로 보고 실행 요약에 경고를 남긴다. 분야 설정 파일만은 실행 로그에 남긴다.
+- **버전은 읽는 쪽이 깨질 때만 올린다.** 칸을 지우거나 이름·뜻을 바꿀 때, 읽는 쪽이 반드시 알아야 하는 칸을 더할 때다. 없어도 되는 칸을 더할 때는 그대로 둔다. 올릴 때는 `FileFormats.Kind`의 숫자를 바꾸고, 옛 버전 파일을 읽는 코드가 계속 도는지 테스트로 확인한다.
+- 버전 칸은 DTO에 두지 않는다. 쓸 때 찍고 읽을 때 걷어 낸다. 파일 형식 DTO에는 이 칸 하나만 무시하라는 표시(`@JsonIgnoreProperties`)가 있어 도우미를 거치지 않고 직접 읽는 곳도 실패하지 않는다.
+
 ## 거절 사례 되먹이기 (검수 → 생성 루프)
 
 검수자가 거절한 문제와 그 사유를 다음 생성 프롬프트에 넣어, 같은 실수를 반복하지 않게 한다.
