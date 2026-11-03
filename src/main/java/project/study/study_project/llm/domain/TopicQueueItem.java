@@ -86,6 +86,13 @@ public class TopicQueueItem {
     @Column(name = "used_count", nullable = false)
     private int usedCount;
 
+    /**
+     * 사용 기록을 초기화한 날(V46). 사용 기록 파일은 배치만 써서 앱이 지울 수 없다.
+     * 그래서 이 날을 남기고, 이 날까지의 기록은 다시 받아들이지 않는다.
+     */
+    @Column(name = "usage_reset_at")
+    private LocalDate usageResetAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -148,6 +155,10 @@ public class TopicQueueItem {
         if (date == null || (lastUsedAt != null && !date.isAfter(lastUsedAt))) {
             return;
         }
+        // 초기화한 날까지의 기록은 초기화로 지운 기록이다
+        if (usageResetAt != null && !date.isAfter(usageResetAt)) {
+            return;
+        }
         this.lastUsedAt = date;
         this.usedCount = count != null ? Math.max(count, usedCount) : usedCount + 1;
     }
@@ -172,8 +183,14 @@ public class TopicQueueItem {
      * 안 맞는 줄이 남고, 화면은 그 숫자를 그대로 보여 준다. 되돌린다면 끝까지 되돌린다.
      */
     public void clearUsage() {
+        clearUsage(LocalDate.now(java.time.ZoneId.of("Asia/Seoul")));
+    }
+
+    /** @param today 초기화한 날. 이 날까지의 사용 기록은 파일에 남아 있어도 다시 받지 않는다 */
+    public void clearUsage(LocalDate today) {
         this.lastUsedAt = null;
         this.usedCount = 0;
+        this.usageResetAt = today;
     }
 
     /** 순서 바꾸기 — 두 행의 값을 맞바꾸는 방식이라 서비스가 짝지어 호출한다. */

@@ -48,7 +48,8 @@ public class TopicQueueExporter extends SnapshotExporter {
             "관리자 화면의 '주제 범위' 탭에서 내보낸 파일입니다. 배치가 문서일마다 범위 하나를 골라 "
                     + "그 안에서 세부 주제를 정해 문서를 씁니다. 다음 차례는 '아직 안 쓴 범위 먼저, "
                     + "그다음은 가장 오래 안 쓴 범위'로 정해지고, 줄은 없어지지 않습니다. "
-                    + "lastUsedAt·usedCount는 배치가 적는 칸입니다. "
+                    + "이 파일은 앱만 씁니다. 배치는 사용일을 _topic-usage.json에 따로 적고, 앱이 기동할 때 읽어 "
+                    + "lastUsedAt·usedCount에 반영합니다. usageResetAt은 관리 화면에서 사용 기록을 초기화한 날입니다. "
                     + "id는 DB 행 번호이니 지우지 마세요 — 지우면 같은 범위가 한 벌 더 생깁니다. "
                     + "id 없이 손으로 적어 넣은 줄은 다음 기동에 DB로 흡수됩니다. "
                     + "이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.";
@@ -113,6 +114,7 @@ public class TopicQueueExporter extends SnapshotExporter {
         return new TopicQueueFile.Entry(
                 item.getId(), item.getDomain().value(), item.getTopic(), item.getMemo(),
                 item.getLastUsedAt() == null ? null : item.getLastUsedAt().toString(),
-                item.getUsedCount() == 0 ? null : item.getUsedCount());
+                item.getUsedCount() == 0 ? null : item.getUsedCount(),
+                item.getUsageResetAt() == null ? null : item.getUsageResetAt().toString());
     }
 }

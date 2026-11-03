@@ -3,6 +3,7 @@ package project.study.study_project.llm.support;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.dto.TopicQueueFile;
+import project.study.study_project.llm.dto.TopicUsageFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,16 +54,17 @@ public final class TopicQueue {
     /** 자바 코드 문제 주제 파일. 형식은 {@link #FILE_NAME}과 같고 담는 주제만 다르다. */
     public static final String CODE_FILE_NAME = "_code-topics.json";
 
-    /** 파일을 새로 쓸 때 note가 비어 있으면 넣어 주는 설명 — 파일 자신이 사용법을 들고 있게 한다. */
-    private static final String DEFAULT_NOTE =
-            "개념 문서의 주제 범위 목록입니다. 배치가 문서일마다 범위 하나를 골라 그 안에서 세부 주제를 정합니다. "
-                    + "다음 차례는 '아직 안 쓴 범위 먼저, 그다음은 가장 오래 안 쓴 범위'로 정해집니다(줄은 없어지지 않습니다). "
-                    // "Domain 상수명"은 enum이 있던 시절의 말이다(머지 전 점검 1). 그 타입이
-                    // 사라진 지금 그대로 두면, 파일을 여는 사람에게 <이제 없는 것>을 찾아보라고
-                    // 시키는 셈이다. 분야 설정 화면에 그대로 뜨는 말인 "분야 코드"로 적는다.
-                    + "domain은 필수이고 분야 코드(NETWORK처럼 분야 설정 화면에 뜨는 영문 코드)를 그대로 적습니다. "
-                    + "lastUsedAt·usedCount는 배치가 적는 칸이니 손대지 마세요. "
-                    + "목록이 비면 예전처럼 모델이 주제를 자동으로 고릅니다. 고친 뒤에는 커밋해야 다음 배치에 반영됩니다.";
+    /** 개념 주제 사용 기록 파일. 배치만 쓴다 */
+    public static final String USAGE_FILE_NAME = "_topic-usage.json";
+
+    /** 코드 주제 사용 기록 파일. 배치만 쓴다 */
+    public static final String CODE_USAGE_FILE_NAME = "_code-topic-usage.json";
+
+    private static final String USAGE_NOTE =
+            "배치가 주제를 쓸 때마다 마지막 사용일과 횟수를 적는 파일입니다. 앱은 이 파일을 쓰지 않고, "
+                    + "기동할 때 읽어 관리 화면에 반영합니다. 대기열 파일(_topics.json·_code-topics.json)은 앱만 씁니다. "
+                    + "둘이 한 파일을 쓰면 '배치로 보내기'가 충돌하기 때문입니다. 관리 화면에서 사용 기록을 초기화하면 "
+                    + "대기열 파일에 초기화한 날(usageResetAt)이 실리고, 그날까지의 기록은 무시합니다.";
 
     private static final ObjectMapper MAPPER = JsonMappers.STRICT;
 
@@ -73,6 +75,33 @@ public final class TopicQueue {
 
     /** 읽는 동안 건너뛴 항목의 사유. 사람이 읽는 문장이다(요약 화면에 그대로 실린다). */
     private final List<String> problems;
+
+    /** 사용 기록 파일에서 읽은 줄. {@link #markUsed}가 이 목록을 고쳐 사용 기록 파일만 다시 쓴다 */
+    private final List<TopicUsageFile.Usage> usage = new ArrayList<>();
+
+    /** 대기열 파일 이름 → 사용 기록 파일 이름. 대기열은 앱만, 사용 기록은 배치만 쓴다(docs/28 8장) */
+    public static String usageFileOf(String fileName) {
+        return CODE_FILE_NAME.equals(fileName) ? CODE_USAGE_FILE_NAME : USAGE_FILE_NAME;
+    }
+
+    private static List<TopicUsageFile.Usage> readUsage(Path dir, String fileName, List<String> problems) {
+        Path path = dir.resolve(usageFileOf(fileName));
+        if (!Files.exists(path)) {
+            return List.of();
+        }
+        try {
+            TopicUsageFile parsed = MAPPER.readValue(path.toFile(), TopicUsageFile.class);
+            return parsed.usage() == null ? List.of() : parsed.usage().stream().filter(java.util.Objects::nonNull).toList();
+        } catch (Exception e) {
+            // 사용 기록을 못 읽어도 대기열은 쓴다. 최악은 같은 주제가 한 번 더 걸리는 것이라 눈에 보인다
+            problems.add("`" + usageFileOf(fileName) + "`을 읽지 못해 사용 기록 없이 고릅니다(JSON 형식 확인): " + e.getMessage());
+            return List.of();
+        }
+    }
+
+    private static TopicUsageFile.Usage findUsage(List<TopicUsageFile.Usage> usage, TopicQueueFile.Entry entry) {
+        return usage.stream().filter(u -> u.matches(entry.id(), entry.domain(), entry.topic())).findFirst().orElse(null);
+    }
 
     private TopicQueue(String fileName, TopicQueueFile file, List<String> problems) {
         this.fileName = fileName;
@@ -117,7 +146,15 @@ public final class TopicQueue {
             TopicQueueFile parsed = MAPPER.readValue(path.toFile(), TopicQueueFile.class);
             List<TopicQueueFile.Entry> topics =
                     parsed.topics() == null ? List.of() : parsed.topics();
-            return new TopicQueue(fileName, new TopicQueueFile(parsed.note(), topics), findProblems(topics));
+            List<String> problems = new ArrayList<>(findProblems(topics));
+            List<TopicUsageFile.Usage> usage = readUsage(dir, fileName, problems);
+            // 사용 기록 파일의 날짜를 줄마다 합친다. 다음 차례는 합친 날짜로 고른다
+            List<TopicQueueFile.Entry> merged = topics.stream()
+                    .map(e -> e == null ? null : e.mergedWith(findUsage(usage, e)))
+                    .toList();
+            TopicQueue queue = new TopicQueue(fileName, new TopicQueueFile(parsed.note(), merged), problems);
+            queue.usage.addAll(usage);
+            return queue;
         } catch (Exception e) {
             // 쉼표 하나 빠뜨린 것으로 그날 생성이 죽으면 안 된다 — 대신 사유를 남긴다
             return new TopicQueue(fileName, new TopicQueueFile(null, List.of()),
@@ -194,7 +231,7 @@ public final class TopicQueue {
             if (entry.topic() == null || entry.topic().isBlank()) {
                 problems.add("%d번 항목에 topic이 비어 있어 건너뜁니다.".formatted(i + 1));
             } else {
-                // 위 DEFAULT_NOTE와 같은 말을 써야 한다 — 파일이 "분야 코드"로 적으라 해 놓고
+                // TopicQueueExporter의 안내문과 같은 말을 써야 한다 — 파일이 "분야 코드"로 적으라 해 놓고
                 // 오류는 "Domain 상수명"을 들이대면, 사람은 서로 다른 두 가지를 찾게 된다.
                 problems.add("%d번 항목(\"%s\")의 domain이 \"%s\"라서 건너뜁니다 — 분야 코드(대문자·숫자·밑줄)를 그대로 적어야 합니다."
                         .formatted(i + 1, entry.topic(), entry.domain()));
@@ -252,7 +289,7 @@ public final class TopicQueue {
     /* ── 사용 표시(되쓰기) ────────────────────────────────────── */
 
     /**
-     * 쓴 범위에 <b>마지막 사용일과 편수</b>를 적어 파일을 다시 쓴다. 성공하면 {@code true}.
+     * 쓴 범위에 <b>마지막 사용일과 편수</b>를 사용 기록 파일에 적는다. 대기열 파일은 건드리지 않는다. 성공하면 {@code true}.
      *
      * <p><b>왜 생성 전이 아니라 후에 적나.</b> 먼저 적으면 생성이 실패했을 때 그 범위만 차례를
      * 잃는다 — 요금도 안 나갔는데 순환에서 뒤로 밀린다. 반대로 나중에 적으면 최악의 경우 같은
@@ -264,17 +301,23 @@ public final class TopicQueue {
      */
     public boolean markUsed(Path dir, Picked picked, LocalDate date) {
         try {
-            List<TopicQueueFile.Entry> updated = new ArrayList<>(file.topics());
-            if (picked.index() < 0 || picked.index() >= updated.size()) {
+            if (picked.index() < 0 || picked.index() >= file.topics().size()) {
                 return false; // 도달할 수 없는 경로(방어) — 인덱스는 이 클래스가 만든 값이다
             }
-            updated.set(picked.index(), updated.get(picked.index()).usedOn(date.toString()));
+            TopicQueueFile.Entry used = file.topics().get(picked.index()).usedOn(date.toString());
 
-            TopicQueueFile written = new TopicQueueFile(
-                    file.note() == null || file.note().isBlank() ? DEFAULT_NOTE : file.note(), updated);
+            // 대기열 파일은 건드리지 않는다. 사용 기록 파일의 그 주제 줄만 고친다(앱과 쓰는 파일을 나눈다)
+            TopicUsageFile.Usage record = new TopicUsageFile.Usage(
+                    used.id(), used.domain(), used.topic(), used.lastUsedAt(), used.usedCount());
+            usage.removeIf(u -> u.matches(used.id(), used.domain(), used.topic()));
+            usage.add(record);
+            usage.sort(java.util.Comparator.comparing(
+                    (TopicUsageFile.Usage u) -> u.id() == null ? Long.MAX_VALUE : u.id())
+                    .thenComparing(u -> u.topic() == null ? "" : u.topic()));
+
             Files.createDirectories(dir);
-            Files.writeString(dir.resolve(fileName),
-                    MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(written));
+            Files.writeString(dir.resolve(usageFileOf(fileName)),
+                    MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(new TopicUsageFile(USAGE_NOTE, usage)));
             return true;
         } catch (Exception e) {
             problems().add("사용 표시를 저장하지 못했습니다: " + e.getMessage());

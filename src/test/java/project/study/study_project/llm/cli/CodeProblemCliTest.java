@@ -12,6 +12,7 @@ import project.study.study_project.llm.client.CodeProblem.Item;
 import project.study.study_project.llm.client.CodeProblem.Kind;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.dto.TopicQueueFile;
+import project.study.study_project.llm.dto.TopicUsageFile;
 import project.study.study_project.llm.client.ProblemReview.FindingType;
 import project.study.study_project.llm.support.CodeFactChecker;
 import project.study.study_project.llm.support.CodeRunner;
@@ -188,10 +189,12 @@ class CodeProblemCliTest {
 
         CodeProblemCli.verify(outDir, workDir, verifier, checker);
 
-        TopicQueueFile topics = CodeProblemCli.MAPPER.readValue(
-                outDir.resolve(TopicQueue.CODE_FILE_NAME).toFile(), TopicQueueFile.class);
-        assertThat(topics.topics().get(0).lastUsedAt()).isEqualTo("2026-10-18");
-        assertThat(topics.topics().get(0).usedCount()).isEqualTo(1);
+        // 사용 표시는 사용 기록 파일에 찍는다. 대기열 파일은 앱만 쓴다
+        TopicUsageFile usage = CodeProblemCli.MAPPER.readValue(
+                outDir.resolve(TopicQueue.CODE_USAGE_FILE_NAME).toFile(), TopicUsageFile.class);
+        assertThat(usage.usage().get(0).lastUsedAt()).isEqualTo("2026-10-18");
+        assertThat(usage.usage().get(0).usedCount()).isEqualTo(1);
+        assertThat(TopicQueue.read(outDir, TopicQueue.CODE_FILE_NAME).next()).as("쓴 주제 하나뿐이라 다음 차례도 그 주제").isNotNull();
         assertThat(CodeProblemCli.previousCodes(outDir, TOPIC)).singleElement()
                 .satisfies(code -> assertThat(code).contains("7 / 2"));
         assertThat(CodeProblemCli.previousCodes(outDir, "다른 주제")).isEmpty();

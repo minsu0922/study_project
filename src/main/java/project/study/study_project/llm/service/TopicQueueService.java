@@ -17,6 +17,7 @@ import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;
+import project.study.study_project.llm.dto.TopicUsageFile;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.domainsetting.support.DomainCatalog;
 import project.study.study_project.llm.support.TopicQueue;
@@ -625,6 +626,43 @@ public class TopicQueueService {
             events.publishEvent(new TopicQueueChanged());
         }
         return new SyncResult(applied, imported);
+    }
+
+    /**
+     * 배치가 사용 기록 파일에 적은 날짜를 DB에 반영한다(REVIEW 2026-11-01 순위 5).
+     * 번호가 있으면 번호로, 없으면 같은 종류에서 분야와 주제 글자로 줄을 찾는다.
+     * 초기화한 날까지의 기록은 엔티티가 받지 않는다({@code recordUse}).
+     *
+     * @return 반영한 줄 수
+     */
+    @Transactional
+    public int syncUsage(TopicUsageFile file, TopicKind kind) {
+        if (file == null || file.usage() == null || file.usage().isEmpty()) {
+            return 0;
+        }
+        List<TopicQueueItem> items = repository.findAllByKindOrderBySortOrderAsc(kind);
+        int applied = 0;
+        for (TopicUsageFile.Usage usage : file.usage()) {
+            LocalDate date = usage == null ? null : parseDate(usage.lastUsedAt());
+            if (date == null) {
+                continue;
+            }
+            TopicQueueItem item = items.stream()
+                    .filter(i -> usage.matches(i.getId(), i.getDomain().value(), i.getTopic()))
+                    .findFirst().orElse(null);
+            // 화면에서 지운 줄의 기록이면 무시한다. 되살리면 지웠는데 다시 나타난다
+            if (item == null) {
+                continue;
+            }
+            LocalDate before = item.getLastUsedAt();
+            item.recordUse(date, usage.usedCount());
+            applied += java.util.Objects.equals(before, item.getLastUsedAt()) ? 0 : 1;
+        }
+        if (applied > 0) {
+            log.info("주제 사용 기록 동기화: {}건 반영", applied);
+            events.publishEvent(new TopicQueueChanged());
+        }
+        return applied;
     }
 
     /** 파일 → DB 동기화 결과. 러너가 로그로 남긴다. */

@@ -14,8 +14,10 @@ import project.study.study_project.TestDomains;
 import project.study.study_project.llm.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.exception.BusinessException;
+import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.llm.domain.TopicQueueItem;
 import project.study.study_project.llm.dto.TopicQueueFile;
+import project.study.study_project.llm.dto.TopicUsageFile;
 import project.study.study_project.llm.dto.TopicQueueItemResponse;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.domainsetting.support.DefaultDomains;
@@ -594,6 +596,64 @@ class TopicQueueServiceTest {
     }
 
     /* ── 파일 → DB 동기화 ─────────────────────────────────────── */
+
+    /* REVIEW 2026-11-01 순위 5 — 배치는 사용 기록 파일에만 쓴다. 앱은 기동할 때 그 파일을 읽는다 */
+
+    @Test
+    @DisplayName("사용 기록 파일의 날짜를 번호로 찾아 DB에 반영하고 파일을 다시 내보내게 알린다")
+    void syncsUsageFileById() {
+        TopicQueueItem item = item(3L, TestDomains.DATABASE, "인덱스", 1);
+        when(repository.findAllByKindOrderBySortOrderAsc(TopicKind.CONCEPT)).thenReturn(List.of(item));
+
+        int applied = service.syncUsage(new TopicUsageFile(null, List.of(
+                new TopicUsageFile.Usage(3L, "DATABASE", "인덱스", "2026-11-03", 2))), TopicKind.CONCEPT);
+
+        assertThat(applied).isEqualTo(1);
+        assertThat(item.getLastUsedAt()).isEqualTo(LocalDate.of(2026, 11, 3));
+        assertThat(item.getUsedCount()).isEqualTo(2);
+        verify(events).publishEvent(any(TopicQueueChanged.class));
+    }
+
+    @Test
+    @DisplayName("번호 없는 기록은 분야와 주제 글자로 찾는다. 화면에서 지운 줄의 기록은 무시한다")
+    void syncsUsageByTopicAndIgnoresDeleted() {
+        TopicQueueItem item = item(3L, TestDomains.DATABASE, "인덱스", 1);
+        when(repository.findAllByKindOrderBySortOrderAsc(TopicKind.CONCEPT)).thenReturn(List.of(item));
+
+        int applied = service.syncUsage(new TopicUsageFile(null, List.of(
+                new TopicUsageFile.Usage(null, "DATABASE", "인덱스", "2026-11-03", 1),
+                new TopicUsageFile.Usage(99L, "DATABASE", "지운 주제", "2026-11-02", 1))), TopicKind.CONCEPT);
+
+        assertThat(applied).isEqualTo(1);
+        assertThat(item.getLastUsedAt()).isEqualTo(LocalDate.of(2026, 11, 3));
+    }
+
+    @Test
+    @DisplayName("초기화한 날까지의 기록은 다시 받지 않는다 — 사용 기록 파일은 앱이 지울 수 없다")
+    void ignoresUsageUpToResetDate() {
+        TopicQueueItem item = used(3L, TestDomains.DATABASE, "인덱스", 1, LocalDate.of(2026, 11, 1));
+        item.clearUsage(LocalDate.of(2026, 11, 2));
+        when(repository.findAllByKindOrderBySortOrderAsc(TopicKind.CONCEPT)).thenReturn(List.of(item));
+
+        int applied = service.syncUsage(new TopicUsageFile(null, List.of(
+                new TopicUsageFile.Usage(3L, "DATABASE", "인덱스", "2026-11-01", 1))), TopicKind.CONCEPT);
+
+        assertThat(applied).isZero();
+        assertThat(item.getLastUsedAt()).isNull();
+        assertThat(item.getUsageResetAt()).isEqualTo(LocalDate.of(2026, 11, 2));
+
+        item.recordUse(LocalDate.of(2026, 11, 5), 1);
+        assertThat(item.getLastUsedAt()).as("초기화 뒤에 새로 쓴 기록은 받는다").isEqualTo(LocalDate.of(2026, 11, 5));
+    }
+
+    @Test
+    @DisplayName("초기화한 날을 대기열 파일에 실어 배치도 알게 한다")
+    void exportsResetDate() {
+        TopicQueueItem item = item(3L, TestDomains.DATABASE, "인덱스", 1);
+        item.clearUsage(LocalDate.of(2026, 11, 2));
+
+        assertThat(TopicQueueExporter.toEntry(item).usageResetAt()).isEqualTo("2026-11-02");
+    }
 
     @Test
     @DisplayName("배치가 파일에 적은 사용 기록을 DB로 되돌려 받는다 — 이게 없으면 한 범위만 계속 걸린다")

@@ -61,7 +61,12 @@ public record TopicQueueFile(String note, List<Entry> topics) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Entry(Long id, String domain, String topic, String memo,
-                        String lastUsedAt, Integer usedCount) {
+                        String lastUsedAt, Integer usedCount, String usageResetAt) {
+
+        /** 초기화한 적 없는 줄. 손으로 적거나 테스트가 만드는 줄이 이 모양이다 */
+        public Entry(Long id, String domain, String topic, String memo, String lastUsedAt, Integer usedCount) {
+            this(id, domain, topic, memo, lastUsedAt, usedCount, null);
+        }
 
         /**
          * 아직 한 번도 안 쓴 범위인지. 공백만 있는 값도 "안 씀"으로 본다(손으로 지운 흔적).
@@ -83,7 +88,23 @@ public record TopicQueueFile(String note, List<Entry> topics) {
          * 앱은 그 줄을 "손으로 새로 적은 범위"로 보고 <b>같은 범위를 하나 더 만든다</b>.
          */
         public Entry usedOn(String date) {
-            return new Entry(id, domain, topic, memo, date, (usedCount == null ? 0 : usedCount) + 1);
+            return new Entry(id, domain, topic, memo, date, (usedCount == null ? 0 : usedCount) + 1, usageResetAt);
+        }
+
+        /** 사용 기록 파일의 기록을 합친 사본. 초기화한 날까지의 기록과 더 오래된 기록은 버린다 */
+        public Entry mergedWith(TopicUsageFile.Usage usage) {
+            if (usage == null || usage.lastUsedAt() == null || usage.lastUsedAt().isBlank()) {
+                return this;
+            }
+            String date = usage.lastUsedAt().trim();
+            if (usageResetAt != null && !usageResetAt.isBlank() && date.compareTo(usageResetAt.trim()) <= 0) {
+                return this;
+            }
+            if (!isNeverUsed() && date.compareTo(lastUsedAt.trim()) <= 0) {
+                return this;
+            }
+            int count = Math.max(usedCount == null ? 0 : usedCount, usage.usedCount() == null ? 1 : usage.usedCount());
+            return new Entry(id, domain, topic, memo, date, count, usageResetAt);
         }
     }
 }

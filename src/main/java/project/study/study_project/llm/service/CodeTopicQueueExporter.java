@@ -33,7 +33,8 @@ public class CodeTopicQueueExporter extends SnapshotExporter {
     private static final String NOTE =
             "관리자 화면의 '코드 문제 주제' 탭에서 내보낸 파일입니다. 주 1회 코드 문제 배치가 주제 하나를 골라 "
                     + "자바 코드 문제를 냅니다. 다음 차례는 '아직 안 쓴 주제 먼저, 그다음은 가장 오래 안 쓴 주제'입니다. "
-                    + "lastUsedAt·usedCount는 배치가 적는 칸이고, id는 DB 행 번호이니 지우지 마세요. "
+                    + "이 파일은 앱만 씁니다. 배치는 사용일을 _code-topic-usage.json에 따로 적고, 앱이 기동할 때 읽어 "
+                    + "lastUsedAt·usedCount에 반영합니다. id는 DB 행 번호이니 지우지 마세요. "
                     + "이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.";
 
     private final TopicQueueItemRepository repository;

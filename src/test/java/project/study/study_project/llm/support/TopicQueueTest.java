@@ -238,28 +238,28 @@ class TopicQueueTest {
     /* ── 사용 기록(되쓰기) ────────────────────────────────────── */
 
     @Test
-    @DisplayName("사용 기록은 고른 줄에만 남고, 다음 차례는 다른 범위로 넘어간다")
-    void recordsUseOnPickedEntryOnly() throws Exception {
-        write("""
+    @DisplayName("사용 기록은 사용 기록 파일에만 남고, 대기열 파일은 그대로다 — 대기열은 앱만 쓴다")
+    void recordsUseInUsageFileOnly() throws Exception {
+        String topics = """
                 {
                   "note": "내가 적어 둔 설명",
                   "topics": [
-                    { "domain": "OS", "topic": "메모리 관리", "memo": "왜 느려지는지" },
-                    { "domain": "NETWORK", "topic": "TCP" }
+                    { "id": 7, "domain": "OS", "topic": "메모리 관리", "memo": "왜 느려지는지" },
+                    { "id": 8, "domain": "NETWORK", "topic": "TCP" }
                   ]
                 }
-                """);
+                """;
+        write(topics);
 
         TopicQueue queue = TopicQueue.read(dir);
         assertThat(queue.markUsed(dir, queue.next(), LocalDate.of(2026, 8, 19))).isTrue();
 
-        String saved = Files.readString(dir.resolve(TopicQueue.FILE_NAME));
-        assertThat(saved).contains("\"lastUsedAt\" : \"2026-08-19\"");
-        assertThat(saved).contains("\"usedCount\" : 1");
-        assertThat(saved).contains("내가 적어 둔 설명");   // note를 배치가 지우면 사용법이 사라진다
-        assertThat(saved).contains("왜 느려지는지");       // memo도 보존한다(사람 몫의 기록)
+        assertThat(Files.readString(dir.resolve(TopicQueue.FILE_NAME))).isEqualTo(topics);
+        String usage = Files.readString(dir.resolve(TopicQueue.USAGE_FILE_NAME));
+        assertThat(usage).contains("\"id\" : 7").contains("\"lastUsedAt\" : \"2026-08-19\"")
+                .contains("\"usedCount\" : 1").contains("메모리 관리").doesNotContain("TCP");
 
-        // 다시 읽으면 아직 안 쓴 범위가 차례를 받는다 — 이게 안 되면 한 범위만 계속 걸린다
+        // 다시 읽으면 두 파일을 합쳐 아직 안 쓴 범위가 차례를 받는다
         TopicQueue reread = TopicQueue.read(dir);
         assertThat(reread.next().topic()).isEqualTo("TCP");
         assertThat(reread.size()).as("쓴 범위도 목록에 남는다").isEqualTo(2);
@@ -270,27 +270,72 @@ class TopicQueueTest {
      * "Spring으로 벌써 스무 편"을 영영 모른다.
      */
     @Test
-    @DisplayName("같은 범위를 다시 쓰면 편수가 하나 늘어난다")
+    @DisplayName("같은 범위를 다시 쓰면 대기열과 사용 기록 중 큰 편수에서 하나 늘어난다")
     void incrementsUsedCount() throws Exception {
         write("""
-                { "topics": [ { "domain": "OS", "topic": "메모리 관리", "lastUsedAt": "2026-08-11", "usedCount": 3 } ] }
+                { "topics": [ { "id": 7, "domain": "OS", "topic": "메모리 관리", "lastUsedAt": "2026-08-11", "usedCount": 3 } ] }
                 """);
 
         TopicQueue queue = TopicQueue.read(dir);
         queue.markUsed(dir, queue.next(), LocalDate.of(2026, 8, 19));
+        assertThat(Files.readString(dir.resolve(TopicQueue.USAGE_FILE_NAME))).contains("\"usedCount\" : 4");
 
-        assertThat(Files.readString(dir.resolve(TopicQueue.FILE_NAME))).contains("\"usedCount\" : 4");
+        TopicQueue again = TopicQueue.read(dir);
+        again.markUsed(dir, again.next(), LocalDate.of(2026, 8, 23));
+        String usage = Files.readString(dir.resolve(TopicQueue.USAGE_FILE_NAME));
+        assertThat(usage).contains("\"usedCount\" : 5").contains("2026-08-23");
+        assertThat(usage.split("\"id\"", -1)).as("같은 주제는 한 줄만 고친다").hasSize(2);
     }
 
     @Test
-    @DisplayName("note가 없던 파일에는 사용법 설명을 채워 넣는다 — 파일 자신이 쓰는 법을 들고 있게 한다")
-    void fillsDefaultNoteWhenMissing() throws Exception {
+    @DisplayName("사용 기록 파일에는 쓰는 법 설명을 싣는다 — 파일 자신이 쓰는 법을 들고 있게 한다")
+    void usageFileCarriesNote() throws Exception {
         write("{ \"topics\": [ { \"domain\": \"OS\", \"topic\": \"메모리 관리\" } ] }");
 
         TopicQueue queue = TopicQueue.read(dir);
         queue.markUsed(dir, queue.next(), LocalDate.of(2026, 8, 19));
 
-        assertThat(Files.readString(dir.resolve(TopicQueue.FILE_NAME))).contains("가장 오래 안 쓴 범위");
+        assertThat(Files.readString(dir.resolve(TopicQueue.USAGE_FILE_NAME))).contains("앱은 이 파일을 쓰지 않고");
+    }
+
+    @Test
+    @DisplayName("번호 없이 손으로 적은 줄은 분야와 주제 글자로 사용 기록을 짝짓는다")
+    void matchesUsageByTopicWhenNoId() throws Exception {
+        write("""
+                { "topics": [ { "domain": "OS", "topic": "메모리 관리" }, { "domain": "OS", "topic": "스케줄링" } ] }
+                """);
+        Files.writeString(dir.resolve(TopicQueue.USAGE_FILE_NAME), """
+                { "usage": [ { "domain": "OS", "topic": "메모리 관리", "lastUsedAt": "2026-08-19", "usedCount": 1 } ] }
+                """);
+
+        assertThat(TopicQueue.read(dir).next().topic()).isEqualTo("스케줄링");
+    }
+
+    @Test
+    @DisplayName("초기화한 날까지의 사용 기록은 무시한다 — 관리 화면 초기화가 배치에도 닿는다")
+    void ignoresUsageUpToResetDate() throws Exception {
+        write("""
+                { "topics": [
+                  { "id": 7, "domain": "OS", "topic": "메모리 관리", "usageResetAt": "2026-08-20" },
+                  { "id": 8, "domain": "OS", "topic": "스케줄링", "lastUsedAt": "2026-08-10", "usedCount": 1 } ] }
+                """);
+        Files.writeString(dir.resolve(TopicQueue.USAGE_FILE_NAME), """
+                { "usage": [ { "id": 7, "lastUsedAt": "2026-08-19", "usedCount": 2 } ] }
+                """);
+
+        assertThat(TopicQueue.read(dir).next().topic()).as("초기화돼 안 쓴 범위로 돌아갔다").isEqualTo("메모리 관리");
+    }
+
+    @Test
+    @DisplayName("사용 기록 파일이 깨져도 대기열은 쓰고 사유를 남긴다")
+    void brokenUsageFileStillPicks() throws Exception {
+        write("{ \"topics\": [ { \"domain\": \"OS\", \"topic\": \"메모리 관리\" } ] }");
+        Files.writeString(dir.resolve(TopicQueue.USAGE_FILE_NAME), "{ 깨짐");
+
+        TopicQueue queue = TopicQueue.read(dir);
+
+        assertThat(queue.next().topic()).isEqualTo("메모리 관리");
+        assertThat(queue.problems()).anyMatch(p -> p.contains(TopicQueue.USAGE_FILE_NAME));
     }
 
     /* ── 실물 파일 ────────────────────────────────────────────── */

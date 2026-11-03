@@ -11,6 +11,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.llm.dto.TopicQueueFile;
+import project.study.study_project.llm.dto.TopicUsageFile;
 import project.study.study_project.llm.support.TopicQueue;
 
 import java.nio.file.Files;
@@ -60,6 +61,25 @@ public class TopicQueueSyncRunner implements ApplicationRunner {
     }
 
     private void sync(String fileName, TopicKind kind) {
+        syncTopics(fileName, kind);
+        // 대기열 파일을 먼저 읽는다. 손으로 적은 줄이 DB에 들어와야 그 줄의 사용 기록을 찾는다
+        syncUsage(TopicQueue.usageFileOf(fileName), kind);
+    }
+
+    /** 배치가 사용 기록 파일에 적은 날짜를 DB로 가져온다. 파일이 없으면 배치가 아직 안 쓴 것이다 */
+    private void syncUsage(String usageFileName, TopicKind kind) {
+        Path file = Path.of(importDir).resolve(usageFileName);
+        if (!Files.exists(file)) {
+            return;
+        }
+        try {
+            topicQueueService.syncUsage(objectMapper.readValue(file.toFile(), TopicUsageFile.class), kind);
+        } catch (Exception e) {
+            log.warn("주제 사용 기록 파일을 읽지 못해 건너뜁니다(JSON 형식 확인): {} — {}", usageFileName, e.getMessage());
+        }
+    }
+
+    private void syncTopics(String fileName, TopicKind kind) {
         Path file = Path.of(importDir).resolve(fileName);
         if (!Files.exists(file)) {
             // 아직 대기열을 한 번도 안 쓴 상태다. 정상이므로 조용히 넘어간다.
