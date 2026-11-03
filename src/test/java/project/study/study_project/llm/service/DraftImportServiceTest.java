@@ -202,6 +202,26 @@ class DraftImportServiceTest {
     }
 
     @Test
+    @DisplayName("이 앱보다 새 형식의 결과 파일은 들여오지 않고 이력도 남기지 않는다 — 앱을 최신으로 맞추면 다시 시도된다")
+    void skipsNewerFormatWithoutHistory() throws Exception {
+        Path file = tempDir.resolve("2026-11-03.json");
+        Files.writeString(file, """
+                {
+                  "formatVersion": %d,
+                  "date": "2026-11-03",
+                  "domain": "NETWORK",
+                  "difficulty": "BEGINNER",
+                  "type": "MULTIPLE_CHOICE",
+                  "problems": []
+                }
+                """.formatted(project.study.study_project.llm.support.FileFormats.Kind.BATCH_PROBLEMS.current() + 1));
+
+        assertThatThrownBy(() -> service.importFile(file))
+                .isInstanceOf(project.study.study_project.llm.support.FileFormats.NewerFormatException.class);
+        verify(importedFileRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("분야가 빠진 파일은 예외를 던지고 이력을 남기지 않는다 — 파일을 고치면 다음 부팅에 다시 시도된다")
     void rejectsFileWithMissingDomain() throws Exception {
         Path file = tempDir.resolve("2026-08-14.json");

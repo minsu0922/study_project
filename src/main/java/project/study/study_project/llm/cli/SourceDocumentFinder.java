@@ -1,6 +1,7 @@
 package project.study.study_project.llm.cli;
 
 import project.study.study_project.global.common.Difficulty;
+import project.study.study_project.llm.support.FileFormats;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
@@ -98,7 +99,7 @@ final class SourceDocumentFinder {
             return null;
         }
         try {
-            GeneratedDocumentFile parsed = MAPPER.readValue(file.toFile(), GeneratedDocumentFile.class);
+            GeneratedDocumentFile parsed = FileFormats.read(MAPPER, file, FileFormats.Kind.DOCUMENTS, GeneratedDocumentFile.class);
             GeneratedDocumentItem doc = editionFor(parsed, difficulty);
             if (doc == null || doc.contentMd() == null || doc.contentMd().isBlank()) {
                 System.out.println("근거 문서 본문이 비어 폴백으로 생성합니다: " + file);

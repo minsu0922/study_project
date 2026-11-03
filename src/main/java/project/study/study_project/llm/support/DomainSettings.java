@@ -87,13 +87,16 @@ public final class DomainSettings implements DomainCatalog {
             return empty();
         }
         try {
-            DomainSettingsFile parsed = MAPPER.readValue(path.toFile(), DomainSettingsFile.class);
+            DomainSettingsFile parsed = FileFormats.read(MAPPER, path, FileFormats.Kind.DOMAIN_SETTINGS, DomainSettingsFile.class);
             List<DomainSettingsFile.Entry> domains = parsed.domains() == null ? List.of() : parsed.domains();
             return new DomainSettings(new DomainSettingsFile(parsed.note(), domains));
         } catch (Exception e) {
             // 형식이 깨졌어도 그날 배치를 죽이면 안 된다 — 이미 낸 API 요금을 버리는 쪽이
             // 훨씬 큰 손해다(TopicQueue.read와 같은 판단, 다만 이 파일은 사람이 아니라 관리
             // 화면이 쓰는 파일이라 problems() 같은 "사람에게 알리는" 장치는 두지 않았다).
+            if (e instanceof FileFormats.NewerFormatException) {
+                System.out.println("⚠️ " + e.getMessage());
+            }
             return empty();
         }
     }

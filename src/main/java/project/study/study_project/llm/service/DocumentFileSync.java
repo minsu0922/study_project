@@ -1,6 +1,7 @@
 package project.study.study_project.llm.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import project.study.study_project.llm.support.FileFormats;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -118,7 +119,9 @@ public class DocumentFileSync {
     private Optional<String> rewrite(Path file, ItemChange change) {
         try {
             String raw = Files.readString(file, StandardCharsets.UTF_8);
-            GeneratedDocumentFile parsed = JsonMappers.LENIENT.readValue(raw, GeneratedDocumentFile.class);
+            // 이 코드보다 새 형식이면 고치지 않는다. 모르는 칸을 버린 채 통째로 다시 쓰면 그 칸이 사라진다
+            GeneratedDocumentFile parsed = FileFormats.read(JsonMappers.LENIENT, raw, FileFormats.Kind.DOCUMENTS,
+                    GeneratedDocumentFile.class, file.getFileName().toString());
             GeneratedDocumentItem beginner = changeOf(parsed.document(), change);
             GeneratedDocumentItem advanced = changeOf(parsed.advancedDocument(), change);
             if (beginner == null && advanced == null) {
@@ -130,7 +133,7 @@ public class DocumentFileSync {
                     advanced != null ? advanced : parsed.advancedDocument(), parsed.factFindings());
             write(file, rewritten(raw, parsed, target));
             return Optional.of(file.getFileName().toString());
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             log.warn("배치 파일을 고치지 못했습니다({}): {}", file.getFileName(), e.getMessage());
             return Optional.empty();
         }
@@ -149,17 +152,18 @@ public class DocumentFileSync {
      * 바뀌어 커밋 차이가 파일 전체가 된다. 제목·slug가 바뀌었거나 글자 그대로 못 찾을 때만 통째로 다시 쓴다.
      */
     static String rewritten(String raw, GeneratedDocumentFile parsed, GeneratedDocumentFile target)
-            throws JsonProcessingException {
+            throws IOException {
         String text = replaceBody(raw, parsed.document(), target.document());
         text = text == null ? null : replaceBody(text, parsed.advancedDocument(), target.advancedDocument());
         if (text != null) {
-            GeneratedDocumentFile check = JsonMappers.LENIENT.readValue(text, GeneratedDocumentFile.class);
+            GeneratedDocumentFile check = FileFormats.read(JsonMappers.LENIENT, text, FileFormats.Kind.DOCUMENTS,
+                    GeneratedDocumentFile.class, "고친 문서 파일");
             if (Objects.equals(check.document(), target.document())
                     && Objects.equals(check.advancedDocument(), target.advancedDocument())) {
                 return text;
             }
         }
-        return JsonMappers.STRICT.writerWithDefaultPrettyPrinter().writeValueAsString(target);
+        return FileFormats.toJson(JsonMappers.STRICT, FileFormats.Kind.DOCUMENTS, target);
     }
 
     /** 본문만 다르면 그 글자를 바꾼 문자열, 그대로면 원래 문자열, 본문 말고도 다르거나 못 찾으면 {@code null}. */

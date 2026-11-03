@@ -1,5 +1,8 @@
 package project.study.study_project.llm.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import project.study.study_project.llm.support.FileFormats;
+
 import project.study.study_project.global.common.DomainCode;
 
 import java.util.List;
@@ -22,6 +25,7 @@ import java.util.List;
  * @param exportedAt 내보낸 날짜 — 날짜 단위로만 기록한다(시각까지 넣으면 매 부팅 파일이 바뀐다)
  * @param questions  정식 problem 테이블의 지문(분야별 최신 순)
  */
+@JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
 public record ExistingQuestionsFile(
         String note,
         String exportedAt,

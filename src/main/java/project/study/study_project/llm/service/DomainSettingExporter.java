@@ -1,6 +1,7 @@
 package project.study.study_project.llm.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.FileFormats;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
@@ -67,6 +68,11 @@ public class DomainSettingExporter extends SnapshotExporter {
     @Override
     protected String label() {
         return "분야 설정";
+    }
+
+    @Override
+    protected FileFormats.Kind formatKind() {
+        return FileFormats.Kind.DOMAIN_SETTINGS;
     }
 
     /**

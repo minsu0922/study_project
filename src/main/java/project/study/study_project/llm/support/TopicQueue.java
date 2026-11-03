@@ -90,7 +90,7 @@ public final class TopicQueue {
             return List.of();
         }
         try {
-            TopicUsageFile parsed = MAPPER.readValue(path.toFile(), TopicUsageFile.class);
+            TopicUsageFile parsed = FileFormats.read(MAPPER, path, FileFormats.Kind.TOPIC_USAGE, TopicUsageFile.class);
             return parsed.usage() == null ? List.of() : parsed.usage().stream().filter(java.util.Objects::nonNull).toList();
         } catch (Exception e) {
             // 사용 기록을 못 읽어도 대기열은 쓴다. 최악은 같은 주제가 한 번 더 걸리는 것이라 눈에 보인다
@@ -143,7 +143,7 @@ public final class TopicQueue {
             return new TopicQueue(fileName, new TopicQueueFile(null, List.of()), List.of());
         }
         try {
-            TopicQueueFile parsed = MAPPER.readValue(path.toFile(), TopicQueueFile.class);
+            TopicQueueFile parsed = FileFormats.read(MAPPER, path, FileFormats.Kind.TOPIC_QUEUE, TopicQueueFile.class);
             List<TopicQueueFile.Entry> topics =
                     parsed.topics() == null ? List.of() : parsed.topics();
             List<String> problems = new ArrayList<>(findProblems(topics));
@@ -317,7 +317,7 @@ public final class TopicQueue {
 
             Files.createDirectories(dir);
             Files.writeString(dir.resolve(usageFileOf(fileName)),
-                    MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(new TopicUsageFile(USAGE_NOTE, usage)));
+                    FileFormats.toJson(MAPPER, FileFormats.Kind.TOPIC_USAGE, new TopicUsageFile(USAGE_NOTE, usage)));
             return true;
         } catch (Exception e) {
             problems().add("사용 표시를 저장하지 못했습니다: " + e.getMessage());

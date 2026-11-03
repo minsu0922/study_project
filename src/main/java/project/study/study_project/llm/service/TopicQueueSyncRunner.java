@@ -1,6 +1,7 @@
 package project.study.study_project.llm.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.FileFormats;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,7 +74,7 @@ public class TopicQueueSyncRunner implements ApplicationRunner {
             return;
         }
         try {
-            topicQueueService.syncUsage(objectMapper.readValue(file.toFile(), TopicUsageFile.class), kind);
+            topicQueueService.syncUsage(FileFormats.read(objectMapper, file, FileFormats.Kind.TOPIC_USAGE, TopicUsageFile.class), kind);
         } catch (Exception e) {
             log.warn("주제 사용 기록 파일을 읽지 못해 건너뜁니다(JSON 형식 확인): {} — {}", usageFileName, e.getMessage());
         }
@@ -88,7 +89,7 @@ public class TopicQueueSyncRunner implements ApplicationRunner {
         }
         try {
             TopicQueueService.SyncResult result =
-                    topicQueueService.syncFrom(objectMapper.readValue(file.toFile(), TopicQueueFile.class), kind);
+                    topicQueueService.syncFrom(FileFormats.read(objectMapper, file, FileFormats.Kind.TOPIC_QUEUE, TopicQueueFile.class), kind);
             if (result.imported() > 0) {
                 // 흡수한 줄은 다음 내보내기에서 id가 붙어 파일이 바뀐다 — 커밋이 필요하다는 뜻이라 info.
                 log.info("주제 대기열: 파일에 적힌 주제 {}건을 DB로 가져왔습니다(관리자 화면에서 확인하세요)",

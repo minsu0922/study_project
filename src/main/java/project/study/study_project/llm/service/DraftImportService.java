@@ -1,6 +1,7 @@
 package project.study.study_project.llm.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.FileFormats;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -63,7 +64,7 @@ public class DraftImportService {
      */
     @Transactional
     public int importFile(Path file) throws IOException {
-        GeneratedBatchFile batch = objectMapper.readValue(file.toFile(), GeneratedBatchFile.class);
+        GeneratedBatchFile batch = FileFormats.read(objectMapper, file, FileFormats.Kind.BATCH_PROBLEMS, GeneratedBatchFile.class);
 
         // 손으로 편집됐거나 형식이 바뀐 파일을 조용히 통과시키지 않는다.
         // 여기서 예외를 던지면 이력이 남지 않아 파일을 고친 뒤 다음 부팅에 다시 시도된다(의도된 동작).

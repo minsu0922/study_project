@@ -1,6 +1,7 @@
 package project.study.study_project.llm.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.FileFormats;
 import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
@@ -284,7 +285,7 @@ public final class DraftGeneratorCli {
                 null);
 
         Files.createDirectories(outDir);
-        Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch));
+        Files.writeString(outFile, FileFormats.toJson(MAPPER, FileFormats.Kind.BATCH_PROBLEMS, batch));
         // 성공한 날도 요약에 남긴다. 건너뛴 날만 적으면 "요약이 비었다"가 두 가지 뜻을
         // 갖게 된다 — 잘 돌았거나, 요약 쓰기가 실패했거나. 둘을 구분할 수 있어야 한다.
         //
@@ -321,8 +322,8 @@ public final class DraftGeneratorCli {
     static void attachReviewFindings(Path outFile, GeneratedBatchFile batch, List<ProblemReview.Finding> findings) {
         Path temp = outFile.resolveSibling(outFile.getFileName() + ".tmp");
         try {
-            Files.writeString(temp, MAPPER.writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(batch.withReviewFindings(findings)));
+            Files.writeString(temp, FileFormats.toJson(MAPPER, FileFormats.Kind.BATCH_PROBLEMS,
+                    batch.withReviewFindings(findings)));
             Files.move(temp, outFile, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             BatchReports.announce("⚠️ 검수 지적을 파일에 싣지 못했습니다 — 문제는 저장했고, 지적은 위 요약에만 있습니다 (%s)"

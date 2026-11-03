@@ -1,5 +1,8 @@
 package project.study.study_project.llm.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import project.study.study_project.llm.support.FileFormats;
+
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
@@ -43,6 +46,7 @@ import java.util.List;
  * @param factFindings     두 편의 사실 검수 지적(docs/22 §6). 문제를 만드는 날 근거 문장과 대조한다.
  *                         2026-10-13 이전 파일과 검수가 두 편 다 실패한 날에는 {@code null}
  */
+@JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
 public record GeneratedDocumentFile(
         String note,
         String date,

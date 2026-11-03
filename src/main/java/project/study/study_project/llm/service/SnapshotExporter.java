@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import project.study.study_project.llm.support.FileFormats;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -91,6 +92,9 @@ public abstract class SnapshotExporter implements ApplicationRunner {
     /** 로그에 쓰는 사람 말 이름(예: {@code "기존 지문 스냅샷"}). */
     protected abstract String label();
 
+    /** 파일 종류. 쓸 때 그 종류의 형식 버전을 맨 앞에 찍는다({@link FileFormats}) */
+    protected abstract FileFormats.Kind formatKind();
+
     /**
      * 내보낼 내용을 만든다. <b>{@code null}을 돌려주면 이번에는 쓰지 않는다.</b>
      *
@@ -145,7 +149,7 @@ public abstract class SnapshotExporter implements ApplicationRunner {
             return false;
         }
 
-        String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(snapshot.payload());
+        String json = FileFormats.toJson(objectMapper, formatKind(), snapshot.payload());
         if (!hasChanged(file, json)) {
             log.debug("{} 변경 없음: {}", label(), snapshot.detail());
             return false;

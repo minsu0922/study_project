@@ -40,6 +40,19 @@ class DocumentFileSyncTest {
     }
 
     @Test
+    @DisplayName("이 앱보다 새 형식의 문서 파일은 고치지 않는다 — 모르는 칸을 버린 채 다시 쓰면 그 칸이 사라진다")
+    void leavesNewerFormatFile() throws Exception {
+        Path file = writeFile("2026-10-21.json", item("cache", "# 캐시\n\n원문."), null);
+        String newer = Files.readString(file).replaceFirst("\\{",
+                "{\n  \"formatVersion\" : " + (project.study.study_project.llm.support.FileFormats.Kind.DOCUMENTS.current() + 1)
+                        + ",\n  \"brandNewField\" : 1,");
+        Files.writeString(file, newer);
+
+        assertThat(sync().replaceContent("cache", "# 캐시\n\n원문.", "# 캐시\n\n고침.")).isEmpty();
+        assertThat(Files.readString(file)).isEqualTo(newer);
+    }
+
+    @Test
     @DisplayName("본문이 이미 달라졌거나 slug가 없으면 파일을 건드리지 않는다")
     void leavesFileWhenNothingMatches() throws Exception {
         Path file = writeFile("2026-10-20.json", item("cache", "# 캐시\n\n원문."), null);

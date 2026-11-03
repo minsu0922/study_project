@@ -1,6 +1,9 @@
 package project.study.study_project.llm.cli;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.FileFormats;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.DocumentFactChecker;
@@ -152,7 +155,7 @@ final class DocumentBatch {
                 date.toString(), Instant.now().toString(), domain, model, document, advanced);
 
         Files.createDirectories(docDir);
-        Files.writeString(outFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(file));
+        Files.writeString(outFile, FileFormats.toJson(MAPPER, FileFormats.Kind.DOCUMENTS, file));
         BatchReports.announce("✅ **%s 개념 문서 %d편** — %s → `%s`%n%n> 입문편(%,d자) %s%n%n> 심화편(%s) %s"
                 .formatted(date, advanced == null ? 1 : 2, domain, outFile,
                         document.contentMd().length(), document.title(),
@@ -210,8 +213,8 @@ final class DocumentBatch {
     static void attachFactFindings(Path outFile, GeneratedDocumentFile file, List<FactCheckFinding> findings) {
         Path temp = outFile.resolveSibling(outFile.getFileName() + ".tmp");
         try {
-            Files.writeString(temp, MAPPER.writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(file.withFactFindings(findings)));
+            Files.writeString(temp, FileFormats.toJson(MAPPER, FileFormats.Kind.DOCUMENTS,
+                    file.withFactFindings(findings)));
             Files.move(temp, outFile, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             BatchReports.announce("⚠️ 사실 검수 지적을 파일에 싣지 못했습니다 — 문서는 저장했고, 지적은 위 요약에만 있습니다 (%s)"
@@ -362,13 +365,16 @@ final class DocumentBatch {
             return ExistingDocuments.empty();
         }
         try {
-            ExistingDocuments snapshot = MAPPER.readValue(file.toFile(), ExistingDocuments.class);
+            ExistingDocuments snapshot = FileFormats.read(MAPPER, file, FileFormats.Kind.EXISTING_DOCUMENTS, ExistingDocuments.class);
             return new ExistingDocuments(snapshot.note(), snapshot.exportedAt(),
                     snapshot.titles() == null ? List.of() : snapshot.titles(),
                     snapshot.tags() == null ? List.of() : snapshot.tags(),
                     snapshot.rejectedSlugs() == null ? List.of() : snapshot.rejectedSlugs());
         } catch (Exception e) {
             System.out.println("기존 문서 스냅샷을 읽지 못해 건너뜁니다: " + e.getMessage());
+            if (e instanceof FileFormats.NewerFormatException) {
+                BatchReports.announce("⚠️ " + e.getMessage());
+            }
             return ExistingDocuments.empty();
         }
     }
@@ -380,6 +386,7 @@ final class DocumentBatch {
      * 문제를 만드는 낭비를 막는 용도다. 옛 파일에는 이 필드가 없으므로 null 방어가 필요하다 —
      * 위 {@code readExistingDocuments}가 전부 빈 목록으로 정규화해 호출부가 신경 쓰지 않게 한다.
      */
+    @JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
     record ExistingDocuments(String note, String exportedAt, List<String> titles,
                                      List<String> tags, List<String> rejectedSlugs) {
 

@@ -1,6 +1,7 @@
 package project.study.study_project.llm.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.FileFormats;
 import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
@@ -183,7 +184,7 @@ public final class CodeProblemCli {
             for (Path file : files.filter(f -> f.getFileName().toString().contains("-code-"))
                     .sorted(java.util.Comparator.reverseOrder()).toList()) {
                 try {
-                    GeneratedBatchFile batch = MAPPER.readValue(file.toFile(), GeneratedBatchFile.class);
+                    GeneratedBatchFile batch = FileFormats.read(MAPPER, file, FileFormats.Kind.BATCH_PROBLEMS, GeneratedBatchFile.class);
                     if (batch.codeParts() != null && topic.equals(batch.codeTopic())) {
                         batch.codeParts().forEach(part -> codes.add(part.code()));
                     }
@@ -244,7 +245,7 @@ public final class CodeProblemCli {
                             entry.getValue().get(i).title(), e.getMessage());
                 }
             }
-            Files.writeString(file, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(
+            Files.writeString(file, FileFormats.toJson(MAPPER, FileFormats.Kind.BATCH_PROBLEMS,
                     toBatchFile(candidates, date, entry.getKey(), entry.getValue()).withReviewFindings(findings)));
             saved += entry.getValue().size();
         }
@@ -287,7 +288,7 @@ public final class CodeProblemCli {
         for (RunNote note : runs.notes()) {
             GeneratedBatchFile batch = files.get(note.file());
             if (batch == null) {
-                batch = MAPPER.readValue(outDir.resolve(note.file()).toFile(), GeneratedBatchFile.class);
+                batch = FileFormats.read(MAPPER, outDir.resolve(note.file()), FileFormats.Kind.BATCH_PROBLEMS, GeneratedBatchFile.class);
                 files.put(note.file(), batch);
             }
             CodeProblem.Item item = itemOf(batch, note.problemIndex());
@@ -324,7 +325,7 @@ public final class CodeProblemCli {
                     batch.reviewFindings() == null ? List.of() : batch.reviewFindings());
             merged.addAll(entry.getValue());
             Files.writeString(outDir.resolve(entry.getKey()),
-                    MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(batch.withReviewFindings(merged)));
+                    FileFormats.toJson(MAPPER, FileFormats.Kind.BATCH_PROBLEMS, batch.withReviewFindings(merged)));
         }
 
         StringBuilder sb = new StringBuilder("🤖 **%s 코드 문제 AI 검수** — %d문제, 지적 %d건 (의견 %d건은 세지 않음)"

@@ -1,6 +1,7 @@
 package project.study.study_project.llm.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.FileFormats;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
@@ -52,6 +53,11 @@ public class CodeTopicQueueExporter extends SnapshotExporter {
     @Override
     protected String label() {
         return "코드 문제 주제";
+    }
+
+    @Override
+    protected FileFormats.Kind formatKind() {
+        return FileFormats.Kind.TOPIC_QUEUE;
     }
 
     @Override

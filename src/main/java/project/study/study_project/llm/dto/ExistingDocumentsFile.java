@@ -1,5 +1,8 @@
 package project.study.study_project.llm.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import project.study.study_project.llm.support.FileFormats;
+
 import java.util.List;
 
 /**
@@ -19,6 +22,7 @@ import java.util.List;
  *                      이 목록에 있는 문서는 근거로 쓰지 않는다 — 검수자가 "이건 아니다"라고
  *                      판단한 문서로 사흘간 문제를 만들면 그 사흘이 통째로 낭비이기 때문
  */
+@JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
 public record ExistingDocumentsFile(
         String note,
         String exportedAt,

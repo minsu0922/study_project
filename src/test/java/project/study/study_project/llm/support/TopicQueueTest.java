@@ -327,6 +327,19 @@ class TopicQueueTest {
     }
 
     @Test
+    @DisplayName("사용 기록 파일이 이 코드보다 새 형식이면 없는 것으로 보고 사유를 남긴다")
+    void newerUsageFileIsIgnoredWithReason() throws Exception {
+        write("{ \"topics\": [ { \"id\": 7, \"domain\": \"OS\", \"topic\": \"메모리 관리\" } ] }");
+        Files.writeString(dir.resolve(TopicQueue.USAGE_FILE_NAME), "{ \"formatVersion\": "
+                + (FileFormats.Kind.TOPIC_USAGE.current() + 1) + ", \"usage\": [] }");
+
+        TopicQueue queue = TopicQueue.read(dir);
+
+        assertThat(queue.next().topic()).isEqualTo("메모리 관리");
+        assertThat(queue.problems()).anyMatch(p -> p.contains("형식 버전"));
+    }
+
+    @Test
     @DisplayName("사용 기록 파일이 깨져도 대기열은 쓰고 사유를 남긴다")
     void brokenUsageFileStillPicks() throws Exception {
         write("{ \"topics\": [ { \"domain\": \"OS\", \"topic\": \"메모리 관리\" } ] }");

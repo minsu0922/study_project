@@ -1,6 +1,7 @@
 package project.study.study_project.llm.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import project.study.study_project.llm.support.FileFormats;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -84,7 +85,7 @@ public class DocumentImportService {
      */
     @Transactional
     public int importFile(Path file) throws IOException {
-        GeneratedDocumentFile parsed = objectMapper.readValue(file.toFile(), GeneratedDocumentFile.class);
+        GeneratedDocumentFile parsed = FileFormats.read(objectMapper, file, FileFormats.Kind.DOCUMENTS, GeneratedDocumentFile.class);
 
         // 손으로 편집됐거나 형식이 바뀐 파일을 조용히 통과시키지 않는다.
         // 여기서 예외를 던지면 이력이 남지 않아, 파일을 고치면 다음 부팅에 다시 시도된다(의도된 동작).
@@ -122,7 +123,7 @@ public class DocumentImportService {
      */
     @Transactional
     public int backfillFactFindings(Path file) throws IOException {
-        GeneratedDocumentFile parsed = objectMapper.readValue(file.toFile(), GeneratedDocumentFile.class);
+        GeneratedDocumentFile parsed = FileFormats.read(objectMapper, file, FileFormats.Kind.DOCUMENTS, GeneratedDocumentFile.class);
         if (parsed.factFindings() == null) {
             return 0;
         }

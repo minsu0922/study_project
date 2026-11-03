@@ -1,5 +1,8 @@
 package project.study.study_project.llm.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import project.study.study_project.llm.support.FileFormats;
+
 import project.study.study_project.llm.client.RejectionNote;
 
 import java.util.List;
@@ -23,6 +26,7 @@ import java.util.List;
  * @param exportedAt 내보낸 날짜. 언제 기준의 피드백인지 사람이 가늠하는 용도
  * @param notes      거절 사례 목록(최신순)
  */
+@JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
 public record RejectionNotesFile(
         String note,
         String exportedAt,

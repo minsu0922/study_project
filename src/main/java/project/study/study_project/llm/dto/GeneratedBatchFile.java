@@ -1,5 +1,8 @@
 package project.study.study_project.llm.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import project.study.study_project.llm.support.FileFormats;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import project.study.study_project.llm.client.CodeProblem;
 import project.study.study_project.global.common.Difficulty;
@@ -47,6 +50,7 @@ import java.util.List;
  *                     {@code problems} 안 위치다. {@code null}은 검수를 안 돌렸거나 실패한 것이고,
  *                     빈 목록은 돌렸는데 지적이 없는 것이다. 옛 파일은 {@code null}로 읽힌다
  */
+@JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
 public record GeneratedBatchFile(
         String note,
         String date,

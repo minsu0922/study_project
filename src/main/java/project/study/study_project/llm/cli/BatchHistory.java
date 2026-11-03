@@ -1,6 +1,9 @@
 package project.study.study_project.llm.cli;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.support.FileFormats;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
@@ -74,7 +77,14 @@ final class BatchHistory {
                 if (avoid.size() >= AVOID_LIST_SIZE) {
                     break;
                 }
-                GeneratedBatchFile batch = MAPPER.readValue(file.toFile(), GeneratedBatchFile.class);
+                GeneratedBatchFile batch;
+                try {
+                    batch = FileFormats.read(MAPPER, file, FileFormats.Kind.BATCH_PROBLEMS, GeneratedBatchFile.class);
+                } catch (FileFormats.NewerFormatException e) {
+                    // 더 새 코드가 쓴 파일이다. 회피 목록에서만 빠지므로 생성은 계속한다
+                    BatchReports.announce("⚠️ " + e.getMessage());
+                    continue;
+                }
                 // Objects.equals다 — 아래 1149행(스냅샷 쪽)과 같은 이유이고, 그 주석이 붙어
                 // 있는데도 이 갈래만 ==로 남아 있었다(최종 리뷰 Important 2). batch.domain()은
                 // Jackson이 파일에서 만든 인스턴스라 인수로 받은 domain과 같은 물건일 수 없고,
@@ -91,8 +101,14 @@ final class BatchHistory {
         // (2) 정식 문제 스냅샷 — 시드 문제처럼 파일로만 알 수 있는 것들
         Path existing = outDir.resolve(EXISTING_QUESTIONS_FILE);
         if (Files.exists(existing) && avoid.size() < AVOID_LIST_SIZE) {
-            ExistingQuestions snapshot = MAPPER.readValue(existing.toFile(), ExistingQuestions.class);
-            if (snapshot.questions() != null) {
+            ExistingQuestions snapshot = null;
+            try {
+                snapshot = FileFormats.read(MAPPER, existing, FileFormats.Kind.EXISTING_QUESTIONS, ExistingQuestions.class);
+            } catch (FileFormats.NewerFormatException e) {
+                // 앱이 더 새 코드로 쓴 현황 파일이다. 없는 것으로 보고 생성은 계속한다
+                BatchReports.announce("⚠️ " + e.getMessage());
+            }
+            if (snapshot != null && snapshot.questions() != null) {
                 snapshot.questions().stream()
                         .filter(q -> Objects.equals(q.domain(), domain)) // == 이면 같은 분야를 하나도 못 거른다
                         .map(ExistingQuestion::question)
@@ -121,11 +137,14 @@ final class BatchHistory {
             return List.of();
         }
         try {
-            RejectionNotesFile snapshot = MAPPER.readValue(file.toFile(), RejectionNotesFile.class);
+            RejectionNotesFile snapshot = FileFormats.read(MAPPER, file, FileFormats.Kind.REJECTION_NOTES, RejectionNotesFile.class);
             return snapshot.notes() == null ? List.of() : snapshot.notes();
         } catch (Exception e) {
             // 손으로 고치다 깨졌을 수 있다 — 되먹임을 포기할 뿐 생성 자체는 계속한다
             System.out.println("거절 사례 파일을 읽지 못해 건너뜁니다: " + e.getMessage());
+            if (e instanceof FileFormats.NewerFormatException) {
+                BatchReports.announce("⚠️ " + e.getMessage());
+            }
             return List.of();
         }
     }
@@ -226,6 +245,7 @@ final class BatchHistory {
     }
 
     /** {@code generated/_existing-questions.json}의 형태 — 이 CLI만 읽으므로 여기 둔다. */
+    @JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
     record ExistingQuestions(String note, String exportedAt, List<ExistingQuestion> questions) {
     }
 

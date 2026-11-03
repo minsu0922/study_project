@@ -1,6 +1,7 @@
 package project.study.study_project.llm.service;
 
 import project.study.study_project.global.event.ReviewCompleted;
+import project.study.study_project.llm.support.FileFormats;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -69,6 +70,11 @@ public class ExistingQuestionsExporter extends SnapshotExporter {
     @Override
     protected String label() {
         return "기존 지문 스냅샷";
+    }
+
+    @Override
+    protected FileFormats.Kind formatKind() {
+        return FileFormats.Kind.EXISTING_QUESTIONS;
     }
 
     /**
