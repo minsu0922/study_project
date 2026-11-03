@@ -84,19 +84,20 @@ class TopicQueueExporterTest {
     }
 
     /**
-     * V10에서는 다 쓴 줄을 빼고 내보냈다(소진되는 티켓이었으므로). 범위는 순환하므로
-     * <b>전부</b> 실어야 배치가 "가장 오래 안 쓴 것"을 고를 수 있다 — 빠뜨리면 순환이 성립하지 않는다.
+     * 범위는 순환하므로 이미 쓴 줄도 <b>전부</b> 싣는다. 사용일은 싣지 않는다. 배치가 _topic-usage.json에
+     * 적고 두 파일을 합쳐 고르므로, 여기 실으면 배치가 쓸 때마다 이 파일이 바뀌어 "보낼 변경"이 매일 뜬다.
      */
     @Test
-    @DisplayName("이미 쓴 범위도 사용 기록과 함께 내보낸다 — 순환의 근거가 되는 값이다")
-    void exportsUsedRangesWithTheirRecord() throws Exception {
+    @DisplayName("이미 쓴 범위도 내보내되 사용일·횟수는 싣지 않는다 — 사용 기록은 배치만 쓰는 파일에 있다")
+    void exportsUsedRangesWithoutUsage() throws Exception {
         given(used(1L, TestDomains.OS, "메모리 관리", 1, LocalDate.of(2026, 8, 19), 3));
 
         exporter.export(tempDir);
 
         TopicQueueFile.Entry entry = read().topics().get(0);
-        assertThat(entry.lastUsedAt()).isEqualTo("2026-08-19");
-        assertThat(entry.usedCount()).isEqualTo(3);
+        assertThat(entry.id()).isEqualTo(1L);
+        assertThat(entry.lastUsedAt()).isNull();
+        assertThat(entry.usedCount()).isNull();
     }
 
     @Test
