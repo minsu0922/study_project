@@ -210,6 +210,51 @@ class GeneratedPublisherTest {
     }
 
     @Test
+    void 원격에_닿지_못하면_커밋하지_않고_실패로_알린다() throws IOException {
+        write(local, "generated/_topics.json", "{\"topics\":[2]}\n");
+        localGit.runOrThrow("remote", "set-url", "origin", tmp.resolve("nowhere.git").toString());
+        String before = head();
+
+        GeneratedPublishResult result = publisher.publish();
+
+        assertThat(result.status()).isEqualTo(Status.FAILED);
+        assertThat(head()).isEqualTo(before);
+        assertThat(dirtyFiles()).contains("generated/_topics.json");
+    }
+
+    @Test
+    void rebase가_시간을_넘기면_되돌리고_사람이_고치던_파일을_꺼내_둔다() throws IOException {
+        pushFromOther("generated/2026-11-03.json", "{\"batch\":2}\n");
+        write(local, "src/B.java", "class B { int dirty; }\n");
+        write(local, "generated/_topics.json", "{\"topics\":[3]}\n");
+        // rebase 시작 전에 멈추는 훅으로 시간 초과를 만든다. 다른 git 명령은 제한 안에 끝난다
+        // 훅은 먼저 폴더를 떠난다. 끊긴 git이 남긴 sleep이 임시 폴더를 붙잡으면 테스트 정리가 실패한다
+        Files.writeString(local.resolve(".git/hooks/pre-rebase"), "#!/bin/sh\ncd /\nsleep 8\n");
+        local.resolve(".git/hooks/pre-rebase").toFile().setExecutable(true);
+        GeneratedPublisher slow = new GeneratedPublisher(local.resolve("generated"),
+                java.time.Clock.systemUTC(), java.time.Duration.ofSeconds(4));
+
+        GeneratedPublishResult result = slow.publish();
+
+        assertThat(result.status()).isEqualTo(Status.FAILED);
+        assertThat(Files.exists(local.resolve(".git/rebase-merge"))).isFalse();
+        assertThat(Files.exists(local.resolve(".git/rebase-apply"))).isFalse();
+        assertThat(localGit.runOrThrow("stash", "list").out()).as("치워 둔 작업을 꺼냈다").isBlank();
+        assertThat(Files.readString(local.resolve("src/B.java"))).isEqualTo("class B { int dirty; }\n");
+        assertThat(subject("HEAD")).as("이번 커밋은 남겨 다음에 push만 한다").startsWith(GeneratedPublisher.SUBJECT_PREFIX);
+        waitForOrphanHook();
+    }
+
+    /** 끊긴 git이 남긴 훅(sleep 8)이 끝나기를 기다린다. Windows는 쓰는 중인 파일이 있는 폴더를 못 지운다 */
+    private static void waitForOrphanHook() {
+        try {
+            Thread.sleep(6000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    @Test
     void 보낼_것이_없으면_아무것도_하지_않는다() {
         String before = head();
 

@@ -80,6 +80,9 @@ public class GitWorkspace {
         env.put("GIT_EDITOR", "true");
         env.put("GIT_SEQUENCE_EDITOR", "true");
         env.put("LC_ALL", "C");
+        // 조회(status·diff)가 index.lock을 잡지 않게 한다. 배지가 status를 도는 순간 보내기의 add·commit이
+        // 잠금에 막혀 실패하던 경로를 없앤다. 쓰기 명령이 꼭 잡아야 하는 잠금에는 영향이 없다
+        env.put("GIT_OPTIONAL_LOCKS", "0");
 
         Path out = null;
         Path err = null;

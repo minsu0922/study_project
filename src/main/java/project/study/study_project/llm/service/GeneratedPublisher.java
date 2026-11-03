@@ -56,6 +56,7 @@ public class GeneratedPublisher {
 
     private final Path importDir;
     private final Clock clock;
+    private final Duration gitTimeout;
     private final ReentrantLock lock = new ReentrantLock();
     private volatile CachedSummary cachedSummary;
 
@@ -72,8 +73,14 @@ public class GeneratedPublisher {
     }
 
     GeneratedPublisher(Path importDir, Clock clock) {
+        this(importDir, clock, GitWorkspace.DEFAULT_TIMEOUT);
+    }
+
+    /** @param gitTimeout git 명령 하나의 시간 제한. 테스트가 시간 초과 경로를 보려고 줄인다 */
+    GeneratedPublisher(Path importDir, Clock clock, Duration gitTimeout) {
         this.importDir = importDir;
         this.clock = clock;
+        this.gitTimeout = gitTimeout;
     }
 
     /** 배지용 요약. {@link #SUMMARY_TTL} 동안은 앞서 센 값을 돌려주고, 보낸 뒤에는 새로 센다. */
@@ -195,7 +202,8 @@ public class GeneratedPublisher {
         }
         GitWorkspace.Result fetch = git.run("fetch", "--quiet", REMOTE, BRANCH);
         if (!fetch.ok()) {
-            return GeneratedPublishResult.of(Status.PUSH_FAILED,
+            // 아직 아무것도 커밋하지 않았다. PUSH_FAILED("커밋은 남김")가 아니다
+            return GeneratedPublishResult.of(Status.FAILED,
                     "원격(origin)에 닿지 못해 보내지 않았습니다: " + fetch.lastErrorLine(), List.of());
         }
         Unpushed unpushed = unpushed(repo);
@@ -241,7 +249,18 @@ public class GeneratedPublisher {
             }
             if (behind(repo) > 0) {
                 boolean stashed = stashTracked(git);
-                GitWorkspace.Result rebase = git.run("rebase", "-q", UPSTREAM);
+                GitWorkspace.Result rebase;
+                try {
+                    rebase = git.run("rebase", "-q", UPSTREAM);
+                } catch (RuntimeException e) {
+                    // 시간 초과로 rebase를 끊었으면 도중 상태로 남는다. 되돌리고 치워 둔 작업을 꺼낸다.
+                    // 이번 커밋은 남긴다. 다음에 누르면 push만 다시 한다
+                    abortRebaseIfInProgress(repo);
+                    if (stashed) {
+                        popStash(git);
+                    }
+                    throw e;
+                }
                 if (!rebase.ok()) {
                     List<String> conflicts = GitWorkspace.splitNul(
                             git.run("diff", "--name-only", "--diff-filter=U", "-z").out());
@@ -357,13 +376,36 @@ public class GeneratedPublisher {
         if (!branch.ok() || !BRANCH.equals(name)) {
             blockers.add("지금 브랜치가 main이 아닙니다(" + (name.isEmpty() ? "브랜치 없음" : name) + "). main에서 보내세요.");
         }
-        for (String marker : IN_PROGRESS_MARKERS) {
-            String gitPath = git.run("rev-parse", "--git-path", marker).out().strip();
-            if (!gitPath.isEmpty() && Files.exists(git.dir().resolve(gitPath))) {
-                blockers.add("진행 중인 git 작업이 있습니다(" + marker + "). 끝낸 뒤 보내세요.");
-            }
+        for (String marker : inProgressMarkers(repo)) {
+            blockers.add("진행 중인 git 작업이 있습니다(" + marker + "). 끝낸 뒤 보내세요.");
         }
         return blockers;
+    }
+
+    /** 지금 남아 있는 진행 중 작업 표지. 배지가 화면마다 부르므로 git을 한 번만 실행한다 */
+    private static List<String> inProgressMarkers(Repo repo) {
+        GitWorkspace git = repo.git();
+        List<String> args = new ArrayList<>(List.of("rev-parse"));
+        IN_PROGRESS_MARKERS.forEach(m -> {
+            args.add("--git-path");
+            args.add(m);
+        });
+        List<String> paths = git.run(args).out().lines().map(String::strip).toList();
+        List<String> found = new ArrayList<>();
+        for (int i = 0; i < IN_PROGRESS_MARKERS.size() && i < paths.size(); i++) {
+            if (!paths.get(i).isEmpty() && Files.exists(git.dir().resolve(paths.get(i)))) {
+                found.add(IN_PROGRESS_MARKERS.get(i));
+            }
+        }
+        return found;
+    }
+
+    /** rebase가 도중에 멈춰 있으면 되돌린다. 없으면 아무것도 하지 않는다 */
+    private static void abortRebaseIfInProgress(Repo repo) {
+        List<String> markers = inProgressMarkers(repo);
+        if (markers.contains("rebase-merge") || markers.contains("rebase-apply")) {
+            repo.git().run("rebase", "--abort");
+        }
     }
 
     /**
@@ -530,7 +572,7 @@ public class GeneratedPublisher {
             if (prefix.isEmpty() || prefix.startsWith("..")) {
                 return new Resolved(null, "파일 폴더가 저장소 루트 아래에 있지 않습니다: " + importDir.toAbsolutePath());
             }
-            GitWorkspace git = new GitWorkspace(root);
+            GitWorkspace git = new GitWorkspace(root, gitTimeout);
             if (!git.run("remote", "get-url", REMOTE).ok()) {
                 return new Resolved(null, "origin 원격이 없습니다.");
             }
