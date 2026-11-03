@@ -133,11 +133,11 @@ sequenceDiagram
     R->>C: 두 편 사실 검수
     C-->>R: 틀린 문장 지적
     R->>F: 지적(factFindings) 덧붙여 다시 저장
-    R->>Q: 주제에 사용 날짜 찍기
+    R->>Q: 사용 기록 파일에 사용 날짜 찍기
     R->>R: git commit · push
 ```
 
-1. `_topics.json`(주제 대기열)에서 맨 위 주제를 꺼낸다. 비었으면 모델이 주제를 고른다.
+1. `_topics.json`(주제 대기열)과 `_topic-usage.json`(사용 기록)을 합쳐 차례가 된 주제를 꺼낸다. 비었으면 모델이 주제를 고른다.
 2. `_existing-documents.json`을 읽어 이미 있는 제목을 피하게 한다.
 3. 입문편을 만들고 그 전문을 넘겨 심화편을 만든다. 심화편이 실패해도 입문편은 저장한다.
 4. 두 편을 `generated/documents/<날짜>.json`에 쓴다.
@@ -184,7 +184,7 @@ flowchart TB
 | 순서 | 클래스 | 방향 | 하는 일 |
 |---|---|---|---|
 | 4 | `DomainSettingSyncRunner` | — | 분야 표가 비었으면 기본 분야 11개로 채운다 |
-| 5 | `TopicQueueSyncRunner` | 파일 → DB | 주제 대기열 파일에서 배치가 찍은 사용 날짜와, 손으로 적은 새 주제를 DB로 가져온다 |
+| 5 | `TopicQueueSyncRunner` | 파일 → DB | 주제 대기열 파일에서 손으로 적은 새 주제를, 사용 기록 파일에서 배치가 찍은 사용 날짜를 DB로 가져온다 |
 | 10 | `DraftImportRunner` | 파일 → DB | 새 문제·문서 파일을 초안으로 들여온다. 이미 들여온 파일은 건너뛴다 |
 | 15 | `ApprovedDocumentFileSync` | DB → 파일 | 정식 문서와 다른 원문 문서 파일의 제목·slug·본문을 정식 문서에 맞춘다 |
 | 20 | `RejectionNotesExporter` | DB → 파일 | `_rejection-notes.json` |
@@ -246,8 +246,9 @@ flowchart LR
 | `_existing-questions.json` | 이미 있는 문제의 질문 | 기동 · 검수 직후 | 문제 배치 (중복 회피) |
 | `_rejection-notes.json` | 최근 거절 사례와 사유 | 기동 · 검수 직후 | 문제 배치 (같은 실수 피하기) |
 | `_existing-documents.json` | 문서 제목·태그, 거절된 문서 slug | 기동 · 검수 직후 | 문서 배치 (중복 회피), 문제 배치 (거절 문서 건너뛰기) |
-| `_topics.json` | 문서 주제 대기열 | 기동 · 대기열을 고친 직후 | 문서 배치. **배치도 이 파일에 사용 날짜를 쓴다** |
-| `_code-topics.json` | 코드 문제 주제 대기열 | 기동 · 대기열을 고친 직후 | 코드 문제 배치. **배치도 이 파일에 쓴다** |
+| `_topics.json` | 문서 주제 대기열, 사용 기록을 초기화한 날(`usageResetAt`) | 기동 · 대기열을 고친 직후 | 문서 배치. 앱만 쓴다 |
+| `_code-topics.json` | 코드 문제 주제 대기열 | 기동 · 대기열을 고친 직후 | 코드 문제 배치. 앱만 쓴다 |
+| `_topic-usage.json`·`_code-topic-usage.json` | 주제마다 마지막 사용일·횟수 | 배치가 주제를 쓸 때 | **배치만 쓴다.** 앱은 기동할 때 읽어 DB에 반영한다 |
 | `_domain-settings.json` | 켜 둔 분야와 순서·이름·힌트 | 기동 · 분야 설정을 고친 직후 | 세 배치 모두 |
 
 - 내용이 바뀔 때만 파일을 쓴다. 그대로면 git에 변경이 안 생긴다.
@@ -283,7 +284,7 @@ flowchart LR
 |---|---|---|
 | 개념 문서 본문 | ① `document` 표 (학습자가 읽음) ② `generated_document_draft` 표 ③ `generated/documents/<날짜>.json` (문제 배치가 읽음) | ③은 늘 최신본을 따른다. 승인 전: 검수함 문단 고치기가 ②③을 함께 고친다. 승인 후: 문서 관리가 ①을 고치면 ③도 맞춘다. 앱이 뜰 때도 ①에 맞춰 ③을 고친다. ②는 승인 뒤 그대로 남는다 |
 | 문제 본문 | ① `problem` 표 ② `generated_problem_draft` 표 ③ `generated/<날짜>.json` | 승인 전: 검수함 지적 처리가 ②만 고친다. 승인 후: 문제 관리가 ①만 고친다 |
-| 주제 대기열 | ① DB `topic_queue` 표 ② `_topics.json`·`_code-topics.json` | 양쪽이 서로 쓴다. 앱이 기동 때 파일 → DB를 먼저 읽고, 그다음 DB → 파일로 쓴다 |
+| 주제 대기열 | ① DB `topic_queue` 표 ② `_topics.json`·`_code-topics.json` ③ `_topic-usage.json`·`_code-topic-usage.json` | ②는 앱만, ③은 배치만 쓴다. 앱은 기동 때 ②의 손으로 적은 줄과 ③의 사용일을 DB로 읽고, 그다음 DB → ②로 쓴다. 관리 화면에서 사용 기록을 초기화하면 ②에 초기화한 날이 실리고, 앱과 배치가 그날까지의 ③ 기록을 무시한다 |
 | 분야 목록 | ① DB `domain_setting` ② `_domain-settings.json` | 앱이 DB → 파일로만 쓴다 |
 | 문서 조회 결과 | ① `document` 표 ② Redis 캐시 (10분) | 관리 API로 고치면 캐시를 지운다. SQL로 바로 고치면 10분간 옛 본문이 나간다 |
 | 거절 사례 | 앱은 DB에서 바로 읽고, 배치는 `_rejection-notes.json`을 읽는다 | 앱이 검수 직후 파일을 다시 쓴다 |
@@ -295,10 +296,10 @@ flowchart LR
 | 증상 | 먼저 볼 곳 |
 |---|---|
 | 아침에 검수함이 비었다 | GitHub Actions 실행 요약 → `generated/`에 새 파일이 있는지 → 앱을 pull 뒤 다시 띄웠는지 |
-| 같은 주제 문서가 또 나왔다 | `_topics.json`에 사용 날짜가 찍혔는지, 상단 띠에 "보낼 변경" 칩이 남아 있는지 |
+| 같은 주제 문서가 또 나왔다 | `_topic-usage.json`에 사용 날짜가 찍혔는지, 상단 띠에 "보낼 변경" 칩이 남아 있는지 |
 | 문제가 근거 없이 나왔다 | 그 주기의 원문 문서 파일이 있는지, 거절된 문서인지 |
 | 거절한 실수가 되풀이된다 | 상단 띠에 "보낼 변경" 칩이 남아 있는지(`_rejection-notes.json`을 보냈는지) |
-| "배치로 보내기"가 충돌로 멈췄다 | 배치가 같은 파일(주로 `_topics.json`)을 바꿨다. pull한 뒤 충돌을 풀고 다시 누른다 |
+| "배치로 보내기"가 충돌로 멈췄다 | 배치가 같은 파일을 바꿨다. pull한 뒤 충돌을 풀고 다시 누른다. 주제 대기열은 2026-11-02부터 앱과 배치가 다른 파일을 써서 여기서 충돌하지 않는다 |
 | 고친 문서가 사이트에 안 보인다 | Redis 캐시 (`document::<slug>`) |
 
 더 자세한 운영 방법: [16 운영 매뉴얼](16-llm-pipeline-operations.md)
