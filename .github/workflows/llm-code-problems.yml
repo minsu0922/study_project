@@ -30,8 +30,9 @@ on:
         required: false
         default: ''
 
+# 기본은 읽기만 준다. 모델이 쓴 코드를 돌리는 job 1이 저장소에 쓸 수 있는 토큰을 받지 않게 한다.
 permissions:
-  contents: write
+  contents: read
 
 # 일일 배치와 같은 묶음에 둔다. 둘 다 generated/ 에 커밋하므로 동시에 돌면 푸시가 엇갈린다.
 concurrency:
@@ -102,6 +103,8 @@ jobs:
     needs: code-problems
     if: needs.code-problems.outputs.changed == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # 결과를 커밋·푸시한다
     timeout-minutes: 120
 
     steps:

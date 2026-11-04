@@ -86,6 +86,8 @@ public class CourseCatalog {
         };
     }
 
+    // 같은 클래스 안의 호출이라 위 find의 @Transactional은 프록시를 거치지 않는다. 여기에도 붙여 둔다
+    @Transactional(readOnly = true)
     public Optional<Course> find(PathKey key) {
         return find(key, false);
     }

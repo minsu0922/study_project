@@ -117,7 +117,7 @@ public final class DocumentDraftValidator {
     }
 
     /** {@code AdminDocumentRequest.slug}의 정규식과 같아야 한다 — 다르면 승인 순간 400으로 튕긴다. */
-    private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(-[a-z0-9]+)*$");
+    private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]++(?:-[a-z0-9]++)*+$");
 
     /**
      * 본문 첫 번째 H1({@code # 제목}). {@code ##} 이상은 잡지 않도록 {@code #} 뒤에 공백을 요구한다.
@@ -251,7 +251,7 @@ public final class DocumentDraftValidator {
             // 생략 부호를 낀 대문자 구문(SELECT ... FOR UPDATE, SET ... NX).
             // 공백을 [ \t]로 못 박아 줄바꿈을 넘지 못하게 한다 — 넘으면 앞 줄 끝과 뒷 줄 첫
             // 낱말이 한 구문으로 붙는다(위 주석의 RST/TCP).
-            Pattern.compile("\\b[A-Z]{2,}(?:[ \\t]+[A-Z]{2,})*[ \\t]+\\.\\.\\.[ \\t]+[A-Z]{2,}(?:[ \\t]+[A-Z]{2,})*")
+            Pattern.compile("\\b[A-Z]{2,}+(?:[ \\t]++[A-Z]{2,}+)*+[ \\t]++\\.\\.\\.[ \\t]++[A-Z]{2,}+(?:[ \\t]++[A-Z]{2,}+)*+")
     );
 
     /** 경고 메시지에 나열할 용어 개수 상한 — 다 적으면 메시지가 화면을 넘긴다. */

@@ -26,7 +26,7 @@ public record AdminDocumentRequest(
 
         @NotBlank(message = "slug는 필수입니다.")
         @Size(max = 150, message = "slug는 150자 이하여야 합니다.")
-        @Pattern(regexp = "^[a-z0-9]+(-[a-z0-9]+)*$",
+        @Pattern(regexp = "^[a-z0-9]++(?:-[a-z0-9]++)*+$",
                 message = "slug는 영문 소문자·숫자·하이픈만 가능합니다. (예: tcp-3-way-handshake)")
         String slug,
 

@@ -39,7 +39,7 @@ public final class CodeFactChecker {
     private static final Pattern COMPILE_FAILS = Pattern.compile("컴파일되지 않|컴파일 ?오류|컴파일 ?에러|컴파일이 안");
     /** 오답 이유의 앞 문장은 학습자의 오해를 옮긴 것이다. 틀린 말이 맞으니 사실 대조에서 뺀다. */
     private static final Pattern MISBELIEF = Pattern.compile("오해|착각|잘못 알|생각했|믿었");
-    private static final Pattern STRING_LITERAL = Pattern.compile("\"(?:\\\\.|[^\"\\\\])*\"");
+    private static final Pattern STRING_LITERAL = Pattern.compile("\"(?:\\\\.|[^\"\\\\])*+\"");
     private static final Pattern LINE_COMMENT = Pattern.compile("//(.*)$");
     private static final Pattern BLOCK_COMMENT = Pattern.compile("/\\*(.*?)\\*/");
     private static final Pattern REVEALING_WORD = Pattern.compile(

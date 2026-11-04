@@ -125,7 +125,7 @@ public record GeneratedProblemItem(
         if (!hasExhibit()) {
             return null;
         }
-        return exhibit.replaceFirst("^(?:[ \\t]*\\r?\\n)+", "").stripTrailing().stripIndent();
+        return exhibit.replaceFirst("^(?:[ \\t]*+\\r?\\n)++", "").stripTrailing().stripIndent();
     }
 
     /** 검수 AI처럼 문제를 처음 보는 쪽에 넘길 지문. 자료가 있으면 지문 아래에 붙인다. */
