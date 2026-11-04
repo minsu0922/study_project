@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -69,7 +70,9 @@ class ApprovedDocumentFileSyncTest {
     void missingDirectoryIsQuiet() {
         when(repository.findAll()).thenReturn(List.of(doc("thread", "본문")));
 
-        new ApprovedDocumentFileSync(repository, new DocumentFileSync(root.resolve("nope").toString())).run(null);
+        assertThatCode(() -> new ApprovedDocumentFileSync(repository,
+                new DocumentFileSync(root.resolve("nope").toString())).run(null))
+                .doesNotThrowAnyException();
     }
 
     private DocumentFileSync sync() {

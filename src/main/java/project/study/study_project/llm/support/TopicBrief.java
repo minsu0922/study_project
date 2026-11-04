@@ -14,12 +14,12 @@ import java.util.List;
 public record TopicBrief(String concepts, String questions, String outOfScope, String facts,
                          String diagram, List<String> laterTopics) {
 
-    private static final String CONCEPTS = "핵심 개념:";
-    private static final String QUESTIONS = "설명할 것:";
-    private static final String OUT_OF_SCOPE = "다루지 않을 것:";
-    private static final String FACTS = "실물:";
-    private static final String DIAGRAM = "그림:";
-    private static final String LATER = "뒤 편이 다룰 주제:";
+    private static final String CONCEPTS_LABEL = "핵심 개념:";
+    private static final String QUESTIONS_LABEL = "설명할 것:";
+    private static final String OUT_OF_SCOPE_LABEL = "다루지 않을 것:";
+    private static final String FACTS_LABEL = "실물:";
+    private static final String DIAGRAM_LABEL = "그림:";
+    private static final String LATER_LABEL = "뒤 편이 다룰 주제:";
 
     public TopicBrief {
         laterTopics = laterTopics == null ? List.of() : List.copyOf(laterTopics);
@@ -41,16 +41,16 @@ public record TopicBrief(String concepts, String questions, String outOfScope, S
         String concepts = null, questions = null, outOfScope = null, facts = null, diagram = null;
         for (String raw : memo.split("\\R")) {
             String line = raw.strip();
-            if (line.startsWith(CONCEPTS)) {
-                concepts = value(line, CONCEPTS);
-            } else if (line.startsWith(QUESTIONS)) {
-                questions = value(line, QUESTIONS);
-            } else if (line.startsWith(OUT_OF_SCOPE)) {
-                outOfScope = value(line, OUT_OF_SCOPE);
-            } else if (line.startsWith(FACTS)) {
-                facts = value(line, FACTS);
-            } else if (line.startsWith(DIAGRAM)) {
-                diagram = value(line, DIAGRAM);
+            if (line.startsWith(CONCEPTS_LABEL)) {
+                concepts = value(line, CONCEPTS_LABEL);
+            } else if (line.startsWith(QUESTIONS_LABEL)) {
+                questions = value(line, QUESTIONS_LABEL);
+            } else if (line.startsWith(OUT_OF_SCOPE_LABEL)) {
+                outOfScope = value(line, OUT_OF_SCOPE_LABEL);
+            } else if (line.startsWith(FACTS_LABEL)) {
+                facts = value(line, FACTS_LABEL);
+            } else if (line.startsWith(DIAGRAM_LABEL)) {
+                diagram = value(line, DIAGRAM_LABEL);
             }
         }
         if (concepts == null || questions == null) {
@@ -67,11 +67,11 @@ public record TopicBrief(String concepts, String questions, String outOfScope, S
     /** 입문편에 싣는 줄 — 메모의 다섯 칸 전부. */
     public String forBeginner() {
         StringBuilder sb = new StringBuilder();
-        append(sb, CONCEPTS, concepts);
-        append(sb, QUESTIONS, questions);
-        append(sb, OUT_OF_SCOPE, outOfScope);
-        append(sb, FACTS, facts);
-        append(sb, DIAGRAM, diagram);
+        append(sb, CONCEPTS_LABEL, concepts);
+        append(sb, QUESTIONS_LABEL, questions);
+        append(sb, OUT_OF_SCOPE_LABEL, outOfScope);
+        append(sb, FACTS_LABEL, facts);
+        append(sb, DIAGRAM_LABEL, diagram);
         return sb.toString();
     }
 
@@ -81,10 +81,10 @@ public record TopicBrief(String concepts, String questions, String outOfScope, S
      */
     public String forAdvanced() {
         StringBuilder sb = new StringBuilder();
-        append(sb, CONCEPTS, concepts);
-        append(sb, OUT_OF_SCOPE, outOfScope);
-        append(sb, FACTS, facts);
-        append(sb, LATER, laterTopics.isEmpty() ? null : String.join(", ", laterTopics));
+        append(sb, CONCEPTS_LABEL, concepts);
+        append(sb, OUT_OF_SCOPE_LABEL, outOfScope);
+        append(sb, FACTS_LABEL, facts);
+        append(sb, LATER_LABEL, laterTopics.isEmpty() ? null : String.join(", ", laterTopics));
         return sb.toString();
     }
 

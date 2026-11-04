@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
  * 코드 문제 배치의 검증 단계 — 후보를 <b>실제로 실행해</b> 통과한 것만 파일로 남기는지 본다.
@@ -176,9 +177,9 @@ class CodeProblemCliTest {
     @Test
     @DisplayName("검증 단계가 남긴 실행 결과가 없으면 AI 검수는 부르지 않는다")
     void reviewSkipsWithoutRunNotes() throws Exception {
-        CodeProblemCli.review(outDir, workDir, model -> {
+        assertThatCode(() -> CodeProblemCli.review(outDir, workDir, model -> {
             throw new AssertionError("검수기를 만들면 안 된다");
-        });
+        })).doesNotThrowAnyException();
     }
 
     @Test
