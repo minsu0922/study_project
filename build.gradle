@@ -3,6 +3,7 @@ plugins {
     id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'jacoco'
+    id 'org.sonarqube' version '7.5.0.8588'
 }
 
 group = 'project.study'
@@ -112,6 +113,16 @@ jacocoTestReport {
     reports {
         xml.required = true
         html.required = true
+    }
+}
+
+// SonarCloud 정적 분석. CI(ci-cd.yml)에서만 돌린다. 토큰은 SONAR_TOKEN 환경변수로 받는다.
+// 커버리지는 위 JaCoCo XML을 플러그인이 알아서 찾는다.
+sonar {
+    properties {
+        property 'sonar.projectKey', 'minsu0922_study_project'
+        property 'sonar.organization', 'minsu0922'
+        property 'sonar.host.url', 'https://sonarcloud.io'
     }
 }
 
