@@ -83,7 +83,9 @@ public class DocumentImportService {
      * @throws IOException              파일이 깨졌거나 형식이 다를 때 — 호출자가 그 파일만 건너뛴다
      * @throws IllegalArgumentException 분야나 입문편 본문이 비었을 때
      */
-    @Transactional
+    // IOException은 검사 예외라 기본값으로는 롤백하지 않는다. 반쯤 저장하고 이력 없이 커밋하면
+    // 다음 부팅에 같은 파일을 다시 들여와 초안이 겹친다
+    @Transactional(rollbackFor = IOException.class)
     public int importFile(Path file) throws IOException {
         GeneratedDocumentFile parsed = FileFormats.read(objectMapper, file, FileFormats.Kind.DOCUMENTS, GeneratedDocumentFile.class);
 
@@ -121,7 +123,7 @@ public class DocumentImportService {
      *
      * @return 채운 초안 수
      */
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     public int backfillFactFindings(Path file) throws IOException {
         GeneratedDocumentFile parsed = FileFormats.read(objectMapper, file, FileFormats.Kind.DOCUMENTS, GeneratedDocumentFile.class);
         if (parsed.factFindings() == null) {
