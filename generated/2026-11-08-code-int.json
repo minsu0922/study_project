@@ -1,0 +1,114 @@
+{
+  "formatVersion" : 1,
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-11-08",
+  "generatedAt" : "2026-11-07T21:08:44.185623751Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행하면 무엇이 출력되는가?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 정적 메서드는 오버라이딩되지 않고 숨겨지므로 변수의 선언 타입으로 호출할 메서드가 컴파일 때 정해진다. 인스턴스 메서드는 오버라이딩되어 실행 때 실제 객체의 메서드가 불린다.\n11행 A x = new B(): 선언 타입은 A, 실제 객체는 B다.\n12행 x.s(): s는 static이라 선언 타입 A의 s를 고른다 → A-static을 출력한다.\n13행 x.i(): i는 인스턴스 메서드라 실제 객체 B의 i를 고른다 → B-inst를 출력한다.\n그래서 출력은 A-static / B-inst다.",
+    "choices" : [ {
+      "text" : "A-static / B-inst",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "B-static / B-inst",
+      "correct" : false,
+      "rationale" : "정적 메서드도 실제 객체 타입으로 골라진다고 오해한 답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "A-static / A-inst",
+      "correct" : false,
+      "rationale" : "인스턴스 메서드도 변수 타입으로 골라진다고 오해한 답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "B-static / A-inst",
+      "correct" : false,
+      "rationale" : "정적 메서드와 인스턴스 메서드의 선택 기준을 거꾸로 생각한 답이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "정적 메서드와 인스턴스 메서드의 호출 대상",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "다음 코드가 circle을 출력하도록 8행을 한 줄로 고치려 한다. 8행을 무엇으로 바꿔야 하는가?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 자식이 같은 이름의 필드를 선언하면 부모 필드는 숨겨질 뿐 그대로 남고, 부모 클래스 안의 코드는 언제나 부모의 필드를 읽는다. 인스턴스 초기화 블록은 중괄호로 감싼 코드로, 객체를 만들 때 실행된다.\n8행 { type = \"circle\"; }: 새 필드를 만들지 않고 물려받은 Shape의 type에 circle을 넣는다.\n12행 Shape s = new Circle(): Shape의 type이 shape로 초기화된 뒤 8행 블록이 실행되어 circle로 바뀐다.\n13행 s.describe(): 4행 return type은 Shape의 type을 읽는다 → 값은 circle이다 → circle을 출력한다.\n원래 코드는 8행에서 Circle만의 새 type을 만들어 4행이 여전히 shape를 읽는 걸음에서 갈린다.\n그래서 정답은 { type = \"circle\"; }이고 출력은 circle이다.",
+    "choices" : [ {
+      "text" : "{ type = \"circle\"; }",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "static String type = \"circle\";",
+      "correct" : false,
+      "rationale" : "static으로 바꾸면 덮어쓴다고 오해했지만 여전히 새 필드라 shape가 나온다.",
+      "matchText" : ""
+    }, {
+      "text" : "String type() { return \"circle\"; }",
+      "correct" : false,
+      "rationale" : "같은 이름의 메서드가 필드를 대신한다고 오해했지만 describe는 필드를 읽어 shape가 나온다.",
+      "matchText" : ""
+    }, {
+      "text" : "final String type = \"circle\";",
+      "correct" : false,
+      "rationale" : "final을 붙이면 부모 필드를 대체한다고 오해했지만 여전히 숨김이라 shape가 나온다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "부모 메서드가 읽는 숨겨진 필드 바로잡기",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "12행의 x.s()는 static 메서드 호출이다. static 메서드는 오버라이딩되지 않고 숨겨지므로 참조 변수의 선언 타입 A를 기준으로 A.s()가 호출되어 \"A-static\"이 출력된다. 13행의 i()는 인스턴스 메서드라 실제 객체 B의 메서드가 호출되어 \"B-inst\"가 출력된다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "4행의 describe()는 Shape의 type 필드를 읽는다. 현재 8행은 같은 이름의 필드를 새로 선언해 Shape의 필드를 숨길 뿐이어서 \"shape\"가 출력된다. 4번(final 필드)과 2번(static 필드)도 여전히 새 필드를 선언해 숨기는 것이라 결과가 바뀌지 않는다. 3번은 type()이라는 메서드를 추가할 뿐이라 describe()와 상관이 없다. 1번처럼 인스턴스 초기화 블록을 쓰면 Circle에 type 필드가 없으므로 type은 상속받은 Shape.type을 가리킨다. Shape의 초기화가 끝난 뒤 이 블록이 실행되어 값이 \"circle\"로 바뀌므로 circle이 출력된다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「원래 코드는 8행에서 Circle만의 새 type을 만들어 4행이 여전히 shape를 읽는 걸음에서 갈린다.」\n고치면: 원래 코드는 8행에서 Circle만의 새 type을 만들기 때문에 4행이 여전히 Shape의 type인 shape를 읽는다. 정답과 원래 코드는 이 점에서 갈린다.",
+    "suggestion" : {
+      "target" : "EXPLANATION",
+      "choiceIndex" : null,
+      "text" : "규칙: 자식이 같은 이름의 필드를 선언하면 부모 필드는 숨겨질 뿐 그대로 남고, 부모 클래스 안의 코드는 언제나 부모의 필드를 읽는다. 인스턴스 초기화 블록은 중괄호로 감싼 코드로, 객체를 만들 때 실행된다.\n8행 { type = \"circle\"; }: 새 필드를 만들지 않고 물려받은 Shape의 type에 circle을 넣는다.\n12행 Shape s = new Circle(): Shape의 type이 shape로 초기화된 뒤 8행 블록이 실행되어 circle로 바뀐다.\n13행 s.describe(): 4행 return type은 Shape의 type을 읽는다 → 값은 circle이다 → circle을 출력한다.\n원래 코드는 8행에서 Circle만의 새 type을 만들기 때문에 4행이 여전히 Shape의 type인 shape를 읽는다. 정답과 원래 코드는 이 점에서 갈린다.\n그래서 정답은 { type = \"circle\"; }이고 출력은 circle이다."
+    }
+  } ],
+  "codeTopic" : "오버라이딩과 필드·정적 메서드 숨김",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "class A {\n    static String s() { return \"A-static\"; }\n    String i() { return \"A-inst\"; }\n}\nclass B extends A {\n    static String s() { return \"B-static\"; }\n    String i() { return \"B-inst\"; }\n}\npublic class Main {\n    public static void main(String[] args) {\n        A x = new B();\n        System.out.println(x.s());\n        System.out.println(x.i());\n    }\n}",
+    "expectedOutput" : "A-static\nB-inst",
+    "targetLine" : 0,
+    "errorType" : ""
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_FIX",
+    "language" : "java",
+    "code" : "class Shape {\n    String type = \"shape\";\n    String describe() {\n        return type;\n    }\n}\nclass Circle extends Shape {\n    String type = \"circle\";\n}\npublic class Main {\n    public static void main(String[] args) {\n        Shape s = new Circle();\n        System.out.println(s.describe());\n    }\n}",
+    "expectedOutput" : "circle",
+    "targetLine" : 8,
+    "errorType" : ""
+  } ]
+}

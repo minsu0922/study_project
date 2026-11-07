@@ -1,0 +1,104 @@
+{
+  "formatVersion" : 1,
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-11-08",
+  "generatedAt" : "2026-11-07T21:08:44.147342891Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행하면 무엇이 출력되는가?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 필드는 오버라이딩되지 않고 숨겨진다. 숨김이란 자식이 같은 이름의 필드를 새로 만들어 부모 필드가 따로 남는 것이고, 어느 필드를 읽을지는 변수의 선언 타입으로 정해진다.\n9행 Animal a = new Dog(): 객체는 Dog지만 변수 a의 타입은 Animal이다 → Dog 객체 안에는 Animal의 name과 Dog의 name이 둘 다 있다.\n10행 Dog d = new Dog(): 변수 d의 타입은 Dog이다.\n11행 a.name: 선언 타입 Animal의 name을 읽는다 → animal을 출력한다.\n12행 d.name: 선언 타입 Dog의 name을 읽는다 → dog를 출력한다.\n그래서 출력은 animal / dog다.",
+    "choices" : [ {
+      "text" : "animal / dog",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "dog / dog",
+      "correct" : false,
+      "rationale" : "필드도 메서드처럼 실제 객체의 것이 쓰인다고 오해한 답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "animal / animal",
+      "correct" : false,
+      "rationale" : "자식 클래스의 필드가 부모 필드를 덮어쓰지 못한다고 오해한 답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "dog / animal",
+      "correct" : false,
+      "rationale" : "변수 타입과 객체 타입의 역할을 거꾸로 생각한 답이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "부모 타입 변수로 읽는 같은 이름의 필드",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "다음 코드는 컴파일되는가? 컴파일되지 않는다면 어느 행에서 오류가 나는가?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 오버라이딩하는 메서드는 부모 메서드보다 접근 범위를 좁힐 수 없다. 접근 제어자를 쓰지 않은 package-private는 public보다 좁은 범위다.\n2행 public void show(): 부모의 show는 public이다.\n7행 void show(): 같은 이름과 매개변수로 오버라이딩하려 하지만 접근 제어자가 없어 package-private다 → public보다 좁아진다 → 컴파일 오류가 난다.\n13행 Parent p = new Child(): 자식 객체를 부모 타입에 담는 것은 문제없다.\n14행 p.show(): Parent에 public show가 있으니 이 줄 자체는 문제없다.\n그래서 답은 7행에서 컴파일 오류가 난다는 보기다.",
+    "choices" : [ {
+      "text" : "7행에서 컴파일 오류가 난다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "13행에서 컴파일 오류가 난다",
+      "correct" : false,
+      "rationale" : "부모 타입 변수에 자식 객체를 담는 것이 금지된다고 오해한 답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "14행에서 컴파일 오류가 난다",
+      "correct" : false,
+      "rationale" : "접근 범위 문제가 호출하는 자리에서 드러난다고 오해한 답이다.",
+      "matchText" : ""
+    }, {
+      "text" : "컴파일된다",
+      "correct" : false,
+      "rationale" : "오버라이딩할 때 접근 제어자를 자유롭게 바꿀 수 있다고 오해한 답이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "오버라이딩할 때의 접근 제어자",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "5행의 name은 Animal의 name을 오버라이딩하지 않고 숨긴다. 필드 접근은 컴파일 시점에 참조 변수의 선언 타입으로 정해진다. 11행의 a는 선언 타입이 Animal이므로 Animal의 name인 \"animal\"을 출력한다. 12행의 d는 선언 타입이 Dog이므로 \"dog\"를 출력한다. 따라서 animal / dog이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 정답을 가린 채 푼 과정입니다",
+    "detail" : "2행의 Parent.show()는 public이다. 7행의 Child.show()는 접근 제어자가 없어 default(package-private)가 된다. 오버라이딩하는 메서드는 부모 메서드보다 접근 범위를 좁힐 수 없으므로 7행에서 컴파일 오류가 난다.",
+    "suggestion" : null
+  } ],
+  "codeTopic" : "오버라이딩과 필드·정적 메서드 숨김",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "class Animal {\n    String name = \"animal\";\n}\nclass Dog extends Animal {\n    String name = \"dog\";\n}\npublic class Main {\n    public static void main(String[] args) {\n        Animal a = new Dog();\n        Dog d = new Dog();\n        System.out.println(a.name);\n        System.out.println(d.name);\n    }\n}",
+    "expectedOutput" : "animal\ndog",
+    "targetLine" : 0,
+    "errorType" : ""
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_COMPILE",
+    "language" : "java",
+    "code" : "class Parent {\n    public void show() {\n        System.out.println(\"parent\");\n    }\n}\nclass Child extends Parent {\n    void show() {\n        System.out.println(\"child\");\n    }\n}\npublic class Main {\n    public static void main(String[] args) {\n        Parent p = new Child();\n        p.show();\n    }\n}",
+    "expectedOutput" : "",
+    "targetLine" : 7,
+    "errorType" : ""
+  } ]
+}

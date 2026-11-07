@@ -1,4 +1,5 @@
 {
+  "formatVersion" : 1,
   "note" : "배치가 주제를 쓸 때마다 마지막 사용일과 횟수를 적는 파일입니다. 앱은 이 파일을 쓰지 않고, 기동할 때 읽어 관리 화면에 반영합니다. 대기열 파일(_topics.json·_code-topics.json)은 앱만 씁니다. 둘이 한 파일을 쓰면 '배치로 보내기'가 충돌하기 때문입니다. 관리 화면에서 사용 기록을 초기화하면 대기열 파일에 초기화한 날(usageResetAt)이 실리고, 그날까지의 기록은 무시합니다.",
   "usage" : [ {
     "id" : 1082,
@@ -17,6 +18,12 @@
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "정적·인스턴스 초기화 순서와 생성자 호출",
     "lastUsedAt" : "2026-11-01",
+    "usedCount" : 1
+  }, {
+    "id" : 1085,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "오버라이딩과 필드·정적 메서드 숨김",
+    "lastUsedAt" : "2026-11-08",
     "usedCount" : 1
   } ]
 }
