@@ -1,0 +1,242 @@
+{
+  "formatVersion" : 1,
+  "note" : "Claude Code가 대화 안에서 직접 쓴 문제 초안입니다(Claude API 미사용). problem/system.txt 규칙과 배치가 만드는 요청문을 그대로 따랐습니다.",
+  "date" : "2026-10-12",
+  "generatedAt" : "2026-11-06T14:00:37.591466900Z",
+  "domain" : "CLOUD_INFRA",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "config-separation-secrets",
+  "problems" : [ {
+    "question" : "커밋(commit)에 대한 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 커밋은 git이 어느 순간의 코드 전체를 찍어 둔 기록 한 장이다. 뒤에 파일을 고쳐도 이미 찍힌 기록은 바뀌지 않는다.\n비밀번호가 든 코드를 커밋한 뒤를 따라가 보자.\n첫 커밋을 만든다: 파일에 'example-password'가 적힌 모습이 기록 한 장으로 남는다.\n파일에서 그 줄을 지우고 둘째 커밋을 만든다: 지금 모습에는 비밀번호가 없다.\n첫 커밋을 다시 연다: 그때 찍힌 모습이라 비밀번호가 그대로 보인다.\n그래서 한 시점 모습을 찍어 두고, 지운 글자도 그 기록에 남는 것이 커밋이다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "팀의 코드와 기록을 인터넷 너머 서버에 모아 두고 함께 내려받는 곳이다",
+      "correct" : false,
+      "rationale" : "원격 저장소와 헷갈린 설명이다. 원격 저장소는 커밋을 모아 두는 자리이고, 커밋은 그 안에 쌓이는 기록 한 장이다.",
+      "matchText" : ""
+    }, {
+      "text" : "코드의 한 시점 모습을 찍은 기록이라, 뒤에 지운 글자도 그 안에 남는다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "새 기록이 올라오면 다른 서버가 코드를 받아 실행 파일로 만들고 검사한다",
+      "correct" : false,
+      "rationale" : "자동 빌드와 헷갈린 설명이다. 자동 빌드는 커밋이 올라온 뒤 서버가 하는 과정이지 기록 자체가 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "파일에서 글자를 지워 다시 기록하면 지난 기록 속 그 글자까지 사라진다",
+      "correct" : false,
+      "rationale" : "지우는 커밋이 지난 기록까지 고친다는 오해다. 새 커밋은 지금 모습만 바꾸고, 지난 커밋에는 지운 글자가 그대로 남는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **커밋(commit)** — git이 코드의 한 시점 모습을 통째로 찍어 남긴 기록 한 장이다. 나중에 파일 속 글자를 지워도 지우기 전 커밋에는 그 글자가 그대로 남는다.",
+    "title" : "git이 코드 모습을 남기는 기록 한 장",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "프로그램에 바깥에서 정해 주는 값 가운데, 남에게 알려지면 곧바로 피해가 나서 보관할 자리를 따로 정하는 값은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 비밀값은 설정값 가운데 남이 알면 곧바로 피해가 나는 값이다. 그래서 다른 설정값과 보관하는 자리를 따로 정한다.\nDB 접속에 쓰는 값을 하나씩 따라가 보자.\n주소 'db.example.com'이 알려진다: 찾아갈 곳만 드러나고 곧바로 들어가지는 못한다.\n사용자 이름 'shop_app'이 알려진다: 누구인지 밝히는 이름일 뿐 문은 열리지 않는다.\n비밀번호가 알려진다: 누구나 그 사용자인 척 들어가 회원 정보를 읽고 지운다.\n모두 설정값이지만 마지막 하나만 곧바로 피해를 낸다.\n그래서 피해 때문에 자리를 따로 두는 값의 이름은 비밀값이다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "설정값",
+      "correct" : false,
+      "rationale" : "설정값은 바깥에서 정해 주는 값 전체를 가리킨다. 남이 알아도 큰 피해가 없는 DB 주소나 글 개수까지 포함해 범위가 더 넓다.",
+      "matchText" : ""
+    }, {
+      "text" : "프로필",
+      "correct" : false,
+      "rationale" : "프로필은 환경마다 다른 설정값 묶음에 붙인 이름이다. 값 하나의 성격이 아니라 묶음을 고르는 이름이라 가리키는 대상이 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "환경변수",
+      "correct" : false,
+      "rationale" : "환경변수는 값을 프로그램에 넘기는 통로의 이름이다. 비밀이 아닌 값도 환경변수로 넘기므로 피해가 나는 값을 가리키는 말이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "비밀값",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **비밀값(secret)** — 설정값 가운데 남이 알면 곧바로 피해가 나는 값이다. DB 비밀번호, 외부 서비스가 발급해 준 열쇠 문자열(API 키)이 여기에 든다.",
+    "title" : "남이 알면 곧바로 피해가 나는 설정값의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "켜는 명령 글자와는 따로, 컴퓨터가 프로그램을 켤 때 이름과 값을 짝지어 함께 넘겨주는 값을 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 환경변수는 컴퓨터가 프로그램을 켤 때 '이름=값' 꼴로 함께 건네는 값이다. 프로그램은 코드에서 이름을 불러 그 값을 꺼낸다.\n셸에서 프로그램을 켜는 장면을 따라가 보자.\n셸에서 'export DB_PASSWORD=example-dev-password'를 친다: 셸이 그 이름과 값을 가진다.\n같은 셸에서 'java -jar shop.jar'를 친다: 명령 글자에는 비밀번호가 없다.\n컴퓨터가 셸의 이름과 값을 새 프로그램에 복사해 넘긴다: 프로그램이 'DB_PASSWORD'로 값을 꺼낸다.\n'--port=9000'처럼 명령 뒤에 붙였다면 그건 실행 인자다.\n그래서 명령과 따로, 켤 때 이름과 값을 짝지어 넘기는 값은 환경변수다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "환경변수",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "실행 환경",
+      "correct" : false,
+      "rationale" : "실행 환경은 프로그램이 도는 자리와 거기 딸린 DB·설정값 전체를 묶어 부르는 말이다. 이름이 닮았지만 넘겨지는 값 하나를 가리키지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "실행 인자",
+      "correct" : false,
+      "rationale" : "실행 인자는 켜는 명령 뒤에 덧붙인 글자라 명령 글자 자체에 값이 들어간다. 명령과 따로 넘긴다는 조건과 맞지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "설정 파일",
+      "correct" : false,
+      "rationale" : "설정 파일은 디스크에 놓인 파일을 프로그램이 읽어 값을 얻는 길이다. 켤 때 컴퓨터가 함께 넘겨주는 값과는 놓이는 곳이 다르다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **환경변수(environment variable)** — 컴퓨터가 프로그램을 켤 때 \"이름=값\" 꼴로 함께 건네는 값이다. 프로그램은 코드 안에서 이름을 불러 값을 꺼낸다.",
+    "title" : "켤 때 이름과 값을 짝지어 넘기는 값의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "'.gitignore' 파일에 대한 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: '.gitignore'는 git이 기록하지 않을 파일 이름을 적는 목록이다. 이 목록은 아직 기록한 적 없는 파일에만 듣는다.\n비밀값 파일 두 개로 따라가 보자.\n'secrets.local.properties'를 새로 만들고 목록에 적는다: git이 이 파일을 커밋 후보에서 뺀다.\n예전에 커밋한 'old-secrets.properties'를 목록에 적는다: git은 이 파일을 계속 기록한다.\n기록을 멈추려면 'git rm --cached'로 기록 대상에서 따로 뺀다: 그래도 지난 커밋 속 내용은 남는다.\n그래서 아직 기록하지 않은 파일 중 목록에 걸린 파일만 커밋에서 빠진다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "목록에 적으면 이미 커밋한 파일도 그 순간부터 기록에서 빠진다",
+      "correct" : false,
+      "rationale" : "이미 기록한 파일까지 빠진다는 오해다. 한 번 커밋한 파일은 목록에 적어도 git이 계속 기록하고, 따로 기록 대상에서 빼야 한다.",
+      "matchText" : ""
+    }, {
+      "text" : "목록에 적힌 파일의 내용을 암호화한 뒤에 커밋에 넣는다",
+      "correct" : false,
+      "rationale" : "암호화와 헷갈린 설명이다. 목록에 걸린 파일은 커밋에 아예 들어가지 않으며, 내용을 뒤섞는 일은 하지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "기록한 적 없는 파일 가운데 목록에 걸린 파일을 커밋에서 뺀다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "새 팀원에게 채울 값의 이름만 알리려고 커밋하는 견본 파일이다",
+      "correct" : false,
+      "rationale" : "견본 파일과 헷갈린 설명이다. 견본 파일은 일부러 커밋하는 파일이고, '.gitignore'는 커밋에서 뺄 파일 이름을 적는 목록이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **.gitignore(깃이그노어)** — git이 기록하지 않을 파일 이름을 적어 두는 목록 파일이다. 아직 기록한 적 없는 파일이 이 목록에 걸리면 git이 커밋에 넣지 않는다.",
+    "title" : "'.gitignore' 목록이 하는 일",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "아래 두 파일 이름에 붙은 dev, prod처럼, 환경마다 다른 설정값 묶음을 골라 쓰려고 붙인 이름을 부르는 용어는?",
+    "exhibit" : "config-dev.properties    db.url=jdbc:mysql://localhost/shop_dev\nconfig-prod.properties   db.url=jdbc:mysql://db.example.com/shop",
+    "answer" : "",
+    "explanation" : "규칙: 프로필은 환경마다 다른 설정값 묶음에 붙인 이름이다. 켤 때 이 이름 하나로 어느 묶음을 쓸지 고른다.\n자료의 두 파일로 따라가 보자.\n켜는 쪽이 'dev'를 고른다: 프로그램이 config-dev.properties를 읽어 db.url이 localhost/shop_dev가 된다.\n같은 실행 파일을 'prod'로 켠다: config-prod.properties를 읽어 db.url이 db.example.com/shop이 된다.\n코드는 그대로고 고른 이름만 바뀌었는데 붙는 DB가 갈린다.\n그래서 값 묶음을 골라 쓰려고 붙인 dev, prod 같은 이름은 프로필이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "환경변수",
+      "correct" : false,
+      "rationale" : "환경변수는 켤 때 값 하나를 프로그램에 넘기는 통로다. dev, prod는 값 하나가 아니라 값 묶음 전체를 고르는 이름이다.",
+      "matchText" : ""
+    }, {
+      "text" : "프로필",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "설정값",
+      "correct" : false,
+      "rationale" : "설정값은 db.url처럼 묶음 안에 든 값 하나하나를 가리킨다. 묶음에 붙인 이름과는 가리키는 단위가 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "비밀값",
+      "correct" : false,
+      "rationale" : "비밀값은 남이 알면 피해가 나는 값이다. 두 파일에는 비밀이 아닌 값만 있고, dev와 prod는 값이 아니라 묶음의 이름이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **프로필(profile)** — 환경마다 다른 설정값 묶음에 붙인 이름이다. \"dev\", \"prod\"처럼 짓고, 켤 때 이 이름으로 묶음을 고른다.",
+    "title" : "환경별 설정값 묶음에 붙이는 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 커밋을 코드의 한 시점 모습을 찍은 기록이라 하고, 뒤에 글자를 지워도 지우기 전 커밋에 남는다고 한다. 4가 그 뜻이다. 1은 자동 빌드, 2는 원격 저장소의 설명이고, 3은 지운 글자가 지난 기록에서도 사라진다는 오해다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "보기 1·2·3이 '커밋' 대신 '기록'이라고 써서, '기록'이 커밋을 뜻하는지 git 기록 전체를 뜻하는지 잠깐 되돌아가 읽었다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "문서를 읽었다면 바로 풀린다. 오답이 다른 용어의 정의라 개념만 알면 갈린다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "설정값 가운데 남이 알면 곧바로 피해가 나서 보관하는 자리를 따로 정하는 값은 비밀값이다. 설정값은 더 넓은 묶음이고, 프로필은 설정값 묶음의 이름, 환경변수는 값을 넘기는 통로다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「프로그램에 바깥에서 정해 주는 값 가운데, 남에게 알려지면 곧바로 피해가 나서 보관할 자리를 따로 정하는 값은?」\n고치면: 프로그램에 바깥에서 정해 주는 값 가운데, 남에게 알려지면 곧바로 피해가 나므로 따로 보관하는 값은?",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "설정값과 비밀값의 포함 관계를 아는지 보는 정의 문제로 무난하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "컴퓨터가 프로그램을 켤 때 '이름=값' 꼴로 함께 건네는 값은 환경변수다. '켜는 명령 글자와는 따로'라는 말이 명령 뒤에 붙이는 실행 인자를 걸러 낸다. 실행 환경은 자리 전체, 설정 파일은 디스크 속 파일이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "환경변수·실행 인자·실행 환경을 가르는 정의 문제다. 문서가 헷갈리기 쉽다고 짚은 짝이라 좋은 재료다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : ".gitignore는 아직 기록한 적 없는 파일 가운데 목록에 걸린 파일을 커밋에 넣지 않는다. 1은 견본 파일, 2는 이미 커밋한 파일도 빠진다는 오해, 3은 암호화한다는 오해다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "문서의 '자주 하는 오해'를 오답으로 잘 썼다. 정답 보기만 '기록한 적 없는'이라는 단서를 달아 길이가 조금 길다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "dev, prod처럼 환경마다 다른 설정값 묶음에 붙인 이름은 프로필이다. 설정값은 묶음 속 값 하나하나, 환경변수는 넘기는 통로, 비밀값은 그 가운데 남이 알면 피해가 나는 값이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「아래 두 파일 이름에 붙은 dev, prod처럼, 환경마다 다른 설정값 묶음을 골라 쓰려고 붙인 이름을 부르는 용어는?」\n고치면: 아래 두 파일 이름에 붙은 dev, prod처럼, 환경마다 다른 설정값 묶음을 고르려고 붙인 이름은?",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "자료가 이름의 쓰임을 눈으로 보여 줘서 쉽게 풀린다. 보기 네 개가 3번 문제와 같은 단어라 연달아 풀면 소거가 쉽다.",
+    "suggestion" : null
+  } ]
+}
