@@ -1,0 +1,242 @@
+{
+  "formatVersion" : 1,
+  "note" : "Claude Code가 대화 안에서 직접 쓴 문제 초안입니다(Claude API 미사용). problem/system.txt 규칙과 배치가 만드는 요청문을 그대로 따랐습니다.",
+  "date" : "2026-10-10",
+  "generatedAt" : "2026-11-06T13:52:33.412498800Z",
+  "domain" : "CLOUD_INFRA",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "manual-deployment-over-ssh",
+  "problems" : [ {
+    "question" : "주소 '203.0.113.10:8080'에서 콜론 뒤의 8080처럼, 한 컴퓨터 안에서 들어온 요청을 어느 프로그램에 넘길지 가르는 번호를 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: IP 주소가 요청을 보낼 컴퓨터를 고르고, 포트 번호가 그 컴퓨터 안에서 요청을 받을 프로그램을 고른다.\n주소 203.0.113.10:8080으로 요청을 보낸다고 하고 따라가 보자.\n요청이 인터넷을 건넌다: 콜론 앞 203.0.113.10을 단 서버 한 대에 닿는다.\n서버가 콜론 뒤를 본다: 8080번을 맡은 프로그램에 요청을 넘긴다 → 그 프로그램이 답한다.\n8080번을 맡은 프로그램이 없다면: 요청은 갈 곳이 없어 실패한다.\n그래서 한 컴퓨터 안에서 받을 프로그램을 가르는 8080은 포트 번호다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "IP 주소",
+      "correct" : false,
+      "rationale" : "IP 주소는 인터넷에 붙은 컴퓨터마다 매긴 번호로, 요청이 어느 컴퓨터로 갈지를 정한다. 콜론 앞의 203.0.113.10이 여기에 해당한다.",
+      "matchText" : ""
+    }, {
+      "text" : "포트 번호",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "프로세스 번호",
+      "correct" : false,
+      "rationale" : "프로세스 번호는 실행 중인 프로그램을 끌 때 pgrep으로 찾는 번호다. 들어온 요청을 어느 프로그램에 넘길지 가르는 번호와는 쓰임이 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "계정 이름",
+      "correct" : false,
+      "rationale" : "계정 이름은 ssh로 접속할 때 서버에 누구로 들어갈지 적는 값이다. 요청을 받을 프로그램을 가르는 번호가 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **포트(port)** — 한 컴퓨터 안에서 들어온 요청을 어느 프로그램에 넘길지 가르는 번호다.",
+    "title" : "한 컴퓨터 안에서 요청을 받을 프로그램을 가르는 번호",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "JAR에 대한 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: JAR는 클래스 파일과 설정 파일, 라이브러리를 zip과 같은 형식으로 압축해 한 파일에 담은 자바 프로그램 꾸러미다.\n게시판 프로그램 하나를 빌드한다고 하고 따라가 보자.\n소스 파일을 컴파일한다: Hello.java 같은 파일 수백 개 → Hello.class 같은 클래스 파일 수백 개가 생긴다.\n빌드 도구가 묶는다: 클래스 파일과 가져다 쓴 라이브러리 → myapp-0.0.1.jar 한 파일이 된다.\n압축 프로그램으로 열어 본다: 안에 클래스 파일과 라이브러리가 그대로 들어 있다.\n서버로는 이 한 파일만 보내고, 'java -jar' 한 줄로 실행한다.\n그래서 여러 파일을 압축해 한 파일로 묶은 꾸러미가 JAR다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "사람이 읽고 고칠 수 있게 자바로 쓴 프로그램 원문이다",
+      "correct" : false,
+      "rationale" : "소스 코드의 설명이다. 사람이 읽는 원문은 컴파일을 거쳐야 실행할 수 있는 꼴이 되고, JAR는 그 결과를 묶은 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "클래스 파일을 읽어 그 컴퓨터의 명령으로 바꿔 실행한다",
+      "correct" : false,
+      "rationale" : "JVM의 설명이다. JVM은 JAR를 읽어 실행하는 프로그램이고, JAR는 실행될 대상인 파일 꾸러미다.",
+      "matchText" : ""
+    }, {
+      "text" : "컴파일과 묶기 순서를 대신 실행해 주는 프로그램이다",
+      "correct" : false,
+      "rationale" : "Gradle·Maven 같은 빌드 도구의 설명이다. 빌드 도구가 일을 마치고 내놓는 결과물이 JAR다.",
+      "matchText" : ""
+    }, {
+      "text" : "클래스 파일 등을 압축해 한 파일로 묶은 꾸러미다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **JAR(Java ARchive, 자바 압축 묶음)** — 클래스 파일과 설정 파일을 압축해 한 파일로 묶은 자바 프로그램 꾸러미다.",
+    "title" : "JAR 파일이 무엇을 담은 것인지",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "'java -jar' 명령을 치면 먼저 떠서, JAR 안의 클래스 파일을 읽어 실행하는 프로그램은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 자바 프로그램은 컴파일한 클래스 파일을 JVM(자바 가상 머신)이 읽어, 그 컴퓨터가 알아듣는 명령으로 바꿔 실행한다.\n서버에서 myapp.jar를 켠다고 하고 따라가 보자.\n'java -jar myapp.jar'를 친다: JVM이 먼저 뜬다.\nJVM이 JAR를 연다: 안에 적힌 시작 지점의 클래스 파일을 찾는다.\nJVM이 클래스 파일을 읽어 실행한다: JVM 프로세스 하나가 생겨 프로그램이 돈다.\n빌드 도구나 터미널은 이 걸음 어디에도 끼지 않는다.\n그래서 'java -jar'로 떠서 클래스 파일을 실행하는 프로그램은 JVM이다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "자바 가상 머신(JVM)",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "빌드 도구(Gradle)",
+      "correct" : false,
+      "rationale" : "빌드 도구는 노트북에서 소스 코드를 컴파일해 JAR로 묶는 일을 한다. 다 만든 JAR를 실행하는 일은 맡지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "터미널(PowerShell)",
+      "correct" : false,
+      "rationale" : "터미널은 사람이 글자로 명령을 쳐 넣는 창일 뿐이다. 명령을 입력받을 뿐, 클래스 파일을 읽어 실행하지는 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "SSH 접속 프로그램",
+      "correct" : false,
+      "rationale" : "SSH는 먼 서버와 암호화한 통로를 열어 명령을 보내는 접속 방식이다. 서버 안에서 JAR를 실행하는 프로그램과는 다르다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "라이브러리까지 함께 담은 JAR는 `java -jar 파일이름.jar` 한 줄로 실행한다. 이 명령은 JVM을 띄우고, JAR 안에 적힌 시작 지점부터 프로그램을 돌린다. 이런 JAR를 흔히 '실행 가능한 JAR'라고 부른다.",
+    "title" : "JAR 안의 클래스 파일을 실행하는 프로그램",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "SSH 키 인증에서 한 쌍으로 만든 두 열쇠 파일 가운데 개인키를 두는 곳은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 키 인증은 개인키로만 만들 수 있는 서명을 보내고, 서버가 맡아 둔 공개키로 그 서명을 확인해 '나'를 증명하는 방식이다.\n노트북에서 키를 만들어 접속한다고 하고 따라가 보자.\n'ssh-keygen -t ed25519'를 친다: 노트북에 id_ed25519(개인키)와 id_ed25519.pub(공개키)가 생긴다.\n공개키 내용을 서버의 authorized_keys 파일에 넣는다: 서버는 공개키만 갖는다.\n접속할 때 노트북이 개인키로 서명을 만든다: 서버가 공개키로 확인하고 접속을 허락한다.\n개인키를 남이 보면 내 행세를 하며 들어오므로, 개인키는 노트북 밖으로 나가지 않는다.\n그래서 개인키를 두는 곳은 내 노트북 한 곳이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "접속할 서버마다 맡긴다",
+      "correct" : false,
+      "rationale" : "공개키를 두는 곳과 헷갈렸다. 서버에 맡기는 쪽은 서명을 확인만 하는 공개키이고, 서명을 만드는 열쇠는 서버에 두지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "서버와 노트북에 하나씩 둔다",
+      "correct" : false,
+      "rationale" : "한 쌍의 두 파일을 각각 개인키로 여긴 오해다. 한 쌍은 개인키 하나와 공개키 하나이고, 개인키는 한 곳에만 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "내 노트북에만 둔다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "서버를 빌려준 회사에 맡긴다",
+      "correct" : false,
+      "rationale" : "서버를 빌려준 회사가 공개키 등록을 대신해 주는 일과 헷갈렸다. 그 회사가 맡는 것도 공개키 쪽이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **키 인증(key authentication)** — 비밀번호 대신 한 쌍으로 만든 열쇠 파일 두 개로 '나'를 증명하는 방식이다. 개인키는 내 노트북에만 두고, 공개키는 서버에 맡긴다.",
+    "title" : "SSH 키 인증에서 개인키를 두는 자리",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "소스 코드를 컴파일하는 데서 끝내지 않고, 라이브러리와 함께 실행할 수 있는 파일 하나로 묶기까지의 과정 전체를 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 빌드는 소스 코드를 컴파일하고, 그 결과를 라이브러리와 함께 실행할 수 있는 파일로 묶는 과정 전체다. 컴파일은 그 안의 첫 걸음이다.\n노트북에서 './gradlew build'를 친다고 하고 따라가 보자.\n빌드 도구가 컴파일한다: .java 소스 파일 → .class 클래스 파일이 생긴다.\n빌드 도구가 설정에 따라 테스트를 돌린다: 모두 통과하면 다음으로 간다.\n빌드 도구가 묶는다: 클래스 파일과 라이브러리 → myapp-0.0.1.jar 한 파일이 build/libs에 놓인다.\n여기까지가 노트북 안에서 끝나는 한 덩어리 일이다. 서버로 옮기는 일은 아직 시작하지 않았다.\n그래서 컴파일부터 JAR로 묶기까지를 아우르는 이름은 빌드다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "컴파일",
+      "correct" : false,
+      "rationale" : "컴파일은 소스 코드를 클래스 파일로 번역하는 일까지만 가리킨다. 라이브러리와 한 파일로 묶는 일은 들지 않는다.",
+      "matchText" : ""
+    }, {
+      "text" : "빌드",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "배포",
+      "correct" : false,
+      "rationale" : "배포는 만든 프로그램을 서버에 올려 실행해 두는 일이다. 노트북에서 실행할 파일을 만드는 과정과는 다른 단계다.",
+      "matchText" : ""
+    }, {
+      "text" : "실행",
+      "correct" : false,
+      "rationale" : "실행은 다 만든 JAR를 JVM으로 켜서 프로세스를 띄우는 일이다. 파일을 만들고 묶는 과정은 그보다 앞에서 끝난다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **빌드(build)** — 소스 코드를 컴파일하고, 라이브러리와 함께 실행할 수 있는 파일로 묶는 과정 전체다.",
+    "title" : "컴파일부터 한 파일로 묶기까지를 아우르는 과정",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 포트를 '한 컴퓨터 안에서 들어온 요청을 어느 프로그램에 넘길지 가르는 번호'로 정의하고, 203.0.113.10:8080에서 8080을 포트로 쓴다. IP 주소는 컴퓨터를 가리키는 번호이고, 계정 이름은 접속할 사용자, 프로세스 번호는 실행 중인 프로그램에 붙은 번호라 정의가 다르다. 그래서 2번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "문서의 포트 정의를 거의 그대로 옮겨 와 문서를 읽은 사람은 바로 푼다. 프로세스 번호가 '번호'라는 말로 헷갈리게 해 주는 오답 노릇을 한다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 JAR를 '클래스 파일과 설정 파일을 압축해 한 파일로 묶은 자바 프로그램 꾸러미'로 정의한다. 2번은 JVM, 3번은 빌드 도구, 1번은 소스 코드의 정의다. 그래서 4번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「컴파일과 묶기 순서를 대신 실행해 주는 프로그램이다」\n고치면: 컴파일하고 JAR로 묶는 순서를 대신 실행해 주는 프로그램이다",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "네 보기가 문서 구성 요소 표의 네 줄과 하나씩 짝지어져 개념을 아는지 깔끔하게 가른다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 'java -jar' 명령이 JVM을 띄우고 JAR 안에 적힌 시작 지점부터 프로그램을 돌린다고 쓴다. 터미널은 명령을 치는 창, Gradle은 빌드 도구, SSH는 먼 서버 접속 방식이라 클래스 파일을 실행하지 않는다. 그래서 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "JVM의 뜻을 아는지 묻는 무난한 초급 문제다. 터미널에서 명령을 치므로 3번을 고르는 학습자가 조금 있을 수 있다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 키 인증을 설명하며 개인키는 내 노트북에만 두고 공개키는 서버에 맡긴다고 쓴다. 1번은 공개키를 두는 곳이고, 2번은 한 쌍을 나눠 두는 모습이라 개인키 자리가 아니다. 개인키를 회사에 맡기라는 말은 문서에 없다. 그래서 3번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「서버와 노트북에 하나씩 둔다」\n고치면: 개인키를 서버와 노트북에 한 벌씩 둔다",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "2번 보기가 개인키 이야기인지 열쇠 두 개 이야기인지 흐려서 질문을 다시 읽었다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "개인키와 공개키 자리를 바꿔 기억한 학습자를 1번으로 잘 걸러 낸다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 빌드를 '소스 코드를 컴파일하고, 라이브러리와 함께 실행할 수 있는 파일로 묶는 과정 전체'로 정의한다. 컴파일은 그중 번역 단계뿐이고, 배포는 서버에 올려 실행해 두는 일, 실행은 프로그램을 돌리는 일이다. 그래서 2번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "빌드와 컴파일을 구분하는지 묻는 좋은 초급 문제다. 질문 앞부분이 컴파일을 직접 지워 주어 남는 헷갈림은 배포 정도다.",
+    "suggestion" : null
+  } ]
+}
