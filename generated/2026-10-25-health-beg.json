@@ -1,0 +1,230 @@
+{
+  "formatVersion" : 1,
+  "note" : "Claude Code가 대화 안에서 직접 쓴 문제 초안입니다(Claude API 미사용). problem/system.txt 규칙과 배치가 만드는 요청문을 그대로 따랐습니다.",
+  "date" : "2026-10-25",
+  "generatedAt" : "2026-11-08T00:29:57.879345300Z",
+  "domain" : "CLOUD_INFRA",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "failed-deploy-health-check-rollback",
+  "problems" : [ {
+    "question" : "프로세스가 일을 끝낼 때 컴퓨터에 남기는 숫자로, 0이면 문제없이 끝났다는 뜻이 되는 값을 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 종료 코드(exit code)는 프로세스가 끝나면서 남기는 숫자 하나로, 0은 성공이고 0이 아니면 실패다. 다른 프로그램은 화면의 글 대신 이 숫자만 읽고 성패를 가른다.\n도커가 점검 명령을 실행하는 장면으로 따라가 보자.\n서버가 200으로 답한다: curl이 끝나며 0을 남긴다 → 도커는 이번 점검을 성공으로 적는다.\n서버가 503으로 답한다: curl이 실패하고 '|| exit 1'이 1을 남긴다 → 도커는 실패로 적는다.\n같은 장면에서 200과 503은 서버가 응답에 붙인 상태 코드이고, 도커가 읽은 것은 0과 1이다.\n그래서 프로세스가 끝날 때 남기는 0 또는 0이 아닌 숫자는 종료 코드다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "상태 코드",
+      "correct" : false,
+      "rationale" : "서버가 응답 맨 앞에 붙이는 세 자리 결과 번호다. 프로세스가 끝날 때 남기는 숫자와 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "종료 코드",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "포트 번호",
+      "correct" : false,
+      "rationale" : "한 컴퓨터 안에서 어느 프로그램이 요청을 받을지 가르는 번호다. 성공과 실패를 알리는 값이 아니다.",
+      "matchText" : ""
+    }, {
+      "text" : "이미지 태그",
+      "correct" : false,
+      "rationale" : "저장소에 올린 이미지마다 붙이는 버전 이름표다. 프로세스가 끝나며 남기는 값과는 관계가 없다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **종료 코드(exit code)** — 프로세스가 일을 끝낼 때 컴퓨터에 남기는 숫자 하나다. 0이면 \"문제없이 끝났다\", 0이 아니면 \"무언가 실패했다\"는 뜻이다.",
+    "title" : "프로세스가 끝날 때 남기는 성패 숫자의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "컨테이너가 막 켜진 뒤 헬스체크 점검에 실패해도 그 실패를 세지 않고 기다려 주는 시간을 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 시작 유예 시간(start period)은 컨테이너가 켜진 직후 점검 실패를 세지 않는 기간이다. 서버는 설정을 읽고 데이터베이스에 붙은 뒤에야 문을 열기 때문에 둔다.\n유예 60초, 간격 30초, 재시도 3번으로 따라가 보자.\n켜진 뒤 30초: 서버가 아직 준비 중이라 점검이 실패한다 → 유예 안이라 세지 않는다.\n켜진 뒤 90초: 점검이 실패한다 → 이제부터 연속 실패 1번으로 센다.\n켜진 뒤 150초: 세 번째 연속 실패다 → 비정상이 된다.\n같은 장면에서 점검 한 번의 답을 3초까지 기다리는 값은 따로 있는 시간 초과다.\n그래서 켜진 직후의 실패를 세지 않는 시간은 시작 유예 시간이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "점검과 점검 사이 간격",
+      "correct" : false,
+      "rationale" : "점검과 점검 사이를 얼마나 띄울지 정하는 값이다. 실패를 세지 않는 기간과는 다른 설정이다.",
+      "matchText" : ""
+    }, {
+      "text" : "점검 시간 초과",
+      "correct" : false,
+      "rationale" : "점검 한 번의 답을 얼마나 기다릴지 정하는 값이다. 켜진 뒤의 준비 기간과 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "연속 실패 횟수",
+      "correct" : false,
+      "rationale" : "재시도 횟수로 정하는, 몇 번 연달아 실패해야 비정상으로 볼지의 숫자다. 기다려 주는 시간이 아니라 횟수다.",
+      "matchText" : ""
+    }, {
+      "text" : "시작 유예 시간",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **시작 유예 시간(start period)** — 컨테이너가 막 켜진 뒤 점검에 실패해도 세지 않고 기다려 주는 시간이다.",
+    "title" : "켜진 직후의 점검 실패를 세지 않는 기간",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "롤백(rollback)에 대한 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 롤백은 새 버전에 문제가 있을 때 바로 앞의 멀쩡하던 버전으로 서버를 다시 바꾸는 일이다. 저장소에 남은 옛 이미지를 태그로 가리켜 다시 켠다.\n커밋 번호 태그로 따라가 보자.\n배포 전: 돌고 있는 버전 3f9c2a1을 파일에 적어 둔다.\n새 버전을 켠다: 점검이 연달아 실패해 비정상이 된다 → 새 버전이 문제다.\n새 컨테이너를 내리고 3f9c2a1로 다시 켠다: 옛 버전이 정상으로 돌아온다.\n같은 장면에서 새 버전을 올리는 일은 배포이고, 상태를 묻는 일은 헬스체크다.\n그래서 앞 버전으로 되돌리는 일을 설명한 보기가 롤백이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "새 버전에 문제가 있을 때 바로 앞의 멀쩡하던 버전으로 다시 바꾸는 일",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "고친 프로그램을 서비스 컴퓨터에 올려 쓰는 버전을 새 버전으로 바꾸는 일",
+      "correct" : false,
+      "rationale" : "배포를 설명한 문장이다. 롤백은 새 버전이 아니라 앞 버전으로 바꾸는 쪽이다.",
+      "matchText" : ""
+    }, {
+      "text" : "정해진 질문을 일정한 간격으로 보내 서버가 요청을 받을 수 있는지 판정하는 일",
+      "correct" : false,
+      "rationale" : "헬스체크를 설명한 문장이다. 이상을 알아채는 장치와 되돌리는 일을 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "표 구조 변경 명령을 버전 순서대로 적어 두고 안 한 것만 차례로 실행하는 일",
+      "correct" : false,
+      "rationale" : "마이그레이션을 설명한 문장이다. 롤백은 데이터베이스 구조를 되돌리지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **롤백(rollback, 되돌리기)** — 새 버전에 문제가 있을 때, 바로 앞의 멀쩡하던 버전으로 서버를 다시 바꾸는 일이다.",
+    "title" : "롤백이 가리키는 일",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "도커가 헬스체크 결과로 컨테이너에 매기는 상태 가운데, 컨테이너가 막 켜져 아직 판정이 나오기 전의 상태는?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 도커는 점검 결과로 컨테이너에 시작 중(starting), 정상(healthy), 비정상(unhealthy) 셋 중 하나를 매긴다. 켜진 직후에는 판정 전이라 시작 중이다.\n새 컨테이너 하나로 따라가 보자.\n켜고 20초 뒤: 아직 점검이 한 번도 성공하지 않았다 → 상태는 starting이다.\n첫 점검이 성공한다: 성공 한 번이면 된다 → healthy로 바뀐다.\n그 뒤 세 번 연달아 실패한다: → unhealthy로 바뀐다.\nDOWN은 도커 상태가 아니라 Actuator가 점검 항목에 매기는 값이다.\n그래서 판정 전의 상태는 starting이다.\n(입문편의 '헬스체크가 묻고 답하는 방식' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "정상 판정(healthy)",
+      "correct" : false,
+      "rationale" : "점검이 한 번 성공한 뒤 매기는 정상 상태다. 판정 전 상태와 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "비정상 판정(unhealthy)",
+      "correct" : false,
+      "rationale" : "점검이 정한 횟수만큼 연달아 실패한 뒤 매기는 비정상 상태다. 판정이 이미 나온 쪽이다.",
+      "matchText" : ""
+    }, {
+      "text" : "시작 중(starting)",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "점검 항목 고장(DOWN)",
+      "correct" : false,
+      "rationale" : "Actuator가 헬스체크 주소의 점검 항목에 매기는 고장 표시다. 도커가 컨테이너에 매기는 상태가 아니다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "4번에서 정하는 상태는 셋이다. 시작 중(starting), 정상(healthy), 비정상(unhealthy)이다. 아래는 컨테이너 상태가 이 셋 사이를 오가는 길을 그린 것이다.",
+    "title" : "헬스체크 판정 전 컨테이너 상태의 이름 (Docker)",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "서버에 정해진 질문을 일정한 간격으로 보내고, 그 답으로 서버가 지금 요청을 받을 수 있는지 판정하는 장치를 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 헬스체크(health check)는 정해진 주소에 주기적으로 물어, 서버가 요청을 받을 수 있는지 판정하는 장치다. 배포 도구는 프로세스가 뜬 순간 성공을 적기 때문에 따로 물어야 한다.\n30초 간격으로 따라가 보자.\n컨테이너가 켜진다: 배포 도구는 여기서 성공을 적는다.\n30초 뒤 도커가 헬스체크 주소를 부른다: 서버가 200으로 답한다 → 요청을 받을 수 있다고 판정한다.\n다시 30초 뒤: 서버가 503으로 답한다 → 실패로 센다.\n같은 장면에서 판정 결과를 보고 옛 버전을 다시 켜는 일은 롤백이다.\n그래서 주기적으로 물어 판정하는 장치는 헬스체크다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "헬스체크",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "배포 도구",
+      "correct" : false,
+      "rationale" : "새 이미지를 받아 옛 컨테이너를 끄고 새 컨테이너를 켜는 자동 작업이다. 상태를 묻지 않고 켜는 데서 끝난다.",
+      "matchText" : ""
+    }, {
+      "text" : "마이그레이션",
+      "correct" : false,
+      "rationale" : "데이터베이스 표 구조 변경을 버전 순서대로 실행하는 방식이다. 서버 상태를 묻는 장치와는 다르다.",
+      "matchText" : ""
+    }, {
+      "text" : "되돌리기",
+      "correct" : false,
+      "rationale" : "문제가 확인된 뒤 앞 버전으로 되돌리는 일이다. 이상을 알아채는 장치와 헷갈린 것이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "**헬스체크(health check, 상태 점검)**는 서버에 정해진 질문을 일정한 간격으로 보내고, 그 답으로 서버가 지금 요청을 받을 수 있는지 판정하는 장치다.",
+    "title" : "서버가 요청을 받을 수 있는지 주기적으로 판정하는 장치",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 프로세스가 끝날 때 남기는 숫자, 0이면 문제없이 끝났다는 값을 종료 코드라고 부른다. 상태 코드는 서버가 HTTP 응답에 붙이는 세 자리 숫자, 포트는 요청을 받을 프로그램을 가르는 번호, 이미지 태그는 이미지의 버전 이름표라 모두 다른 개념이다. 2번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「프로세스가 일을 끝낼 때 컴퓨터에 남기는 숫자로, 0이면 문제없이 끝났다는 뜻이 되는 값을 부르는 이름은?」\n고치면: 프로세스가 일을 끝낼 때 컴퓨터에 남기는 숫자로, 0이면 문제없이 끝났다는 뜻인 값의 이름은?",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "정의를 문서 문장 거의 그대로 옮겨 문서를 읽었으면 바로 푼다. 1번 '상태 코드'가 HTTP 상태 코드와 헷갈리게 하는 좋은 오답이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "켜진 직후 실패를 세지 않고 기다려 주는 시간은 시작 유예 시간(start period)이다. 점검 시간 초과는 한 번의 점검이 답을 기다리는 시간, 간격은 점검 사이 시간, 연속 실패 횟수는 비정상 판정 기준이다. 4번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "오답이 모두 HEALTHCHECK의 다른 설정이라 헷갈릴 만하지만, 문서의 '기다리는 대상' 표를 읽었으면 갈린다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "롤백은 새 버전에 문제가 있을 때 바로 앞의 멀쩡하던 버전으로 다시 바꾸는 일이다. 3번은 헬스체크, 2번은 배포, 4번은 마이그레이션의 뜻이다. 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "네 보기가 이 문서의 네 핵심 용어 정의라 용어끼리 구별하는지 잘 본다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "도커가 매기는 헬스 상태는 starting, healthy, unhealthy 셋이고, 막 켜져 아직 판정 전인 상태는 starting이다(예시 출력 'health: starting'). DOWN은 도커가 아니라 Actuator가 항목에 매기는 값이다. 3번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "질문의 '막 켜져'가 '시작 중'과 이어져 쉬운 편이다. 4번 DOWN이 Actuator 값과 도커 상태를 구별하는지 보는 좋은 오답이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "정해진 질문을 일정한 간격으로 보내 요청을 받을 수 있는지 판정하는 장치는 헬스체크다. 되돌리기는 롤백, 배포 도구는 컨테이너를 바꿔 켜는 자동 작업, 마이그레이션은 표 구조 변경 방식이다. 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "질문이 문서의 정의 문장을 그대로 옮겨 아주 쉽다. 1번 롤백 문제와 같은 용어 묶음을 거꾸로 묻는 꼴이라 두 문제가 겹친다.",
+    "suggestion" : null
+  } ]
+}
