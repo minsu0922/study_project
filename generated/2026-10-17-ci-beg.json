@@ -1,0 +1,236 @@
+{
+  "formatVersion" : 1,
+  "note" : "Claude Code가 대화 안에서 직접 쓴 문제 초안입니다(Claude API 미사용). problem/system.txt 규칙과 배치가 만드는 요청문을 그대로 따랐습니다.",
+  "date" : "2026-10-17",
+  "generatedAt" : "2026-11-08T00:10:55.692717700Z",
+  "domain" : "CLOUD_INFRA",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "continuous-integration-github-actions",
+  "problems" : [ {
+    "question" : "워크플로를 실제로 실행하며, GitHub가 빌려줄 때는 실행마다 새로 준비했다가 끝나면 지우는 컴퓨터를 부르는 이름은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 워크플로에 적힌 명령을 실제로 돌리는 컴퓨터를 러너(runner)라 한다. GitHub가 빌려주는 러너는 실행마다 새로 준비되고 끝나면 지워진다.\n월요일과 화요일에 push가 한 번씩 왔다고 하고 따라가 보자.\n월요일 push가 온다: GitHub가 새 러너 A를 준비한다 → A가 코드를 내려받아 빌드와 테스트를 돌린다.\n실행이 끝난다: 러너 A는 지워진다 → A가 만든 파일도 함께 사라진다.\n화요일 push가 온다: GitHub가 또 새 러너 B를 준비한다 → B에는 월요일 실행이 남긴 파일이 하나도 없다.\n그래서 실행 때마다 새로 준비되어 명령을 돌리는 컴퓨터의 이름은 러너다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "잡",
+      "correct" : false,
+      "rationale" : "잡은 러너 한 대 위에서 이어서 도는 작업 묶음이다. 실행하는 컴퓨터가 아니라 그 컴퓨터가 맡는 일의 단위와 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "러너",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "스텝",
+      "correct" : false,
+      "rationale" : "스텝은 잡 안에서 차례로 실행하는 명령 한 칸이다. 명령을 돌리는 컴퓨터가 아니라 돌릴 명령 하나를 가리키는 말과 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "저장소",
+      "correct" : false,
+      "rationale" : "저장소는 프로젝트 파일과 변경 기록을 담아 두는 보관 장소다. 코드를 보관하는 곳과 코드를 실행하는 컴퓨터를 헷갈린 것이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **러너(runner)** — 워크플로를 실제로 실행하는 컴퓨터다. GitHub가 빌려주는 러너는 실행마다 새로 준비한 깨끗한 컴퓨터를 쓰고, 끝나면 지운다.",
+    "title" : "워크플로를 실행하는 컴퓨터의 이름 (GitHub Actions)",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "git에서 커밋(commit)에 대한 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 커밋은 고친 내용을 설명과 함께 저장소 기록에 한 칸으로 남기는 일이다. 커밋은 내 컴퓨터에서 하고, 남에게 보내는 일은 따로 한다.\n점수 계산 파일 하나를 고쳤다고 하고 따라가 보자.\n파일을 고친다: 내 컴퓨터의 파일만 바뀌었다 → 기록에는 아직 아무것도 없다.\n'점수 계산 오류 수정'이라는 설명을 달아 커밋한다: 기록에 한 칸이 생긴다 → 누가 언제 무엇을 고쳤는지 남는다.\n이 칸을 GitHub 저장소로 보내는 일은 push라는 다른 동작이다: 커밋만 한 상태로는 동료가 이 변경을 보지 못한다.\n그래서 커밋은 변경을 기록 한 칸으로 남기는 일이다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "내 컴퓨터에 쌓인 기록을 인터넷 너머 저장소로 올려 보내는 일이다",
+      "correct" : false,
+      "rationale" : "push의 뜻을 커밋으로 착각한 설명이다. 커밋은 내 컴퓨터의 기록에 한 칸을 남길 뿐이고, 올려 보내는 일은 push가 한다.",
+      "matchText" : ""
+    }, {
+      "text" : "한 브랜치에서 고친 내용을 다른 브랜치에 합치는 일이다",
+      "correct" : false,
+      "rationale" : "병합(merge)의 뜻을 커밋으로 착각한 설명이다. 커밋은 한 줄기 안에 기록을 쌓는 일이고, 줄기끼리 합치는 일은 병합이다.",
+      "matchText" : ""
+    }, {
+      "text" : "기존 기록에서 갈라져 나와 따로 고쳐 나갈 줄기를 만드는 일이다",
+      "correct" : false,
+      "rationale" : "브랜치를 만드는 일을 커밋으로 착각한 설명이다. 갈라진 줄기가 브랜치이고, 커밋은 그 줄기 위에 남기는 기록 한 칸이다.",
+      "matchText" : ""
+    }, {
+      "text" : "바뀐 내용을 설명과 함께 기록 한 칸으로 남기는 일이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "고친 내용을 설명 한 줄과 함께 기록 한 칸으로 저장하는 일이다",
+    "title" : "git 커밋의 뜻",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "아래 워크플로 설정에서 5번째 줄처럼, 차례가 오면 실행되는 명령 한 칸을 부르는 이름은?",
+    "exhibit" : "jobs:\n  build-and-test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ./gradlew test",
+    "answer" : "",
+    "explanation" : "규칙: 워크플로는 잡을 담고, 잡은 스텝을 담는다. 스텝은 잡 안에서 위에서부터 하나씩 실행되는 한 칸이며, 직접 쓰는 명령(run) 하나나 남이 만든 작업 부품(uses) 하나를 담는다.\n자료를 위에서부터 따라가 보자.\n1번째 줄 jobs: 이 아래가 잡 목록이다.\n2번째 줄 build-and-test: 잡 하나의 이름이다 → 이 잡은 러너 한 대에서 돈다.\n3번째 줄 runs-on: 그 잡을 돌릴 러너 종류다.\n4번째 줄 steps: 이 아래가 그 잡의 스텝 목록이다.\n5번째 줄 run: ./gradlew test: steps 아래 놓인 명령 한 칸이다 → 차례가 오면 테스트를 돌린다.\n그래서 5번째 줄 같은 한 칸의 이름은 스텝이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "스텝",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "잡",
+      "correct" : false,
+      "rationale" : "잡은 2번째 줄 build-and-test처럼 여러 스텝을 담는 작업 묶음이다. 담는 쪽과 담기는 쪽을 뒤바꿔 본 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "러너",
+      "correct" : false,
+      "rationale" : "러너는 3번째 줄 runs-on이 고르는, 명령을 실제로 돌리는 컴퓨터다. 실행할 명령 한 칸과 그것을 실행하는 컴퓨터를 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "워크플로",
+      "correct" : false,
+      "rationale" : "워크플로는 언제 돌지와 잡 목록을 담은 설정 파일 전체다. 파일 안의 명령 한 칸과 파일 전체를 헷갈린 것이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "- **스텝(step)** — 잡 안에서 위에서부터 하나씩 차례로 실행하는 한 칸이다. 직접 쓰는 명령(`run`) 하나나 남이 만들어 둔 작업 부품(`uses`) 하나를 담는다.",
+    "title" : "워크플로 안 명령 한 칸의 이름 (GitHub Actions)",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "사람이 쓴 프로그램 원문을 실행할 수 있는 파일 하나로 만들어 내며, 문법 오류가 있으면 그 자리에서 멈추는 과정은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 빌드(build)는 소스 코드를 컴퓨터가 실행하는 형태로 바꾸고 실행 파일 하나로 묶는 일이다. 문법이 틀린 곳이 있으면 실행 파일이 나오지 않고 멈춘다.\n자바 파일 두 개가 있다고 하고 따라가 보자.\n두 파일 모두 문법이 맞다: 빌드 도구가 둘을 바꾸고 묶는다 → 실행 파일 하나가 나온다.\n한 파일에 오타가 하나 생긴다: 빌드 도구가 그 줄에서 멈춘다 → 실행 파일이 나오지 않는다.\n문법은 맞는데 점수를 잘못 계산한다: 빌드는 성공한다 → 계산이 맞는지는 테스트가 따로 본다.\n그래서 원문을 실행 파일로 만들고 문법 오류에서 멈추는 과정은 빌드다.\n(입문편의 '바탕이 되는 개념' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "자동 테스트",
+      "correct" : false,
+      "rationale" : "자동 테스트는 이미 만든 프로그램에 입력을 넣고 결과가 기대와 같은지 보는 일이다. 실행 파일을 만드는 과정과 만든 뒤 시험하는 과정을 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "병합",
+      "correct" : false,
+      "rationale" : "병합은 한 브랜치의 변경을 다른 브랜치에 합치는 일이다. 코드를 실행 파일로 바꾸는 일이 아니라 기록을 합치는 일과 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "빌드",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "push",
+      "correct" : false,
+      "rationale" : "push는 내 커밋을 GitHub 저장소로 올려 보내는 일이다. 코드를 옮기는 일일 뿐 문법을 보거나 실행 파일을 만들지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "빌드는 코드에 문법 오류가 있으면 그 자리에서 멈춘다.",
+    "title" : "소스 코드를 실행 파일로 만드는 과정의 이름",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "CI(continuous integration, 지속적 통합)에 대한 설명으로 옳은 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: CI는 여러 사람이 고친 코드를 자주 모으고, 모일 때마다 사람이 아니라 기계가 빌드와 자동 테스트를 돌려 결과를 바로 알리는 방식이다.\n두 사람이 하루에 한 번씩 push한다고 하고 따라가 보자.\n오전에 지수가 push한다: 기계가 곧바로 빌드와 테스트를 돌린다 → 통과해 커밋 옆에 초록 체크가 붙는다.\n오후에 민호가 push한다: 기계가 다시 돌린다 → 테스트 하나가 실패해 빨간 X가 붙는다.\n의심할 변경은 민호의 커밋 하나다: 몇 분 안에 원인을 찾는다.\n사람이 기억해서 돌리는 방식이라면 오후 검사는 건너뛰었을 수도 있다.\n그래서 CI는 코드가 모일 때마다 기계가 검사해 바로 알리는 방식이다.\n(입문편의 '무엇인가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "검사를 통과한 코드만 받도록 저장소가 push를 거부하는 방식이다",
+      "correct" : false,
+      "rationale" : "검사는 push가 끝난 뒤에 돈다. 실패해도 push는 이미 끝나 코드가 저장소에 남으므로, 검사가 push를 막는다고 착각한 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "코드가 모일 때마다 기계가 빌드와 테스트를 돌려 바로 알리는 방식이다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "각자 몇 주씩 작업한 뒤 마감 직전에 한꺼번에 합쳐 검사하는 방식이다",
+      "correct" : false,
+      "rationale" : "'지속적'은 하루에도 여러 번 합친다는 뜻이다. 몰아서 합치는 방식은 CI가 피하려는 방식과 헷갈린 것이다.",
+      "matchText" : ""
+    }, {
+      "text" : "push하기 전에 자기 컴퓨터에서 빌드와 테스트를 돌리도록 정한 규칙이다",
+      "correct" : false,
+      "rationale" : "사람이 돌리는 검사를 규칙으로 정한 것일 뿐이다. 잊거나 일부만 돌리는 빈틈이 남아, 기계가 맡는 CI와는 다르다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "여러 사람이 고친 코드를 자주 저장소에 모으고, 모일 때마다 기계가 빌드와 자동 테스트를 돌려 문제를 바로 알리는 개발 방식이다.",
+    "title" : "지속적 통합(CI)의 뜻",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 워크플로를 실제로 실행하는 컴퓨터를 러너라 하고, GitHub가 빌려주는 러너는 실행마다 새로 준비했다가 끝나면 지운다고 했다. 잡은 러너 위에서 도는 작업 묶음, 스텝은 잡 안의 한 칸, 저장소는 파일과 기록을 담는 곳이라 컴퓨터가 아니다. 정답은 2번 러너다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "러너의 뜻을 문서 정의 그대로 묻는 문제라 문서를 읽었으면 바로 풀린다. 오답 셋도 문서의 다른 단위라 헷갈릴 여지가 적다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서 표에서 커밋은 고친 내용을 설명 한 줄과 함께 기록 한 칸으로 저장하는 일이다. 3번은 브랜치, 2번은 병합, 1번은 push의 설명이다. 정답은 4번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "git 다섯 용어 표를 그대로 활용한 정의 문제다. 보기 넷이 각각 다른 용어의 정의라 표를 기억하면 명확하게 갈린다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "자료의 5번째 줄은 `- run: ./gradlew test`로 steps 아래의 한 칸이다. 문서는 잡 안에서 차례로 실행하는 한 칸을 스텝이라 하고, 스텝은 run 명령 하나를 담는다고 했다. 러너는 컴퓨터, 잡은 2번째 줄 build-and-test, 워크플로는 파일 전체다. 정답은 1번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「아래 워크플로 설정에서 5번째 줄처럼, 차례가 오면 실행되는 명령 한 칸을 부르는 이름은?」\n고치면: 아래 워크플로 설정의 5번째 줄(- run: ./gradlew test)처럼, 잡 안에서 차례가 오면 실행되는 한 칸을 부르는 이름은?",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "'5번째 줄'이 어느 줄인지 자료를 다시 세어 봤다. 줄 번호가 자료에 없어 jobs:부터 세는지 확인해야 했다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "자료가 개념을 눈으로 보여 줘 좋다. 줄을 세게 하기보다 줄 내용을 질문에 적으면 덜 헷갈린다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 빌드를 소스 코드를 실행 형태로 바꾸고 실행 파일 하나로 묶는 일이라 정의하고, 문법 오류가 있으면 그 자리에서 멈춘다고 했다. 병합은 브랜치를 합치는 일, 자동 테스트는 기대 결과를 확인하는 일, push는 커밋을 올려 보내는 일이다. 정답은 3번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "빌드의 정의와 특징을 그대로 묻는다. 무난하지만 근거 문서가 '빌드는 글자와 문법만 본다'고 단정하는 부분은 사실 검수에 걸려 있어 함께 보면 좋다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "문서는 CI를 코드를 자주 저장소에 모으고 모일 때마다 기계가 빌드와 자동 테스트를 돌려 문제를 바로 알리는 개발 방식이라 했다. 1번은 '테스트가 실패하면 push가 거부된다'는 오해, 4번은 사람이 돌리는 규칙으로 CI가 없앤 방식, 3번은 '지속적'의 반대다. 정답은 2번이다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "오답이 문서의 오해 절과 사람 검사 절에서 나와 이해했는지 잘 가린다. 정의 문제로 적절하다.",
+    "suggestion" : null
+  } ]
+}
