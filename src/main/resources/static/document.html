@@ -485,11 +485,20 @@ async function renderDiagrams(bodyEl) {
   }
 
   function configure() {
+    const dark = isDarkTheme();
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: "strict",
-      theme: isDarkTheme() ? "dark" : "neutral",
+      theme: dark ? "dark" : "neutral",
       fontFamily: getComputedStyle(document.body).fontFamily,
+      // neutral 테마는 차트(xychart)의 막대·선을 아주 옅은 회색으로 칠해 바탕과 거의 구별되지 않는다.
+      // 차트 색만 사이트 주 색 계열로 정한다
+      themeVariables: {
+        xyChart: {
+          plotColorPalette: dark ? "#8b8cf8, #38bdf8, #4ade80, #fbbf24"
+                                 : "#4f46e5, #0284c7, #16a34a, #d97706",
+        },
+      },
     });
   }
 
