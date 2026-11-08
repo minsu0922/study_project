@@ -1,0 +1,254 @@
+{
+  "formatVersion" : 1,
+  "note" : "Claude Code가 대화 안에서 직접 쓴 문제 초안입니다(Claude API 미사용). problem/system.txt 규칙과 배치가 만드는 요청문을 그대로 따랐습니다.",
+  "date" : "2026-10-21",
+  "generatedAt" : "2026-11-08T00:19:07.659508400Z",
+  "domain" : "CLOUD_INFRA",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-code/claude-opus-5-5",
+  "documentSlug" : "continuous-deployment-via-image-registry-advanced",
+  "problems" : [ {
+    "question" : "운영 서버가 띄울 이미지 이름에 latest를 적을지, 커밋 해시 태그를 적을지 고른다. 둘을 가르는 기준으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: latest는 push할 때마다 새 이미지로 옮겨 가고, 커밋 해시 태그는 처음 붙인 이미지에 남는다. 그래서 늘 같은 내용이 떠야 하면 해시를, 최신이면 되면 latest를 적는다.\n커밋 A, B가 차례로 올라갔다고 하고 따라가 보자.\n월요일 커밋 A가 push된다: latest와 A의 해시가 모두 이미지 A를 가리킨다.\n화요일 커밋 B가 push된다: latest는 이미지 B로 옮겨 가고, A의 해시는 이미지 A에 남는다.\n수요일에 이미지를 새로 받아 띄운다: latest를 적은 서버는 이미지 B를, A의 해시를 적은 서버는 이미지 A를 받는다.\n그래서 두 태그를 가르는 것은 띄울 때마다 같은 코드가 떠야 하는지다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "이미지 용량이 커서 내려받는 시간이 긴지 짧은지",
+      "correct" : false,
+      "rationale" : "같은 이미지를 가리키는 두 태그는 용량도 같다. 태그를 바꿔 적어도 받는 양은 달라지지 않으니, 이름을 고르는 기준이 될 수 없다.",
+      "matchText" : ""
+    }, {
+      "text" : "이미지를 공개로 두었는지 비공개로 두었는지",
+      "correct" : false,
+      "rationale" : "공개 여부는 서버가 로그인해야 하는지를 가른다. 어느 태그를 적든 로그인 조건은 같아서 태그 선택과는 상관이 없다.",
+      "matchText" : ""
+    }, {
+      "text" : "늘 같은 코드가 떠야 하는지, 최신이면 되는지",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "CI가 이미지를 만들기 전에 돌리는 테스트가 많은지",
+      "correct" : false,
+      "rationale" : "테스트 수는 이미지를 만들기 전 검사의 두께일 뿐이다. 통과한 뒤 붙는 두 태그 가운데 무엇을 적을지는 테스트 수로 갈리지 않는다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "갈림길은 latest를 적어 늘 최신을 받을지, 해시나 다이제스트를 적어 한 버전에 묶을지다.",
+    "title" : "운영 서버에 적을 이미지 태그를 가르는 기준",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "CI가 이미지를 저장소에 올리는 시점으로, PR(pull request, 병합 요청)마다 올리는 방식과 main에 합쳐진 뒤에만 올리는 방식이 있다. 뒤쪽을 고를 때 저장소에 쌓이는 이미지에서 달라지는 점으로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 저장소에 넣을 이미지를 main에 반영된 코드로만 제한하면, 아직 검사 중인 코드의 이미지가 저장소에 들어가지 않는다.\nPR 하나가 열렸다가 합쳐진다고 하고 따라가 보자.\nPR이 열린다: CI가 테스트만 돌리고 이미지는 만들지 않는다 → 저장소는 그대로다.\n리뷰에서 고칠 점이 나와 PR에 커밋이 더 붙는다: 여전히 저장소에는 아무것도 들어가지 않는다.\nPR이 main에 합쳐진다: CI가 다시 돌고 이미지를 만들어 latest와 그 커밋의 해시로 올린다.\nPR마다 올렸다면 리뷰 도중의 커밋마다 이미지가 하나씩 저장소에 쌓였을 것이다.\n그래서 main 반영 때만 올리면 검사 중인 코드의 이미지가 섞이지 않는다.\n(입문편의 '실무에서는 이렇게 쓴다' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "검사 중인 코드의 이미지가 저장소에 섞이지 않는다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "저장소에 올리기 전에 돌던 PR 테스트를 건너뛰게 된다",
+      "correct" : false,
+      "rationale" : "main 반영 때만 올려도 PR 단계의 테스트는 그대로 돈다. 이미지를 만드는 시점과 테스트를 돌리는 시점을 헷갈린 판단이다.",
+      "matchText" : ""
+    }, {
+      "text" : "이미지에 커밋 해시 태그를 붙일 수 없게 된다",
+      "correct" : false,
+      "rationale" : "main에 합쳐진 커밋에도 해시가 있어 태그는 그대로 붙는다. 올리는 시점이 태그 이름까지 바꾼다고 잘못 적용한 판단이다.",
+      "matchText" : ""
+    }, {
+      "text" : "서버가 pull하지 않고도 새 이미지를 받게 된다",
+      "correct" : false,
+      "rationale" : "올리는 시점이 바뀌어도 서버는 여전히 저장소에서 pull해 간다. 저장소에 넣는 조건과 서버가 받는 방법을 헷갈린 판단이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "PR 단계에서 CI는 테스트만 돌리고 이미지는 만들지 않는다. 검사 중인 코드가 저장소에 섞이지 않게 하려는 설정이다.",
+    "title" : "main 반영 때만 이미지를 올리는 설정의 이득",
+    "questionKind" : "COMPARISON",
+    "skipReason" : ""
+  }, {
+    "question" : "이미지 버전을 가리키는 이름으로 1, 2, 3 같은 일련번호 대신 커밋 해시를 태그로 쓰도록 정한 이유로 가장 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 커밋 해시는 커밋마다 이미 붙어 있는 번호라서 CI가 따로 번호를 매기지 않아도 되고, 그 해시로 GitHub에서 해당 코드를 바로 찾는다. 일련번호는 읽기 쉽지만 어느 코드인지 잇는 표가 따로 필요하다.\n버전 이름을 두 방식으로 붙였다고 하고 따라가 보자.\n일련번호로 붙인다: 서버에 버전 7이 돈다 → 7이 어느 커밋인지 알려면 따로 적어 둔 표를 열어야 한다.\n해시로 붙인다: 서버에 9c1e4b7로 시작하는 해시 태그가 돈다 → 그 해시로 GitHub 기록을 찾으면 고친 코드가 바로 나온다.\n표가 빠지거나 틀리면 일련번호 쪽만 어느 코드인지 잃는다.\n그래서 해시를 고른 이유는 번호가 이미 있고 코드와 바로 이어지기 때문이다.\n(입문편의 '왜 이렇게 설계됐는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "해시가 일련번호보다 짧아 사람이 읽고 외우기 쉬워서다",
+      "correct" : false,
+      "rationale" : "40자리 해시는 1, 2, 3보다 길고 읽기 어렵다. 읽기 쉬운 쪽은 일련번호라서, 숫자 번호의 장점을 해시에 옮겨 붙인 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "해시 태그는 저장소가 덮어쓰지 못하게 막아 주어서다",
+      "correct" : false,
+      "rationale" : "해시 태그도 같은 이름으로 다시 push하면 옮겨 가는 이름표다. 다른 커밋이 그 이름을 쓰지 않을 뿐인데, 저장소가 막아 준다고 섞은 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "해시를 붙이면 같은 이미지를 한 번만 저장하게 되어서다",
+      "correct" : false,
+      "rationale" : "이미지가 한 번만 저장되는 까닭은 두 태그가 같은 이미지를 가리켜서다. 태그를 둘 다는 이유와 해시를 고른 이유를 섞은 설명이다.",
+      "matchText" : ""
+    }, {
+      "text" : "커밋마다 이미 있고, 그 이름으로 코드를 바로 찾아서다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "버전 번호로 1, 2, 3 같은 숫자를 쓰는 방법도 있다. 숫자는 읽기 쉽지만, 그 숫자가 어느 코드인지 잇는 표를 따로 둬야 한다. 커밋 해시는 커밋마다 이미 있으므로 CI가 따로 번호를 매기지 않아도 되고, 해시로 GitHub에서 그 코드를 바로 찾는다.",
+    "title" : "이미지 버전 이름으로 커밋 해시를 쓰는 이유",
+    "questionKind" : "CAUSE",
+    "skipReason" : ""
+  }, {
+    "question" : "이미지 저장소에 로그인할 때 쓰는 자격 증명에 관한 설명으로 옳은 것은? (GITHUB_TOKEN은 CI의 job마다 GitHub가 발급하는 임시 출입증이다)",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 토큰은 사람 비밀번호 대신 프로그램이 쓰는 비밀 문자열이고, 권한 범위(scope)는 그 토큰으로 할 수 있는 일을 읽기·쓰기 등으로 좁혀 둔 범위다. 서버는 받기만 하므로 읽기 권한이면 충분하다.\n서버용 토큰이 밖으로 새었다고 하고 따라가 보자.\n읽기·쓰기를 다 가진 토큰이 샜다: 누군가 그 토큰으로 로그인한다 → 같은 이름과 태그로 다른 이미지를 push해 덮어쓴다.\n읽기만 가진 토큰이 샜다: 누군가 로그인해 pull은 한다 → push는 거부되어 저장소의 이미지는 그대로다.\nCI 쪽은 job마다 새로 받는 GITHUB_TOKEN에 쓰기 권한을 준다: 그 job이 끝나면 토큰이 만료된다.\n그래서 서버 토큰을 읽기로만 좁히면 새어도 덮어쓰지 못한다는 설명이 옳다.\n(심화편의 '실무에서 어디에 나타나는가' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "CI가 GHCR에 push하려면 사람 계정의 비밀번호를 설정에 적어 둔다",
+      "correct" : false,
+      "rationale" : "비밀번호를 따로 적어 둔다는 부분이 틀렸다. GITHUB_TOKEN에 packages: write 권한을 주면 그 토큰만으로 GHCR에 쓴다.",
+      "matchText" : ""
+    }, {
+      "text" : "GITHUB_TOKEN은 한 번 받으면 그 job이 끝난 뒤에도 서버가 이어서 쓴다",
+      "correct" : false,
+      "rationale" : "job이 끝난 뒤에도 쓴다는 부분이 틀렸다. GITHUB_TOKEN은 job마다 새로 발급되고, 그 job이 끝나면(늦어도 24시간 뒤) 만료되는 임시 출입증이다.",
+      "matchText" : ""
+    }, {
+      "text" : "서버 토큰을 읽기 권한으로만 좁히면 새어도 이미지를 덮어쓰지 못한다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "이미지가 비공개여도 서버는 로그인 없이 pull하고, push할 때만 로그인한다",
+      "correct" : false,
+      "rationale" : "비공개인데 로그인 없이 받는다는 부분이 틀렸다. 이미지가 비공개면 서버도 docker login으로 토큰을 대야 pull한다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "권한 범위를 읽기로만 좁혀 두면 토큰이 새어도 그 토큰으로는 저장소의 이미지를 덮어쓰지 못한다.",
+    "title" : "이미지 저장소 로그인에 쓰는 토큰의 권한 (GHCR)",
+    "questionKind" : "JUDGMENT",
+    "skipReason" : ""
+  }, {
+    "question" : "고친 코드가 운영 서버에서 돌기까지 테스트, 이미지 push, 서버 실행이 이어지는 순서로 적절한 것은?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 이미지는 테스트를 통과하고 main에 반영된 코드로만 만들어 저장소에 올리고, 서버는 저장소에 들어온 이미지를 해시 태그로 받아 띄운다. 저장소가 CI와 서버 사이에 있어서 push가 pull보다 먼저다.\n버그 수정 PR 하나를 따라가 보자.\nPR이 열린다: CI가 테스트만 돌린다 → 저장소에는 아무것도 들어가지 않는다.\nPR이 main에 합쳐진다: CI가 다시 돌아 이미지를 만들고 latest와 커밋 해시 두 태그로 push한다 → 저장소에 이 커밋의 이미지가 생긴다.\n서버가 그 커밋의 해시 태그로 pull해 새 컨테이너를 띄운다: 서버에서 도는 코드가 GitHub의 그 커밋과 짝지어진다.\n흔히 뒤바꾸는 것은 push와 서버 실행이다. 서버가 먼저 움직이면 받을 이미지가 아직 없다.\n그래서 테스트, main 반영, push, 서버 실행 순서가 맞다.\n(입문편의 '실무에서는 이렇게 쓴다' 절을 다시 읽어 보라)",
+    "choices" : [ {
+      "text" : "PR에서 이미지를 push한다 → main에 합친다 → CI가 테스트를 돈다 → 서버가 해시 태그로 받아 띄운다",
+      "correct" : false,
+      "rationale" : "테스트 전에 PR에서 이미지를 올리면 검사를 거치지 않은 이미지가 저장소에 먼저 들어간다. 나중에 테스트가 실패해도 그 이미지는 남는다.",
+      "matchText" : ""
+    }, {
+      "text" : "PR에서 테스트를 돈다 → main에 합친다 → CI가 이미지를 push한다 → 서버가 해시 태그로 받아 띄운다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "main에 합친다 → 서버가 해시 태그로 받아 띄운다 → CI가 테스트를 돈다 → CI가 이미지를 push한다",
+      "correct" : false,
+      "rationale" : "서버가 먼저 받으려 하면 저장소에 아직 이번 커밋의 이미지가 없다. 그 해시 태그를 찾지 못해 새 버전을 띄우지 못한다.",
+      "matchText" : ""
+    }, {
+      "text" : "PR에서 테스트를 돈다 → CI가 이미지를 push한다 → 서버가 해시 태그로 받아 띄운다 → main에 합친다",
+      "correct" : false,
+      "rationale" : "main에 합치기 전에 push하면 검사 중인 PR 코드로 만든 이미지가 운영 서버까지 나간다. 합쳐지지 않을 수도 있는 코드가 뜨는 셈이다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "PR이 main에 합쳐지면 CI가 다시 돌고, 이번에는 이미지를 만들어 GHCR에 올린다. 태그는 latest와 그 커밋의 해시 두 개다. 여기까지 개발자가 따로 할 일은 없다.",
+    "title" : "고친 코드가 운영 서버에 뜨기까지의 순서",
+    "questionKind" : "SEQUENCE",
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 0,
+    "type" : "QUESTION_REVEALS",
+    "message" : "내용을 몰라도 질문과 보기의 문장만 견줘 답을 좁힐 수 있습니다",
+    "detail" : "질문이 'push마다 새 이미지로 옮겨 가는 latest'와 '한 버전에 남는 커밋 해시 태그'를 직접 풀어 주고, 3번만 그 두 성질('최신이면 되는지'·'늘 같은 코드')을 되받는다. 원리를 몰라도 질문과 보기의 짝만 맞추면 3번으로 좁혀진다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "ANSWER_MISMATCH",
+    "message" : "검수 AI는 표시된 정답이 아닌 보기를 골랐습니다",
+    "detail" : "AI가 고른 보기: 「GITHUB_TOKEN은 한 번 받으면 그 job이 끝난 뒤에도 서버가 이어서 쓴다」\n고른 이유: 서버 토큰을 읽기 권한으로만 좁히면 새어도 그 토큰으로 이미지를 덮어쓰지 못한다. 비공개 이미지는 서버도 로그인해야 pull하고(3번), GITHUB_TOKEN은 실행이 끝나면 못 쓴다(4번), CI는 비밀번호 대신 GITHUB_TOKEN으로 push한다(1번).",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "DIFFICULTY_MISMATCH",
+    "message" : "중급으로 냈지만 초급으로 보입니다",
+    "detail" : "지문에 답을 가르는 조건: 없음\n조건이 달랐다면 정답이 되는 오답: 1개\n보기별 판단: 3번: 공개 이미지라면 서버는 로그인 없이 pull하므로 앞부분은 맞는다. 4번: 없음. 1번: 없음.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "latest는 push마다 옮겨 가므로 최신이면 될 때, 해시 태그는 한 버전에 남으므로 늘 같은 코드가 떠야 할 때 고른다. 테스트 개수, 공개 여부, 이미지 용량은 어느 태그를 적든 똑같이 따라오는 성질이라 둘을 가르지 못한다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 0,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "기준을 고르는 중급 형태는 맞지만, 질문이 두 태그의 성질을 미리 풀어 줘서 답이 거의 드러난다. 질문에서 '옮겨 가는/한 버전에 남는' 설명을 빼면 원리를 아는지 확인할 수 있다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "main에 합쳐진 뒤에만 이미지를 올리면 아직 검사 중인 PR 코드의 이미지가 저장소에 들어가지 않는다. 서버는 여전히 pull해야 하고(4번 오답), PR 테스트는 그대로 돈다(2번 오답), 해시 태그도 그대로 붙는다(3번 오답).",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「CI가 이미지를 저장소에 올리는 시점으로, PR(pull request, 병합 요청)마다 올리는 방식과 main에 합쳐진 뒤에만 올리는 방식이 있다.」\n고치면: CI가 이미지를 저장소에 올리는 때는 PR(pull request, 병합 요청)마다 올리는 방식과 main에 합쳐진 뒤에만 올리는 방식으로 나뉜다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 1,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "정답 보기가 문서 문장을 거의 그대로 옮겨 기억만으로도 풀린다. 오답 셋이 모두 명백히 틀린 말이라 원리를 잘못 적용한 판단으로 보기는 약하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "커밋 해시는 커밋마다 이미 있어 CI가 번호를 따로 매기지 않아도 되고, 해시로 GitHub에서 그 코드를 바로 찾는다. 2번은 해시 태그도 다시 push하면 옮겨 가므로 틀렸고, 1번은 해시가 40자리라 더 길며, 3번의 '한 번만 저장'은 두 태그를 함께 붙여서 생기는 일이지 해시를 써서 생기는 일이 아니다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 2,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "2번이 심화편 '흔한 오해'를 그대로 오답으로 써서 잘 걸러 낸다. 설계 이유를 묻는 중급 문제로 알맞다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "괄호 설명이 질문 끝에 붙어 있어 질문을 다 읽은 뒤 괄호를 보고 4번을 다시 읽었다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 3,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "사실 넷 가운데 맞는 것을 고르는 회상형이라 중급보다 초급에 가깝다. 괄호 속 'CI 실행마다'는 실제로는 job마다 발급·만료되므로 고쳐 두는 편이 안전하다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "SOLUTION",
+    "message" : "검수 AI가 문서를 보고 푼 과정입니다",
+    "detail" : "PR에서 테스트를 돌고, main에 합쳐지면 CI가 다시 돌아 이미지를 push하고, 서버가 해시 태그로 받아 띄운다. 4번은 main에 합치기 전에 운영에 올라가고, 3번은 테스트 전에 서버가 띄우며, 1번은 PR에서 이미지를 올려 문서의 설정과 어긋난다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "READABILITY",
+    "message" : "읽다가 막히는 곳이 있습니다",
+    "detail" : "정답 2번에 main 반영 뒤 CI가 다시 도는 단계가 빠져 있어, 문서의 'CI가 다시 돌고'와 맞는지 한 번 더 확인했다.",
+    "suggestion" : null
+  }, {
+    "problemIndex" : 4,
+    "type" : "OVERALL",
+    "message" : "풀어 본 총평입니다",
+    "detail" : "순서를 묻는 중급 형태로 알맞다. 오답의 순서가 크게 어긋나 있어 난도는 낮은 편이다.",
+    "suggestion" : null
+  } ]
+}
