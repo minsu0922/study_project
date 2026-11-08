@@ -35,6 +35,26 @@ public interface LearningPathStatsRepository extends Repository<Problem, Long> {
         boolean isHidden();
     }
 
+    /** 공개 문서마다 붙은 태그 — 다음에 읽을 글을 태그로 채울 때 겹치는 정도를 잰다 */
+    @Query("select d.slug as slug, t.name as name from Document d join d.tags t where d.hidden = false")
+    List<SlugTag> findPublicSlugTags();
+
+    /** 고른 문서의 본문 — 카드에 붙일 「핵심 요약」 첫 줄을 뽑는다. 두세 편만 부른다 */
+    @Query("select d.slug as slug, d.contentMd as contentMd from Document d where d.slug in :slugs")
+    List<SlugContent> findContents(@Param("slugs") Collection<String> slugs);
+
+    interface SlugTag {
+        String getSlug();
+
+        String getName();
+    }
+
+    interface SlugContent {
+        String getSlug();
+
+        String getContentMd();
+    }
+
     /** 단계마다 문제 수 — 문서로 묶인 문제 */
     @Query("select p.documentSlug as key, count(p) as cnt from Problem p "
             + "where p.hidden = false and p.documentSlug in :slugs group by p.documentSlug")

@@ -57,6 +57,8 @@ try {
     <!-- 다 읽은 사람이 갈 곳. 자세한 판단은 renderPracticeLink 주석. -->
     <div id="practice" hidden></div>
     <a class="next-edition" id="nextEdition" hidden></a>
+    <!-- 다음 주제 두 편. 자세한 판단은 renderNextReads 주석 -->
+    <section class="next-reads" id="nextReads" hidden></section>
     <p class="meta" id="source" style="margin-top:12px"></p>
   </article>
 </main>
@@ -133,6 +135,27 @@ function renderEdition(d) {
   next.hidden = false;
 }
 
+/* 다음에 읽을 글 — 서버가 코스 다음 단계를 먼저, 모자라면 태그가 겹치는 글로 두 편을 고른다
+ * (NextReadService). 같은 주제의 다른 편은 위 「이어서 읽기」가 맡으므로 여기 오지 않는다.
+ * 본문과 따로 부르는 이유: 추천이 실패해도 글은 읽혀야 한다. 실패하면 칸을 숨긴 채 둔다. */
+async function renderNextReads(slug) {
+  let items;
+  try {
+    items = await api("/api/documents/" + encodeURIComponent(slug) + "/next-reads");
+  } catch (e) {
+    return;
+  }
+  if (!items || items.length === 0) return;
+  const el = document.getElementById("nextReads");
+  el.innerHTML = `<div class="section-label">다음에 읽을 글</div><div class="next-reads-list">` +
+    items.map(it => `<a class="next-edition" href="/document.html?slug=${encodeURIComponent(it.slug)}">` +
+      `<span class="label">${escapeHtml(it.reason)}</span>` +
+      `<span class="name">${escapeHtml(it.title)}${it.edition ? " · " + escapeHtml(it.edition) : ""}</span>` +
+      (it.summary ? `<span class="hint">${escapeHtml(it.summary)}</span>` : "") +
+      `</a>`).join("") + `</div>`;
+  el.hidden = false;
+}
+
 async function loadDoc() {
   const slug = new URLSearchParams(location.search).get("slug");
   const msg = document.getElementById("message");
@@ -195,6 +218,7 @@ async function loadDoc() {
     buildToc(bodyEl);
     renderPracticeLink(d);
     renderDiagrams(bodyEl);   // 기다리지 않는다 — 그림은 늦게 와도 글은 먼저 읽힌다
+    renderNextReads(d.slug);  // 이것도 기다리지 않는다
 
     if (d.source) {
       document.getElementById("source").innerHTML =

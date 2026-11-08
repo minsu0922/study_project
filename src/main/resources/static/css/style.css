@@ -1295,6 +1295,11 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
 .next-edition .label { font-size: .78rem; font-weight: 700; color: var(--primary); }
 .next-edition .name { display: block; margin-top: 4px; font-weight: 700; }
 .next-edition .hint { display: block; margin-top: 4px; font-size: .82rem; color: var(--muted); }
+/* 다음에 읽을 글 — 「이어서 읽기」 카드와 같은 모양을 두 장 나란히. 좁은 화면에서는 한 줄씩 */
+.next-reads { margin-top: 28px; }
+.next-reads .section-label { margin-top: 0; }
+.next-reads-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.next-reads-list .next-edition { margin-top: 0; }
 .badge.green { background: var(--correct-bg); color: var(--correct); } /* 졸업 표시용 */
 
 .meta { color: var(--muted); font-size: var(--fs-1); }

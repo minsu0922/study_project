@@ -43,6 +43,7 @@ API는 **앱과 서버가 주고받는 창구 목록**이다. 🪟
 | POST | `/api/auth/logout` | ✕ | refresh 폐기 |
 | GET | `/api/documents` | ✕ | 문서 목록(도메인/태그 필터, 페이징) |
 | GET | `/api/documents/{slug}` | ✕ | 문서 단건 |
+| GET | `/api/documents/{slug}/next-reads` | ✕ | 다음에 읽을 글 두 편 |
 | GET | `/api/quiz` | ✕ | 필터로 문제 N개 |
 | GET | `/api/quiz/{problemId}` | ✕ | 문제 단건(목록에서 고른 한 문제를 푼다) |
 | POST | `/api/quiz/submit` | ✓ | 답안 제출 → 채점 + 해설 |
@@ -208,6 +209,26 @@ access 토큰 재발급. **refresh 토큰은 1회용**이라 쓰는 순간 새�
   파생 가능한 값을 저장하면 그 칸과 slug가 어긋난 채 엉뚱한 문서로 가는 링크가 생긴다.
 
 **에러**: `DOC_001` slug 없음(404)
+
+---
+
+## GET /api/documents/{slug}/next-reads
+문서 아래 「다음에 읽을 글」 두 편(2026-11-08). 인증 없이 열린다.
+
+**Response 200**
+```json
+[
+  { "slug": "public-private-ip-network-address-translation", "title": "공인 IP와 사설 IP 사이의 네트워크 주소 변환",
+    "edition": "입문편", "reason": "네트워크 입문 코스 · 다음 단계", "summary": "인터넷 주소는 개수가 정해져 있다" }
+]
+```
+- 고르는 순서: 이 문서가 든 코스(관리자 코스 → 분야 코스)에서 뒤에 오는 주제, 모자라면 태그가 겹치는 주제.
+  태그는 드문 것일수록 무겁게 센다. `reason`은 고른 근거를 그대로 적는다(`#tcp 태그가 같은 글`).
+- 같은 주제의 다른 편은 고르지 않는다. 심화편을 읽는 중이면 다음 주제도 심화편으로 잇는다.
+- `summary`는 그 글 「핵심 요약」 첫 항목의 굵은 제목이다. 없으면 `null`.
+- 단건 응답에 넣지 않고 따로 둔 이유: 단건은 Redis에 캐시돼 코스 순서를 바꿔도 옛 추천이 남는다.
+
+**에러**: `DOC_001` slug 없음·숨긴 문서(404)
 
 ---
 
