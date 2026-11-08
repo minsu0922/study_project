@@ -1,4 +1,5 @@
 {
+  "formatVersion" : 1,
   "note" : "배치가 주제를 쓸 때마다 마지막 사용일과 횟수를 적는 파일입니다. 앱은 이 파일을 쓰지 않고, 기동할 때 읽어 관리 화면에 반영합니다. 대기열 파일(_topics.json·_code-topics.json)은 앱만 씁니다. 둘이 한 파일을 쓰면 '배치로 보내기'가 충돌하기 때문입니다. 관리 화면에서 사용 기록을 초기화하면 대기열 파일에 초기화한 날(usageResetAt)이 실리고, 그날까지의 기록은 무시합니다.",
   "usage" : [ {
     "id" : 9,
@@ -85,6 +86,18 @@
     "lastUsedAt" : "2026-10-01",
     "usedCount" : 1
   }, {
+    "id" : 78,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "도커 — \"제 컴퓨터에서는 되는데요\"가 안 통하게 만드는 상자(이미지와 컨테이너)",
+    "lastUsedAt" : "2026-10-15",
+    "usedCount" : 1
+  }, {
+    "id" : 80,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "헬스체크와 되돌리기 — 배포는 끝났는데 서버가 안 떴을 때 알아채고, 이전 버전으로 돌아가는 법",
+    "lastUsedAt" : "2026-10-25",
+    "usedCount" : 1
+  }, {
     "id" : 1070,
     "domain" : "NETWORK",
     "topic" : "HTTP 메서드와 상태 코드 — 재시도해도 되는 요청과 안 되는 요청이 갈리는 기준",
@@ -119,6 +132,42 @@
     "domain" : "CLOUD_INFRA",
     "topic" : "클라우드 — 서버 컴퓨터를 사는 대신 빌려 쓰는 이유와, 켜 두기만 해도 요금이 나가는 구조",
     "lastUsedAt" : "2026-11-02",
+    "usedCount" : 1
+  }, {
+    "id" : 1096,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "손으로 하는 배포 — SSH로 먼 서버에 접속해 빌드한 파일을 올리고 실행하기까지",
+    "lastUsedAt" : "2026-10-10",
+    "usedCount" : 1
+  }, {
+    "id" : 1097,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "환경변수와 비밀값 — 코드를 공개했더니 DB 비밀번호가 함께 새는 사고를 막는 법",
+    "lastUsedAt" : "2026-10-12",
+    "usedCount" : 1
+  }, {
+    "id" : 1098,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "로그 — 서버가 멈췄는데 이유를 모를 때 가장 먼저 여는 기록(INFO·ERROR 수준)",
+    "lastUsedAt" : "2026-10-14",
+    "usedCount" : 1
+  }, {
+    "id" : 1099,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "Git과 브랜치 — 두 사람이 같은 파일을 고칠 때 서로 덮어쓰지 않게 하는 커밋·push·브랜치",
+    "lastUsedAt" : "2026-10-16",
+    "usedCount" : 1
+  }, {
+    "id" : 1100,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "CI — push할 때마다 사람이 빌드·테스트를 돌리다 빠뜨리는 일을 기계에 맡기기(GitHub Actions)",
+    "lastUsedAt" : "2026-10-17",
+    "usedCount" : 1
+  }, {
+    "id" : 1101,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "CD와 이미지 저장소 — 테스트를 통과한 도커 이미지를 어디에 두고, 서버는 그것을 어떻게 받아 가는가(GHCR)",
+    "lastUsedAt" : "2026-10-21",
     "usedCount" : 1
   }, {
     "id" : 1102,
@@ -161,6 +210,12 @@
     "domain" : "NETWORK",
     "topic" : "주소창에 URL을 치면 생기는 일 — DNS·TCP·TLS·HTTP가 한 번의 접속에서 차례로 일하는 순서",
     "lastUsedAt" : "2026-10-24",
+    "usedCount" : 1
+  }, {
+    "id" : 1109,
+    "domain" : "CLOUD_INFRA",
+    "topic" : "방화벽과 포트 열기 — 서버에 앱을 띄웠는데 내 브라우저로는 접속이 안 되는 이유",
+    "lastUsedAt" : "2026-10-11",
     "usedCount" : 1
   } ]
 }
