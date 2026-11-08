@@ -142,9 +142,16 @@ public final class DocumentDraftValidator {
      *
      * <p>mermaid 문법 전체를 자바에서 검사할 방법은 없다. 첫 줄만 본다 — 종류 선언이 틀리면
      * 그림이 통째로 안 그려지고, 화면에는 그림 대신 원문이 코드로 남는다.
+     *
+     * <p>gantt·xychart-beta·block-beta·packet-beta는 문서 화면의 mermaid 11.4.1이 그리는 것을
+     * 실물 문서(패킷 교환 두 편)로 확인하고 넣었다. 화면의 mermaid 버전을 내리면 여기도 함께 본다.
      */
-    private static final Pattern MERMAID_HEADER =
-            Pattern.compile("^(flowchart\\s+(TD|TB|LR)|sequenceDiagram|stateDiagram-v2)\\s*$");
+    private static final Pattern MERMAID_HEADER = Pattern.compile(
+            "^(flowchart\\s+(TD|TB|LR)|sequenceDiagram|stateDiagram-v2|gantt|xychart-beta|block-beta|packet-beta)\\s*$");
+
+    /** 경고 메시지에 적는 허용 종류 — {@link #MERMAID_HEADER}와 같이 고친다. */
+    private static final String MERMAID_KINDS =
+            "flowchart TD·LR, sequenceDiagram, stateDiagram-v2, gantt, xychart-beta, block-beta, packet-beta";
 
     /** 인라인 코드. 줄바꿈을 포함하지 않게 막아 두어 백틱 하나가 문서 절반을 삼키는 일을 방지. */
     private static final Pattern INLINE_CODE = Pattern.compile("`[^`\\n]*`");
@@ -204,10 +211,20 @@ public final class DocumentDraftValidator {
             Pattern.compile("(?m)^(\\*\\*|###\\s+|-\\s+|\\d+\\.\\s+)");
 
     /**
+     * 같은 절의 <b>{@code ####} 항목 제목</b> — 프롬프트가 정한 지금 형식이다.
+     *
+     * <p>이 형식에서는 항목 하나 아래에 꼬리표 목록({@code - `증상`} 등) 세 줄이 붙는다.
+     * {@link #FAILURE_MODE_ITEM}으로 세면 항목 둘이 여덟로 불어나 모자란 문서가 통과하므로,
+     * {@code ####} 제목이 있으면 이것만 센다. 줄 그은 제목({@code #### ~~"…"~~})은
+     * 「흔한 오해」 항목이라 뺀다.
+     */
+    private static final Pattern FAILURE_MODE_HEADING = Pattern.compile("(?m)^####\\s+(?!~~)");
+
+    /**
      * 용어 표 제목. <b>{@code ##}와 {@code ###}를 모두 인정한다</b> — 두 편이 다른 자리에 둔다.
      *
-     * <p>입문편은 2026-09-03 후속 개정에서 최상위 절({@code ## 용어 한눈에})로 올라가
-     * 필수 절 목록에 들어갔다. 심화편은 여전히 본론 끝의 {@code ### } 소제목이다.
+     * <p>입문편은 최상위 절({@code ## 용어 한눈에})이라 필수 절 목록에 들어 있다. 심화편도 지금은
+     * 최상위 절이지만, 옛 심화편 문서는 본론 끝의 {@code ### } 소제목으로 두었다.
      * 표가 있는지 세는 이 패턴은 <b>심화편에만</b> 쓴다 — 입문편에서 같이 돌리면
      * 절이 빠졌을 때 차단(필수 절)과 경고(표 없음)가 <b>한 결함에 두 번</b> 뜬다.
      */
@@ -579,7 +596,7 @@ public final class DocumentDraftValidator {
         if (!GLOSSARY_HEADING.matcher(structure).find()) {
             checks.add(DraftCheck.warning(
                     "'## 용어 한눈에' 표가 없습니다. "
-                            + "'## 이 글을 읽기 전에' 바로 뒤에 두는 절입니다 — 낯선 말을 먼저 풀어 두고, "
+                            + "본론 뒤, '## 실무에서 어디에 나타나는가' 바로 앞에 두는 절입니다 — "
                             + "독자가 아래 절에서 막혔을 때 돌아오는 자리입니다."));
         }
     }
@@ -733,7 +750,8 @@ public final class DocumentDraftValidator {
             return; // 절 자체가 없으면 checkRequiredSections가 차단으로 잡는다
         }
         // 사본으로 센다 — 코드 예제의 "- " 줄까지 항목으로 세면 모자란 문서가 통과한다
-        int items = count(FAILURE_MODE_ITEM, section.masked());
+        int headings = count(FAILURE_MODE_HEADING, section.masked());
+        int items = headings > 0 ? headings : count(FAILURE_MODE_ITEM, section.masked());
         if (items < MIN_FAILURE_MODES) {
             checks.add(DraftCheck.warning(
                     "'## 어떤 때 통하지 않는가'의 항목이 %d개입니다(기준 %d개 이상). 고급 문제가 여기를 재료로 씁니다."
@@ -788,8 +806,9 @@ public final class DocumentDraftValidator {
                     .findFirst().orElse("");
             if (!MERMAID_HEADER.matcher(header).matches()) {
                 checks.add(DraftCheck.warning(
-                        "%d번째 그림의 첫 줄이 \"%s\"입니다(flowchart TD·LR, sequenceDiagram, stateDiagram-v2만). 화면에 그림 대신 원문이 코드로 보입니다."
-                                .formatted(diagrams, header.length() <= 30 ? header : header.substring(0, 30) + "…")));
+                        "%d번째 그림의 첫 줄이 \"%s\"입니다(%s만). 화면에 그림 대신 원문이 코드로 보입니다."
+                                .formatted(diagrams, header.length() <= 30 ? header : header.substring(0, 30) + "…",
+                                        MERMAID_KINDS)));
             }
         }
         if (diagrams == 0 && edition == DocumentEdition.BEGINNER) {

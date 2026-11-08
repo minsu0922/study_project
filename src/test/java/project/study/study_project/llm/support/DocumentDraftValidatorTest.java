@@ -373,6 +373,57 @@ class DocumentDraftValidatorTest {
     }
 
     /**
+     * <b>{@code ####} 항목 아래 꼬리표 목록이 붙는 지금 형식</b>(2026-11-08).
+     *
+     * <p>항목 하나에 {@code - `증상`} 같은 줄이 셋 붙는다. 옛 패턴은 하이픈 줄도 항목으로 세므로,
+     * 항목 둘이 여덟로 불어나 재료가 모자란 문서가 조용히 통과한다. {@code ####} 제목이 있으면
+     * 그것만 센다.
+     */
+    @Test
+    @DisplayName("#### 항목은 제목만 센다 — 꼬리표 줄까지 세면 항목 둘이 여덟이 된다")
+    void countsHeadingItemsOnlyWhenPresent() {
+        String base = advancedBody(TITLE);
+        String written = """
+                **1. 첫째 조건**
+                **2. 둘째 조건**
+                **3. 셋째 조건**
+                **4. 넷째 조건**
+                **5. 다섯째 조건**
+                **6. 여섯째 조건**
+                **7. 일곱째 조건**""";
+        String item = """
+                #### %s
+
+                - `증상` 터진다.
+                - `원인` 이유다.
+                - `대처` 막는다.
+                """;
+        String seven = List.of("하나", "둘", "셋", "넷", "다섯", "여섯", "일곱").stream()
+                .map(item::formatted).collect(java.util.stream.Collectors.joining("\n"));
+        String myths = """
+
+                ### 흔한 오해
+
+                #### ~~"오해 하나"~~
+
+                설명.
+
+                #### ~~"오해 둘"~~
+
+                설명.
+                """;
+        String twoPlusMyths = item.formatted("하나") + "\n" + item.formatted("둘") + myths;
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", base.replace(written, seven)))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("어떤 때 통하지 않는가"));
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", base.replace(written, twoPlusMyths)))
+                .extracting(DraftCheck::message)
+                .as("꼬리표 줄과 줄 그은 오해 제목은 항목이 아니다")
+                .anyMatch(m -> m.contains("'## 어떤 때 통하지 않는가'의 항목이 2개"));
+    }
+
+    /**
      * <b>절이 문장으로 시작하는가</b>(2026-09-16).
      *
      * <p>사용자 지적: "절과 절 사이가 툭툭 끊긴다. 절 여섯 개가 한 글이 아니라 여섯 개의
@@ -759,10 +810,15 @@ class DocumentDraftValidatorTest {
                 .anyMatch(m -> m.contains("1번째 그림의 첫 줄이 \"pie title 비율\"입니다"));
     }
 
+    /**
+     * 2026-11-08에 gantt·xychart-beta·block-beta·packet-beta를 더했다. 문서 화면의 mermaid 11.4.1이
+     * 이 넷을 그리는 것을 패킷 교환 두 편으로 확인했는데, 검증기만 "원문이 코드로 보인다"고 헛울렸다.
+     */
     @Test
-    @DisplayName("허용한 세 종류는 조용하다 — flowchart·sequenceDiagram·stateDiagram-v2")
+    @DisplayName("허용한 일곱 종류는 조용하다 — 화면이 그리는 종류에 헛울리면 경고를 안 보게 된다")
     void acceptsAllowedDiagramTypes() {
-        for (String header : List.of("flowchart TD", "flowchart LR", "sequenceDiagram", "stateDiagram-v2")) {
+        for (String header : List.of("flowchart TD", "flowchart LR", "sequenceDiagram", "stateDiagram-v2",
+                "gantt", "xychart-beta", "block-beta", "packet-beta")) {
             String doc = body(TITLE, "본문").replace("sequenceDiagram", header);
 
             assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", doc))
