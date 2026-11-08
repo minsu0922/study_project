@@ -308,38 +308,38 @@ class ClaudeDocumentGeneratorTest {
         // 지키는 것은 문구가 아니라 <새 용어 정의를 붙일 자리가 열려 있다>는 사실이다.
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("가장 어려운 용어가 처음 나오는 절인데 정의를 붙일 자리가 없으면 그냥 지나간다")
-                .contains("그 항목만 세 문장 + 하이픈 한 줄이 된다")
+                .contains("다리 문장 한 줄과 하이픈 정의 한 줄을 붙인다")
                 .as("입문편이 푼 용어를 다시 푸는 것이 이 편의 가장 큰 낭비다")
                 .contains("입문편이 이미 푼 용어는 넣지 마라");
     }
 
     /**
-     * <b>심화편 「용어 한눈에」가 최상위 절이고 「언제 깨지는가」보다 앞인지</b>(2026-09-04).
+     * <b>심화편 「용어 한눈에」가 최상위 절이고, 입문편과 같이 본론 뒤에 있는지</b>(2026-11-08).
      *
      * <p>소제목({@code ###})으로 두면 <b>마지막 본론 섹션에 딸린 표</b>로 읽혀 그 섹션의 용어만
-     * 올라온다. 입문편이 09-03에 똑같이 겪었고, 그래서 그때도 고친 방법은 문구가 아니라
-     * <b>자리</b>였다. 위치까지 못 박는 이유는 이 표가 {@code ## 언제 깨지는가}가 쓸 용어를
-     * 받는 자리이기 때문이다 — 뒤로 밀리면 정의가 용어보다 늦게 나온다.
+     * 올라온다. 그래서 최상위 절로 두는 것은 그대로다. 자리는 글 앞머리에서 본론 뒤로 옮겼다 —
+     * 앞머리에 두면 독자가 본론보다 표를 먼저 읽어야 했다. 실패 조건 절이 쓸 용어를 받는 자리라
+     * 그 절보다는 여전히 앞이어야 한다.
      *
      * <p>증상이 조용한 종류다. 표는 있고 검증도 통과하는데, 문서를 읽는 사람만 뒤쪽 절에서 막힌다.
      */
     @Test
-    @DisplayName("심화편 용어 표가 글 앞머리에 있다 — 낯선 말을 먼저 풀어 두고 막히면 돌아오는 자리다")
-    void advancedGlossarySitsNearTheTop() {
+    @DisplayName("심화편 용어 표가 본론 뒤, 실무 절 앞에 있다 — 입문편과 같은 자리다")
+    void advancedGlossarySitsAfterBody() {
         String prompt = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
 
         assertThat(prompt)
                 .as("### 로 두면 그 섹션에 딸린 표로 읽혀 그 섹션 용어만 올라온다")
-                .contains("## 용어 한눈에")
-                .as("자리를 못 박지 않으면 표가 옛 자리(본론 뒤)로 돌아간다")
-                .contains("\"## 이 글을 읽기 전에\" 바로 뒤에 독립된 절로 둔다")
-                .as("자리가 바뀌면 성격도 바뀐다 — 본론이 정의한 것을 걷어 오는 표가 아니라 먼저 푸는 표다")
+                .contains("\n## 용어 한눈에\n")
+                .as("자리를 못 박지 않으면 표가 옛 자리(앞머리)로 돌아간다")
+                .contains("\"## 실무에서 어디에 나타나는가\" 바로 앞에 독립된 절로 둔다")
+                .as("뒤쪽 절이 쓸 용어를 미리 받는 자리라는 성격은 그대로다")
                 .contains("아래 절에서 막히면 여기로 돌아온다");
 
-        assertThat(prompt.indexOf("## 용어 한눈에"))
-                .as("프롬프트의 절 순서가 곧 문서 순서다 — 머리말 뒤, 중급 재료 절 앞")
-                .isGreaterThan(prompt.indexOf("## 이 글을 읽기 전에"))
-                .isLessThan(prompt.indexOf("## 실무에서 어디에 나타나는가"));
+        assertThat(prompt.indexOf("\n## 용어 한눈에\n"))
+                .as("프롬프트의 절 순서가 곧 문서 순서다 — 본론 뒤, 중급 재료 절 앞")
+                .isGreaterThan(prompt.indexOf("\n## (본론 1~2개 섹션)\n"))
+                .isLessThan(prompt.indexOf("\n## 실무에서 어디에 나타나는가\n"));
     }
 
     /**
@@ -493,7 +493,7 @@ class ClaudeDocumentGeneratorTest {
     void showsWorkedExamplesForNewSections() {
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("항목 제목 형식이 흔들려 검증기가 헛울린 자리")
-                .contains("**캐시 스탬피드**")
+                .contains("#### 캐시 스탬피드")
                 .as("네 번째 줄(새 용어 정의)까지 예시가 보여 줘야 한다")
                 .contains("- **뮤텍스(mutex)** —")
                 .as("이게 빠지면 모든 문서의 깨지는 조건이 캐시 이야기가 된다")
@@ -743,8 +743,10 @@ class ClaudeDocumentGeneratorTest {
                 .contains("표나 번호 목록으로 충분한 것을 그림으로 다시 그리지 마라")
                 .as("화면이 그리는 것은 이 펜스뿐이다")
                 .contains("```mermaid 펜스 안에 쓴다")
-                .as("검증기가 첫 줄로 세 종류만 통과시킨다")
-                .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2")
+                .as("검증기가 첫 줄로 통과시키는 일곱 종류와 같아야 한다")
+                .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2 / gantt / xychart-beta / block-beta / packet-beta")
+                .as("한 종류만 되풀이하면 그림이 단조롭다(2026-11-08 사용자 지적)")
+                .contains("같은 종류만 되풀이하지 마라")
                 .as("ASCII 그림으로 돌아가면 한글 폭 때문에 다시 어긋난다")
                 .contains("ASCII 그림은 쓰지 마라")
                 .as("같은 펜스라 코드 예제를 그림으로 바꿔치기할 수 있다")
@@ -754,7 +756,7 @@ class ClaudeDocumentGeneratorTest {
                 .as("심화편은 선택이다 — 검증기도 심화편에는 없다고 울리지 않는다")
                 .contains("[그림] — 필요할 때만")
                 .doesNotContain("많아도")
-                .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2");
+                .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2 / gantt / xychart-beta / block-beta / packet-beta");
     }
 
     @Test
@@ -1095,28 +1097,73 @@ class ClaudeDocumentGeneratorTest {
     }
 
     /**
-     * <b>처음에 던진 질문을 끝에서 회수하게 한다.</b>
+     * <b>맨 앞 「글의 주제」에서 던진 질문을 끝에서 회수하게 한다.</b>
      *
-     * <p>"글의 목적지가 안 보인다"의 정체가 여기였다. 두 편 모두 이미
-     * {@code > 이 글이 답하는 질문:} 한 줄을 쓰고 있는데, <b>그 뒤로 아무도 그 질문을 다시
-     * 보지 않는다</b>. 1쪽에서 약속하고 어디서도 갚지 않으니, 끝까지 읽어도 "이 글이 답한 게
+     * <p>"글의 목적지가 안 보인다"를 막는 장치다. 전에는 본문 중간의 {@code > 이 글이 답하는 질문:}
+     * 한 줄이 그 질문이었는데, 2026-11-08에 제목 바로 아래 「글의 주제」 상자로 옮겼다.
+     * 질문이 앞으로 갔어도 마지막 절이 그것을 받지 않으면, 끝까지 읽어도 "이 글이 답한 게
      * 뭐였지"가 남는다.
-     *
-     * <p>그래서 장치를 새로 만들지 않았다. 이미 있는 질문 줄을 마지막 절이 받게 했을 뿐이다.
-     * 새 개념을 더하면 프롬프트가 길어지고, 긴 프롬프트에서 먼저 무시되는 것은 늘 뒤쪽이다.
      */
     @Test
-    @DisplayName("처음 던진 질문을 마지막 절이 답하게 한다 — 지금은 1쪽에서 약속하고 아무도 갚지 않는다")
-    void bothPromptsCloseTheOpeningQuestion() {
-        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
-                .as("입문편의 마지막 절")
+    @DisplayName("글의 주제 상자를 제목 아래에 두고, 마지막 절이 그 질문에 답하게 한다")
+    void bothPromptsOpenWithTopicAndCloseIt() {
+        String beginner = ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT;
+        String advanced = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
+
+        assertThat(beginner.indexOf("> **글의 주제**"))
+                .as("입문편: 제목 아래, 핵심 요약보다 먼저")
+                .isPositive()
+                .isLessThan(beginner.indexOf("\n## 핵심 요약"));
+        assertThat(advanced.indexOf("> **글의 주제**"))
+                .as("심화편: 제목 아래, 핵심 요약보다 먼저")
+                .isPositive()
+                .isLessThan(advanced.indexOf("\n## 핵심 요약"));
+
+        assertThat(beginner)
+                .as("입문편 상자는 일상 장면으로 흥미를 끈다")
+                .contains("독자가 매일 겪는 장면 하나로 시작해")
+                .as("옛 질문 줄을 다시 시키면 질문이 두 군데가 된다")
+                .doesNotContain("> 이 글이 답하는 질문:")
                 .contains("## 한 줄로 정리하면")
-                .contains("이 글이 답하는 질문에 그대로 답이 되어야 한다");
+                .contains("「글의 주제」가 던진 궁금증에 그대로 답이 되어야 한다");
+
+        assertThat(advanced)
+                .as("심화편 상자는 입문편보다 구체적으로 쓴다")
+                .contains("입문편 상자보다 <구체적으로> 쓴다")
+                .doesNotContain("> 이 글이 답하는 질문:")
+                .contains("## 면접 한 줄 요약")
+                .contains("「글의 주제」가 던진 질문에 그대로 답이 되어야 한다");
+    }
+
+    /**
+     * <b>화면에서 읽히는 모양을 프롬프트가 정하는지</b>(2026-11-08).
+     *
+     * <p>굵은 글씨 한 줄 아래에 본문을 붙여 쓰면 화면에서 한 문단으로 뭉친다(marked의 홑줄바꿈).
+     * 1102 두 편에서 오해·실무·실패 조건·면접 항목이 모두 그렇게 뭉쳐 있었다. 항목은 소제목으로,
+     * 실패 조건은 꼬리표 목록으로, 오해는 줄 그은 제목과 상자로 바꾸면서 그 형식을 여기서 지킨다.
+     */
+    @Test
+    @DisplayName("항목은 소제목·꼬리표·상자로 쓴다 — 굵은 줄 아래 붙여 쓰면 화면에서 한 문단으로 뭉친다")
+    void bothPromptsFixHowItemsRender() {
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .contains("[강조와 줄바꿈]")
+                .contains("굵은 글씨 한 줄 바로 아래에 본문을 붙여 쓰지 마라")
+                .contains("한 문단에는 이야기 하나만 담는다")
+                .as("입문편 오해 항목")
+                .contains("### ~~\"(믿기 쉬운 문장)\"~~")
+                .contains("> **(맞는 사실 한 문장)**");
 
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
-                .as("심화편의 마지막 절")
-                .contains("## 면접 한 줄 요약")
-                .contains("이 글이 답하는 질문에 그대로 답이 되어야 한다");
+                .contains("[강조와 줄바꿈]")
+                .contains("굵은 글씨 한 줄 바로 아래에 본문을 붙여 쓰지 마라")
+                .as("실패 조건 항목은 #### 제목 아래 꼬리표 목록이다 — 검증기가 #### 제목으로 센다")
+                .contains("#### (항목 이름)")
+                .contains("- `증상`").contains("- `원인`").contains("- `대처`")
+                .as("실무 항목과 면접 질문도 소제목이다")
+                .contains("### (항목 이름)")
+                .contains("### Q. (질문)")
+                .as("주제를 벗어난 실패 조건이 글을 흐린다(1102 심화편)")
+                .contains("<「글의 주제」 안에서 깨지는 것만 고른다.>");
     }
 
     /**
