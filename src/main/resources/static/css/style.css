@@ -2238,6 +2238,24 @@ body.admin-shell {
    넓은 그림은 상자 안에서만 옆으로 굴린다. 표와 같은 처리다(본문 전체가 옆으로 밀리지 않게). */
 .doc-body .doc-diagram { margin: 16px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; text-align: center; }
 .doc-body .doc-diagram svg { max-width: 100%; height: auto; }
+/* 손으로 그린 그림(static/images/docs/*.svg) — document.html의 renderFigures가 본문 안에 펼친다.
+   그림 속 모양은 class만 달고 색은 여기서 입혀, 어두운 화면에서도 사이트 색을 따른다.
+   좁은 화면에서 글자가 너무 작아지지 않게 폭을 지키고 상자 안에서 옆으로 굴린다. */
+.doc-body .doc-figure svg { min-width: 600px; }
+.doc-figure .f-dev, .doc-figure .f-paper { fill: var(--card); stroke: var(--text); }
+.doc-figure .f-screen { fill: var(--primary-soft); stroke: var(--primary); }
+.doc-figure .f-dot { fill: var(--primary); }
+.doc-figure .f-line, .doc-figure .f-flap { stroke: var(--text); }
+.doc-figure .f-house { fill: var(--fill); stroke: var(--border-strong); }
+.doc-figure .f-panel { fill: var(--fill); }
+.doc-figure .f-cloud { fill: var(--card); stroke: var(--muted); }
+.doc-figure .f-arrow { stroke: var(--primary); }
+.doc-figure .f-ledger { fill: var(--card); stroke: var(--primary); }
+.doc-figure .f-hl { fill: var(--primary-soft); }
+.doc-figure .f-strike { stroke: var(--wrong); }
+.doc-figure .f-t, .doc-figure .f-b, .doc-figure .f-mono { fill: var(--text); }
+.doc-figure .f-sm { fill: var(--muted); }
+.doc-figure .f-new, .doc-figure .f-acc { fill: var(--primary); }
 
 /* 제목 위계 — 생성 프롬프트가 "### 왜 이렇게 설계됐는가"를 쓰게 바뀌면서 필요해졌다.
  * 전에는 그 자리를 **굵은 글씨** 한 줄로 썼는데, 마크다운에서 그건 그냥 문단이라

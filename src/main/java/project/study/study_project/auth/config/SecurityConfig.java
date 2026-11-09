@@ -88,7 +88,7 @@ public class SecurityConfig {
                         // 공개: 프론트 정적 파일(HTML/CSS/JS). "화면은 누구나 열 수 있고,
                         // 화면 속 데이터(API)만 토큰으로 보호한다" — 페이지를 잠그면 로그인
                         // 화면 자체도 못 여는 모순이 생기므로 정적 리소스는 전부 연다.
-                        .requestMatchers("/", "/*.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/", "/*.html", "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         // 관리 화면(/admin/**)은 위 규칙의 <예외>다. 여기서 permitAll인 것은
                         // 검사를 안 한다는 뜻이 아니라, 검사를 AdminGateFilter가 한다는 뜻이다.
                         // 왜 Spring Security에 맡기지 않나: 이 규칙들은 Authorization 헤더의

@@ -135,6 +135,32 @@ function renderEdition(d) {
   next.hidden = false;
 }
 
+/* 손으로 그린 그림(static/images/docs/*.svg) — 본문의 이미지 줄을 SVG 원문으로 바꿔 끼운다.
+ * <img>로 두면 그림 속이 페이지 CSS를 못 받아, 어두운 화면에서도 밝은 색 그대로 남는다.
+ * 우리 저장소의 파일이지만 주소는 본문이 고르므로 DOMPurify로 한 번 거른다.
+ * 받기에 실패하면 <img>를 그대로 둔다 — 그림 파일에 밝은 색이 기본값으로 들어 있다. */
+async function renderFigures(root) {
+  if (!window.DOMPurify) return;
+  const imgs = [...root.querySelectorAll('img[src^="/images/docs/"][src$=".svg"]')];
+  for (const img of imgs) {
+    try {
+      const res = await fetch(img.getAttribute("src"));
+      if (!res.ok) continue;
+      const box = document.createElement("div");
+      box.className = "doc-diagram doc-figure";
+      box.innerHTML = DOMPurify.sanitize(await res.text(), { USE_PROFILES: { svg: true } });
+      const svg = box.querySelector("svg");
+      if (!svg) continue;
+      if (img.alt) svg.setAttribute("aria-label", img.alt);
+      const p = img.parentElement;
+      const alone = p && p.tagName === "P" && p.childElementCount === 1 && p.textContent.trim() === "";
+      (alone ? p : img).replaceWith(box);
+    } catch (e) {
+      // 그림 하나 때문에 글을 막지 않는다
+    }
+  }
+}
+
 /* 다음에 읽을 글 — 서버가 코스 다음 단계를 먼저, 모자라면 태그가 겹치는 글로 두 편을 고른다
  * (NextReadService). 같은 주제의 다른 편은 위 「이어서 읽기」가 맡으므로 여기 오지 않는다.
  * 본문과 따로 부르는 이유: 추천이 실패해도 글은 읽혀야 한다. 실패하면 칸을 숨긴 채 둔다. */
@@ -218,6 +244,7 @@ async function loadDoc() {
     buildToc(bodyEl);
     renderPracticeLink(d);
     renderDiagrams(bodyEl);   // 기다리지 않는다 — 그림은 늦게 와도 글은 먼저 읽힌다
+    renderFigures(bodyEl);    // 손으로 그린 그림도 마찬가지
     renderNextReads(d.slug);  // 이것도 기다리지 않는다
 
     if (d.source) {
