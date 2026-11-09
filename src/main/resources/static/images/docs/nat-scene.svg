@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 320" role="img" aria-label="집 안의 노트북이 보낸 편지가 공유기를 지나며 보낸 곳 주소가 바뀌어 웹 서버로 가는 장면">
+<defs><marker id="nat-scene-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<path d="M16 120 L241 52 L466 120 Z" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<rect x="30" y="120" width="422" height="190" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="46" y="146" class="f-sm" fill="#556274" font-size="11.5">우리 집 · 사설 주소 192.168.0.x</text>
+<g transform="translate(50 168) scale(1.2)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="50" y="240" class="f-b" fill="#0f172a" font-size="13" font-weight="700">노트북</text>
+<text x="50" y="256" class="f-mono" fill="#0f172a" font-size="11.5" font-family="ui-monospace, Consolas, monospace">192.168.0.12</text>
+<g transform="translate(56 262) scale(0.8)"><rect x="3" y="2" width="24" height="46" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="7" y="8" width="16" height="30" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><circle cx="15" cy="43" r="2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="90" y="280" class="f-b" fill="#0f172a" font-size="13" font-weight="700">휴대폰</text>
+<text x="90" y="296" class="f-mono" fill="#0f172a" font-size="11.5" font-family="ui-monospace, Consolas, monospace">192.168.0.20</text>
+<g transform="translate(128 150)"><rect x="0" y="0" width="210" height="46" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><path d="M0 0 L105.0 24 L210 0" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/><text x="8" y="38" class="f-mono" fill="#0f172a" font-size="11.5" font-family="ui-monospace, Consolas, monospace">보낸 곳 192.168.0.12:51000</text></g>
+<path d="M126 212 L342 212" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#nat-scene-head)"/>
+<g transform="translate(346 170) scale(1.1)"><path d="M18 18 L12 2 M62 18 L68 2" class="f-line" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/><rect x="2" y="18" width="76" height="28" rx="6" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/><circle cx="16" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="28" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="40" cy="32" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="358" y="244" class="f-b" fill="#0f172a" font-size="13" font-weight="700">공유기</text>
+<text x="344" y="260" class="f-mono" fill="#0f172a" font-size="11.5" font-family="ui-monospace, Consolas, monospace">203.0.113.25</text>
+<rect x="316" y="266" width="180" height="46" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="326" y="283" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700">변환 표</text>
+<text x="326" y="302" class="f-mono" fill="#0f172a" font-size="11.5" font-family="ui-monospace, Consolas, monospace">40001 → 노트북:51000</text>
+<path d="M440 205 L536 202" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#nat-scene-head)"/>
+<g transform="translate(470 96)"><rect x="0" y="0" width="210" height="46" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><path d="M0 0 L105.0 24 L210 0" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/><rect x="4" y="25" width="202" height="18" rx="2" class="f-hl" fill="#eef2ff"/><text x="8" y="38" class="f-new" fill="#4f46e5" font-size="11.5" font-weight="700" font-family="ui-monospace, Consolas, monospace">보낸 곳 203.0.113.25:40001</text></g>
+<text x="470" y="88" class="f-sm" fill="#556274" font-size="11.5">공유기를 지나며 바뀐 보낸 곳</text>
+<path d="M550 200 a26 26 0 0 1 44 -22 a34 34 0 0 1 62 8 a24 24 0 0 1 10 46 h-110 a20 20 0 0 1 -6 -32 z" class="f-cloud" fill="#ffffff" stroke="#556274" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="592" y="215" class="f-t" fill="#0f172a" font-size="13">인터넷</text>
+<path d="M680 205 L730 205" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#nat-scene-head)"/>
+<g transform="translate(740 165) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="744" y="256" class="f-b" fill="#0f172a" font-size="13" font-weight="700">웹 서버</text>
+<text x="702" y="274" class="f-sm" fill="#556274" font-size="11.5">공유기 주소 하나만 본다</text>
+</svg>
