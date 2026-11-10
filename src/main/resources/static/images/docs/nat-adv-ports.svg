@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="결제사 한 곳으로 가는 번호표가 진행 중과 반납 대기로 모두 걸려 빈 번호표가 없다. 커넥션 풀은 번호표 50장만 돌려 쓴다">
+<defs><marker id="nat-adv-ports-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker><marker id="nat-adv-ports-bad" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-bad" fill="#dc2626"/></marker></defs>
+<text x="20" y="30" class="f-b" fill="#0f172a" font-size="15" text-anchor="start" font-weight="700">결제사 198.51.100.7:443 으로 가는 번호표(바깥 포트) 걸이</text>
+<text x="20" y="52" class="f-sm" fill="#556274" font-size="13" text-anchor="start">같은 목적지라 번호표 번호만 다르고 나머지 네 칸은 똑같다</text>
+<path d="M20 72 L620 72" class="f-line" fill="none" stroke="#0f172a" stroke-width="3"/>
+<path d="M33.0 72 L33.0 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="24.0" y="80" width="18" height="34" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<path d="M57.6 72 L57.6 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="48.6" y="80" width="18" height="34" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<path d="M82.2 72 L82.2 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="73.2" y="80" width="18" height="34" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<path d="M106.80000000000001 72 L106.80000000000001 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="97.80000000000001" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M131.4 72 L131.4 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="122.4" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M156.0 72 L156.0 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="147.0" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M180.60000000000002 72 L180.60000000000002 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="171.60000000000002" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M205.20000000000002 72 L205.20000000000002 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="196.20000000000002" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M229.8 72 L229.8 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="220.8" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M254.4 72 L254.4 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="245.4" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M279.0 72 L279.0 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="270.0" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M303.6 72 L303.6 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="294.6" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M328.20000000000005 72 L328.20000000000005 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="319.20000000000005" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M352.8 72 L352.8 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="343.8" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M377.40000000000003 72 L377.40000000000003 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="368.40000000000003" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M402.0 72 L402.0 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="393.0" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M426.6 72 L426.6 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="417.6" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M451.20000000000005 72 L451.20000000000005 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="442.20000000000005" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M475.8 72 L475.8 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="466.8" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M500.40000000000003 72 L500.40000000000003 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="491.40000000000003" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M525.0 72 L525.0 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="516.0" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M549.6 72 L549.6 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="540.6" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M574.2 72 L574.2 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="565.2" y="80" width="18" height="34" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<path d="M598.8000000000001 72 L598.8000000000001 80" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="589.8000000000001" y="80" width="18" height="34" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.4" stroke-dasharray="3 3"/>
+<path d="M591.8000000000001 90 L605.8000000000001 104" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3.5"/>
+<path d="M591.8000000000001 104 L605.8000000000001 90" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3.5"/>
+<rect x="24" y="132" width="14" height="14" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<text x="46" y="144" class="f-sm" fill="#556274" font-size="13" text-anchor="start">연결 중</text>
+<rect x="120" y="132" width="14" height="14" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.4"/>
+<text x="142" y="144" class="f-sm" fill="#556274" font-size="13" text-anchor="start">반납 대기 (닫았지만 60초 걸어 둠)</text>
+<text x="400" y="144" class="f-bad" fill="#dc2626" font-size="13" text-anchor="start" font-weight="700">빈 번호표 0장 → 새 연결 실패</text>
+<rect x="20" y="172" width="290" height="190" rx="10" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="36" y="200" class="f-b" fill="#0f172a" font-size="15" text-anchor="start" font-weight="700">요청마다 새 연결</text>
+<text x="36" y="224" class="f-sm" fill="#556274" font-size="13" text-anchor="start">퀵 기사를 건마다 새로 부르는 셈</text>
+<text x="36" y="258" class="f-b" fill="#0f172a" font-size="14" text-anchor="start" font-weight="700">초당 1,000장 새로 쓰고</text>
+<text x="36" y="280" class="f-b" fill="#0f172a" font-size="14" text-anchor="start" font-weight="700">닫은 뒤에도 60초씩 걸어 둔다</text>
+<text x="36" y="314" class="f-mono" fill="#0f172a" font-size="14" text-anchor="start" font-family="ui-monospace, Consolas, monospace">1,000 × 60 = 60,000장</text>
+<text x="36" y="342" class="f-bad" fill="#dc2626" font-size="14" text-anchor="start" font-weight="700">→ 6만 장 남짓에서 바닥</text>
+<rect x="330" y="172" width="290" height="190" rx="10" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="346" y="200" class="f-b" fill="#0f172a" font-size="15" text-anchor="start" font-weight="700">커넥션 풀 50개</text>
+<text x="346" y="224" class="f-sm" fill="#556274" font-size="13" text-anchor="start">단골 퀵 기사 50명을 대기시키는 셈</text>
+<rect x="346" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="372" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="398" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="424" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="450" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="476" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="502" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="528" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="554" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<rect x="580" y="244" width="18" height="30" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+<text x="346" y="296" class="f-b" fill="#0f172a" font-size="14" text-anchor="start" font-weight="700">같은 50장을 계속 돌려 쓴다</text>
+<text x="346" y="320" class="f-b" fill="#0f172a" font-size="14" text-anchor="start" font-weight="700">초당 1,000건이어도 번호표는 50장</text>
+<path d="M343 342 L349 349 L362 334" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3.5" stroke-linecap="round"/>
+<text x="370" y="347" class="f-acc" fill="#4f46e5" font-size="14" text-anchor="start" font-weight="700">바닥날 일이 없다</text>
+</svg>

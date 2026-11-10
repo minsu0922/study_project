@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="경비실이 두 겹이면 바깥 요청은 단지 정문 경비실에서 버려진다. 포워딩 메모는 안쪽 동 경비실에만 적혀 있다">
+<defs><marker id="nat-adv-double-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker><marker id="nat-adv-double-bad" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-bad" fill="#dc2626"/></marker></defs>
+<text x="20" y="26" class="f-b" fill="#0f172a" font-size="15" text-anchor="start" font-weight="700">포워딩을 적었는데 밖에서 안 열린다: 경비실이 두 겹이다</text>
+<rect x="14" y="120" width="104" height="48" rx="24.0" class="f-cloud" fill="#ffffff" stroke="#556274" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="66.0" y="149.0" class="f-sm" fill="#556274" font-size="14" text-anchor="middle">친구 (바깥)</text>
+<rect x="150" y="50" width="470" height="250" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="164" y="72" class="f-sm" fill="#556274" font-size="12" text-anchor="start">단지 정문 · 통신사 장비 또는 앞 공유기</text>
+<g transform="translate(166 112) scale(1.2)"><path d="M0 18 L30 2 L60 18 Z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="6" y="18" width="48" height="34" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="14" y="25" width="32" height="14" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<text x="202" y="196" class="f-b" fill="#0f172a" font-size="13" text-anchor="middle" font-weight="700">정문 경비실</text>
+<text x="202" y="214" class="f-mono" fill="#0f172a" font-size="12" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">공인 203.0.113.25</text>
+<rect x="290" y="84" width="316" height="202" rx="10" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="304" y="106" class="f-sm" fill="#556274" font-size="12" text-anchor="start">우리 동 · 내 공유기</text>
+<g transform="translate(310 130) scale(1.1)"><path d="M0 18 L30 2 L60 18 Z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="6" y="18" width="48" height="34" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="14" y="25" width="32" height="14" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<text x="343" y="210" class="f-b" fill="#0f172a" font-size="13" text-anchor="middle" font-weight="700">동 경비실</text>
+<text x="343" y="228" class="f-mono" fill="#0f172a" font-size="11" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">바깥 주소 100.64.3.7</text>
+<rect x="420" y="116" width="172" height="52" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.8"/>
+<text x="430" y="136" class="f-acc" fill="#4f46e5" font-size="13" text-anchor="start" font-weight="700">포워딩 메모</text>
+<text x="430" y="158" class="f-b" fill="#0f172a" font-size="12" text-anchor="start" font-weight="700">8080 → 노트북</text>
+<g transform="translate(470 196) scale(1.0)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="500" y="260" class="f-mono" fill="#0f172a" font-size="11" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">노트북 192.168.0.12</text>
+<path d="M118 144 L168 144" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2.5" marker-end="url(#nat-adv-double-bad)"/>
+<path d="M170 120 L186 136" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3.5"/>
+<path d="M170 136 L186 120" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3.5"/>
+<text x="34" y="236" class="f-bad" fill="#dc2626" font-size="13" text-anchor="start" font-weight="700">정문 장부엔</text>
+<text x="34" y="254" class="f-bad" fill="#dc2626" font-size="13" text-anchor="start" font-weight="700">8080 줄이 없다</text>
+<text x="34" y="272" class="f-bad" fill="#dc2626" font-size="13" text-anchor="start" font-weight="700">→ 여기서 버림</text>
+<text x="304" y="278" class="f-sm" fill="#556274" font-size="11" text-anchor="start">메모는 안쪽에만 있어 바깥 요청이 여기까지 오지 못한다</text>
+</svg>

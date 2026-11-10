@@ -2256,6 +2256,7 @@ body.admin-shell {
 .doc-figure .f-t, .doc-figure .f-b, .doc-figure .f-mono { fill: var(--text); }
 .doc-figure .f-sm { fill: var(--muted); }
 .doc-figure .f-new, .doc-figure .f-acc { fill: var(--primary); }
+.doc-figure .f-bad { fill: var(--wrong); }
 
 /* 제목 위계 — 생성 프롬프트가 "### 왜 이렇게 설계됐는가"를 쓰게 바뀌면서 필요해졌다.
  * 전에는 그 자리를 **굵은 글씨** 한 줄로 썼는데, 마크다운에서 그건 그냥 문단이라
