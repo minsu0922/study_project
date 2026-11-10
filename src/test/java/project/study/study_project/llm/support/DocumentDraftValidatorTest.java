@@ -266,7 +266,8 @@ class DocumentDraftValidatorTest {
         // 그대로 두는 이유는 <검사를 늘릴 때 한 번은 여기서 멈추게> 하기 위해서다. 경고가 는 것을
         // 아무도 모르는 채 지나가면, 검수 화면이 어느새 읽히지 않는 목록이 된다.
         // 2026-10-10에 그림 없음 경고가 늘어 14가 됐다.
-        assertThat(checks).hasSize(14);
+        // 2026-11-10에 참고 자료 없음 경고가 늘어 15가 됐다.
+        assertThat(checks).hasSize(15);
         assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
@@ -370,6 +371,66 @@ class DocumentDraftValidatorTest {
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", few))
                 .extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("'## 어떤 때 통하지 않는가'의 항목이 3개"));
+    }
+
+    /* ── 2026-11-10: 참고 자료 ─────────────────────────────────
+     * 배치 모델은 인터넷을 볼 수 없어 없는 주소를 지어낼 수 있다. 막지 않고, 허용 목록 밖의
+     * 링크만 짚어 검수자가 눌러 볼 곳을 좁힌다. */
+
+    @Test
+    @DisplayName("참고 자료 절이 없으면 알린다")
+    void warnsWhenReferencesMissing() {
+        String none = body(TITLE, "본문").substring(0, body(TITLE, "본문").indexOf("\n## 참고 자료"));
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", none))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("'## 참고 자료' 절이 없습니다"));
+    }
+
+    @Test
+    @DisplayName("허용 목록 밖이거나 https가 아닌 링크를 짚는다 — 지어낸 주소일 수 있다")
+    void flagsUntrustedReferenceLinks() {
+        String doc = body(TITLE, "본문").replace(
+                "- [RFC 9293](https://www.rfc-editor.org/rfc/rfc9293) — 연결 순서.",
+                "- [어느 블로그](https://some-blog.example.com/tcp) — 정리 글.\n"
+                        + "- [옛 주소](http://www.rfc-editor.org/rfc/rfc793) — 암호화 안 된 주소.\n"
+                        + "- [OWASP](https://cheatsheetseries.owasp.org/index.html) — 하위 도메인은 받는다.");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", doc))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("링크 2개가 허용 목록 밖이거나 https가 아닙니다")
+                        && m.contains("some-blog.example.com") && m.contains("http://www.rfc-editor.org")
+                        && !m.contains("owasp"));
+    }
+
+    @Test
+    @DisplayName("참고 자료는 본론 개수에 들지 않는다 — 출처 절로 본론 부족을 가리면 안 된다")
+    void referencesAreNotBodySections() {
+        // 심화편 fixture의 본론은 '## 깊은 동작' 하나다. 그 제목만 걷어 내면 본론이 0개여야 한다
+        String noBody = advancedBody(TITLE).replace("## 깊은 동작\n", "");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy-advanced", noBody))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("본론 섹션이 0개"));
+    }
+
+    @Test
+    @DisplayName("참고 자료는 분량에 넣지 않는다 — 링크 주소가 길어 몇백 자를 먹는다")
+    void referencesAreNotCountedInLength() {
+        String longRefs = body(TITLE, "본문") + "- [RFC](https://www.rfc-editor.org/rfc/rfc9293) — 같은 줄.\n"
+                .repeat(DocumentDraftValidator.WARN_LENGTH / 40);
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", longRefs))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("권장 분량"));
+    }
+
+    @Test
+    @DisplayName("허용 목록은 그 도메인과 하위 도메인만 받는다 — 이름만 비슷한 곳은 막는다")
+    void trustedReferenceMatchesDomainBoundary() {
+        assertThat(DocumentDraftValidator.isTrustedReference("https://www.rfc-editor.org/rfc/rfc1918")).isTrue();
+        assertThat(DocumentDraftValidator.isTrustedReference("https://evil-rfc-editor.org/x")).isFalse();
+        assertThat(DocumentDraftValidator.isTrustedReference("not a url")).isFalse();
     }
 
     /**
@@ -1009,9 +1070,15 @@ class DocumentDraftValidatorTest {
                 .isEmpty();
     }
 
-    /** 본문 뒤를 채워 정확히 그 길이로 만든다. 분량 검사만 재려는 것이라 내용은 뜻이 없다. */
+    /**
+     * 본문을 채워 분량 검사가 재는 길이를 정확히 그 값으로 만든다. 내용은 뜻이 없다.
+     * 참고 자료 절은 분량에서 빠지므로 그 앞에 채운다 — 뒤에 채우면 채운 만큼이 세어지지 않는다.
+     */
     private String padTo(String content, int length) {
-        return content + "가".repeat(length - content.length());
+        int refs = content.indexOf("\n## 참고 자료\n");
+        int counted = refs < 0 ? content.length() : refs;
+        String fill = "가".repeat(length - counted);
+        return refs < 0 ? content + fill : content.substring(0, refs) + fill + content.substring(refs);
     }
 
     /**
@@ -1108,6 +1175,11 @@ class DocumentDraftValidatorTest {
 
                 ## 한 줄로 정리하면
                 "한 줄 요약."
+
+                ## 참고 자료
+                이 글의 동작은 아래 문서에서 확인할 수 있다.
+
+                - [RFC 9293](https://www.rfc-editor.org/rfc/rfc9293) — 연결 순서.
                 """.formatted(heading, FOUNDATION, content);
     }
 
@@ -1181,6 +1253,11 @@ class DocumentDraftValidatorTest {
 
                 ## 면접 한 줄 요약
                 한 줄 요약.
+
+                ## 참고 자료
+                이 글의 동작은 아래 문서에서 확인할 수 있다.
+
+                - [MySQL 문서](https://dev.mysql.com/doc/) — 잠금 동작.
                 """.formatted(heading);
     }
 }

@@ -1142,6 +1142,25 @@ class ClaudeDocumentGeneratorTest {
      * 1102 두 편에서 오해·실무·실패 조건·면접 항목이 모두 그렇게 뭉쳐 있었다. 항목은 소제목으로,
      * 실패 조건은 꼬리표 목록으로, 오해는 줄 그은 제목과 상자로 바꾸면서 그 형식을 여기서 지킨다.
      */
+    /**
+     * <b>참고 자료 절을 시키되, 지어낸 주소를 막는 말을 함께 둔다</b>(2026-11-10).
+     *
+     * <p>배치 모델은 인터넷을 볼 수 없다. "참고 자료를 달아라"만 적으면 그럴듯한 블로그 주소를
+     * 지어낸다. 그래서 표준·공식 문서로 좁히는 문장과, 확실하지 않으면 줄이라는 문장을 함께 지킨다.
+     */
+    @Test
+    @DisplayName("두 편 모두 맨 끝에 참고 자료를 달고, 확실히 아는 공식 문서만 쓰게 한다")
+    void bothPromptsAskForTrustedReferences() {
+        for (String prompt : List.of(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT,
+                ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)) {
+            assertThat(prompt)
+                    .contains("\n## 참고 자료\n")
+                    .contains("<확실히 아는 주소만> 쓴다")
+                    .contains("https://www.rfc-editor.org/rfc/rfc번호")
+                    .contains("확실하지 않으면 개수를 줄여라");
+        }
+    }
+
     @Test
     @DisplayName("항목은 소제목·꼬리표·상자로 쓴다 — 굵은 줄 아래 붙여 쓰면 화면에서 한 문단으로 뭉친다")
     void bothPromptsFixHowItemsRender() {

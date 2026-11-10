@@ -3,8 +3,10 @@ package project.study.study_project.llm.support;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.DocumentEdition;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -148,6 +150,26 @@ public final class DocumentDraftValidator {
      */
     private static final Pattern MERMAID_HEADER = Pattern.compile(
             "^(flowchart\\s+(TD|TB|LR)|sequenceDiagram|stateDiagram-v2|gantt|xychart-beta|block-beta|packet-beta)\\s*$");
+
+    /** 글 끝의 출처 절. 본론이 아니므로 본론 개수에서 뺀다(2026-11-10). */
+    static final String REFERENCES_SECTION = "## 참고 자료";
+
+    /** 마크다운 링크 {@code [글자](주소)} — 1번 그룹이 주소다. */
+    private static final Pattern MARKDOWN_LINK = Pattern.compile("\\[[^\\]\\n]+\\]\\(([^)\\s]+)\\)");
+
+    /**
+     * 참고 자료로 믿고 받아 주는 곳 — 표준 문서와 제품을 만든 곳의 공식 문서만.
+     *
+     * <p>배치 모델은 인터넷을 볼 수 없어서, 그럴듯한데 없는 주소를 지어낼 수 있다. 이 목록 밖의
+     * 링크는 막지 않고 경고만 띄워, 검수자가 승인 전에 한 번 눌러 보게 한다.
+     * 하위 도메인도 받는다(예: {@code cheatsheetseries.owasp.org}).
+     */
+    static final List<String> TRUSTED_REFERENCE_HOSTS = List.of(
+            "rfc-editor.org", "ietf.org", "w3.org", "whatwg.org", "developer.mozilla.org",
+            "docs.oracle.com", "openjdk.org", "spring.io", "jakarta.ee", "hibernate.org",
+            "dev.mysql.com", "postgresql.org", "redis.io", "kubernetes.io", "docs.docker.com",
+            "docs.aws.amazon.com", "cloud.google.com", "learn.microsoft.com", "nginx.org",
+            "kernel.org", "man7.org", "owasp.org", "nist.gov", "iana.org", "unicode.org");
 
     /** 경고 메시지에 적는 허용 종류 — {@link #MERMAID_HEADER}와 같이 고친다. */
     private static final String MERMAID_KINDS =
@@ -374,6 +396,7 @@ public final class DocumentDraftValidator {
         checkHtmlTags(body, checks);
         checkLength(body, edition, checks);
         checkSectionOpeners(structure, checks);
+        checkReferences(body, structure, checks);
 
         if (edition == DocumentEdition.BEGINNER) {
             // 아래 넷은 입문편에만 있는 절·규칙을 본다. 심화편에서 돌리면 전부 헛울린다 —
@@ -713,7 +736,7 @@ public final class DocumentDraftValidator {
         Matcher m = H2_PATTERN.matcher(structure);
         while (m.find()) {
             String heading = "## " + body.substring(m.start(1), m.end(1)).trim();
-            if (!required.contains(heading)) {
+            if (!required.contains(heading) && !heading.equals(REFERENCES_SECTION)) {
                 bodySections.add(heading);
             }
         }
@@ -738,6 +761,55 @@ public final class DocumentDraftValidator {
      * {@code ### }나 {@code - }로 올 수 있다. 셋을 모두 항목으로 센다. 여기서 형식 하나만
      * 인정하면 멀쩡한 문서에 경고가 뜨고, 오탐은 경고를 무력하게 만든다.
      */
+    /**
+     * 글 끝의 {@code ## 참고 자료} — 있는지, 링크가 믿을 만한 곳인지(2026-11-10).
+     *
+     * <p>전부 경고다. 링크가 실제로 열리는지는 여기서 알 수 없다(검사기는 인터넷에 나가지 않는다).
+     * 그래서 허용 목록({@link #TRUSTED_REFERENCE_HOSTS}) 밖이거나 https가 아닌 링크를 짚어,
+     * 검수자가 눌러 볼 곳을 좁혀 준다.
+     */
+    private static void checkReferences(String body, String structure, List<DraftCheck> checks) {
+        Section section = sectionOf(body, structure, REFERENCES_SECTION);
+        if (section == null) {
+            checks.add(DraftCheck.warning(
+                    "'## 참고 자료' 절이 없습니다. 본문의 수치·동작을 확인할 표준 문서나 공식 문서를 2~5개 답니다."));
+            return;
+        }
+        Matcher m = MARKDOWN_LINK.matcher(section.masked());
+        int links = 0;
+        List<String> doubtful = new ArrayList<>();
+        while (m.find()) {
+            links++;
+            String url = m.group(1);
+            if (!isTrustedReference(url)) {
+                doubtful.add(url);
+            }
+        }
+        if (links == 0) {
+            checks.add(DraftCheck.warning("'## 참고 자료'에 링크가 없습니다. [제목](https://...) 꼴로 답니다."));
+        }
+        if (!doubtful.isEmpty()) {
+            checks.add(DraftCheck.warning(
+                    "참고 자료 링크 %d개가 허용 목록 밖이거나 https가 아닙니다. 승인 전에 열어 보고 확인하세요: %s"
+                            .formatted(doubtful.size(), String.join(", ", doubtful))));
+        }
+    }
+
+    /** https이고 호스트가 허용 목록의 도메인이거나 그 하위 도메인인지. */
+    static boolean isTrustedReference(String url) {
+        try {
+            URI uri = URI.create(url);
+            String host = uri.getHost();
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || host == null) {
+                return false;
+            }
+            String h = host.toLowerCase(Locale.ROOT);
+            return TRUSTED_REFERENCE_HOSTS.stream().anyMatch(t -> h.equals(t) || h.endsWith("." + t));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     private static void checkFailureModeCount(String body, String structure, List<DraftCheck> checks) {
         // 2026-09-16에 이름이 바뀌었다. 새 이름으로 먼저 찾고, 없으면 옛 이름으로 찾는다 —
         // 검수 대기함에 남아 있던 옛 초안을 열었을 때 "절이 아예 없다"로 읽혀 개수 검사가
@@ -1119,7 +1191,9 @@ public final class DocumentDraftValidator {
     private static void checkLength(String body, DocumentEdition edition, List<DraftCheck> checks) {
         int warn = warnLengthOf(edition);
         int hard = edition == DocumentEdition.ADVANCED ? ADVANCED_MAX_LENGTH : MAX_LENGTH;
-        int length = body.length();
+        // 참고 자료는 읽는 글이 아니라 출처 목록이라 분량에서 뺀다 — 링크 주소가 길어 몇백 자를 먹는다
+        int refs = body.indexOf("\n" + REFERENCES_SECTION + "\n");
+        int length = refs < 0 ? body.length() : refs;
         if (length > hard) {
             checks.add(DraftCheck.blocking(
                     "본문이 하드 상한을 넘었습니다: " + length + "자 (" + edition.getDisplayName()
