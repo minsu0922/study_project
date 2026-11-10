@@ -1161,6 +1161,9 @@ h1 { font-size: var(--fs-5); margin: 0 0 var(--sp-4); letter-spacing: -.02em; }
 .doc-toc > summary { cursor: pointer; font-weight: 700; font-size: var(--fs-2); }
 .doc-toc ol { margin: var(--sp-2) 0 var(--sp-1); padding-left: 1.4em; }
 .doc-toc li { margin: 2px 0; font-size: var(--fs-2); }
+/* 절 아래 장면(document.html buildToc) — 번호 없이 들여 쓰고 한 단계 작게. 장면 제목에 ①②③이 이미 있다 */
+.doc-toc ol.toc-sub { list-style: none; padding-left: .9em; margin: 2px 0 4px; }
+.doc-toc ol.toc-sub li { font-size: var(--fs-1); }
 /* 번호가 이미 순서를 말하므로 링크는 밑줄 없이 둔다 — 목록 전체가 링크 덩어리라
    밑줄이 열둘 겹치면 오히려 글자가 안 읽힌다. 대신 호버·초점에서 분명히 바뀐다. */
 .doc-toc a { color: var(--text); text-decoration: none; }
