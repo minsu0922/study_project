@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 426" role="img" aria-label="인증서 사슬 그림. 서버가 사이트 인증서와 중간 인증서를 함께 보낸다. 사이트 인증서는 중간 인증서가 서명했고, 중간 인증서는 뿌리 인증서가 서명했다. 뿌리 인증서는 브라우저와 운영체제의 신뢰 저장소에 미리 들어 있어, 브라우저는 그 고리를 따라 올라가 확인을 마친다">
+<defs><marker id="tls-chain-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="330" y="10" width="300" height="118" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="346" y="34" class="f-sm" fill="#556274" font-size="13">브라우저·운영체제의 신뢰 저장소</text>
+<rect x="350" y="42" width="260" height="78" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><text x="366" y="70" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">뿌리 인증서</text><text x="366" y="92" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">Root CA</text><text x="366" y="112" class="f-sm" fill="#556274" font-size="13">스스로 서명, 미리 들어 있다</text>
+<rect x="30" y="160" width="260" height="78" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="46" y="188" class="f-b" fill="#0f172a" font-size="15" font-weight="700">중간 인증서</text><text x="46" y="210" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">Intermediate CA</text><text x="46" y="230" class="f-sm" fill="#556274" font-size="13">서명: 뿌리 인증서</text>
+<rect x="30" y="290" width="260" height="78" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="46" y="318" class="f-b" fill="#0f172a" font-size="15" font-weight="700">사이트 인증서</text><text x="46" y="340" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">shop.example.com</text><text x="46" y="360" class="f-sm" fill="#556274" font-size="13">서명: 중간 인증서</text>
+<path d="M160 286 V244" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tls-chain-head)"/>
+<text x="176" y="270" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서명 확인</text>
+<path d="M290 190 C 360 190, 420 170, 470 126" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tls-chain-head)"/>
+<text x="360" y="210" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서명 확인</text>
+<rect x="16" y="146" width="290" height="236" rx="10" class="f-line" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="330" y="330" class="f-sm" fill="#556274" font-size="13">서버가 핸드셰이크에서</text>
+<text x="330" y="350" class="f-sm" fill="#556274" font-size="13">함께 보내는 두 장</text>
+<text x="16" y="410" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">아래에서 위로 서명을 따라 올라가, 미리 믿는 뿌리에 닿으면 확인이 끝난다</text>
+</svg>
