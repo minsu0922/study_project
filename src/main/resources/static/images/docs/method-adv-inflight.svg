@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 594" role="img" aria-label="사다리 그림. 앱이 키 abc로 주문을 보내고 서버가 키를 처리 중으로 적는다. 응답이 길에서 사라져 앱이 같은 키로 다시 보내면, 서버는 처리 중인 키라서 일을 하지 않고 409로 답한다. 뒤에 다시 물으면 적어 둔 첫 결과를 그대로 준다">
+<defs><marker id="inflight" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="70" y="10" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="133.0" y="32" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">앱</text>
+<line x1="140" y1="60" x2="140" y2="584" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="430" y="10" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="467.9" y="32" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">주문 서버</text>
+<line x1="500" y1="60" x2="500" y2="584" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<path d="M140 90 L492 112" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#inflight)"/>
+<text x="244.0" y="84" class="f-t" fill="#0f172a" font-size="14">POST /orders 키 abc</text>
+<text x="165.3" y="132" class="f-sm" fill="#556274" font-size="13">서버가 키 abc를 처리 중으로 적고 일을 시작한다</text>
+<path d="M500 174 L320.0 192" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5"/>
+<line transform="rotate(45 328.0 196)" x1="318.0" y1="196" x2="338.0" y2="196" class="f-strike" stroke="#dc2626" stroke-width="2"/><line transform="rotate(-45 328.0 196)" x1="318.0" y1="196" x2="338.0" y2="196" class="f-strike" stroke="#dc2626" stroke-width="2"/>
+<text x="396.0" y="168" class="f-t" fill="#0f172a" font-size="14">응답</text>
+<text x="360.7" y="216" class="f-sm" fill="#556274" font-size="13">길에서 사라진다</text>
+<path d="M140 258 L492 280" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#inflight)"/>
+<text x="253.6" y="252" class="f-t" fill="#0f172a" font-size="14">같은 키 abc로 다시</text>
+<path d="M500 342 L148 364" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#inflight)"/>
+<text x="264.7" y="336" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">409 처리 중이다</text>
+<text x="196.1" y="384" class="f-sm" fill="#556274" font-size="13">일을 하지 않는다. 주문은 그대로 한 건</text>
+<path d="M140 426 L492 448" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#inflight)"/>
+<text x="240.8" y="420" class="f-t" fill="#0f172a" font-size="14">조금 뒤 같은 키로 다시</text>
+<path d="M500 510 L148 532" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#inflight)"/>
+<text x="249.6" y="504" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">200 적어 둔 첫 결과</text>
+</svg>

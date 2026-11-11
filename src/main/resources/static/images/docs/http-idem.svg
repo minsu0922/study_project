@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 422" role="img" aria-label="두 컷 그림. 수량을 3으로 정하는 PUT은 두 번 보내도 장바구니 수량이 3개 그대로다. 주문을 만드는 POST는 두 번 보내면 주문 101번과 102번 두 건이 생긴다">
+<defs><marker id="idem-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="0" y="0" width="640" height="200" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="28" class="f-b" fill="#0f172a" font-size="15" font-weight="700">① PUT 수량을 3으로: 두 번 보내도 결과가 같다</text>
+<rect x="16" y="50" width="200" height="44" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="30" y="78" class="f-t" fill="#0f172a" font-size="14">PUT 수량 = 3</text>
+<rect x="16" y="120" width="200" height="44" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="30" y="148" class="f-t" fill="#0f172a" font-size="14">PUT 수량 = 3</text>
+<text x="222" y="152" class="f-sm" fill="#556274" font-size="13">(다시)</text>
+<path d="M220 72 H400" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#idem-head)"/>
+<path d="M270 142 H400" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#idem-head)"/>
+<rect x="420" y="68" width="140" height="64" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><text x="460.0" y="96" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">장바구니</text><text x="463.0" y="118" class="f-sm" fill="#556274" font-size="13">수량 3개</text>
+<text x="420" y="160" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">몇 번 보내도 3개</text>
+<rect x="0" y="212" width="640" height="210" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="240" class="f-b" fill="#0f172a" font-size="15" font-weight="700">② POST 주문 만들기: 보낼 때마다 주문이 는다</text>
+<rect x="16" y="262" width="200" height="44" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="30" y="290" class="f-t" fill="#0f172a" font-size="14">POST 주문</text>
+<rect x="16" y="332" width="200" height="44" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="30" y="360" class="f-t" fill="#0f172a" font-size="14">POST 주문</text>
+<text x="222" y="364" class="f-sm" fill="#556274" font-size="13">(다시)</text>
+<path d="M220 284 H410" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#idem-head)"/>
+<path d="M270 354 H410" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#idem-head)"/>
+<rect x="420" y="256" width="140" height="64" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><text x="450.1" y="284" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">주문 101번</text><text x="490.0" y="306" class="f-sm" fill="#556274" font-size="13"></text>
+<rect x="420" y="328" width="140" height="64" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><text x="450.1" y="356" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">주문 102번</text><text x="490.0" y="378" class="f-sm" fill="#556274" font-size="13"></text>
+<text x="574" y="328" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">두 건</text>
+</svg>
