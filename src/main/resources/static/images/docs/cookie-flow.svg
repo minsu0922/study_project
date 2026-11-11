@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 490" role="img" aria-label="사다리 그림. 브라우저가 로그인 요청을 보내면 서버가 Set-Cookie로 sid=abc를 맡긴다. 브라우저는 그 값을 보관함에 저장했다가, 다음 장바구니 요청에 Cookie: sid=abc를 실어 보낸다. 서버는 그 번호로 손님을 알아본다">
+<defs><marker id="cookie-flow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="60" y="10" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="102.0" y="32" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">브라우저</text>
+<line x1="130" y1="60" x2="130" y2="416" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="430" y="10" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="486.0" y="32" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서버</text>
+<line x1="500" y1="60" x2="500" y2="416" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<path d="M130 90 L492 112" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-flow)"/>
+<text x="268.8" y="84" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">POST /login</text>
+<text x="259.2" y="132" class="f-sm" fill="#556274" font-size="13">아이디와 비밀번호</text>
+<path d="M500 174 L138 196" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-flow)"/>
+<text x="235.2" y="168" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">Set-Cookie: sid=abc</text>
+<text x="258.2" y="216" class="f-sm" fill="#556274" font-size="13">이 값을 맡아 두라</text>
+<path d="M130 258 L492 280" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-flow)"/>
+<text x="205.8" y="252" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">GET /cart  Cookie: sid=abc</text>
+<text x="234.9" y="300" class="f-sm" fill="#556274" font-size="13">맡아 둔 값을 실어 보낸다</text>
+<path d="M500 342 L138 364" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-flow)"/>
+<text x="252.7" y="336" class="f-t" fill="#0f172a" font-size="14">200 장바구니 내용</text>
+<text x="229.1" y="384" class="f-sm" fill="#556274" font-size="13">sid=abc로 손님을 알아본다</text>
+<rect x="16" y="422" width="230" height="56" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="30" y="446" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">브라우저 보관함</text>
+<text x="30" y="468" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">shop.example.com · sid=abc</text>
+</svg>
