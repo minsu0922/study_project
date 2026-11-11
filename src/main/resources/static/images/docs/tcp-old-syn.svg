@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 540" role="img" aria-label="두 컷 그림. 두 번 방식에서는 늦게 도착한 옛 SYN에 서버가 바로 연결을 열어 자원을 내준다. 세 번 방식에서는 서버가 SYN-ACK를 보내고, 클라이언트가 모르는 연결이라 RST로 거절해 서버가 자원을 거둔다">
+<rect x="0" y="0" width="640" height="206" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="28" class="f-b" fill="#0f172a" font-size="15" font-weight="700">① 두 번 방식: 옛 SYN 하나에 서버가 연결을 연다</text>
+<g transform="translate(0 34)">
+<defs><marker id="tcp-old-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="80" y="6" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="115.0" y="28" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">클라이언트</text>
+<line x1="150" y1="56" x2="150" y2="146" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="420" y="6" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="476.0" y="28" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서버</text>
+<line x1="490" y1="56" x2="490" y2="146" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<path d="M150 86 L482 108" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-old-a)"/>
+<text x="244.4" y="80" class="f-t" fill="#0f172a" font-size="14">옛 SYN 시작 번호 700</text>
+<text x="180.4" y="128" class="f-sm" fill="#556274" font-size="13">길에서 헤매다 이제야 닿은 지난 연결의 인사</text>
+<text x="380" y="170" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">바로 연결을 열고 자원을 내준다</text>
+</g>
+<rect x="0" y="218" width="640" height="322" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="246" class="f-b" fill="#0f172a" font-size="15" font-weight="700">② 세 번 방식: 클라이언트가 모르는 연결이라 거절한다</text>
+<g transform="translate(0 252)">
+<defs><marker id="tcp-old-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="80" y="6" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="115.0" y="28" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">클라이언트</text>
+<line x1="150" y1="56" x2="150" y2="262" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="420" y="6" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="476.0" y="28" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서버</text>
+<line x1="490" y1="56" x2="490" y2="262" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<path d="M150 86 L482 108" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-old-b)"/>
+<text x="244.4" y="80" class="f-t" fill="#0f172a" font-size="14">옛 SYN 시작 번호 700</text>
+<path d="M490 148 L158 170" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-old-b)"/>
+<text x="257.0" y="142" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">SYN-ACK ACK 701</text>
+<path d="M150 210 L482 232" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-old-b)"/>
+<text x="307.4" y="204" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">RST</text>
+<text x="250.2" y="252" class="f-sm" fill="#556274" font-size="13">내가 연 연결이 아니다</text>
+<text x="380" y="280" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서버가 자원을 거둔다</text>
+</g>
+</svg>
