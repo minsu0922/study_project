@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 290" role="img" aria-label="연결 위의 바이트를 한 줄로 편 그림. 응답 1은 헤더와 본문 100바이트인데, 클라이언트가 60바이트만 읽고 연결을 돌려준다. 남은 40바이트가 연결에 남아, 다음 요청의 응답을 읽을 때 시작줄 자리에서 먼저 읽힌다">
+<defs><marker id="http-left-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="30" class="f-b" fill="#0f172a" font-size="15" font-weight="700">연결 하나에 흐르는 바이트</text>
+<rect x="16" y="110" width="130" height="60" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/><text x="38.0" y="136" class="f-b" fill="#0f172a" font-size="15" font-weight="700">응답 1 헤더</text><text x="33.4" y="156" class="f-sm" fill="#556274" font-size="13">길이 100바이트</text>
+<rect x="146" y="110" width="170" height="60" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><text x="168.6" y="136" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">본문 앞 60바이트</text><text x="175.2" y="156" class="f-sm" fill="#556274" font-size="13">클라이언트가 읽음</text>
+<rect x="316" y="110" width="120" height="60" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="325.4" y="136" class="f-b" fill="#0f172a" font-size="15" font-weight="700">남은 40바이트</text><text x="329.5" y="156" class="f-sm" fill="#556274" font-size="13">아무도 안 읽음</text>
+<rect x="436" y="110" width="188" height="60" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/><text x="460.1" y="136" class="f-b" fill="#0f172a" font-size="15" font-weight="700">응답 2 시작줄·헤더</text><text x="458.4" y="156" class="f-sm" fill="#556274" font-size="13">HTTP/1.1 200 OK ...</text>
+<path d="M16 96 V86 H436 V96" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="122.3" y="78" class="f-sm" fill="#556274" font-size="13">응답 1 (헤더 + 본문 100바이트)</text>
+<path d="M316 228 V178" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#http-left-head)"/>
+<text x="220" y="248" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">다음 응답을 여기서부터 읽는다</text>
+<text x="220" y="268" class="f-sm" fill="#556274" font-size="13">시작줄 자리에 본문 조각이 나온다</text>
+<path d="M530 228 V178" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#http-left-head)"/>
+<text x="470" y="248" class="f-sm" fill="#556274" font-size="13">원래 읽어야 할 곳</text>
+<line transform="rotate(45 330 140)" x1="330" y1="140" x2="330" y2="140" class="f-strike" stroke="#dc2626" stroke-width="2"/><line transform="rotate(-45 330 140)" x1="330" y1="140" x2="330" y2="140" class="f-strike" stroke="#dc2626" stroke-width="2"/>
+</svg>

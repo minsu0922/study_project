@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 412" role="img" aria-label="HTTP 요청 한 통을 네 부분으로 나눈 그림. 맨 위 한 줄이 시작줄, 그 아래 다섯 줄이 헤더, 아무 글자도 없는 한 줄이 빈 줄, 마지막 줄이 본문이다. Content-Length 32가 본문 32바이트를 가리킨다">
+<defs><marker id="http-parts-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="22" width="330" height="368" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="24" y="30" width="314" height="40" rx="2" class="f-hl" fill="#eef2ff"/>
+<text x="32" y="50" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">POST /api/cart/items HTTP/1.1</text>
+<text x="32" y="94" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">Host: shop.example.com</text>
+<text x="32" y="138" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">User-Agent: Mozilla/5.0</text>
+<text x="32" y="182" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">Accept: application/json</text>
+<text x="32" y="226" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">Content-Type: application/json</text>
+<text x="32" y="270" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">Content-Length: 32</text>
+<text x="32" y="314" class="f-sm" fill="#556274" font-size="13">(빈 줄)</text>
+<rect x="24" y="338" width="314" height="40" rx="2" class="f-hl" fill="#eef2ff"/>
+<text x="32" y="358" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">{"productId": 42, "quantity": 2}</text>
+<path d="M362 32 h10 V68 h-10" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/><text x="388" y="52.0" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">시작줄</text><text x="388" y="72.0" class="f-sm" fill="#556274" font-size="13">할 일 · 주소 · HTTP 판</text>
+<path d="M362 76 h10 V288 h-10" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/><text x="388" y="184.0" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">헤더 다섯 줄</text><text x="388" y="204.0" class="f-sm" fill="#556274" font-size="13">이름: 값 꼴, 한 줄에 하나</text>
+<path d="M362 296 h10 V332 h-10" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/><text x="388" y="316.0" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">빈 줄</text><text x="388" y="336.0" class="f-sm" fill="#556274" font-size="13">헤더가 여기서 끝난다</text>
+<path d="M362 340 h10 V376 h-10" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/><text x="388" y="360.0" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">본문</text><text x="388" y="380.0" class="f-sm" fill="#556274" font-size="13">42번 상품을 2개 담아 달라</text>
+<path d="M200 276 C 300 304, 300 328, 280 342" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#http-parts-head)"/>
+<text x="120" y="320" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">↓ 32바이트</text>
+</svg>
