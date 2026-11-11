@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 460" role="img" aria-label="네 규칙의 범위가 과녁처럼 겹쳐 있다. 바깥부터 0.0.0.0/0, 10.0.0.0/8, 10.20.0.0/16, 10.20.5.7/32이고, 주소마다 자기가 들어가는 가장 안쪽 칸의 규칙을 탄다">
+<rect x="10" y="10" width="620" height="440" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="26" y="36" class="f-b" fill="#0f172a" font-size="15" font-weight="700">규칙 1 · 0.0.0.0/0 → 집 게이트웨이</text>
+<rect x="26" y="52" width="440" height="388" rx="10" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="42" y="78" class="f-b" fill="#0f172a" font-size="15" font-weight="700">규칙 2 · 10.0.0.0/8 → VPN</text>
+<rect x="42" y="96" width="408" height="282" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="58" y="122" class="f-b" fill="#0f172a" font-size="15" font-weight="700">규칙 3 · 10.20.0.0/16 → VPN 너머 게이트웨이</text>
+<rect x="230" y="176" width="204" height="150" rx="10" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="246" y="202" class="f-b" fill="#0f172a" font-size="15" font-weight="700">규칙 4 · 10.20.5.7/32</text>
+<text x="246" y="222" class="f-t" fill="#0f172a" font-size="14">→ 관리망 라우터</text>
+<circle cx="250" cy="262" r="6" class="f-dot" fill="#4f46e5"/>
+<text x="266" y="267" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.20.5.7</text>
+<text x="266" y="290" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">네 규칙 모두 맞음 → 규칙 4</text>
+<circle cx="70" cy="220" r="6" class="f-dot" fill="#4f46e5"/>
+<text x="86" y="225" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.20.1.1</text>
+<text x="86" y="247" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">→ 규칙 3</text>
+<circle cx="60" cy="410" r="6" class="f-dot" fill="#4f46e5"/>
+<text x="76" y="415" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.9.1.1</text>
+<text x="166" y="415" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">→ 규칙 2</text>
+<circle cx="500" cy="230" r="6" class="f-dot" fill="#4f46e5"/>
+<text x="486" y="260" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">203.0.113.50</text>
+<text x="500" y="282" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">→ 규칙 1</text>
+<text x="484" y="400" class="f-sm" fill="#556274" font-size="13">안쪽 칸일수록</text>
+<text x="484" y="420" class="f-sm" fill="#556274" font-size="13">범위가 좁고, 이긴다</text>
+</svg>

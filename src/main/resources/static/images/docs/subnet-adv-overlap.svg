@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 500" role="img" aria-label="사무실 10.0.0.0/16과 VPC 10.0.0.0/16을 VPN으로 이었다. 사무실 PC가 VPC 서버 10.0.3.9로 보내지만, 자기 서브넷 규칙에 먼저 맞아 VPN으로 나가지 못하고 사무실 안에서 찾다 실패한다">
+<defs><marker id="subnet-overlap-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="12" y="30" width="300" height="350" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="28" y="56" class="f-sm" fill="#556274" font-size="13">사무실 10.0.0.0/16</text>
+<rect x="340" y="30" width="288" height="350" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="356" y="56" class="f-sm" fill="#556274" font-size="13">VPC 10.0.0.0/16</text>
+<g transform="translate(30 76) scale(1.2)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="30" y="150" class="f-b" fill="#0f172a" font-size="15" font-weight="700">PC</text>
+<text x="30" y="168" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.0.3.5</text>
+<g transform="translate(190 176) scale(1.0)"><path d="M18 18 L12 2 M62 18 L68 2" class="f-line" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/><rect x="2" y="18" width="76" height="28" rx="6" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/><circle cx="16" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="28" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="40" cy="32" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="194" y="240" class="f-b" fill="#0f172a" font-size="15" font-weight="700">VPN 장비</text>
+<rect x="272" y="196" width="88" height="16" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="298" y="188" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">VPN</text>
+<g transform="translate(520 76) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="512" y="166" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버</text>
+<text x="512" y="184" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.0.3.9</text>
+<path d="M362 204 H470 V110 H516" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#subnet-overlap-head)"/>
+<text x="372" y="232" class="f-sm" fill="#556274" font-size="13">원래 가야 할 길</text>
+<path d="M66 182 V290 H120" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#subnet-overlap-head)"/>
+<text x="130" y="284" class="f-sm" fill="#556274" font-size="13">ARP: 10.0.3.9</text>
+<text x="130" y="302" class="f-sm" fill="#556274" font-size="13">누구세요?</text>
+<line transform="rotate(45 250 290)" x1="238" y1="290" x2="262" y2="290" class="f-strike" stroke="#dc2626" stroke-width="2"/><line transform="rotate(-45 250 290)" x1="238" y1="290" x2="262" y2="290" class="f-strike" stroke="#dc2626" stroke-width="2"/>
+<text x="30" y="336" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">사무실 안에서 찾다 실패한다</text>
+<text x="30" y="358" class="f-sm" fill="#556274" font-size="13">VPN 선은 멀쩡히 이어져 있다</text>
+<rect x="12" y="394" width="616" height="96" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="28" y="418" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">PC의 라우팅 규칙 · 10.0.3.9는 둘 다 맞는다</text>
+<rect x="24" y="428" width="592" height="24" rx="2" class="f-hl" fill="#eef2ff"/>
+<text x="30" y="446" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.0.3.0/24 →</text><text x="150" y="446" class="f-t" fill="#0f172a" font-size="14">직접 건넨다</text>
+<text x="330" y="446" class="f-t" fill="#0f172a" font-size="14">접두사 24라 이긴다</text>
+<text x="30" y="476" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.0.0.0/16 →</text><text x="150" y="476" class="f-t" fill="#0f172a" font-size="14">VPN으로 보낸다</text>
+<text x="330" y="476" class="f-sm" fill="#556274" font-size="13">접두사 16이라 진다</text>
+</svg>

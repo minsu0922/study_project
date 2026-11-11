@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 430" role="img" aria-label="관리팀 PC의 요청은 관리망 라우터를 거쳐 DB 서버의 eth1로 들어온다. 응답은 받는 쪽 주소가 두 서브넷 어디에도 맞지 않아 기본 게이트웨이 규칙을 타고 eth0으로 나가고, 서비스망 방화벽이 시작을 본 적 없는 응답이라며 버린다">
+<defs><marker id="subnet-asym-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(16 52) scale(1.2)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="16" y="126" class="f-b" fill="#0f172a" font-size="15" font-weight="700">관리팀 PC</text>
+<text x="16" y="144" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.0.9.20</text>
+<g transform="translate(206 50) scale(1.0)"><path d="M18 18 L12 2 M62 18 L68 2" class="f-line" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/><rect x="2" y="18" width="76" height="28" rx="6" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/><circle cx="16" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="28" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="40" cy="32" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="206" y="114" class="f-b" fill="#0f172a" font-size="15" font-weight="700">관리망 라우터</text>
+<text x="206" y="132" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.0.2.1</text>
+<g transform="translate(470 150) scale(1.1)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="398" y="196" class="f-b" fill="#0f172a" font-size="15" font-weight="700">DB 서버</text>
+<text x="560" y="168" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">eth1</text>
+<text x="548" y="186" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.0.2.15</text>
+<text x="560" y="226" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">eth0</text>
+<text x="548" y="244" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10.0.1.15</text>
+<path d="M104 82 H200" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#subnet-asym-head)"/>
+<path d="M290 82 H502 V144" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#subnet-asym-head)"/>
+<text x="300" y="70" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">① 요청이 eth1로 들어온다</text>
+<path d="M502 232 V330 H306" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#subnet-asym-head)"/>
+<text x="316" y="290" class="f-t" fill="#0f172a" font-size="14">② 응답은 기본 게이트웨이</text>
+<text x="316" y="310" class="f-t" fill="#0f172a" font-size="14">규칙을 타고 eth0으로 나간다</text>
+<rect x="226" y="306" width="76" height="48" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><line x1="226" y1="322" x2="302" y2="322" class="f-line" stroke="#0f172a" stroke-width="1.2"/><line x1="226" y1="338" x2="302" y2="338" class="f-line" stroke="#0f172a" stroke-width="1.2"/>
+<text x="214" y="376" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서비스망 방화벽</text>
+<line transform="rotate(45 264 330)" x1="250" y1="330" x2="278" y2="330" class="f-strike" stroke="#dc2626" stroke-width="2"/><line transform="rotate(-45 264 330)" x1="250" y1="330" x2="278" y2="330" class="f-strike" stroke="#dc2626" stroke-width="2"/>
+<text x="16" y="412" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">③ 연결 시작을 본 적 없는 응답이라 버린다</text>
+<path d="M486 144 V104 H296" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#subnet-asym-head)"/>
+<text x="330" y="128" class="f-sm" fill="#556274" font-size="13">정적 라우트를 더하면 이 길로</text>
+</svg>
