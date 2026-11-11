@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="리슨 소켓 하나가 8080에서 기다리고, 접속은 백로그 대기열에 줄을 선다. accept로 꺼낼 때마다 연결 소켓이 하나씩 생기는데, 서버 쪽 번호는 모두 8080이고 상대 주소와 포트만 다르다">
+<defs><marker id="port-listen-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="10" y="10" width="620" height="360" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="26" y="36" class="f-sm" fill="#556274" font-size="13">서버 10.0.1.15 안의 운영체제</text>
+<rect x="26" y="60" width="200" height="70" rx="6" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="40" y="88" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">리슨 소켓</text>
+<text x="40" y="114" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0.0.0.0:8080</text>
+<text x="26" y="170" class="f-b" fill="#0f172a" font-size="15" font-weight="700">백로그 대기열</text>
+<rect x="26" y="182" width="60" height="40" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="94" y="182" width="60" height="40" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="162" y="182" width="60" height="40" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="36" y="207" class="f-sm" fill="#556274" font-size="13">접속</text>
+<text x="104" y="207" class="f-sm" fill="#556274" font-size="13">접속</text>
+<text x="172" y="207" class="f-sm" fill="#556274" font-size="13">접속</text>
+<path d="M126 134 V176" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-listen-head)"/>
+<path d="M230 202 H340" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-listen-head)"/>
+<text x="256" y="192" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">accept</text>
+<text x="26" y="270" class="f-sm" fill="#556274" font-size="13">새 접속은 리슨 소켓이 받고,</text>
+<text x="26" y="290" class="f-sm" fill="#556274" font-size="13">데이터는 연결 소켓으로 오간다</text>
+<text x="26" y="340" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서버 쪽 번호는 모두 8080</text>
+<rect x="352" y="100" width="270" height="66" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="366" y="124" class="f-b" fill="#0f172a" font-size="15" font-weight="700">연결 소켓 1</text><text x="366" y="150" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">8080</text><text x="410" y="150" class="f-t" fill="#0f172a" font-size="14">↔</text><rect x="432" y="135" width="182" height="22" rx="2" class="f-hl" fill="#eef2ff"/><text x="436" y="150" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">10.0.9.20:51834</text><rect x="352" y="182" width="270" height="66" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="366" y="206" class="f-b" fill="#0f172a" font-size="15" font-weight="700">연결 소켓 2</text><text x="366" y="232" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">8080</text><text x="410" y="232" class="f-t" fill="#0f172a" font-size="14">↔</text><rect x="432" y="217" width="182" height="22" rx="2" class="f-hl" fill="#eef2ff"/><text x="436" y="232" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">10.0.9.21:60211</text><rect x="352" y="264" width="270" height="66" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><text x="366" y="288" class="f-b" fill="#0f172a" font-size="15" font-weight="700">연결 소켓 3</text><text x="366" y="314" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">8080</text><text x="410" y="314" class="f-t" fill="#0f172a" font-size="14">↔</text><rect x="432" y="299" width="182" height="22" rx="2" class="f-hl" fill="#eef2ff"/><text x="436" y="314" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">10.0.9.20:51835</text>
+</svg>
