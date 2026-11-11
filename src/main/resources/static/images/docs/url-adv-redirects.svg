@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 282" role="img" aria-label="두 컷 그림. 위 컷은 http://example.com에서 https://example.com, https://www.example.com, /ko/로 세 번 넘기며 DNS·TCP·TLS·요청을 여러 번 되풀이해 약 1초를 쓴다. 아래 컷은 처음부터 https://www.example.com/ko/로 한 번에 넘겨 왕복을 절반 넘게 줄인다">
+<rect x="0" y="0" width="640" height="150" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="28" class="f-b" fill="#0f172a" font-size="15" font-weight="700">① 세 번 넘기기: 약 1초</text>
+<rect x="16" y="50" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="35.6" y="70" class="f-sm" fill="#556274" font-size="13">DNS</text>
+<rect x="76.0" y="50" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="95.6" y="70" class="f-sm" fill="#556274" font-size="13">TCP</text>
+<rect x="136.0" y="50" width="58.0" height="30" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="155.6" y="70" class="f-sm" fill="#556274" font-size="13">301</text>
+<rect x="196.0" y="50" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="215.6" y="70" class="f-sm" fill="#556274" font-size="13">TCP</text>
+<rect x="256.0" y="50" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="275.6" y="70" class="f-sm" fill="#556274" font-size="13">TLS</text>
+<rect x="316.0" y="50" width="58.0" height="30" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="335.6" y="70" class="f-sm" fill="#556274" font-size="13">301</text>
+<rect x="376.0" y="50" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="395.6" y="70" class="f-sm" fill="#556274" font-size="13">DNS</text>
+<rect x="436.0" y="50" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="455.6" y="70" class="f-sm" fill="#556274" font-size="13">TCP</text>
+<rect x="496.0" y="50" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="515.6" y="70" class="f-sm" fill="#556274" font-size="13">TLS</text>
+<rect x="556.0" y="50" width="58.0" height="30" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="575.6" y="70" class="f-sm" fill="#556274" font-size="13">301</text>
+<text x="16" y="136" class="f-sm" fill="#556274" font-size="13">http → https → www → /ko/, 넘길 때마다 연결 준비를 다시 한다</text>
+<text x="546.0" y="112" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">+ /ko/ 요청</text>
+<rect x="0" y="162" width="640" height="120" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="190" class="f-b" fill="#0f172a" font-size="15" font-weight="700">② 한 번에 넘기기: 처음부터 https://www.example.com/ko/</text>
+<rect x="16" y="212" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="35.6" y="232" class="f-sm" fill="#556274" font-size="13">DNS</text>
+<rect x="76.0" y="212" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="95.6" y="232" class="f-sm" fill="#556274" font-size="13">TCP</text>
+<rect x="136.0" y="212" width="58.0" height="30" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="155.6" y="232" class="f-sm" fill="#556274" font-size="13">TLS</text>
+<rect x="196.0" y="212" width="58.0" height="30" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="212.1" y="232" class="f-sm" fill="#556274" font-size="13">/ko/</text>
+<text x="266.0" y="232" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">약 0.4초</text>
+<text x="16" y="270" class="f-sm" fill="#556274" font-size="13">넘기기를 하나로 줄이면 연결 준비 묶음도 한 번으로 준다</text>
+</svg>

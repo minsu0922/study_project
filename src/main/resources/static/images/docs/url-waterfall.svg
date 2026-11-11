@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 334" role="img" aria-label="폭포 그림. 0초에서 시작해 DNS 12ms, TCP 33ms, TLS 36ms, 서버 처리 159ms, 본문 받기 22ms가 차례로 이어진다. 서버 처리 막대가 가장 길다">
+<text x="16" y="52" class="f-b" fill="#0f172a" font-size="15" font-weight="700">DNS</text>
+<rect x="120.0" y="30" width="20.4" height="32" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="148.4" y="52" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">12ms</text>
+<text x="16" y="98" class="f-b" fill="#0f172a" font-size="15" font-weight="700">TCP</text>
+<rect x="140.4" y="76" width="56.1" height="32" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="204.5" y="98" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">33ms</text>
+<text x="16" y="144" class="f-b" fill="#0f172a" font-size="15" font-weight="700">TLS</text>
+<rect x="196.5" y="122" width="61.2" height="32" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="265.7" y="144" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">36ms</text>
+<text x="16" y="190" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 처리</text>
+<rect x="257.7" y="168" width="270.3" height="32" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="536.0" y="190" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">159ms</text>
+<text x="16" y="236" class="f-b" fill="#0f172a" font-size="15" font-weight="700">본문 받기</text>
+<rect x="528.0" y="214" width="37.4" height="32" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="573.4" y="236" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">22ms</text>
+<line x1="120" y1="264" x2="565.4" y2="264" class="f-line" stroke="#0f172a" stroke-width="1.5"/>
+<line x1="120.0" y1="264" x2="120.0" y2="270" class="f-line" stroke="#0f172a" stroke-width="1.5"/>
+<text x="107.4" y="288" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0ms</text>
+<line x1="257.7" y1="264" x2="257.7" y2="270" class="f-line" stroke="#0f172a" stroke-width="1.5"/>
+<text x="240.9" y="288" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">81ms</text>
+<line x1="565.4" y1="264" x2="565.4" y2="270" class="f-line" stroke="#0f172a" stroke-width="1.5"/>
+<text x="544.4" y="288" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">262ms</text>
+<text x="16" y="320" class="f-sm" fill="#556274" font-size="13">앞 세 막대(81ms)는 연결 준비, 서버 처리 159ms가 가장 길다</text>
+</svg>
