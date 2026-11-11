@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" role="img" aria-label="시간 축 그림. 10시에 주 DB가 멈춘다. 리졸버 캐시는 30초 뒤 옛 답을 버리고, JVM DNS 캐시는 3분 뒤에 버리며, 커넥션 풀의 열린 연결은 오류로 끊길 때까지 옛 DB를 붙잡는다. 앱이 새 DB로 가는 시각은 가장 긴 막대의 끝이다">
+<text x="16" y="62" class="f-b" fill="#0f172a" font-size="15" font-weight="700">리졸버 캐시</text>
+<text x="16" y="80" class="f-sm" fill="#556274" font-size="13">레코드 TTL 60초</text>
+<rect x="170.0" y="48" width="37.5" height="30" rx="4" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="215.5" y="68" class="f-sm" fill="#556274" font-size="13">+30초에 버림</text>
+<text x="16" y="132" class="f-b" fill="#0f172a" font-size="15" font-weight="700">JVM DNS 캐시</text>
+<text x="16" y="150" class="f-sm" fill="#556274" font-size="13">캐시 기간 300초</text>
+<rect x="170.0" y="118" width="225.0" height="30" rx="4" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/><text x="180.0" y="138" class="f-sm" fill="#556274" font-size="13">옛 DB 주소</text>
+<text x="403.0" y="138" class="f-sm" fill="#556274" font-size="13">+3분에 버림</text>
+<text x="16" y="202" class="f-b" fill="#0f172a" font-size="15" font-weight="700">열린 연결</text>
+<text x="16" y="220" class="f-sm" fill="#556274" font-size="13">커넥션 풀</text>
+<rect x="170.0" y="188" width="412.5" height="30" rx="4" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/><text x="180.0" y="208" class="f-sm" fill="#556274" font-size="13">옛 DB를 붙잡고 다시 묻지 않는다</text>
+<text x="512.5" y="236" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">끊길 때까지 ?</text>
+<line x1="170.0" y1="30" x2="170.0" y2="256" class="f-line" stroke="#0f172a" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="140.0" y="276" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10:00:00</text>
+<text x="140.0" y="296" class="f-sm" fill="#556274" font-size="13">주 DB 멈춤</text>
+<line x1="395.0" y1="30" x2="395.0" y2="256" class="f-line" stroke="#0f172a" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="365.0" y="276" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">10:03:00</text>
+<text x="16" y="26" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">옛 주소를 쥐고 있는 시간</text>
+<text x="330" y="296" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">새 DB로 가는 시각 = 가장 긴 막대의 끝</text>
+</svg>
