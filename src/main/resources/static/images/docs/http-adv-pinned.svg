@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 472" role="img" aria-label="두 컷 그림. L4 로드 밸런서는 연결 단위로 서버를 고르므로, 클라이언트의 연결 두 개가 서버 A와 B에 붙은 채 모든 요청이 그 둘로만 간다. 새로 늘린 C와 D는 논다. L7 로드 밸런서는 요청마다 서버를 골라 네 대에 고르게 나눈다">
+<defs><marker id="pinned-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="0" y="0" width="640" height="230" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="28" class="f-b" fill="#0f172a" font-size="15" font-weight="700">① L4 로드 밸런서: 연결 두 개가 A와 B에 붙는다</text>
+<rect x="16" y="90" width="120" height="60" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="38.5" y="116" class="f-b" fill="#0f172a" font-size="15" font-weight="700">클라이언트</text>
+<text x="49.0" y="138" class="f-sm" fill="#556274" font-size="13">연결 2개</text>
+<rect x="230" y="90" width="130" height="60" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="286.3" y="116" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">L4</text>
+<text x="252.2" y="138" class="f-sm" fill="#556274" font-size="13">연결마다 고름</text>
+<path d="M136 112 H224" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<path d="M136 128 H224" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<rect x="470" y="46" width="150" height="36" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="486" y="70" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 A</text>
+<text x="560" y="70" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">바쁨</text>
+<path d="M360 120 L464 64" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<rect x="470" y="90" width="150" height="36" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="486" y="114" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 B</text>
+<text x="560" y="114" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">바쁨</text>
+<path d="M360 120 L464 108" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<rect x="470" y="134" width="150" height="36" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="486" y="158" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 C</text>
+<text x="560" y="158" class="f-sm" fill="#556274" font-size="13">놂</text>
+<rect x="470" y="178" width="150" height="36" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="486" y="202" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 D</text>
+<text x="560" y="202" class="f-sm" fill="#556274" font-size="13">놂</text>
+<rect x="0" y="242" width="640" height="230" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="270" class="f-b" fill="#0f172a" font-size="15" font-weight="700">② L7 로드 밸런서: 요청마다 네 대에 나눈다</text>
+<rect x="16" y="332" width="120" height="60" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="38.5" y="358" class="f-b" fill="#0f172a" font-size="15" font-weight="700">클라이언트</text>
+<text x="49.0" y="380" class="f-sm" fill="#556274" font-size="13">연결 2개</text>
+<rect x="230" y="332" width="130" height="60" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="286.3" y="358" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">L7</text>
+<text x="252.2" y="380" class="f-sm" fill="#556274" font-size="13">요청마다 고름</text>
+<path d="M136 354 H224" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<path d="M136 370 H224" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<rect x="470" y="288" width="150" height="36" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="486" y="312" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 A</text>
+<text x="560" y="312" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">바쁨</text>
+<path d="M360 362 L464 306" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<rect x="470" y="332" width="150" height="36" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="486" y="356" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 B</text>
+<text x="560" y="356" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">바쁨</text>
+<path d="M360 362 L464 350" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<rect x="470" y="376" width="150" height="36" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="486" y="400" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 C</text>
+<text x="560" y="400" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">바쁨</text>
+<path d="M360 362 L464 394" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+<rect x="470" y="420" width="150" height="36" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="486" y="444" class="f-b" fill="#0f172a" font-size="15" font-weight="700">서버 D</text>
+<text x="560" y="444" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">바쁨</text>
+<path d="M360 362 L464 438" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#pinned-head)"/>
+</svg>
