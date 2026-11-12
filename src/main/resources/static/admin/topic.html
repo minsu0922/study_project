@@ -24,6 +24,25 @@ try {
     <div id="tdMessage"></div>
     <div class="card topic-head" id="head" hidden></div>
     <div class="card" id="brief" hidden></div>
+    <div class="card" id="boxCard" hidden></div>
+
+    <!-- 글의 주제(V48). 사람이 쓰고 생성은 그대로 싣는다. 문단만 쓰면 상자 모양은 코드가 입힌다 -->
+    <div class="card topic-edit" id="boxEdit" hidden>
+      <h2>글의 주제 쓰기</h2>
+      <p class="meta">문단만 쓰세요. 문단 사이는 빈 줄 하나입니다. 생성된 글의 상자는 이 글로 그대로 바뀝니다.</p>
+      <div class="topic-box-editor">
+        <div class="field"><label for="bBeginner">입문편 <span class="meta" id="bBeginnerCount"></span></label>
+          <textarea id="bBeginner" rows="9" style="width:100%"></textarea></div>
+        <div class="doc-body" id="bBeginnerPreview"></div>
+        <div class="field"><label for="bAdvanced">심화편 <span class="meta" id="bAdvancedCount"></span></label>
+          <textarea id="bAdvanced" rows="9" style="width:100%"></textarea></div>
+        <div class="doc-body" id="bAdvancedPreview"></div>
+      </div>
+      <div class="topic-actions">
+        <button id="bSaveBtn">저장</button>
+        <button id="bCancelBtn" class="btn-outline">취소</button>
+      </div>
+    </div>
 
     <!-- 수정은 이 화면에서 한다. 목록으로 보내면 저장 뒤 보던 지시로 돌아올 길이 없었다 -->
     <div class="card topic-edit" id="editCard" hidden>
@@ -71,6 +90,7 @@ if (initAdminPage("topics")) {
     showErrorAlert(message, "어느 주제인지 알 수 없습니다. 목록에서 다시 들어와 주세요.");
   } else {
     wireEditForm();
+    wireBoxForm();
     api("/api/admin/batch-status")
       .then(s => { nextDocumentDate = s.nextDocumentDate || ""; })
       .catch(() => {})
@@ -140,6 +160,84 @@ function render(t) {
     }));
 
   renderBrief(t.memo);
+  renderBoxes(t);
+}
+
+/* ═══════════ 글의 주제(V48) ═══════════
+ * 입문편·심화편 상자를 사람이 쓴다. 둘 중 하나라도 비면 배치가 이 주제를 건너뛴다.
+ *   PUT /api/admin/topic-queue/{id}/topic-boxes  { beginner, advanced } */
+
+/** 상자 미리보기 — 문서 화면의 「글의 주제」와 같은 class라 모양이 같다. 굵게(**)만 살린다 */
+function topicBoxHtml(text) {
+  const paras = (text || "").trim().split(/\n[ \t]*\n/).filter(p => p.trim());
+  if (!paras.length) return `<p class="meta">아직 안 씀</p>`;
+  const inline = p => escapeHtml(p.replace(/\s*\n\s*/g, " ").trim())
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  return `<blockquote class="topic-box"><p><strong>글의 주제</strong></p>${
+    paras.map(p => `<p>${inline(p)}</p>`).join("")}</blockquote>`;
+}
+
+function renderBoxes(t) {
+  const card = document.getElementById("boxCard");
+  if (t.kind === "CODE") { card.hidden = true; return; }   // 코드 문제 주제에는 문서가 없다
+  const status = t.hasTopicBoxes
+    ? `<span class="badge green">두 편 다 씀</span>`
+    : `<span class="badge orange">상자 없음 · 배치가 건너뜀</span>`;
+  card.innerHTML = `
+    <h2>글의 주제 ${status}</h2>
+    <h3>입문편</h3><div class="doc-body">${topicBoxHtml(t.beginnerTopicBox)}</div>
+    <h3>심화편</h3><div class="doc-body">${topicBoxHtml(t.advancedTopicBox)}</div>
+    <div class="topic-actions"><button class="btn-outline" id="boxEditBtn">글의 주제 쓰기</button></div>`;
+  card.hidden = false;
+  document.getElementById("boxEditBtn").addEventListener("click", openBoxEdit);
+}
+
+function wireBoxForm() {
+  for (const side of ["Beginner", "Advanced"]) {
+    document.getElementById(`b${side}`).addEventListener("input", () => updateBoxPreview(side));
+  }
+  document.getElementById("bSaveBtn").addEventListener("click", saveBoxes);
+  document.getElementById("bCancelBtn").addEventListener("click", () => showBoxEditing(false));
+}
+
+function updateBoxPreview(side) {
+  const value = document.getElementById(`b${side}`).value;
+  document.getElementById(`b${side}Preview`).innerHTML = topicBoxHtml(value);
+  document.getElementById(`b${side}Count`).textContent = `${value.trim().length.toLocaleString()} / 3,000자`;
+}
+
+function openBoxEdit() {
+  document.getElementById("bBeginner").value = current.beginnerTopicBox || "";
+  document.getElementById("bAdvanced").value = current.advancedTopicBox || "";
+  updateBoxPreview("Beginner");
+  updateBoxPreview("Advanced");
+  showBoxEditing(true);
+  document.getElementById("bBeginner").focus();
+}
+
+/** 쓰는 동안 위 카드들을 감춘다 — 저장 전 글과 저장된 글이 두 벌 보이지 않게 */
+function showBoxEditing(on) {
+  document.getElementById("boxEdit").hidden = !on;
+  for (const id of ["head", "brief", "boxCard"]) document.getElementById(id).hidden = on;
+}
+
+async function saveBoxes() {
+  try {
+    const saved = await api(`/api/admin/topic-queue/${current.id}/topic-boxes`, {
+      method: "PUT",
+      body: JSON.stringify({
+        beginner: document.getElementById("bBeginner").value,
+        advanced: document.getElementById("bAdvanced").value,
+      }),
+    });
+    showOk(message, saved.hasTopicBoxes
+      ? `저장했습니다. ${topicFile(current)}을 커밋하면 다음 배치부터 이 글로 씁니다.`
+      : `저장했습니다. 두 편을 다 써야 배치가 이 주제를 씁니다. ${topicFile(current)}을 커밋하세요.`);
+    showBoxEditing(false);
+    await reload();
+  } catch (e) {
+    showError(message, e);
+  }
 }
 
 /* ═══════════ 수정 ═══════════ */
@@ -175,6 +273,7 @@ function showEditing(on) {
   document.getElementById("editCard").hidden = !on;
   document.getElementById("head").hidden = on;
   document.getElementById("brief").hidden = on;
+  if (current && current.kind !== "CODE") document.getElementById("boxCard").hidden = on;
 }
 
 async function saveEdit() {

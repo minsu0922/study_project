@@ -36,7 +36,10 @@ public record TopicQueueItemResponse(
         boolean next,
         int order,
         int position,
-        TopicKind kind
+        TopicKind kind,
+        String beginnerTopicBox,
+        String advancedTopicBox,
+        boolean hasTopicBoxes
 ) {
 
     /**
@@ -48,6 +51,7 @@ public record TopicQueueItemResponse(
         return new TopicQueueItemResponse(
                 item.getId(), item.getDomain(), domainLabel,
                 item.getTopic(), item.getMemo(), item.getSortOrder(),
-                item.getLastUsedAt(), item.getUsedCount(), next, order, position, item.getKind());
+                item.getLastUsedAt(), item.getUsedCount(), next, order, position, item.getKind(),
+                item.getBeginnerTopicBox(), item.getAdvancedTopicBox(), item.hasTopicBoxes());
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.study.study_project.llm.dto.AdminTopicBoxesRequest;
 import project.study.study_project.llm.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.Texts;
@@ -237,8 +238,10 @@ public class TopicQueueService {
      */
     private int[] positionsOf(List<TopicQueueItem> items) {
         List<Integer> ranked = IntStream.range(0, items.size()).boxed()
-                // LocalDate는 null을 비교할 수 없어 <안 썼는가>를 따로 뽑는다. 규칙 문장과 같은 모양이기도 하다
-                .sorted(Comparator.comparing((Integer i) -> !items.get(i).isNeverUsed())
+                // 글의 주제를 다 안 쓴 개념 주제는 배치가 꺼내지 않으므로 맨 뒤로 보낸다(pickNext와 같은 규칙)
+                .sorted(Comparator.comparing((Integer i) -> isBoxless(items.get(i)))
+                        // LocalDate는 null을 비교할 수 없어 <안 썼는가>를 따로 뽑는다. 규칙 문장과 같은 모양이기도 하다
+                        .thenComparing((Integer i) -> !items.get(i).isNeverUsed())
                         .thenComparing(i -> items.get(i).getLastUsedAt(),
                                 Comparator.nullsFirst(Comparator.naturalOrder()))
                         .thenComparingInt(i -> i))
@@ -298,11 +301,19 @@ public class TopicQueueService {
     private TopicQueueItem pickNext(List<TopicQueueItem> items) {
         TopicQueueItem best = null;
         for (TopicQueueItem item : items) {
+            // 개념 주제는 글의 주제 두 편을 다 써야 배치가 꺼낸다(TopicQueue.next와 같은 규칙)
+            if (isBoxless(item)) {
+                continue;
+            }
             if (best == null || isEarlier(item, best)) {
                 best = item;
             }
         }
         return best;
+    }
+
+    private static boolean isBoxless(TopicQueueItem item) {
+        return item.getKind() == TopicKind.CONCEPT && !item.hasTopicBoxes();
     }
 
     private boolean isEarlier(TopicQueueItem a, TopicQueueItem b) {
@@ -399,6 +410,22 @@ public class TopicQueueService {
 
         // add와 같은 이유로 next는 false다 — 판정에 목록 전체가 필요하고, 화면은 수정 직후
         // 목록을 다시 불러 정확한 값을 받는다.
+        int last = (int) repository.countByKind(item.getKind());
+        return TopicQueueItemResponse.from(
+                item, domainCatalog.displayName(item.getDomain()), false, last, last);
+    }
+
+    /**
+     * 「글의 주제」 상자 두 편을 바꾼다(V48). 사용 기록과 순서는 그대로다.
+     * 상자는 배치가 읽는 파일로 나가야 하므로 수정과 같이 내보내기 이벤트를 낸다.
+     */
+    @Transactional
+    public TopicQueueItemResponse updateTopicBoxes(Long id, AdminTopicBoxesRequest request) {
+        TopicQueueItem item = find(id);
+        item.editTopicBoxes(request.beginner(), request.advanced());
+        log.info("글의 주제 수정: #{} {} (두 편 {}) — 커밋해야 다음 배치부터 반영됩니다",
+                id, item.getTopic(), item.hasTopicBoxes() ? "다 씀" : "덜 씀");
+        events.publishEvent(new TopicQueueChanged());
         int last = (int) repository.countByKind(item.getKind());
         return TopicQueueItemResponse.from(
                 item, domainCatalog.displayName(item.getDomain()), false, last, last);
@@ -723,9 +750,12 @@ public class TopicQueueService {
         }
         // 사용 기록까지 함께 들여온다. 기록을 버리면 그 범위가 "새것"이 되어 곧바로 다음 차례가
         // 되고, 순환이 한쪽으로 쏠린다(엔티티 imported 주석).
-        return repository.save(TopicQueueItem.imported(
+        TopicQueueItem item = TopicQueueItem.imported(
                 kind, domain, topic, Texts.trimToNull(entry.memo()), sortOrder,
-                parseDate(entry.lastUsedAt()), entry.usedCount() == null ? 0 : entry.usedCount()));
+                parseDate(entry.lastUsedAt()), entry.usedCount() == null ? 0 : entry.usedCount());
+        // 손으로 적은 줄에 글의 주제가 있으면 함께 들여온다. id가 있는 줄은 DB가 원본이라 읽지 않는다
+        item.editTopicBoxes(entry.beginnerTopicBox(), entry.advancedTopicBox());
+        return repository.save(item);
     }
 
     /* ── 도우미 ───────────────────────────────────────────────── */

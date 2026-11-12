@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import project.study.study_project.admin.dto.AdminTopicQueueMoveRequest;
 import project.study.study_project.global.common.DomainCode;
+import project.study.study_project.llm.dto.AdminTopicBoxesRequest;
 import project.study.study_project.llm.dto.AdminTopicQueueRequest;
 import project.study.study_project.global.response.ApiResponse;
 import project.study.study_project.global.response.PageResponse;
@@ -112,6 +114,16 @@ public class AdminTopicQueueController {
     public ApiResponse<TopicQueueItemResponse> update(@PathVariable Long id,
                                                      @Valid @RequestBody AdminTopicQueueRequest request) {
         return ApiResponse.ok(topicQueueService.update(id, request));
+    }
+
+    /**
+     * 「글의 주제」 상자 두 편 저장(V48). 두 칸이 곧 전부라 PUT이다 — 비운 칸은 "안 씀"으로 저장한다.
+     * 없는 id면 404(TOPIC_001).
+     */
+    @PutMapping("/{id}/topic-boxes")
+    public ApiResponse<TopicQueueItemResponse> updateTopicBoxes(@PathVariable Long id,
+                                                               @Valid @RequestBody AdminTopicBoxesRequest request) {
+        return ApiResponse.ok(topicQueueService.updateTopicBoxes(id, request));
     }
 
     /** 삭제 — 되돌릴 수 없다. 없는 id면 404(TOPIC_001). */

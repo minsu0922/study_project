@@ -819,6 +819,8 @@ class TopicQueueServiceTest {
     private TopicQueueItem item(Long id, DomainCode domain, String topic, int sortOrder) {
         TopicQueueItem item = TopicQueueItem.fresh(domain, topic, null, sortOrder);
         ReflectionTestUtils.setField(item, "id", id);
+        // 여기 테스트는 차례 규칙을 본다. 글의 주제가 없으면 차례에서 빠지는 규칙은 TopicQueueBoxServiceTest가 본다
+        item.editTopicBoxes("입문 글", "심화 글");
         return item;
     }
 

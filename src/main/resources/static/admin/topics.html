@@ -404,6 +404,8 @@ async function loadTopicQueue() {
         <td>${escapeHtml(t.domainLabel)}</td>
         <td class="wrap topic-cell">
           <a class="topic-link" href="/admin/topic.html?id=${t.id}">${escapeHtml(t.topic)}</a>
+          ${topicKind === "CONCEPT" && !t.hasTopicBoxes
+            ? ` <span class="badge gray" title="입문편·심화편 글의 주제를 다 써야 배치가 이 주제를 씁니다">상자 없음</span>` : ""}
           ${t.next ? ` <span class="badge orange">다음 차례${
             // 날짜는 4일 주기의 다음 문서일이다. 코드 문제 주제는 주 1회 배치가 쓰므로 그 날짜가 아니다
             topicKind === "CONCEPT" && nextDocumentDate ? ` · ${escapeHtml(nextDocumentDate)}` : ""}</span>` : ""}
