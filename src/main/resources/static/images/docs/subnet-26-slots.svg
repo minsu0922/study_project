@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 278" role="img" aria-label="192.168.0.0/26의 주소 64칸을 16칸씩 네 줄로 늘어놓았다. 맨 앞 .0은 네트워크 주소, 맨 끝 .63은 브로드캐스트 주소라 기기에 주지 않고, .1은 게이트웨이가 쓴다. 남은 .2부터 .62까지 61칸을 기기에 준다">
+<text x="16" y="26" class="f-b" fill="#0f172a" font-size="15" font-weight="700">192.168.0.0/26의 주소 64칸</text>
+<rect x="32" y="44" width="34" height="30" rx="4" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="42.0" y="64" class="f-sm" fill="#556274" font-size="13">.0</text>
+<rect x="68" y="44" width="34" height="30" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="78.0" y="64" class="f-sm" fill="#556274" font-size="13">.1</text>
+<rect x="104" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="114.0" y="64" class="f-sm" fill="#556274" font-size="13">.2</text>
+<rect x="140" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="150.0" y="64" class="f-sm" fill="#556274" font-size="13">.3</text>
+<rect x="176" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="186.0" y="64" class="f-sm" fill="#556274" font-size="13">.4</text>
+<rect x="212" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="222.0" y="64" class="f-sm" fill="#556274" font-size="13">.5</text>
+<rect x="248" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="258.0" y="64" class="f-sm" fill="#556274" font-size="13">.6</text>
+<rect x="284" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="294.0" y="64" class="f-sm" fill="#556274" font-size="13">.7</text>
+<rect x="320" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="330.0" y="64" class="f-sm" fill="#556274" font-size="13">.8</text>
+<rect x="356" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="366.0" y="64" class="f-sm" fill="#556274" font-size="13">.9</text>
+<rect x="392" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="398.6" y="64" class="f-sm" fill="#556274" font-size="13">.10</text>
+<rect x="428" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="434.6" y="64" class="f-sm" fill="#556274" font-size="13">.11</text>
+<rect x="464" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="470.6" y="64" class="f-sm" fill="#556274" font-size="13">.12</text>
+<rect x="500" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="506.6" y="64" class="f-sm" fill="#556274" font-size="13">.13</text>
+<rect x="536" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="542.6" y="64" class="f-sm" fill="#556274" font-size="13">.14</text>
+<rect x="572" y="44" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="578.6" y="64" class="f-sm" fill="#556274" font-size="13">.15</text>
+<rect x="32" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="38.6" y="96" class="f-sm" fill="#556274" font-size="13">.16</text>
+<rect x="68" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="74.6" y="96" class="f-sm" fill="#556274" font-size="13">.17</text>
+<rect x="104" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="110.6" y="96" class="f-sm" fill="#556274" font-size="13">.18</text>
+<rect x="140" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="146.6" y="96" class="f-sm" fill="#556274" font-size="13">.19</text>
+<rect x="176" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="182.6" y="96" class="f-sm" fill="#556274" font-size="13">.20</text>
+<rect x="212" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="218.6" y="96" class="f-sm" fill="#556274" font-size="13">.21</text>
+<rect x="248" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="254.6" y="96" class="f-sm" fill="#556274" font-size="13">.22</text>
+<rect x="284" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="290.6" y="96" class="f-sm" fill="#556274" font-size="13">.23</text>
+<rect x="320" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="326.6" y="96" class="f-sm" fill="#556274" font-size="13">.24</text>
+<rect x="356" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="362.6" y="96" class="f-sm" fill="#556274" font-size="13">.25</text>
+<rect x="392" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="398.6" y="96" class="f-sm" fill="#556274" font-size="13">.26</text>
+<rect x="428" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="434.6" y="96" class="f-sm" fill="#556274" font-size="13">.27</text>
+<rect x="464" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="470.6" y="96" class="f-sm" fill="#556274" font-size="13">.28</text>
+<rect x="500" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="506.6" y="96" class="f-sm" fill="#556274" font-size="13">.29</text>
+<rect x="536" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="542.6" y="96" class="f-sm" fill="#556274" font-size="13">.30</text>
+<rect x="572" y="76" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="578.6" y="96" class="f-sm" fill="#556274" font-size="13">.31</text>
+<rect x="32" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="38.6" y="128" class="f-sm" fill="#556274" font-size="13">.32</text>
+<rect x="68" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="74.6" y="128" class="f-sm" fill="#556274" font-size="13">.33</text>
+<rect x="104" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="110.6" y="128" class="f-sm" fill="#556274" font-size="13">.34</text>
+<rect x="140" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="146.6" y="128" class="f-sm" fill="#556274" font-size="13">.35</text>
+<rect x="176" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="182.6" y="128" class="f-sm" fill="#556274" font-size="13">.36</text>
+<rect x="212" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="218.6" y="128" class="f-sm" fill="#556274" font-size="13">.37</text>
+<rect x="248" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="254.6" y="128" class="f-sm" fill="#556274" font-size="13">.38</text>
+<rect x="284" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="290.6" y="128" class="f-sm" fill="#556274" font-size="13">.39</text>
+<rect x="320" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="326.6" y="128" class="f-sm" fill="#556274" font-size="13">.40</text>
+<rect x="356" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="362.6" y="128" class="f-sm" fill="#556274" font-size="13">.41</text>
+<rect x="392" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="398.6" y="128" class="f-sm" fill="#556274" font-size="13">.42</text>
+<rect x="428" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="434.6" y="128" class="f-sm" fill="#556274" font-size="13">.43</text>
+<rect x="464" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="470.6" y="128" class="f-sm" fill="#556274" font-size="13">.44</text>
+<rect x="500" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="506.6" y="128" class="f-sm" fill="#556274" font-size="13">.45</text>
+<rect x="536" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="542.6" y="128" class="f-sm" fill="#556274" font-size="13">.46</text>
+<rect x="572" y="108" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="578.6" y="128" class="f-sm" fill="#556274" font-size="13">.47</text>
+<rect x="32" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="38.6" y="160" class="f-sm" fill="#556274" font-size="13">.48</text>
+<rect x="68" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="74.6" y="160" class="f-sm" fill="#556274" font-size="13">.49</text>
+<rect x="104" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="110.6" y="160" class="f-sm" fill="#556274" font-size="13">.50</text>
+<rect x="140" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="146.6" y="160" class="f-sm" fill="#556274" font-size="13">.51</text>
+<rect x="176" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="182.6" y="160" class="f-sm" fill="#556274" font-size="13">.52</text>
+<rect x="212" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="218.6" y="160" class="f-sm" fill="#556274" font-size="13">.53</text>
+<rect x="248" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="254.6" y="160" class="f-sm" fill="#556274" font-size="13">.54</text>
+<rect x="284" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="290.6" y="160" class="f-sm" fill="#556274" font-size="13">.55</text>
+<rect x="320" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="326.6" y="160" class="f-sm" fill="#556274" font-size="13">.56</text>
+<rect x="356" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="362.6" y="160" class="f-sm" fill="#556274" font-size="13">.57</text>
+<rect x="392" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="398.6" y="160" class="f-sm" fill="#556274" font-size="13">.58</text>
+<rect x="428" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="434.6" y="160" class="f-sm" fill="#556274" font-size="13">.59</text>
+<rect x="464" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="470.6" y="160" class="f-sm" fill="#556274" font-size="13">.60</text>
+<rect x="500" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="506.6" y="160" class="f-sm" fill="#556274" font-size="13">.61</text>
+<rect x="536" y="140" width="34" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="542.6" y="160" class="f-sm" fill="#556274" font-size="13">.62</text>
+<rect x="572" y="140" width="34" height="30" rx="4" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="578.6" y="160" class="f-sm" fill="#556274" font-size="13">.63</text>
+<rect x="32" y="179" width="20" height="20" rx="4" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="62" y="194" class="f-t" fill="#0f172a" font-size="14">.0 네트워크 주소, .63 브로드캐스트 주소: 기기에 주지 않는다</text>
+<rect x="32" y="207" width="20" height="20" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="62" y="222" class="f-t" fill="#0f172a" font-size="14">.1 게이트웨이: 라우터가 쓴다</text>
+<rect x="32" y="235" width="20" height="20" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="62" y="250" class="f-t" fill="#0f172a" font-size="14">.2 ~ .62: 기기에 줄 수 있는 61칸</text>
+</svg>

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 478" role="img" aria-label="사다리 그림. 다른 PC가 10.0.1.50의 MAC 주소를 ARP로 묻자 서버 A가 aa로, 같은 주소를 잘못 받은 서버 B가 bb로 답한다. 늦게 온 bb가 PC의 ARP 캐시를 덮어, 다음 요청이 서버 B로 간다">
+<defs><marker id="ip-conflict" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="30" y="10" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="73.8" y="32" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">다른 PC</text>
+<line x1="100" y1="60" x2="100" y2="392" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="260" y="10" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="307.9" y="32" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서버 A</text>
+<text x="304.8" y="51" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">MAC aa</text>
+<line x1="330" y1="60" x2="330" y2="392" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="470" y="10" width="140" height="50" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="517.9" y="32" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">서버 B</text>
+<text x="514.8" y="51" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">MAC bb</text>
+<line x1="540" y1="60" x2="540" y2="392" class="f-line" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<path d="M100 90 L532 112" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#ip-conflict)"/>
+<text x="136.0" y="84" class="f-t" fill="#0f172a" font-size="14">ARP: 10.0.1.50 누구?</text>
+<text x="149.0" y="132" class="f-sm" fill="#556274" font-size="13">서브넷 전체에 묻는다</text>
+<path d="M330 168 L108 190" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#ip-conflict)"/>
+<text x="159.3" y="162" class="f-t" fill="#0f172a" font-size="14">10.0.1.50은 aa</text>
+<text x="138.7" y="210" class="f-sm" fill="#556274" font-size="13">진짜 서버가 먼저 답한다</text>
+<path d="M540 246 L108 268" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#ip-conflict)"/>
+<text x="379.3" y="240" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">10.0.1.50은 bb</text>
+<text x="352.2" y="288" class="f-sm" fill="#556274" font-size="13">같은 주소의 서버도 답한다</text>
+<path d="M100 324 L532 346" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#ip-conflict)"/>
+<text x="156.8" y="318" class="f-t" fill="#0f172a" font-size="14">요청이 bb로 간다</text>
+<text x="147.9" y="366" class="f-sm" fill="#556274" font-size="13">서버 A는 받지 못한다</text>
+<text x="260" y="74" class="f-sm" fill="#556274" font-size="13"></text>
+<text x="458" y="62" class="f-sm" fill="#556274" font-size="13"></text>
+<rect x="12" y="402" width="616" height="64" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="28" y="428" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">PC의 ARP 캐시 · 10.0.1.50</text>
+<text x="28" y="452" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">aa</text>
+<line x1="24" y1="447" x2="50" y2="447" class="f-strike" stroke="#dc2626" stroke-width="2"/>
+<text x="62" y="452" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">→ bb</text>
+<text x="150" y="452" class="f-t" fill="#0f172a" font-size="14">늦게 온 답이 앞 답을 덮어, 연결이 됐다 안 됐다 한다</text>
+</svg>

@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 412" role="img" aria-label="두 컷 그림. 255.255.255.0을 32칸 비트 띠로 펼치면 앞 24칸이 1, 뒤 8칸이 0이라 /24다. 255.255.255.192는 앞 26칸이 1이라 마지막 칸 안에서 끊기고 /26이다">
+<rect x="0" y="0" width="640" height="200" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="28" class="f-b" fill="#0f172a" font-size="15" font-weight="700">① 255.255.255.0 = /24</text>
+<g transform="translate(0 10)"><text x="16" y="44" class="f-b" fill="#0f172a" font-size="15" font-weight="700"></text></g>
+<g transform="translate(0 10)"><text x="92.0" y="44" class="f-sm" fill="#556274" font-size="13"></text></g>
+<g transform="translate(0 10)"><text x="86" y="108" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">255</text></g>
+<g transform="translate(0 10)"><text x="230.0" y="44" class="f-sm" fill="#556274" font-size="13"></text></g>
+<g transform="translate(0 10)"><text x="224" y="108" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">255</text></g>
+<g transform="translate(0 10)"><text x="368.0" y="44" class="f-sm" fill="#556274" font-size="13"></text></g>
+<g transform="translate(0 10)"><text x="362" y="108" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">255</text></g>
+<g transform="translate(0 10)"><text x="506.0" y="44" class="f-sm" fill="#556274" font-size="13"></text></g>
+<g transform="translate(0 10)"><text x="500" y="108" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><rect x="36" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="39.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="52" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="55.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="68" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="71.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="84" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="87.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="100" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="103.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="116" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="119.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="132" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="135.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="148" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="151.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="174" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="177.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="190" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="193.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="206" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="209.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="222" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="225.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="238" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="241.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="254" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="257.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="270" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="273.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="286" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="289.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="312" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="315.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="328" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="331.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="344" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="347.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="360" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="363.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="376" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="379.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="392" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="395.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="408" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="411.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="424" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="427.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 10)"><rect x="450" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="453.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><rect x="466" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="469.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><rect x="482" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="485.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><rect x="498" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="501.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><rect x="514" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="517.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><rect x="530" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="533.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><rect x="546" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="549.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><rect x="562" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="565.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 10)"><path d="M36 120 v8 H439 v-8" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="36" y="146" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">네트워크 부분 24비트</text></g>
+<g transform="translate(0 10)"><path d="M450 120 v8 H577 v-8" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/></g>
+<g transform="translate(0 10)"><text x="452" y="146" class="f-sm" fill="#556274" font-size="13">호스트 부분 8비트</text></g>
+<g transform="translate(0 10)"><text x="16" y="170" class="f-sm" fill="#556274" font-size="13">앞 세 칸이 모두 1이라, 칸 경계에서 깔끔하게 끊긴다</text></g>
+<rect x="0" y="212" width="640" height="200" rx="8" class="f-panel" fill="#f1f5f9"/><text x="16" y="240" class="f-b" fill="#0f172a" font-size="15" font-weight="700">② 255.255.255.192 = /26</text>
+<g transform="translate(0 222)"><text x="16" y="44" class="f-b" fill="#0f172a" font-size="15" font-weight="700"></text></g>
+<g transform="translate(0 222)"><text x="92.0" y="44" class="f-sm" fill="#556274" font-size="13"></text></g>
+<g transform="translate(0 222)"><text x="86" y="108" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">255</text></g>
+<g transform="translate(0 222)"><text x="230.0" y="44" class="f-sm" fill="#556274" font-size="13"></text></g>
+<g transform="translate(0 222)"><text x="224" y="108" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">255</text></g>
+<g transform="translate(0 222)"><text x="368.0" y="44" class="f-sm" fill="#556274" font-size="13"></text></g>
+<g transform="translate(0 222)"><text x="362" y="108" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">255</text></g>
+<g transform="translate(0 222)"><text x="506.0" y="44" class="f-sm" fill="#556274" font-size="13"></text></g>
+<g transform="translate(0 222)"><text x="500" y="108" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">192</text></g>
+<g transform="translate(0 222)"><rect x="36" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="39.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="52" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="55.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="68" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="71.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="84" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="87.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="100" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="103.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="116" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="119.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="132" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="135.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="148" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="151.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="174" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="177.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="190" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="193.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="206" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="209.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="222" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="225.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="238" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="241.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="254" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="257.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="270" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="273.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="286" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="289.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="312" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="315.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="328" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="331.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="344" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="347.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="360" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="363.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="376" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="379.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="392" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="395.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="408" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="411.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="424" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="427.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="450" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="453.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="466" y="58" width="15" height="28" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="469.3" y="77" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">1</text></g>
+<g transform="translate(0 222)"><rect x="482" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="485.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 222)"><rect x="498" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="501.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 222)"><rect x="514" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="517.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 222)"><rect x="530" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="533.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 222)"><rect x="546" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="549.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 222)"><rect x="562" y="58" width="15" height="28" rx="3" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="565.3" y="77" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text></g>
+<g transform="translate(0 222)"><path d="M36 120 v8 H481 v-8" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="36" y="146" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">네트워크 부분 26비트</text></g>
+<g transform="translate(0 222)"><path d="M482 120 v8 H577 v-8" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/></g>
+<g transform="translate(0 222)"><text x="482" y="146" class="f-sm" fill="#556274" font-size="13">호스트 부분 6비트</text></g>
+<g transform="translate(0 222)"><text x="16" y="170" class="f-sm" fill="#556274" font-size="13">마지막 칸 안에서 끊긴다. 칸의 앞 2비트(128+64=192)까지가 네트워크 부분이다</text></g>
+</svg>
