@@ -93,6 +93,17 @@ public class TopicQueueItem {
     @Column(name = "usage_reset_at")
     private LocalDate usageResetAt;
 
+    /**
+     * 입문편 「글의 주제」 상자 본문(V48). 사람이 쓰고, 생성은 고치지 않고 그대로 싣는다.
+     * 인용 기호 없이 문단만 담는다. {@code null}이면 아직 안 썼다.
+     */
+    @Column(name = "beginner_topic_box", columnDefinition = "TEXT")
+    private String beginnerTopicBox;
+
+    /** 심화편 「글의 주제」 상자 본문(V48). 입문편과 각도가 달라 따로 쓴다. */
+    @Column(name = "advanced_topic_box", columnDefinition = "TEXT")
+    private String advancedTopicBox;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -220,5 +231,29 @@ public class TopicQueueItem {
         this.domain = domain;
         this.topic = topic;
         this.memo = memo;
+    }
+
+    /**
+     * 두 편의 「글의 주제」 상자를 고친다. 사용 기록과 순서는 건드리지 않는다.
+     * 줄바꿈을 LF로 맞추고 앞뒤 공백을 걷는다 — 생성 결과와 글자 그대로 비교하는 값이라서다.
+     */
+    public void editTopicBoxes(String beginner, String advanced) {
+        this.beginnerTopicBox = normalizeBox(beginner);
+        this.advancedTopicBox = normalizeBox(advanced);
+    }
+
+    /** 두 편 상자가 모두 있는가 — 없으면 배치가 이 주제를 건너뛴다. */
+    public boolean hasTopicBoxes() {
+        return beginnerTopicBox != null && advancedTopicBox != null;
+    }
+
+    static String normalizeBox(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String text = raw.replace("\r\n", "\n").replace('\r', '\n').strip();
+        // 문단 사이 빈 줄은 하나로 — 상자 안에서 빈 줄 둘은 "> " 빈 줄 둘이 되어 칸이 벌어진다
+        text = text.replaceAll("\n[ \t]*\n(?:[ \t]*\n)+", "\n\n");
+        return text.isEmpty() ? null : text;
     }
 }
