@@ -90,9 +90,9 @@ function param(name) {
 /**
  * 주제 메모(작성 지시)를 칸별로 나눈다. 대기열 목록과 상세 화면이 함께 쓴다.
  *
- * <p>서버 TopicBrief.parse와 같은 규칙이다. "핵심 개념"과 "설명할 것"이 둘 다 있어야
- * 모델에 실린다(valid). "설명할 것"은 앞뒤 공백이 있는 빗금으로만 나눈다.
- * 맨 빗금으로 나누면 "HTTP/2" 같은 질문이 잘린다.
+ * <p>서버 TopicBrief.parse와 같은 규칙이다. "핵심 개념"이 있어야 모델에 실린다(valid).
+ * "설명할 것"(질문)은 2026-11-12부터 입문편 「글의 주제」가 맡는다. 옮기기 전 메모를 위해
+ * 읽기만 남겼다. 앞뒤 공백이 있는 빗금으로만 나눈다 — 맨 빗금이면 "HTTP/2"가 잘린다.
  */
 const TOPIC_MEMO_LABELS = ["핵심 개념", "설명할 것", "다루지 않을 것", "실물", "그림"];
 
@@ -103,8 +103,8 @@ function parseTopicMemo(memo) {
     const label = TOPIC_MEMO_LABELS.find(l => line.startsWith(l + ":"));
     if (label) fields[label] = line.slice(label.length + 1).trim();
   }
-  const valid = Boolean(fields["핵심 개념"] && fields["설명할 것"]);
-  const questions = valid
+  const valid = Boolean(fields["핵심 개념"]);
+  const questions = fields["설명할 것"]
     ? fields["설명할 것"].split(/\s+\/\s+/).map(q => q.trim()).filter(Boolean) : [];
   return { valid, fields, questions };
 }

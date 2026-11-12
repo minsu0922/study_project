@@ -33,12 +33,31 @@ class TopicBriefTest {
     }
 
     @Test
-    @DisplayName("필수 두 칸 중 하나라도 없으면 지시가 아니다 — 옛 사람용 메모는 모델에 싣지 않는다")
+    @DisplayName("핵심 개념이 없으면 지시가 아니다 — 옛 사람용 메모는 모델에 싣지 않는다")
     void rejectsMemoWithoutRequiredLabels() {
         assertThat(TopicBrief.parse("정보처리기사 대비. 증상을 붙였다")).isNull();
-        assertThat(TopicBrief.parse("핵심 개념: 인덱스")).isNull();
+        assertThat(TopicBrief.parse("설명할 것: 왜 느린가")).isNull();
         assertThat(TopicBrief.parse(null)).isNull();
         assertThat(TopicBrief.parse("  ")).isNull();
+    }
+
+    @Test
+    @DisplayName("질문은 글의 주제가 맡는다 — 핵심 개념만 있어도 지시로 싣는다(2026-11-12)")
+    void conceptsAloneIsABrief() {
+        TopicBrief brief = TopicBrief.parse("핵심 개념: 인덱스\n다루지 않을 것: B+트리");
+
+        assertThat(brief).isNotNull();
+        assertThat(brief.questions()).isNull();
+        assertThat(brief.forBeginner()).contains("핵심 개념: 인덱스").doesNotContain("설명할 것");
+    }
+
+    @Test
+    @DisplayName("글의 주제를 저장하면 메모의 '설명할 것' 줄만 빠진다")
+    void withoutQuestionsDropsOnlyThatLine() {
+        assertThat(TopicBrief.withoutQuestions("핵심 개념: 인덱스\n설명할 것: 왜 / 어떻게\n실물: 16ms"))
+                .isEqualTo("핵심 개념: 인덱스\n실물: 16ms");
+        assertThat(TopicBrief.withoutQuestions("설명할 것: 왜")).isNull();
+        assertThat(TopicBrief.withoutQuestions(null)).isNull();
     }
 
     @Test

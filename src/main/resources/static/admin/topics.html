@@ -51,9 +51,8 @@ try {
         <div class="field" style="flex:1 1 320px"><label>주제 범위</label><input type="text" id="tTopic" placeholder="Spring 트랜잭션 / JVM 메모리와 GC / 인덱스와 실행계획"></div>
       </div>
       <!-- 줄바꿈이 곧 칸 구분이라 한 줄 input으로 두면 고칠 때 칸이 한 줄로 붙어 지시가 깨진다 -->
-      <div class="field"><label for="tMemo">작성 지시 (선택 · 모델에 전달됩니다. "핵심 개념:"과 "설명할 것:" 줄이 둘 다 있어야 실립니다)</label>
-        <textarea id="tMemo" rows="5" style="width:100%" placeholder="핵심 개념: 인덱스, 풀 스캔
-설명할 것: 없으면 어떻게 찾나 / 왜 쓰기는 느려지나
+      <div class="field"><label for="tMemo">작성 지시 (선택 · 모델에 전달됩니다. "핵심 개념:" 줄이 있어야 실립니다. 질문은 주제 상세의 「글의 주제」에 씁니다)</label>
+        <textarea id="tMemo" rows="4" style="width:100%" placeholder="핵심 개념: 인덱스, 풀 스캔
 다루지 않을 것: B+트리 구조 (선택)
 실물: 50만 건에서 1.8초가 16ms로 (선택)
 그림: 전체 훑기와 인덱스 경로 비교 (선택)"></textarea></div>
@@ -317,7 +316,7 @@ function memoSummaryOf(memo) {
   const { valid, fields, questions } = parseTopicMemo(memo);
   if (!valid) return `<span class="badge gray">지시 아님 · 모델에 안 실림</span>`;
   return `<span class="memo-concepts">${escapeHtml(fields["핵심 개념"])}</span>
-    <span class="memo-counts">질문 ${questions.length} · 그림 ${fields["그림"] ? "✓" : "—"}</span>`;
+    <span class="memo-counts">${questions.length ? `옮길 질문 ${questions.length} · ` : ""}그림 ${fields["그림"] ? "✓" : "—"}</span>`;
 }
 
 async function loadTopicQueue() {

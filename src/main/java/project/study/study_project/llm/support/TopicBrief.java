@@ -5,9 +5,13 @@ import java.util.List;
 /**
  * 대기열 메모를 모델용 작성 지시로 읽은 것 — 2026-10-29.
  *
- * <p>메모는 "핵심 개념:", "설명할 것:", "다루지 않을 것:", "실물:", "그림:" 이름표를 단 줄로 쓴다.
- * 앞의 두 칸이 모두 있어야 지시로 본다. 이름표 없는 옛 메모는 사람용 작업 기록이라
+ * <p>메모는 "핵심 개념:", "다루지 않을 것:", "실물:", "그림:" 이름표를 단 줄로 쓴다.
+ * "핵심 개념"이 있어야 지시로 본다. 이름표 없는 옛 메모는 사람용 작업 기록이라
  * (대기열 id·날짜가 섞여 있다) 모델에 실으면 문서로 새어 나온다.
+ *
+ * <p>"설명할 것:"(질문 목록)은 2026-11-12부터 사람이 쓰는 입문편 「글의 주제」가 맡는다.
+ * 두 곳에 질문이 있으면 어긋날 때 모델이 어느 쪽을 따를지 모른다. 글의 주제를 저장하면
+ * 그 주제의 이 줄은 지운다. 아직 안 옮긴 메모를 위해 읽기만은 남겨 둔다.
  *
  * <p>칸 정의와 이유는 docs/27-topic-roadmap.md에 있다.
  */
@@ -33,7 +37,19 @@ public record TopicBrief(String concepts, String questions, String outOfScope, S
 
     /** 메모가 지시 형식이라 [작성 지시]로 실을 칸이 있는가. 글의 주제만 있는 사본은 아니다 */
     public boolean hasMemoFields() {
-        return concepts != null && questions != null;
+        return concepts != null;
+    }
+
+    /** 메모에서 "설명할 것:" 줄을 뺀다 — 질문은 글의 주제로 옮겼다. 남는 것이 없으면 {@code null} */
+    public static String withoutQuestions(String memo) {
+        if (memo == null) {
+            return null;
+        }
+        String kept = memo.lines()
+                .filter(line -> !line.strip().startsWith(QUESTIONS_LABEL))
+                .collect(java.util.stream.Collectors.joining("\n"))
+                .strip();
+        return kept.isEmpty() ? null : kept;
     }
 
     private static final String CONCEPTS_LABEL = "핵심 개념:";
@@ -76,7 +92,7 @@ public record TopicBrief(String concepts, String questions, String outOfScope, S
                 diagram = value(line, DIAGRAM_LABEL);
             }
         }
-        if (concepts == null || questions == null) {
+        if (concepts == null) {
             return null;
         }
         return new TopicBrief(concepts, questions, outOfScope, facts, diagram, List.of());

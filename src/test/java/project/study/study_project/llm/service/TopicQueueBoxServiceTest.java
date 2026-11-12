@@ -50,6 +50,31 @@ class TopicQueueBoxServiceTest {
     }
 
     @Test
+    void 입문편_글을_저장하면_메모의_설명할_것_줄을_지운다() {
+        TopicQueueItem item = TopicQueueItem.fresh(TestDomains.NETWORK, "서브넷",
+                "핵심 개념: 서브넷\n설명할 것: 왜 나누나 / 어떻게 고르나\n다루지 않을 것: NAT", 1);
+        when(repository.findById(9L)).thenReturn(Optional.of(item));
+        TopicQueueService service = new TopicQueueService(repository, events, DefaultDomains.catalog());
+
+        service.updateTopicBoxes(9L, new AdminTopicBoxesRequest("입문 글", null));
+
+        assertThat(item.getMemo()).isEqualTo("핵심 개념: 서브넷\n다루지 않을 것: NAT");
+        assertThat(item.getTopic()).isEqualTo("서브넷");
+    }
+
+    @Test
+    void 입문편_글이_없으면_메모를_건드리지_않는다() {
+        String memo = "핵심 개념: 서브넷\n설명할 것: 왜 나누나";
+        TopicQueueItem item = TopicQueueItem.fresh(TestDomains.NETWORK, "서브넷", memo, 1);
+        when(repository.findById(9L)).thenReturn(Optional.of(item));
+        TopicQueueService service = new TopicQueueService(repository, events, DefaultDomains.catalog());
+
+        service.updateTopicBoxes(9L, new AdminTopicBoxesRequest(null, "심화 글"));
+
+        assertThat(item.getMemo()).isEqualTo(memo);
+    }
+
+    @Test
     void 한_편을_비우면_상자_없음이다() {
         TopicQueueItem item = TopicQueueItem.fresh(TestDomains.NETWORK, "서브넷", null, 1);
         item.editTopicBoxes("입문", "심화");

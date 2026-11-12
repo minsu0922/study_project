@@ -849,12 +849,16 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
             if (brief.hasMemoFields()) {
                 sb.append("[작성 지시]\n").append(brief.forBeginner()).append('\n');
             }
+            // 질문의 출처는 하나만 둔다. 글의 주제가 있으면 그 글이, 없으면(옮기기 전 메모) "설명할 것"이 뼈대다
+            String skeleton = brief.beginnerTopicBox() != null
+                    ? "4. 「글의 주제」가 던진 질문을 본문이 답하는 순서의 뼈대로 삼는다.\n"
+                    : "4. \"설명할 것\"의 질문들을 본문이 답하는 순서의 뼈대로 삼는다.\n";
             sb.append("""
                     [주제 선정 원칙]
                     1. 위 주제를 그대로 쓴다. 이 안에서 더 좁은 주제를 다시 고르지 마라.
                     2. 독자는 컴퓨터 전공 지식 없이 이 분야를 순서대로 배워 가는 비전공자다.
                     3. "핵심 개념"은 본문에서 반드시 정의하고 넘어간다.
-                    4. "설명할 것"의 질문들을 본문이 답하는 순서의 뼈대로 삼는다.
+                    """).append(skeleton).append("""
                     5. "다루지 않을 것"은 이름만 꺼내고 깊게 들어가지 마라.
                     6. "실물"의 사실과 수치는 바꾸지 말고 그대로 쓴다.
                     7. 아래 목록에 같은 주제의 문서가 있어도 그래도 이 주제를 쓴다.

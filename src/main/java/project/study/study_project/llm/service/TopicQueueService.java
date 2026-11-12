@@ -21,6 +21,7 @@ import project.study.study_project.llm.dto.TopicQueueItemResponse;
 import project.study.study_project.llm.dto.TopicUsageFile;
 import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.domainsetting.support.DomainCatalog;
+import project.study.study_project.llm.support.TopicBrief;
 import project.study.study_project.llm.support.TopicQueue;
 
 import java.time.LocalDate;
@@ -423,6 +424,10 @@ public class TopicQueueService {
     public TopicQueueItemResponse updateTopicBoxes(Long id, AdminTopicBoxesRequest request) {
         TopicQueueItem item = find(id);
         item.editTopicBoxes(request.beginner(), request.advanced());
+        // 입문편 글의 주제가 질문을 맡으므로 메모의 "설명할 것:" 줄은 지운다 — 두 곳에 두면 어긋난다
+        if (item.getBeginnerTopicBox() != null) {
+            item.edit(item.getDomain(), item.getTopic(), TopicBrief.withoutQuestions(item.getMemo()));
+        }
         log.info("글의 주제 수정: #{} {} (두 편 {}) — 커밋해야 다음 배치부터 반영됩니다",
                 id, item.getTopic(), item.hasTopicBoxes() ? "다 씀" : "덜 씀");
         events.publishEvent(new TopicQueueChanged());

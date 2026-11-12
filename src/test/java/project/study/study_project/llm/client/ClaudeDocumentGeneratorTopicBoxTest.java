@@ -24,6 +24,9 @@ class ClaudeDocumentGeneratorTopicBoxTest {
 
         assertThat(prompt).contains("[글의 주제 — 사람이 쓴 글]").contains("입문편 상자 글.")
                 .doesNotContain("심화편 상자 글.").contains("[작성 지시]");
+        assertThat(prompt).as("질문의 뼈대는 글의 주제 하나다")
+                .contains("「글의 주제」가 던진 질문을 본문이 답하는 순서의 뼈대로 삼는다")
+                .doesNotContain("\"설명할 것\"의 질문들을");
     }
 
     @Test

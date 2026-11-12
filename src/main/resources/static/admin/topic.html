@@ -30,6 +30,8 @@ try {
     <div class="card topic-edit" id="boxEdit" hidden>
       <h2>글의 주제 쓰기</h2>
       <p class="meta">문단만 쓰세요. 문단 사이는 빈 줄 하나입니다. 생성된 글의 상자는 이 글로 그대로 바뀝니다.</p>
+      <!-- 옮기기 전 메모의 "설명할 것" 질문. 입문편 글을 쓸 때 재료로 보고, 저장하면 메모에서 지워진다 -->
+      <div class="card" id="bQuestions" hidden></div>
       <div class="topic-box-editor">
         <div class="field"><label for="bBeginner">입문편 <span class="meta" id="bBeginnerCount"></span></label>
           <textarea id="bBeginner" rows="9" style="width:100%"></textarea></div>
@@ -52,7 +54,7 @@ try {
         <div class="field" style="flex:1 1 320px"><label for="eTopic">주제 범위</label><input type="text" id="eTopic"></div>
       </div>
       <!-- 줄바꿈이 곧 칸 구분이라 한 줄 input이면 지시가 깨진다 -->
-      <div class="field"><label for="eMemo">작성 지시 <span class="meta">("핵심 개념:"과 "설명할 것:" 줄이 둘 다 있어야 모델에 실립니다)</span></label>
+      <div class="field"><label for="eMemo">작성 지시 <span class="meta">("핵심 개념:" 줄이 있어야 모델에 실립니다. 질문은 「글의 주제」에 씁니다)</span></label>
         <textarea id="eMemo" rows="9" style="width:100%"></textarea></div>
       <div class="topic-actions">
         <button id="eSaveBtn">저장</button>
@@ -211,6 +213,13 @@ function openBoxEdit() {
   document.getElementById("bAdvanced").value = current.advancedTopicBox || "";
   updateBoxPreview("Beginner");
   updateBoxPreview("Advanced");
+  const { questions } = parseTopicMemo(current.memo);
+  const qBox = document.getElementById("bQuestions");
+  qBox.hidden = !questions.length;
+  qBox.innerHTML = questions.length
+    ? `<h3>참고: 메모의 「설명할 것」 <span class="meta">· 입문편 글에 담아 주세요. 저장하면 메모에서 이 줄을 지웁니다</span></h3>
+       <ol class="brief-questions">${questions.map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ol>`
+    : "";
   showBoxEditing(true);
   document.getElementById("bBeginner").focus();
 }
@@ -337,7 +346,7 @@ function renderBrief(memo) {
   const { valid, fields, questions } = parseTopicMemo(memo);
   if (!valid) {
     box.innerHTML = `<h2>작성 지시 <span class="badge gray">지시 아님 · 모델에 안 실림</span></h2>
-      <p class="meta">"핵심 개념:"과 "설명할 것:" 줄이 둘 다 있어야 모델에 실립니다. 지금은 메모로만 남습니다.</p>
+      <p class="meta">"핵심 개념:" 줄이 있어야 모델에 실립니다. 지금은 메모로만 남습니다.</p>
       <p class="brief-raw">${escapeHtml(memo)}</p>`;
     return;
   }
@@ -351,8 +360,10 @@ function renderBrief(memo) {
   let html = `<h2>작성 지시 <span class="badge green">모델에 실림</span></h2>`;
   html += section("핵심 개념", `<div class="brief-chips">${
     splitTopLevel(fields["핵심 개념"]).map(c => `<span>${escapeHtml(c)}</span>`).join("")}</div>`);
-  html += section("설명할 것", `<ol class="brief-questions">${
-    questions.map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ol>`, "입문편에만 실림 · 이 순서대로 다룸");
+  if (questions.length) {
+    html += section("설명할 것", `<ol class="brief-questions">${
+      questions.map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ol>`, "「글의 주제」로 옮길 질문 · 글의 주제를 저장하면 지워짐");
+  }
   if (fields["다루지 않을 것"]) html += section("다루지 않을 것", text(fields["다루지 않을 것"]), "이름만 꺼냄");
   if (fields["실물"]) html += section("실물", text(fields["실물"]));
   html += section("그림", diagramOf(fields["그림"]), "입문편에만 실림");

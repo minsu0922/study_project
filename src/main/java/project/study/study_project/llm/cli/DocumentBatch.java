@@ -129,7 +129,7 @@ final class DocumentBatch {
             // 형식이 안 맞는 메모는 조용히 빠진다. 그대로 두면 지시가 실렸는지 아무도 모른다
             System.out.println(brief != null && brief.hasMemoFields()
                     ? "작성 지시: 메모를 실었습니다(주제를 그대로 씁니다)."
-                    : "작성 지시: 없음 — 메모에 '핵심 개념:'·'설명할 것:'이 없어 범위로 다룹니다.");
+                    : "작성 지시: 없음 — 메모에 '핵심 개념:'이 없습니다(글의 주제만 싣습니다).");
         }
 
         ExistingDocuments snapshot = readExistingDocuments(outDir);
