@@ -748,9 +748,7 @@ class ClaudeDocumentGeneratorTest {
                 .as("한 종류만 되풀이하면 그림이 단조롭다(2026-11-08 사용자 지적)")
                 .contains("같은 종류만 되풀이하지 마라")
                 .as("ASCII 그림으로 돌아가면 한글 폭 때문에 다시 어긋난다")
-                .contains("ASCII 그림은 쓰지 마라")
-                .as("같은 펜스라 코드 예제를 그림으로 바꿔치기할 수 있다")
-                .contains("그림은 [코드 예제] 개수에 세지 않는다");
+                .contains("ASCII 그림은 쓰지 마라");
 
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("심화편은 선택이다 — 검증기도 심화편에는 없다고 울리지 않는다")
@@ -879,8 +877,9 @@ class ClaudeDocumentGeneratorTest {
                 .contains("이 문서의 <좁은 주제>를 여기서 정의하지 마라")
                 .as("일곱 층 중 서너 개만 적힌 표가 오는 것을 막는다 — 초급 재료가 그만큼 준다")
                 .contains("일곱 개면 일곱 줄이다")
-                .as("숫자를 박은 지시만 지켜진다는 것이 이 프롬프트에서 세 번 확인된 사실이다")
-                .contains("3,000~4,000자를 쓴다");
+                .as("2026-11-13 분량 숫자를 뺐다 — 채우기 글을 불렀다. 대신 멈출 자리를 적는다")
+                .contains("뒤에서 이름만으로 쓸 용어를 다 풀었으면 거기서 멈춘다")
+                .doesNotContain("3,000~4,000자");
     }
 
     /**
@@ -904,9 +903,10 @@ class ClaudeDocumentGeneratorTest {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("요약은 정의상 되풀이라, 예외라고 적지 않으면 담백 규칙에 밀려 사라진다")
                 .contains("이 절은 아래 [덜어낼 것]의 되풀이 금지에서 예외다")
-                .as("금지를 푸는 것만으로는 안 나온다 — 개수를 박아야 지켜진다")
+                .as("2026-11-13 개수를 뺐다 — 개수를 채우려고 붙인 예제가 나왔다")
                 .contains("[코드 예제]")
-                .contains("코드·명령·설정 예제를 3~5개 넣는다")
+                .contains("직접 봐야 이해되는 자리에 예제를 넣는다")
+                .doesNotContain("예제를 3~5개 넣는다")
                 .as("한 절에 몰아넣으면 개수만 채우고 주장은 못 보여 준다(09-03 실물이 그랬다)")
                 .contains("예제는 서로 다른 절을 받쳐야 한다")
                 .as("코드만 덩그러니 두면 개념 문서가 아니라 스니펫 모음이 된다")
