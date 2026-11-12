@@ -57,6 +57,10 @@
    *  널리 읽히는 순서가 있어 대체할 색이 마땅치 않다.) */
   --lv1-bg: #ecfdf5; --lv1-fg: #065f46; --lv1-solid: #10b981;   /* 초급 — 배지 위 7.29:1 */
   --lv2-bg: #fffbeb; --lv2-fg: #92400e; --lv2-solid: #f59e0b;   /* 중급 — 배지 위 6.84:1 */
+
+  /* 개념 문서 본문의 강조 글자(2026-11-12). 굵게·결론 상자·바른 사실을 본문 검정보다
+     한 단계 진한 인디고·초록으로 칠한다. 흰 카드 위 대비 7:1 이상. */
+  --doc-em: #3730a3; --doc-key-ink: #312e81; --doc-fact-ink: #14532d; --doc-hl: #c7d2fe;
   --lv3-bg: #fef2f2; --lv3-fg: #991b1b; --lv3-solid: #ef4444;   /* 고급 — 배지 위 7.6:1 */
 
   /* ── 중립색: slate 계열 (2026-08-29 개편 4단계) ─────────────────
@@ -314,6 +318,7 @@
   --lv1-bg: #052e22; --lv1-fg: #6ee7b7; --lv1-solid: #34d399;
   --lv2-bg: #422006; --lv2-fg: #fcd34d; --lv2-solid: #fbbf24;
   --lv3-bg: #4c1414; --lv3-fg: #fca5a5; --lv3-solid: #f87171;
+  --doc-em: #e0e7ff; --doc-key-ink: #eef2ff; --doc-fact-ink: #bbf7d0; --doc-hl: rgba(165, 180, 252, .32);
 
   --overlay-shadow: 0 8px 24px rgba(0, 0, 0, .45);
 }
@@ -371,6 +376,7 @@
      * 대비 기준이 다르고(3:1), 너무 밝으면 진도 막대가 눈을 찌른다. */
     --lv1-bg: #052e22; --lv1-fg: #6ee7b7; --lv1-solid: #34d399;
     --lv2-bg: #422006; --lv2-fg: #fcd34d; --lv2-solid: #fbbf24;
+    --doc-em: #e0e7ff; --doc-key-ink: #eef2ff; --doc-fact-ink: #bbf7d0; --doc-hl: rgba(165, 180, 252, .32);
     --lv3-bg: #4c1414; --lv3-fg: #fca5a5; --lv3-solid: #f87171;
 
     --overlay-shadow: 0 8px 24px rgba(0, 0, 0, .45);
@@ -2298,6 +2304,61 @@ body.admin-shell {
   margin: 14px 0; padding: 2px 16px;
   border-left: 3px solid var(--primary); color: var(--muted);
 }
+
+/* ── 개념 문서 강조(2026-11-12) ──────────────────────────────────────
+ * 문서 원문은 그대로 두고, document.html의 decorateBody가 모양을 보고 붙인 class로 칠한다.
+ * 마크다운만으로는 결론 상자와 「바른 사실」 상자가 똑같은 인용(>)이라 화면에서 가를 수 없어서다.
+ * 굵게: 짙은 인디고 글자 + 아래쪽 절반 형광 밑줄. 제목·표 머리 안의 굵게는 칠하지 않는다. */
+.doc-body strong { color: var(--doc-em); background: linear-gradient(transparent 60%, var(--doc-hl) 60%); padding: 0 1px; }
+.doc-body h2 strong, .doc-body h3 strong, .doc-body h4 strong, .doc-body th strong { color: inherit; background: none; }
+
+/* 「글의 주제」 상자: 따로 선 카드, 첫 줄은 작은 머리표 */
+.doc-body .topic-box { color: var(--text); border: 1px solid var(--border-strong); background: var(--fill);
+  border-radius: 10px; padding: 14px 20px 6px; margin: 4px 0 26px; font-size: 1.02rem; }
+.doc-body .topic-box > p:first-child { margin: 0 0 4px; font-size: .78rem; letter-spacing: .08em; }
+.doc-body .topic-box > p:first-child strong { color: var(--primary); background: none; }
+
+/* 결론 상자: 옅은 보라 면, 진한 글자, 「핵심」 표 */
+.doc-body .key-box { color: var(--doc-key-ink); background: var(--primary-soft); border-left: 4px solid var(--primary);
+  border-radius: 0 8px 8px 0; padding: 10px 16px; font-weight: 600; }
+.doc-body .key-box p { margin: 0; }
+.doc-body .key-box strong, .doc-body .fact-box strong { color: inherit; background: none; font-weight: 700; }
+.doc-body .key-box::before { content: "핵심"; display: inline-block; margin-bottom: 4px; padding: 1px 7px; border-radius: 4px;
+  font-size: .72rem; font-weight: 700; letter-spacing: .06em; color: var(--on-primary); background: var(--primary); }
+
+/* 오해 제목과 그 뒤의 「바른 사실」 상자 */
+.doc-body .myth { color: var(--text); }
+.doc-body .myth del { text-decoration-color: var(--wrong); text-decoration-thickness: 2px; }
+.doc-body .myth::before { content: "오해"; display: inline-block; vertical-align: 2px; margin-right: 8px; padding: 0 7px;
+  border: 1px solid var(--wrong); border-radius: 4px; font-size: .72rem; font-weight: 700; color: var(--wrong-fg); background: var(--wrong-bg); }
+.doc-body .fact-box { color: var(--doc-fact-ink); background: var(--correct-bg); border-left: 4px solid var(--correct);
+  border-radius: 0 8px 8px 0; padding: 10px 16px; font-weight: 600; }
+.doc-body .fact-box p { margin: 0; }
+.doc-body .fact-box::before { content: "바른 사실"; display: inline-block; margin-bottom: 4px; font-size: .72rem; font-weight: 700; color: var(--correct-fg); }
+
+/* 실패 조건의 꼬리표 칩: 증상 빨강 · 원인 주황 · 대처 초록 · 보는 곳 보라 */
+.doc-body ul.tags { list-style: none; padding-left: 0; display: grid; gap: 6px; }
+.doc-body ul.tags li { display: grid; grid-template-columns: 5.2em minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.doc-body code.tag { font-family: inherit; font-size: .78rem; font-weight: 700; text-align: center; border-radius: 999px; padding: 2px 8px; }
+.doc-body code.tag-symptom { background: var(--wrong-bg); color: var(--wrong-fg); }
+.doc-body code.tag-cause { background: var(--lv2-bg); color: var(--lv2-fg); }
+.doc-body code.tag-fix { background: var(--correct-bg); color: var(--correct-fg); }
+.doc-body code.tag-look { background: var(--primary-soft); color: var(--primary-dark); }
+
+/* 용어 정의 `- **용어** — 뜻`: 왼쪽 선을 둔 정의 카드 */
+.doc-body ul:has(> li.def) { padding-left: 0; }
+.doc-body li.def { list-style: none; border-left: 3px solid var(--primary); padding: 2px 0 2px 12px; margin: 10px 0; }
+.doc-body li.def strong:first-child { background: none; }
+.doc-body li.def > p { margin: 0; }
+
+/* 장면 소제목의 "장면 ①" 배지 */
+.doc-body h3 .scene-badge { display: inline-block; margin-right: 8px; padding: 0 8px; border-radius: 6px;
+  font-size: .88rem; color: var(--on-primary); background: var(--primary); }
+
+/* 「핵심 요약」: 줄마다 옅은 카드 */
+.doc-body ul.summary { list-style: none; padding-left: 0; display: grid; gap: 8px; }
+.doc-body ul.summary li { background: var(--fill); border-radius: 8px; padding: 10px 14px; }
+.doc-body ul.summary li > strong:first-child { display: block; background: none; }
 
 /* ── 쪽 넘기기(api.js mountPager) — 학습 화면과 관리 콘솔이 같은 모양을 쓴다 ──
    세 칸 격자: 왼쪽 전체 건수, 가운데 번호. 건수가 없는 목록도 번호가 늘 가운데에 선다 */

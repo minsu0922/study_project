@@ -139,6 +139,66 @@ function renderEdition(d) {
  * <img>로 두면 그림 속이 페이지 CSS를 못 받아, 어두운 화면에서도 밝은 색 그대로 남는다.
  * 우리 저장소의 파일이지만 주소는 본문이 고르므로 DOMPurify로 한 번 거른다.
  * 받기에 실패하면 <img>를 그대로 둔다 — 그림 파일에 밝은 색이 기본값으로 들어 있다. */
+// 본문 모양을 보고 강조용 class를 붙인다(색은 style.css의 「개념 문서 강조」).
+// 마크다운에서는 결론 상자와 「바른 사실」 상자가 같은 인용(>)이라, 바로 앞 소제목에
+// 취소선(오해 제목)이 있는지로 가른다. 원문을 고치지 않으니 이미 쓴 문서에도 그대로 먹는다.
+const TAG_CLASS = { "증상": "tag-symptom", "원인": "tag-cause", "대처": "tag-fix", "보는 곳": "tag-look", "보는 칸": "tag-look" };
+function decorateBody(root) {
+  root.querySelectorAll("blockquote").forEach(q => {
+    const first = q.querySelector("p");
+    if (first && first.textContent.trim() === "글의 주제") { q.classList.add("topic-box"); return; }
+    let h = q.previousElementSibling;
+    while (h && !/^H[2-4]$/.test(h.tagName)) h = h.previousElementSibling;
+    q.classList.add(h && h.querySelector("del") ? "fact-box" : "key-box");
+  });
+  root.querySelectorAll("h3, h4").forEach(t => {
+    if (t.querySelector("del")) t.classList.add("myth");
+    const m = t.textContent.match(/^(장면 [①-⑨])\s*(.*)$/);
+    if (m) {
+      t.textContent = "";
+      const badge = document.createElement("span");
+      badge.className = "scene-badge";
+      badge.textContent = m[1];
+      t.append(badge, " " + m[2]);   // 빈칸을 남겨 목차가 읽는 제목 글자가 원문과 같게 한다
+    }
+  });
+  root.querySelectorAll("ul").forEach(ul => {
+    const items = [...ul.children];
+    const tagOf = li => li.firstElementChild && li.firstChild === li.firstElementChild
+      && li.firstElementChild.tagName === "CODE" && TAG_CLASS[li.firstElementChild.textContent];
+    if (items.length && items.every(tagOf)) {
+      ul.classList.add("tags");
+      items.forEach(li => {
+        const chip = li.firstElementChild;
+        chip.classList.add("tag", tagOf(li));
+        // 칩 뒤의 글을 한 덩어리로 묶는다 — 글 속 코드 조각마다 격자 칸이 갈리지 않게
+        const rest = document.createElement("span");
+        while (chip.nextSibling) rest.appendChild(chip.nextSibling);
+        li.appendChild(rest);
+      });
+      return;
+    }
+    items.forEach(li => {
+      // 빈 줄로 띄운 목록은 marked가 항목 안을 <p>로 한 번 더 감싼다
+      const host = li.firstElementChild && li.firstChild === li.firstElementChild && li.firstElementChild.tagName === "P"
+        ? li.firstElementChild : li;
+      const s = host.firstElementChild;
+      if (s && s.tagName === "STRONG" && host.firstChild === s && li.textContent.includes(" — ")) li.classList.add("def");
+    });
+  });
+  const sum = [...root.querySelectorAll("h2")].find(h => h.textContent.trim() === "핵심 요약");
+  const list = sum && sum.nextElementSibling;
+  if (list && list.tagName === "UL") {
+    list.classList.add("summary");
+    list.querySelectorAll("li").forEach(li => {
+      li.classList.remove("def");
+      // 제목을 한 줄로 세우니, 뒤따르는 " — "는 떼어 낸다
+      const s = li.querySelector("strong"), next = s && s.nextSibling;
+      if (next && next.nodeType === Node.TEXT_NODE) next.textContent = next.textContent.replace(/^\s*—\s*/, "");
+    });
+  }
+}
+
 async function renderFigures(root) {
   if (!window.DOMPurify) return;
   const imgs = [...root.querySelectorAll('img[src^="/images/docs/"][src$=".svg"]')];
@@ -241,6 +301,7 @@ async function loadDoc() {
     // 중간에 화면이 그려지지 않는다 — 목차 없는 문서가 잠깐 보이는 일은 없다.
     document.getElementById("doc").hidden = false;
 
+    decorateBody(bodyEl);   // 목차보다 먼저 — 장면 배지를 넣어도 목차는 제목 글자만 읽는다
     buildToc(bodyEl);
     renderPracticeLink(d);
     renderDiagrams(bodyEl);   // 기다리지 않는다 — 그림은 늦게 와도 글은 먼저 읽힌다
