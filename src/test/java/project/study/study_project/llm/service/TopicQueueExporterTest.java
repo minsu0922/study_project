@@ -145,6 +145,8 @@ class TopicQueueExporterTest {
     private TopicQueueItem item(Long id, DomainCode domain, String topic, String memo, int sortOrder) {
         TopicQueueItem item = TopicQueueItem.fresh(domain, topic, memo, sortOrder);
         ReflectionTestUtils.setField(item, "id", id);
+        // 내보낸 파일을 배치가 그대로 고를 수 있어야 하므로 글의 주제까지 채운다
+        item.editTopicBoxes("입문 글", "심화 글");
         return item;
     }
 

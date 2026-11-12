@@ -108,12 +108,26 @@ final class DocumentBatch {
                 if (brief != null) {
                     brief = brief.withLaterTopics(queue.laterTopicsInBlock(picked));
                 }
+                brief = TopicBrief.withTopicBoxes(brief, picked.beginnerTopicBox(), picked.advancedTopicBox());
+            } else if (queue.boxlessCount() > 0) {
+                // 글의 주제는 사람이 쓴다(V48). 쓴 주제가 없을 때 모델 자동 선택으로 흘리면
+                // 사람이 고르지도, 쓰지도 않은 문서가 나온다 — 그날은 만들지 않는다
+                BatchReports.announce("""
+                        ⏭️ **아무것도 만들지 않았습니다 — 글의 주제를 쓴 주제가 없습니다**
+
+                        대기열의 개념 주제 %d개가 입문편·심화편 「글의 주제」를 아직 다 쓰지 않았습니다.
+                        관리 콘솔 → 주제 상세 → 「글의 주제 쓰기」에서 두 편을 쓰고 `%s`을 커밋하세요."""
+                        .formatted(queue.boxlessCount(), TopicQueue.FILE_NAME));
+                return;
             }
         }
         reportTopicQueue(queue, picked, topic);
+        if (picked != null && queue.boxlessCount() > 0) {
+            System.out.printf("글의 주제를 아직 안 써서 건너뛴 주제: %d개%n", queue.boxlessCount());
+        }
         if (picked != null) {
             // 형식이 안 맞는 메모는 조용히 빠진다. 그대로 두면 지시가 실렸는지 아무도 모른다
-            System.out.println(brief != null
+            System.out.println(brief != null && brief.hasMemoFields()
                     ? "작성 지시: 메모를 실었습니다(주제를 그대로 씁니다)."
                     : "작성 지시: 없음 — 메모에 '핵심 개념:'·'설명할 것:'이 없어 범위로 다룹니다.");
         }
@@ -164,9 +178,9 @@ final class DocumentBatch {
 
         // 문제 쪽의 수확량 점검에 해당하는 자리다. 지금까지 문서에는 이런 점검이 없었고,
         // 검증은 <며칠 뒤 승인 화면에서만> 돌았다. 그 사이 이 문서로 사흘 치 문제가 만들어진다.
-        BatchReports.reportDraftChecks(document, date);
+        BatchReports.reportDraftChecks(document, date, brief == null ? null : brief.beginnerTopicBox());
         if (advanced != null) {
-            BatchReports.reportDraftChecks(advanced, date);
+            BatchReports.reportDraftChecks(advanced, date, brief == null ? null : brief.advancedTopicBox());
         }
 
         // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다

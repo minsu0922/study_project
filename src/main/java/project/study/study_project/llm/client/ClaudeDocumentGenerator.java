@@ -15,6 +15,7 @@ import project.study.study_project.domainsetting.support.DefaultDomains;
 import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.domainsetting.support.DomainCatalog;
+import project.study.study_project.llm.support.TopicBoxes;
 import project.study.study_project.llm.support.TopicBrief;
 
 import java.util.List;
@@ -637,9 +638,19 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     @Override
     public GeneratedDocumentItem generate(DomainCode domain, String topic, TopicBrief brief,
                                           List<String> avoidTitles, List<String> preferredTags) {
-        return call(BEGINNER_SYSTEM_PROMPT,
+        GeneratedDocumentItem item = call(BEGINNER_SYSTEM_PROMPT,
                 buildPrompt(domain, topic, brief, avoidTitles, preferredTags),
                 DocumentEdition.BEGINNER);
+        return withTopicBox(item, brief == null ? null : brief.beginnerTopicBox());
+    }
+
+    /** 사람이 쓴 글의 주제로 모델이 쓴 상자를 바꿔 끼운다 — 모델은 옮겨 적다가 조금씩 고친다 */
+    static GeneratedDocumentItem withTopicBox(GeneratedDocumentItem item, String box) {
+        if (item == null || box == null || box.isBlank()) {
+            return item;
+        }
+        return new GeneratedDocumentItem(item.title(), item.slug(),
+                TopicBoxes.apply(item.contentMd(), box), item.tags());
     }
 
     /**
@@ -667,9 +678,28 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
         if (beginner == null || beginner.contentMd() == null || beginner.contentMd().isBlank()) {
             throw new BusinessException(ErrorCode.LLM_003, "심화편을 만들려면 입문편 본문이 필요합니다.");
         }
-        return call(ADVANCED_SYSTEM_PROMPT,
+        GeneratedDocumentItem item = call(ADVANCED_SYSTEM_PROMPT,
                 buildAdvancedPrompt(domain, beginner, brief, preferredTags),
                 DocumentEdition.ADVANCED);
+        return withTopicBox(item, brief == null ? null : brief.advancedTopicBox());
+    }
+
+    /**
+     * 사람이 쓴 글의 주제를 프롬프트에 싣는다. 상자는 코드가 끼우지만, 모델이 이 글을 봐야
+     * 본문이 이 글이 던진 질문에 맞춰 나온다.
+     */
+    static void appendTopicBox(StringBuilder sb, String box) {
+        if (box == null || box.isBlank()) {
+            return;
+        }
+        sb.append("""
+                [글의 주제 — 사람이 쓴 글]
+                아래 글이 이 문서 맨 앞 「글의 주제」 상자에 그대로 들어간다. 상자에는 이 글을 옮겨 적는다.
+                본문은 이 글이 던진 질문에 답하는 데만 쓴다. 이 글이 약속하지 않은 이야기는 넣지 마라.
+                맺음 절의 결론은 이 글이 던진 질문의 답이어야 한다.
+                --- 글의 주제 시작 ---
+                """);
+        sb.append(box.strip()).append("\n--- 글의 주제 끝 ---\n\n");
     }
 
     /**
@@ -815,7 +845,10 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
             // 로드맵 주제는 이미 한 편 크기다. "범위 안에서 골라라"를 주면 한 번 더 좁혀
             // 엉뚱한 세부 주제를 쓰고, 기존 문서와 겹치지 말라는 규칙에 밀려 주제를 피해 간다.
             sb.append("주제: ").append(topic.trim()).append("\n\n");
-            sb.append("[작성 지시]\n").append(brief.forBeginner()).append('\n');
+            appendTopicBox(sb, brief.beginnerTopicBox());
+            if (brief.hasMemoFields()) {
+                sb.append("[작성 지시]\n").append(brief.forBeginner()).append('\n');
+            }
             sb.append("""
                     [주제 선정 원칙]
                     1. 위 주제를 그대로 쓴다. 이 안에서 더 좁은 주제를 다시 고르지 마라.
@@ -950,6 +983,9 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
         sb.append("본문 맨 위 H1도 위 제목과 같아야 한다.\n\n");
 
         if (brief != null) {
+            appendTopicBox(sb, brief.advancedTopicBox());
+        }
+        if (brief != null && brief.hasMemoFields()) {
             sb.append("[작성 지시]\n").append(brief.forAdvanced());
             sb.append("""
                     "핵심 개념"은 입문편보다 한 단계 깊이 다룬다. "다루지 않을 것"은 깊게 들어가지 마라.

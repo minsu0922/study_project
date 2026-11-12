@@ -12,7 +12,29 @@ import java.util.List;
  * <p>칸 정의와 이유는 docs/27-topic-roadmap.md에 있다.
  */
 public record TopicBrief(String concepts, String questions, String outOfScope, String facts,
-                         String diagram, List<String> laterTopics) {
+                         String diagram, List<String> laterTopics,
+                         String beginnerTopicBox, String advancedTopicBox) {
+
+    /** 글의 주제(V48)가 없는 지시 — 메모만 있는 경우와 V48 전의 호출부가 쓴다. */
+    public TopicBrief(String concepts, String questions, String outOfScope, String facts,
+                      String diagram, List<String> laterTopics) {
+        this(concepts, questions, outOfScope, facts, diagram, laterTopics, null, null);
+    }
+
+    /** 사람이 쓴 글의 주제를 얹은 사본. 메모가 지시 형식이 아니면 {@code brief}가 없어 글만 담는다 */
+    public static TopicBrief withTopicBoxes(TopicBrief brief, String beginner, String advanced) {
+        if (beginner == null && advanced == null) {
+            return brief;
+        }
+        TopicBrief base = brief != null ? brief : new TopicBrief(null, null, null, null, null, List.of());
+        return new TopicBrief(base.concepts, base.questions, base.outOfScope, base.facts, base.diagram,
+                base.laterTopics, beginner, advanced);
+    }
+
+    /** 메모가 지시 형식이라 [작성 지시]로 실을 칸이 있는가. 글의 주제만 있는 사본은 아니다 */
+    public boolean hasMemoFields() {
+        return concepts != null && questions != null;
+    }
 
     private static final String CONCEPTS_LABEL = "핵심 개념:";
     private static final String QUESTIONS_LABEL = "설명할 것:";
@@ -30,7 +52,8 @@ public record TopicBrief(String concepts, String questions, String outOfScope, S
      * 심화편은 질문 목록을 받지 않아 범위가 넓어지기 쉽고, 실제로 뒤 편 주제를 미리 썼다(2026-10-29).
      */
     public TopicBrief withLaterTopics(List<String> later) {
-        return new TopicBrief(concepts, questions, outOfScope, facts, diagram, later);
+        return new TopicBrief(concepts, questions, outOfScope, facts, diagram, later,
+                beginnerTopicBox, advancedTopicBox);
     }
 
     /** 형식을 갖춘 메모면 지시를, 아니면 {@code null}을 돌려준다. */

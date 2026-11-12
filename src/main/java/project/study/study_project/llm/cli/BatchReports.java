@@ -135,8 +135,13 @@ final class BatchReports {
      * 그 주기가 통째로 헛돌게 되므로 <b>요약 화면에</b> 눈에 띄게 남긴다.
      */
     static void reportDraftChecks(GeneratedDocumentItem document, LocalDate date) {
+        reportDraftChecks(document, date, null);
+    }
+
+    /** @param expectedTopicBox 사람이 쓴 그 편 「글의 주제」(V48). 있으면 상자가 같은지도 본다 */
+    static void reportDraftChecks(GeneratedDocumentItem document, LocalDate date, String expectedTopicBox) {
         List<DraftCheck> checks = DocumentDraftValidator.validate(
-                document.title(), document.slug(), document.contentMd());
+                document.title(), document.slug(), document.contentMd(), expectedTopicBox);
         // 하루에 두 편을 만들게 되면서(2026-09-03) 어느 편의 결과인지 밝히지 않으면
         // 요약 화면에 같은 모양의 블록이 둘 나란히 서서 구별되지 않는다.
         String edition = ClaudeDocumentGenerator.editionOf(document.contentMd()).getDisplayName();

@@ -51,6 +51,7 @@ public class TopicQueueExporter extends SnapshotExporter {
                     + "그다음은 가장 오래 안 쓴 범위'로 정해지고, 줄은 없어지지 않습니다. "
                     + "이 파일은 앱만 씁니다. 사용일·횟수는 배치가 _topic-usage.json에 따로 적고, 관리 화면에서 볼 수 있습니다. "
                     + "usageResetAt은 관리 화면에서 사용 기록을 초기화한 날입니다. "
+                    + "beginnerTopicBox·advancedTopicBox는 사람이 쓴 「글의 주제」로, 둘 다 있어야 배치가 그 범위를 꺼냅니다. "
                     + "id는 DB 행 번호이니 지우지 마세요 — 지우면 같은 범위가 한 벌 더 생깁니다. "
                     + "id 없이 손으로 적어 넣은 줄은 다음 기동에 DB로 흡수됩니다. "
                     + "이 파일이 갱신되면 커밋해야 다음 배치부터 반영됩니다.";
@@ -122,6 +123,7 @@ public class TopicQueueExporter extends SnapshotExporter {
                 // 사용일·횟수는 싣지 않는다. 배치가 _topic-usage.json에 적고, 여기 실으면 배치가 주제를 쓸 때마다
                 // 이 파일이 바뀌어 "보낼 변경"이 매일 뜬다(REVIEW 2026-11-01 순위 5, 8장)
                 null, null,
-                item.getUsageResetAt() == null ? null : item.getUsageResetAt().toString());
+                item.getUsageResetAt() == null ? null : item.getUsageResetAt().toString(),
+                item.getBeginnerTopicBox(), item.getAdvancedTopicBox());
     }
 }

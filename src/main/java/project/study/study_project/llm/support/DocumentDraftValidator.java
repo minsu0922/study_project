@@ -414,6 +414,23 @@ public final class DocumentDraftValidator {
         return checks;
     }
 
+    /**
+     * 사람이 쓴 「글의 주제」(V48)가 있으면 본문 상자가 그 글과 같은지도 본다.
+     * 생성은 상자를 코드로 끼우므로 다르다면 손으로 쓰는 흐름이나 수정 중에 바뀐 것이다.
+     *
+     * @param expectedTopicBox 대기열의 그 편 글. {@code null}이면 이 검사를 건너뛴다
+     */
+    public static List<DraftCheck> validate(String title, String slug, String contentMd, String expectedTopicBox) {
+        List<DraftCheck> checks = validate(title, slug, contentMd);
+        if (expectedTopicBox != null && !expectedTopicBox.isBlank()
+                && !TopicBoxes.matches(contentMd, expectedTopicBox)) {
+            checks.add(DraftCheck.blocking(TopicBoxes.extract(contentMd) == null
+                    ? "「글의 주제」 상자가 없습니다. 대기열에 사람이 쓴 글이 있으니 그 글을 상자로 넣으세요."
+                    : "「글의 주제」가 대기열에 사람이 쓴 글과 다릅니다. 글을 고치려면 관리 콘솔의 주제 상세에서 고치세요."));
+        }
+        return checks;
+    }
+
     /** 승인해도 되는가 — BLOCKING이 하나라도 있으면 안 된다. */
     public static boolean hasBlocking(List<DraftCheck> checks) {
         return checks.stream().anyMatch(DraftCheck::isBlocking);

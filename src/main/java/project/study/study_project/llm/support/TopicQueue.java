@@ -116,12 +116,34 @@ public final class TopicQueue {
      * 꺼내 온 주제 한 건. {@code index}는 되쓸 때 어느 줄에 도장을 찍을지 가리킨다.
      * {@code memo}는 작성 지시 후보다({@link TopicBrief#parse}가 형식을 판정한다).
      */
-    public record Picked(int index, DomainCode domain, String topic, String memo) {
+    public record Picked(int index, DomainCode domain, String topic, String memo,
+                         String beginnerTopicBox, String advancedTopicBox) {
 
         /** 메모가 없는 주제 — 코드 문제 주제가 이 모양이다. */
         public Picked(int index, DomainCode domain, String topic) {
             this(index, domain, topic, null);
         }
+
+        /** 글의 주제가 없는 주제 — 코드 문제 주제와 테스트가 쓴다. */
+        public Picked(int index, DomainCode domain, String topic, String memo) {
+            this(index, domain, topic, memo, null, null);
+        }
+    }
+
+    /**
+     * 개념 주제인데 글의 주제(V48)를 다 쓰지 않아 {@link #next}가 건너뛴 줄 수.
+     * 코드 문제 대기열은 문서가 없어 늘 0이다.
+     */
+    public int boxlessCount() {
+        if (!requiresTopicBoxes()) {
+            return 0;
+        }
+        return (int) file.topics().stream().filter(e -> isUsable(e) && !e.hasTopicBoxes()).count();
+    }
+
+    /** 개념 문서 대기열만 글의 주제를 요구한다. 그 글이 문서 맨 앞 상자로 그대로 실린다 */
+    private boolean requiresTopicBoxes() {
+        return FILE_NAME.equals(fileName);
     }
 
     /* ── 읽기 ─────────────────────────────────────────────────── */
@@ -186,6 +208,9 @@ public final class TopicQueue {
             if (!isUsable(topics.get(i))) {
                 continue; // 왜 건너뛰는지는 read() 시점에 이미 problems()에 쌓아 뒀다
             }
+            if (requiresTopicBoxes() && !topics.get(i).hasTopicBoxes()) {
+                continue; // 글의 주제를 사람이 아직 안 썼다 — 건너뛴 수는 boxlessCount()가 알린다
+            }
             if (best < 0 || isEarlier(topics.get(i), topics.get(best))) {
                 best = i;
             }
@@ -194,7 +219,8 @@ public final class TopicQueue {
             return null;
         }
         TopicQueueFile.Entry picked = topics.get(best);
-        return new Picked(best, parseDomain(picked.domain()), picked.topic().trim(), picked.memo());
+        return new Picked(best, parseDomain(picked.domain()), picked.topic().trim(), picked.memo(),
+                picked.beginnerTopicBox(), picked.advancedTopicBox());
     }
 
     /**

@@ -57,15 +57,31 @@ public record TopicQueueFile(String note, List<Entry> topics) {
      * @param lastUsedAt 이 범위로 <b>마지막으로</b> 문서를 만든 날({@code YYYY-MM-DD}). 배치가 적는다.
      *                   비어 있으면 아직 한 번도 안 쓴 범위라 다음 차례 1순위다
      * @param usedCount  이 범위로 만든 문서 편수. 범위가 말라 가는 것을 알아채는 신호다
+     * @param beginnerTopicBox 입문편 「글의 주제」 본문(V48). 사람이 쓰고, 생성은 고치지 않고 싣는다
+     * @param advancedTopicBox 심화편 「글의 주제」 본문(V48). 개념 주제는 둘 다 있어야 배치가 꺼낸다
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Entry(Long id, String domain, String topic, String memo,
-                        String lastUsedAt, Integer usedCount, String usageResetAt) {
+                        String lastUsedAt, Integer usedCount, String usageResetAt,
+                        String beginnerTopicBox, String advancedTopicBox) {
 
         /** 초기화한 적 없는 줄. 손으로 적거나 테스트가 만드는 줄이 이 모양이다 */
         public Entry(Long id, String domain, String topic, String memo, String lastUsedAt, Integer usedCount) {
             this(id, domain, topic, memo, lastUsedAt, usedCount, null);
+        }
+
+        /** 글의 주제가 없는 줄 — 코드 문제 주제와 V48 전의 호출부가 쓴다 */
+        public Entry(Long id, String domain, String topic, String memo, String lastUsedAt, Integer usedCount,
+                     String usageResetAt) {
+            this(id, domain, topic, memo, lastUsedAt, usedCount, usageResetAt, null, null);
+        }
+
+        /** 입문편·심화편 글의 주제를 다 썼는가. 빈칸만 있는 값은 안 쓴 것으로 본다 */
+        @JsonIgnore
+        public boolean hasTopicBoxes() {
+            return beginnerTopicBox != null && !beginnerTopicBox.isBlank()
+                    && advancedTopicBox != null && !advancedTopicBox.isBlank();
         }
 
         /**
@@ -88,7 +104,8 @@ public record TopicQueueFile(String note, List<Entry> topics) {
          * 앱은 그 줄을 "손으로 새로 적은 범위"로 보고 <b>같은 범위를 하나 더 만든다</b>.
          */
         public Entry usedOn(String date) {
-            return new Entry(id, domain, topic, memo, date, (usedCount == null ? 0 : usedCount) + 1, usageResetAt);
+            return new Entry(id, domain, topic, memo, date, (usedCount == null ? 0 : usedCount) + 1, usageResetAt,
+                    beginnerTopicBox, advancedTopicBox);
         }
 
         /** 사용 기록 파일의 기록을 합친 사본. 초기화한 날까지의 기록과 더 오래된 기록은 버린다 */
@@ -104,7 +121,7 @@ public record TopicQueueFile(String note, List<Entry> topics) {
                 return this;
             }
             int count = Math.max(usedCount == null ? 0 : usedCount, usage.usedCount() == null ? 1 : usage.usedCount());
-            return new Entry(id, domain, topic, memo, date, count, usageResetAt);
+            return new Entry(id, domain, topic, memo, date, count, usageResetAt, beginnerTopicBox, advancedTopicBox);
         }
     }
 }

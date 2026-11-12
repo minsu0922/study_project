@@ -249,12 +249,12 @@ class TopicQueueTest {
                   ]
                 }
                 """;
-        write(topics);
+        String written = write(topics);
 
         TopicQueue queue = TopicQueue.read(dir);
         assertThat(queue.markUsed(dir, queue.next(), LocalDate.of(2026, 8, 19))).isTrue();
 
-        assertThat(Files.readString(dir.resolve(TopicQueue.FILE_NAME))).isEqualTo(topics);
+        assertThat(Files.readString(dir.resolve(TopicQueue.FILE_NAME))).isEqualTo(written);
         String usage = Files.readString(dir.resolve(TopicQueue.USAGE_FILE_NAME));
         assertThat(usage).contains("\"id\" : 7").contains("\"lastUsedAt\" : \"2026-08-19\"")
                 .contains("\"usedCount\" : 1").contains("메모리 관리").doesNotContain("TCP");
@@ -369,7 +369,17 @@ class TopicQueueTest {
         assertThat(TopicQueue.read(Path.of("generated")).problems()).isEmpty();
     }
 
-    private void write(String json) throws Exception {
-        Files.writeString(dir.resolve(TopicQueue.FILE_NAME), json);
+    /**
+     * 줄마다 글의 주제(V48) 두 편을 채워 쓴다. 여기 테스트는 차례·사용 기록 규칙을 본다.
+     * 글의 주제가 없으면 건너뛰는 규칙은 {@link TopicQueueTopicBoxTest}가 본다.
+     *
+     * @return 실제로 쓴 글. 파일이 그대로인지 견줄 때 쓴다
+     */
+    private String write(String json) throws Exception {
+        String withBoxes = json.contains("TopicBox") ? json : json.replaceAll(
+                "(\"topic\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")",
+                "$1, \"beginnerTopicBox\": \"입문 글\", \"advancedTopicBox\": \"심화 글\"");
+        Files.writeString(dir.resolve(TopicQueue.FILE_NAME), withBoxes);
+        return withBoxes;
     }
 }
