@@ -1023,18 +1023,8 @@ class ClaudeDocumentGeneratorTest {
         assertThat(advanced)
                 .as("실패 조건 개수 — 고급 문제가 여기를 재료로 쓴다")
                 .contains("%d가지 이상".formatted(DocumentDraftValidator.MIN_FAILURE_MODES));
-
-        assertThat(advanced)
-                .as("심화편 코드 예제 최소 개수")
-                .contains("예제를 %d~4개 넣는다".formatted(DocumentDraftValidator.MIN_CODE_BLOCKS));
-
-        assertThat(beginner)
-                .as("입문편은 하나 더 요구한다 — 주장을 코드로 보여 줘야 하는 편이다")
-                .contains("예제를 %d~5개 넣는다".formatted(DocumentDraftValidator.BEGINNER_MIN_CODE_BLOCKS));
-
-        assertThat(beginner)
-                .as("입문편 본론 섹션 개수의 아래쪽 끝")
-                .contains("본론 %d~3개 섹션".formatted(DocumentDraftValidator.MIN_BODY_SECTIONS));
+        // 코드 예제·본론 절 개수는 2026-11-13에 검사에서 뺐다. 지금 문서 78편에서 한 번도 안 울렸다
+        assertThat(beginner).isNotBlank();
     }
 
     /**

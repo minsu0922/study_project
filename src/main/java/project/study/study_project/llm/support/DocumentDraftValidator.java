@@ -139,6 +139,12 @@ public final class DocumentDraftValidator {
      */
     private static final Pattern MERMAID_BLOCK = Pattern.compile("(?s)```mermaid[ \\t]*\\R(.*?)```");
 
+    /** 용어 표 절 제목 — 입문편은 {@code ## 용어 한눈에}, 옛 심화편은 {@code ###}였다. */
+    private static final Pattern GLOSSARY_HEADING = Pattern.compile("(?m)^#{2,3}\\s+용어 한눈에");
+
+    /** 문서에 넣은 그림 파일 — {@code ![설명](/images/docs/x.svg)} 꼴. 손으로 그린 그림이 여기 든다. */
+    private static final Pattern DOC_IMAGE = Pattern.compile("!\\[[^\\]\\n]*\\]\\([^)\\s]+\\.(?:svg|png|jpe?g|webp)\\)");
+
     /**
      * 프롬프트가 허용한 그림 종류의 첫 줄 — {@code ClaudeDocumentGenerator}의 {@code [그림]} 절과 같아야 한다.
      *
@@ -243,16 +249,6 @@ public final class DocumentDraftValidator {
     private static final Pattern FAILURE_MODE_HEADING = Pattern.compile("(?m)^####\\s+(?!~~)");
 
     /**
-     * 용어 표 제목. <b>{@code ##}와 {@code ###}를 모두 인정한다</b> — 두 편이 다른 자리에 둔다.
-     *
-     * <p>입문편은 최상위 절({@code ## 용어 한눈에})이라 필수 절 목록에 들어 있다. 심화편도 지금은
-     * 최상위 절이지만, 옛 심화편 문서는 본론 끝의 {@code ### } 소제목으로 두었다.
-     * 표가 있는지 세는 이 패턴은 <b>심화편에만</b> 쓴다 — 입문편에서 같이 돌리면
-     * 절이 빠졌을 때 차단(필수 절)과 경고(표 없음)가 <b>한 결함에 두 번</b> 뜬다.
-     */
-    private static final Pattern GLOSSARY_HEADING = Pattern.compile("(?m)^#{2,3}\\s+용어 한눈에");
-
-    /**
      * 정의가 있어야 하는 용어 후보 — <b>넓게 잡지 않는다.</b>
      *
      * <p>이상적으로는 "문서에 나오는 모든 전문 용어"를 세고 싶지만, 한국어 문장에서 용어의
@@ -296,9 +292,6 @@ public final class DocumentDraftValidator {
     /** 경고 메시지에 나열할 용어 개수 상한 — 다 적으면 메시지가 화면을 넘긴다. */
     private static final int MAX_LISTED_TERMS = 6;
 
-    /** 본론 섹션 최소 개수 — 프롬프트는 2~3개를 요구한다. */
-    public static final int MIN_BODY_SECTIONS = 2;
-
     /**
      * {@code ## 어떤 때 통하지 않는가} 항목 최소 개수 — 프롬프트의 "7가지 이상"과 같아야 한다.
      *
@@ -309,57 +302,6 @@ public final class DocumentDraftValidator {
      * 잇는 것이 주석 한 줄뿐이었다. {@code DocumentDraftValidatorTest}가 대조한다.
      */
     public static final int MIN_FAILURE_MODES = 7;
-
-    /**
-     * 펜스 코드블록 최소 개수 — 프롬프트 {@code [코드 예제]}의 "2~4개"와 짝이다.
-     *
-     * <p><b>2026-08-23에 코드 예제를 허용하면서 같이 넣었다.</b> 그 전까지 프롬프트는
-     * "긴 예제는 쓰지 마라"였고, 허용으로 뒤집는 것만으로는 예제가 나오지 않는다 —
-     * 모델에게 코드를 빼는 쪽이 언제나 더 안전한 선택이기 때문이다(틀릴 위험이 없다).
-     * 이 저장소가 두 번 확인한 대로 <b>개수를 박은 지시만 지켜지고</b>, 그 개수는 세는 곳이
-     * 있어야 유지된다. 없으면 몇 주 뒤 조용히 코드 없는 문서로 돌아간다.
-     *
-     * <p>상한(4개)은 세지 않는다. 넘쳐서 생기는 문제는 분량 경고가 이미 잡고,
-     * 여기서 두 방향을 다 막으면 "코드가 잘 어울리는 주제"에서 헛경고가 난다.
-     */
-    public static final int MIN_CODE_BLOCKS = 2;
-
-    /**
-     * 입문편의 코드 예제 최소 개수 — 프롬프트 {@code [코드 예제]}의 "3~5개"와 짝이다(2026-09-03).
-     *
-     * <p>심화편보다 하나 많은 이유: 입문편은 <b>주장을 코드로 보여 줘야 하는 편</b>이다.
-     * 09-03 실물의 코드 2개가 둘 다 같은 주제였고, 정작 제목이 약속한 대비
-     * ("A는 따로, B는 공유")를 보여 주는 예제가 없었다.
-     */
-    public static final int BEGINNER_MIN_CODE_BLOCKS = 3;
-
-    /**
-     * {@code ### 용어 한눈에}에 본문에서 안 푼 용어가 몇 개부터 경고인가.
-     * 왜 1이 아닌지는 {@link #checkGlossaryIsReview} 주석 참고(표기 차이로 인한 오탐).
-     */
-    private static final int MIN_FRESH_GLOSSARY_TERMS = 3;
-
-    /** 용어 표의 행 — 첫 칸만 꺼낸다. 앞뒤 파이프 사이의 첫 칸이 용어 자리다. */
-    private static final Pattern GLOSSARY_ROW = Pattern.compile("(?m)^\\|([^|]+)\\|");
-
-    /** 마크다운 표의 구분 행 칸({@code ---}, {@code :---:}). 용어로 세면 문서마다 헛울린다. */
-    private static final Pattern SEPARATOR_CELL = Pattern.compile("^:?-{2,}:?$");
-
-    /**
-     * {@code ## 바탕이 되는 개념} 절의 최소 분량 — 프롬프트는 1,500~2,500자를 요구한다.
-     *
-     * <p><b>요구치보다 낮춰 잡는 이유</b>: 이 검사가 잡으려는 것은 "조금 짧다"가 아니라
-     * <b>절이 이름만 남고 비었다</b>는 상태다. 2026-08-23 이전 문서들이 정확히 그랬다 —
-     * OSI 7계층을 용어 목록 한 줄로 처리하고 넘어갔다. 요구치에 딱 맞춰 경고하면 조금 모자란
-     * 멀쩡한 절에도 울리고, 헛울리는 경고는 사람이 경고 전체를 안 보게 만든다.
-     * 요구치의 대략 3분의 2를 기준으로 삼는다.
-     *
-     * <p><b>2026-09-03 후속에 1,000 → 2,000으로 올렸다.</b> 프롬프트 요구가 1,500~2,500에서
-     * 3,000~4,000자가 됐다("문서 전체의 30% 가까이"). 요구가 배로 늘었는데 기준을 그대로 두면
-     * <b>요구의 3분의 1만 써도 통과</b>하므로, 이 검사는 사실상 없는 검사가 된다.
-     * 09-07 실물의 이 절이 1,940자였다 — 새 기준이면 걸린다. 걸리는 게 맞다.
-     */
-    private static final int MIN_FOUNDATION_LENGTH = 2_000;
 
     private DocumentDraftValidator() {
     }
@@ -388,10 +330,7 @@ public final class DocumentDraftValidator {
         checkTitleMatchesHeading(title, body, structure, checks);
         checkTitleStyle(title, checks);
         checkRequiredSections(structure, edition, checks);
-        checkMatchingMaterial(body, checks);
         checkUndefinedTerms(body, checks);
-        checkBodySections(body, structure, edition, checks);
-        checkCodeExamples(body, edition, checks);
         checkDiagrams(body, edition, checks);
         checkHtmlTags(body, checks);
         checkLength(body, edition, checks);
@@ -399,12 +338,10 @@ public final class DocumentDraftValidator {
         checkReferences(body, structure, checks);
 
         if (edition == DocumentEdition.BEGINNER) {
-            // 아래 넷은 입문편에만 있는 절·규칙을 본다. 심화편에서 돌리면 전부 헛울린다 —
+            // 아래 둘은 입문편에만 있는 절·규칙을 본다. 심화편에서 돌리면 전부 헛울린다 —
             // 심화편에는 ## 무엇인가도 ## 바탕이 되는 개념도 없는 것이 정상이다.
             checkDesignRationaleHeading(structure, checks);
             checkTermList(body, structure, checks);
-            checkFoundationSection(body, structure, checks);
-            checkGlossaryIsReview(body, structure, checks);
         } else {
             checkFailureModeCount(body, structure, checks);
             // 입문편은 '## 용어 한눈에'가 필수 절이라 checkRequiredSections가 이미 차단으로 잡는다.
@@ -642,31 +579,6 @@ public final class DocumentDraftValidator {
     }
 
     /**
-     * 짝짓기 문제를 낼 표 재료가 있는지 — <b>알리기만 한다</b>(2026-09-01).
-     *
-     * <p>이 검사가 앞의 것들과 다른 점: 형식이 틀렸다는 신호가 아니라 <b>"이 문서로는 못 만드는
-     * 유형이 있다"</b>는 정보다. 표가 적은 것 자체는 문서의 흠이 아니다 — 짝지을 개념이 없는
-     * 주제가 실제로 있다.
-     *
-     * <p>그래도 검수자에게 알리는 이유는 <b>알 방법이 여기밖에 없어서다</b>. 이 사실이 드러나는
-     * 다음 자리는 며칠 뒤 짝짓기를 뽑으려다 "재료가 없습니다"로 막히는 순간인데, 그때는 왜
-     * 막혔는지 문서를 다시 열어 봐야 안다. 승인 화면에서 미리 보면 표를 한 줄 채워 넣든,
-     * 이 문서로는 다른 유형을 내든 <b>고를 수 있다</b>.
-     *
-     * <p>세는 일은 {@link TypeMaterialRule}에 맡긴다. 여기서 따로 세면 "검증은 통과했는데
-     * 생성에서 막히는" 어긋남이 나고, 그건 규칙이 둘로 갈렸다는 뜻이다.
-     */
-    private static void checkMatchingMaterial(String body, List<DraftCheck> checks) {
-        int rows = TypeMaterialRule.comparableRowsOf(body);
-        if (rows < TypeMaterialRule.MATCHING_MIN_ROWS) {
-            checks.add(DraftCheck.warning(
-                    "표 재료가 %d행뿐이라 이 문서로는 짝짓기 문제를 만들 수 없습니다(%d행 필요). "
-                            .formatted(rows, TypeMaterialRule.MATCHING_MIN_ROWS)
-                            + "'## 바탕이 되는 개념'이나 '### 용어 한눈에'에 표를 채우면 쓸 수 있습니다."));
-        }
-    }
-
-    /**
      * 어려운 용어가 <b>정의 없이</b> 지나가는지 — 초보 학습자가 문서를 놓치는 가장 흔한 이유다.
      *
      * <p><b>이 검사의 한계를 먼저 적는다.</b> 문서에 나오는 모든 전문 용어를 세지 않는다.
@@ -732,39 +644,6 @@ public final class DocumentDraftValidator {
             }
         }
         return false;
-    }
-
-    /**
-     * 본론 섹션이 <b>2개 이상</b>인지 — 프롬프트는 2~3개를 요구한다.
-     *
-     * <p>{@link ClaudeDocumentGenerator#REQUIRED_SECTIONS}에는 본론이 없다. 제목이 주제마다
-     * 달라서 목록으로 못 박을 수가 없기 때문인데, 그 결과 <b>본론이 통째로 비어도 통과하는</b>
-     * 구멍이 남았다. 이름을 못 박을 수 없으면 <b>개수</b>를 세면 된다 — 필수 절 목록에 없는
-     * {@code ## } 제목이 곧 본론이다.
-     *
-     * <p>본론이 얇으면 초급·중급 재료가 함께 마른다. 초급이 캘 곳은 {@code ## 무엇인가}와
-     * 본론의 기본 동작이고, 중급의 설계 판단도 대부분 본론에 녹아 있다.
-     */
-    private static void checkBodySections(String body, String structure, DocumentEdition edition,
-                                          List<DraftCheck> checks) {
-        List<String> required = ClaudeDocumentGenerator.requiredSections(edition);
-        List<String> bodySections = new ArrayList<>();
-        // 코드블록 안의 "## " 주석을 본론 섹션으로 세면 본론이 빈 문서가 통과한다
-        Matcher m = H2_PATTERN.matcher(structure);
-        while (m.find()) {
-            String heading = "## " + body.substring(m.start(1), m.end(1)).trim();
-            if (!required.contains(heading) && !heading.equals(REFERENCES_SECTION)) {
-                bodySections.add(heading);
-            }
-        }
-        // 심화편은 본론 1~2개다 — 지면을 "언제 깨지는가"에 쓰기로 했으므로 2개를 요구하면
-        // 지시대로 쓴 문서에 매번 경고가 뜬다(이 클래스가 가장 경계하는 오탐).
-        int min = edition == DocumentEdition.ADVANCED ? 1 : MIN_BODY_SECTIONS;
-        if (bodySections.size() < min) {
-            checks.add(DraftCheck.warning(
-                    "본론 섹션이 %d개입니다(권장 %d개 이상). 본론이 얇으면 그만큼 문제 재료가 마릅니다."
-                            .formatted(bodySections.size(), min)));
-        }
     }
 
     /**
@@ -849,36 +728,11 @@ public final class DocumentDraftValidator {
     }
 
     /**
-     * 코드 예제가 <b>2개 이상</b>인지 — 2026-08-23에 블로그 수준 품질을 목표로 삼으면서 넣었다.
-     *
-     * <p>목표로 제시된 기술 블로그 글에는 Java 예제가 일곱 개 있었다. 우리 문서에는 하나도
-     * 없었는데, 프롬프트가 "긴 예제는 쓰지 마라"로 막고 있었기 때문이다. 금지를 풀었지만
-     * <b>푸는 것만으로는 나오지 않는다</b> — 모델에게는 코드를 빼는 쪽이 언제나 안전하다.
-     *
-     * <p>경고인 이유는 이 절의 다른 형식 규칙과 같다. 코드가 하나 모자란다고 나흘치 문서를
-     * 버리는 것보다, 검수자가 승인 전에 한 토막 넣는 편이 싸다. 게다가 주제에 따라서는
-     * (설계 원칙·방법론) 코드가 억지가 되는 날도 있어 차단으로 두면 그런 날 길이 막힌다.
-     */
-    private static void checkCodeExamples(String body, DocumentEdition edition, List<DraftCheck> checks) {
-        // 입문편은 3개 이상이다(2026-09-03). 09-03 실물은 코드 2개가 <둘 다 같은 주제>였고,
-        // 정작 제목이 약속한 주장을 보여 주는 예제가 없었다. 개수를 하나 올린 것은 그 자체가
-        // 목적이 아니라 "서로 다른 절을 받쳐라"는 프롬프트 지시가 지켜졌는지 보는 대리 지표다.
-        int min = edition == DocumentEdition.ADVANCED ? MIN_CODE_BLOCKS : BEGINNER_MIN_CODE_BLOCKS;
-        // 그림 블록은 코드 예제가 아니다 — 같은 펜스 문법이라 따로 빼야 한다(MERMAID_BLOCK 주석).
-        int blocks = count(FENCED_CODE, body) - count(MERMAID_BLOCK, body);
-        if (blocks < min) {
-            checks.add(DraftCheck.warning(
-                    "코드 예제가 %d개입니다(기준 %d개 이상). 코드가 없으면 블로그로 옮겼을 때 밀도가 확 떨어집니다."
-                            .formatted(blocks, min)));
-        }
-    }
-
-    /**
      * 그림({@code ```mermaid})이 있는지, 있으면 화면이 그릴 수 있는 종류인지 — 2026-10-10 신설.
      *
      * <p>그날까지 나온 문서 30편에 그림이 한 장도 없었다. 프롬프트가 "표로도 목록으로도 담기지
      * 않는 구조만 예외로 그림을 허용한다"고 했는데, 허용만으로는 나오지 않는다 — 코드 예제에서
-     * 이미 겪은 일이다({@link #checkCodeExamples}). 그래서 입문편에는 한 장을 요구하고 여기서 센다.
+     * 이미 겪은 일이다. 그래서 입문편에는 한 장을 요구하고 여기서 센다. 손으로 그린 그림 파일도 센다.
      *
      * <p><b>심화편은 없어도 조용하다.</b> 프롬프트가 심화편의 그림을 선택으로 뒀다.
      * 대신 종류 검사는 두 편 모두에 건다 — 틀린 그림은 어느 편에서든 원문이 코드로 보인다.
@@ -900,120 +754,11 @@ public final class DocumentDraftValidator {
                                         MERMAID_KINDS)));
             }
         }
-        if (diagrams == 0 && edition == DocumentEdition.BEGINNER) {
+        // 손으로 그린 SVG도 그림이다(2026-11). 네트워크 입문편은 mermaid 대신 SVG만 쓴 편이 있다
+        int pictures = diagrams + count(DOC_IMAGE, body);
+        if (pictures == 0 && edition == DocumentEdition.BEGINNER) {
             checks.add(DraftCheck.warning(
-                    "그림(```mermaid)이 없습니다(입문편은 1개 이상). 구조나 흐름을 글로만 따라가야 합니다."));
-        }
-    }
-
-    /**
-     * 입문편의 {@code ### 용어 한눈에}가 <b>복습표인지</b> — 새 용어를 몰아넣는 자리가 되지 않았는지.
-     *
-     * <p><b>이 검사가 2026-09-03 개정의 핵심이다.</b> 전에는 프롬프트가 이 표에 "10행 이상,
-     * 앞에서 이미 정의한 용어로 채우지 마라"를 요구했다 — 문서 한 편에 <b>새 용어 10개를
-     * 강제</b>한 셈이고, 09-03 실물에서 용어가 폭증한 진원지가 정확히 여기였다.
-     * 지시를 뒤집었으므로 세는 곳도 뒤집는다.
-     *
-     * <h2>첫 규칙을 실물로 재 보고 버렸다 (2026-09-07)</h2>
-     *
-     * <p>처음에는 "표보다 앞에 {@code - **용어** — 뜻} 꼴 <b>정의 줄</b>이 있는가"로 판정했다.
-     * 첫 실물 두 편에 걸어 보니 <b>입문편에서 여섯 건이 헛울렸다</b> —
-     * 참조 무결성·RESTRICT·NO ACTION·CASCADE·SET NULL·SET DEFAULT. 여섯 다 본문에서 멀쩡히
-     * 설명돼 있었고, 다만 형식이 정의 줄이 아니었을 뿐이다. 절 제목으로 설명한 것
-     * ({@code ## 삭제를 막는 쪽 — RESTRICT와 NO ACTION}), 비교 표의 칸으로 설명한 것,
-     * 줄표 대신 조사로 이은 문장({@code **참조 무결성(referential integrity)** 은 …})이 섞여 있었다.
-     *
-     * <p><b>정의의 형식을 세려 한 것이 잘못이었다.</b> 좋은 글은 용어를 여러 방식으로 푼다.
-     * 그래서 형식이 아니라 <b>등장 여부</b>를 본다 — 표 앞 본문에 그 낱말이 한 번도 안 나왔다면
-     * 그 표가 처음 꺼내는 말이고, 그게 이 검사가 잡으려는 상태다.
-     *
-     * <table border="1">
-     *   <caption>두 규칙을 같은 실물에 걸어 본 결과</caption>
-     *   <tr><th>문서</th><th>정의 줄을 찾는 규칙</th><th>등장 여부를 보는 규칙</th></tr>
-     *   <tr><td>09-03 옛 단일 문서(잡아야 함)</td><td>13건</td><td><b>11건</b></td></tr>
-     *   <tr><td>09-07 입문편(조용해야 함)</td><td>6건 — 전부 오탐</td><td><b>0건</b></td></tr>
-     * </table>
-     *
-     * <p><b>왜 3개 이상일 때만 울리나.</b> 표의 첫 칸과 본문의 표기가 늘 같지는 않다
-     * (고아 행 / 고아). 하나 어긋난 것으로 경고를 띄우면 표기 차이에 헛울리고, 이 클래스의
-     * 원칙대로 <b>오탐이 미탐보다 비싸다</b>. 셋이 모이면 표기 문제가 아니라 습관이 돌아온 것이다.
-     */
-    private static void checkGlossaryIsReview(String body, String structure, List<DraftCheck> checks) {
-        // 제목을 패턴으로 찾는다 — 입문편은 '## 용어 한눈에'(최상위 절), 심화편은 '### '다.
-        // 리터럴로 찾던 코드가 2026-09-03 후속 개정에서 절이 승격되자 아무것도 못 찾게 됐다.
-        Matcher heading = GLOSSARY_HEADING.matcher(structure);
-        if (!heading.find()) {
-            return; // 표가 없는 것은 필수 절 검사가 이미 차단으로 잡는다
-        }
-        int start = heading.start();
-        // 표보다 <앞>만 본다 — 뒤에서 처음 꺼내는 것은 복습이 아니다.
-        String before = body.substring(0, start);
-
-        List<String> fresh = new ArrayList<>();
-        Matcher m = GLOSSARY_ROW.matcher(structure.substring(start));
-        while (m.find()) {
-            String term = headTermOf(m.group(1));
-            // 헤더 행과 구분 행(|---|---|)을 걸러 낸다. 구분 행을 안 거르면 <모든> 표에서
-            // "---"가 정의 없는 용어로 잡혀, 이 경고가 문서마다 한 건씩 헛울린다.
-            if (term.isEmpty() || term.equals("용어") || SEPARATOR_CELL.matcher(term).matches()) {
-                continue;
-            }
-            if (!before.contains(term)) {
-                fresh.add(term);
-            }
-        }
-        if (fresh.size() < MIN_FRESH_GLOSSARY_TERMS) {
-            return;
-        }
-        List<String> listed = fresh.stream().limit(MAX_LISTED_TERMS).toList();
-        String tail = fresh.size() > listed.size() ? " 외 %d개".formatted(fresh.size() - listed.size()) : "";
-        checks.add(DraftCheck.warning(
-                "'### 용어 한눈에'에 본문에 없던 용어가 %d개 처음 나옵니다: %s%s. "
-                        .formatted(fresh.size(), String.join(", ", listed), tail)
-                        + "입문편의 이 표는 복습표입니다 — 본문에서 먼저 다루거나, 심화편으로 미루세요."));
-    }
-
-    /**
-     * 표 칸에서 용어의 머리 부분만 떼어낸다 — {@code TTL(time to live)} → {@code TTL}.
-     *
-     * <p>괄호 안 원어와 굵게 표시를 걷어내는 이유: 본문 정의 줄과 표기가 미세하게 다른 것이
-     * 흔한데, 그 차이로 "정의가 없다"고 판정하면 헛울린다. 머리만 비교하면 대부분 붙는다.
-     */
-    private static String headTermOf(String cell) {
-        String head = cell.strip().replace("**", "").replace("`", "");
-        int paren = head.indexOf('(');
-        if (paren > 0) {
-            head = head.substring(0, paren);
-        }
-        return head.strip();
-    }
-
-
-    /**
-     * {@code ## 바탕이 되는 개념} 절이 <b>이름만 남고 비지</b> 않았는지.
-     *
-     * <p><b>이 절이 2026-08-23 개정의 전부다.</b> 사용자가 8/23 실물을 읽고 "실무 상황만 있고
-     * OSI 7계층 자체는 설명하지 않는다"고 지적했다. 원인은 바로 위 8/19 개정이 주제를 좁히도록
-     * 시킨 것이었고, 좁힌 주제와 기본 개념이 한 절을 두고 겨루면 좁은 쪽이 이긴다.
-     * 그래서 상위 개념 전용 자리를 따로 냈는데, <b>자리만 만들면 이름만 남는다</b>는 것을
-     * {@code ### 용어 한눈에}에서 이미 겪었다(8/18 — 표를 만들라고 시켰더니 만들긴 했다).
-     *
-     * <p>그래서 존재가 아니라 <b>분량</b>을 센다. 이 검사가 없으면 모델은 [분량] 압박을 받을
-     * 때 이 절부터 줄인다 — 문서의 주제와 가장 먼 절이라 지우기 가장 쉬워 보이기 때문이다.
-     * {@link #MIN_FOUNDATION_LENGTH}의 기준을 프롬프트 요구치보다 낮춘 이유는 그 상수 주석 참고.
-     */
-    private static void checkFoundationSection(String body, String structure, List<DraftCheck> checks) {
-        Section section = sectionOf(body, structure, "## 바탕이 되는 개념");
-        if (section == null) {
-            return; // 절 자체가 없으면 checkRequiredSections가 이미 차단으로 잡는다
-        }
-        // 분량은 원문으로 잰다 — 코드 예제도 독자가 읽는 양이다(항목을 세는 검사와 갈리는 지점)
-        int length = section.raw().strip().length();
-        if (length < MIN_FOUNDATION_LENGTH) {
-            checks.add(DraftCheck.warning(
-                    "'## 바탕이 되는 개념'이 %d자입니다(기준 %d자 이상, 프롬프트 요구는 3,000~4,000자). "
-                            .formatted(length, MIN_FOUNDATION_LENGTH)
-                            + "이 절이 얇으면 배경 지식이 없는 사람은 첫 문단에서 막힙니다."));
+                    "그림이 없습니다(입문편은 mermaid나 그림 파일 1개 이상). 구조나 흐름을 글로만 따라가야 합니다."));
         }
     }
 

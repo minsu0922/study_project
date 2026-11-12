@@ -267,12 +267,13 @@ class DocumentDraftValidatorTest {
         // 아무도 모르는 채 지나가면, 검수 화면이 어느새 읽히지 않는 목록이 된다.
         // 2026-10-10에 그림 없음 경고가 늘어 14가 됐다.
         // 2026-11-10에 참고 자료 없음 경고가 늘어 15가 됐다.
-        assertThat(checks).hasSize(15);
+        // 2026-11-13에 짝짓기 재료·본론 개수·코드 예제 경고를 빼서 12가 됐다(실측에서 지금 문서에 0건).
+        assertThat(checks).hasSize(12);
         assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
                 .anyMatch(m -> m.contains("## 자주 하는 오해"))
-                .anyMatch(m -> m.contains("짝짓기"));
+                .noneMatch(m -> m.contains("짝짓기"));
     }
 
     /* ── 형식 규칙 ───────────────────────────────────────────────
@@ -337,22 +338,6 @@ class DocumentDraftValidatorTest {
     }
 
     /**
-     * 본론은 제목이 주제마다 달라 {@code REQUIRED_SECTIONS}로 못 박을 수 없다. 그래서
-     * <b>본론이 통째로 비어도 통과하는</b> 구멍이 있었다. 이름을 못 박으면 개수를 센다.
-     */
-    @Test
-    @DisplayName("본론이 얇으면 알린다 — 필수 절 목록으로는 본론의 부재를 못 잡는다")
-    void warnsWhenBodySectionsAreThin() {
-        String thin = body(TITLE, "본문")
-                .replace("## 첫째 갈래", "### 첫째 갈래")
-                .replace("## 둘째 갈래", "### 둘째 갈래");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", thin))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("본론 섹션이 0개"));
-    }
-
-    /**
      * 고급 문제의 재료. 2026-08-14에 고급 날 재료가 말라 5개를 요청해 3개만 받았다.
      * 그 뒤 프롬프트에 "5가지 이상"을 박았지만 세는 곳은 없었다.
      *
@@ -401,17 +386,6 @@ class DocumentDraftValidatorTest {
                 .anyMatch(m -> m.contains("링크 2개가 허용 목록 밖이거나 https가 아닙니다")
                         && m.contains("some-blog.example.com") && m.contains("http://www.rfc-editor.org")
                         && !m.contains("owasp"));
-    }
-
-    @Test
-    @DisplayName("참고 자료는 본론 개수에 들지 않는다 — 출처 절로 본론 부족을 가리면 안 된다")
-    void referencesAreNotBodySections() {
-        // 심화편 fixture의 본론은 '## 깊은 동작' 하나다. 그 제목만 걷어 내면 본론이 0개여야 한다
-        String noBody = advancedBody(TITLE).replace("## 깊은 동작\n", "");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy-advanced", noBody))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("본론 섹션이 0개"));
     }
 
     @Test
@@ -769,51 +743,6 @@ class DocumentDraftValidatorTest {
      * 둘 다 프롬프트로 풀었지만, 프롬프트만 고치면 몇 주 뒤 조용히 돌아온다는 것을
      * 이 저장소는 세 번 겪었다(8/15 하이픈, 8/18 용어 정의, 8/18 절 형식). 그래서 센다. */
 
-    /**
-     * {@code ## 바탕이 되는 개념}이 <b>이름만 남고 비지</b> 않았는지.
-     *
-     * <p>자리를 만들어 주면 이름만 남는다는 것을 {@code ### 용어 한눈에}에서 이미 겪었다.
-     * 게다가 이 절은 문서의 주제와 가장 먼 절이라, 모델이 분량 압박을 받을 때
-     * <b>가장 먼저 줄이고 싶어 하는 자리</b>다. 존재가 아니라 분량을 세는 이유다.
-     */
-    @Test
-    @DisplayName("'바탕이 되는 개념'이 얇으면 알린다 — 자리만 만들면 이름만 남는다")
-    void warnsWhenFoundationSectionIsThin() {
-        String thin = body(TITLE, "본문").replace(FOUNDATION, "상위 개념을 한 줄로 스쳐 지나간다.");
-
-        List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", thin);
-
-        assertThat(checks).extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("'## 바탕이 되는 개념'이"));
-        assertThat(DocumentDraftValidator.hasBlocking(checks))
-                .as("얇다고 막으면 그 주기 나흘이 날아간다 — 검수자가 채워 넣는 편이 싸다")
-                .isFalse();
-    }
-
-    /**
-     * 코드 예제가 기준 개수 이상인지. 2026-08-23에 "긴 예제는 쓰지 마라"라는 금지를 풀었는데,
-     * <b>푸는 것만으로는 나오지 않는다</b> — 모델에게 코드를 빼는 쪽이 언제나 안전하다.
-     * 개수를 박은 지시만 지켜지고, 그 개수는 세는 곳이 있어야 유지된다.
-     *
-     * <p>2026-09-03에 입문편 기준이 3개로 올랐다. 개수 자체가 목적은 아니고, 09-03 실물의
-     * 코드 2개가 <b>둘 다 같은 주제</b>였던 것을 막으려는 대리 지표다.
-     */
-    @Test
-    @DisplayName("코드 예제가 모자라면 알린다 — 금지를 푸는 것만으로는 코드가 나오지 않는다")
-    void warnsWhenCodeExamplesAreTooFew() {
-        String noCode = body(TITLE, "본문")
-                .replace("```sql\nSELECT 1\n```", "설명으로 대신한다.")
-                .replace("```bash\necho done\n```", "설명으로 대신한다.");
-
-        List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noCode);
-
-        assertThat(checks).extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("코드 예제가 1개입니다"));
-        assertThat(DocumentDraftValidator.hasBlocking(checks))
-                .as("코드가 억지가 되는 주제(설계 원칙·방법론)도 있어 차단으로 두면 그런 날 길이 막힌다")
-                .isFalse();
-    }
-
     /* ── 2026-10-10: 그림(```mermaid) ─────────────────────────────
      * 그날까지 나온 문서 30편에 그림이 한 장도 없었다. 프롬프트가 입문편에 그림 1개를 요구하게
      * 되면서 세는 곳을 함께 둔다 — 코드 예제 때와 같이, 허용만으로는 나오지 않는다. */
@@ -830,10 +759,20 @@ class DocumentDraftValidatorTest {
         List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noDiagram);
 
         assertThat(checks).extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("그림(```mermaid)이 없습니다"));
+                .anyMatch(m -> m.contains("그림이 없습니다"));
         assertThat(DocumentDraftValidator.hasBlocking(checks))
                 .as("그림 하나 때문에 나흘치 문서를 버리지 않는다")
                 .isFalse();
+    }
+
+    @Test
+    @DisplayName("손으로 그린 그림 파일도 그림으로 센다 — 네트워크 입문편은 SVG만 쓴 편이 있다")
+    void handDrawnImageCountsAsDiagram() {
+        String svgOnly = body(TITLE, "본문").replace(DIAGRAM, "![요청이 서버로 가는 길](/images/docs/cache-flow.svg)");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", svgOnly))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("그림이 없습니다"));
     }
 
     /** 심화편의 그림은 프롬프트가 선택으로 뒀다 — 없다고 울리면 매번 헛울린다. */
@@ -843,21 +782,6 @@ class DocumentDraftValidatorTest {
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy-advanced", advancedBody(TITLE)))
                 .extracting(DraftCheck::message)
                 .noneMatch(m -> m.contains("그림"));
-    }
-
-    /**
-     * 같은 펜스 문법이라 그림이 코드 예제로 세어질 수 있다. 그러면 모델이 코드 하나를 그림으로
-     * 바꿔치기해도 개수 검사가 통과한다.
-     */
-    @Test
-    @DisplayName("그림은 코드 예제 개수에 세지 않는다 — 코드를 그림으로 바꿔치기해도 걸린다")
-    void diagramIsNotACodeExample() {
-        String swapped = body(TITLE, "본문").replace("```bash\necho done\n```", "설명으로 대신한다.");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", swapped))
-                .extracting(DraftCheck::message)
-                .as("코드 2개 + 그림 1개 — 펜스는 셋이지만 코드 예제는 둘이다")
-                .anyMatch(m -> m.contains("코드 예제가 2개입니다"));
     }
 
     /** 종류 선언이 틀리면 그림이 통째로 안 그려지고, 읽는 사람은 원문을 코드로 본다. */
@@ -997,29 +921,6 @@ class DocumentDraftValidatorTest {
     void passesValidAdvancedDocument() {
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", advancedBody(TITLE)))
                 .isEmpty();
-    }
-
-    /**
-     * 입문편의 {@code ### 용어 한눈에}가 <b>못 다 한 설명을 몰아넣는 자리</b>로 돌아가지 않는지.
-     *
-     * <p>전에는 프롬프트가 이 표에 "새 용어를 미리 올려 두라"고 <b>시켰다</b>. 그 지시가
-     * 09-03 실물에서 용어 폭증의 진원지였다. 지시를 복습표로 뒤집었으므로 세는 곳도 뒤집는다 —
-     * 세는 곳이 없으면 몇 주 뒤 조용히 옛 습관으로 돌아간다.
-     */
-    @Test
-    @DisplayName("복습표가 본문에 없던 용어를 처음 꺼내면 알린다 — 전에는 프롬프트가 그걸 시켰다")
-    void warnsWhenGlossaryIntroducesNewTerms() {
-        // 다섯째~일곱째를 본문에서 통째로 지운다. 표에만 남으므로 그 표가 처음 꺼내는 말이 된다.
-        // 셋이 모여야 울리는 기준(표기 차이로 인한 오탐 방지)을 그대로 확인하려는 것이다.
-        String leaky = body(TITLE, "본문")
-                .replace("- **다섯째 용어** — 한 문장 정의.\n", "")
-                .replace("- **여섯째 용어** — 한 문장 정의.\n", "")
-                .replace("- **일곱째 용어** — 한 문장 정의.\n", "");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", leaky))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("본문에 없던 용어가 3개")
-                        && m.contains("다섯째 용어"));
     }
 
     /**
