@@ -38,9 +38,10 @@ on:
           - document
       topic:
         # 비워 두는 것이 평소 경로다 — 예약 실행은 generated/_topics.json(주제 대기열)에서
-        # 위에서부터 하나씩 꺼내 쓰고, 그것도 비면 모델이 고른다. 여기 적는 주제는
-        # "이번 한 번만"이라 대기열을 소모하지 않는다(DraftGeneratorCli.generateDocument).
-        description: '문서 주제 (type=document일 때만). 비우면 주제 대기열(_topics.json) → 모델 자동 선택'
+        # 「글의 주제」 두 편을 다 쓴 주제만 꺼내 쓴다. 대기열이 비면 모델이 고르고, 상자 쓴 주제가
+        # 하나도 없으면 그날은 만들지 않는다. 여기 적는 주제는 "이번 한 번만"이라 대기열을 소모하지
+        # 않고, 사람이 쓴 글의 주제도 붙지 않는다(DocumentBatch.generateDocument).
+        description: '문서 주제 (type=document일 때만). 비우면 주제 대기열(_topics.json)에서 글의 주제를 쓴 주제만 꺼냄'
         required: false
         default: ''
       domain:
