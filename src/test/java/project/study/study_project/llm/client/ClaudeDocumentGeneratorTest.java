@@ -456,7 +456,13 @@ class ClaudeDocumentGeneratorTest {
                 .as("입문편 절 이름을 쓰는 것 자체가 되풀이하고 있다는 신호다")
                 .contains("전부 입문편이 쓰는 이름이다")
                 .as("개수만 박으면 모델은 채우기 쉬운 교과서적 항목부터 채운다")
-                .contains("실무에서 실제로 만나는 것을 앞에 놓고");
+                .contains("실무에서 실제로 만나는 것을 앞에 놓는다")
+                .as("넣을지 뺄지는 세 질문으로 가린다(2026-11-13, docs/WRITING_STYLE.md 9절)")
+                .contains("입문편에서 배운 걸로 설명되나?")
+                .contains("백엔드 개발자가 하는 일에 맞나?")
+                .contains("이 글의 이야기인가?")
+                .as("장면마다 첫 사례는 이야기로 쓴다(사용자가 고친 NAT 심화편)")
+                .contains("장면마다 첫 항목은 이야기로 쓴다");
     }
 
     /**
@@ -469,11 +475,12 @@ class ClaudeDocumentGeneratorTest {
      * 실제로 지켜졌다는 것이 이 프롬프트에서 두 번 확인된 사실이다(8/14 고급 재료, 8/18 해설 분량).
      */
     @Test
-    @DisplayName("추상적인 동작을 다루는 절에 비유를 하나 더 허용한다 — 스냅샷 하나로 다섯 절을 설명했다")
+    @DisplayName("비유 하나를 세워 끝까지 끌고 간다 — 스냅샷 하나로 다섯 절을 설명했다")
     void allowsSecondAnalogyForInvisibleMechanics() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
-                .as("무제한으로 풀면 부연이 된다 — 숫자를 박은 지시만 지켜진다")
-                .contains("본문 문장에 쓰는 비유는 4개까지다")
+                .as("2026-11-13 사용자가 고른 방식: 비유 개수 대신 하나를 끝까지 잇는다")
+                .contains("하나를 세워 끝까지 끌고 간다")
+                .doesNotContain("본문 문장에 쓰는 비유는 4개까지다")
                 .as("한 낱말에 기댄 설명이 이번 사고의 다른 얼굴이다")
                 .contains("그 절의 설명을 한 낱말에만 기대지 마라");
     }
