@@ -104,12 +104,14 @@ public class AdminLlmDocumentController {
     }
 
     /**
-     * 사실 검수 지적 처리 — 바디 {@code {"text": "고친 문단"}}이면 지적된 문단을 바꾸고,
-     * text가 없거나 빈 바디면 "고치지 않음"으로 둔다.
+     * 사실 검수 지적 처리 — {@code {"text": "고친 문단"}}이면 「고침」(지적 문장이 남으면 400),
+     * {@code {"note": "틀린 이유"}}면 「헛경보」(이유가 없으면 400). 미처리가 남으면 승인되지 않는다.
      */
     @PostMapping("/{id}/fact-findings/{index}/resolve")
     public ApiResponse<LlmDocumentDraftResponse> resolveFactFinding(@PathVariable Long id, @PathVariable int index,
                                                                     @RequestBody(required = false) Map<String, String> body) {
-        return ApiResponse.ok(llmDocumentService.resolveFactFinding(id, index, body != null ? body.get("text") : null));
+        String text = body != null ? body.get("text") : null;
+        String note = body != null ? body.get("note") : null;
+        return ApiResponse.ok(llmDocumentService.resolveFactFinding(id, index, text, note));
     }
 }

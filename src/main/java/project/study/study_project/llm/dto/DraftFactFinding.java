@@ -24,4 +24,22 @@ public record DraftFactFinding(String quote, FactCheckFinding.Kind kind, String 
     public DraftFactFinding resolvedWith(String resolution) {
         return new DraftFactFinding(quote, kind, reason, correction, sourceUrl, confidence, resolution);
     }
+
+    /** 처리 상태(2026-11-13). 미처리가 하나라도 남은 초안은 승인하지 않는다. */
+    public enum Status { OPEN, FIXED, FALSE_ALARM }
+
+    /** 헛경보 처리 기록의 머리말. 이유가 이 뒤에 붙는다. */
+    public static final String FALSE_ALARM_PREFIX = "헛경보: ";
+
+    /**
+     * 처리 기록에서 상태를 읽는다. "고치지 않음"은 이유 칸이 생기기 전(11-13 이전)의 헛경보 기록이다.
+     * 메서드 이름이 getter 꼴이 아니라 JSON에는 실리지 않는다.
+     */
+    public Status status() {
+        if (resolution == null) {
+            return Status.OPEN;
+        }
+        return resolution.startsWith(FALSE_ALARM_PREFIX) || resolution.equals("고치지 않음")
+                ? Status.FALSE_ALARM : Status.FIXED;
+    }
 }

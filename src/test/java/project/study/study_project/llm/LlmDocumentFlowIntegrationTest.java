@@ -311,7 +311,7 @@ class LlmDocumentFlowIntegrationTest {
         assertThat(before.factFindings().get(0).paragraph()).isEqualTo("캐시는 **항상** 빠르다. 그래서 늘 쓴다.");
 
         llmDocumentService.resolveFactFinding(draft.getId(), 0, "캐시는 대개 빠르지만 항상은 아니다.");
-        var after = llmDocumentService.resolveFactFinding(draft.getId(), 1, null);
+        var after = llmDocumentService.resolveFactFinding(draft.getId(), 1, null, "용어 풀이는 사람이 본다");
 
         assertThat(after.contentMd()).contains("캐시는 대개 빠르지만 항상은 아니다.")
                 .doesNotContain("그래서 늘 쓴다.").contains("## 무엇인가");
@@ -319,8 +319,9 @@ class LlmDocumentFlowIntegrationTest {
                 .as("이 테스트의 slug는 배치 파일에 없다")
                 .isEqualTo("직접 수정(배치 파일은 못 찾아 그대로): 「캐시는 **항상** 빠르다. 그래서 늘 쓴다.」 → 「캐시는 대개 빠르지만 항상은 아니다.」");
         assertThat(after.factFindings().get(0).paragraph()).as("처리한 지적엔 고칠 문단을 싣지 않는다").isNull();
-        assertThat(after.factFindings().get(1).resolution()).isEqualTo("고치지 않음");
-        assertThat(after.contentMd()).as("고치지 않음은 본문을 건드리지 않는다").contains("상위 개념을 처음부터 설명한다.");
+        assertThat(after.factFindings().get(1).resolution()).isEqualTo("헛경보: 용어 풀이는 사람이 본다");
+        assertThat(after.factFindings()).extracting(f -> f.status()).containsExactly("FIXED", "FALSE_ALARM");
+        assertThat(after.contentMd()).as("헛경보는 본문을 건드리지 않는다").contains("상위 개념을 처음부터 설명한다.");
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.resolveFactFinding(draft.getId(), 1, null))
                 .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
@@ -337,9 +338,52 @@ class LlmDocumentFlowIntegrationTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.resolveFactFinding(draft.getId(), 0, "  "))
                 .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+        llmDocumentService.resolveFactFinding(draft.getId(), 0, null, "확인해 보니 맞는 문장");
         llmDocumentService.approve(draft.getId());
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.resolveFactFinding(draft.getId(), 0, null))
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.resolveFactFinding(draft.getId(), 0, null, "다시"))
                 .isInstanceOf(project.study.study_project.global.exception.BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("처리하지 않은 AI 지적이 남으면 승인을 막는다 — 지적이 남은 채 승인돼 오류가 사이트에 남았다")
+    void blocksApprovalWhileFactFindingsAreOpen() {
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(), validContent("캐시 전략", "캐시는 항상 빠르다."));
+        draft.recordFactFindings("""
+                [{"quote":"캐시는 항상 빠르다.","kind":"FACT_ERROR","reason":"틀림","correction":"",
+                  "sourceUrl":"","confidence":"LOW"}]
+                """);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.approve(draft.getId()))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class)
+                .hasMessageContaining("처리하지 않은 AI 지적이 1건");
+
+        llmDocumentService.resolveFactFinding(draft.getId(), 0, "캐시는 대개 빠르다.", null);
+        assertThat(llmDocumentService.approve(draft.getId()).id()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("고침은 지적 문장이 사라져야, 헛경보는 이유가 있어야 받는다")
+    void requiresRealFixOrReasonedFalseAlarm() {
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(), validContent("캐시 전략", "캐시는 항상 빠르다."));
+        draft.recordFactFindings("""
+                [{"quote":"캐시는 항상 빠르다.","kind":"FACT_ERROR","reason":"틀림","correction":"",
+                  "sourceUrl":"","confidence":"HIGH"}]
+                """);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                        llmDocumentService.resolveFactFinding(draft.getId(), 0, "캐시는 항상 빠르다. 덧붙인 말.", null))
+                .hasMessageContaining("그대로 남아");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                        llmDocumentService.resolveFactFinding(draft.getId(), 0, null, "  "))
+                .hasMessageContaining("한 줄");
+    }
+
+    @Test
+    @DisplayName("AI 검수를 못 돌린 초안은 지적 때문에 막지 않는다")
+    void doesNotBlockDraftWithoutFactCheck() {
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(), validContent("캐시 전략", "본문"));
+
+        assertThat(llmDocumentService.approve(draft.getId()).id()).isNotNull();
     }
 
     /* ── 도우미 ──────────────────────────────────────────────── */

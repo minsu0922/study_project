@@ -170,6 +170,13 @@ public class LlmDocumentService {
                     .orElse("");
             throw new BusinessException(ErrorCode.LLM_005, "승인 불가: " + reasons);
         }
+        // AI 사실 검수 지적은 하나씩 처리해야 승인한다(2026-11-13). 지적이 그대로 남은 채 승인돼
+        // 진짜 오류가 사이트에 남은 일이 있었다. 검수를 못 돌린 초안(목록 없음)은 막지 않는다
+        long open = openFactFindings(draft);
+        if (open > 0) {
+            throw new BusinessException(ErrorCode.LLM_005,
+                    "승인 불가: 처리하지 않은 AI 지적이 %d건 있습니다. 「고침」이나 「헛경보」로 처리하세요.".formatted(open));
+        }
 
         DocumentDetailResponse created = adminDocumentService.create(new AdminDocumentRequest(
                 draft.getDomain(), draft.getTitle(), draft.getSlug(), draft.getContentMd(),
@@ -308,11 +315,24 @@ public class LlmDocumentService {
                             f.confidence() == FactCheckFinding.Confidence.HIGH,
                             f.quote(), f.reason(), f.correction(), f.sourceUrl() == null ? "" : f.sourceUrl(),
                             f.resolution() == null ? paragraphOf(d.getContentMd(), f.quote()) : null,
-                            f.resolution()))
+                            f.resolution(), f.status().name()))
                     .toList();
         } catch (JsonProcessingException | RuntimeException e) {
             log.warn("문서 초안 #{}의 사실 검수 지적을 읽지 못함: {}", d.getId(), e.getMessage());
             return null;
+        }
+    }
+
+    /** 미처리 지적 수. 검수를 안 돌렸으면 0이다. 저장된 목록을 못 읽으면 막지 않고 0으로 본다. */
+    private long openFactFindings(GeneratedDocumentDraft d) {
+        if (d.getFactFindingsJson() == null) {
+            return 0;
+        }
+        try {
+            return storedFactFindingsOf(d).stream().filter(f -> f.status() == DraftFactFinding.Status.OPEN).count();
+        } catch (JsonProcessingException | RuntimeException e) {
+            log.warn("문서 초안 #{}의 사실 검수 지적을 읽지 못해 승인 검사에서 건너뜀: {}", d.getId(), e.getMessage());
+            return 0;
         }
     }
 
@@ -328,8 +348,16 @@ public class LlmDocumentService {
      * <p>문장이 아니라 문단을 바꾸는 이유: 지적의 인용은 강조·백틱을 걷어 낸 글이라 본문에서
      * 글자 그대로 안 찾아질 때가 많다. 문단은 본문의 마크다운 원문 그대로라 바꿀 자리가 정확하다.
      */
-    @Transactional
     public LlmDocumentDraftResponse resolveFactFinding(Long draftId, int findingIndex, String text) {
+        return resolveFactFinding(draftId, findingIndex, text, null);
+    }
+
+    /**
+     * @param text 고친 문단. 있으면 「고침」이다 — 지적받은 문장이 고친 글에 그대로 남으면 받지 않는다
+     * @param note 헛경보 이유. {@code text}가 없으면 「헛경보」이고 이유가 반드시 있어야 한다
+     */
+    @Transactional
+    public LlmDocumentDraftResponse resolveFactFinding(Long draftId, int findingIndex, String text, String note) {
         GeneratedDocumentDraft draft = findDraft(draftId);
         if (draft.getStatus() != DraftStatus.PENDING) {
             throw new BusinessException(ErrorCode.LLM_002);
@@ -342,7 +370,12 @@ public class LlmDocumentService {
         String content = draft.getContentMd();
         String resolution;
         if (text == null) {
-            resolution = "고치지 않음";
+            // 이유를 남겨야 AI가 무엇을 자주 헛짚는지 모아 볼 수 있다
+            String why = Texts.trimToNull(note);
+            if (why == null) {
+                throw new BusinessException(ErrorCode.COMMON_001, "헛경보로 처리하려면 왜 틀린 지적인지 한 줄을 적어 주세요.");
+            }
+            resolution = DraftFactFinding.FALSE_ALARM_PREFIX + oneLine(why);
         } else {
             String paragraph = paragraphOf(content, finding.quote());
             if (paragraph == null) {
@@ -351,6 +384,10 @@ public class LlmDocumentService {
             String replaced = text.strip();
             if (replaced.isEmpty()) {
                 throw new BusinessException(ErrorCode.COMMON_001, "고친 문단이 비어 있습니다.");
+            }
+            if (ClaudeDocumentFactChecker.normalize(replaced).contains(ClaudeDocumentFactChecker.normalize(finding.quote()))) {
+                throw new BusinessException(ErrorCode.COMMON_001,
+                        "지적받은 문장이 고친 문단에 그대로 남아 있습니다. 문장을 고치거나, 지적이 틀렸으면 헛경보로 처리하세요.");
             }
             int at = content.indexOf(paragraph);
             String before = content;
@@ -363,7 +400,7 @@ public class LlmDocumentService {
         }
         draft.resolveFactFinding(content,
                 FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, resolution)));
-        log.info("문서 초안 #{}: 사실 검수 지적 처리({})", draft.getId(), text == null ? "고치지 않음" : "직접 수정");
+        log.info("문서 초안 #{}: 사실 검수 지적 처리({})", draft.getId(), text == null ? "헛경보" : "고침");
         return toResponse(draft);
     }
 
