@@ -1256,9 +1256,13 @@ async function loadDocDrafts() {
         ${warnings.map(c => `${icon("alert")} ${escapeHtml(c.message)}`).join("<br>")}
       </div>` : "";
 
+    // 처리하지 않은 AI 지적이 남으면 서버가 승인을 거절한다(2026-11-13). 화면도 미리 버튼을 끈다
+    const openFindings = (d.factFindings ?? []).filter(f => f.status === "OPEN").length;
+    const cannotApprove = d.blocked || openFindings > 0;
     const actions = d.status === "PENDING" ? `
       <div class="row-actions" style="margin-top:10px">
-        <button onclick="approveDocDraft(this, ${d.id})" ${d.blocked ? "disabled" : ""}>승인 → 문서 등록</button>
+        <button onclick="approveDocDraft(this, ${d.id})" ${cannotApprove ? "disabled" : ""}>승인 → 문서 등록</button>
+        ${openFindings > 0 ? `<span class="meta">AI 지적 ${openFindings}건 처리 필요</span>` : ""}
         <button class="danger" onclick="openDocReject(${d.id})">거절</button>
       </div>
       <div id="docRejectForm-${d.id}" hidden style="margin-top:10px">
@@ -1287,7 +1291,7 @@ async function loadDocDrafts() {
     return `
       <div class="card" style="margin-bottom:12px">
         <div>
-          ${d.status === "PENDING" && !d.blocked
+          ${d.status === "PENDING" && !cannotApprove
             ? `<label style="display:inline-flex; align-items:center; gap:6px; margin-right:6px">
                  <input type="checkbox" class="doc-bulk-pick" value="${d.id}">
                  <span class="badge gray">#${d.id}</span>
@@ -1338,14 +1342,17 @@ async function loadDocDrafts() {
  * 대기 중인 초안은 지적된 문단을 바로 고칠 수 있다. 승인한 문서는 문서 관리에서 고친다.
  */
 function factFindingsBoxOf(d) {
-  if (d.factFindings == null) return "";
+  // 검수를 못 돌린 초안은 지적 때문에 막지 않는다. 대신 사람이 더 꼼꼼히 읽도록 알린다
+  if (d.factFindings == null) {
+    return d.status === "PENDING" ? `<div class="meta" style="margin-top:6px">${icon("alert")} AI 검수 안 됨 — 사실 확인은 직접 읽어서 하세요</div>` : "";
+  }
   // 고치기 버튼이 서버에 보낼 번호는 전체 목록 안의 위치라, 가르기 전에 먼저 매긴다.
   const all = d.factFindings.map((f, index) => ({ ...f, index }));
-  const open = all.filter(f => !f.resolution);
-  const resolved = all.filter(f => f.resolution);
+  const open = all.filter(f => f.status === "OPEN");
+  const resolved = all.filter(f => f.status !== "OPEN");
   const resolvedBox = resolved.length === 0 ? "" : `
     <details class="ai-opinions">
-      <summary>반영한 사실 지적 ${resolved.length}건 (지적 수에 세지 않습니다)</summary>
+      <summary>처리한 사실 지적 ${resolved.length}건 (고침 ${resolved.filter(f => f.status === "FIXED").length} · 헛경보 ${resolved.filter(f => f.status === "FALSE_ALARM").length})</summary>
       ${resolved.map(f => factFindingItemOf(d, f)).join("")}
     </details>`;
   if (open.length === 0) {
@@ -1353,7 +1360,7 @@ function factFindingsBoxOf(d) {
   }
   return `
     <div class="alert info ai-findings" style="margin:10px 0">
-      <div class="ai-findings-head"><b>AI 사실 검수 지적 ${open.length}건</b> · 틀릴 수 있으니 직접 확인하세요</div>
+      <div class="ai-findings-head"><b>AI 사실 검수 지적 ${open.length}건</b> · 하나씩 「고침」이나 「헛경보」로 처리해야 승인됩니다</div>
       ${open.map(f => factFindingItemOf(d, f)).join("")}
     </div>${resolvedBox}`;
 }
@@ -1369,7 +1376,9 @@ function factFindingItemOf(d, f) {
           ${/^https?:\/\//.test(f.sourceUrl ?? "")
             ? `<li>출처: <a href="${escapeHtml(f.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.sourceUrl)}</a></li>` : ""}
         </ul>
-        ${f.resolution ? `<div class="meta"><b>처리</b> ${escapeHtml(f.resolution)}</div>` : factResolveOf(d, f)}
+        ${f.status !== "OPEN"
+          ? `<div class="meta"><span class="badge ${f.status === "FIXED" ? "green" : "gray"}">${f.status === "FIXED" ? "고침" : "헛경보"}</span> ${escapeHtml(f.resolution ?? "")}</div>`
+          : factResolveOf(d, f)}
       </div>`;
 }
 
@@ -1384,9 +1393,9 @@ function factResolveOf(d, f) {
   return `
         <div class="row-actions" style="margin-top:6px">
           ${f.paragraph != null
-            ? `<button class="btn-outline" onclick="openFactResolve('${key}')">문단 고치기</button>`
+            ? `<button class="btn-outline" onclick="openFactResolve('${key}')">고침 — 문단 고치기</button>`
             : `<span class="meta">지적된 문장이 본문에 없습니다</span>`}
-          <button class="btn-outline" onclick="resolveFactFinding(this, ${d.id}, ${f.index}, null)">고치지 않음</button>
+          <button class="btn-outline" onclick="openFalseAlarm('${key}')">헛경보</button>
         </div>
         <div id="factResolve-${key}" hidden style="margin-top:6px">
           <textarea id="factResolveText-${key}" rows="6" maxlength="20000" style="width:100%"></textarea>
@@ -1394,6 +1403,15 @@ function factResolveOf(d, f) {
             <button onclick="resolveFactFinding(this, ${d.id}, ${f.index}, '${key}')">고친 문단 적용</button>
             ${f.correction ? `<button class="btn-outline" onclick="appendFactCorrection('${key}')">바로잡은 문장 붙여 넣기</button>` : ""}
             <button onclick="document.getElementById('factResolve-${key}').hidden = true">취소</button>
+          </div>
+        </div>
+        <!-- 헛경보는 이유가 있어야 받는다. 이유가 쌓이면 AI가 무엇을 자주 헛짚는지 모아 볼 수 있다 -->
+        <div id="falseAlarm-${key}" hidden style="margin-top:6px">
+          <input id="falseAlarmNote-${key}" type="text" maxlength="300" style="width:100%"
+                 placeholder="왜 틀린 지적인가 — 예: DHCP 연장 시점은 본문이 맞다(RFC 2131 4.4.5)">
+          <div class="row-actions" style="margin-top:6px">
+            <button onclick="markFalseAlarm(this, ${d.id}, ${f.index}, '${key}')">헛경보로 처리</button>
+            <button onclick="document.getElementById('falseAlarm-${key}').hidden = true">취소</button>
           </div>
         </div>`;
 }
@@ -1412,8 +1430,25 @@ function appendFactCorrection(key) {
   ta.value = ta.value.trimEnd() + "\n" + factEditTexts.get(key).correction;
 }
 
+function openFalseAlarm(key) {
+  document.getElementById(`falseAlarm-${key}`).hidden = false;
+  document.getElementById(`falseAlarmNote-${key}`).focus();
+}
+
+async function markFalseAlarm(btn, id, index, key) {
+  const note = document.getElementById(`falseAlarmNote-${key}`).value.trim();
+  if (!note) {
+    alertDocError(new Error("왜 틀린 지적인지 한 줄을 적어 주세요."));
+    return;
+  }
+  await sendFactResolution(btn, id, index, { note });
+}
+
 async function resolveFactFinding(btn, id, index, key) {
-  const body = key ? { text: document.getElementById(`factResolveText-${key}`).value } : {};
+  await sendFactResolution(btn, id, index, { text: document.getElementById(`factResolveText-${key}`).value });
+}
+
+async function sendFactResolution(btn, id, index, body) {
   btn.disabled = true;
   try {
     await api(`/api/admin/llm-documents/${id}/fact-findings/${index}/resolve`, { method: "POST", body: JSON.stringify(body) });
