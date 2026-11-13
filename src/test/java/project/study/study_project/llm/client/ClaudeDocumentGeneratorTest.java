@@ -269,8 +269,9 @@ class ClaudeDocumentGeneratorTest {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("용어를 정의 없이 지나가면 초급 재료가 통째로 비는 셈이 된다")
                 .contains("[용어 다루기]")
-                .as("어려운 절을 덜어낸 만큼을 쉽게 푸는 데 쓰라고 상한을 올렸다")
-                .contains("11,000~14,000자")
+                .as("2026-11-13 분량 숫자를 뺐다 — 글의 주제에 다 답하면 멈춘다")
+                .contains("분량은 정해 두지 않는다")
+                .doesNotContain("11,000~14,000자")
                 .as("면접 질문 절은 심화편이 쓴다 — 두 편에 다 있으면 재료 판정이 갈리지 않는다")
                 .doesNotContain("## 면접에서 이렇게 물어본다\n");
     }

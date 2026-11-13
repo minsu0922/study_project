@@ -400,6 +400,7 @@ public class LlmDocumentService {
         return switch (kind) {
             case FACT_ERROR -> "사실 오류";
             case INTERNAL_MISMATCH -> "문서 안 어긋남";
+            case CODE_MISMATCH -> "코드와 설명 어긋남";
             case UNDEFINED_TERM -> "풀지 않은 용어";
         };
     }

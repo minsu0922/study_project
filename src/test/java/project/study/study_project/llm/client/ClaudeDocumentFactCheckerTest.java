@@ -54,10 +54,13 @@ class ClaudeDocumentFactCheckerTest {
     }
 
     @Test
-    @DisplayName("정의 없는 용어 항목은 입문편에만 붙는다 — 심화편은 입문편에서 푼 용어를 다시 풀지 않는다")
-    void undefinedTermRuleOnlyForBeginner() {
-        assertThat(ClaudeDocumentFactChecker.systemPromptFor(DocumentEdition.BEGINNER)).contains("UNDEFINED_TERM");
-        assertThat(ClaudeDocumentFactChecker.systemPromptFor(DocumentEdition.ADVANCED)).doesNotContain("UNDEFINED_TERM");
+    @DisplayName("두 편 모두 사실 오류·수치 불일치·코드 불일치만 찾는다 — 용어 지적은 2026-11-13에 뺐다")
+    void checksOnlyFactsInBothEditions() {
+        for (DocumentEdition edition : DocumentEdition.values()) {
+            assertThat(ClaudeDocumentFactChecker.systemPromptFor(edition))
+                    .contains("FACT_ERROR").contains("INTERNAL_MISMATCH").contains("CODE_MISMATCH")
+                    .doesNotContain("UNDEFINED_TERM");
+        }
     }
 
     @Test

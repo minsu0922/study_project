@@ -31,13 +31,11 @@ public class ClaudeDocumentFactChecker implements DocumentFactChecker {
     static final String SYSTEM_PROMPT = Prompts.load("document-fact-check/system.txt");
 
     /**
-     * 입문편에만 붙인다. 심화편은 입문편에서 푼 용어를 다시 풀지 않게 쓰므로,
-     * 심화편 하나만 보고 이 항목을 돌리면 입문편 용어가 전부 헛경보로 나온다.
+     * 두 편이 같은 지시를 받는다. 입문편에만 붙이던 "풀지 않은 용어" 항목은 2026-11-13에 뺐다 —
+     * 지적 31건 중 17건이 이 항목이었고 정답을 틀리게 하지 않아 진짜 오류를 묻었다.
      */
-    static final String UNDEFINED_TERM_RULE = Prompts.load("document-fact-check/undefined-term-rule.txt");
-
     static String systemPromptFor(DocumentEdition edition) {
-        return edition == DocumentEdition.ADVANCED ? SYSTEM_PROMPT : SYSTEM_PROMPT + UNDEFINED_TERM_RULE;
+        return SYSTEM_PROMPT;
     }
 
     /**

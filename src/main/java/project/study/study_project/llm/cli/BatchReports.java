@@ -222,6 +222,7 @@ final class BatchReports {
                 .map(f -> "- [%s·%s] \"%s\"%n  - 이유: %s%n  - 바로잡으면: %s%s".formatted(
                         switch (f.kind()) {
                             case INTERNAL_MISMATCH -> "문서 안 불일치";
+                            case CODE_MISMATCH -> "코드와 설명 불일치";
                             case UNDEFINED_TERM -> "정의 없는 용어";
                             case FACT_ERROR -> "사실 오류";
                         },

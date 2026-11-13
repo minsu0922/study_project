@@ -19,7 +19,7 @@ public record FactCheckFinding(
 
         @JsonPropertyDescription("FACT_ERROR=사실과 다른 주장, "
                 + "INTERNAL_MISMATCH=같은 문서의 다른 곳과 수치·설명이 어긋남, "
-                + "UNDEFINED_TERM=처음 나온 곳에서 뜻을 풀지 않은 용어(입문편만)")
+                + "CODE_MISMATCH=코드가 실제로 하는 일과 그 코드를 설명한 글이 다름")
         Kind kind,
 
         @JsonPropertyDescription("왜 틀렸는지. INTERNAL_MISMATCH면 어긋나는 상대 문장도 함께 적는다")
@@ -40,7 +40,8 @@ public record FactCheckFinding(
         this(quote, kind, reason, correction, "", confidence);
     }
 
-    public enum Kind { FACT_ERROR, INTERNAL_MISMATCH, UNDEFINED_TERM }
+    /** UNDEFINED_TERM은 더 만들지 않는다(2026-11-13). 그 전에 저장된 지적을 읽으려고 남겨 둔다. */
+    public enum Kind { FACT_ERROR, INTERNAL_MISMATCH, CODE_MISMATCH, UNDEFINED_TERM }
 
     public enum Confidence { HIGH, LOW }
 
