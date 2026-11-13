@@ -70,11 +70,11 @@ class LlmDocumentFlowIntegrationTest {
     @Test
     @DisplayName("검수 대기 목록에 자동 검증 결과가 함께 실려 온다 — 화면이 스스로 판단하면 규칙이 두 벌이 된다")
     void listCarriesValidationResult() throws Exception {
-        // 분량만 살짝 넘긴 문서 — 경고는 뜨지만 승인은 가능해야 한다.
+        // 제목이 의문문인 문서 — 경고는 뜨지만 승인은 가능해야 한다(분량 검사는 2026-11-13에 뺐다).
         // 숫자를 직접 적지 않고 상수에 묶는다: 권장 분량을 올린 날 이 문서가 경고선 아래로
         // 내려가면 검증 결과가 0건이 되는데, 그건 "응답에 안 실렸다"와 구분되지 않는다.
-        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(),
-                validContent("캐시 전략", "가".repeat(DocumentDraftValidator.WARN_LENGTH + 1)));
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략은 무엇인가", uniqueSlug(),
+                validContent("캐시 전략은 무엇인가", "본문"));
 
         // 검수 대기 목록은 오래된 순이라 방금 만든 초안이 맨 뒤에 온다. 기존 초안이 몇 건
         // 쌓여 있을지 모르므로 넉넉히 받아 와서 우리 것을 직접 찾는다 —
@@ -86,7 +86,7 @@ class LlmDocumentFlowIntegrationTest {
 
         Map<String, Object> mine = findById(json, draft.getId());
         assertThat(mine).as("방금 만든 초안이 검수 대기 목록에 있어야 한다").isNotNull();
-        assertThat(mine.get("blocked")).as("분량 초과는 경고일 뿐 — 승인을 막으면 안 된다").isEqualTo(false);
+        assertThat(mine.get("blocked")).as("제목 꼴 경고는 경고일 뿐 — 승인을 막으면 안 된다").isEqualTo(false);
         assertThat(mine.get("contentLength")).as("분량 감각을 화면에서 바로 볼 수 있어야 한다")
                 .isEqualTo(draft.getContentMd().length());
 
@@ -98,7 +98,7 @@ class LlmDocumentFlowIntegrationTest {
         assertThat(checks).as("검증 결과가 응답에 실려야 화면이 규칙을 따로 갖지 않는다")
                 .anySatisfy(c -> {
                     assertThat(c.get("severity")).isEqualTo("WARNING");
-                    assertThat((String) c.get("message")).contains("권장 분량");
+                    assertThat((String) c.get("message")).contains("의문문");
                 });
     }
 
@@ -371,6 +371,10 @@ class LlmDocumentFlowIntegrationTest {
     private String validContent(String heading, String body) {
         return """
                 # %s
+
+                > **글의 주제**
+                >
+                > 확인용 글의 주제.
 
                 ## 핵심 요약
                 - **요점** — 결론 한 문장.

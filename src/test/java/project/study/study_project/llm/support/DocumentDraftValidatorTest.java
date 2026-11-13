@@ -221,29 +221,6 @@ class DocumentDraftValidatorTest {
 
     /* ── 분량 ────────────────────────────────────────────────── */
 
-    @Test
-    @DisplayName("권장 분량 초과는 경고에 그친다 — 실측이 매번 넘겼고, 억지로 줄이면 좋은 내용이 잘린다")
-    void warnsOnlyWhenOverRecommendedLength() {
-        String content = body(TITLE, "가".repeat(DocumentDraftValidator.WARN_LENGTH));
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content))
-                .singleElement()
-                .satisfies(c -> {
-                    assertThat(c.severity()).isEqualTo(DraftCheck.Severity.WARNING);
-                    assertThat(c.message()).contains("권장 분량");
-                });
-    }
-
-    @Test
-    @DisplayName("하드 상한을 넘으면 차단 — 여기까지 오면 '길게 잘 쓴 것'이 아니라 지시를 무시한 것")
-    void blocksOverHardLimit() {
-        String content = body(TITLE, "가".repeat(DocumentDraftValidator.MAX_LENGTH));
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content))
-                .singleElement()
-                .satisfies(c -> assertThat(c.isBlocking()).isTrue());
-    }
-
     /* ── 여러 건 ─────────────────────────────────────────────── */
 
     @Test
@@ -268,7 +245,8 @@ class DocumentDraftValidatorTest {
         // 2026-10-10에 그림 없음 경고가 늘어 14가 됐다.
         // 2026-11-10에 참고 자료 없음 경고가 늘어 15가 됐다.
         // 2026-11-13에 짝짓기 재료·본론 개수·코드 예제 경고를 빼서 12가 됐다(실측에서 지금 문서에 0건).
-        assertThat(checks).hasSize(12);
+        // 같은 날 「글의 주제」 상자 없음(차단)이 늘어 13이 됐다.
+        assertThat(checks).hasSize(13);
         assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
@@ -321,23 +299,6 @@ class DocumentDraftValidatorTest {
     }
 
     /**
-     * 마크다운의 홑줄바꿈은 문단을 끊지 않아, 하이픈 없이 쓴 용어 정의가 화면에서 한 문단으로
-     * 뭉친다. 프롬프트에 두 번 적었는데도 안 지켜졌다(커밋 bafb2e9가 고치려다 실패) —
-     * 규칙 옆 예시에 하이픈이 없어서였다. 세는 쪽이 확실하다.
-     */
-    @Test
-    @DisplayName("용어 정의에 하이픈이 없으면 알린다 — 화면에서 한 문단으로 뭉친다")
-    void warnsWhenTermListHasNoBullets() {
-        String noBullets = body(TITLE, "본문")
-                .replace("- **첫째 용어(first)**", "**첫째 용어(first)**")
-                .replace("- **둘째 용어(second)**", "**둘째 용어(second)**");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", noBullets))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("하이픈 목록이 아닙니다"));
-    }
-
-    /**
      * 고급 문제의 재료. 2026-08-14에 고급 날 재료가 말라 5개를 요청해 3개만 받았다.
      * 그 뒤 프롬프트에 "5가지 이상"을 박았지만 세는 곳은 없었다.
      *
@@ -347,11 +308,9 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("'어떤 때 통하지 않는가' 항목이 모자라면 알린다 — 고급 날 재료가 마른다")
     void warnsWhenFailureModesAreTooFew() {
-        String few = advancedBody(TITLE)
-                .replace("**4. 넷째 조건**\n", "")
-                .replace("**5. 다섯째 조건**\n", "")
-                .replace("**6. 여섯째 조건**\n", "")
-                .replace("**7. 일곱째 조건**\n", "");
+        String few = withFailureItems(advancedBody(TITLE), List.of("하나", "둘", "셋").stream()
+                .map(n -> "#### %s\n\n- `증상` 터진다.\n- `원인` 이유다.\n- `대처` 막는다.\n".formatted(n))
+                .collect(java.util.stream.Collectors.joining("\n")));
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", few))
                 .extracting(DraftCheck::message)
@@ -389,17 +348,6 @@ class DocumentDraftValidatorTest {
     }
 
     @Test
-    @DisplayName("참고 자료는 분량에 넣지 않는다 — 링크 주소가 길어 몇백 자를 먹는다")
-    void referencesAreNotCountedInLength() {
-        String longRefs = body(TITLE, "본문") + "- [RFC](https://www.rfc-editor.org/rfc/rfc9293) — 같은 줄.\n"
-                .repeat(DocumentDraftValidator.WARN_LENGTH / 40);
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", longRefs))
-                .extracting(DraftCheck::message)
-                .noneMatch(m -> m.contains("권장 분량"));
-    }
-
-    @Test
     @DisplayName("허용 목록은 그 도메인과 하위 도메인만 받는다 — 이름만 비슷한 곳은 막는다")
     void trustedReferenceMatchesDomainBoundary() {
         assertThat(DocumentDraftValidator.isTrustedReference("https://www.rfc-editor.org/rfc/rfc1918")).isTrue();
@@ -418,14 +366,6 @@ class DocumentDraftValidatorTest {
     @DisplayName("#### 항목은 제목만 센다 — 꼬리표 줄까지 세면 항목 둘이 여덟이 된다")
     void countsHeadingItemsOnlyWhenPresent() {
         String base = advancedBody(TITLE);
-        String written = """
-                **1. 첫째 조건**
-                **2. 둘째 조건**
-                **3. 셋째 조건**
-                **4. 넷째 조건**
-                **5. 다섯째 조건**
-                **6. 여섯째 조건**
-                **7. 일곱째 조건**""";
         String item = """
                 #### %s
 
@@ -449,10 +389,10 @@ class DocumentDraftValidatorTest {
                 """;
         String twoPlusMyths = item.formatted("하나") + "\n" + item.formatted("둘") + myths;
 
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", base.replace(written, seven)))
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", withFailureItems(base, seven)))
                 .extracting(DraftCheck::message)
                 .noneMatch(m -> m.contains("어떤 때 통하지 않는가"));
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", base.replace(written, twoPlusMyths)))
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", withFailureItems(base, twoPlusMyths)))
                 .extracting(DraftCheck::message)
                 .as("꼬리표 줄과 줄 그은 오해 제목은 항목이 아니다")
                 .anyMatch(m -> m.contains("'## 어떤 때 통하지 않는가'의 항목이 2개"));
@@ -521,12 +461,10 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("옛 이름 초안도 항목 개수를 센다 — 새 이름으로만 찾으면 검사가 조용히 꺼진다")
     void countsFailureModesInLegacyNamedDraft() {
-        String legacy = advancedBody(TITLE)
-                .replace("## 어떤 때 통하지 않는가", "## 언제 깨지는가")
-                .replace("**4. 넷째 조건**\n", "")
-                .replace("**5. 다섯째 조건**\n", "")
-                .replace("**6. 여섯째 조건**\n", "")
-                .replace("**7. 일곱째 조건**\n", "");
+        String legacy = withFailureItems(advancedBody(TITLE), List.of("하나", "둘", "셋").stream()
+                .map(n -> "#### %s\n\n- `증상` 터진다.\n- `원인` 이유다.\n- `대처` 막는다.\n".formatted(n))
+                .collect(java.util.stream.Collectors.joining("\n")))
+                .replace("## 어떤 때 통하지 않는가", "## 언제 깨지는가");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", legacy))
                 .extracting(DraftCheck::message)
@@ -543,14 +481,6 @@ class DocumentDraftValidatorTest {
         // 일곱 항목을 통째로 다른 형식으로 갈아 끼운다. 하나만 바꿔서는 나머지 여섯이
         // 받쳐 줘서 통과하므로, 그 형식을 정말 세는지 알 수 없다.
         String base = advancedBody(TITLE);
-        String written = """
-                **1. 첫째 조건**
-                **2. 둘째 조건**
-                **3. 셋째 조건**
-                **4. 넷째 조건**
-                **5. 다섯째 조건**
-                **6. 여섯째 조건**
-                **7. 일곱째 조건**""";
 
         for (String form : List.of(
                 // 소제목
@@ -566,7 +496,7 @@ class DocumentDraftValidatorTest {
                 // 적이 없으므로 번호를 세던 쪽이 처음부터 틀렸다.
                 "**하나**\n**둘**\n**셋**\n**넷**\n**다섯**\n**여섯**\n**일곱**")) {
             assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy",
-                    base.replace(written, form)))
+                    withFailureItems(base, form)))
                     .as("이 형식을 못 세면 멀쩡한 문서에 경고가 뜬다:%n%s", form)
                     .extracting(DraftCheck::message)
                     .noneMatch(m -> m.contains("어떤 때 통하지 않는가"));
@@ -637,102 +567,6 @@ class DocumentDraftValidatorTest {
         assertThat(checks).extracting(DraftCheck::message)
                 .as("한 결함에 메시지가 둘 뜨면 안 된다")
                 .noneMatch(m -> m.contains("표가 없습니다"));
-    }
-
-    @Test
-    @DisplayName("잠금 계열 용어와 SQL 구문이 정의 없이 쓰이면 알린다 — 8/15 실물이 그대로 통과했다")
-    void warnsWhenHardTermsAreUsedWithoutDefinition() {
-        String leaky = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
-                ## 첫째 갈래
-                낙관적 잠금을 쓰거나 판단 근거가 된 행을 SELECT ... FOR UPDATE로 잠근다.""");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", leaky))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("낙관적 잠금") && m.contains("SELECT ... FOR UPDATE"));
-    }
-
-    /**
-     * 정의만 있으면 조용해야 한다. 형태 셋(표의 행·하이픈 정의 목록·굵은 글씨 정의 줄)을
-     * 모두 인정하는지 함께 본다 — 하나만 인정하면 <b>제대로 정의한 문서에 경고가 뜬다</b>.
-     * 굵은 글씨 형태를 인정하는 이유는 {@code checkTermList}가 이미 그 형태를 경고하되
-     * 허용하기 때문이다. 한쪽이 봐준 형식을 다른 쪽이 막으면 같은 결함에 경고가 두 번 뜬다.
-     */
-    @Test
-    @DisplayName("정의가 있으면 조용하다 — 표·하이픈 목록·굵은 글씨 셋 다 정의로 본다")
-    void acceptsEveryDefinitionForm() {
-        for (String definition : List.of(
-                "| 낙관적 잠금 | 저장할 때 번호로 확인해 남이 고쳤으면 실패시키는 방식. | 경합이 드물 때. |",
-                "- **낙관적 잠금(optimistic lock)** — 저장할 때 번호로 확인해 실패시키는 방식이다.",
-                "**낙관적 잠금(optimistic lock)** — 저장할 때 번호로 확인해 실패시키는 방식이다.")) {
-            String defined = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
-                    ## 첫째 갈래
-                    낙관적 잠금으로 막는다.
-
-                    %s""".formatted(definition));
-
-            assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", defined))
-                    .as("이 형태를 정의로 못 보면 제대로 쓴 문서에 경고가 뜬다:%n%s", definition)
-                    .extracting(DraftCheck::message)
-                    .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
-        }
-    }
-
-    /**
-     * <b>오탐을 내지 않는지가 이 검사의 생사다.</b> 후보를 넓게 잡아
-     * {@code ([가-힣]{2,6})\s*락}처럼 쓰면 "그래서 따로 락을 건다"에서 "따로 락"이 걸린다.
-     * 수식어를 목록으로 못 박은 이유이고, 그 판단이 유지되는지 여기서 지킨다.
-     */
-    @Test
-    @DisplayName("평범한 문장의 '락'은 용어로 잡지 않는다 — 오탐이 경고 전체를 무력화한다")
-    void doesNotFlagOrdinaryProseAsTerm() {
-        String prose = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
-                ## 첫째 갈래
-                그래서 따로 락을 건다. 이때 걸리는 락은 하나뿐이다.""");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", prose))
-                .extracting(DraftCheck::message)
-                .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
-    }
-
-    /**
-     * <b>2026-08-27 실물에서 나온 오탐 둘.</b> 코퍼스 재구축으로 만든 문서 4편을 검증기에
-     * 걸었더니 넷 중 셋에서 대문자 구문 패턴이 헛울렸다.
-     *
-     * <ol>
-     *   <li>네트워크 문서의 {@code RST}가 <b>줄바꿈을 건너</b> 다음 줄 첫 낱말 {@code TCP}와
-     *       한 구문으로 붙었다. 공백을 {@code \s}로 잡으면 줄바꿈이 그 안에 들어간다.
-     *   <li>보안 문서의 평범한 한국어 문장 속 {@code GET API}·{@code JSON API}가 걸렸다.
-     *       대문자 낱말 둘이 나란한 것은 한국어 기술 문서에서 너무 흔해 신호가 못 된다.
-     * </ol>
-     *
-     * <p>같은 4편의 {@code SET ... NX}는 <b>진짜 지적</b>이었다(캐시 문서가 뜻 없이 두 번 썼다).
-     * 셋을 가르는 것이 {@code ...}의 유무이고, 이 테스트는 그 경계가 유지되는지 지킨다.
-     * 위 {@link #doesNotFlagOrdinaryProseAsTerm}과 같은 종류의 방어다.
-     */
-    @Test
-    @DisplayName("대문자 낱말이 나란하기만 하면 용어로 잡지 않는다 — 줄바꿈 너머와 'GET API'가 걸렸다")
-    void doesNotFlagAdjacentUppercaseWordsAsTerm() {
-        String prose = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
-                ## 첫째 갈래
-                포트가 닫혀 있으면 즉시 RST
-                TCP 연결은 그 자리에서 끊긴다. 조회용이라 믿고 만든 GET API가 실제로는
-                데이터를 바꾸면 터지고, JSON API라 안전하다는 생각도 근거가 없다.""");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", prose))
-                .extracting(DraftCheck::message)
-                .noneMatch(m -> m.contains("정의 없이 쓰인 용어"));
-    }
-
-    @Test
-    @DisplayName("생략 부호를 낀 구문은 여전히 잡는다 — SET ... NX가 뜻 없이 두 번 쓰였다")
-    void stillFlagsElidedUppercasePhrase() {
-        String leaky = body(TITLE, "본문").replace("## 첫째 갈래\n본론 설명.", """
-                ## 첫째 갈래
-                미스가 몰리는 자리에는 SET ... NX 뮤텍스를 걸어 원본에 요청 하나만 닿게 한다.""");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", leaky))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("SET ... NX"));
     }
 
     /* ── 2026-08-23: 기본 개념과 코드 예제 ────────────────────────
@@ -949,40 +783,6 @@ class DocumentDraftValidatorTest {
     }
 
     /**
-     * 두 편의 분량 기준이 <b>따로</b> 적용되는지. 심화편에 입문편 기준(13,000)을 쓰면
-     * 11,500자짜리 멀쩡한 심화편이 조용히 통과하고, 반대로 입문편에 심화편 기준을 쓰면
-     * 지시대로 쓴 입문편이 매번 경고를 단다.
-     */
-    @Test
-    @DisplayName("분량 기준이 편마다 다르다 — 두 편을 같은 길이로 재면 판정이 갈려야 한다")
-    void appliesLengthLimitPerEdition() {
-        // 두 경고선의 한가운데. 심화편에는 초과이고 입문편에는 미달인 <같은 길이>라,
-        // 편을 안 가리고 재면 둘 중 하나는 반드시 틀린다.
-        int between = (DocumentDraftValidator.ADVANCED_WARN_LENGTH
-                + DocumentDraftValidator.WARN_LENGTH) / 2;
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", padTo(advancedBody(TITLE), between)))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains(
-                        "심화편 권장 " + DocumentDraftValidator.ADVANCED_WARN_LENGTH + "자"));
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", padTo(body(TITLE, "본문"), between)))
-                .as("입문편 상한이 더 높다 — 어려운 절을 덜어낸 만큼을 쉽게 푸는 데 쓰라는 뜻이다")
-                .isEmpty();
-    }
-
-    /**
-     * 본문을 채워 분량 검사가 재는 길이를 정확히 그 값으로 만든다. 내용은 뜻이 없다.
-     * 참고 자료 절은 분량에서 빠지므로 그 앞에 채운다 — 뒤에 채우면 채운 만큼이 세어지지 않는다.
-     */
-    private String padTo(String content, int length) {
-        int refs = content.indexOf("\n## 참고 자료\n");
-        int counted = refs < 0 ? content.length() : refs;
-        String fill = "가".repeat(length - counted);
-        return refs < 0 ? content + fill : content.substring(0, refs) + fill + content.substring(refs);
-    }
-
-    /**
      * <b>모든 검사를 통과하는</b> 최소 문서. 검사하려는 항목만 골라 망가뜨려 쓴다.
      *
      * <p>2026-08-17에 형식 규칙 넷을 추가하면서 이 문서도 함께 채웠다 — 전에는 본론이 0개이고
@@ -993,6 +793,10 @@ class DocumentDraftValidatorTest {
     private String body(String heading, String content) {
         return """
                 # %s
+
+                > **글의 주제**
+                >
+                > 확인용 글의 주제.
 
                 ## 핵심 요약
                 - **첫째 요점** — 결론 한 문장.
@@ -1091,9 +895,24 @@ class DocumentDraftValidatorTest {
      * 이 절을 입문편 fixture에 남겨 두면 <b>입문편 검사가 하나도 안 도는</b> 상태로 스무 개
      * 넘는 테스트가 통과해 버린다 — 초록불인데 아무것도 안 재는, 가장 나쁜 종류의 통과다.
      */
+    /**
+     * 심화편 「어떤 때 통하지 않는가」의 항목 부분을 갈아 끼운다. 첫머리 문장은 남기고,
+     * 장면 소제목 하나 아래에 주어진 항목을 둔다(장면 꼴 검사가 절 이름으로 헛울리지 않게).
+     */
+    private String withFailureItems(String doc, String items) {
+        int start = doc.indexOf("## 어떤 때 통하지 않는가\n");
+        int intro = doc.indexOf("\n\n", start) + 2;
+        int end = doc.indexOf("## 면접에서 이렇게 물어본다");
+        return doc.substring(0, intro) + "### 장면 ① 갈래\n\n갈래를 연다.\n\n" + items + "\n\n" + doc.substring(end);
+    }
+
     private String advancedBody(String heading) {
         return """
                 # %s
+
+                > **글의 주제**
+                >
+                > 확인용 글의 주제.
 
                 ## 핵심 요약
                 - **첫째 요점** — 결론 한 문장.
@@ -1138,13 +957,51 @@ class DocumentDraftValidatorTest {
                 ## 어떤 때 통하지 않는가
                 지금까지는 조건이 맞을 때의 이야기다. 조건이 어긋나는 자리가 이만큼 있다.
 
-                **1. 첫째 조건**
-                **2. 둘째 조건**
-                **3. 셋째 조건**
-                **4. 넷째 조건**
-                **5. 다섯째 조건**
-                **6. 여섯째 조건**
-                **7. 일곱째 조건**
+                ### 장면 ① 첫째 갈래
+
+                첫째 갈래는 이렇게 시작된다.
+
+                #### 첫째 조건 이야기
+
+                상황과 벌어진 일을 이야기로 쓴다.
+
+                #### 둘째 조건
+
+                - `증상` 언제 터지는가.
+                - `원인` 왜 그런가.
+                - `대처` 어떻게 막는가.
+
+                #### 셋째 조건
+
+                - `증상` 언제 터지는가.
+                - `원인` 왜 그런가.
+                - `대처` 어떻게 막는가.
+
+                ### 장면 ② 둘째 갈래
+
+                둘째 갈래는 이렇게 시작된다.
+
+                #### 넷째 조건 이야기
+
+                상황과 벌어진 일을 이야기로 쓴다.
+
+                #### 다섯째 조건
+
+                - `증상` 언제 터지는가.
+                - `원인` 왜 그런가.
+                - `대처` 어떻게 막는가.
+
+                #### 여섯째 조건
+
+                - `증상` 언제 터지는가.
+                - `원인` 왜 그런가.
+                - `대처` 어떻게 막는가.
+
+                #### 일곱째 조건
+
+                - `증상` 언제 터지는가.
+                - `원인` 왜 그런가.
+                - `대처` 어떻게 막는가.
 
                 ## 면접에서 이렇게 물어본다
                 위의 조건들은 면접에서 이런 형태의 질문으로 나온다.

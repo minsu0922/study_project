@@ -535,33 +535,6 @@ class ClaudeDocumentGeneratorTest {
     }
 
     /**
-     * <b>프롬프트의 분량 지시와 검증기의 경고선이 같은 숫자인지</b> 본다.
-     *
-     * <p>이 짝이 어긋나면 증상이 고약하다. 프롬프트가 6,000자까지 쓰라고 하는데 경고선이
-     * 5,800이면, <b>지시를 잘 따른 문서일수록 매번 경고를 달고</b> 나온다. 경고가 상시로 뜨면
-     * 사람이 경고 자체를 안 보게 되고, 그러면 진짜 문제가 왔을 때도 지나친다.
-     *
-     * <p>2026-08-14과 08-15에 분량을 세 번 올렸는데 그때마다 두 곳을 따로 고쳐야 했다.
-     * 문자열을 뒤져 비교하는 것이 예쁜 테스트는 아니지만, 두 숫자가 다른 파일에 사는 한
-     * 잊는 것을 막을 방법은 이것뿐이다.
-     */
-    @Test
-    @DisplayName("분량 지시와 검증기 경고선이 같은 숫자다 — 어긋나면 지시를 잘 따른 문서가 매번 경고를 단다")
-    void lengthInstructionMatchesValidatorWarnLine() {
-        String beginnerLine = "%,d자".formatted(DocumentDraftValidator.WARN_LENGTH);
-        String advancedLine = "%,d자".formatted(DocumentDraftValidator.ADVANCED_WARN_LENGTH);
-
-        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
-                .as("입문편 [분량]의 상한이 검증기 경고선(%s)과 같아야 한다", beginnerLine)
-                .contains(beginnerLine);
-        // 편이 둘이 되면서 짝도 둘이 됐다. 한쪽만 지키면 나머지 편은 지시대로 쓴 문서가
-        // 매번 경고를 달고 나오고, 상시로 뜨는 경고는 사람이 경고 전체를 안 보게 만든다.
-        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
-                .as("심화편 [분량]의 상한이 검증기 경고선(%s)과 같아야 한다", advancedLine)
-                .contains(advancedLine);
-    }
-
-    /**
      * <b>제목 규칙이 명사구로 뒤집힌 것을 못 박는다</b>(2026-09-17).
      *
      * <p>사용자가 Flyway 문서 제목을 「…무엇으로 아는가」에서 「데이터베이스 마이그레이션 도구의

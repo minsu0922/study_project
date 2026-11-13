@@ -125,7 +125,7 @@ class LlmDocumentServiceTest {
         // 숫자를 직접 적지 않고 상수에 묶는다 — 권장 분량을 올린 날 이 테스트가 "경고 없는 문서로
         // 경고를 검사하는" 상태가 되어도 통과해 버려서, 무의미해진 것을 아무도 모른다.
         String content = validContent("캐시 전략")
-                .replace("내용.", "가".repeat(DocumentDraftValidator.WARN_LENGTH + 1));
+                .replace("# 캐시 전략", "# 캐시 전략은 무엇인가");
         givenDraft(1L, pendingDraft("캐시 전략", "cache-strategy", content));
         when(adminDocumentService.create(any())).thenReturn(detail(7L));
 
@@ -387,6 +387,10 @@ class LlmDocumentServiceTest {
         return """
                 # %s
 
+                > **글의 주제**
+                >
+                > 확인용 글의 주제.
+
                 ## 핵심 요약
                 - **요점** — 결론 한 문장.
 
@@ -432,6 +436,10 @@ class LlmDocumentServiceTest {
     private String validContent(String heading) {
         return """
                 # %s
+
+                > **글의 주제**
+                >
+                > 확인용 글의 주제.
 
                 ## 핵심 요약
                 - **요점** — 결론 한 문장.

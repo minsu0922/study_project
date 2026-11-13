@@ -32,92 +32,6 @@ import java.util.regex.Pattern;
  */
 public final class DocumentDraftValidator {
 
-    /**
-     * 권장 분량 상한(경고). 프롬프트가 요구하는 "9,000~12,000자"의 위쪽 끝.
-     * 넘겼다고 막지 않는 이유는 {@link DraftCheck.Severity} 주석 참고 — 억지로 줄이면
-     * 용어 설명과 면접 질문부터 잘려 나가는데, 그 두 절이 분량을 올린 목적이었다.
-     *
-     * <p><b>이 값은 프롬프트의 분량 지시를 따라간다.</b> 2026-08-14에 고급 재료를 늘리려고
-     * 지시를 3,500자에서 5,500자로 올리면서 여기도 함께 올렸고, 2026-08-15에
-     * {@code ## 실무에서는 이렇게 쓴다} 절을 신설하면서 그 절의 몫만큼 5,800자로 올렸고,
-     * 같은 날 프롬프트를 다시 다듬으면서 6,000자가 됐고, 2026-08-18에 <b>용어 정의를 넣을
-     * 자리</b>를 만들려고 6,800자가 됐다.
-     * 한쪽만 고치면 <b>지시대로 쓴 문서가 전부 경고를 달고 나오고</b>, 경고가 매번 뜨면
-     * 사람이 경고 자체를 안 보게 된다.
-     *
-     * <p><b>2026-08-18에 800자를 올린 이유는 다른 때와 다르다.</b> 앞선 인상은 전부 절을
-     * 신설한 대가였는데, 이번에는 절이 늘지 않았다. 8/15 실물이 상한에 17자를 남기고 나온
-     * 탓에 <b>모델이 용어 정의를 넣을 곳이 없었다</b>는 것이 원인이었다 — 어려운 용어 아홉 개가
-     * 정의 없이 지나갔다. 지면을 주지 않고 "정의를 빼먹지 마라"만 세게 적는 것은 소용이 없다.
-     *
-     * <p><b>하드 상한과의 배율도 같이 본다.</b> 지금은 8,800 / 6,800 = 1.29배다. 권장치를
-     * 계속 올리면서 하드 상한을 그대로 두면 언젠가 둘이 붙어, 경고 없이 곧바로 차단되는
-     * 구간이 생긴다. 그때는 하드 상한도 함께 올려야 한다(이번이 그런 경우였다 —
-     * 7,700을 두면 배율이 1.13으로 좁아져 경고 구간이 사실상 사라진다).
-     *
-     * <p>{@code public}인 이유: 다른 패키지의 테스트({@code LlmDocumentServiceTest})가 "경고만
-     * 있는 문서"를 만들 때 이 값을 기준으로 삼는다. 거기서 숫자를 따로 적어 두면 이 값을 올린 날
-     * <b>그 테스트가 조용히 무의미해진다</b> — 경고 없는 문서로 "경고만 있으면 승인된다"를
-     * 검사하게 되고, 통과하므로 아무도 모른다. {@link ClaudeDocumentGenerator#REQUIRED_SECTIONS}를
-     * 공개한 것과 같은 이유다.
-     *
-     * <p><b>2026-08-23에 6,800 → 12,000으로 올렸다.</b> 지금까지의 인상은 전부 절 하나·자리
-     * 하나의 대가였는데 이번에는 목표 자체가 바뀌었다 — 문서를 그대로 기술 블로그에 올릴 수
-     * 있는 완결된 글로 만들고, 기본 개념을 처음부터 설명하는 절({@code ## 바탕이 되는 개념})을
-     * 앞에 새로 뒀다. 늘린 5,200자의 갈 곳은 프롬프트 쪽 주석의 배정표에 적어 두었다.
-     * 상한만 올리면 부연으로 찬다는 것을 두 번 겪었으므로 개수 지시를 함께 올렸다.
-     *
-     * <p><b>2026-09-03에 12,000 → 13,000으로 올리면서 이 값이 입문편 전용이 됐다.</b>
-     * 한 편을 두 편으로 가르면서 어려운 절 셋이 심화편으로 빠졌는데, 그만큼을 <b>쉽게 푸는 데</b>
-     * 쓰라고 지시했으므로 상한을 낮추면 안 된다. 낮추면 모델이 "덜어 냈으니 짧게"로 읽는다.
-     * {@code ## 바탕이 되는 개념}이 1,500~2,500에서 2,500~3,500으로, 코드 예제가 2~4에서
-     * 3~5개로 늘어난 것이 그 1,000자의 갈 곳이다.
-     *
-     * <p><b>같은 날 후속으로 14,000이 됐다.</b> 사용자가 프롬프트를 다듬으면서
-     * {@code ## 바탕이 되는 개념}을 다시 3,000~4,000자로 올리고("문서 전체의 30% 가까이를
-     * 여기에 쓰는 것은 의도한 배분이다"), 본론에도 깎지 못하는 최소선 셋을 못 박았다.
-     * 그 몫만큼만 올린 것이라 늘어난 1,000자에는 이미 갈 곳이 정해져 있다.
-     */
-    public static final int WARN_LENGTH = 14_000;
-
-    /**
-     * 심화편의 권장 분량 상한 — 프롬프트가 요구하는 "7,000~11,000자"의 위쪽 끝(2026-09-03).
-     *
-     * <p>입문편보다 1,500자 적다. 배경 설명을 하지 않기 때문인데, 입문편과 같은 값을 주면
-     * 남는 지면이 <b>입문편 되풀이</b>로 찬다 — 이 편에서 가장 경계하는 실패다.
-     *
-     * <p><b>2026-09-14에 11,000 → 12,500으로 올렸다.</b> 이 편이 고급 3문제만 떠받치다
-     * 중급 5문제까지 맡게 되면서 {@code ## 실제로는 어디에서 만나는가} 절이 필수로 들어왔다
-     * ({@code ClaudeDocumentGenerator.ADVANCED_REQUIRED_SECTIONS} 주석). 절을 늘리고 상한을
-     * 그대로 두면 <b>지시를 잘 따른 문서일수록 경고를 달고 나온다</b> — 이 짝을 놓치는 사고가
-     * 입문편에서 이미 두 번 있었다. 올린 1,500자에는 갈 곳이 정해져 있다(새 절의 4~6항목).
-     */
-    public static final int ADVANCED_WARN_LENGTH = 12_500;
-
-    /**
-     * 하드 상한(차단). 권장치의 약 1.3배.
-     *
-     * <p>이 선을 넘으면 "길게 잘 썼다"가 아니라 <b>모델이 지시를 통째로 무시했거나 같은 말을
-     * 반복하기 시작했다</b>는 신호로 본다.
-     *
-     * <p><b>권장치와 함께 올려야 하는 값이다.</b> 전에는 5,000자였는데, 프롬프트가 5,500자까지
-     * 쓰라고 하면서 이 값을 그대로 뒀다면 <b>지시를 잘 따른 문서일수록 승인이 막히는</b>
-     * 상태가 됐을 것이다. 차단은 조용하지 않지만 원인이 엉뚱한 곳(검수 화면)에서 보여서
-     * 프롬프트를 의심하기까지 시간이 걸린다.
-     *
-     * <p>2026-08-23에 권장치를 12,000으로 올리면서 같은 1.3배를 유지해 15,600으로 옮겼고,
-     * 2026-09-03에 13,000 → 14,000으로 두 번 오르면서 18,200이 됐다.
-     */
-    static final int MAX_LENGTH = 18_200;
-
-    /** 심화편의 하드 상한 — {@link #ADVANCED_WARN_LENGTH}의 같은 1.3배(2026-09-14에 14,300에서 옮김). */
-    static final int ADVANCED_MAX_LENGTH = 16_250;
-
-    /** 편에 해당하는 권장 분량 상한. */
-    public static int warnLengthOf(DocumentEdition edition) {
-        return edition == DocumentEdition.ADVANCED ? ADVANCED_WARN_LENGTH : WARN_LENGTH;
-    }
-
     /** {@code AdminDocumentRequest.slug}의 정규식과 같아야 한다 — 다르면 승인 순간 400으로 튕긴다. */
     private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]++(?:-[a-z0-9]++)*+$");
 
@@ -204,12 +118,6 @@ public final class DocumentDraftValidator {
     private static final Pattern DESIGN_RATIONALE_BOLD =
             Pattern.compile("(?m)^\\*\\*왜 이렇게 설계됐는가\\*\\*");
 
-    /** 하이픈으로 시작하는 용어 정의 줄 — 프롬프트가 요구하는 형태. */
-    private static final Pattern TERM_BULLET = Pattern.compile("(?m)^-\\s+\\*\\*");
-
-    /** 하이픈 없이 굵은 글씨로만 시작하는 용어 정의 줄 — 화면에서 한 문단으로 뭉치는 형태. */
-    private static final Pattern BOLD_TERM_LINE = Pattern.compile("(?m)^\\*\\*[^*]+\\*\\*\\s*[—-]");
-
     /**
      * {@code ## 언제 깨지는가}의 항목 한 개. 형식이 프롬프트에 지정돼 있지 않아
      * 실물에서 나온 형태({@code **1. 제목**})와 있을 법한 형태들({@code ### }, {@code - },
@@ -249,50 +157,6 @@ public final class DocumentDraftValidator {
     private static final Pattern FAILURE_MODE_HEADING = Pattern.compile("(?m)^####\\s+(?!~~)");
 
     /**
-     * 정의가 있어야 하는 용어 후보 — <b>넓게 잡지 않는다.</b>
-     *
-     * <p>이상적으로는 "문서에 나오는 모든 전문 용어"를 세고 싶지만, 한국어 문장에서 용어의
-     * 경계를 정규식으로 자르면 오탐이 쏟아진다. 예를 들어 {@code ([가-힣]{2,6})\s*락}으로
-     * 잡으면 "그래서 따로 락을 건다"에서 <b>"따로 락"</b>이 용어로 걸린다. 이 클래스의 오랜
-     * 원칙대로 <b>오탐이 미탐보다 비싸다</b> — 헛울리는 경고는 사람이 경고 전체를 안 보게 만든다.
-     *
-     * <p>그래서 <b>2026-08-18에 실제로 새어 나간 두 계열만</b> 본다.
-     * <ol>
-     *   <li>잠금 계열 — 수식어를 목록으로 못 박는다. 실물에서 정의 없이 지나간 것이
-     *       공유 락·배타 락·낙관적 잠금·비관적 잠금·갭 락 다섯이었다.
-     *   <li>대문자 SQL 구문 — 한글이 섞이지 않아 경계가 분명하다. 실물의
-     *       {@code SELECT ... FOR UPDATE}가 세 번 나오도록 정의가 없었다.
-     * </ol>
-     *
-     * <p>다른 분야(네트워크·보안)의 용어는 이 목록으로 잡히지 않는다. <b>알고 그렇게 뒀다.</b>
-     * 여기서 잡는 것은 "모든 미정의 용어"가 아니라 <b>사고가 났던 자리</b>이고, 같은 사고가
-     * 다른 분야에서 나면 그때 그 계열을 한 줄 더한다. 미리 넓히면 지금 당장 오탐이 난다.
-     *
-     * <p><b>2026-08-27: 대문자 구문에 {@code ...}를 필수로 만들었다.</b> 코퍼스 재구축으로 만든
-     * 문서 4편을 걸어 보니 넷 중 셋에서 이 패턴이 헛울렸다 — 네트워크 문서의 {@code RST}가
-     * <b>줄바꿈을 건너</b> 다음 줄 첫 낱말 {@code TCP}와 한 구문으로 붙었고, 보안 문서에서는
-     * 평범한 한국어 문장 속의 {@code GET API}·{@code JSON API}가 걸렸다. 낱말 둘이 나란히
-     * 대문자인 것은 한국어 기술 문서에서 <b>너무 흔한 일</b>이라 신호가 되지 못한다.
-     *
-     * <p>셋을 진짜 지적({@code SET ... NX} — 캐시 문서가 뜻 없이 두 번 쓴 레디스 명령)과
-     * 가르는 조건이 {@code ...}였다. 글쓴이가 중간을 생략해 적었다는 것은 <b>그 구문을 이미
-     * 아는 사람에게 말하고 있다</b>는 표시이고, 이 검사가 잡으려는 것이 정확히 그 상태다.
-     * 대가는 {@code SELECT FOR UPDATE}처럼 생략 없이 적은 구문을 놓치는 것인데, 사고가 났던
-     * 실물은 {@code SELECT ... FOR UPDATE}였으므로 이 클래스의 원칙(사고가 난 자리만 본다)에
-     * 오히려 더 맞다. 놓치는 쪽은 다음에 실물이 나오면 그때 넓힌다.
-     */
-    private static final List<Pattern> TERM_CANDIDATES = List.of(
-            Pattern.compile("(?:공유|배타|낙관적|비관적|명시적|묵시적|갭|넥스트키|행|테이블|범위|분산)\\s*(?:락|잠금)"),
-            // 생략 부호를 낀 대문자 구문(SELECT ... FOR UPDATE, SET ... NX).
-            // 공백을 [ \t]로 못 박아 줄바꿈을 넘지 못하게 한다 — 넘으면 앞 줄 끝과 뒷 줄 첫
-            // 낱말이 한 구문으로 붙는다(위 주석의 RST/TCP).
-            Pattern.compile("\\b[A-Z]{2,}+(?:[ \\t]++[A-Z]{2,}+)*+[ \\t]++\\.\\.\\.[ \\t]++[A-Z]{2,}+(?:[ \\t]++[A-Z]{2,}+)*+")
-    );
-
-    /** 경고 메시지에 나열할 용어 개수 상한 — 다 적으면 메시지가 화면을 넘긴다. */
-    private static final int MAX_LISTED_TERMS = 6;
-
-    /**
      * {@code ## 어떤 때 통하지 않는가} 항목 최소 개수 — 프롬프트의 "7가지 이상"과 같아야 한다.
      *
      * <p><b>주석이 아니라 테스트가 지킨다</b>(2026-09-16). 이 값과 프롬프트 문구가 갈라지면
@@ -330,20 +194,20 @@ public final class DocumentDraftValidator {
         checkTitleMatchesHeading(title, body, structure, checks);
         checkTitleStyle(title, checks);
         checkRequiredSections(structure, edition, checks);
-        checkUndefinedTerms(body, checks);
         checkDiagrams(body, edition, checks);
         checkHtmlTags(body, checks);
-        checkLength(body, edition, checks);
         checkSectionOpeners(structure, checks);
         checkReferences(body, structure, checks);
+        checkTopicBoxPresent(body, checks);
+        checkImageFiles(body, checks);
 
         if (edition == DocumentEdition.BEGINNER) {
             // 아래 둘은 입문편에만 있는 절·규칙을 본다. 심화편에서 돌리면 전부 헛울린다 —
             // 심화편에는 ## 무엇인가도 ## 바탕이 되는 개념도 없는 것이 정상이다.
             checkDesignRationaleHeading(structure, checks);
-            checkTermList(body, structure, checks);
         } else {
             checkFailureModeCount(body, structure, checks);
+            checkFailureScenes(body, structure, checks);
             // 입문편은 '## 용어 한눈에'가 필수 절이라 checkRequiredSections가 이미 차단으로 잡는다.
             // 여기서 또 세면 한 결함에 메시지가 둘 뜬다.
             checkGlossaryTable(structure, checks);
@@ -359,11 +223,11 @@ public final class DocumentDraftValidator {
      */
     public static List<DraftCheck> validate(String title, String slug, String contentMd, String expectedTopicBox) {
         List<DraftCheck> checks = validate(title, slug, contentMd);
+        // 상자가 아예 없으면 기본 검사(checkTopicBoxPresent)가 이미 막는다. 여기서는 다를 때만 본다
         if (expectedTopicBox != null && !expectedTopicBox.isBlank()
-                && !TopicBoxes.matches(contentMd, expectedTopicBox)) {
-            checks.add(DraftCheck.blocking(TopicBoxes.extract(contentMd) == null
-                    ? "「글의 주제」 상자가 없습니다. 대기열에 사람이 쓴 글이 있으니 그 글을 상자로 넣으세요."
-                    : "「글의 주제」가 대기열에 사람이 쓴 글과 다릅니다. 글을 고치려면 관리 콘솔의 주제 상세에서 고치세요."));
+                && TopicBoxes.extract(contentMd) != null && !TopicBoxes.matches(contentMd, expectedTopicBox)) {
+            checks.add(DraftCheck.blocking(
+                    "「글의 주제」가 대기열에 사람이 쓴 글과 다릅니다. 글을 고치려면 관리 콘솔의 주제 상세에서 고치세요."));
         }
         return checks;
     }
@@ -526,32 +390,6 @@ public final class DocumentDraftValidator {
     }
 
     /**
-     * {@code ## 무엇인가} 절의 핵심 용어가 <b>하이픈 목록</b>인지.
-     *
-     * <p><b>줄만 바꿔서는 안 되는 이유가 마크다운에 있다.</b> 홑줄바꿈은 문단을 끊지 않으므로
-     * ({@code marked}의 기본값 {@code breaks:false}) 하이픈 없이 다섯 줄을 쓰면 화면에서
-     * 한 문단으로 뭉쳐 나온다. 정의를 맨 앞에 올려 찾기 쉽게 하려던 절이 정작 가장 읽기
-     * 어려운 덩어리가 된다 — 실제로 그렇게 나왔다.
-     *
-     * <p>프롬프트에 두 번 적었는데도 안 지켜졌다(커밋 bafb2e9가 고치려다 실패). 원인은
-     * 규칙 옆의 예시에 하이픈이 없어서였고, 그때 <b>예시가 규칙을 이긴다</b>는 것을 배웠다.
-     * 프롬프트를 또 고치는 것보다 세어 보는 쪽이 확실하다.
-     */
-    private static void checkTermList(String body, String structure, List<DraftCheck> checks) {
-        Section section0 = sectionOf(body, structure, "## 무엇인가");
-        if (section0 == null || section0.raw().isBlank()) {
-            return; // 절 자체가 없으면 checkRequiredSections가 이미 차단으로 잡는다
-        }
-        // 코드블록 안의 하이픈 목록에 속으면 "용어 목록이 있다"고 잘못 판정한다
-        String section = section0.masked();
-        if (!TERM_BULLET.matcher(section).find() && BOLD_TERM_LINE.matcher(section).find()) {
-            checks.add(DraftCheck.warning(
-                    "'## 무엇인가'의 용어 정의가 하이픈 목록이 아닙니다. "
-                            + "줄만 바꾸면 화면에서 한 문단으로 뭉쳐 나옵니다(마크다운의 홑줄바꿈)."));
-        }
-    }
-
-    /**
      * 심화편에 {@code ## 용어 한눈에} 표가 있는지.
      *
      * <p><b>2026-09-04: 자리가 본론 안({@code ###})에서 최상위 절({@code ##})로 올라갔다.</b>
@@ -576,74 +414,6 @@ public final class DocumentDraftValidator {
                             + "본론 뒤, '## 실무에서 어디에 나타나는가' 바로 앞에 두는 절입니다 — "
                             + "독자가 아래 절에서 막혔을 때 돌아오는 자리입니다."));
         }
-    }
-
-    /**
-     * 어려운 용어가 <b>정의 없이</b> 지나가는지 — 초보 학습자가 문서를 놓치는 가장 흔한 이유다.
-     *
-     * <p><b>이 검사의 한계를 먼저 적는다.</b> 문서에 나오는 모든 전문 용어를 세지 않는다.
-     * 셀 수도 없고, 넓게 잡으면 오탐이 경고 전체를 무력하게 만든다({@link #TERM_CANDIDATES}
-     * 주석의 "따로 락" 예). 여기서 보는 것은 <b>2026-08-18에 실제로 새어 나간 두 계열</b>뿐이고,
-     * 다른 계열에서 같은 사고가 나면 그때 목록을 한 줄 늘린다.
-     *
-     * <p>그래도 값어치가 있는 이유: 이 두 계열이 <b>고급 문제의 보기에 그대로 실려 나간다</b>.
-     * 8/18 문제 5개 중 3개의 보기에 {@code SELECT ... FOR UPDATE}와 낙관적 잠금이 들어 있었는데,
-     * 문서 어디에도 그 뜻이 없었다. 문서에서 새면 문제까지 새는 구조라 <b>문서 단계에서</b>
-     * 잡는 것이 가장 싸다.
-     */
-    private static void checkUndefinedTerms(String body, List<DraftCheck> checks) {
-        // LinkedHashSet — 같은 용어가 여러 번 나와도 한 번만 알리고, 문서에 나온 순서를 지킨다.
-        // 검수자는 메시지를 들고 문서를 위에서 아래로 훑으므로 순서가 곧 찾는 순서다.
-        Set<String> undefined = new LinkedHashSet<>();
-        List<String> lines = List.of(body.split("\n", -1));
-
-        for (Pattern candidate : TERM_CANDIDATES) {
-            Matcher m = candidate.matcher(body);
-            while (m.find()) {
-                String term = m.group();
-                if (!isDefinedSomewhere(lines, term)) {
-                    undefined.add(term);
-                }
-            }
-        }
-        if (undefined.isEmpty()) {
-            return;
-        }
-
-        List<String> listed = undefined.stream().limit(MAX_LISTED_TERMS).toList();
-        String tail = undefined.size() > listed.size()
-                ? " 외 %d개".formatted(undefined.size() - listed.size())
-                : "";
-        checks.add(DraftCheck.warning(
-                "정의 없이 쓰인 용어가 있습니다: %s%s. 그 자리에서 풀거나 '### 용어 한눈에' 표에 올리세요."
-                        .formatted(String.join(", ", listed), tail)));
-    }
-
-    /**
-     * 그 용어를 담은 <b>정의 줄</b>이 문서 어딘가에 있는지.
-     *
-     * <p>정의 줄로 인정하는 형태는 셋이다 — 표의 행({@code |}로 시작), 하이픈 정의 목록
-     * ({@code - **용어** — 뜻.}), 굵은 글씨 정의 줄({@code **용어** — 뜻.}). 마지막 것을
-     * 함께 인정하는 이유는 {@link #checkTermList}가 그 형태를 <b>경고하되 허용</b>하기
-     * 때문이다. 한쪽이 봐준 형식을 다른 쪽이 "정의가 아니다"라고 하면 같은 결함으로 경고가
-     * 두 번 뜨고, 검수자는 무엇을 고쳐야 하는지 헷갈린다.
-     *
-     * <p>표 행에 줄표를 요구하지 않는 이유: 표는 칸이 뜻을 나누므로 줄표가 필요 없다.
-     */
-    private static boolean isDefinedSomewhere(List<String> lines, String term) {
-        for (String line : lines) {
-            String trimmed = line.strip();
-            if (!trimmed.contains(term)) {
-                continue;
-            }
-            if (trimmed.startsWith("|")) {
-                return true;
-            }
-            if ((trimmed.startsWith("- **") || trimmed.startsWith("**")) && trimmed.contains("—")) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -860,6 +630,74 @@ public final class DocumentDraftValidator {
         return new Section(body.substring(from, to), structure.substring(from, to));
     }
 
+    /** 「글의 주제」 상자가 있는지(2026-11-13). 상자는 사람이 쓰므로 없으면 승인하지 않는다. */
+    private static void checkTopicBoxPresent(String body, List<DraftCheck> checks) {
+        if (TopicBoxes.extract(body) == null) {
+            checks.add(DraftCheck.blocking(
+                    "「글의 주제」 상자가 없습니다. 제목 바로 아래에 '> **글의 주제**' 상자를 두세요."));
+        }
+    }
+
+    /** 본문이 부르는 그림 파일 — {@code ![설명](/images/docs/x.svg)}의 괄호 속 경로를 꺼낸다. */
+    private static final Pattern DOC_IMAGE_PATH = Pattern.compile("!\\[[^\\]\\n]*\\]\\((/[^)\\s]+)\\)");
+
+    /**
+     * 그림 파일이 실제로 있는지(2026-11-13). 경로 오타 하나면 화면에 깨진 그림이 뜬다.
+     * 사이트가 정적 파일을 {@code static/} 아래에서 내주므로 클래스패스의 같은 자리를 찾는다.
+     */
+    private static void checkImageFiles(String body, List<DraftCheck> checks) {
+        Matcher m = DOC_IMAGE_PATH.matcher(body);
+        ClassLoader loader = DocumentDraftValidator.class.getClassLoader();
+        while (m.find()) {
+            String path = m.group(1);
+            if (loader.getResource("static" + path) == null) {
+                checks.add(DraftCheck.blocking("그림 파일이 없습니다: " + path));
+            }
+        }
+    }
+
+    private static final Pattern SCENE_HEADING = Pattern.compile("(?m)^###\\s+장면\\s");
+    private static final Pattern ITEM_HEADING = Pattern.compile("(?m)^####\\s+(?!~~)(.+)$");
+
+    /**
+     * 심화편 실패 사례가 장면 꼴인지(2026-11-13, docs/WRITING_STYLE.md 10절).
+     * 「어떤 때 통하지 않는가」 아래에 {@code ### 장면}이 있어야 하고, 장면마다 첫 사례는
+     * 꼬리표(`증상` 등) 없이 이야기로 쓴다. 꼬리표만 남으면 장면 없이 요약만 남는다.
+     */
+    private static void checkFailureScenes(String body, String structure, List<DraftCheck> checks) {
+        Section section = sectionOf(body, structure, "## 어떤 때 통하지 않는가");
+        if (section == null) {
+            return; // 절이 없으면 필수 절 검사가 이미 차단으로 잡는다
+        }
+        String text = section.masked();
+        Matcher scene = SCENE_HEADING.matcher(text);
+        List<Integer> starts = new ArrayList<>();
+        while (scene.find()) {
+            starts.add(scene.start());
+        }
+        if (starts.isEmpty()) {
+            checks.add(DraftCheck.warning(
+                    "'## 어떤 때 통하지 않는가'에 '### 장면 ①' 소제목이 없습니다. 실패 사례를 장면 2~3개로 묶으세요."));
+            return;
+        }
+        for (int i = 0; i < starts.size(); i++) {
+            int end = i + 1 < starts.size() ? starts.get(i + 1) : text.length();
+            String block = text.substring(starts.get(i), end);
+            Matcher item = ITEM_HEADING.matcher(block);
+            if (!item.find()) {
+                continue;
+            }
+            int from = item.end();
+            int to = item.find() ? item.start() : block.length();
+            if (block.substring(from, to).contains("`증상`")) {
+                String name = block.lines().findFirst().orElse("").replaceFirst("^###\\s+", "");
+                checks.add(DraftCheck.warning(
+                        "'%s'의 첫 사례가 꼬리표로 쓰였습니다. 장면마다 첫 사례는 상황→벌어진 일→원인→비유→대처 순서의 이야기로 쓰세요."
+                                .formatted(name)));
+            }
+        }
+    }
+
     /** 패턴이 몇 번 나오는지. */
     private static int count(Pattern pattern, String text) {
         Matcher m = pattern.matcher(text);
@@ -946,24 +784,6 @@ public final class DocumentDraftValidator {
         if (m.find()) {
             checks.add(DraftCheck.blocking(
                     "코드블록 밖에 HTML 태그가 있습니다(문서 화면에서 그대로 실행됩니다): " + m.group()));
-        }
-    }
-
-    /** 분량 — 권장 초과는 경고, 하드 상한 초과는 차단. */
-    private static void checkLength(String body, DocumentEdition edition, List<DraftCheck> checks) {
-        int warn = warnLengthOf(edition);
-        int hard = edition == DocumentEdition.ADVANCED ? ADVANCED_MAX_LENGTH : MAX_LENGTH;
-        // 참고 자료는 읽는 글이 아니라 출처 목록이라 분량에서 뺀다 — 링크 주소가 길어 몇백 자를 먹는다
-        int refs = body.indexOf("\n" + REFERENCES_SECTION + "\n");
-        int length = refs < 0 ? body.length() : refs;
-        if (length > hard) {
-            checks.add(DraftCheck.blocking(
-                    "본문이 하드 상한을 넘었습니다: " + length + "자 (" + edition.getDisplayName()
-                            + " 상한 " + hard + "자)"));
-        } else if (length > warn) {
-            checks.add(DraftCheck.warning(
-                    "본문이 권장 분량을 넘었습니다: " + length + "자 (" + edition.getDisplayName()
-                            + " 권장 " + warn + "자)"));
         }
     }
 
