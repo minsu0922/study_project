@@ -518,21 +518,20 @@ class ClaudeDocumentGeneratorTest {
      * 3개(그중 1개는 껍데기)만 나온 사고가 있었다. 원인은 고급 재료 지시에 <b>개수가 없었던</b>
      * 것이다 — 실측에서 유일하게 숫자가 박혀 있던 "면접 질문 3~4개"만 그대로 지켜졌다.
      *
-     * <p>이 테스트가 지키는 것은 문구의 좋고 나쁨이 아니라 <b>개수 지시가 사라지는 것</b>이다.
-     * 프롬프트를 다듬다가 "5가지 이상"이 빠지면 증상은 조용하다 — 문서는 멀쩡해 보이고,
-     * 사흘 뒤 고급 문제 날에 가서야 재료가 없다는 게 드러난다.
+     * <p><b>2026-11-13에 개수를 일부러 뺐다.</b> 같은 외래키 주제를 API로 돌려 보니 "7가지 이상"을
+     * 채우려고 인덱스·잠금 같은 뒤 글 주제를 끌어왔다. 문제 수는 맞추지 않아도 된다고 사용자가 정했고,
+     * 재료가 모자란 날은 문제 생성이 못 채운 이유(skipReason)를 남긴다. 그래서 이제 지키는 것은
+     * <b>절이 남아 있는가</b>와 <b>개수를 채우려고 범위를 넘지 말라는 지시</b>다.
      */
     @Test
-    @DisplayName("고급 재료에 개수 지시가 박혀 있다 — 이게 빠지면 사흘 뒤 고급 날에 재료가 마른다")
+    @DisplayName("고급 재료 절은 남기고, 개수를 채우려고 범위를 넘지 말라고 적는다")
     void pinsAdvancedMaterialQuota() {
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .as("고급 전용 절이 모델 재량이면 아예 없는 문서가 나온다")
                 .contains("## 어떤 때 통하지 않는가")
-                .as("개수를 박은 지시만 실제로 지켜졌다는 것이 실측 결과다")
-                .contains("서로 다른 것으로 7가지 이상")
-                .contains("6개 이하면 실패다")
-                .as("분량이 빠듯할 때 제일 먼저 깎이는 것이 이 절이라, 깎지 말라고 따로 적는다")
-                .contains("분량 상한 때문에 줄이지 않는다");
+                .as("하한이 범위를 넘게 만들었다")
+                .doesNotContain("7가지 이상").doesNotContain("6개 이하면 실패다")
+                .contains("모자라도 채우지 마라");
     }
 
     /**
@@ -1002,8 +1001,8 @@ class ClaudeDocumentGeneratorTest {
         String advanced = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
 
         assertThat(advanced)
-                .as("실패 조건 개수 — 고급 문제가 여기를 재료로 쓴다")
-                .contains("%d가지 이상".formatted(DocumentDraftValidator.MIN_FAILURE_MODES));
+                .as("2026-11-13 하한을 뺐다 — 개수를 채우려다 뒤 글 주제를 끌어왔다")
+                .doesNotContain("6개 이하면 실패다").contains("모자라도 채우지 마라");
         // 코드 예제·본론 절 개수는 2026-11-13에 검사에서 뺐다. 지금 문서 78편에서 한 번도 안 울렸다
         assertThat(beginner).isNotBlank();
     }

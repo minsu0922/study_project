@@ -298,25 +298,6 @@ class DocumentDraftValidatorTest {
                 .anyMatch(m -> m.contains("소제목이 2개입니다"));
     }
 
-    /**
-     * 고급 문제의 재료. 2026-08-14에 고급 날 재료가 말라 5개를 요청해 3개만 받았다.
-     * 그 뒤 프롬프트에 "5가지 이상"을 박았지만 세는 곳은 없었다.
-     *
-     * <p>2026-08-23에 분량을 12,000자로 올리면서 기준을 7가지로 올렸다 — 늘린 지면은
-     * 갈 곳을 지정해야 부연으로 차지 않는다는 것이 이 프롬프트의 오랜 결론이다.
-     */
-    @Test
-    @DisplayName("'어떤 때 통하지 않는가' 항목이 모자라면 알린다 — 고급 날 재료가 마른다")
-    void warnsWhenFailureModesAreTooFew() {
-        String few = withFailureItems(advancedBody(TITLE), List.of("하나", "둘", "셋").stream()
-                .map(n -> "#### %s\n\n- `증상` 터진다.\n- `원인` 이유다.\n- `대처` 막는다.\n".formatted(n))
-                .collect(java.util.stream.Collectors.joining("\n")));
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", few))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("'## 어떤 때 통하지 않는가'의 항목이 3개"));
-    }
-
     /* ── 2026-11-10: 참고 자료 ─────────────────────────────────
      * 배치 모델은 인터넷을 볼 수 없어 없는 주소를 지어낼 수 있다. 막지 않고, 허용 목록 밖의
      * 링크만 짚어 검수자가 눌러 볼 곳을 좁힌다. */
@@ -353,49 +334,6 @@ class DocumentDraftValidatorTest {
         assertThat(DocumentDraftValidator.isTrustedReference("https://www.rfc-editor.org/rfc/rfc1918")).isTrue();
         assertThat(DocumentDraftValidator.isTrustedReference("https://evil-rfc-editor.org/x")).isFalse();
         assertThat(DocumentDraftValidator.isTrustedReference("not a url")).isFalse();
-    }
-
-    /**
-     * <b>{@code ####} 항목 아래 꼬리표 목록이 붙는 지금 형식</b>(2026-11-08).
-     *
-     * <p>항목 하나에 {@code - `증상`} 같은 줄이 셋 붙는다. 옛 패턴은 하이픈 줄도 항목으로 세므로,
-     * 항목 둘이 여덟로 불어나 재료가 모자란 문서가 조용히 통과한다. {@code ####} 제목이 있으면
-     * 그것만 센다.
-     */
-    @Test
-    @DisplayName("#### 항목은 제목만 센다 — 꼬리표 줄까지 세면 항목 둘이 여덟이 된다")
-    void countsHeadingItemsOnlyWhenPresent() {
-        String base = advancedBody(TITLE);
-        String item = """
-                #### %s
-
-                - `증상` 터진다.
-                - `원인` 이유다.
-                - `대처` 막는다.
-                """;
-        String seven = List.of("하나", "둘", "셋", "넷", "다섯", "여섯", "일곱").stream()
-                .map(item::formatted).collect(java.util.stream.Collectors.joining("\n"));
-        String myths = """
-
-                ### 흔한 오해
-
-                #### ~~"오해 하나"~~
-
-                설명.
-
-                #### ~~"오해 둘"~~
-
-                설명.
-                """;
-        String twoPlusMyths = item.formatted("하나") + "\n" + item.formatted("둘") + myths;
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", withFailureItems(base, seven)))
-                .extracting(DraftCheck::message)
-                .noneMatch(m -> m.contains("어떤 때 통하지 않는가"));
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", withFailureItems(base, twoPlusMyths)))
-                .extracting(DraftCheck::message)
-                .as("꼬리표 줄과 줄 그은 오해 제목은 항목이 아니다")
-                .anyMatch(m -> m.contains("'## 어떤 때 통하지 않는가'의 항목이 2개"));
     }
 
     /**
@@ -448,59 +386,6 @@ class DocumentDraftValidatorTest {
                 .noneMatch(m -> m.contains("## 핵심 요약") && m.contains("문장으로 시작"))
                 .noneMatch(m -> m.contains("## 이 글을 읽기 전에") && m.contains("문장으로 시작"))
                 .noneMatch(m -> m.contains("용어 한눈에") && m.contains("문장으로 시작"));
-    }
-
-    /**
-     * <b>옛 이름으로 쓰인 초안도 개수를 센다</b>(2026-09-16).
-     *
-     * <p>절 이름을 바꾼 날 검수 대기함에 남아 있던 초안은 옛 이름을 쓴다. 새 이름으로만 찾으면
-     * 그 초안은 "절이 아예 없다"로 읽혀 개수 검사가 <b>통째로 건너뛰어진다</b>. 그러면 재료가
-     * 세 개뿐인 초안에 경고가 하나도 안 붙은 채 승인 버튼이 열린다 — 검사가 없는 것보다
-     * 나쁘다. 있는 줄 알고 안 보게 되기 때문이다.
-     */
-    @Test
-    @DisplayName("옛 이름 초안도 항목 개수를 센다 — 새 이름으로만 찾으면 검사가 조용히 꺼진다")
-    void countsFailureModesInLegacyNamedDraft() {
-        String legacy = withFailureItems(advancedBody(TITLE), List.of("하나", "둘", "셋").stream()
-                .map(n -> "#### %s\n\n- `증상` 터진다.\n- `원인` 이유다.\n- `대처` 막는다.\n".formatted(n))
-                .collect(java.util.stream.Collectors.joining("\n")))
-                .replace("## 어떤 때 통하지 않는가", "## 언제 깨지는가");
-
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", legacy))
-                .extracting(DraftCheck::message)
-                .anyMatch(m -> m.contains("항목이 3개"));
-    }
-
-    /**
-     * 항목 형식이 프롬프트에 지정돼 있지 않다. 실물은 {@code **1. 제목**}으로 왔지만 다음 문서는
-     * 다른 형식일 수 있어, 형식 하나만 인정하면 <b>멀쩡한 문서에 경고가 뜬다</b>.
-     */
-    @Test
-    @DisplayName("항목 형식이 달라도 센다 — 형식 하나만 인정하면 멀쩡한 문서에 경고가 뜬다")
-    void countsFailureModesInAnyFormat() {
-        // 일곱 항목을 통째로 다른 형식으로 갈아 끼운다. 하나만 바꿔서는 나머지 여섯이
-        // 받쳐 줘서 통과하므로, 그 형식을 정말 세는지 알 수 없다.
-        String base = advancedBody(TITLE);
-
-        for (String form : List.of(
-                // 소제목
-                "### 하나\n### 둘\n### 셋\n### 넷\n### 다섯\n### 여섯\n### 일곱",
-                // 하이픈+굵게
-                "- **하나**\n- **둘**\n- **셋**\n- **넷**\n- **다섯**\n- **여섯**\n- **일곱**",
-                // 맨 하이픈 ← 처음엔 못 셌다
-                "- 하나\n- 둘\n- 셋\n- 넷\n- 다섯\n- 여섯\n- 일곱",
-                // 맨 번호
-                "1. 하나\n2. 둘\n3. 셋\n4. 넷\n5. 다섯\n6. 여섯\n7. 일곱",
-                // 번호 없는 굵은 글씨 ← 2026-08-18 재생성 문서가 이 형식이었고, 항목 7개를
-                // 1개로 세어 잘 쓴 문서에 "5개 이상" 경고가 떴다. 프롬프트는 번호를 요구한
-                // 적이 없으므로 번호를 세던 쪽이 처음부터 틀렸다.
-                "**하나**\n**둘**\n**셋**\n**넷**\n**다섯**\n**여섯**\n**일곱**")) {
-            assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy",
-                    withFailureItems(base, form)))
-                    .as("이 형식을 못 세면 멀쩡한 문서에 경고가 뜬다:%n%s", form)
-                    .extracting(DraftCheck::message)
-                    .noneMatch(m -> m.contains("어떤 때 통하지 않는가"));
-        }
     }
 
     /* ── 2026-08-18: 어려운 용어가 정의 없이 지나갔다 ─────────────

@@ -118,55 +118,6 @@ public final class DocumentDraftValidator {
     private static final Pattern DESIGN_RATIONALE_BOLD =
             Pattern.compile("(?m)^\\*\\*왜 이렇게 설계됐는가\\*\\*");
 
-    /**
-     * {@code ## 언제 깨지는가}의 항목 한 개. 형식이 프롬프트에 지정돼 있지 않아
-     * 실물에서 나온 형태({@code **1. 제목**})와 있을 법한 형태들({@code ### }, {@code - },
-     * {@code 1. })을 모두 항목으로 인정한다 — 자세한 이유는 {@link #checkFailureModeCount} 참고.
-     *
-     * <p><b>맨 하이픈을 포함한 것이 핵심이다.</b> 처음에는 {@code - **}(하이픈+굵게)만
-     * 인정했는데, 그러면 {@code - 깨지는 조건 하나} 같은 <b>평범한 목록으로 잘 쓴 문서에
-     * 경고가 뜬다</b>. 실제로 이 저장소의 테스트 도우미 문서가 그 형태였다.
-     *
-     * <p>대가는 항목 밑의 하위 목록까지 항목으로 세는 것이다. 그래서 개수가 부풀고,
-     * 진짜 부족한 문서를 놓칠 수 있다. 그 방향을 택한 이유는 <b>오탐이 미탐보다 비싸기</b>
-     * 때문이다 — 헛울리는 경고는 사람이 경고 전체를 안 보게 만들지만, 재료가 모자란 것은
-     * 다음 날 수확량 점검이 한 번 더 잡는다({@code DraftGeneratorCli.reportYield}).
-     *
-     * <p><b>2026-08-18: 번호 없는 굵은 글씨를 더했다.</b> 같은 날 다시 뽑은 문서가 항목을
-     * {@code **쓰기 스큐**}처럼 <b>번호 없이</b> 썼다. 항목이 7개인데 검증기는 1개로 세고
-     * "기준 5개 이상"을 경고했다 — 잘 쓴 문서에 헛울린 것이라 이 주석이 말하는 실패 그대로다.
-     * 원인은 {@code \*\*\d+\.}에 박아 둔 <b>{@code \d+\.}</b>였다. 프롬프트는 "각각 이름을
-     * 붙이고"라고만 할 뿐 번호를 요구한 적이 없으니, 번호를 세는 쪽이 처음부터 틀렸다.
-     * 숫자 부분을 떼어 굵은 글씨로 시작하는 줄을 모두 인정한다.
-     *
-     * <p>그 결과 {@code ### 흔한 오해}의 항목({@code **"...이다"**})까지 함께 세어 개수가 더
-     * 부푼다. 알고 받아들인다 — 위 문단이 정한 방향(오탐 &gt; 미탐)과 같은 판단이고,
-     * 여기서 형식을 하나로 좁히면 <b>다음 문서가 또 다른 형식으로 와서 같은 사고가 반복된다</b>.
-     */
-    private static final Pattern FAILURE_MODE_ITEM =
-            Pattern.compile("(?m)^(\\*\\*|###\\s+|-\\s+|\\d+\\.\\s+)");
-
-    /**
-     * 같은 절의 <b>{@code ####} 항목 제목</b> — 프롬프트가 정한 지금 형식이다.
-     *
-     * <p>이 형식에서는 항목 하나 아래에 꼬리표 목록({@code - `증상`} 등) 세 줄이 붙는다.
-     * {@link #FAILURE_MODE_ITEM}으로 세면 항목 둘이 여덟로 불어나 모자란 문서가 통과하므로,
-     * {@code ####} 제목이 있으면 이것만 센다. 줄 그은 제목({@code #### ~~"…"~~})은
-     * 「흔한 오해」 항목이라 뺀다.
-     */
-    private static final Pattern FAILURE_MODE_HEADING = Pattern.compile("(?m)^####\\s+(?!~~)");
-
-    /**
-     * {@code ## 어떤 때 통하지 않는가} 항목 최소 개수 — 프롬프트의 "7가지 이상"과 같아야 한다.
-     *
-     * <p><b>주석이 아니라 테스트가 지킨다</b>(2026-09-16). 이 값과 프롬프트 문구가 갈라지면
-     * 두 방향으로 다 나쁘다. 검사가 느슨하면 지시를 어겨도 조용하고, 검사가 빡빡하면
-     * <b>지시대로 쓴 문서가 매번 경고를 달고 나온다</b>. 커밋 169개를 훑어 보니 이 검증기
-     * 변경의 64%가 문서 프롬프트와 같은 커밋에 있었다 — 두 곳이 사실상 한 덩어리인데
-     * 잇는 것이 주석 한 줄뿐이었다. {@code DocumentDraftValidatorTest}가 대조한다.
-     */
-    public static final int MIN_FAILURE_MODES = 7;
-
     private DocumentDraftValidator() {
     }
 
@@ -206,7 +157,6 @@ public final class DocumentDraftValidator {
             // 심화편에는 ## 무엇인가도 ## 바탕이 되는 개념도 없는 것이 정상이다.
             checkDesignRationaleHeading(structure, checks);
         } else {
-            checkFailureModeCount(body, structure, checks);
             checkFailureScenes(body, structure, checks);
             // 입문편은 '## 용어 한눈에'가 필수 절이라 checkRequiredSections가 이미 차단으로 잡는다.
             // 여기서 또 세면 한 결함에 메시지가 둘 뜬다.
@@ -476,27 +426,6 @@ public final class DocumentDraftValidator {
         }
     }
 
-    private static void checkFailureModeCount(String body, String structure, List<DraftCheck> checks) {
-        // 2026-09-16에 이름이 바뀌었다. 새 이름으로 먼저 찾고, 없으면 옛 이름으로 찾는다 —
-        // 검수 대기함에 남아 있던 옛 초안을 열었을 때 "절이 아예 없다"로 읽혀 개수 검사가
-        // 통째로 건너뛰어지면, 재료가 모자란 초안이 경고 없이 승인된다.
-        Section section = sectionOf(body, structure, "## 어떤 때 통하지 않는가");
-        if (section == null) {
-            section = sectionOf(body, structure, ClaudeDocumentGenerator.LEGACY_FAILURE_MODE_SECTION);
-        }
-        if (section == null) {
-            return; // 절 자체가 없으면 checkRequiredSections가 차단으로 잡는다
-        }
-        // 사본으로 센다 — 코드 예제의 "- " 줄까지 항목으로 세면 모자란 문서가 통과한다
-        int headings = count(FAILURE_MODE_HEADING, section.masked());
-        int items = headings > 0 ? headings : count(FAILURE_MODE_ITEM, section.masked());
-        if (items < MIN_FAILURE_MODES) {
-            checks.add(DraftCheck.warning(
-                    "'## 어떤 때 통하지 않는가'의 항목이 %d개입니다(기준 %d개 이상). 고급 문제가 여기를 재료로 씁니다."
-                            .formatted(items, MIN_FAILURE_MODES)));
-        }
-    }
-
     /**
      * 그림({@code ```mermaid})이 있는지, 있으면 화면이 그릴 수 있는 종류인지 — 2026-10-10 신설.
      *
@@ -586,10 +515,6 @@ public final class DocumentDraftValidator {
      */
     /**
      * 절의 첫 줄이 <b>목록·표·코드·소제목</b>인지 — 그러면 다리 문장이 없는 것이다.
-     *
-     * <p>{@code FAILURE_MODE_ITEM}과 거의 같은데 표({@code |})와 펜스({@code ```})를 더했다.
-     * 따로 두는 이유는 두 패턴이 재는 것이 다르기 때문이다 — 저쪽은 "항목이 몇 개인가",
-     * 이쪽은 "첫 줄이 문장인가"다. 한 패턴을 공유하면 한쪽을 고칠 때 다른 쪽이 조용히 바뀐다.
      */
     private static final Pattern NOT_A_SENTENCE_OPENER =
             Pattern.compile("^(\\*\\*|#{3,}\\s|-\\s|\\*\\s|\\||```|\\d+\\.\\s|>\\s)");
