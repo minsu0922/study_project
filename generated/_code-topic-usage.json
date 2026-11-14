@@ -25,5 +25,11 @@
     "topic" : "오버라이딩과 필드·정적 메서드 숨김",
     "lastUsedAt" : "2026-11-08",
     "usedCount" : 1
+  }, {
+    "id" : 1086,
+    "domain" : "LANGUAGE_RUNTIME",
+    "topic" : "try-catch-finally 실행 순서와 return",
+    "lastUsedAt" : "2026-11-15",
+    "usedCount" : 1
   } ]
 }

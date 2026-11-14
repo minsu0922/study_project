@@ -1,0 +1,54 @@
+{
+  "formatVersion" : 1,
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-11-15",
+  "generatedAt" : "2026-11-14T21:44:53.739603002Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "ADVANCED",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행하면 무엇이 출력되는가?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: return x를 만나면 그 순간의 x 값을 돌려줄 값으로 따로 저장해 두고 finally를 실행한다. finally에서 기본형 변수 x를 바꿔도 이미 저장한 값은 바뀌지 않는다.\n13행 calc() 호출: calc 메서드로 들어간다.\n3행 int x = 1: x는 1이다.\n5행 x = 2: x는 2가 된다.\n6행 return x: 돌려줄 값으로 2를 저장해 두고 finally로 간다.\n8행 x = 3: 변수 x만 3이 되고 저장된 값 2는 그대로다.\n9행 println: finally x=3을 출력한다.\nfinally가 끝나면 저장해 둔 2가 돌려진다 → 13행 r은 2다.\n14행 println: r=2를 출력한다.\n그래서 출력은 finally x=3 / r=2다.",
+    "choices" : [ {
+      "text" : "finally x=3 / r=2",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "finally x=3 / r=3",
+      "correct" : false,
+      "rationale" : "finally에서 바꾼 변수가 이미 정해진 return 값에도 반영된다고 오해했다.",
+      "matchText" : ""
+    }, {
+      "text" : "r=2 / finally x=3",
+      "correct" : false,
+      "rationale" : "return이 먼저 호출한 쪽으로 돌아간 뒤에 finally가 실행된다고 오해했다.",
+      "matchText" : ""
+    }, {
+      "text" : "r=2",
+      "correct" : false,
+      "rationale" : "try에서 return하면 finally는 건너뛴다고 오해했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "try의 return 값과 finally에서의 변수 변경",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ ],
+  "codeTopic" : "try-catch-finally 실행 순서와 return",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "public class Main {\n    static int calc() {\n        int x = 1;\n        try {\n            x = 2;\n            return x;\n        } finally {\n            x = 3;\n            System.out.println(\"finally x=\" + x);\n        }\n    }\n    public static void main(String[] args) {\n        int r = calc();\n        System.out.println(\"r=\" + r);\n    }\n}",
+    "expectedOutput" : "finally x=3\nr=2",
+    "targetLine" : 0,
+    "errorType" : ""
+  } ]
+}

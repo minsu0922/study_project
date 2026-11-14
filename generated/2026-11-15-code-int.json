@@ -1,0 +1,102 @@
+{
+  "formatVersion" : 1,
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-11-15",
+  "generatedAt" : "2026-11-14T21:44:53.738204243Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "INTERMEDIATE",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행하면 어떻게 되는가?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: catch 블록 안에서 새로 난 예외는 같은 try 문의 catch가 잡지 못한다. 이때 finally는 실행되지만, 예외는 사라지지 않고 finally가 끝난 뒤 바깥으로 그대로 나간다.\n3행 int[] arr = new int[3]: arr는 [0, 0, 0]이고 유효한 인덱스는 0~2다.\n5행 arr[1] / arr[0]: 0 / 0이라 ArithmeticException이 난다 → 6행은 건너뛴다.\n7행 catch (ArithmeticException e): 종류가 맞아 예외를 잡는다.\n8행 arr[3]: 인덱스 3은 범위 밖이라 ArrayIndexOutOfBoundsException이 새로 난다.\n10행 println(\"finally\"): 나가기 전에 finally가 실행되어 finally를 출력한다.\nfinally가 끝나면 8행에서 난 예외가 main 밖으로 나가고 12행 end는 출력되지 않는다.\n그래서 정답은 8행에서 ArrayIndexOutOfBoundsException이 난다는 보기다.",
+    "choices" : [ {
+      "text" : "5행에서 ArithmeticException이 난다",
+      "correct" : false,
+      "rationale" : "catch가 잡은 예외도 main 밖으로 나간다고 오해했다.",
+      "matchText" : ""
+    }, {
+      "text" : "8행에서 ArrayIndexOutOfBoundsException이 난다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "10행에서 ArrayIndexOutOfBoundsException이 난다",
+      "correct" : false,
+      "rationale" : "finally가 실행된 뒤에 예외가 생긴다고 여겨 예외가 나는 줄을 finally 줄로 착각했다.",
+      "matchText" : ""
+    }, {
+      "text" : "예외 없이 끝난다",
+      "correct" : false,
+      "rationale" : "finally가 있으면 catch 안에서 난 예외도 모두 삼켜진다고 오해했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "catch 블록 안에서 생긴 예외와 finally",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "다음 코드는 컴파일되는가? 되지 않는다면 어느 줄에서 오류가 나는가?",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: catch는 위에서부터 차례로 검사하므로, 부모 예외 타입을 잡는 catch 아래에 자식 예외 타입의 catch를 두면 그 catch는 절대 실행될 수 없어 컴파일 오류가 난다. finally는 catch가 몇 개든 마지막에 하나 붙일 수 있다.\n5행 count = 10 / count: count는 변수라 0으로 나누기는 실행 중에야 드러난다 → 컴파일 문제는 없다.\n6행 catch (Exception e): Exception은 모든 일반 예외의 부모라 ArithmeticException도 여기서 잡힌다.\n8행 catch (ArithmeticException e): ArithmeticException은 Exception의 자식이라 이미 6행에서 잡혀 도달할 수 없다 → exception has already been caught 컴파일 오류가 난다.\n10행 finally: 여러 catch 뒤에 붙는 것은 문법상 문제없다.\n그래서 정답은 8행에서 컴파일 오류가 난다는 보기다.",
+    "choices" : [ {
+      "text" : "5행에서 컴파일 오류가 난다",
+      "correct" : false,
+      "rationale" : "0으로 나누기를 컴파일러가 잡는다고 오해했지만 count는 변수라 실행 중에야 알 수 있다.",
+      "matchText" : ""
+    }, {
+      "text" : "8행에서 컴파일 오류가 난다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "10행에서 컴파일 오류가 난다",
+      "correct" : false,
+      "rationale" : "catch가 여러 개면 finally를 붙일 수 없다고 오해했다.",
+      "matchText" : ""
+    }, {
+      "text" : "컴파일된다",
+      "correct" : false,
+      "rationale" : "catch는 위에서부터 차례로 검사하니 순서는 상관없다고 오해했다.",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "여러 catch 블록의 순서와 finally",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ {
+    "problemIndex" : 1,
+    "type" : "AWKWARD_SENTENCE",
+    "message" : "어색하거나 뜻이 흐린 문장이 있습니다",
+    "detail" : "지금: 「catch는 위에서부터 차례로 검사하니 순서는 상관없다고 오해했다.」\n고치면: 부모 예외를 잡는 catch가 앞에 있어도 아래의 자식 예외 catch는 문제없이 쓸 수 있어 순서는 상관없다고 오해했다.",
+    "suggestion" : {
+      "target" : "RATIONALE",
+      "choiceIndex" : 3,
+      "text" : "부모 예외를 잡는 catch가 앞에 있어도 아래의 자식 예외 catch는 문제없이 쓸 수 있어 순서는 상관없다고 오해했다."
+    }
+  } ],
+  "codeTopic" : "try-catch-finally 실행 순서와 return",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_ERROR",
+    "language" : "java",
+    "code" : "public class Main {\n    public static void main(String[] args) {\n        int[] arr = new int[3];\n        try {\n            int v = arr[1] / arr[0];\n            System.out.println(v);\n        } catch (ArithmeticException e) {\n            System.out.println(arr[3]);\n        } finally {\n            System.out.println(\"finally\");\n        }\n        System.out.println(\"end\");\n    }\n}",
+    "expectedOutput" : "",
+    "targetLine" : 8,
+    "errorType" : "ArrayIndexOutOfBoundsException"
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_COMPILE",
+    "language" : "java",
+    "code" : "public class Main {\n    public static void main(String[] args) {\n        int count = 0;\n        try {\n            count = 10 / count;\n        } catch (Exception e) {\n            System.out.println(\"일반\");\n        } catch (ArithmeticException e) {\n            System.out.println(\"산술\");\n        } finally {\n            System.out.println(\"끝\");\n        }\n    }\n}",
+    "expectedOutput" : "",
+    "targetLine" : 8,
+    "errorType" : ""
+  } ]
+}
