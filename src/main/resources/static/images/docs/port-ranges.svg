@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" role="img" aria-label="0부터 65535까지를 한 줄로 늘어놓으면 잘 알려진 포트 0~1023은 맨 앞의 아주 좁은 조각이고, 1024~49151이 가장 넓으며, 49152~65535가 뒤쪽 4분의 1이다">
+<defs><marker id="port-ranges-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="20" y="30" class="f-b" fill="#0f172a" font-size="15" font-weight="700">포트 번호 65,536개를 실제 크기대로 한 줄에 놓으면</text>
+<rect x="20.0" y="96" width="9.4" height="54" class="f-arrow" fill="#4f46e5" stroke="#4f46e5" stroke-width="1"/>
+<rect x="29.4" y="96" width="440.6" height="54" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<rect x="470.0" y="96" width="150.0" height="54" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<path d="M25.0 94 V62 H60" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="66" y="66" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">0~1023 잘 알려진 포트 · 웹 80, 443</text>
+<text x="66" y="86" class="f-sm" fill="#556274" font-size="13">전체의 1.6%뿐이라 겨우 보인다</text>
+<text x="249.6875" y="120" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">1024~49151</text>
+<text x="249.6875" y="140" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">서비스가 이름을 올려 두는 번호</text>
+<text x="545.0" y="120" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">49152~65535</text>
+<text x="545.0" y="140" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">임시 포트로 흔히 씀</text>
+<text x="20" y="170" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">0</text>
+<text x="620" y="170" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace" text-anchor="end">65535</text>
+<text x="470.0" y="170" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">49152</text>
+<path d="M94.0 150 V209 H124" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="130" y="214" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">8080</text>
+<text x="174" y="214" class="f-t" fill="#0f172a" font-size="14">개발용 웹 앱</text>
+<path d="M78.4 150 V233 H124" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="130" y="238" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">6379</text>
+<text x="174" y="238" class="f-t" fill="#0f172a" font-size="14">Redis</text>
+<path d="M50.3 150 V257 H124" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="130" y="262" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">3306</text>
+<text x="174" y="262" class="f-t" fill="#0f172a" font-size="14">MySQL</text>
+<path d="M486.9 150 V196" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="486.9189453125" y="214" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">51000</text>
+<text x="486.9189453125" y="236" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle">브라우저가 빌린 번호</text>
+<text x="20" y="290" class="f-sm" fill="#556274" font-size="13">범위마다 쓰임이 다를 뿐, 운영체제가 번호를 다루는 방식은 같다.</text>
+</svg>

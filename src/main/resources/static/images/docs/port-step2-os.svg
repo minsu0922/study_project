@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="컴퓨터에 들어온 패킷은 네트워크 장치를 거쳐 운영체제가 먼저 받는다. 운영체제는 브라우저·메신저·음악 앱 가운데 누구에게 줄지 정해야 하는데, IP 주소에는 그 정보가 없다">
+<defs><marker id="port-step2-os-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="10" y="10" width="620" height="290" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="26" y="36" class="f-sm" fill="#556274" font-size="13">컴퓨터 192.168.0.10 안</text>
+<g transform="translate(26 60)"><rect x="0" y="0" width="120" height="56" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><path d="M0 0 L60.0 22 L120 0" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/></g>
+<text x="40" y="104" class="f-b" fill="#0f172a" font-size="15" font-weight="700">패킷</text>
+<path d="M150 88 H186" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-step2-os-head)"/>
+<rect x="192" y="56" width="120" height="64" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="252" y="84" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">네트워크 장치</text>
+<text x="252" y="106" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">랜카드</text>
+<path d="M252 122 V160" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-step2-os-head)"/>
+<rect x="162" y="166" width="180" height="96" rx="8" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="252" y="196" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">운영체제</text>
+<text x="252" y="220" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">= 관리사무소</text>
+<text x="252" y="244" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">택배를 먼저 다 받는다</text>
+<rect x="440" y="40" width="170" height="70" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="440" y="40" width="170" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="452" cy="51" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="463" cy="51" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="474" cy="51" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="525.0" y="91.0" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">브라우저</text>
+<path d="M344 214 L434 75" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#port-step2-os-head)"/>
+<rect x="440" y="128" width="170" height="70" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="440" y="128" width="170" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="452" cy="139" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="463" cy="139" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="474" cy="139" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="525.0" y="179.0" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">메신저</text>
+<path d="M344 214 L434 163" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#port-step2-os-head)"/>
+<rect x="440" y="216" width="170" height="70" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="440" y="216" width="170" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="452" cy="227" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="463" cy="227" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="474" cy="227" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="525.0" y="267.0" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">음악 앱</text>
+<path d="M344 214 L434 251" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#port-step2-os-head)"/>
+<text x="274" y="142" class="f-bad" fill="#dc2626" font-size="16" font-weight="700">누구에게</text>
+<text x="274" y="160" class="f-bad" fill="#dc2626" font-size="16" font-weight="700">줄까?</text>
+<rect x="0" y="312" width="640" height="64" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="16" y="338" class="f-b" fill="#0f172a" font-size="15" font-weight="700">프로세스는 패킷을 직접 받지 못하고 운영체제가 나눠 준다.</text>
+<text x="16" y="362" class="f-sm" fill="#556274" font-size="13">그런데 받은 패킷만 봐서는 몇 호(어느 프로그램)인지 모른다.</text>
+</svg>

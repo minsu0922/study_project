@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="보낸 패킷이 받는 곳 IP 주소 192.168.0.10을 따라 그 컴퓨터까지 온다. 아파트 단지 정문까지 온 택배처럼, 단지 안의 몇 동 몇 호인지는 아직 정해지지 않았다">
+<defs><marker id="port-step1-ip-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(14 70) scale(1.3)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="20" y="150" class="f-b" fill="#0f172a" font-size="15" font-weight="700">보내는 컴퓨터</text>
+<g transform="translate(120 46)"><rect x="0" y="0" width="230" height="66" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><path d="M0 0 L115.0 22 L230 0" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/></g>
+<text x="132" y="92" class="f-sm" fill="#556274" font-size="13">받는 곳</text>
+<text x="192" y="92" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">192.168.0.10</text>
+<path d="M120 136 H448" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-step1-ip-head)"/>
+<text x="170" y="160" class="f-sm" fill="#556274" font-size="13">IP 주소를 따라 이 컴퓨터까지</text>
+<rect x="470" y="40" width="70" height="150" rx="2" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<rect x="484.0" y="57.7" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="512.0" y="57.7" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="484.0" y="83.2" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="512.0" y="83.2" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="484.0" y="108.6" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="512.0" y="108.6" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="484.0" y="134.1" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="512.0" y="134.1" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="484.0" y="159.5" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="512.0" y="159.5" width="14.0" height="12.7" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="550" y="70" width="70" height="120" rx="2" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<rect x="564.0" y="87.2" width="14.0" height="12.2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="592.0" y="87.2" width="14.0" height="12.2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="564.0" y="111.7" width="14.0" height="12.2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="592.0" y="111.7" width="14.0" height="12.2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="564.0" y="136.1" width="14.0" height="12.2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="592.0" y="136.1" width="14.0" height="12.2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="564.0" y="160.6" width="14.0" height="12.2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="592.0" y="160.6" width="14.0" height="12.2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="454" y="190" width="176" height="8" rx="2" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<path d="M454 136 V190 M466 136 V190" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<text x="470" y="220" class="f-b" fill="#0f172a" font-size="15" font-weight="700">컴퓨터 192.168.0.10</text>
+<text x="470" y="240" class="f-sm" fill="#556274" font-size="13">= 단지 정문</text>
+<rect x="0" y="262" width="640" height="64" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="16" y="288" class="f-b" fill="#0f172a" font-size="15" font-weight="700">여기까지가 "어느 컴퓨터인가"의 문제다.</text>
+<text x="16" y="312" class="f-sm" fill="#556274" font-size="13">정문에 온 택배가 몇 동 몇 호로 갈지는 IP 주소에 적혀 있지 않다.</text>
+</svg>

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 350" role="img" aria-label="운영체제의 등록표에 8080은 이미 앱 ①이 차지하고 있다. 앱 ②가 같은 8080을 등록하려 하자 운영체제가 이미 쓰는 주소라며 거절하고, 앱 ②는 시작하지 못한다">
+<defs><marker id="port-bind-conflict-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="30" width="170" height="76" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="16" y="30" width="170" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="28" cy="41" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="39" cy="41" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="50" cy="41" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="101.0" y="84.0" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">앱 ①</text>
+<text x="30" y="130" class="f-sm" fill="#556274" font-size="13">먼저 8080에 바인드</text>
+<path d="M188 70 H262" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-bind-conflict-head)"/>
+<rect x="268" y="20" width="220" height="196" rx="8" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="284" y="48" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">운영체제의 등록표</text>
+<rect x="282" y="64" width="192" height="36" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="296" y="88" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">8080</text>
+<text x="360" y="88" class="f-t" fill="#0f172a" font-size="14">→ 앱 ①</text>
+<rect x="282" y="110" width="192" height="36" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="296" y="134" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">3306</text>
+<text x="360" y="134" class="f-t" fill="#0f172a" font-size="14">→ MySQL</text>
+<rect x="282" y="156" width="192" height="36" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="296" y="180" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">6379</text>
+<text x="360" y="180" class="f-t" fill="#0f172a" font-size="14">→ Redis</text>
+<rect x="16" y="230" width="170" height="76" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="16" y="230" width="170" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="28" cy="241" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="39" cy="241" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="50" cy="241" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="101.0" y="284.0" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">앱 ②</text>
+<path d="M188 268 H372 V222" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2.5"/>
+<path d="M301 259 L319 277 M319 259 L301 277" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<text x="204" y="250" class="f-t" fill="#0f172a" font-size="14">"8080 주세요"</text>
+<text x="392" y="256" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">이미 쓰는 주소 → 거절</text>
+<text x="392" y="282" class="f-sm" fill="#556274" font-size="13">앱 ②는 시작하지 못하고</text>
+<text x="392" y="302" class="f-sm" fill="#556274" font-size="13">그대로 끝난다</text>
+<text x="504" y="100" class="f-sm" fill="#556274" font-size="13">한 번호에</text>
+<text x="504" y="120" class="f-b" fill="#0f172a" font-size="15" font-weight="700">주인은 하나</text>
+</svg>

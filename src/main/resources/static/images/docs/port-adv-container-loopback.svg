@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 464" role="img" aria-label="호스트 8080으로 온 요청은 포트 매핑을 거쳐 컨테이너 주소 172.17.0.2의 8080으로 들어간다. 앱이 127.0.0.1에 바인드했으면 그 문에는 받을 소켓이 없어 연결이 거부되고, 0.0.0.0에 바인드했으면 받는다">
+<defs><marker id="port-adv-container-loopback-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="10" y="10" width="620" height="214" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="26" y="36" class="f-sm" fill="#556274" font-size="13">서버 호스트</text>
+<text x="26" y="66" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">호스트</text>
+<text x="78" y="66" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">8080</text>
+<text x="26" y="88" class="f-sm" fill="#556274" font-size="13">→ 컨테이너 8080</text>
+<rect x="230" y="46" width="384" height="140" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="246" y="70" class="f-b" fill="#0f172a" font-size="15" font-weight="700">컨테이너</text>
+<rect x="246" y="86" width="150" height="36" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="321" y="109" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">172.17.0.2:8080</text>
+<rect x="246" y="134" width="150" height="36" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="321" y="157" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">127.0.0.1:8080</text>
+<rect x="450" y="86" width="150" height="84" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="450" y="86" width="150" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="462" cy="97" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="473" cy="97" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="484" cy="97" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="525.0" y="144.0" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">앱</text>
+<text x="525" y="70" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">바인드 127.0.0.1:8080</text>
+<path d="M450 152 H398" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<path d="M140 104 H240" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-adv-container-loopback-head)"/>
+<path d="M175 125 L193 143 M193 125 L175 143" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<text x="26" y="212" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">요청은 172.17.0.2로 오는데 앱은 127.0.0.1에만 붙었다 → 연결 거부</text>
+<rect x="10" y="238" width="620" height="214" rx="10" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="26" y="264" class="f-sm" fill="#556274" font-size="13">서버 호스트</text>
+<text x="26" y="294" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">호스트</text>
+<text x="78" y="294" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">8080</text>
+<text x="26" y="316" class="f-sm" fill="#556274" font-size="13">→ 컨테이너 8080</text>
+<rect x="230" y="274" width="384" height="140" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="246" y="298" class="f-b" fill="#0f172a" font-size="15" font-weight="700">컨테이너</text>
+<rect x="246" y="314" width="150" height="36" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="321" y="337" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">172.17.0.2:8080</text>
+<rect x="246" y="362" width="150" height="36" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="321" y="385" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">127.0.0.1:8080</text>
+<rect x="450" y="314" width="150" height="84" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="450" y="314" width="150" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="462" cy="325" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="473" cy="325" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="484" cy="325" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="525.0" y="372.0" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">앱</text>
+<text x="525" y="298" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">바인드 0.0.0.0:8080</text>
+<path d="M450 338 H398" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<path d="M450 374 H398" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<path d="M140 332 H240" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-adv-container-loopback-head)"/>
+<path d="M175 360 L181 367 L193 352" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="26" y="440" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">앱이 모든 문에 붙어 있어 매핑으로 온 요청을 받는다</text>
+</svg>

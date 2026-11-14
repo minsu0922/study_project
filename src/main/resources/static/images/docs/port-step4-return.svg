@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 276" role="img" aria-label="요청 송장의 보내는 곳 51000과 받는 곳 80을, 서버는 답장 송장에서 자리를 바꿔 적는다. 그래서 답장의 받는 곳이 51000이 되어 브라우저로 돌아온다">
+<defs><marker id="port-step4-return-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="28" class="f-b" fill="#0f172a" font-size="15" font-weight="700">① 브라우저가 보낸 요청</text>
+<g transform="translate(16 40)"><rect x="0" y="0" width="260" height="104" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><path d="M0 0 L130.0 22 L260 0" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/></g>
+<text x="30" y="86" class="f-sm" fill="#556274" font-size="13">보내는 곳</text>
+<text x="110" y="86" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">브라우저</text>
+<text x="180" y="86" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">51000</text>
+<text x="30" y="118" class="f-sm" fill="#556274" font-size="13">받는 곳</text>
+<text x="110" y="118" class="f-t" fill="#0f172a" font-size="14">웹 서버</text>
+<text x="180" y="118" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">80</text>
+<text x="364" y="28" class="f-b" fill="#0f172a" font-size="15" font-weight="700">② 서버가 보낸 답장</text>
+<g transform="translate(364 40)"><rect x="0" y="0" width="260" height="104" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/><path d="M0 0 L130.0 22 L260 0" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/></g>
+<text x="378" y="86" class="f-sm" fill="#556274" font-size="13">보내는 곳</text>
+<text x="458" y="86" class="f-t" fill="#0f172a" font-size="14">웹 서버</text>
+<text x="528" y="86" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">80</text>
+<text x="378" y="118" class="f-sm" fill="#556274" font-size="13">받는 곳</text>
+<text x="458" y="118" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">브라우저</text>
+<text x="528" y="118" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">51000</text>
+<path d="M240 82 C 300 82, 300 114, 364 114" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#port-step4-return-head)"/>
+<path d="M200 114 C 290 114, 300 82, 364 82" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#port-step4-return-head)"/>
+<text x="282" y="166" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">자리를 바꿔 옮겨 적는다</text>
+<rect x="0" y="190" width="640" height="82" rx="8" class="f-panel" fill="#f1f5f9"/>
+<g transform="translate(18 204) scale(1.1)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="96" y="224" class="f-b" fill="#0f172a" font-size="15" font-weight="700">내 컴퓨터의 운영체제</text>
+<text x="96" y="250" class="f-t" fill="#0f172a" font-size="14">답장의 받는 곳 51000을 보고 브라우저에 넘긴다.</text>
+</svg>

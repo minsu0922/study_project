@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="같은 서버에 문이 셋 있다. 같은 서버 안에서 오는 루프백 127.0.0.1, 랜카드 ① 10.0.1.15, 랜카드 ② 172.16.0.8. 앱을 127.0.0.1에 바인드하면 같은 서버 안 접속만, 10.0.1.15에 바인드하면 그 랜카드로 온 접속만, 0.0.0.0에 바인드하면 세 문 모두로 온 접속을 받는다">
+<defs><marker id="port-adv-bind-scope-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="26" class="f-b" fill="#0f172a" font-size="15" font-weight="700">문은 셋, 앱이 어느 문에 바인드했느냐에 따라 받는 접속이 갈린다</text>
+<rect x="0" y="42" width="640" height="108" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="16" y="68" class="f-sm" fill="#556274" font-size="13">앱이 바인드한 곳</text>
+<text x="16" y="92" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">127.0.0.1:8080</text>
+<rect x="200" y="56" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="268" y="82" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">같은 서버 안</text>
+<text x="268" y="104" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">127.0.0.1</text>
+<path d="M259 120 L265 127 L277 112" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="346" y="56" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="414" y="82" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">랜카드 ①</text>
+<text x="414" y="104" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">10.0.1.15</text>
+<path d="M407 115 L421 129 M421 115 L407 129" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<rect x="492" y="56" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="560" y="82" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">랜카드 ②</text>
+<text x="560" y="104" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">172.16.0.8</text>
+<path d="M553 115 L567 129 M567 115 L553 129" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<rect x="0" y="160" width="640" height="108" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="16" y="186" class="f-sm" fill="#556274" font-size="13">앱이 바인드한 곳</text>
+<text x="16" y="210" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">10.0.1.15:8080</text>
+<rect x="200" y="174" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="268" y="200" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">같은 서버 안</text>
+<text x="268" y="222" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">127.0.0.1</text>
+<path d="M261 233 L275 247 M275 233 L261 247" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<rect x="346" y="174" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="414" y="200" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">랜카드 ①</text>
+<text x="414" y="222" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">10.0.1.15</text>
+<path d="M405 238 L411 245 L423 230" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="492" y="174" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="560" y="200" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">랜카드 ②</text>
+<text x="560" y="222" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">172.16.0.8</text>
+<path d="M553 233 L567 247 M567 233 L553 247" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<rect x="0" y="278" width="640" height="108" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="16" y="304" class="f-sm" fill="#556274" font-size="13">앱이 바인드한 곳</text>
+<text x="16" y="328" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">0.0.0.0:8080</text>
+<rect x="200" y="292" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="268" y="318" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">같은 서버 안</text>
+<text x="268" y="340" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">127.0.0.1</text>
+<path d="M259 356 L265 363 L277 348" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="346" y="292" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="414" y="318" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">랜카드 ①</text>
+<text x="414" y="340" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">10.0.1.15</text>
+<path d="M405 356 L411 363 L423 348" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="492" y="292" width="136" height="78" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="560" y="318" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">랜카드 ②</text>
+<text x="560" y="340" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">172.16.0.8</text>
+<path d="M551 356 L557 363 L569 348" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="16" y="394" class="f-sm" fill="#556274" font-size="13">✓ 받는다   ✗ 그 문으로 온 접속은 받을 소켓이 없어 거부된다</text>
+</svg>
