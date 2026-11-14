@@ -54,13 +54,16 @@ try {
       </div>
       <div class="form-actions">
         <button id="dSubmitBtn">등록</button>
-        <button id="dCancelBtn" class="btn-outline" hidden>수정 취소</button>
+        <button id="dCancelBtn" class="btn-outline" hidden>목록으로</button>
       </div>
       <!-- 수정 이력(V36) — 수정으로 들어왔고 이력이 있을 때만 그린다. -->
       <div id="dRevisions"></div>
     </details>
 
-    <h3>문서 목록 <span class="meta">(행을 누르면 위 폼에서 수정 · [보기]는 실제 문서 화면 · [MD 복사]는 본문 마크다운을 클립보드로)</span></h3>
+    <!-- 수정 중에는 목록을 통째로 숨겨 수정 화면만 남긴다(editDocument). 폼이 목록 위에
+         펼쳐지기만 하면 행을 눌렀는데 무엇이 바뀌었는지 눈에 잘 안 들어왔다. -->
+    <section id="dListSection">
+    <h3>문서 목록 <span class="meta">(행을 누르면 수정 화면 · [보기]는 실제 문서 화면 · [MD 복사]는 본문 마크다운을 클립보드로)</span></h3>
     <!-- 필터 줄은 문제 관리 화면과 같은 모양이다(wireFilterBar). 검색은 제목과 본문을 함께 본다 —
          "TIME_WAIT 얘기가 나온 글"처럼 찾는다(학습 화면의 문서 검색과 같은 조건) -->
     <div class="filters" style="margin-bottom:12px">
@@ -79,6 +82,7 @@ try {
     </div>
     <!-- 표·페이저·빈 상태는 admin-table.js가 통째로 그린다. 여기는 자리만 둔다. -->
     <div id="documentList"></div>
+    </section>
   </div>
 </main>
 
@@ -102,6 +106,20 @@ if (initAdminPage("documents")) {
   // 띠의 통합 검색이 문서 하나를 열 때 쓴다(문제 화면의 ?edit=와 같다)
   const editId = param("edit");
   if (editId) editDocument(Number(editId));
+  // 수정 화면은 주소(?edit=)를 가진다. 그래야 브라우저 뒤로 가기가 목록으로 돌아간다.
+  window.addEventListener("popstate", () => {
+    const id = param("edit");
+    if (id) editDocument(Number(id)); else resetDocumentForm();
+  });
+}
+
+/** 수정 화면을 닫고 목록으로. 수정 화면이 쌓은 기록이 있으면 그 기록을 되돌린다(popstate가 폼을 비운다). */
+function closeEditor() {
+  if (history.state && history.state.edit) history.back();
+  else {
+    if (param("edit")) history.replaceState(null, "", location.pathname);
+    resetDocumentForm();
+  }
 }
 
 function initDocumentForm() {
@@ -113,7 +131,11 @@ function initDocumentForm() {
   fillDocumentDomain();
   domainsReady.then(fillDocumentDomain);
   document.getElementById("dSubmitBtn").addEventListener("click", submitDocument);
-  document.getElementById("dCancelBtn").addEventListener("click", resetDocumentForm);
+  document.getElementById("dCancelBtn").addEventListener("click", closeEditor);
+  // 수정 화면에서 폼 제목줄을 눌러 접으면 빈 화면만 남는다. 접는 것을 "목록으로"로 본다.
+  document.getElementById("dFormPanel").addEventListener("toggle", e => {
+    if (!e.target.open && editingDocumentId) closeEditor();
+  });
 
   // 치는 동안에도 따라 늘어난다. 여기서 한 번 부르는 것은 등록 폼에 붙여 넣기로
   // 긴 글이 들어오는 경우를 위해서다(붙여넣기도 input 이벤트를 낸다).
@@ -151,11 +173,12 @@ async function submitDocument() {
     if (editingDocumentId) {
       await api("/api/admin/documents/" + editingDocumentId, { method: "PUT", body });
       showOk(msg, "수정 완료");
+      closeEditor();
     } else {
       await api("/api/admin/documents", { method: "POST", body });
       showOk(msg, "등록 완료");
+      resetDocumentForm();
     }
-    resetDocumentForm();
     loadDocuments();
   } catch (e) {
     showError(msg, e);
@@ -179,6 +202,7 @@ function autoGrow(el) {
 function resetDocumentForm() {
   // 수정을 취소하면 폼도 접는다 — 문제 화면과 같은 규칙이다.
   document.getElementById("dFormPanel").open = false;
+  document.getElementById("dListSection").hidden = false;
   editingDocumentId = null;
   document.getElementById("dFormTitle").textContent = "새 문서 등록";
   document.getElementById("dSubmitBtn").textContent = "등록";
@@ -285,6 +309,8 @@ async function toggleDocumentHidden(d) {
 async function editDocument(id) {
   // 고치러 들어온 사람에게 "폼을 펼치라"는 한 걸음을 시키지 않는다.
   document.getElementById("dFormPanel").open = true;
+  document.getElementById("dListSection").hidden = true;
+  if (param("edit") !== String(id)) history.pushState({ edit: id }, "", "?edit=" + id);
   const d = await api("/api/admin/documents/" + id); // 본문은 단건 API에만 있다
   editingDocumentId = id;
   document.getElementById("dFormTitle").textContent = `문서 수정 (ID ${id})`;
