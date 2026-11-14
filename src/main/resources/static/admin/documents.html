@@ -343,46 +343,93 @@ async function editDocument(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-/* ═══════════ 문단 고치기 ═══════════
+/* ═══════════ 절 고치기 ═══════════
  * AI 검수의 "문단 고치기"와 같은 방식이다. 9,000자 본문을 통째 칸에서 고치면 어디를 고치는지
- * 앞뒤가 안 보여, 고칠 문단 하나만 칸으로 연다. 저장은 문단마다 바로 한다.
- * 서버 API는 그대로다: 바뀐 문단을 끼운 본문 전체를 PUT으로 보낸다. */
+ * 앞뒤가 안 보여, 고칠 덩이 하나만 칸으로 연다. 저장은 덩이마다 바로 한다.
+ * 서버 API는 그대로다: 바뀐 덩이를 끼운 본문 전체를 PUT으로 보낸다.
+ *
+ * 덩이는 큰 절(##) 하나다. 문단마다 버튼을 달았더니 한 편에 70개가 넘었다.
+ * 제목 줄·그림·「글의 주제」는 버튼 없이 보여만 준다(splitEditBlocks). */
+
+const FIGURE_LINE = /^\s*!\[[^\]]*\]\([^)]*\)\s*$/;   // 손 SVG 그림은 이미지 한 줄로 들어간다
+const TOPIC_BOX_HEAD = "> **글의 주제**";
 
 /**
- * 본문을 빈 줄 기준으로 문단으로 나눈다. 각 문단은 줄 번호 범위(start~end)를 든다.
+ * 본문을 덩이로 나눈다. 덩이마다 줄 번호 범위(start~end)를 든다.
  * 줄 번호로 갈아 끼워야 빈 줄 개수·끝 줄바꿈까지 원문이 그대로 남는다.
- * 코드 울타리(``` · ~~~) 안의 빈 줄에서는 나누지 않는다. 코드 한 덩이가 둘로 쪼개지면
- * 반쪽만 고치다 울타리가 깨진다.
+ *
+ * <p>잠그는 줄(type이 text가 아닌 것): # · ## 제목, 「글의 주제」 상자, mermaid 블록, 그림 이미지 줄.
+ * 그 사이에 남은 줄이 고치는 덩이(text)다. ### 제목과 일반 코드 블록은 덩이 안에 남는다.
+ *
+ * <p>「글의 주제」를 잠그는 이유: 이 글의 원본은 주제 대기열에 따로 있고, 문서와 이어져 있지 않다.
+ * 여기서만 고치면 다음에 같은 주제로 만든 문서에는 옛 글이 들어간다.
  */
-function splitParagraphs(md) {
+function splitEditBlocks(md) {
   const lines = md.split("\n");
   const blocks = [];
-  let start = -1, fence = null;
-  lines.forEach((line, i) => {
-    const m = line.match(/^\s*(```|~~~)/);
-    if (m) fence = fence === null ? m[1] : (m[1] === fence ? null : fence);
-    const blank = line.trim() === "" && fence === null;
-    if (!blank && start < 0) start = i;
-    if (blank && start >= 0) { blocks.push({ start, end: i - 1 }); start = -1; }
-  });
-  if (start >= 0) blocks.push({ start, end: lines.length - 1 });
+  let run = null;   // 지금 모으는 text 덩이 { start, end } — end는 마지막 글자 있는 줄
+  const flush = () => { if (run) blocks.push({ type: "text", ...run }); run = null; };
+  const lock = (type, start, end, extra) => { flush(); blocks.push({ type, start, end, ...extra }); };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = line.match(/^\s*(```|~~~)\s*(\S*)/);
+    if (fence) {
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim().startsWith(fence[1])) j++;
+      j = Math.min(j, lines.length - 1);
+      if (fence[2].startsWith("mermaid")) {
+        lock("figure", i, j, { label: (lines[i + 1] ?? "").trim().split(/\s+/)[0] || "mermaid" });
+      } else {
+        run = run ? { ...run, end: j } : { start: i, end: j };
+      }
+      i = j;
+      continue;
+    }
+    if (/^#{1,2}\s/.test(line)) { lock("heading", i, i, { level: line.startsWith("## ") ? 2 : 1 }); continue; }
+    if (line.trim() === TOPIC_BOX_HEAD) {
+      let j = i;
+      while (j + 1 < lines.length && lines[j + 1].startsWith(">")) j++;
+      lock("topic", i, j);
+      i = j;
+      continue;
+    }
+    if (FIGURE_LINE.test(line)) {
+      lock("figure", i, i, { label: (line.match(/!\[([^\]]*)\]/)[1] || "그림") });
+      continue;
+    }
+    if (line.trim() === "") continue;   // 빈 줄은 덩이 끝에 붙이지 않는다 — 덩이 사이 간격이 그대로 남는다
+    run = run ? { ...run, end: i } : { start: i, end: i };
+  }
+  flush();
   return blocks.map(b => ({ ...b, text: lines.slice(b.start, b.end + 1).join("\n") }));
 }
 
 function renderParagraphs(savedIndex) {
   const box = document.getElementById("dParagraphs");
-  const paras = splitParagraphs(loadedDocument.contentMd);
+  const paras = splitEditBlocks(loadedDocument.contentMd);
+  const editable = paras.filter(p => p.type === "text").length;
   box.hidden = false;
   box.innerHTML = `
-    <h4>본문 문단 <span class="meta">(${paras.length}개 · [고치기]로 한 문단씩 고치고 바로 저장합니다)</span></h4>
-    ${paras.map((p, i) => `
+    <h4>본문 <span class="meta">(고칠 덩이 ${editable}개 · [고치기]로 절 하나씩 고치고 바로 저장합니다)</span></h4>
+    ${paras.map((p, i) => {
+      if (p.type === "heading") return `<div class="para-head lv${p.level}">${escapeHtml(p.text)}</div>`;
+      if (p.type === "figure") return `<div class="para-figure meta">그림: ${escapeHtml(p.label)}</div>`;
+      if (p.type === "topic") return `
+        <div class="para-topic">
+          <pre class="para-text">${escapeHtml(p.text)}</pre>
+          <div class="meta">「글의 주제」는 여기서 고치지 않습니다. 이 문서만 바꾸려면 위 「본문 (마크다운)」 전체 칸에서,
+            다음에 만들 문서까지 바꾸려면 주제 상세의 「글의 주제 쓰기」에서 고치세요. 두 곳은 서로 이어져 있지 않습니다.</div>
+        </div>`;
+      return `
       <div class="para-item" data-index="${i}">
         <pre class="para-text">${escapeHtml(p.text)}</pre>
         <div class="row-actions para-bar">
           ${i === savedIndex ? `<span class="meta para-saved">저장했습니다</span>` : ""}
           <button class="btn-outline" data-action="edit-para">고치기</button>
         </div>
-      </div>`).join("")}`;
+      </div>`;
+    }).join("")}`;
   box.onclick = e => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;

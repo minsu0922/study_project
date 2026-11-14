@@ -2629,6 +2629,11 @@ table.grid td.click-cell:hover { background: var(--primary-soft); cursor: pointe
 }
 .para-bar { margin-top: 4px; }
 .para-saved { color: var(--correct); }
+.para-head { font-weight: 700; margin-top: var(--sp-4); }
+.para-head.lv1 { font-size: var(--fs-3); }
+.para-figure { margin-top: var(--sp-2); padding: 6px 14px; border: 1px dashed var(--border); border-radius: 8px; }
+.para-topic { margin-top: var(--sp-2); }
+.para-topic .meta { margin-top: 4px; }
 #dContentBox > summary { cursor: pointer; }
 #dContentBox > summary label { display: inline; cursor: pointer; }
 .draft-diagram { margin: 8px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; text-align: center; }
