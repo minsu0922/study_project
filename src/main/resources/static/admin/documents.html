@@ -47,7 +47,12 @@ try {
            9,000자짜리 문서를 열두 줄 창으로 고치는 것은 빨대로 보며 글을 고치는 일이라,
            어디를 고치는 중인지 앞뒤가 안 보였다. 대신 저장 버튼이 저 아래로 밀리므로
            버튼 줄을 화면 아래에 붙여 둔다(.form-actions). -->
-      <div class="field"><label>본문 (마크다운)</label><textarea id="dContent" rows="12" style="width:100%; font-family:Consolas,monospace"></textarea></div>
+      <!-- 수정 화면에서는 이 통짜 칸을 접고 아래 문단 목록으로 고친다(renderParagraphs).
+           통짜 칸은 문단을 새로 넣거나 크게 옮길 때만 편다. 등록할 때는 늘 펼쳐 둔다. -->
+      <details class="field" id="dContentBox" open>
+        <summary><label>본문 (마크다운)</label></summary>
+        <textarea id="dContent" rows="12" style="width:100%; font-family:Consolas,monospace"></textarea>
+      </details>
       <div class="filters">
         <div class="field"><label>태그 (쉼표 구분, 없는 태그는 자동 생성)</label><input type="text" id="dTags" placeholder="tcp, network"></div>
         <div class="field"><label>출처 URL (선택)</label><input type="text" id="dSource"></div>
@@ -56,6 +61,7 @@ try {
         <button id="dSubmitBtn">등록</button>
         <button id="dCancelBtn" class="btn-outline" hidden>목록으로</button>
       </div>
+      <div id="dParagraphs" hidden></div>
       <!-- 수정 이력(V36) — 수정으로 들어왔고 이력이 있을 때만 그린다. -->
       <div id="dRevisions"></div>
     </details>
@@ -98,6 +104,8 @@ try {
  * 승인된 뒤에야 이 목록에 나타난다 — 검수를 건너뛸 수 있는 길을 만들지 않기 위해서다. */
 
 let editingDocumentId = null;
+/** 서버에서 마지막으로 받은(또는 저장한) 문서. 문단 저장은 이 값을 바탕으로 본문만 바꾼다. */
+let loadedDocument = null;
 
 if (initAdminPage("documents")) {
   initDocumentForm();
@@ -141,6 +149,7 @@ function initDocumentForm() {
   // 긴 글이 들어오는 경우를 위해서다(붙여넣기도 input 이벤트를 낸다).
   const content = document.getElementById("dContent");
   content.addEventListener("input", () => autoGrow(content));
+  document.getElementById("dContentBox").addEventListener("toggle", e => { if (e.target.open) autoGrow(content); });
 }
 
 function initDocumentFilters() {
@@ -209,7 +218,11 @@ function resetDocumentForm() {
   document.getElementById("dCancelBtn").hidden = true;
   ["dTitle", "dSlug", "dContent", "dTags", "dSource"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("dContent").style.height = "";   // 늘려 둔 높이도 되돌린다
+  document.getElementById("dContentBox").open = true;
+  document.getElementById("dParagraphs").hidden = true;
+  document.getElementById("dParagraphs").innerHTML = "";
   document.getElementById("dRevisions").innerHTML = "";
+  loadedDocument = null;
 }
 
 /**
@@ -320,11 +333,110 @@ async function editDocument(id) {
   document.getElementById("dTitle").value = d.title;
   document.getElementById("dSlug").value = d.slug;
   document.getElementById("dContent").value = d.contentMd;
-  autoGrow(document.getElementById("dContent"));   // 불러온 본문 길이에 맞춰 칸을 편다
   document.getElementById("dTags").value = d.tags.join(", ");
   document.getElementById("dSource").value = d.source ?? "";
+  // 접힌 칸은 높이를 잴 수 없다(scrollHeight가 0). 펼칠 때 잰다.
+  document.getElementById("dContentBox").open = false;
+  loadedDocument = d;
+  renderParagraphs();
   renderRevisions("#dRevisions", "/api/admin/documents/" + id, () => { editDocument(id); loadDocuments(); });
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ═══════════ 문단 고치기 ═══════════
+ * AI 검수의 "문단 고치기"와 같은 방식이다. 9,000자 본문을 통째 칸에서 고치면 어디를 고치는지
+ * 앞뒤가 안 보여, 고칠 문단 하나만 칸으로 연다. 저장은 문단마다 바로 한다.
+ * 서버 API는 그대로다: 바뀐 문단을 끼운 본문 전체를 PUT으로 보낸다. */
+
+/**
+ * 본문을 빈 줄 기준으로 문단으로 나눈다. 각 문단은 줄 번호 범위(start~end)를 든다.
+ * 줄 번호로 갈아 끼워야 빈 줄 개수·끝 줄바꿈까지 원문이 그대로 남는다.
+ * 코드 울타리(``` · ~~~) 안의 빈 줄에서는 나누지 않는다. 코드 한 덩이가 둘로 쪼개지면
+ * 반쪽만 고치다 울타리가 깨진다.
+ */
+function splitParagraphs(md) {
+  const lines = md.split("\n");
+  const blocks = [];
+  let start = -1, fence = null;
+  lines.forEach((line, i) => {
+    const m = line.match(/^\s*(```|~~~)/);
+    if (m) fence = fence === null ? m[1] : (m[1] === fence ? null : fence);
+    const blank = line.trim() === "" && fence === null;
+    if (!blank && start < 0) start = i;
+    if (blank && start >= 0) { blocks.push({ start, end: i - 1 }); start = -1; }
+  });
+  if (start >= 0) blocks.push({ start, end: lines.length - 1 });
+  return blocks.map(b => ({ ...b, text: lines.slice(b.start, b.end + 1).join("\n") }));
+}
+
+function renderParagraphs(savedIndex) {
+  const box = document.getElementById("dParagraphs");
+  const paras = splitParagraphs(loadedDocument.contentMd);
+  box.hidden = false;
+  box.innerHTML = `
+    <h4>본문 문단 <span class="meta">(${paras.length}개 · [고치기]로 한 문단씩 고치고 바로 저장합니다)</span></h4>
+    ${paras.map((p, i) => `
+      <div class="para-item" data-index="${i}">
+        <pre class="para-text">${escapeHtml(p.text)}</pre>
+        <div class="row-actions para-bar">
+          ${i === savedIndex ? `<span class="meta para-saved">저장했습니다</span>` : ""}
+          <button class="btn-outline" data-action="edit-para">고치기</button>
+        </div>
+      </div>`).join("")}`;
+  box.onclick = e => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    const item = btn.closest(".para-item");
+    const index = Number(item.dataset.index);
+    if (btn.dataset.action === "edit-para") openParagraph(item, paras[index]);
+    else if (btn.dataset.action === "cancel-para") renderParagraphs();
+    else if (btn.dataset.action === "save-para") saveParagraph(btn, item, paras[index]);
+  };
+}
+
+/** 한 번에 한 문단만 연다. 둘을 열어 두면 먼저 저장한 쪽이 목록을 다시 그려 나머지 칸이 사라진다. */
+function openParagraph(item, para) {
+  const box = document.getElementById("dParagraphs");
+  if (box.querySelector(".para-item.editing")) renderParagraphs();
+  const target = box.querySelector(`.para-item[data-index="${item.dataset.index}"]`);
+  target.classList.add("editing");
+  target.innerHTML = `
+    <textarea class="para-input" style="width:100%; font-family:Consolas,monospace"></textarea>
+    <div class="para-error"></div>
+    <div class="row-actions para-bar">
+      <button data-action="save-para">고친 문단 적용</button>
+      <button class="btn-outline" data-action="cancel-para">취소</button>
+    </div>`;
+  const ta = target.querySelector("textarea");
+  ta.value = para.text;
+  autoGrow(ta);
+  ta.addEventListener("input", () => autoGrow(ta));
+  ta.focus();
+}
+
+async function saveParagraph(btn, item, para) {
+  const d = loadedDocument;
+  const lines = d.contentMd.split("\n");
+  const next = item.querySelector("textarea").value.replace(/\n+$/, "");
+  const contentMd = [...lines.slice(0, para.start), ...(next === "" ? [] : next.split("\n")), ...lines.slice(para.end + 1)].join("\n");
+  btn.disabled = true;
+  try {
+    // 제목·태그 칸은 위에서 고치는 중일 수 있어 화면 값이 아니라 받아 둔 값을 보낸다.
+    // 문단 저장이 저장 안 한 제목 수정까지 함께 내보내면 안 된다.
+    await api("/api/admin/documents/" + d.id, { method: "PUT", body: JSON.stringify({
+      domain: d.domain, title: d.title, slug: d.slug, contentMd, source: d.source ?? null, tags: d.tags,
+    }) });
+    // 통짜 칸을 따로 고치지 않았다면 새 본문으로 맞춘다. 고쳤다면 그 손길을 덮지 않는다.
+    const full = document.getElementById("dContent");
+    if (full.value === d.contentMd) full.value = contentMd;
+    d.contentMd = contentMd;
+    renderParagraphs(Number(item.dataset.index));
+    renderRevisions("#dRevisions", "/api/admin/documents/" + d.id, () => { editDocument(d.id); loadDocuments(); });
+    loadDocuments();
+  } catch (e) {
+    btn.disabled = false;
+    showError(item.querySelector(".para-error"), e);
+  }
 }
 
 async function deleteDocument(btn, id) {
