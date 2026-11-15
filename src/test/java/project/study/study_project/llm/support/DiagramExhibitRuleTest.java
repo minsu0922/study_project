@@ -133,6 +133,19 @@ class DiagramExhibitRuleTest {
     }
 
     @Test
+    @DisplayName("손그림 자료는 image로 저장하고, 검수에는 경로 대신 그림 속 글자를 넘긴다")
+    void figureExhibitGoesToReviewAsText() {
+        GeneratedProblemItem item = withExhibit("![봉투가 바뀐다](/images/problems/test-figure.svg)");
+
+        assertThat(item.exhibitLanguage()).isEqualTo("image");
+        assertThat(DiagramExhibitRule.warningsOf(item)).as("그림 문법 검사 대상이 아니다").isEmpty();
+        assertThat(item.questionWithExhibit())
+                .contains("[자료 — 손그림")
+                .contains("설명: 봉투가 바뀐다\n노트북\n공유기")
+                .doesNotContain("/images/problems/");
+    }
+
+    @Test
     @DisplayName("글자 자료에는 그림 문법 검사를 하지 않는다")
     void skipsTextExhibit() {
         assertThat(DiagramExhibitRule.warningsOf(withExhibit("id  type  rows\n1   ref   48210"))).isEmpty();

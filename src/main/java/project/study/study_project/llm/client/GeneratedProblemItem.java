@@ -2,6 +2,7 @@ package project.study.study_project.llm.client;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import project.study.study_project.document.support.FigureRequests;
 
 import java.util.List;
 
@@ -86,6 +87,9 @@ public record GeneratedProblemItem(
     /** 그림 자료(mermaid 흐름도·시퀀스·차트)의 언어 값. 화면이 이 자료만 그림으로 그린다. */
     public static final String EXHIBIT_DIAGRAM_LANGUAGE = "mermaid";
 
+    /** 손그림 자료({@code ![설명](/images/problems/x.svg)} 한 줄)의 언어 값. 관리 화면 저장과 같은 값이다. */
+    public static final String EXHIBIT_IMAGE_LANGUAGE = "image";
+
     /**
      * 그림으로 그리는 첫 줄. 흐름도와 시퀀스만 연다. api.js의 isDiagramSource와 같은 규칙이다 —
      * 한쪽만 바꾸면 서버는 그림이라 하고 화면은 글자로 보인다.
@@ -97,6 +101,9 @@ public record GeneratedProblemItem(
     public String exhibitLanguage() {
         if (!hasExhibit()) {
             return null;
+        }
+        if (FigureRequests.problemImagePathOf(normalizedExhibit()) != null) {
+            return EXHIBIT_IMAGE_LANGUAGE;
         }
         String first = normalizedExhibit().lines().findFirst().orElse("").strip();
         return DIAGRAM_HEADER.matcher(first).matches() ? EXHIBIT_DIAGRAM_LANGUAGE : EXHIBIT_LANGUAGE;
@@ -128,9 +135,18 @@ public record GeneratedProblemItem(
         return exhibit.replaceFirst("^(?:[ \\t]*+\\r?\\n)++", "").stripTrailing().stripIndent();
     }
 
-    /** 검수 AI처럼 문제를 처음 보는 쪽에 넘길 지문. 자료가 있으면 지문 아래에 붙인다. */
+    /**
+     * 검수 AI처럼 문제를 처음 보는 쪽에 넘길 지문. 자료가 있으면 지문 아래에 붙인다.
+     * 손그림 자료는 경로 한 줄만으로는 내용을 알 수 없어, 그림 속 글자를 대신 싣는다(2026-11-15).
+     */
     public String questionWithExhibit() {
-        return hasExhibit() ? question + "\n[자료]\n" + normalizedExhibit() : question;
+        if (!hasExhibit()) {
+            return question;
+        }
+        String figure = FigureRequests.problemImageTextOf(normalizedExhibit());
+        return figure != null
+                ? question + "\n[자료 — 손그림. 그림은 볼 수 없어 설명과 그림 속 글자를 위에서부터 옮겼다]\n" + figure
+                : question + "\n[자료]\n" + normalizedExhibit();
     }
 
     /**
