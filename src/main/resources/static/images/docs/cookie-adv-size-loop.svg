@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="되도는 사다리 그림. 정산팀장이 로그인하면 서버가 권한 70개를 담은 4,600바이트 쿠키를 Set-Cookie로 보낸다. 브라우저는 4,096바이트를 넘는 쿠키를 오류 없이 버린다. 다음 요청에는 쿠키가 없어 서버가 로그인 화면으로 넘기고, 팀장은 다시 로그인해 같은 일이 되풀이된다. 일반 직원의 900바이트 쿠키는 저장된다">
+<defs><marker id="cookie-adv-size-loop-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(40 40) scale(1.1)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="73" y="108" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">브라우저</text>
+<g transform="translate(520 36) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="550" y="120" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">백오피스</text>
+<path d="M73 126 V350" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.5" stroke-dasharray="5 4"/>
+<path d="M550 126 V350" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.5" stroke-dasharray="5 4"/>
+<path d="M80 150 H540" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#cookie-adv-size-loop-head)"/>
+<text x="310" y="142" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle">① 로그인 (정산팀장)</text>
+<path d="M540 200 H80" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#cookie-adv-size-loop-head)"/>
+<text x="310" y="184" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle">② Set-Cookie: auth=… (4,600바이트)</text>
+<text x="310" y="218" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">권한 70개를 담은 서명 쿠키</text>
+<rect x="92" y="228" width="178" height="42" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="104" y="246" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">4,096바이트 넘음</text>
+<text x="104" y="264" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">→ 조용히 버린다</text>
+<path d="M80 300 H540" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#cookie-adv-size-loop-head)"/>
+<text x="310" y="292" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle">③ 다음 요청 · Cookie 없음</text>
+<path d="M540 340 H80" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#cookie-adv-size-loop-head)"/>
+<text x="310" y="332" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="middle">④ 로그인 안 됨 → 로그인 화면</text>
+<path d="M64 340 C16 330 16 160 64 152" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#cookie-adv-size-loop-head)"/>
+<text x="34" y="250" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700">되풀이</text>
+<rect x="372" y="228" width="236" height="42" rx="6" class="f-hl" fill="#eef2ff"/>
+<text x="384" y="246" class="f-sm" fill="#556274" font-size="12">일반 직원 · 권한 6개</text>
+<text x="384" y="264" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">900바이트 → 저장된다</text>
+<text x="320" y="372" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">서버 로그에는 ① 로그인 성공만 찍히고, 버려진 쿠키는 어디에도 남지 않는다</text>
+</svg>

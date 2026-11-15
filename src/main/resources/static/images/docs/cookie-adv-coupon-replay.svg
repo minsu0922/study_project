@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="두 줄 장면. 고치기 전에는 사용자가 가입 직후의 welcome=unused 쿠키를 복사해 두고, 주문할 때마다 그 값을 다시 넣어 서명 검사를 통과해 할인을 380번 받는다. 고친 뒤에는 할인을 썼다는 기록을 DB 장부에 적어, 같은 회원의 두 번째 사용을 고유 제약이 막는다">
+<defs><marker id="cookie-adv-coupon-replay-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="28" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">고치기 전 · 썼는지를 서명 쿠키에 적는다</text>
+<rect x="16" y="44" width="150" height="64" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="28" y="68" class="f-sm" fill="#556274" font-size="12">가입 직후 쿠키</text>
+<text x="28" y="92" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">unused.Qm9v…</text>
+<text x="28" y="128" class="f-b" fill="#0f172a" font-size="13" font-weight="700">복사해 둔다</text>
+<rect x="214" y="44" width="112" height="64" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="226" y="68" class="f-b" fill="#0f172a" font-size="13" font-weight="700">주문 1</text>
+<text x="226" y="92" class="f-sm" fill="#556274" font-size="12">복사본을 넣음</text>
+<text x="226" y="128" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">할인 통과</text>
+<rect x="342" y="44" width="112" height="64" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="354" y="68" class="f-b" fill="#0f172a" font-size="13" font-weight="700">주문 2</text>
+<text x="354" y="92" class="f-sm" fill="#556274" font-size="12">복사본을 넣음</text>
+<text x="354" y="128" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">할인 통과</text>
+<rect x="470" y="44" width="112" height="64" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="482" y="68" class="f-b" fill="#0f172a" font-size="13" font-weight="700">주문 380</text>
+<text x="482" y="92" class="f-sm" fill="#556274" font-size="12">복사본을 넣음</text>
+<text x="482" y="128" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">할인 통과</text>
+<path d="M168 76 H208" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#cookie-adv-coupon-replay-head)"/>
+<path d="M328 76 H336" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#cookie-adv-coupon-replay-head)"/>
+<path d="M456 76 H464" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#cookie-adv-coupon-replay-head)"/>
+<text x="16" y="172" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">서명은 진짜라 서버가 매번 통과시킨다 · 할인 190만 원이 더 나갔다</text>
+<text x="16" y="218" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">고친 뒤 · 썼다는 기록을 DB 장부에 적는다</text>
+<rect x="16" y="234" width="150" height="64" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="28" y="258" class="f-b" fill="#0f172a" font-size="13" font-weight="700">주문 1</text>
+<text x="28" y="282" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">할인 적용</text>
+<rect x="214" y="234" width="150" height="64" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="226" y="258" class="f-b" fill="#0f172a" font-size="13" font-weight="700">주문 2 · 복사본</text>
+<text x="226" y="282" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">장부가 막는다</text>
+<rect x="420" y="228" width="200" height="82" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="432" y="252" class="f-sm" fill="#556274" font-size="12">coupon_uses 장부</text>
+<text x="432" y="276" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">회원 1042 · WELCOME5000</text>
+<text x="432" y="298" class="f-sm" fill="#556274" font-size="12">(회원, 쿠폰) 고유 제약</text>
+<path d="M168 266 H208" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#cookie-adv-coupon-replay-head)"/>
+<path d="M366 266 H414" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#cookie-adv-coupon-replay-head)"/>
+<text x="320" y="360" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">열쇠패를 아무리 복사해도, 카운터 장부의 "사용함"은 지워지지 않는다</text>
+</svg>
