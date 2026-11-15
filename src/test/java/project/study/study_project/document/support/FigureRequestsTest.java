@@ -38,6 +38,26 @@ class FigureRequestsTest {
     }
 
     @Test
+    @DisplayName("문제 손그림은 우리 폴더의 SVG 한 줄만 받는다 — 바깥 주소는 그림으로 보지 않는다")
+    void problemImagePathAcceptsOnlyOurFolder() {
+        assertThat(FigureRequests.problemImagePathOf(" ![봉투](/images/problems/a-1.svg) "))
+                .isEqualTo("/images/problems/a-1.svg");
+        assertThat(FigureRequests.problemImagePathOf("![봉투](https://evil.example/a.svg)")).isNull();
+        assertThat(FigureRequests.problemImagePathOf("![봉투](/images/docs/a.svg)")).isNull();
+        assertThat(FigureRequests.problemImagePathOf("![봉투](/images/problems/a.svg)\n둘째 줄")).isNull();
+    }
+
+    @Test
+    @DisplayName("손그림 글자 옮기기는 설명과 SVG의 text를 위에서부터 싣는다")
+    void problemImageTextReadsSvgText() {
+        assertThat(FigureRequests.problemImageTextOf("![봉투가 바뀐다](/images/problems/test-figure.svg)"))
+                .isEqualTo("설명: 봉투가 바뀐다\n노트북\n공유기");
+        assertThat(FigureRequests.problemImageTextOf("![없는 그림](/images/problems/no-such.svg)"))
+                .as("파일을 못 읽어도 설명은 남긴다").isEqualTo("설명: 없는 그림");
+        assertThat(FigureRequests.problemImageTextOf("flowchart LR")).isNull();
+    }
+
+    @Test
     @DisplayName("요청 설명을 꺼낸다")
     void extractReadsDescriptions() {
         assertThat(FigureRequests.extract(BODY)).containsExactly("봉투가 바뀐다");

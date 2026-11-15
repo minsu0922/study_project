@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" role="img">
+  <rect x="10" y="10" width="80" height="40" rx="6" fill="none" stroke="currentColor"/>
+  <text x="50" y="35" text-anchor="middle" fill="currentColor">노트북</text>
+  <text x="150" y="35" text-anchor="middle" fill="currentColor">공유기</text>
+</svg>

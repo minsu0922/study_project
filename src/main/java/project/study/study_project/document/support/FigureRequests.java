@@ -51,6 +51,56 @@ public final class FigureRequests {
     /** 요청 한 줄과 그 줄바꿈. 앞 들여쓰기도 함께 지운다. */
     private static final Pattern REQUEST_LINE = Pattern.compile("(?m)^[ \\t]*" + Pattern.quote(MARKER) + ".*(\\R|\\z)");
 
+    /**
+     * 문제 자료 칸의 손그림 — {@code ![설명](/images/problems/x.svg)} 한 줄. 화면(api.js
+     * {@code PROBLEM_FIGURE})과 같은 규칙이다. 파일 이름은 영문·숫자·점·하이픈·밑줄만 받는다.
+     */
+    private static final Pattern PROBLEM_IMAGE =
+            Pattern.compile("^!\\[[^\\]\\n]*\\]\\((/images/problems/[A-Za-z0-9._-]+\\.svg)\\)$");
+
+    /** 자료 칸이 손그림 한 줄이면 그 경로, 아니면 {@code null}. */
+    public static String problemImagePathOf(String code) {
+        if (code == null) {
+            return null;
+        }
+        Matcher m = PROBLEM_IMAGE.matcher(code.strip());
+        return m.matches() ? m.group(1) : null;
+    }
+
+    private static final Pattern SVG_TEXT = Pattern.compile("(?s)<text\\b[^>]*>(.*?)</text>");
+    private static final Pattern TAG = Pattern.compile("<[^>]+>");
+    private static final Pattern IMAGE_ALT = Pattern.compile("^!\\[([^\\]\\n]*)\\]");
+
+    /**
+     * 손그림 자료를 글로 옮긴 것 — 설명과 그림 속 글자(SVG {@code <text>})를 위에서부터 한 줄씩.
+     * AI 검수는 그림을 못 보므로 이것으로 "그림이 답을 흘리는가, 문제와 맞는가"를 본다.
+     * 손그림이 아니면 {@code null}, 파일을 못 읽으면 설명만 돌려준다.
+     */
+    public static String problemImageTextOf(String code) {
+        String path = problemImagePathOf(code);
+        if (path == null) {
+            return null;
+        }
+        Matcher alt = IMAGE_ALT.matcher(code.strip());
+        StringBuilder out = new StringBuilder("설명: ").append(alt.find() ? alt.group(1) : "");
+        try (var in = FigureRequests.class.getClassLoader().getResourceAsStream("static" + path)) {
+            if (in == null) {
+                return out.toString();
+            }
+            Matcher text = SVG_TEXT.matcher(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            while (text.find()) {
+                String line = TAG.matcher(text.group(1)).replaceAll(" ").replace("&lt;", "<").replace("&gt;", ">")
+                        .replace("&quot;", "\"").replace("&amp;", "&").replaceAll("\\s+", " ").strip();
+                if (!line.isEmpty()) {
+                    out.append('\n').append(line);
+                }
+            }
+        } catch (java.io.IOException e) {
+            // 글자를 못 뽑아도 설명은 남긴다. 검수가 통째로 멈추는 것보다 낫다
+        }
+        return out.toString();
+    }
+
     /** 펜스 밖에 적힌 요청 줄 수 — 펜스 밖이면 화면에 글자로 그대로 나온다. */
     public static int countOutsideMermaid(String body) {
         if (body == null) {

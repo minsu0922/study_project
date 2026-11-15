@@ -668,6 +668,12 @@ function showRecoveryCode(box, code) {
  */
 function codeBlockHtml(code, focusLine) {
   if (!code) return "";
+  // 손그림 자료는 <img>로 먼저 두고 drawProblemDiagrams가 SVG 원문으로 펼친다(사이트 색을 따르게)
+  const figure = problemFigureOf(code);
+  if (figure) {
+    return `<figure class="q-diagram q-figure" data-figure="${escapeHtml(figure.src)}">`
+      + `<img src="${escapeHtml(figure.src)}" alt="${escapeHtml(figure.alt)}"></figure>`;
+  }
   const lines = String(code).replaceAll("\r\n", "\n").split("\n");
   // 그림 자료는 원문 상자를 먼저 그리고 drawProblemDiagrams가 그림으로 갈아 끼운다.
   // 못 그리면 원문이 그대로 남는다. 화살표가 적힌 원문은 읽을 수라도 있다.
@@ -685,6 +691,63 @@ function codeBlockHtml(code, focusLine) {
 function isDiagramSource(code) {
   const first = String(code ?? "").trimStart().split("\n")[0].trim();
   return /^(flowchart|graph)\s+(TD|TB|BT|LR|RL)\b/.test(first) || /^(sequenceDiagram|xychart-beta)\b/.test(first);
+}
+
+/**
+ * 자료가 손그림 한 줄인가 — ![설명](/images/problems/x.svg). 서버 FigureRequests.problemImagePathOf와 같은 규칙이다.
+ * 경로를 우리 폴더 한 곳으로 묶어, 자료 칸에 아무 주소나 넣어 바깥 그림을 끌어오지 못하게 한다.
+ */
+const PROBLEM_FIGURE = /^!\[([^\]\n]*)\]\((\/images\/problems\/[A-Za-z0-9._-]+\.svg)\)$/;
+function problemFigureOf(code) {
+  const m = String(code ?? "").trim().match(PROBLEM_FIGURE);
+  return m ? { alt: m[1], src: m[2] } : null;
+}
+
+// document.html과 같은 판이다. 손그림이 있을 때만 받는다
+const PROBLEM_PURIFY_SRC = "https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js";
+const PROBLEM_PURIFY_INTEGRITY = "sha384-JEyTNhjM6R1ElGoJns4U2Ln4ofPcqzSsynQkmEc/KGy6336qAZl70tDLufbkla+3";
+let problemPurifyLoading = null;
+
+function loadProblemPurify() {
+  if (window.DOMPurify) return Promise.resolve();
+  if (!problemPurifyLoading) {
+    problemPurifyLoading = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = PROBLEM_PURIFY_SRC;
+      s.integrity = PROBLEM_PURIFY_INTEGRITY;
+      s.crossOrigin = "anonymous";
+      s.onload = resolve;
+      s.onerror = () => { problemPurifyLoading = null; reject(); };
+      document.head.appendChild(s);
+    });
+  }
+  return problemPurifyLoading;
+}
+
+/** 손그림 자료를 SVG 원문으로 펼친다. <img>로 두면 그림 속이 사이트 색(다크 테마)을 못 받는다. 실패하면 <img>를 그대로 둔다 */
+async function drawProblemFigures(root) {
+  const boxes = [...(root ?? document).querySelectorAll("figure.q-figure[data-figure]")];
+  if (boxes.length === 0) return;
+  try {
+    await loadProblemPurify();
+  } catch (e) {
+    return;
+  }
+  for (const box of boxes) {
+    try {
+      const res = await fetch(box.dataset.figure);
+      if (!res.ok) continue;
+      const alt = box.querySelector("img")?.alt ?? "";
+      const holder = document.createElement("div");
+      holder.innerHTML = DOMPurify.sanitize(await res.text(), { USE_PROFILES: { svg: true } });
+      const svg = holder.querySelector("svg");
+      if (!svg || !box.isConnected) continue;
+      if (alt) svg.setAttribute("aria-label", alt);
+      box.replaceChildren(svg);
+    } catch (e) {
+      // 그림 하나 때문에 문제를 막지 않는다
+    }
+  }
 }
 
 // document.html·admin-common.js와 같은 판이어야 한다. 버전을 올리면 세 곳의 해시를 함께 바꾼다
@@ -715,6 +778,7 @@ function loadProblemMermaid() {
  * securityLevel strict: 자료는 모델이 쓴 글이라 그림 안의 태그·클릭 동작을 살리지 않는다.
  */
 async function drawProblemDiagrams(root) {
+  drawProblemFigures(root);   // 손그림은 mermaid를 기다리지 않는다
   const boxes = [...(root ?? document).querySelectorAll("pre.q-code[data-diagram]")];
   if (boxes.length === 0) return;
   try {

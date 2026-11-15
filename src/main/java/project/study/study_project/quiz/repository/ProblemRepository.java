@@ -85,6 +85,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
                    or lower(p.title) like lower(:keyword) escape '!'
                    or lower(p.question) like lower(:keyword) escape '!'
                    or p.id = :keywordId)
+              and (:figureMarker is null or locate(:figureMarker, p.code) > 0)
             order by p.id desc
             """)
     Page<Problem> findForAdmin(
@@ -94,6 +95,8 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             @Param("documentSlug") String documentSlug,
             @Param("keyword") String keyword,
             @Param("keywordId") Long keywordId,
+            // 손그림 대기 필터(2026-11-15). 표지에 %가 있어 like 대신 locate로 찾는다
+            @Param("figureMarker") String figureMarker,
             Pageable pageable
     );
 

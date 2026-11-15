@@ -64,7 +64,7 @@ class AdminSearchQueriesIntegrationTest {
         save("상관없는 제목", "상관없는 지문");
 
         Page<Problem> page = problemRepository.findForAdmin(null, null, null, null,
-                SearchKeyword.likePattern(word.toUpperCase()), null, PageRequest.of(0, 20));
+                SearchKeyword.likePattern(word.toUpperCase()), null, null, PageRequest.of(0, 20));
 
         assertThat(page.getContent()).extracting(Problem::getId)
                 .containsExactly(byQuestion.getId(), byTitle.getId());
@@ -78,7 +78,7 @@ class AdminSearchQueriesIntegrationTest {
         String q = "#" + problem.getId();
 
         Page<Problem> page = problemRepository.findForAdmin(null, null, null, null,
-                SearchKeyword.likePattern(q), SearchKeyword.idOf(q), PageRequest.of(0, 20));
+                SearchKeyword.likePattern(q), SearchKeyword.idOf(q), null, PageRequest.of(0, 20));
         assertThat(page.getContent()).extracting(Problem::getId).containsExactly(problem.getId());
 
         assertThat(statsService.search(new AdminProblemStatsService.Filter(
@@ -174,6 +174,23 @@ class AdminSearchQueriesIntegrationTest {
 
     private static List<Long> ids(PageResponse<DocumentListItem> page) {
         return page.content().stream().map(DocumentListItem::id).toList();
+    }
+
+    @Test
+    @DisplayName("문제 손그림 대기 필터는 자료 칸에 요청 줄이 남은 문제만 — 손그림으로 바꾼 문제는 빠진다")
+    void problemFigurePendingFilter() {
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        Problem pending = save(word + " 대기", "지문");
+        pending.attachCode("flowchart LR\n  %% 손그림: 봉투\n  A[\"a\"] --> B[\"b\"]", "mermaid");
+        Problem drawn = save(word + " 끝남", "지문");
+        drawn.attachCode("![봉투](/images/problems/x.svg)", "image");
+        save(word + " 자료 없음", "지문");
+        problemRepository.flush();
+
+        Page<Problem> page = problemRepository.findForAdmin(null, null, null, null,
+                SearchKeyword.likePattern(word), null, "%% 손그림:", PageRequest.of(0, 20));
+
+        assertThat(page.getContent()).extracting(Problem::getId).containsExactly(pending.getId());
     }
 
     private Problem save(String title, String question) {

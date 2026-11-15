@@ -1,5 +1,6 @@
 package project.study.study_project.quiz.service;
 
+import project.study.study_project.document.support.FigureRequests;
 import project.study.study_project.revision.ContentRevisionService;
 import project.study.study_project.revision.RevisionItem;
 import project.study.study_project.revision.RevisionTarget;
@@ -69,9 +70,18 @@ public class AdminProblemService {
     @Transactional(readOnly = true)
     public PageResponse<AdminProblemDetail> getProblems(DomainCode domain, Difficulty difficulty, ProblemType type,
                                                         String documentSlug, String q, Pageable pageable) {
+        return getProblems(domain, difficulty, type, documentSlug, q, false, pageable);
+    }
+
+    /** @param figurePending true면 자료 칸에 손그림 요청이 남은 문제만 */
+    @Transactional(readOnly = true)
+    public PageResponse<AdminProblemDetail> getProblems(DomainCode domain, Difficulty difficulty, ProblemType type,
+                                                        String documentSlug, String q, boolean figurePending,
+                                                        Pageable pageable) {
         // 빈 문자열은 "안 고름"이다 — 화면의 select가 빈 값을 보낼 수 있어 여기서 null로 맞춘다.
         Page<Problem> page = problemRepository.findForAdmin(domain, difficulty, type, Texts.trimToNull(documentSlug),
-                SearchKeyword.likePattern(q), SearchKeyword.idOf(q), pageable);
+                SearchKeyword.likePattern(q), SearchKeyword.idOf(q),
+                figurePending ? FigureRequests.MARKER : null, pageable);
         return PageResponse.from(page.map(AdminProblemDetail::from));
     }
 
@@ -94,6 +104,7 @@ public class AdminProblemService {
     public AdminProblemDetail create(AdminProblemRequest request) {
         requireRegisteredDomain(request.domain());
         validateByType(request);
+        requireProblemImage(request);
         Problem problem = Problem.create(
                 request.domain(), request.difficulty(), request.type(), Texts.trimToNull(request.title()),
                 request.question().trim(), normalizeAnswer(request), Texts.trimToNull(request.explanation()),
@@ -116,6 +127,7 @@ public class AdminProblemService {
     public AdminProblemDetail update(Long id, AdminProblemRequest request) {
         requireRegisteredDomain(request.domain());
         validateByType(request);
+        requireProblemImage(request);
         Problem problem = findProblem(id);
         // 고치기 전 모습을 먼저 적는다(V36). 검증이 끝난 뒤라 실패할 수정은 이력을 남기지 않는다.
         revisionService.snapshot(RevisionTarget.PROBLEM, id, toRequest(problem));
@@ -165,6 +177,16 @@ public class AdminProblemService {
 
     /** 지금 문제를 등록 요청과 같은 모양으로 — 이력에 적는 모양이자 되돌릴 때 다시 넣는 모양이다. */
     static final String CODE_LANGUAGE_JAVA = "java";
+    /** 손그림 자료 — 자료 칸이 {@code ![설명](/images/problems/x.svg)} 한 줄이다(2026-11-15). */
+    static final String CODE_LANGUAGE_IMAGE = "image";
+
+    /** 손그림 자료가 가리키는 파일이 실제로 있는지. 경로 오타 하나면 학습 화면에 깨진 그림이 뜬다. */
+    private static void requireProblemImage(AdminProblemRequest request) {
+        String path = FigureRequests.problemImagePathOf(codeOf(request));
+        if (path != null && AdminProblemService.class.getClassLoader().getResource("static" + path) == null) {
+            throw new BusinessException(ErrorCode.QUIZ_004, "그림 파일이 없습니다: " + path);
+        }
+    }
 
     private AdminProblemRequest toRequest(Problem p) {
         return new AdminProblemRequest(p.getDomain(), p.getDifficulty(), p.getType(), p.getTitle(),
@@ -191,10 +213,13 @@ public class AdminProblemService {
         return request.code() == null || request.code().isBlank() ? null : request.code().strip();
     }
 
-    /** 언어를 비워 보내면 java로 본다. 지금 받는 언어가 그것 하나다. */
+    /** 언어를 비워 보내면 java로 본다. 손그림 이미지 한 줄이면 고른 값과 상관없이 image다. */
     private static String codeLanguageOf(AdminProblemRequest request) {
         if (codeOf(request) == null) {
             return null;
+        }
+        if (FigureRequests.problemImagePathOf(codeOf(request)) != null) {
+            return CODE_LANGUAGE_IMAGE;
         }
         String language = Texts.trimToNull(request.codeLanguage());
         return language == null ? CODE_LANGUAGE_JAVA : language.toLowerCase(java.util.Locale.ROOT);

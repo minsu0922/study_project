@@ -60,9 +60,11 @@ public class AdminProblemController {
             @RequestParam(required = false) ProblemType type,
             @RequestParam(required = false) String documentSlug,
             @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "false") boolean figurePending,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ok(adminProblemService.getProblems(domain, difficulty, type, documentSlug, q, pageable));
+        return ApiResponse.ok(adminProblemService.getProblems(domain, difficulty, type, documentSlug, q,
+                figurePending, pageable));
     }
 
     /** 근거 문서 필터에 채울 slug 목록 — 문제에 실제로 붙어 있는 것만. */

@@ -127,6 +127,25 @@ class ProblemCodeIntegrationTest {
     }
 
     @Test
+    @DisplayName("손그림 한 줄 자료는 고른 언어와 상관없이 image로 저장한다")
+    void storesProblemFigureAsImage() {
+        // 파일은 테스트 리소스(static/images/problems/test-figure.svg)에 있다
+        AdminProblemDetail created = adminProblemService.create(
+                request("![봉투가 바뀐다](/images/problems/test-figure.svg)", "mermaid"));
+
+        assertThat(created.codeLanguage()).isEqualTo("image");
+    }
+
+    @Test
+    @DisplayName("손그림 파일이 없으면 저장을 막는다 — 학습 화면에 깨진 그림이 뜬다")
+    void rejectsMissingProblemFigure() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> adminProblemService.create(
+                        request("![없는 그림](/images/problems/no-such-figure.svg)", null)))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class)
+                .hasMessageContaining("그림 파일이 없습니다");
+    }
+
+    @Test
     @DisplayName("코드가 없는 보통 문제는 두 칸이 모두 null이다")
     void plainProblemHasNoCode() {
         AdminProblemDetail created = adminProblemService.create(request(null, null));

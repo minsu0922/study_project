@@ -2251,21 +2251,25 @@ body.admin-shell {
    그림 속 모양은 class만 달고 색은 여기서 입혀, 어두운 화면에서도 사이트 색을 따른다.
    좁은 화면에서 글자가 너무 작아지지 않게 폭을 지키고 상자 안에서 옆으로 굴린다. */
 .doc-body .doc-figure svg { min-width: 600px; }
-.doc-figure .f-dev, .doc-figure .f-paper { fill: var(--card); stroke: var(--text); }
-.doc-figure .f-screen { fill: var(--primary-soft); stroke: var(--primary); }
-.doc-figure .f-dot { fill: var(--primary); }
-.doc-figure .f-line, .doc-figure .f-flap { stroke: var(--text); }
-.doc-figure .f-house { fill: var(--fill); stroke: var(--border-strong); }
-.doc-figure .f-panel { fill: var(--fill); }
-.doc-figure .f-cloud { fill: var(--card); stroke: var(--muted); }
-.doc-figure .f-arrow { stroke: var(--primary); }
-.doc-figure .f-ledger { fill: var(--card); stroke: var(--primary); }
-.doc-figure .f-hl { fill: var(--primary-soft); }
-.doc-figure .f-strike { stroke: var(--wrong); }
-.doc-figure .f-t, .doc-figure .f-b, .doc-figure .f-mono { fill: var(--text); }
-.doc-figure .f-sm { fill: var(--muted); }
-.doc-figure .f-new, .doc-figure .f-acc { fill: var(--primary); }
-.doc-figure .f-bad { fill: var(--wrong); }
+/* 문제 자료의 손그림(2026-11-15). 같은 그리기 도구로 그려 아래 색 규칙을 함께 쓴다.
+   문제 상자는 본문보다 좁아 폭은 500px만 지키고, 넘치면 .q-diagram 안에서 옆으로 굴린다. */
+.q-figure svg { min-width: 500px; }
+.q-figure img { max-width: 100%; height: auto; }
+:is(.doc-figure, .q-figure) .f-dev, :is(.doc-figure, .q-figure) .f-paper { fill: var(--card); stroke: var(--text); }
+:is(.doc-figure, .q-figure) .f-screen { fill: var(--primary-soft); stroke: var(--primary); }
+:is(.doc-figure, .q-figure) .f-dot { fill: var(--primary); }
+:is(.doc-figure, .q-figure) .f-line, :is(.doc-figure, .q-figure) .f-flap { stroke: var(--text); }
+:is(.doc-figure, .q-figure) .f-house { fill: var(--fill); stroke: var(--border-strong); }
+:is(.doc-figure, .q-figure) .f-panel { fill: var(--fill); }
+:is(.doc-figure, .q-figure) .f-cloud { fill: var(--card); stroke: var(--muted); }
+:is(.doc-figure, .q-figure) .f-arrow { stroke: var(--primary); }
+:is(.doc-figure, .q-figure) .f-ledger { fill: var(--card); stroke: var(--primary); }
+:is(.doc-figure, .q-figure) .f-hl { fill: var(--primary-soft); }
+:is(.doc-figure, .q-figure) .f-strike { stroke: var(--wrong); }
+:is(.doc-figure, .q-figure) .f-t, :is(.doc-figure, .q-figure) .f-b, :is(.doc-figure, .q-figure) .f-mono { fill: var(--text); }
+:is(.doc-figure, .q-figure) .f-sm { fill: var(--muted); }
+:is(.doc-figure, .q-figure) .f-new, :is(.doc-figure, .q-figure) .f-acc { fill: var(--primary); }
+:is(.doc-figure, .q-figure) .f-bad { fill: var(--wrong); }
 
 /* 제목 위계 — 생성 프롬프트가 "### 왜 이렇게 설계됐는가"를 쓰게 바뀌면서 필요해졌다.
  * 전에는 그 자리를 **굵은 글씨** 한 줄로 썼는데, 마크다운에서 그건 그냥 문단이라

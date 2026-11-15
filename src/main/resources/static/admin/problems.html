@@ -63,7 +63,9 @@ try {
         <!-- 자료(text)를 java로 저장하면 그 문제가 자바 코스에 섞인다. 수정할 때 원래 값을 되채운다. -->
         <div class="field"><label>칸 종류</label><select id="pCodeLanguage">
           <option value="java">Java 코드</option><option value="text">자료 (로그·표)</option>
-          <option value="mermaid">그림 (흐름도·시퀀스·차트)</option></select></div>
+          <option value="mermaid">그림 (흐름도·시퀀스·차트)</option>
+          <!-- ![설명](/images/problems/x.svg) 한 줄이면 서버가 이 값으로 저장한다(고른 값과 상관없이) -->
+          <option value="image">손그림 (SVG 한 줄)</option></select></div>
         <div class="field"><label>강조할 줄 (선택)</label><input type="number" id="pCodeFocusLine" min="1" style="width:110px" placeholder="예: 12"></div>
         <div class="field"><label style="display:block">&nbsp;</label><label><input type="checkbox" id="pCodeChoices"> 보기가 코드다 (고정폭으로 그린다)</label></div>
       </div>
@@ -99,6 +101,9 @@ try {
       <div class="field"><label>난이도</label><select id="fpDifficulty"></select></div>
       <div class="field"><label>유형</label><select id="fpType"></select></div>
       <div class="field"><label>근거 문서</label><select id="fpDocument"></select></div>
+      <!-- 자료 칸에 "%% 손그림:" 요청이 남은 문제 — 손 SVG로 바꿀 차례인 것 -->
+      <div class="field"><label for="fpFigure">손그림</label>
+        <select id="fpFigure"><option value="">전체</option><option value="true">대기만</option></select></div>
       <div class="field field-reset"><label>&nbsp;</label><button id="fpResetBtn" class="btn-outline">필터 지우기</button></div>
     </div>
     <!-- 표·전체 건수·페이저·빈 상태는 admin-table.js가 통째로 그린다. 여기는 자리만 둔다. -->
@@ -172,7 +177,7 @@ function initListFilters() {
   }
   // 필터를 바꾸면 첫 쪽부터 — 3쪽을 보다 좁히면 결과가 1쪽뿐이라 빈 화면이 뜬다.
   wireFilterBar({
-    search: "fpQ", selects: ["fpDomain", "fpDifficulty", "fpType", "fpDocument"], reset: "fpResetBtn",
+    search: "fpQ", selects: ["fpDomain", "fpDifficulty", "fpType", "fpDocument", "fpFigure"], reset: "fpResetBtn",
     onChange: () => loadProblems({ page: 0 }),
   });
 
@@ -406,12 +411,14 @@ function loadProblems(opts) {
     url: "/api/admin/problems",
     filters: () => filterQuery({
       q: "fpQ", domain: "fpDomain", difficulty: "fpDifficulty",
-      type: "fpType", documentSlug: "fpDocument",
+      type: "fpType", documentSlug: "fpDocument", figurePending: "fpFigure",
     }),
     columns: [
       { head: "ID", width: "60px", cell: p => p.id },
       { head: "제목 / 지문", wrap: true,
-        cell: p => (p.hidden ? `<span class="badge gray">내림</span> ` : "") + problemLabel(p) },
+        cell: p => (p.hidden ? `<span class="badge gray">내림</span> ` : "")
+          + (String(p.code ?? "").includes("%% 손그림:") ? `<span class="badge">손그림 대기</span> ` : "")
+          + problemLabel(p) },
       { head: "도메인", width: "90px", cell: p => escapeHtml(domainLabel(p.domain)) },
       { head: "난이도", width: "70px", cell: p => difficultyBadge(p.difficulty) },
       { head: "유형", width: "80px", cell: p => escapeHtml(typeLabel(p.type)) },
@@ -478,7 +485,7 @@ async function editProblem(id) {
   document.getElementById("pQuestion").value = p.question;
   document.getElementById("pCode").value = p.code ?? "";
   document.getElementById("pCodeLanguage").value =
-    ["text", "mermaid"].includes(p.codeLanguage) ? p.codeLanguage : "java";
+    ["text", "mermaid", "image"].includes(p.codeLanguage) ? p.codeLanguage : "java";
   document.getElementById("pCodeFocusLine").value = p.codeFocusLine ?? "";
   document.getElementById("pCodeChoices").checked = !!p.codeChoices;
   document.getElementById("pAnswer").value = p.answer ?? "";
