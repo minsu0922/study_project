@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 370" role="img" aria-label="장면과 막대. 서버가 전원이 꺼져 FIN도 RST도 보내지 못하자, 클라이언트는 연결이 열려 있다고 믿는다. 알아채기까지 걸리는 시간은 읽기 시간 제한 5초면 5초, 하트비트 30초 간격 두 번이면 60초, 줄인 keepalive면 90초, 리눅스 기본 keepalive면 약 2시간 11분이다">
+<defs><marker id="tcp-silent-detect-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(40 24) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="70" y="116" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">클라이언트</text>
+<g transform="translate(520 24) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M534 41 L566 73 M566 41 L534 73" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<text x="550" y="116" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="middle">서버 · 전원 꺼짐</text>
+<path d="M108 58 H512" class="f-cloud" fill="none" stroke="#556274" stroke-width="2" stroke-dasharray="5 4"/>
+<text x="310" y="46" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">연결은 열려 있다고 믿는다</text>
+<text x="310" y="82" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">FIN도 RST도 오지 않는다</text>
+<text x="24" y="168" class="f-b" fill="#0f172a" font-size="15" font-weight="700">상대가 사라진 뒤 알아채기까지</text>
+<text x="24" y="204" class="f-t" fill="#0f172a" font-size="13">읽기 시간 제한 5초</text>
+<rect x="200" y="191" width="11.666666666666666" height="16" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="219.66666666666666" y="204" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">5초</text>
+<text x="24" y="244" class="f-t" fill="#0f172a" font-size="13">하트비트 30초 × 2번</text>
+<rect x="200" y="231" width="140.0" height="16" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="348.0" y="244" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">60초</text>
+<text x="24" y="284" class="f-t" fill="#0f172a" font-size="13">keepalive 줄인 값</text>
+<rect x="200" y="271" width="210.0" height="16" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="418.0" y="284" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">90초</text>
+<text x="24" y="324" class="f-t" fill="#0f172a" font-size="13">keepalive 기본값</text>
+<rect x="200" y="311" width="400" height="16" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="600" y="304" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="end">약 2시간 11분</text>
+<path d="M200 340 H480" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.2"/>
+<text x="200" y="358" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">0</text>
+<text x="340" y="358" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">60초</text>
+<text x="480" y="358" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">120초</text>
+</svg>
