@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="송장과 세 단계 그림. 응답 헤더 송장에 Content-Encoding: gzip, Content-Type: text/plain, charset=UTF-8이 적혀 있다. 받는 쪽은 압축된 바이트를 gzip으로 풀고, text/plain이라 글자로 다루며, UTF-8 규칙으로 바꿔 &#x27;무선 마우스&#x27;를 얻는다">
+<defs><marker id="http-three-layers-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="40" width="240" height="170" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="30" y="66" class="f-sm" fill="#556274" font-size="13">송장 · 응답 헤더</text>
+<text x="28" y="104" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">①</text>
+<text x="48" y="104" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">Content-Encoding: gzip</text>
+<text x="28" y="144" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">②</text>
+<text x="48" y="144" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">Content-Type: text/plain</text>
+<text x="28" y="184" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">③</text>
+<text x="48" y="184" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">; charset=UTF-8</text>
+<rect x="300" y="30" width="300" height="50" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="314" y="50" class="f-sm" fill="#556274" font-size="12">압축된 바이트</text>
+<text x="314" y="70" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">1f 8b 08 00 …</text>
+<rect x="300" y="130" width="300" height="50" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="314" y="150" class="f-sm" fill="#556274" font-size="12">푼 바이트</text>
+<text x="314" y="170" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">eb ac b4 ec 84 a0 …</text>
+<rect x="300" y="230" width="300" height="50" rx="6" class="f-hl" fill="#eef2ff"/>
+<text x="314" y="250" class="f-sm" fill="#556274" font-size="12">글자</text>
+<text x="314" y="270" class="f-new" fill="#4f46e5" font-size="15" font-weight="700">무선 마우스</text>
+<path d="M330 82 V126" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#http-three-layers-head)"/>
+<text x="348" y="110" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">① gzip으로 압축을 푼다</text>
+<path d="M330 182 V226" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#http-three-layers-head)"/>
+<text x="348" y="200" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">② text/plain: 글자로 다룬다</text>
+<text x="348" y="220" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">③ UTF-8 규칙으로 바꾼다</text>
+<path d="M258 104 H296" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.2" stroke-dasharray="5 4"/>
+<path d="M258 164 H296" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="320" y="312" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">기사가 송장만 보고 상자를 다루듯, 받는 쪽은 헤더 세 겹을 차례로 따라 본문을 푼다</text>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 384" role="img" aria-label="쌓인 기둥 그림. 새 회원의 요청 헤더는 기본 헤더 0.5KB, 로그인 토큰 2KB, 하위 서비스 값 3개로 3.1KB라 프록시 한도 8KB 아래에서 통과한다. 몇 년 된 회원은 하위 서비스 값이 15개 쌓여 9.4KB가 되어 한도를 넘고 400으로 거절된다">
+<defs><marker id="http-header-stickers-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="120" y="316.0" width="140" height="14.0" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="120" y="260.0" width="140" height="56.0" rx="3" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="124" y="255.4" width="132" height="3.6000000000000005" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="124" y="249.8" width="132" height="3.6000000000000005" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="124" y="244.2" width="132" height="3.6000000000000005" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="380" y="316.0" width="140" height="14.0" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="380" y="260.0" width="140" height="56.0" rx="3" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="384" y="248.12" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="235.24" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="222.36" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="209.48" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="196.6" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="183.72" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="170.83999999999997" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="157.95999999999998" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="145.07999999999998" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="132.2" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="119.32" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="106.44" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="93.56" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="80.67999999999998" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<rect x="384" y="67.79999999999998" width="132" height="10.88" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1"/>
+<text x="190" y="294.0" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">토큰 2KB</text>
+<text x="450" y="294.0" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">토큰 2KB</text>
+<text x="270" y="326" class="f-sm" fill="#556274" font-size="11">기본 헤더</text>
+<text x="270" y="290.0" class="f-sm" fill="#556274" font-size="11">로그인 토큰</text>
+<text x="270" y="255.2" class="f-sm" fill="#556274" font-size="11">값 3개</text>
+<text x="530" y="200" class="f-sm" fill="#556274" font-size="11">하위 서비스 값</text>
+<text x="530" y="216" class="f-sm" fill="#556274" font-size="11">15개 · 6.9KB</text>
+<path d="M60 106 H600" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="64" y="98" class="f-bad" fill="#dc2626" font-size="12" font-weight="700">앞단 프록시 한도 8KB</text>
+<text x="190" y="233.2" class="f-new" fill="#4f46e5" font-size="13" font-weight="700" text-anchor="middle">3.1KB · 통과</text>
+<text x="450" y="58.79999999999998" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="middle">9.4KB · 400 거절</text>
+<path d="M100 330 H560" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="190" y="352" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">새 회원</text>
+<text x="450" y="352" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">몇 년 된 회원</text>
+<text x="320" y="374" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">스티커(하위 서비스 값)가 쌓인 송장만 한도에 걸린다</text>
+</svg>

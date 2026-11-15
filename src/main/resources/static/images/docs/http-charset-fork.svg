@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="갈라지는 그림. 송장에 Content-Type: text/plain만 있고 charset 칸이 비어 있다. 같은 본문 바이트를 관리 화면은 UTF-8로 읽어 &#x27;무선 마우스&#x27;로 보이고, 자바 17로 윈도우에서 도는 정산 배치는 MS949로 읽어 알아볼 수 없는 글자가 된다">
+<defs><marker id="http-charset-fork-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="50" width="210" height="126" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="30" y="74" class="f-sm" fill="#556274" font-size="12">송장</text>
+<text x="30" y="102" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">Content-Type: text/plain</text>
+<text x="30" y="146" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">charset</text>
+<rect x="96" y="128" width="116" height="28" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="154" y="147" class="f-bad" fill="#dc2626" font-size="12" font-weight="700" text-anchor="middle">비어 있음</text>
+<rect x="16" y="194" width="210" height="60" rx="6" class="f-hl" fill="#eef2ff"/>
+<text x="30" y="216" class="f-sm" fill="#556274" font-size="12">본문 바이트</text>
+<text x="30" y="240" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">eb ac b4 ec 84 a0 …</text>
+<rect x="320" y="36" width="150" height="96" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="320" y="36" width="150" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="332" cy="47" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="343" cy="47" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="354" cy="47" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="395" y="96" class="f-new" fill="#4f46e5" font-size="16" font-weight="700" text-anchor="middle">무선 마우스</text>
+<text x="488" y="72" class="f-b" fill="#0f172a" font-size="15" font-weight="700">관리 화면</text>
+<text x="488" y="94" class="f-sm" fill="#556274" font-size="13">UTF-8로 읽음</text>
+<rect x="320" y="186" width="150" height="96" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="320" y="186" width="150" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="332" cy="197" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="343" cy="197" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="354" cy="197" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="395" y="246" class="f-bad" fill="#dc2626" font-size="18" font-weight="700" text-anchor="middle">▒▒ ▒▒▒</text>
+<text x="488" y="218" class="f-b" fill="#0f172a" font-size="15" font-weight="700">정산 배치</text>
+<text x="488" y="240" class="f-sm" fill="#556274" font-size="13">자바 17 · 윈도우</text>
+<text x="488" y="262" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">MS949로 읽음</text>
+<path d="M230 200 C270 180 280 100 314 90" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#http-charset-fork-head)"/>
+<path d="M230 228 C270 236 290 240 314 238" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#http-charset-fork-head)"/>
+<text x="320" y="312" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">같은 바이트인데, charset 칸이 비어 받는 쪽마다 제 습관대로 읽는다</text>
+</svg>
