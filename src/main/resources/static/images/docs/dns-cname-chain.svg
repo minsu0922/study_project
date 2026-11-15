@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 410" role="img" aria-label="장부 두 장 그림. 리졸버가 내 장부에서 shop.example.com이 업체 이름 shop-123.host.example을 가리킨다는 CNAME 줄을 받고, 업체 장부에서 그 이름의 IP를 받는다. 업체가 IP를 198.51.100.20에서 198.51.100.40으로 고쳐도 내 장부는 그대로이고, 60초 뒤 새 IP로 풀린다">
+<defs><marker id="dns-cname-chain-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(24 150) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="54" y="240" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">리졸버</text>
+<rect x="200" y="40" width="424" height="120" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="216" y="66" class="f-b" fill="#0f172a" font-size="15" font-weight="700">내 장부 · example.com</text>
+<text x="608" y="66" class="f-sm" fill="#556274" font-size="13" text-anchor="end">고치지 않는다</text>
+<rect x="212" y="82" width="400" height="34" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="222" y="104" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">shop.example.com → shop-123.host.example</text>
+<text x="222" y="142" class="f-sm" fill="#556274" font-size="13">CNAME 줄 · TTL 300초</text>
+<rect x="200" y="196" width="424" height="140" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="216" y="222" class="f-b" fill="#0f172a" font-size="15" font-weight="700">업체 장부 · host.example</text>
+<text x="608" y="222" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="end">업체가 고친다</text>
+<text x="222" y="254" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">shop-123.host.example → 198.51.100.20</text>
+<path d="M218 249 H520" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+<rect x="212" y="266" width="400" height="34" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="222" y="288" class="f-new" fill="#4f46e5" font-size="13" font-weight="700" font-family="ui-monospace, Consolas, monospace">shop-123.host.example → 198.51.100.40</text>
+<text x="222" y="324" class="f-sm" fill="#556274" font-size="13">A 줄 · TTL 60초</text>
+<path d="M84 160 C130 120 160 102 196 100" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#dns-cname-chain-head)"/>
+<text x="132" y="112" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">①</text>
+<path d="M84 206 C130 240 160 270 196 280" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#dns-cname-chain-head)"/>
+<text x="128" y="266" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">②</text>
+<text x="320" y="368" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">① 내 이름은 업체 이름을 가리키고, ② 그 이름의 IP는 업체 장부가 답한다</text>
+<text x="320" y="392" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">업체가 IP를 바꿔도 내 장부는 그대로, 60초 뒤 새 IP로 풀린다</text>
+</svg>

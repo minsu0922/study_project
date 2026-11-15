@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 370" role="img" aria-label="두 칸 그림. TTL이 86400초면 리졸버는 권한 서버에 하루 1번만 묻지만, 주소를 바꾸면 옛 답이 최대 24시간 남는다. TTL이 30초면 옛 답은 30초 뒤 사라지지만, 리졸버가 하루 2,880번 묻는다">
+<defs><marker id="dns-ttl-tradeoff-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="50" width="296" height="270" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="32" y="36" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">TTL 86400초 (하루)</text>
+<g transform="translate(36 134) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<g transform="translate(236 134) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="66" y="228" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">리졸버</text>
+<text x="266" y="228" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">권한 서버</text>
+<rect x="328" y="50" width="296" height="270" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="344" y="36" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">TTL 30초</text>
+<g transform="translate(348 134) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<g transform="translate(548 134) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="378" y="228" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">리졸버</text>
+<text x="578" y="228" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">권한 서버</text>
+<path d="M98 168 H232" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" marker-end="url(#dns-ttl-tradeoff-head)"/>
+<text x="157" y="118" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">하루 1번 묻는다</text>
+<path d="M410 146 H544" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#dns-ttl-tradeoff-head)"/>
+<path d="M410 155 H544" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#dns-ttl-tradeoff-head)"/>
+<path d="M410 164 H544" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#dns-ttl-tradeoff-head)"/>
+<path d="M410 173 H544" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#dns-ttl-tradeoff-head)"/>
+<path d="M410 182 H544" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#dns-ttl-tradeoff-head)"/>
+<path d="M410 191 H544" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#dns-ttl-tradeoff-head)"/>
+<text x="469" y="118" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">하루 2,880번 묻는다</text>
+<text x="32" y="268" class="f-t" fill="#0f172a" font-size="14">주소를 바꾸면 옛 답이</text>
+<text x="32" y="292" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">최대 24시간 남는다</text>
+<text x="344" y="268" class="f-t" fill="#0f172a" font-size="14">주소를 바꾸면 옛 답이</text>
+<text x="344" y="292" class="f-new" fill="#4f46e5" font-size="14" font-weight="700">30초 뒤 사라진다</text>
+<text x="320" y="352" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">옛 답이 남는 시간을 줄이면, 그만큼 자주 다시 묻는다</text>
+</svg>

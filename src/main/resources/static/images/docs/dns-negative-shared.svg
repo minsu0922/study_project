@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="안내소 그림. 13시에 확인 스크립트가 아직 없는 api2.example.com을 물어, 회사 리졸버의 수첩에 &#x27;없음, 3600초&#x27;가 적힌다. 14시에 권한 서버 장부에 이름을 만들었지만, 14시 30분과 14시 50분에 같은 리졸버에 물은 주문 서버들도 &#x27;없다&#x27;를 받는다. 리졸버는 권한 서버에 다시 묻지 않는다">
+<defs><marker id="dns-negative-shared-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(14 52) scale(1.0)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="84" y="68" class="f-b" fill="#0f172a" font-size="15" font-weight="700">확인 스크립트</text>
+<text x="84" y="88" class="f-sm" fill="#556274" font-size="12">13시에 처음 물음</text>
+<path d="M206 72 C240 72 260 119 282 130" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#dns-negative-shared-head)"/>
+<text x="208" y="96" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="middle">없다</text>
+<g transform="translate(20 144) scale(0.75)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="84" y="170" class="f-b" fill="#0f172a" font-size="15" font-weight="700">주문 서버 1</text>
+<text x="84" y="190" class="f-sm" fill="#556274" font-size="12">14시 30분에 물음</text>
+<path d="M206 174 C240 174 260 150 282 150" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#dns-negative-shared-head)"/>
+<text x="208" y="198" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="middle">없다</text>
+<g transform="translate(20 246) scale(0.75)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="84" y="272" class="f-b" fill="#0f172a" font-size="15" font-weight="700">주문 서버 2</text>
+<text x="84" y="292" class="f-sm" fill="#556274" font-size="12">14시 50분에 물음</text>
+<path d="M206 276 C240 276 260 181 282 170" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#dns-negative-shared-head)"/>
+<text x="208" y="300" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="middle">없다</text>
+<g transform="translate(290 112) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="320" y="206" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">회사 리졸버</text>
+<rect x="268" y="222" width="160" height="78" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="280" y="244" class="f-sm" fill="#556274" font-size="12">수첩</text>
+<text x="280" y="266" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">api2.example.com</text>
+<text x="280" y="288" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">없음 · 3600초</text>
+<g transform="translate(520 112) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="550" y="206" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">권한 서버</text>
+<rect x="466" y="222" width="158" height="78" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="478" y="244" class="f-sm" fill="#556274" font-size="12">14시에 만듦</text>
+<text x="478" y="270" class="f-new" fill="#4f46e5" font-size="12" font-weight="700" font-family="ui-monospace, Consolas, monospace">api2 → 203.0.113.30</text>
+<path d="M356 150 H514" class="f-cloud" fill="none" stroke="#556274" stroke-width="2" stroke-dasharray="5 4"/>
+<path d="M428 142 L444 158 M444 142 L428 158" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<text x="436" y="132" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">다시 묻지 않음</text>
+<text x="320" y="348" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">수첩에 '없음'이 남은 3600초 동안, 이 리졸버에 묻는 모두가 같은 답을 듣는다</text>
+</svg>

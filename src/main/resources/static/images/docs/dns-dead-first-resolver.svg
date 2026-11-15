@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 410" role="img" aria-label="장면과 그래프. 결제 서버가 이름을 다시 물을 때마다 꺼진 첫 리졸버 10.0.0.2에 먼저 묻고 5초를 기다린 뒤, 둘째 리졸버 10.0.0.3에서 답을 받는다. 자바가 답을 30초 저장하므로, 결제 응답 시간 그래프가 30초마다 5초씩 튀어 톱니 모양이 된다">
+<defs><marker id="dns-dead-first-resolver-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(24 48) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="54" y="140" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">결제 서버</text>
+<g transform="translate(296 28) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M312 47 L340 75 M340 47 L312 75" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<text x="366" y="56" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">10.0.0.2</text>
+<text x="366" y="76" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">점검으로 꺼짐 · 답 없음</text>
+<g transform="translate(296 112) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="366" y="140" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">10.0.0.3</text>
+<text x="366" y="160" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">답한다</text>
+<path d="M88 74 C160 70 220 62 290 60" class="f-cloud" fill="none" stroke="#556274" stroke-width="2" stroke-dasharray="5 4"/>
+<text x="188" y="46" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">① 먼저 묻고 5초 기다림</text>
+<path d="M88 100 C160 110 220 140 290 144" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#dns-dead-first-resolver-head)"/>
+<text x="196" y="154" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">② 그다음에 묻는다</text>
+<text x="60" y="214" class="f-b" fill="#0f172a" font-size="15" font-weight="700">결제 응답 시간</text>
+<path d="M70 230 V340 H610" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="64" y="254" class="f-sm" fill="#556274" font-size="12" text-anchor="end">5초</text>
+<text x="64" y="342" class="f-sm" fill="#556274" font-size="12" text-anchor="end">0초</text>
+<path d="M72 334 H104 L110 250 L116 334 H224 L230 250 L236 334 H344 L350 250 L356 334 H464 L470 250 L476 334 H584 L590 250 L596 334 H608" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2"/>
+<text x="110" y="362" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">0초</text>
+<text x="230" y="362" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">30초</text>
+<text x="350" y="362" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">60초</text>
+<text x="470" y="362" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">90초</text>
+<text x="590" y="362" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">120초</text>
+<text x="320" y="392" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">다시 물을 때마다(30초마다) 꺼진 첫 리졸버를 5초 기다린다</text>
+</svg>
