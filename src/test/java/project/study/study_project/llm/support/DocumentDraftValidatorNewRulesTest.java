@@ -63,6 +63,9 @@ class DocumentDraftValidatorNewRulesTest {
         String body = "### 장면 ① 칸이 모자란다\n\n잇는 문장.\n\n#### 행사 날 결제가 실패하는 이유\n\n쇼핑몰이 0시에 행사를 연다.\n\n"
                 + TAGGED.formatted("둘");
 
-        assertThat(messages(advanced(body))).noneMatch(m -> m.contains("장면"));
+        // 장면에 그림이 없다는 경고는 이 검사의 몫이 아니라 빼고 본다
+        assertThat(messages(advanced(body)))
+                .filteredOn(m -> !m.startsWith("그림이 없는 자리가 있습니다"))
+                .noneMatch(m -> m.contains("장면"));
     }
 }

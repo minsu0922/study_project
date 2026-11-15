@@ -2,9 +2,11 @@ package project.study.study_project.llm.support;
 
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.DocumentEdition;
+import project.study.study_project.document.support.FigureRequests;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.List;
@@ -146,6 +148,9 @@ public final class DocumentDraftValidator {
         checkTitleStyle(title, checks);
         checkRequiredSections(structure, edition, checks);
         checkDiagrams(body, edition, checks);
+        checkDiagramPlacement(body, structure, edition, checks);
+        checkDuplicateDiagrams(body, checks);
+        checkFigureRequests(body, checks);
         checkHtmlTags(body, checks);
         checkSectionOpeners(structure, checks);
         checkReferences(body, structure, checks);
@@ -433,8 +438,8 @@ public final class DocumentDraftValidator {
      * 않는 구조만 예외로 그림을 허용한다"고 했는데, 허용만으로는 나오지 않는다 — 코드 예제에서
      * 이미 겪은 일이다. 그래서 입문편에는 한 장을 요구하고 여기서 센다. 손으로 그린 그림 파일도 센다.
      *
-     * <p><b>심화편은 없어도 조용하다.</b> 프롬프트가 심화편의 그림을 선택으로 뒀다.
-     * 대신 종류 검사는 두 편 모두에 건다 — 틀린 그림은 어느 편에서든 원문이 코드로 보인다.
+     * <p>여기는 입문편의 "하나도 없음"만 본다. 절마다 그림이 있는지는 두 편 모두
+     * {@link #checkDiagramPlacement}가 본다. 종류 검사는 두 편 모두에 건다.
      *
      * <p>전부 경고다. 그림 하나 때문에 나흘치 문서를 버리는 것보다 검수자가 지우거나
      * 고치는 편이 싸다(코드 예제 검사와 같은 판단).
@@ -458,6 +463,138 @@ public final class DocumentDraftValidator {
         if (pictures == 0 && edition == DocumentEdition.BEGINNER) {
             checks.add(DraftCheck.warning(
                     "그림이 없습니다(입문편은 mermaid나 그림 파일 1개 이상). 구조나 흐름을 글로만 따라가야 합니다."));
+        }
+    }
+
+    /** 본론이 시작되기 직전 절 — 편마다 다르다. 본론은 이 뒤의, 이름이 정해진 절이 아닌 ## 절이다. */
+    private static final String BEGINNER_BEFORE_MAIN = "왜 필요한가";
+    private static final String ADVANCED_BEFORE_MAIN = "이 글을 읽기 전에";
+    private static final List<String> FIXED_SECTIONS = List.of(
+            "용어 한눈에", "참고 자료", "실무에서는 이렇게 쓴다", "실무에서 어디에 나타나는가",
+            "어떤 때 통하지 않는가", "자주 하는 오해", "한 줄로 정리하면", "면접에서 이렇게 물어본다",
+            "면접 한 줄 요약", "핵심 요약", "바탕이 되는 개념", "무엇인가", "실제로는 어디에서 만나는가",
+            "언제 깨지는가");
+
+    /**
+     * 본론 절과 심화편 장면마다 그림이 있는지(2026-11-15). 프롬프트가 "절마다 하나, 겹치면 뺀다"로
+     * 바뀌었다. 뺀 자리가 중복 기준에 맞는지는 사람만 알아서, 빠진 자리를 한 줄로 모아 경고만 한다.
+     * 입문편에 그림이 아예 없으면 {@link #checkDiagrams}가 이미 울리므로 여기선 조용하다.
+     */
+    private static void checkDiagramPlacement(String body, String structure, DocumentEdition edition,
+                                              List<DraftCheck> checks) {
+        if (edition == DocumentEdition.BEGINNER && !hasFigure(body)) {
+            return;
+        }
+        List<String> missing = new ArrayList<>();
+        String before = edition == DocumentEdition.BEGINNER ? BEGINNER_BEFORE_MAIN : ADVANCED_BEFORE_MAIN;
+        Matcher h2 = H2_PATTERN.matcher(structure);
+        List<int[]> spans = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        while (h2.find()) {
+            spans.add(new int[]{h2.start(), h2.end()});
+            names.add(h2.group(1).trim());
+        }
+        boolean inMain = false;
+        for (int i = 0; i < names.size(); i++) {
+            String name = names.get(i);
+            if (inMain && FIXED_SECTIONS.stream().noneMatch(name::startsWith)) {
+                int to = i + 1 < spans.size() ? spans.get(i + 1)[0] : body.length();
+                if (!hasFigure(body.substring(spans.get(i)[1], to))) {
+                    missing.add("## " + name);
+                }
+            }
+            if (name.startsWith(before)) {
+                inMain = true;
+            }
+        }
+        if (edition == DocumentEdition.ADVANCED) {
+            missing.addAll(scenesWithoutFigure(body, structure));
+        }
+        if (!missing.isEmpty()) {
+            checks.add(DraftCheck.warning(
+                    "그림이 없는 자리가 있습니다: %s. 앞 그림과 겹쳐서 뺀 게 아니면 그림을 넣으세요."
+                            .formatted(String.join(", ", missing))));
+        }
+    }
+
+    /** 「어떤 때 통하지 않는가」의 {@code ### 장면} 가운데 그림이 없는 것들의 제목. */
+    private static List<String> scenesWithoutFigure(String body, String structure) {
+        List<String> missing = new ArrayList<>();
+        Section section = sectionOf(body, structure, "## 어떤 때 통하지 않는가");
+        if (section == null) {
+            return missing;
+        }
+        Matcher scene = SCENE_HEADING.matcher(section.masked());
+        List<Integer> starts = new ArrayList<>();
+        while (scene.find()) {
+            starts.add(scene.start());
+        }
+        for (int i = 0; i < starts.size(); i++) {
+            int end = i + 1 < starts.size() ? starts.get(i + 1) : section.raw().length();
+            String block = section.raw().substring(starts.get(i), end);
+            if (!hasFigure(block)) {
+                missing.add(block.lines().findFirst().orElse("").strip());
+            }
+        }
+        return missing;
+    }
+
+    private static boolean hasFigure(String text) {
+        return MERMAID_BLOCK.matcher(text).find() || DOC_IMAGE.matcher(text).find();
+    }
+
+    /** 그림 칸에 보이는 글 — 큰따옴표 안 글과 sequenceDiagram의 {@code participant X as 이름}. */
+    private static final Pattern DIAGRAM_LABEL = Pattern.compile("\"([^\"\\n]+)\"|(?m)^\\s*participant\\s+\\S+\\s+as\\s+(.+?)\\s*$");
+
+    /** 칸 이름이 이만큼 겹치면 같은 그림을 다시 그린 것으로 본다. 첫 배치 결과를 보고 다시 잡는다. */
+    private static final double DUPLICATE_OVERLAP = 0.7;
+    /** 칸이 이보다 적은 그림은 우연히 겹치기 쉬워 비교하지 않는다. */
+    private static final int DUPLICATE_MIN_LABELS = 3;
+
+    /** 두 mermaid 그림의 칸 이름이 많이 겹치는지(2026-11-15) — 절마다 그림을 넣게 하면서 생길 중복을 잡는다. */
+    private static void checkDuplicateDiagrams(String body, List<DraftCheck> checks) {
+        List<Set<String>> labels = new ArrayList<>();
+        Matcher m = MERMAID_BLOCK.matcher(body);
+        while (m.find()) {
+            Set<String> set = new HashSet<>();
+            Matcher l = DIAGRAM_LABEL.matcher(m.group(1));
+            while (l.find()) {
+                String label = l.group(1) != null ? l.group(1) : l.group(2);
+                set.add(squash(label));
+            }
+            labels.add(set);
+        }
+        for (int i = 0; i < labels.size(); i++) {
+            for (int j = i + 1; j < labels.size(); j++) {
+                Set<String> a = labels.get(i);
+                Set<String> b = labels.get(j);
+                int smaller = Math.min(a.size(), b.size());
+                if (smaller < DUPLICATE_MIN_LABELS) {
+                    continue;
+                }
+                long shared = a.stream().filter(b::contains).count();
+                if ((double) shared / smaller > DUPLICATE_OVERLAP) {
+                    checks.add(DraftCheck.warning(
+                            "%d번째와 %d번째 그림이 칸 이름 %d개 중 %d개가 같습니다. 같은 장면을 다시 그렸으면 하나를 빼세요."
+                                    .formatted(i + 1, j + 1, smaller, shared)));
+                }
+            }
+        }
+    }
+
+    /** 손그림 요청 줄이 제자리에 있고 설명이 있는지(2026-11-15, {@link FigureRequests}). */
+    private static void checkFigureRequests(String body, List<DraftCheck> checks) {
+        long empty = FigureRequests.extract(body).stream().filter(String::isEmpty).count();
+        if (empty > 0) {
+            checks.add(DraftCheck.warning(
+                    "설명이 빈 손그림 요청이 %d개 있습니다. 무엇이 어떻게 바뀌는지와 그림에 들어갈 글자를 적으세요."
+                            .formatted(empty)));
+        }
+        int outside = FigureRequests.countOutsideMermaid(body);
+        if (outside > 0) {
+            checks.add(DraftCheck.warning(
+                    "mermaid 펜스 밖에 손그림 요청 줄이 %d개 있습니다. 화면에 글자로 그대로 나옵니다."
+                            .formatted(outside)));
         }
     }
 

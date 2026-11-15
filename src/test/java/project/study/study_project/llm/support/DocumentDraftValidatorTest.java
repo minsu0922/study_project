@@ -470,10 +470,19 @@ class DocumentDraftValidatorTest {
     private static final String DIAGRAM =
             "```mermaid\nsequenceDiagram\n  participant C as 클라이언트\n  participant S as 서버\n  C->>S: 요청한다\n```";
 
+    /** 도우미 입문편 둘째 본론 절의 그림. */
+    private static final String DIAGRAM2 =
+            "```mermaid\nflowchart LR\n  A[\"설정 파일\"] -->|\"읽는다\"| B[\"애플리케이션\"]\n```";
+
+    /** {@link #withFailureItems}가 장면 아래 넣는 그림. */
+    private static final String SCENE_DIAGRAM =
+            "```mermaid\nflowchart LR\n  K[\"키\"] -->|\"만료\"| D[\"원본\"]\n```";
+
     @Test
     @DisplayName("입문편에 그림이 없으면 알린다 — 30편에 그림이 한 장도 없었다")
     void warnsWhenBeginnerHasNoDiagram() {
-        String noDiagram = body(TITLE, "본문").replace(DIAGRAM, "그림 없이 글로 설명한다.");
+        String noDiagram = body(TITLE, "본문").replace(DIAGRAM, "그림 없이 글로 설명한다.")
+                .replace(DIAGRAM2, "여기도 글로 설명한다.");
 
         List<DraftCheck> checks = DocumentDraftValidator.validate(TITLE, "cache-strategy", noDiagram);
 
@@ -494,13 +503,74 @@ class DocumentDraftValidatorTest {
                 .noneMatch(m -> m.contains("그림이 없습니다"));
     }
 
-    /** 심화편의 그림은 프롬프트가 선택으로 뒀다 — 없다고 울리면 매번 헛울린다. */
+    /* ── 2026-11-15: 절마다 그림, 겹침, 손그림 요청 ─────────────────
+     * 프롬프트가 "본론 절·장면마다 하나, 겹치면 뺀다"로 바뀌었다. 빠진 자리와 겹친 그림을 센다. */
+
     @Test
-    @DisplayName("심화편은 그림이 없어도 조용하다 — 프롬프트가 선택으로 뒀다")
-    void advancedNeedsNoDiagram() {
-        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy-advanced", advancedBody(TITLE)))
+    @DisplayName("그림이 빠진 본론 절을 한 줄로 알린다 — 경고 여러 개로 흩으면 검수함이 덮인다")
+    void listsMainSectionsWithoutDiagram() {
+        String doc = body(TITLE, "본문").replace(DIAGRAM2, "여기는 글로 설명한다.");
+
+        List<String> messages = DocumentDraftValidator.validate(TITLE, "cache-strategy", doc).stream()
+                .map(DraftCheck::message).toList();
+
+        assertThat(messages).filteredOn(m -> m.startsWith("그림이 없는 자리가 있습니다"))
+                .containsExactly("그림이 없는 자리가 있습니다: ## 둘째 갈래. 앞 그림과 겹쳐서 뺀 게 아니면 그림을 넣으세요.");
+    }
+
+    @Test
+    @DisplayName("본론 밖의 고정 절에는 그림을 요구하지 않는다 — 용어 표·오해에 그림을 강요하면 헛울린다")
+    void fixedSectionsNeedNoDiagram() {
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", body(TITLE, "본문")))
                 .extracting(DraftCheck::message)
                 .noneMatch(m -> m.contains("그림"));
+    }
+
+    @Test
+    @DisplayName("심화편은 본론 절과 장면마다 그림을 본다")
+    void advancedListsScenesWithoutDiagram() {
+        String doc = advancedBody(TITLE).replaceFirst("(?s)```mermaid\nflowchart LR\n  T\\[.*?```", "글로만 쓴다.");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy-advanced", doc))
+                .extracting(DraftCheck::message)
+                .contains("그림이 없는 자리가 있습니다: ### 장면 ② 둘째 갈래. 앞 그림과 겹쳐서 뺀 게 아니면 그림을 넣으세요.");
+    }
+
+    @Test
+    @DisplayName("칸 이름이 70% 넘게 같은 두 그림은 겹친 것으로 알린다")
+    void warnsOnDuplicateDiagrams() {
+        String copy = "```mermaid\nsequenceDiagram\n  participant C as 클라이언트\n  participant S as 서버\n"
+                + "  participant D as \"DB\"\n  C->>S: 다시 요청한다\n```";
+        String first = "```mermaid\nsequenceDiagram\n  participant C as 클라이언트\n  participant S as 서버\n"
+                + "  participant D as \"DB\"\n  C->>S: 요청한다\n```";
+        String doc = body(TITLE, "본문").replace(DIAGRAM, first).replace(DIAGRAM2, copy);
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", doc))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.startsWith("1번째와 2번째 그림이 칸 이름 3개 중 3개가 같습니다"));
+    }
+
+    @Test
+    @DisplayName("칸이 둘뿐인 그림끼리는 겹침을 재지 않는다 — 클라이언트·서버는 어느 그림에나 나온다")
+    void smallDiagramsAreNotCompared() {
+        String doc = body(TITLE, "본문").replace(DIAGRAM2, DIAGRAM.replace("요청한다", "응답한다"));
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", doc))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("그림이 칸 이름"));
+    }
+
+    @Test
+    @DisplayName("설명이 빈 손그림 요청과 펜스 밖 요청 줄을 알린다")
+    void warnsOnBrokenFigureRequests() {
+        String doc = body(TITLE, "본문")
+                .replace("flowchart LR\n", "flowchart LR\n  %% 손그림:\n")
+                .replace("그림에서 설정을 읽는 쪽을 본다.", "%% 손그림: 펜스 밖에 적었다\n\n그림에서 설정을 읽는 쪽을 본다.");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", doc))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.startsWith("설명이 빈 손그림 요청이 1개"))
+                .anyMatch(m -> m.startsWith("mermaid 펜스 밖에 손그림 요청 줄이 1개"));
     }
 
     /** 종류 선언이 틀리면 그림이 통째로 안 그려지고, 읽는 사람은 원문을 코드로 본다. */
@@ -740,7 +810,14 @@ class DocumentDraftValidatorTest {
                 echo done
                 ```
 
-                그래서 이렇게 확인한다.
+                그래서 이렇게 확인한다. 설정이 들어가는 길은 아래 그림과 같다.
+
+                ```mermaid
+                flowchart LR
+                  A["설정 파일"] -->|"읽는다"| B["애플리케이션"]
+                ```
+
+                그림에서 설정을 읽는 쪽을 본다.
 
                 ## 용어 한눈에
 
@@ -788,7 +865,8 @@ class DocumentDraftValidatorTest {
         int start = doc.indexOf("## 어떤 때 통하지 않는가\n");
         int intro = doc.indexOf("\n\n", start) + 2;
         int end = doc.indexOf("## 면접에서 이렇게 물어본다");
-        return doc.substring(0, intro) + "### 장면 ① 갈래\n\n갈래를 연다.\n\n" + items + "\n\n" + doc.substring(end);
+        return doc.substring(0, intro) + "### 장면 ① 갈래\n\n갈래를 연다.\n\n" + SCENE_DIAGRAM + "\n\n" + items
+                + "\n\n" + doc.substring(end);
     }
 
     private String advancedBody(String heading) {
@@ -827,7 +905,16 @@ class DocumentDraftValidatorTest {
                 SELECT 1
                 ```
 
-                그래서 이렇게 동작한다.
+                그래서 이렇게 동작한다. 상태가 바뀌는 길은 아래 그림과 같다.
+
+                ```mermaid
+                stateDiagram-v2
+                  state "대기" as W
+                  state "처리 중" as P
+                  W --> P
+                ```
+
+                그림에서 되돌아가는 화살표가 없는 것을 본다.
 
                 ### 용어 한눈에
 
@@ -850,6 +937,12 @@ class DocumentDraftValidatorTest {
 
                 상황과 벌어진 일을 이야기로 쓴다.
 
+                ```mermaid
+                flowchart LR
+                  %%%% 손그림: 요청 봉투가 꽉 찬 창구 앞에서 되돌아간다. 창구 하나, 봉투 세 장
+                  Q["요청"] -->|"창구가 꽉 찼다"| G["창구"]
+                ```
+
                 #### 둘째 조건
 
                 - `증상` 언제 터지는가.
@@ -869,6 +962,11 @@ class DocumentDraftValidatorTest {
                 #### 넷째 조건 이야기
 
                 상황과 벌어진 일을 이야기로 쓴다.
+
+                ```mermaid
+                flowchart LR
+                  T["타이머"] -->|"시간이 지났다"| X["연결 끊김"]
+                ```
 
                 #### 다섯째 조건
 
