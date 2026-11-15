@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="서버 열 대의 CPU 그림. 고치기 전에는 게이트웨이가 아침에 맺은 HTTP/2 연결 두 개가 서버 1·2번에 붙어, 두 대는 CPU 95%이고 새로 늘린 3~10번은 3%다. 연결 최대 수명을 10분으로 두자 연결이 다시 맺히며 열 대가 모두 20%대로 고르게 일한다">
+<defs><marker id="httpver-adv-ten-servers-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="24" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">고치기 전 · 아침에 맺은 연결 두 개가 그대로</text>
+<rect x="30" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="34" y="49.3" width="36" height="100.7" rx="2" class="f-dot" fill="#dc2626"/>
+<text x="52" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">1번</text>
+<text x="52" y="42" class="f-bad" fill="#dc2626" font-size="11" font-weight="700" text-anchor="middle">95%</text>
+<rect x="90" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="94" y="49.3" width="36" height="100.7" rx="2" class="f-dot" fill="#dc2626"/>
+<text x="112" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">2번</text>
+<text x="112" y="42" class="f-bad" fill="#dc2626" font-size="11" font-weight="700" text-anchor="middle">95%</text>
+<rect x="150" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="154" y="146.8" width="36" height="3.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="172" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3번</text>
+<text x="172" y="140.82" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3%</text>
+<rect x="210" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="214" y="146.8" width="36" height="3.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="232" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">4번</text>
+<text x="232" y="140.82" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3%</text>
+<rect x="270" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="274" y="146.8" width="36" height="3.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="292" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">5번</text>
+<text x="292" y="140.82" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3%</text>
+<rect x="330" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="334" y="146.8" width="36" height="3.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="352" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">6번</text>
+<text x="352" y="140.82" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3%</text>
+<rect x="390" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="394" y="146.8" width="36" height="3.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="412" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">7번</text>
+<text x="412" y="140.82" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3%</text>
+<rect x="450" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="454" y="146.8" width="36" height="3.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="472" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">8번</text>
+<text x="472" y="140.82" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3%</text>
+<rect x="510" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="514" y="146.8" width="36" height="3.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="532" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">9번</text>
+<text x="532" y="140.82" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3%</text>
+<rect x="570" y="44" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="574" y="146.8" width="36" height="3.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="592" y="172" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">10번</text>
+<text x="592" y="140.82" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3%</text>
+<text x="16" y="200" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">연결 최대 수명 10분 · 10분마다 다시 고른다</text>
+<rect x="30" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="34" y="302.7" width="36" height="23.3" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="52" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">1번</text>
+<text x="52" y="296.68" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">22%</text>
+<rect x="90" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="94" y="303.7" width="36" height="22.3" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="112" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">2번</text>
+<text x="112" y="297.74" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">21%</text>
+<rect x="150" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="154" y="304.8" width="36" height="21.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="172" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">3번</text>
+<text x="172" y="298.8" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">20%</text>
+<rect x="210" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="214" y="301.6" width="36" height="24.4" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="232" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">4번</text>
+<text x="232" y="295.62" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">23%</text>
+<rect x="270" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="274" y="305.9" width="36" height="20.1" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="292" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">5번</text>
+<text x="292" y="299.86" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">19%</text>
+<rect x="330" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="334" y="303.7" width="36" height="22.3" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="352" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">6번</text>
+<text x="352" y="297.74" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">21%</text>
+<rect x="390" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="394" y="302.7" width="36" height="23.3" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="412" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">7번</text>
+<text x="412" y="296.68" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">22%</text>
+<rect x="450" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="454" y="304.8" width="36" height="21.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="472" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">8번</text>
+<text x="472" y="298.8" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">20%</text>
+<rect x="510" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="514" y="303.7" width="36" height="22.3" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="532" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">9번</text>
+<text x="532" y="297.74" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">21%</text>
+<rect x="570" y="220" width="44" height="110" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="574" y="304.8" width="36" height="21.2" rx="2" class="f-dot" fill="#4f46e5"/>
+<text x="592" y="348" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">10번</text>
+<text x="592" y="298.8" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">20%</text>
+<text x="320" y="372" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">서버는 아홉 대를 더 늘렸는데, 일은 연결이 붙은 서버만 받는다</text>
+</svg>

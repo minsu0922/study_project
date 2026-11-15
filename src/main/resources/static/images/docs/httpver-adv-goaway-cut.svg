@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 350" role="img" aria-label="시간 막대 두 컷. 고치기 전에는 0초에 GOAWAY 57을 보낸 뒤 10초에 배포 도구가 서버를 강제로 꺼, 결제사 답을 기다리던 55번 스트림이 끊긴다. 결제사는 이미 승인했는데 주문 서버가 55번을 다시 보내 결제가 2건이 된다. 고친 뒤에는 30초까지 기다려 55번이 14초에 끝나고 결제는 1건이다">
+<defs><marker id="httpver-adv-goaway-cut-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="24" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">고치기 전 · 10초에 강제로 끈다</text>
+<text x="16" y="64" class="f-sm" fill="#556274" font-size="12">55번</text>
+<path d="M110 94 H560" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.2"/>
+<text x="110" y="112" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">0초</text>
+<text x="260" y="112" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">10초</text>
+<text x="320" y="112" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">14초</text>
+<text x="410" y="112" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">20초</text>
+<text x="560" y="112" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">30초</text>
+<path d="M110 46 V98" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="114" y="45" class="f-mono" fill="#0f172a" font-size="11" font-family="ui-monospace, Consolas, monospace">GOAWAY 57</text>
+<rect x="110" y="50" width="150" height="22" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="118" y="66" class="f-t" fill="#0f172a" font-size="12">결제사 답 기다림</text>
+<path d="M260 44 V98" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<path d="M253 54 L267 68 M267 54 L253 68" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<text x="272" y="40" class="f-bad" fill="#dc2626" font-size="12" font-weight="700">강제 종료</text>
+<text x="274" y="66" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">끊김 → 새 연결로 다시 보냄 → 결제 2건</text>
+<text x="16" y="140" class="f-sm" fill="#556274" font-size="12">55는 57 이하라 서버가 처리하기로 한 요청이었다</text>
+<text x="16" y="190" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">고친 뒤 · 받은 스트림이 끝날 때까지 기다린다</text>
+<text x="16" y="230" class="f-sm" fill="#556274" font-size="12">55번</text>
+<path d="M110 260 H560" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.2"/>
+<text x="110" y="278" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">0초</text>
+<text x="260" y="278" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">10초</text>
+<text x="320" y="278" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">14초</text>
+<text x="410" y="278" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">20초</text>
+<text x="560" y="278" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">30초</text>
+<path d="M110 212 V264" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="114" y="211" class="f-mono" fill="#0f172a" font-size="11" font-family="ui-monospace, Consolas, monospace">GOAWAY 57</text>
+<rect x="110" y="216" width="210" height="22" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="118" y="232" class="f-t" fill="#0f172a" font-size="12">결제사 답 기다림 → 14초에 끝</text>
+<text x="330" y="232" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">응답 도착 · 결제 1건</text>
+<text x="16" y="306" class="f-sm" fill="#556274" font-size="12">타임아웃 30초 · 배포 도구는 40초 뒤에야 끈다</text>
+<text x="320" y="340" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">약속한 번호까지 다 만들고 문을 닫으면, 손님이 다시 주문할 일이 없다</text>
+</svg>
