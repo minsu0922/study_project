@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="두 컷 그림. 가격을 쿠키에 담으면 사용자가 개발자 도구에서 price=30000을 price=100으로 고쳐 보내고, 서버가 그 값을 믿어 100원에 결제된다. 장바구니 번호만 담으면 사용자가 c-81을 c-82로 바꿔도, 서버가 DB에서 c-82가 이 사람 것인지 확인해 거절하고 가격도 DB에서 읽는다">
+<defs><marker id="cookie-tamper-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="22" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">① 가격을 쿠키에 담으면</text>
+<text x="16" y="212" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">② 짧은 번호만 담으면</text>
+<rect x="16" y="36" width="250" height="138" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="16" y="36" width="250" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="28" cy="47" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="39" cy="47" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="50" cy="47" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="28" y="76" class="f-sm" fill="#556274" font-size="12">개발자 도구 · 쿠키</text>
+<text x="28" y="108" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">price=30000</text>
+<path d="M26 103 H122" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+<rect x="24" y="120" width="234" height="30" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="32" y="141" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">price=100</text>
+<text x="150" y="141" class="f-sm" fill="#556274" font-size="12">← 사용자가 고침</text>
+<path d="M270 105 H360" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-tamper-head)"/>
+<text x="312" y="94" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">그대로 보냄</text>
+<g transform="translate(370 72) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="444" y="96" class="f-t" fill="#0f172a" font-size="14">쿠키 값을 믿는다</text>
+<text x="444" y="126" class="f-bad" fill="#dc2626" font-size="15" font-weight="700">100원에 결제</text>
+<rect x="16" y="226" width="250" height="138" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="16" y="226" width="250" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="28" cy="237" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="39" cy="237" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="50" cy="237" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="28" y="266" class="f-sm" fill="#556274" font-size="12">개발자 도구 · 쿠키</text>
+<text x="28" y="298" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">cart=c-81</text>
+<path d="M26 293 H106" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+<rect x="24" y="310" width="234" height="30" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="32" y="331" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace">cart=c-82</text>
+<text x="132" y="331" class="f-sm" fill="#556274" font-size="12">← 사용자가 고침</text>
+<path d="M270 295 H360" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-tamper-head)"/>
+<text x="312" y="284" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">그대로 보냄</text>
+<g transform="translate(370 262) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="444" y="278" class="f-t" fill="#0f172a" font-size="14">DB에서 다시 확인</text>
+<text x="444" y="306" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">c-82는 이 사람 것 아님</text>
+<text x="444" y="330" class="f-sm" fill="#556274" font-size="13">→ 거절, 가격은 DB 값</text>
+<text x="320" y="392" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">사용자가 바꿔도 괜찮은 값만 쿠키에 담는다</text>
+</svg>

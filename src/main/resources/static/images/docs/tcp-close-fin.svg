@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 430" role="img" aria-label="사다리 그림. 클라이언트가 FIN을 보내고 서버가 ACK로 받는다. 클라이언트에서 서버로 가는 길이 닫혀도 서버는 남은 데이터를 계속 보낸다. 서버도 다 보내면 FIN을 보내고 클라이언트가 ACK로 답한다. 먼저 끊은 클라이언트는 마지막 ACK 뒤 TIME_WAIT로 잠시 기다린다">
+<defs><marker id="tcp-close-fin-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(140 34) scale(1.0)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="170" y="100" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">클라이언트</text>
+<g transform="translate(440 12) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="470" y="100" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">서버</text>
+<path d="M170 110 V410" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.5"/>
+<path d="M470 110 V410" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.5"/>
+<path d="M172 124 L466 146" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-close-fin-head)"/>
+<text x="320" y="122" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">FIN · 나는 더 보낼 것이 없다</text>
+<path d="M468 172 L174 194" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-close-fin-head)"/>
+<text x="320" y="170" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">ACK · FIN 받았다</text>
+<path d="M468 220 L174 242" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-close-fin-head)"/>
+<text x="320" y="218" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">데이터 · 남은 것을 마저 보낸다</text>
+<path d="M468 268 L174 290" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-close-fin-head)"/>
+<text x="320" y="266" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">FIN · 나도 다 보냈다</text>
+<path d="M172 316 L466 338" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#tcp-close-fin-head)"/>
+<text x="320" y="314" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">ACK · FIN 받았다</text>
+<text x="484" y="198" class="f-sm" fill="#556274" font-size="13">한쪽 길만 닫힘</text>
+<text x="484" y="216" class="f-sm" fill="#556274" font-size="13">서버는 아직 보낸다</text>
+<rect x="156" y="342" width="28" height="64" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="146" y="368" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" font-family="ui-monospace, Consolas, monospace" text-anchor="end">TIME_WAIT</text>
+<text x="146" y="388" class="f-sm" fill="#556274" font-size="13" text-anchor="end">잠시 기다린다</text>
+<text x="484" y="350" class="f-b" fill="#0f172a" font-size="14" font-weight="700">두 길 모두 닫힘</text>
+<text x="484" y="370" class="f-sm" fill="#556274" font-size="13">연결 기록을 지운다</text>
+</svg>

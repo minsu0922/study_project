@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="브라우저 보관함에 쿠키 셋이 있다. shop.example.com/events/sale로 가는 요청에는 cart와 seen이 실린다. shop.example.com/cart로 가는 요청에는 cart만 실린다. seen은 /events 아래 주소에만 보낸다. lang은 blog.example.com에서 맡긴 쿠키라 어느 요청에도 실리지 않는다">
+<defs><marker id="cookie-send-rules-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="20" width="250" height="330" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="30" y="46" class="f-b" fill="#0f172a" font-size="14" font-weight="700">브라우저 쿠키 보관함</text>
+<rect x="28" y="64" width="226" height="76" rx="5" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="42" y="94" class="f-mono" fill="#0f172a" font-size="15" font-family="ui-monospace, Consolas, monospace">cart=c-81</text>
+<text x="42" y="120" class="f-sm" fill="#556274" font-size="12">shop.example.com · Path /</text>
+<rect x="28" y="154" width="226" height="76" rx="5" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="42" y="184" class="f-mono" fill="#0f172a" font-size="15" font-family="ui-monospace, Consolas, monospace">seen=1</text>
+<text x="42" y="210" class="f-sm" fill="#556274" font-size="12">shop.example.com · Path /events</text>
+<rect x="28" y="244" width="226" height="76" rx="5" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="42" y="274" class="f-mono" fill="#0f172a" font-size="15" font-family="ui-monospace, Consolas, monospace">lang=ko</text>
+<text x="42" y="300" class="f-sm" fill="#556274" font-size="12">blog.example.com · Path /</text>
+<rect x="366" y="40" width="258" height="92" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<path d="M366 40 L495.0 62 L624 40" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<text x="378" y="84" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">shop.example.com/events/sale</text>
+<rect x="374" y="96" width="242" height="26" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="382" y="114" class="f-new" fill="#4f46e5" font-size="13" font-weight="700" font-family="ui-monospace, Consolas, monospace">Cookie: cart=c-81; seen=1</text>
+<rect x="366" y="210" width="258" height="92" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<path d="M366 210 L495.0 232 L624 210" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<text x="378" y="254" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">shop.example.com/cart</text>
+<rect x="374" y="266" width="242" height="26" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="382" y="284" class="f-new" fill="#4f46e5" font-size="13" font-weight="700" font-family="ui-monospace, Consolas, monospace">Cookie: cart=c-81</text>
+<path d="M256 98 C310 98 320 80 362 80" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-send-rules-head)"/>
+<path d="M256 108 C310 120 320 250 362 262" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-send-rules-head)"/>
+<path d="M256 190 C310 190 320 116 362 114" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#cookie-send-rules-head)"/>
+<text x="366" y="330" class="f-sm" fill="#556274" font-size="13">seen은 /events 아래 주소에만 실린다</text>
+<path d="M267 275 L281 289 M281 275 L267 289" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<text x="42" y="341" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">다른 도메인이라 어디에도 안 실림</text>
+<text x="320" y="386" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">브라우저가 도메인·경로·만료를 보고 요청마다 골라 싣는다</text>
+</svg>

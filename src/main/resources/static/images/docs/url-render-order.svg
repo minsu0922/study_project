@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="세 컷 그림. HTML만 도착하면 shop.css를 기다리느라 화면이 아직 비어 있다. shop.css가 오면 제목 무선 마우스와 상자를 그리고 사진 자리는 비워 둔다. 사진과 cart.js가 오면 사진을 채우고 장바구니 단추가 움직인다">
+<defs><marker id="url-render-order-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="30" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">① HTML 도착</text>
+<rect x="16" y="44" width="188" height="200" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="16" y="44" width="188" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="28" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="39" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="50" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<path d="M208 144 H222" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#url-render-order-head)"/>
+<text x="110" y="140" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">빈 화면</text>
+<text x="110" y="160" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">shop.css 기다리는 중</text>
+<text x="226" y="30" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">② shop.css 도착</text>
+<rect x="226" y="44" width="188" height="200" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="226" y="44" width="188" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="238" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="249" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="260" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<path d="M418 144 H432" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#url-render-order-head)"/>
+<text x="240" y="92" class="f-b" fill="#0f172a" font-size="16" font-weight="700">무선 마우스</text>
+<rect x="240" y="104" width="160" height="84" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="320" y="150" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">사진 자리</text>
+<rect x="240" y="200" width="110" height="30" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="295" y="220" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">장바구니 담기</text>
+<text x="436" y="30" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">③ 사진·cart.js 도착</text>
+<rect x="436" y="44" width="188" height="200" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<rect x="436" y="44" width="188" height="22" rx="5" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="448" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="459" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<circle cx="470" cy="55" r="3" class="f-dot" fill="#4f46e5"/>
+<text x="450" y="92" class="f-b" fill="#0f172a" font-size="16" font-weight="700">무선 마우스</text>
+<rect x="450" y="104" width="160" height="84" rx="4" class="f-hl" fill="#eef2ff"/>
+<path d="M460 178 L502 132 L532 162 L554 144 L600 178 Z" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<circle cx="578" cy="122" r="8" class="f-dot" fill="#4f46e5"/>
+<rect x="450" y="200" width="110" height="30" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="505" y="220" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">장바구니 담기</text>
+<text x="16" y="270" class="f-t" fill="#0f172a" font-size="13">꾸밈 파일이 와야 그린다</text>
+<text x="226" y="270" class="f-t" fill="#0f172a" font-size="13">글자와 상자를 그린다</text>
+<text x="436" y="270" class="f-t" fill="#0f172a" font-size="13">사진을 채우고 단추가 움직인다</text>
+<text x="16" y="306" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">HTML → shop.css → mouse-42.jpg·cart.js</text>
+<text x="16" y="330" class="f-sm" fill="#556274" font-size="13">같은 사이트라 아까 연 연결을 다시 써서 받는다</text>
+</svg>

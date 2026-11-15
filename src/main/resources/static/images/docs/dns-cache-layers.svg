@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="두 컷 그림. 브라우저 캐시에 답이 있으면 질문은 거기서 끝나 운영체제·리졸버·권한 서버까지 가지 않는다. ipconfig /flushdns로 운영체제 캐시를 지운 뒤에는 질문이 리졸버까지 가고, 리졸버가 남은 180초를 붙여 저장한 답을 준다. 권한 서버에는 묻지 않는다">
+<defs><marker id="dns-cache-layers-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="40" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">① 브라우저에 답이 있을 때</text>
+<rect x="16" y="60" width="128" height="88" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<rect x="22" y="96" width="116" height="44" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="80" y="84" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">브라우저 캐시</text>
+<text x="80" y="116" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">있음</text>
+<text x="80" y="134" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">93.184.216.34</text>
+<path d="M146 104 H168" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5"/>
+<rect x="172" y="60" width="128" height="88" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="236" y="84" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">운영체제 캐시</text>
+<text x="236" y="116" class="f-sm" fill="#556274" font-size="14" text-anchor="middle">묻지 않음</text>
+<path d="M302 104 H324" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5"/>
+<rect x="328" y="60" width="128" height="88" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="392" y="84" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">리졸버 캐시</text>
+<text x="392" y="116" class="f-sm" fill="#556274" font-size="14" text-anchor="middle">묻지 않음</text>
+<path d="M458 104 H480" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5"/>
+<rect x="484" y="60" width="128" height="88" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="548" y="84" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">권한 서버</text>
+<text x="548" y="116" class="f-sm" fill="#556274" font-size="14" text-anchor="middle">묻지 않음</text>
+<text x="16" y="176" class="f-sm" fill="#556274" font-size="13">가까운 곳에서 답이 나오면 그 뒤로는 가지 않는다</text>
+<text x="16" y="220" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">② ipconfig /flushdns 뒤</text>
+<rect x="16" y="240" width="128" height="88" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="80" y="264" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">브라우저 캐시</text>
+<text x="80" y="296" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle">비어 있음</text>
+<path d="M146 284 H168" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#dns-cache-layers-head)"/>
+<rect x="172" y="240" width="128" height="88" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="236" y="264" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">운영체제 캐시</text>
+<text x="236" y="296" class="f-bad" fill="#dc2626" font-size="14" font-weight="700" text-anchor="middle">지웠음</text>
+<path d="M302 284 H324" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#dns-cache-layers-head)"/>
+<rect x="328" y="240" width="128" height="88" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<rect x="334" y="276" width="116" height="44" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="392" y="264" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">리졸버 캐시</text>
+<text x="392" y="296" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">있음</text>
+<text x="392" y="314" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">남은 180초</text>
+<path d="M458 284 H480" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5"/>
+<rect x="484" y="240" width="128" height="88" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="548" y="264" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">권한 서버</text>
+<text x="548" y="296" class="f-sm" fill="#556274" font-size="14" text-anchor="middle">묻지 않음</text>
+<text x="16" y="356" class="f-sm" fill="#556274" font-size="13">운영체제 칸을 지워도 리졸버의 답은 남아 있다</text>
+</svg>
