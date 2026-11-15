@@ -1,5 +1,6 @@
 package project.study.study_project.llm.support;
 
+import project.study.study_project.document.support.FigureRequests;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 
 import java.util.ArrayList;
@@ -60,12 +61,26 @@ public final class DiagramExhibitRule {
         if (item.normalizedExhibit().contains("%%{")) {
             return List.of("그림에 mermaid 설정 줄(%%{...}%%)이 있음 (화면 설정을 덮어쓴다 — 지워라)");
         }
+        List<String> requests = item.normalizedExhibit().lines().map(String::strip)
+                .filter(line -> line.startsWith(FigureRequests.MARKER))
+                .map(line -> line.substring(FigureRequests.MARKER.length()).strip())
+                .toList();
         if (ChartExhibitRule.isChart(item.normalizedExhibit())) {
-            return ChartExhibitRule.parse(item.normalizedExhibit()).problems();
+            List<String> chart = new ArrayList<>(ChartExhibitRule.parse(item.normalizedExhibit()).problems());
+            if (!requests.isEmpty()) {
+                chart.add("차트에 손그림 요청이 있음 (차트는 값이 정확해야 해서 손그림으로 바꾸지 않는다 — 지워라)");
+            }
+            return chart;
         }
         List<String> lines = item.normalizedExhibit().lines().toList();
         boolean sequence = lines.get(0).strip().startsWith("sequenceDiagram");
         List<String> warnings = new ArrayList<>();
+        // 흐름도·시퀀스는 사람이 손그림으로 바꿔 그린다(2026-11-15). 요청이 없으면 그릴 사람이 지문부터 다시 읽어야 한다
+        if (requests.isEmpty()) {
+            warnings.add("그림에 손그림 요청(%% 손그림: …)이 없음 (둘째 줄에 무엇을 그릴지 적어라)");
+        } else if (requests.stream().anyMatch(String::isEmpty)) {
+            warnings.add("손그림 요청의 설명이 비어 있음 (누가 어디 있고 무엇이 오가는지 적어라)");
+        }
         for (int i = 1; i < lines.size(); i++) {
             String line = lines.get(i).strip();
             if (line.isEmpty() || line.startsWith("%%")) {
