@@ -714,27 +714,28 @@ class ClaudeDocumentGeneratorTest {
      * 문법(mermaid)과 종류를 정해 준다. 종류는 검증기의 {@code MERMAID_HEADER}와 같아야 한다.
      */
     @Test
-    @DisplayName("입문편은 그림을 1개 이상 mermaid로 쓴다 — 허용만으로는 30편에 한 장도 안 나왔다")
-    void asksForOneMermaidDiagram() {
-        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
-                .contains("[그림] — 1개 이상 넣어라")
-                .as("상한에는 근거가 없었다(2026-10-30). 중복 그림은 아래 규칙이 막는다")
-                .doesNotContain("많아도")
-                .contains("표나 번호 목록으로 충분한 것을 그림으로 다시 그리지 마라")
-                .as("화면이 그리는 것은 이 펜스뿐이다")
-                .contains("```mermaid 펜스 안에 쓴다")
-                .as("검증기가 첫 줄로 통과시키는 일곱 종류와 같아야 한다")
-                .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2 / gantt / xychart-beta / block-beta / packet-beta")
-                .as("한 종류만 되풀이하면 그림이 단조롭다(2026-11-08 사용자 지적)")
-                .contains("같은 종류만 되풀이하지 마라")
-                .as("ASCII 그림으로 돌아가면 한글 폭 때문에 다시 어긋난다")
-                .contains("ASCII 그림은 쓰지 마라");
-
+    @DisplayName("두 편 모두 절마다 그림을 하나씩 mermaid로 쓰고, 뺄 때는 중복 기준을 따른다(2026-11-15)")
+    void asksForDiagramPerSection() {
+        for (String prompt : List.of(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT,
+                ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)) {
+            assertThat(prompt)
+                    .contains("[그림] — 절마다 하나씩, 겹치지 않게")
+                    .contains("본론의 ## 절마다 하나")
+                    .as("빼는 자리는 정한 이유가 있을 때만 — 목록 옆이라고 다 빼면 그림이 다시 사라진다")
+                    .contains("그림이 바로 옆 번호 목록의 단계를 상자로 한 줄 늘어놓은 것뿐이다")
+                    .as("화면이 그리는 것은 이 펜스뿐이다")
+                    .contains("```mermaid 펜스 안에 쓴다")
+                    .as("검증기가 첫 줄로 통과시키는 일곱 종류와 같아야 한다")
+                    .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2 / gantt / xychart-beta / block-beta / packet-beta")
+                    .contains("같은 종류를 연달아 쓰지 마라")
+                    .as("ASCII 그림으로 돌아가면 한글 폭 때문에 다시 어긋난다")
+                    .contains("ASCII 그림은 쓰지 마라")
+                    .as("장면 자리는 관리 콘솔이 이 표지로 손그림 대기를 찾는다(FigureRequests.MARKER)")
+                    .contains("%% 손그림:");
+        }
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
-                .as("심화편은 선택이다 — 검증기도 심화편에는 없다고 울리지 않는다")
-                .contains("[그림] — 필요할 때만")
-                .doesNotContain("많아도")
-                .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2 / gantt / xychart-beta / block-beta / packet-beta");
+                .as("꼬리표 목록 안에 그림이 끼면 형식이 깨진다")
+                .contains("장면의 첫 이야기 항목 문단 뒤에 둔다");
     }
 
     @Test
