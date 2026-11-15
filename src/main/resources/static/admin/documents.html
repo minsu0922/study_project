@@ -84,6 +84,13 @@ try {
           <option value="true">내림</option>
         </select>
       </div>
+      <!-- 배치가 장면 그림 자리에 남긴 "%% 손그림:" 요청이 아직 있는 문서만 본다 -->
+      <div class="field"><label for="fdFigure">손그림</label>
+        <select id="fdFigure">
+          <option value="">전체</option>
+          <option value="true">대기만</option>
+        </select>
+      </div>
       <div class="field field-reset"><label>&nbsp;</label><button id="fdResetBtn" class="btn-outline">필터 지우기</button></div>
     </div>
     <!-- 표·페이저·빈 상태는 admin-table.js가 통째로 그린다. 여기는 자리만 둔다. -->
@@ -106,6 +113,8 @@ try {
 let editingDocumentId = null;
 /** 서버에서 마지막으로 받은(또는 저장한) 문서. 문단 저장은 이 값을 바탕으로 본문만 바꾼다. */
 let loadedDocument = null;
+/** 목록 필터: 요청 이름 → 칸 id. 아래 초기화가 바로 목록을 읽으므로 그보다 위에 둔다. */
+const DOCUMENT_FILTERS = { q: "dQ", domain: "fdDomain", tag: "fdTag", hidden: "fdHidden", figurePending: "fdFigure" };
 
 if (initAdminPage("documents")) {
   initDocumentForm();
@@ -158,7 +167,7 @@ function initDocumentFilters() {
   fillDomain();
   domainsReady.then(fillDomain);
   wireFilterBar({
-    search: "dQ", selects: ["fdDomain", "fdTag", "fdHidden"], reset: "fdResetBtn",
+    search: "dQ", selects: ["fdDomain", "fdTag", "fdHidden", "fdFigure"], reset: "fdResetBtn",
     onChange: () => loadDocuments({ page: 0 }),
   });
   // 태그는 문서에 실제로 붙은 것만 받는다. 못 받아도 "전체" 하나로 목록은 그대로 쓴다
@@ -243,7 +252,7 @@ function loadDocuments(opts) {
   return renderAdminTable("#documentList", {
     // 내려 둔 문서까지 봐야 다시 올릴 수 있어 관리 전용 목록을 쓴다(공개 목록은 그 문서를 뺀다).
     url: "/api/admin/documents",
-    filters: () => filterQuery({ q: "dQ", domain: "fdDomain", tag: "fdTag", hidden: "fdHidden" }),
+    filters: () => filterQuery(DOCUMENT_FILTERS),
     columns: [
       { head: "ID", width: "60px", cell: d => d.id },
       { head: "제목", wrap: true, cell: d => `
@@ -280,7 +289,7 @@ function loadDocuments(opts) {
       if (action === "delete") { deleteDocument(btn, d.id); return; }
       editDocument(d.id);
     },
-    emptyText: filterQuery({ q: "dQ", domain: "fdDomain", tag: "fdTag", hidden: "fdHidden" })
+    emptyText: filterQuery(DOCUMENT_FILTERS)
       ? "조건에 맞는 문서가 없습니다 — 필터를 지우면 전체가 보입니다."
       : "등록된 문서가 없습니다. 위 폼으로 직접 쓰거나, AI 검수 화면에서 초안을 승인하세요.",
   }, opts);
@@ -353,6 +362,7 @@ async function editDocument(id) {
 
 const FIGURE_LINE = /^\s*!\[[^\]]*\]\([^)]*\)\s*$/;   // 손 SVG 그림은 이미지 한 줄로 들어간다
 const TOPIC_BOX_HEAD = "> **글의 주제**";
+const FIGURE_REQUEST = "%% 손그림:";
 
 /**
  * 본문을 덩이로 나눈다. 덩이마다 줄 번호 범위(start~end)를 든다.
@@ -379,7 +389,12 @@ function splitEditBlocks(md) {
       while (j < lines.length && !lines[j].trim().startsWith(fence[1])) j++;
       j = Math.min(j, lines.length - 1);
       if (fence[2].startsWith("mermaid")) {
-        lock("figure", i, j, { label: (lines[i + 1] ?? "").trim().split(/\s+/)[0] || "mermaid" });
+        // 장면 그림 자리면 배치가 둘째 줄쯤에 "%% 손그림: 설명"을 남긴다(FigureRequests.MARKER)
+        const ask = lines.slice(i + 1, j).map(l => l.trim()).find(l => l.startsWith(FIGURE_REQUEST));
+        lock("figure", i, j, {
+          label: (lines[i + 1] ?? "").trim().split(/\s+/)[0] || "mermaid",
+          request: ask === undefined ? null : ask.slice(FIGURE_REQUEST.length).trim(),
+        });
       } else {
         run = run ? { ...run, end: j } : { start: i, end: j };
       }
@@ -414,7 +429,10 @@ function renderParagraphs(savedIndex) {
     <h4>본문 <span class="meta">(고칠 덩이 ${editable}개 · [고치기]로 절 하나씩 고치고 바로 저장합니다)</span></h4>
     ${paras.map((p, i) => {
       if (p.type === "heading") return `<div class="para-head lv${p.level}">${escapeHtml(p.text)}</div>`;
-      if (p.type === "figure") return `<div class="para-figure meta">그림: ${escapeHtml(p.label)}</div>`;
+      if (p.type === "figure") return p.request === null || p.request === undefined
+        ? `<div class="para-figure meta">그림: ${escapeHtml(p.label)}</div>`
+        : `<div class="para-figure meta"><span class="badge">손그림 대기</span> 그림: ${escapeHtml(p.label)}
+             — ${escapeHtml(p.request || "(설명이 비어 있습니다)")}</div>`;
       if (p.type === "topic") return `
         <div class="para-topic">
           <pre class="para-text">${escapeHtml(p.text)}</pre>

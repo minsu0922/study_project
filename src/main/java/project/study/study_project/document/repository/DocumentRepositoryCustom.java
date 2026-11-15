@@ -22,6 +22,13 @@ public interface DocumentRepositoryCustom {
      *
      * @param hidden false면 공개 문서만(학습 화면), true면 내린 문서만, null이면 둘 다(관리 목록)
      */
+    default Page<DocumentListItem> searchListItems(DomainCode domain, List<String> tagNames,
+                                                   String keyword, Boolean hidden, Pageable pageable) {
+        return searchListItems(domain, tagNames, keyword, hidden, false, pageable);
+    }
+
+    /** @param figurePending true면 손그림 요청({@code FigureRequests.MARKER})이 남은 문서만 */
     Page<DocumentListItem> searchListItems(DomainCode domain, List<String> tagNames,
-                                           String keyword, Boolean hidden, Pageable pageable);
+                                           String keyword, Boolean hidden, boolean figurePending,
+                                           Pageable pageable);
 }

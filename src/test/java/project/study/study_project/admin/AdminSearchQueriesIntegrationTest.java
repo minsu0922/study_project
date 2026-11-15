@@ -154,6 +154,24 @@ class AdminSearchQueriesIntegrationTest {
         assertThat(documentRepository.findUsedTagNames()).contains(tagName);
     }
 
+    @Test
+    @DisplayName("손그림 대기 필터는 요청 줄이 남은 문서만 — 표지의 %가 like 와일드카드로 새지 않는다")
+    void documentAdminFigurePendingFilter() {
+        String word = "Zq" + UUID.randomUUID().toString().substring(0, 8);
+        String slug = word.toLowerCase();
+        Document pending = documentRepository.save(Document.create(TestDomains.NETWORK, word + " 대기", "c-" + slug,
+                "```mermaid\nflowchart LR\n  %% 손그림: 봉투가 바뀐다\n  A[\"a\"] --> B[\"b\"]\n```", null, Set.of()));
+        // 표지가 like 패턴으로 번역되면 "%"가 아무 글자로 풀려 이 문서도 걸린다
+        documentRepository.save(Document.create(TestDomains.NETWORK, word + " 비슷", "d-" + slug,
+                "100% 손그림: 이라는 글자만 있다", null, Set.of()));
+        documentRepository.save(Document.create(TestDomains.NETWORK, word + " 끝남", "e-" + slug,
+                "![봉투](/images/docs/x.svg)", null, Set.of()));
+        documentRepository.flush();
+
+        assertThat(ids(documentService.getDocumentsForAdmin(null, null, word, null, true, PageRequest.of(0, 20))))
+                .containsExactly(pending.getId());
+    }
+
     private static List<Long> ids(PageResponse<DocumentListItem> page) {
         return page.content().stream().map(DocumentListItem::id).toList();
     }

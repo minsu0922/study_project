@@ -68,7 +68,13 @@ public class AdminDocumentService {
      */
     public PageResponse<DocumentListItem> list(DomainCode domain, String tag, String q, Boolean hidden,
                                                Pageable pageable) {
-        return documentService.getDocumentsForAdmin(domain, tag, q, hidden, pageable);
+        return list(domain, tag, q, hidden, false, pageable);
+    }
+
+    /** @param figurePending true면 손그림 요청이 남은 문서만 */
+    public PageResponse<DocumentListItem> list(DomainCode domain, String tag, String q, Boolean hidden,
+                                               boolean figurePending, Pageable pageable) {
+        return documentService.getDocumentsForAdmin(domain, tag, q, hidden, figurePending, pageable);
     }
 
     /** 태그 필터에 채울 이름 — 문서에 실제로 붙은 것만. */

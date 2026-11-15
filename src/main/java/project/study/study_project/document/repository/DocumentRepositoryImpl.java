@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
 import project.study.study_project.document.domain.QDocument;
 import project.study.study_project.document.dto.DocumentListItem;
+import project.study.study_project.document.support.FigureRequests;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.tag.domain.QTag;
 
@@ -69,12 +70,17 @@ public class DocumentRepositoryImpl implements DocumentRepositoryCustom {
 
     @Override
     public Page<DocumentListItem> searchListItems(DomainCode domain, List<String> tagNames,
-                                                 String keyword, Boolean hidden, Pageable pageable) {
+                                                 String keyword, Boolean hidden, boolean figurePending,
+                                                 Pageable pageable) {
         QDocument d = QDocument.document;
 
         BooleanBuilder where = new BooleanBuilder();
         if (hidden != null) {
             where.and(d.hidden.eq(hidden));
+        }
+        if (figurePending) {
+            // 표지에 like 특수 문자(%)가 들어 있어 contains 대신 위치 찾기(LOCATE)로 본다
+            where.and(d.contentMd.indexOf(FigureRequests.MARKER).goe(0));
         }
         if (domain != null) {
             where.and(d.domain.eq(domain));

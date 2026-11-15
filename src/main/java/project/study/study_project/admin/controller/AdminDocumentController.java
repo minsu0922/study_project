@@ -43,8 +43,9 @@ public class AdminDocumentController {
                                                            @RequestParam(required = false) String tag,
                                                            @RequestParam(required = false) String q,
                                                            @RequestParam(required = false) Boolean hidden,
+                                                           @RequestParam(defaultValue = "false") boolean figurePending,
                                                            @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(adminDocumentService.list(domain, tag, q, hidden, pageable));
+        return ApiResponse.ok(adminDocumentService.list(domain, tag, q, hidden, figurePending, pageable));
     }
 
     /** 태그 필터의 선택지 — 문서에 실제로 붙은 태그 이름. */

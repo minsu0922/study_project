@@ -77,9 +77,17 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public PageResponse<DocumentListItem> getDocumentsForAdmin(DomainCode domain, String tag, String keyword,
                                                                Boolean hidden, Pageable pageable) {
+        return getDocumentsForAdmin(domain, tag, keyword, hidden, false, pageable);
+    }
+
+    /** @param figurePending true면 손그림 요청이 남은 문서만(2026-11-15) */
+    @Transactional(readOnly = true)
+    public PageResponse<DocumentListItem> getDocumentsForAdmin(DomainCode domain, String tag, String keyword,
+                                                               Boolean hidden, boolean figurePending,
+                                                               Pageable pageable) {
         List<String> tags = tag == null || tag.isBlank() ? null : List.of(tag.trim());
         return PageResponse.from(withEditions(withDomainLabels(
-                documentRepository.searchListItems(domain, tags, keyword, hidden, pageable))));
+                documentRepository.searchListItems(domain, tags, keyword, hidden, figurePending, pageable))));
     }
 
     /**
