@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="두 줄 비교 그림. 앞단에서 TLS를 끝내면 브라우저와 로드 밸런서 사이만 잠기고, 로드 밸런서와 앱 서버 사이는 평문이며 로드 밸런서가 X-Forwarded-Proto: https 꼬리표를 붙인다. 앱 서버까지 TLS를 이으면 두 구간이 모두 잠기고 앱이 원래 프로토콜을 직접 안다">
+<defs><marker id="tls-adv-termination-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="24" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">앞단에서 TLS 종료</text>
+<g transform="translate(24 54) scale(1.0)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="54" y="116" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">브라우저</text>
+<rect x="250" y="50" width="130" height="54" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="315" y="82" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">로드 밸런서</text>
+<g transform="translate(536 38) scale(0.8)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="560" y="116" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">앱 서버</text>
+<path d="M90 77 H246" class="f-line" fill="none" stroke="#0f172a" stroke-width="6"/>
+<g transform="translate(158 50) scale(1.1)"><path d="M4 9 V6 a5 5 0 0 1 10 0 V9" class="f-line" fill="none" stroke="#0f172a" stroke-width="2"/><rect x="1" y="9" width="16" height="12" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/></g>
+<path d="M384 77 H530" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="456" y="66" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="middle">평문</text>
+<rect x="388" y="88" width="140" height="26" rx="4" class="f-hl" fill="#eef2ff"/>
+<text x="458" y="106" class="f-mono" fill="#0f172a" font-size="11" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">X-Forwarded-Proto</text>
+<text x="458" y="136" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">꼬리표로만 안다</text>
+<text x="16" y="180" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">앱 서버까지 TLS</text>
+<g transform="translate(24 210) scale(1.0)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="54" y="272" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">브라우저</text>
+<rect x="250" y="206" width="130" height="54" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="315" y="238" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">로드 밸런서</text>
+<g transform="translate(536 194) scale(0.8)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="560" y="272" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">앱 서버</text>
+<path d="M90 233 H246" class="f-line" fill="none" stroke="#0f172a" stroke-width="6"/>
+<g transform="translate(158 206) scale(1.1)"><path d="M4 9 V6 a5 5 0 0 1 10 0 V9" class="f-line" fill="none" stroke="#0f172a" stroke-width="2"/><rect x="1" y="9" width="16" height="12" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/></g>
+<path d="M384 233 H530" class="f-line" fill="none" stroke="#0f172a" stroke-width="6"/>
+<g transform="translate(448 206) scale(1.1)"><path d="M4 9 V6 a5 5 0 0 1 10 0 V9" class="f-line" fill="none" stroke="#0f172a" stroke-width="2"/><rect x="1" y="9" width="16" height="12" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/></g>
+<text x="456" y="278" class="f-new" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">잠겨 있다 · 직접 안다</text>
+<text x="320" y="318" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">경비가 상자를 어디서 여느냐에 따라, 안쪽 직원이 보는 것이 달라진다</text>
+</svg>

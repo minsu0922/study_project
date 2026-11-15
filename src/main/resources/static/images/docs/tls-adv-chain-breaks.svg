@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="사슬 그림. 서버가 사이트 인증서와 중간 인증서를 내밀면, 클라이언트는 서명을 따라 올라가 신뢰 저장소의 뿌리 인증서와 맞춘다. 사이트 인증서에서는 만료일과 이름 목록이, 중간 인증서에서는 빠진 고리가, 신뢰 저장소에서는 사내 뿌리가 없는 것이, 클라이언트 쪽에서는 틀린 시계가 검증을 끊는다">
+<defs><marker id="tls-adv-chain-breaks-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="28" class="f-sm" fill="#556274" font-size="13">서버가 내미는 것</text>
+<text x="440" y="28" class="f-sm" fill="#556274" font-size="13">클라이언트가 가진 것</text>
+<rect x="16" y="200" width="230" height="92" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="30" y="228" class="f-b" fill="#0f172a" font-size="15" font-weight="700">사이트 인증서</text>
+<text x="30" y="250" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">신분증</text>
+<text x="30" y="274" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">shop.example.com</text>
+<rect x="16" y="60" width="230" height="92" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="30" y="88" class="f-b" fill="#0f172a" font-size="15" font-weight="700">중간 인증서</text>
+<text x="30" y="110" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">구청 확인서</text>
+<text x="30" y="134" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">R11</text>
+<path d="M131 196 V158" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#tls-adv-chain-breaks-head)"/>
+<text x="140" y="182" class="f-sm" fill="#556274" font-size="12">서명</text>
+<rect x="430" y="60" width="194" height="120" rx="8" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="444" y="86" class="f-b" fill="#0f172a" font-size="15" font-weight="700">신뢰 저장소</text>
+<text x="444" y="108" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">나라 도장 견본</text>
+<rect x="444" y="124" width="166" height="40" rx="6" class="f-hl" fill="#eef2ff"/>
+<text x="456" y="149" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">ISRG Root X1 …</text>
+<path d="M250 100 H424" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#tls-adv-chain-breaks-head)"/>
+<text x="336" y="92" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">도장을 맞춘다</text>
+<g transform="translate(470 210) scale(1.2)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="506" y="286" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">자바 · curl · 브라우저</text>
+<text x="262" y="230" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">① 만료일 지남</text>
+<text x="262" y="258" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">② 이름 목록에 없음</text>
+<text x="262" y="130" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">③ 빠진 고리</text>
+<text x="430" y="204" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">④ 사내 뿌리가 없음</text>
+<text x="430" y="316" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">⑤ 기기 시계가 틀림</text>
+<text x="320" y="350" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">다섯 자리 가운데 하나만 끊겨도 클라이언트는 그 자리에서 검증을 멈춘다</text>
+</svg>

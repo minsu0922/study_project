@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="90일 시간 막대. 0일에 받은 인증서는 60일째부터 갱신을 시도하지만, 80번 포트가 막혀 매일 실패하고 실패 메일은 퇴사자 메일함으로 간다. 바깥에서 만료일을 쟀다면 남은 날이 21일이 되는 69일째에 경보가 울렸다. 실제로는 아무도 모른 채 90일째 새벽 3시 12분에 만료됐다">
+<defs><marker id="tls-adv-renew-timeline-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="30" class="f-b" fill="#0f172a" font-size="15" font-weight="700">인증서 하나의 90일</text>
+<rect x="40.0" y="70" width="372.0" height="40" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="52.0" y="96" class="f-t" fill="#0f172a" font-size="13">멀쩡히 쓰는 기간</text>
+<rect x="412.0" y="70" width="186.0" height="40" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<path d="M413.2 85 L423.2 95 M423.2 85 L413.2 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M431.8 85 L441.8 95 M441.8 85 L431.8 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M450.40000000000003 85 L460.40000000000003 95 M460.40000000000003 85 L450.40000000000003 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M469.0 85 L479.0 95 M479.0 85 L469.0 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M487.6 85 L497.6 95 M497.6 85 L487.6 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M506.2 85 L516.2 95 M516.2 85 L506.2 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M524.8 85 L534.8 95 M534.8 85 L524.8 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M543.4000000000001 85 L553.4000000000001 95 M553.4000000000001 85 L543.4000000000001 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M562.0 85 L572.0 95 M572.0 85 L562.0 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M580.6 85 L590.6 95 M590.6 85 L580.6 95" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<path d="M40.0 126 H598.0" class="f-cloud" fill="none" stroke="#556274" stroke-width="1.2"/>
+<text x="40.0" y="146" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">0일</text>
+<text x="226.0" y="146" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">30일</text>
+<text x="412.0" y="146" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">60일</text>
+<text x="467.8" y="146" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">69일</text>
+<text x="598.0" y="146" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">90일</text>
+<text x="404.0" y="176" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="end">60일 · 갱신 시도 시작</text>
+<text x="505.0" y="52" class="f-bad" fill="#dc2626" font-size="12" font-weight="700" text-anchor="middle">매일 실패 · 80번 포트가 막힘</text>
+<path d="M467.8 60 V128 M467.8 154 V196" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="367.8" y="196" width="200" height="48" rx="6" class="f-hl" fill="#eef2ff"/>
+<text x="467.8" y="218" class="f-new" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">바깥 감시라면 여기서 경보</text>
+<text x="467.8" y="236" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">남은 21일 · 고칠 시간 3주</text>
+<text x="598.0" y="280" class="f-bad" fill="#dc2626" font-size="13" font-weight="700" text-anchor="end">90일 새벽 3:12 만료 · 결제 2시간 50분 실패</text>
+<text x="16" y="306" class="f-sm" fill="#556274" font-size="12">실패 메일은 퇴사한 담당자의 메일함으로 갔다</text>
+<text x="320" y="346" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">갱신 프로그램의 보고 대신, 서버가 내미는 인증서의 남은 날을 잰다</text>
+</svg>
