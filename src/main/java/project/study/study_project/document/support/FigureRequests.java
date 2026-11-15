@@ -37,6 +37,20 @@ public final class FigureRequests {
         return found;
     }
 
+    /**
+     * 요청 줄을 지운 본문. 요청은 사람에게 남긴 메모라 학습자 화면에 안 보인다 —
+     * 문제 생성 모델이 읽으면 화면에 없는 내용으로 문제를 낸다.
+     */
+    public static String strip(String body) {
+        if (body == null || !body.contains(MARKER)) {
+            return body;
+        }
+        return REQUEST_LINE.matcher(body).replaceAll("");
+    }
+
+    /** 요청 한 줄과 그 줄바꿈. 앞 들여쓰기도 함께 지운다. */
+    private static final Pattern REQUEST_LINE = Pattern.compile("(?m)^[ \\t]*" + Pattern.quote(MARKER) + ".*(\\R|\\z)");
+
     /** 펜스 밖에 적힌 요청 줄 수 — 펜스 밖이면 화면에 글자로 그대로 나온다. */
     public static int countOutsideMermaid(String body) {
         if (body == null) {

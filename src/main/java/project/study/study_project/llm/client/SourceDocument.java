@@ -1,5 +1,7 @@
 package project.study.study_project.llm.client;
 
+import project.study.study_project.document.support.FigureRequests;
+
 /**
  * 문제 생성의 <b>근거가 되는 개념 문서</b> — 2단계(docs/15).
  *
@@ -31,6 +33,14 @@ package project.study.study_project.llm.client;
  * @param kind      문서의 출처. 프롬프트가 절 이름을 지목할지 말지를 가른다
  */
 public record SourceDocument(String slug, String title, String contentMd, Kind kind) {
+
+    /**
+     * 손그림 요청 줄({@code %% 손그림:})은 여기서 지운다(2026-11-15). 생성·검수·인용 대조가
+     * 모두 이 본문을 읽으므로, 한 곳에서 지워야 모델이 화면에 없는 메모로 문제를 내지 않는다.
+     */
+    public SourceDocument {
+        contentMd = FigureRequests.strip(contentMd);
+    }
 
     /** 우리 양식으로 생성된 문서 — 편의 생성자. 기존 호출부(배치·평가 CLI)가 그대로 쓴다. */
     public SourceDocument(String slug, String title, String contentMd) {

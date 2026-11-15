@@ -1231,6 +1231,29 @@ class ClaudeProblemGeneratorPromptTest {
                 .doesNotContain("묻는 형태:");
     }
 
+    /** 문서의 손그림 요청은 사람에게 남긴 메모다. 화면에 없는 내용으로 문제가 나오면 안 된다(2026-11-15). */
+    @Test
+    @DisplayName("근거 문서의 손그림 요청 줄은 프롬프트에 실리지 않는다 — 학습자 화면에는 없는 메모다")
+    void stripsFigureRequestsFromSourceDocument() {
+        SourceDocument withRequest = new SourceDocument("nat", "NAT", """
+                # NAT
+
+                ## 무엇인가
+                공유기가 보내는 주소를 바꾼다.
+
+                ```mermaid
+                flowchart LR
+                  %% 손그림: 바뀌기 전·후 봉투 두 장
+                  A["노트북"] --> R["공유기"]
+                ```
+                """);
+
+        assertThat(prompt(Difficulty.BEGINNER, withRequest))
+                .contains("A[\"노트북\"] --> R[\"공유기\"]")
+                .doesNotContain("손그림")
+                .doesNotContain("봉투 두 장");
+    }
+
     private String prompt(Difficulty difficulty, SourceDocument source) {
         return generator.buildPrompt(TestDomains.SECURITY, difficulty, ProblemType.MULTIPLE_CHOICE,
                 5, List.of(), List.of(), source, null);
