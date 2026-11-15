@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 340" role="img" aria-label="설명서와 부품 그림. HTML 설명서에는 shop.4b1e9d.css와 app.3f9a2c.js 같은 부품 번호가 적혀 있다. 설명서는 no-cache라 펼 때마다 서버에 새 판인지 묻고, 바뀌지 않았으면 304로 본문 없이 확인만 받는다. 번호가 찍힌 부품은 1년 동안 immutable로 묻지 않고 집에 둔 것을 쓴다. 내용이 바뀌면 번호가 바뀌어 새 부품을 받는다">
+<defs><marker id="url-adv-cache-split-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="24" y="40" width="210" height="210" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="40" y="68" class="f-b" fill="#0f172a" font-size="15" font-weight="700">설명서 · HTML</text>
+<text x="40" y="104" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">shop.4b1e9d.css</text>
+<text x="40" y="132" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">app.3f9a2c.js</text>
+<text x="40" y="160" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">photo.91ac0e.jpg</text>
+<text x="40" y="200" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">no-cache</text>
+<text x="40" y="222" class="f-sm" fill="#556274" font-size="12">펼 때마다 새 판인지 묻는다</text>
+<g transform="translate(300 30) scale(0.9)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M238 80 C260 70 270 60 294 58" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#url-adv-cache-split-head)"/>
+<text x="362" y="46" class="f-t" fill="#0f172a" font-size="13">바뀌었나요?</text>
+<text x="362" y="70" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">304 · 본문 없이 확인만</text>
+<rect x="400" y="90" width="216" height="36" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="414" y="114" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">shop.4b1e9d.css</text>
+<path d="M238 100 C300 100 330 108 394 108" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#url-adv-cache-split-head)"/>
+<rect x="400" y="138" width="216" height="36" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="414" y="162" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">app.3f9a2c.js</text>
+<path d="M238 128 C300 128 330 156 394 156" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#url-adv-cache-split-head)"/>
+<rect x="400" y="186" width="216" height="36" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="414" y="210" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">photo.91ac0e.jpg</text>
+<path d="M238 156 C300 156 330 204 394 204" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#url-adv-cache-split-head)"/>
+<text x="400" y="256" class="f-b" fill="#0f172a" font-size="15" font-weight="700">부품 · 지문 파일</text>
+<text x="400" y="278" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">1년 · immutable</text>
+<text x="400" y="298" class="f-sm" fill="#556274" font-size="12">번호가 같으면 묻지 않고 쓴다</text>
+<text x="320" y="330" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">바뀌면 번호가 바뀌니, 새 번호는 매번 확인하는 설명서로만 알게 된다</text>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="쌓인 막대 두 줄. 서버 처리는 둘 다 50ms다. 왕복 20ms인 가까운 사용자는 DNS·TCP·TLS·요청에 20ms씩 써 첫 바이트가 130ms에 온다. 왕복 150ms인 먼 사용자는 같은 네 단계에 150ms씩 써 650ms에 온다. 서버 처리 50ms는 두 줄에서 같은 크기다">
+<defs><marker id="url-adv-rtt-stack-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="30" class="f-b" fill="#0f172a" font-size="14" font-weight="700">첫 바이트까지 (서버 처리는 둘 다 50ms)</text>
+<text x="40" y="70" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">가까운 사용자 · 왕복 20ms</text>
+<rect x="40" y="80" width="16.4" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="56.4" y="80" width="16.4" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="72.8" y="80" width="16.4" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="89.19999999999999" y="80" width="16.4" height="40" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="105.6" y="80" width="41.0" height="40" rx="3" class="f-dot" fill="#4f46e5"/>
+<text x="156.6" y="106" class="f-new" fill="#4f46e5" font-size="15" font-weight="700">130ms</text>
+<text x="40" y="180" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">먼 사용자 · 왕복 150ms</text>
+<rect x="40" y="190" width="122.99999999999999" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="101.5" y="215" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">DNS</text>
+<rect x="163.0" y="190" width="122.99999999999999" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="224.5" y="215" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP</text>
+<rect x="286.0" y="190" width="122.99999999999999" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="347.5" y="215" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TLS</text>
+<rect x="409.0" y="190" width="122.99999999999999" height="40" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="470.5" y="215" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">요청</text>
+<rect x="532.0" y="190" width="41.0" height="40" rx="3" class="f-dot" fill="#4f46e5"/>
+<text x="583.0" y="216" class="f-bad" fill="#dc2626" font-size="15" font-weight="700">650ms</text>
+<text x="40" y="140" class="f-sm" fill="#556274" font-size="12">DNS·TCP·TLS·요청 네 칸을 합쳐도 서버 처리(진한 칸)보다 조금 큰 정도다</text>
+<text x="40" y="250" class="f-sm" fill="#556274" font-size="12">같은 네 칸이 왕복 150ms씩 늘어, 서버 처리는 막대 끝의 작은 칸이 된다</text>
+<text x="320" y="312" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">서버를 빠르게 해도 줄어드는 것은 진한 칸 하나뿐이다</text>
+</svg>
