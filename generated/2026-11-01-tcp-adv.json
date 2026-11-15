@@ -39,7 +39,7 @@
                                              "matchText":  ""
                                          }
                                      ],
-                         "sourceQuote":  "모든 클라이언트에 연결 시간 제한을 따로 걸고, 의존 서버마다 스레드나 연결 수 상한을 둔다.",
+                         "sourceQuote":  "의존 서버마다 동시에 부를 수 있는 수에도 상한을 둔다.",
                          "title":  "꺼진 의존 서버 하나에 서버 전체가 막히는 장애",
                          "questionKind":  "SITUATION",
                          "skipReason":  ""
