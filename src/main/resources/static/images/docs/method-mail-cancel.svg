@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="두 줄 장면. 고치기 전에는 메일 보안 장비가 주문 확인 메일 속 GET 취소 링크를 미리 열어, 주문 서버가 주문 101을 취소한다. 고친 뒤에는 보안 장비가 GET으로 열어도 확인 화면만 받고, 사람이 화면의 단추를 눌러 POST를 보내야 취소된다">
+<defs><marker id="method-mail-cancel-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="24" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">고치기 전 · 링크가 바로 취소한다</text>
+<rect x="20" y="54" width="90" height="56" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<path d="M20 54 L65.0 76 L110 54" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<text x="65" y="132" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">주문 확인 메일</text>
+<rect x="160" y="44" width="140" height="76" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="230" y="76" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">메일 보안 장비</text>
+<text x="230" y="98" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">링크를 미리 연다</text>
+<path d="M112 82 H156" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#method-mail-cancel-head)"/>
+<path d="M302 82 H444" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#method-mail-cancel-head)"/>
+<g transform="translate(452 46) scale(0.9)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="512" y="48" class="f-b" fill="#0f172a" font-size="15" font-weight="700">주문 서버</text>
+<text x="16" y="190" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">고친 뒤 · 링크는 확인 화면까지만</text>
+<rect x="20" y="220" width="90" height="56" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<path d="M20 220 L65.0 242 L110 220" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<text x="65" y="298" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">주문 확인 메일</text>
+<rect x="160" y="210" width="140" height="76" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="230" y="242" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">메일 보안 장비</text>
+<text x="230" y="264" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">링크를 미리 연다</text>
+<path d="M112 248 H156" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#method-mail-cancel-head)"/>
+<path d="M302 248 H444" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#method-mail-cancel-head)"/>
+<g transform="translate(452 212) scale(0.9)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="512" y="214" class="f-b" fill="#0f172a" font-size="15" font-weight="700">주문 서버</text>
+<text x="373" y="70" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">GET …/cancel</text>
+<text x="512" y="70" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">주문 101 취소됨</text>
+<text x="512" y="92" class="f-sm" fill="#556274" font-size="12">아무도 누르지 않았다</text>
+<text x="373" y="236" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">GET …/cancel</text>
+<text x="512" y="236" class="f-sm" fill="#556274" font-size="13">확인 화면만 준다</text>
+<text x="512" y="258" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">POST가 와야 취소</text>
+<g transform="translate(196 290) scale(1.0)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="226" y="350" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">사람이 단추를 누름</text>
+<path d="M260 306 C340 306 400 290 446 276" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#method-mail-cancel-head)"/>
+<text x="354" y="316" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700" text-anchor="middle">POST</text>
+</svg>

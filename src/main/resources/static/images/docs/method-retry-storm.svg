@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="선 그래프. 결제사로 가는 요청 수는 평소 초당 100건이다. 2분부터 4분까지 결제사가 점검하자, 곧바로 세 번 다시 보내는 쪽은 초당 400건으로 뛰고 점검이 끝난 뒤에도 실패와 회복을 오가 14분에야 가라앉는다. Retry-After를 지키는 쪽은 점검 동안 100건을 넘지 않고, 4분에 잠깐 늘었다가 6분에 평소로 돌아온다">
+<defs><marker id="method-retry-storm-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="147.14285714285714" y="56" width="77.14285714285714" height="244" rx="0" class="f-panel" fill="#f1f5f9"/>
+<text x="185.71428571428572" y="76" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">점검 2분</text>
+<path d="M70 56 V300 H610" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="70.0" y="318" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">0분</text>
+<text x="147.14285714285714" y="318" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">2분</text>
+<text x="224.28571428571428" y="318" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">4분</text>
+<text x="301.42857142857144" y="318" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">6분</text>
+<text x="378.57142857142856" y="318" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">8분</text>
+<text x="455.7142857142857" y="318" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">10분</text>
+<text x="532.8571428571429" y="318" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">12분</text>
+<text x="610.0" y="318" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">14분</text>
+<text x="64" y="250.66666666666666" class="f-sm" fill="#556274" font-size="11" text-anchor="end">100</text>
+<path d="M70 246.7 H610" class="f-cloud" fill="none" stroke="#556274" stroke-width="0.8" stroke-dasharray="5 4"/>
+<text x="64" y="90.66666666666666" class="f-sm" fill="#556274" font-size="11" text-anchor="end">400</text>
+<path d="M70 86.7 H610" class="f-cloud" fill="none" stroke="#556274" stroke-width="0.8" stroke-dasharray="5 4"/>
+<path d="M70.0 246.7 L147.1 246.7 L154.9 86.7 L224.3 86.7 L243.6 60.0 L282.1 166.7 L320.7 70.7 L359.3 161.3 L397.9 76.0 L436.4 172.0 L475.0 97.3 L513.6 182.7 L552.1 140.0 L590.7 220.0 L610.0 246.7" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M70.0 249.7 L147.1 249.7 L224.3 249.7 L235.9 207.0 L262.9 223.0 L301.4 249.7 L610.0 249.7" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5"/>
+<text x="16" y="36" class="f-b" fill="#0f172a" font-size="13" font-weight="700">결제사로 가는 요청 수 (초당)</text>
+<path d="M290 32 H320" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2.5"/>
+<text x="326" y="36" class="f-bad" fill="#dc2626" font-size="12" font-weight="700">곧바로 세 번 다시</text>
+<path d="M450 32 H480" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5"/>
+<text x="486" y="36" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700">Retry-After 지킴</text>
+<path d="M147.1 334 H610.0" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<text x="378.57142857142856" y="352" class="f-bad" fill="#dc2626" font-size="12" font-weight="700" text-anchor="middle">12분 동안 실패와 회복을 오간다</text>
+</svg>

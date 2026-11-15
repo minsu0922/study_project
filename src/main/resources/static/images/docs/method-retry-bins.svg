@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 350" role="img" aria-label="분류 상자 그림. 400·401·403·404와 버그로 난 500은 다시 보내도 같아 다시 보내지 않는다. 409는 처리가 끝나면, 429와 503은 Retry-After만큼 기다렸다 보낸다. 502·504·응답 없음은 지수 백오프로 보내되, 504와 응답 없음은 결과를 모른다. 키 없는 POST는 502·504·응답 없음이면 결과부터 확인한다">
+<defs><marker id="method-retry-bins-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="40" width="192" height="210" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="30" y="66" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">다시 보내지 않는다</text>
+<text x="30" y="86" class="f-sm" fill="#556274" font-size="12">다시 보내도 같은 답</text>
+<rect x="28" y="104" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="62" y="124" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">400·401</text>
+<text x="104" y="124" class="f-sm" fill="#556274" font-size="12">요청을 고친다</text>
+<rect x="28" y="148" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="62" y="168" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">403·404</text>
+<text x="104" y="168" class="f-sm" fill="#556274" font-size="12">요청을 고친다</text>
+<rect x="28" y="192" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="62" y="212" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">500</text>
+<text x="104" y="212" class="f-sm" fill="#556274" font-size="12">버그면 같다</text>
+<rect x="224" y="40" width="192" height="210" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="238" y="66" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">기다렸다 보낸다</text>
+<text x="238" y="86" class="f-sm" fill="#556274" font-size="12">기다리면 달라진다</text>
+<rect x="236" y="104" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="270" y="124" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">409</text>
+<text x="312" y="124" class="f-sm" fill="#556274" font-size="12">처리가 끝나면</text>
+<rect x="236" y="148" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="270" y="168" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">429</text>
+<text x="312" y="168" class="f-sm" fill="#556274" font-size="12">Retry-After만큼</text>
+<rect x="236" y="192" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="270" y="212" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">503</text>
+<text x="312" y="212" class="f-sm" fill="#556274" font-size="12">Retry-After만큼</text>
+<rect x="432" y="40" width="192" height="210" rx="8" class="f-panel" fill="#f1f5f9"/>
+<text x="446" y="66" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">백오프로 보낸다</text>
+<text x="446" y="86" class="f-sm" fill="#556274" font-size="12">뒤쪽이 회복되면 달라진다</text>
+<rect x="444" y="104" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="478" y="124" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">502</text>
+<text x="520" y="124" class="f-sm" fill="#556274" font-size="12">지수 백오프</text>
+<rect x="444" y="148" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="478" y="168" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">504</text>
+<text x="520" y="168" class="f-bad" fill="#dc2626" font-size="12" font-weight="700">결과를 모른다</text>
+<rect x="444" y="192" width="68" height="30" rx="15" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="478" y="212" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle">응답 없음</text>
+<text x="520" y="212" class="f-bad" fill="#dc2626" font-size="12" font-weight="700">결과를 모른다</text>
+<text x="16" y="284" class="f-b" fill="#0f172a" font-size="15" font-weight="700">키 없는 POST</text>
+<text x="130" y="284" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">502·504·응답 없음이면 다시 보내지 말고 결과부터 확인한다</text>
+<text x="320" y="330" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">엘리베이터 버튼(멱등하거나 키를 실은 요청)만 이 기준으로 다시 누른다</text>
+</svg>
