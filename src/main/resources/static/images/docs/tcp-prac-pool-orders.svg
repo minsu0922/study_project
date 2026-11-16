@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" role="img" aria-label="막대 그림. 주문 다섯 건을 처리할 때, 주문마다 연결을 새로 열면 건마다 인사 150ms와 요청 160ms로 310ms씩 든다. 커넥션 풀로 연결을 다시 쓰면 첫 주문만 310ms이고 나머지 네 건은 160ms씩이다">
+<defs><marker id="tcp-prac-pool-orders-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="30" class="f-b" fill="#0f172a" font-size="14" font-weight="700">주문 다섯 건 · 환율 API 왕복 150ms</text>
+<rect x="380" y="17" width="16" height="14" rx="2" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="402" y="30" class="f-sm" fill="#556274" font-size="12">인사 150ms</text>
+<rect x="500" y="17" width="16" height="14" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="522" y="30" class="f-sm" fill="#556274" font-size="12">요청 160ms</text>
+<text x="16" y="70" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">주문마다 새 연결</text>
+<rect x="16" y="84" width="40.5" height="40" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="56.5" y="84" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="78.1" y="109" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">1</text>
+<rect x="103.7" y="84" width="40.5" height="40" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="144.2" y="84" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="165.79999999999998" y="109" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">2</text>
+<rect x="191.39999999999998" y="84" width="40.5" height="40" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="231.89999999999998" y="84" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="253.49999999999997" y="109" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">3</text>
+<rect x="279.09999999999997" y="84" width="40.5" height="40" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="319.59999999999997" y="84" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="341.2" y="109" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">4</text>
+<rect x="366.79999999999995" y="84" width="40.5" height="40" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="407.29999999999995" y="84" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="428.9" y="109" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">5</text>
+<text x="462.49999999999994" y="110" class="f-bad" fill="#dc2626" font-size="15" font-weight="700">1550ms</text>
+<text x="16" y="190" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">커넥션 풀로 다시 쓴다</text>
+<rect x="16" y="204" width="40.5" height="40" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<rect x="56.5" y="204" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="78.1" y="229" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">1</text>
+<rect x="103.7" y="204" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="125.30000000000001" y="229" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">2</text>
+<rect x="150.9" y="204" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="172.5" y="229" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">3</text>
+<rect x="198.10000000000002" y="204" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="219.70000000000002" y="229" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">4</text>
+<rect x="245.3" y="204" width="43.2" height="40" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="266.90000000000003" y="229" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">5</text>
+<text x="300.5" y="230" class="f-new" fill="#4f46e5" font-size="15" font-weight="700">950ms</text>
+<text x="320" y="300" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">인사(점선 칸)를 주문마다 치르지 않고 처음 한 번만 치른다</text>
+</svg>

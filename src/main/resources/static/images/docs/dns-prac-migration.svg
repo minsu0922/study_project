@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="시간 막대 그림. 전날 12시에 TTL을 3600초에서 300초로 낮추면 늦어도 전날 13시에는 옛 답이 모두 5분짜리로 바뀐다. 당일 13시에 장부를 새 번호로 고치면 옛 서버로 가는 사람은 13시 5분까지 사라진다. TTL을 낮추지 않았다면 옛 서버로 가는 사람이 14시까지 남는다. 옛 서버는 접속이 0에 가까워진 뒤에 끈다">
+<defs><marker id="dns-prac-migration-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="30" class="f-b" fill="#0f172a" font-size="14" font-weight="700">당일 13시 · 장부를 새 번호로 고친 뒤 옛 서버로 가는 사람</text>
+<path d="M60.0 230 H585.0" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<path d="M60.0 226 V234" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="60.0" y="250" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">13:00</text>
+<path d="M97.5 226 V234" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="97.5" y="250" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">13:05</text>
+<path d="M285.0 226 V234" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="285.0" y="250" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">13:30</text>
+<path d="M510.0 226 V234" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="510.0" y="250" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">14:00</text>
+<path d="M60.0 230 L60.0 80 L510.0 230 Z" class="f-hl" fill="#eef2ff"/>
+<path d="M60.0 80 L510.0 230" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="7 5"/>
+<path d="M60.0 80 L97.5 230" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3"/>
+<text x="112.5" y="214" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">TTL 300초 · 5분이면 0</text>
+<text x="270.0" y="128" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">TTL 3600초 그대로였다면 · 1시간</text>
+<rect x="60.0" y="266" width="280" height="46" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="72.0" y="286" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700">전날 12시 TTL을 300초로 낮춤</text>
+<text x="72.0" y="304" class="f-sm" fill="#556274" font-size="12">→ 13시엔 옛 3600초 답이 다 사라짐</text>
+<text x="585.0" y="300" class="f-sm" fill="#556274" font-size="12" text-anchor="end">옛 서버는 접속이 0이 된 뒤 끈다</text>
+</svg>

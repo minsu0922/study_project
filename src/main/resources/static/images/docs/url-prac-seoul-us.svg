@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="쌓인 막대 세 줄. 서울 사무실은 DNS·TCP·TLS·서버 첫 바이트·본문 받기를 합쳐 0.26초다. 미국 지사는 TCP와 TLS가 0.16초씩, 첫 바이트가 0.31초, 본문 받기가 0.39초로 모두 1.04초다. CDN을 거치게 한 뒤 미국 지사는 0.6초 안팎으로 줄었다. 서버 처리 시간은 셋 다 0.15초로 같다">
+<defs><marker id="url-prac-seoul-us-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="330.0" y="18.0" width="16.0" height="14.0" rx="3" class="f-dot" fill="#4f46e5"/>
+<text x="352" y="30" class="f-sm" fill="#556274" font-size="12">서버 첫 바이트 (처리 0.15초 포함)</text>
+<text x="16" y="60" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">서울 사무실</text>
+<rect x="16" y="70" width="5.28" height="36" rx="2" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="21.28" y="70" width="14.520000000000001" height="36" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="35.800000000000004" y="70" width="15.839999999999998" height="36" rx="2" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="51.6" y="70.0" width="70.0" height="36.0" rx="3" class="f-dot" fill="#4f46e5"/>
+<rect x="121.60000000000001" y="70" width="9.68" height="36" rx="2" class="f-hl" fill="#eef2ff"/>
+<text x="141.28" y="94" class="f-new" fill="#4f46e5" font-size="15" font-weight="700">0.26초</text>
+<text x="16" y="150" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">미국 지사</text>
+<rect x="16" y="160" width="6.6" height="36" rx="2" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="22.6" y="160" width="70.4" height="36" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="57.800000000000004" y="183" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP</text>
+<rect x="93.0" y="160" width="72.60000000000001" height="36" rx="2" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="129.3" y="183" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TLS</text>
+<rect x="165.6" y="160.0" width="136.4" height="36.0" rx="3" class="f-dot" fill="#4f46e5"/>
+<rect x="302.0" y="160" width="171.6" height="36" rx="2" class="f-hl" fill="#eef2ff"/>
+<text x="387.8" y="183" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">본문</text>
+<text x="483.6" y="184" class="f-bad" fill="#dc2626" font-size="15" font-weight="700">1.04초</text>
+<text x="16" y="240" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">미국 지사 · CDN 뒤</text>
+<rect x="16" y="250" width="6.6" height="36" rx="2" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="22.6" y="250" width="13.2" height="36" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="35.8" y="250" width="15.400000000000002" height="36" rx="2" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<rect x="51.2" y="250.0" width="145.2" height="36.0" rx="3" class="f-dot" fill="#4f46e5"/>
+<rect x="196.40000000000003" y="250" width="83.6" height="36" rx="2" class="f-hl" fill="#eef2ff"/>
+<text x="238.20000000000005" y="273" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">본문</text>
+<text x="290.0" y="274" class="f-new" fill="#4f46e5" font-size="15" font-weight="700">0.60초</text>
+<text x="320" y="318" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">서버 처리는 세 줄 모두 0.15초다. 줄어든 것은 바다를 건너는 왕복이다</text>
+</svg>
