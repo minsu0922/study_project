@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="실무 지도. 서버 안의 앱에는 ① 바인드 주소가, 앞단에는 ② 표준 포트를 누가 받을지가, 컨테이너에는 ③ 포트 매핑이, DB와 캐시에는 ④ 노출 범위가, 로드 밸런서에는 ⑤ 대상 포트와 헬스 체크가, 앱이 외부 API를 부르는 자리에는 ⑥ 연결을 돌려 쓸지가 있다">
+<defs><marker id="port-adv-prac-map-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="70" width="110" height="70" rx="8" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="71.0" y="102.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">로드 밸런서</text>
+<text x="71.0" y="122.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">443</text>
+<circle cx="71" cy="160" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="71" y="165" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<rect x="160" y="30" width="300" height="200" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="174" y="52" class="f-b" fill="#0f172a" font-size="14" font-weight="700">서버</text>
+<rect x="174" y="66" width="120" height="56" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="234.0" y="91.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">nginx</text>
+<text x="234.0" y="111.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">80 · 443</text>
+<circle cx="284" cy="70" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="284" y="75" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<rect x="312" y="66" width="134" height="90" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="326" y="88" class="f-sm" fill="#556274" font-size="12">컨테이너</text>
+<rect x="326" y="96" width="106" height="48" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="379.0" y="125.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">앱 8080</text>
+<circle cx="436" cy="70" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="436" y="75" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<circle cx="436" cy="120" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="436" y="125" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<rect x="174" y="160" width="120" height="54" rx="8" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="234.0" y="184.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">MySQL</text>
+<text x="234.0" y="204.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">3306</text>
+<circle cx="284" cy="166" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="284" y="171" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<rect x="500" y="70" width="124" height="60" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="562.0" y="105.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">외부 API</text>
+<path d="M130 105 H168" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#port-adv-prac-map-head)"/>
+<path d="M450 110 H494" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#port-adv-prac-map-head)"/>
+<circle cx="472" cy="150" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="472" y="155" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">6</text>
+<circle cx="34" cy="261" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="266" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="54" y="266" class="f-t" fill="#0f172a" font-size="13">바인드 주소: 127.0.0.1이냐 0.0.0.0이냐</text>
+<circle cx="334" cy="261" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="266" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="354" y="266" class="f-t" fill="#0f172a" font-size="13">80·443은 앞단이 받고 앱은 뒤에</text>
+<circle cx="34" cy="287" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="292" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="54" y="292" class="f-t" fill="#0f172a" font-size="13">호스트 번호는 컨테이너마다 다르게</text>
+<circle cx="334" cy="287" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="292" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<text x="354" y="292" class="f-t" fill="#0f172a" font-size="13">DB는 앱 서버만 들어오게</text>
+<circle cx="34" cy="313" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="318" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<text x="54" y="318" class="f-t" fill="#0f172a" font-size="13">대상 포트와 헬스 체크 포트를 같이</text>
+<circle cx="334" cy="313" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="318" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">6</text>
+<text x="354" y="318" class="f-t" fill="#0f172a" font-size="13">외부 API는 연결을 돌려 쓴다</text>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="선 그래프. 요청마다 새 연결을 여는 배치는 묶인 임시 포트가 1초에 500개씩 늘어 55초쯤 빌려줄 수 있는 28,000개에 닿고, 그 뒤 새 연결이 모두 실패한다. 커넥션 풀로 연결 50개를 돌려 쓰는 배치는 처음부터 끝까지 50개에 머문다">
+<defs><marker id="port-adv-timewait-climb-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<path d="M70 50 V260 H600" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="70.0" y="280" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">0초</text>
+<text x="221.42857142857142" y="280" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">20초</text>
+<text x="372.85714285714283" y="280" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">40초</text>
+<text x="486.42857142857144" y="280" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">55초</text>
+<text x="600.0" y="280" class="f-sm" fill="#556274" font-size="11" text-anchor="middle">70초</text>
+<text x="64" y="77.33333333333334" class="f-sm" fill="#556274" font-size="11" text-anchor="end">28,000</text>
+<path d="M70 73.3 H600" class="f-cloud" fill="none" stroke="#556274" stroke-width="1" stroke-dasharray="5 4"/>
+<path d="M70.0 260.0 L486.4 76.7 L494.0 73.3 H600.0" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3"/>
+<path d="M70.0 256.7 H600.0" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3"/>
+<rect x="494.0" y="70" width="106.0" height="40" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="547.0" y="95" class="f-bad" fill="#dc2626" font-size="12" font-weight="700" text-anchor="middle">새 연결 실패</text>
+<text x="92.71428571428572" y="126.66666666666666" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">요청마다 새 연결 · 1초에 +500</text>
+<text x="221.42857142857142" y="247.66666666666669" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">커넥션 풀 · 50개에 머문다</text>
+<text x="16" y="30" class="f-b" fill="#0f172a" font-size="14" font-weight="700">TIME_WAIT로 묶인 임시 포트</text>
+<text x="320" y="316" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">번호표는 쓴 뒤 1분이 지나야 돌아온다. 1분 안에 28,000장을 쓰면 바닥난다</text>
+</svg>

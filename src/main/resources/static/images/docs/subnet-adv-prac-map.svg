@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="실무 지도. 랜카드가 둘인 DB 서버의 라우팅 테이블에는 ① 정적 라우트의 접두사와 ② 기본 게이트웨이를 어느 랜카드에 둘지가 있다. 사내망 설계에는 ③ 서브넷 크기와 ④ 고정 주소 범위가, 접속 기록을 세는 코드에는 ⑤ 주소가 어느 대역에 드는지 가르는 계산이 있다">
+<defs><marker id="subnet-adv-prac-map-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(270 40) scale(1.0)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="300" y="126" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">DB 서버</text>
+<rect x="30" y="50" width="170" height="60" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="115.0" y="77.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">서비스망</text>
+<text x="115.0" y="97.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">eth0 · 기본 게이트웨이</text>
+<rect x="420" y="50" width="190" height="60" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="515.0" y="77.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">관리망</text>
+<text x="515.0" y="97.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">eth1 · 10.0.9.0/24로</text>
+<path d="M204 80 H266" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<path d="M334 80 H416" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<circle cx="235" cy="110" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="235" y="115" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<circle cx="375" cy="110" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="375" y="115" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<rect x="30" y="150" width="290" height="90" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="44" y="172" class="f-b" fill="#0f172a" font-size="14" font-weight="700">사내망 설계</text>
+<text x="44" y="198" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">/24 · /23 · …</text>
+<circle cx="210" cy="192" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="210" y="197" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="44" y="224" class="f-sm" fill="#556274" font-size="12">.2~.99 손으로 · .100~ 자동</text>
+<circle cx="300" cy="218" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="300" y="223" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<rect x="350" y="150" width="260" height="90" rx="8" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="364" y="172" class="f-b" fill="#0f172a" font-size="14" font-weight="700">접속 기록 코드</text>
+<text x="364" y="202" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">covers("10.0.0.0/8", ip)</text>
+<circle cx="590" cy="196" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="590" y="201" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<circle cx="34" cy="281" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="286" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="54" y="286" class="f-t" fill="#0f172a" font-size="13">정적 라우트는 보낼 대역만큼 좁게</text>
+<circle cx="334" cy="281" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="286" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="354" y="286" class="f-t" fill="#0f172a" font-size="13">기본 게이트웨이는 한쪽 랜카드에만</text>
+<circle cx="34" cy="307" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="312" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="54" y="312" class="f-t" fill="#0f172a" font-size="13">서브넷 크기는 늘어날 기기 수로</text>
+<circle cx="334" cy="307" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="312" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<text x="354" y="312" class="f-t" fill="#0f172a" font-size="13">자동 범위와 손으로 적는 범위를 나눈다</text>
+<circle cx="34" cy="333" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="338" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<text x="54" y="338" class="f-t" fill="#0f172a" font-size="13">대역 판정은 마스크 계산 그대로</text>
+</svg>
