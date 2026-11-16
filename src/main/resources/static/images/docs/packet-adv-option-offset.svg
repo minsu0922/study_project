@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="두 줄 바이트 그림. 시험용 패킷은 IP 20바이트와 TCP 20바이트 뒤 41번째 바이트부터 GET이 시작해, 41번째부터 읽는 배치가 맞게 읽는다. 실제 패킷은 TCP 헤더에 시각 기록 옵션 12바이트가 붙어 32바이트라, 41번째부터 읽으면 옵션 12바이트가 요청 줄 앞에 붙어 나온다">
+<defs><marker id="packet-adv-option-offset-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="24" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">시험용 패킷 · 옵션 없음</text>
+<rect x="30" y="44" width="112.0" height="44" rx="3" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="86.0" y="71" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">IP 20</text>
+<rect x="142.0" y="44" width="112.0" height="44" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="198.0" y="71" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP 20</text>
+<rect x="254.0" y="44" width="356.0" height="44" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="266.0" y="71" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">GET /api/orders …</text>
+<path d="M254.0 36 V98" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<text x="254.0" y="118" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">41번째 바이트부터 읽음</text>
+<text x="380" y="118" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">→ GET /api/orders</text>
+<text x="16" y="180" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">실제 캡처 · 시각 기록 옵션</text>
+<rect x="30" y="200" width="112.0" height="44" rx="3" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="86.0" y="227" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">IP 20</text>
+<rect x="142.0" y="200" width="112.0" height="44" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="198.0" y="227" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP 20</text>
+<rect x="254.0" y="200" width="67.19999999999999" height="44" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="287.6" y="227" class="f-bad" fill="#dc2626" font-size="11" font-weight="700" text-anchor="middle">옵션 12</text>
+<rect x="321.2" y="200" width="288.8" height="44" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="333.2" y="227" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">GET /api/orders …</text>
+<path d="M254.0 192 V254" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<text x="254.0" y="274" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">41번째 바이트부터 읽음</text>
+<text x="380" y="274" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">→ 옵션 12바이트 + GET /api/…</text>
+<text x="320" y="318" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">송장 크기는 송장의 길이 칸에 적혀 있다. 고정값 40으로 세면 메모 스티커가 딸려 나온다</text>
+</svg>

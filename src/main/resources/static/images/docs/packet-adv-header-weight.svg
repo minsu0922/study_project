@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" role="img" aria-label="쌓인 막대 그림. 측정값 30바이트를 따로 보내면 한 번에 100바이트가 회선에 오르고 그중 70바이트가 TCP·IP·링크 이름표다. 5초 동안 모은 측정값 다섯 개 150바이트를 한 번에 보내면 220바이트 가운데 이름표는 같은 70바이트라, 데이터 한 개당 이름표가 14바이트가 된다">
+<defs><marker id="packet-adv-header-weight-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="30" class="f-b" fill="#0f172a" font-size="14" font-weight="700">한 번 보낼 때 회선에 오르는 바이트</text>
+<text x="16" y="60" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">측정값 하나씩</text>
+<rect x="16" y="70" width="34.199999999999996" height="44" rx="2" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="33.099999999999994" y="97" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">링크</text>
+<rect x="50.199999999999996" y="70" width="38.0" height="44" rx="2" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="69.19999999999999" y="97" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">IP</text>
+<rect x="88.19999999999999" y="70" width="60.8" height="44" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="118.6" y="97" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP</text>
+<rect x="149.0" y="70.0" width="57.0" height="44.0" rx="3" class="f-dot" fill="#4f46e5"/>
+<text x="216.0" y="98" class="f-bad" fill="#dc2626" font-size="14" font-weight="700">100B · 이름표 70%</text>
+<text x="16" y="160" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">5초 모아 다섯 개</text>
+<rect x="16" y="170" width="34.199999999999996" height="44" rx="2" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="33.099999999999994" y="197" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">링크</text>
+<rect x="50.199999999999996" y="170" width="38.0" height="44" rx="2" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="69.19999999999999" y="197" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">IP</text>
+<rect x="88.19999999999999" y="170" width="60.8" height="44" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="118.6" y="197" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP</text>
+<rect x="149.0" y="170.0" width="285.0" height="44.0" rx="3" class="f-dot" fill="#4f46e5"/>
+<text x="444.0" y="198" class="f-new" fill="#4f46e5" font-size="14" font-weight="700">220B · 이름표 32%</text>
+<text x="16" y="254" class="f-sm" fill="#556274" font-size="12">진한 칸이 측정값이다. 이름표 70바이트는 두 줄이 같고, 실은 데이터만 다섯 배가 됐다</text>
+<text x="320" y="286" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">편지마다 상자 하나를 쓰지 않고, 편지를 모아 상자 하나에 넣는다</text>
+</svg>

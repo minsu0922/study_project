@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 340" role="img" aria-label="길 그림. 백업 파일이 보내는 서버에서 스위치와 라우터를 거쳐 백업 서버로 간다. 고장 난 스위치가 장비 안에서 비트 하나를 바꾸지만, 다음 구간의 링크 검사값은 바뀐 뒤의 바이트로 새로 계산돼 통과한다. 끝의 TCP 체크섬도 같은 합이 나와 통과하고, 석 달 뒤 압축 해제에서야 손상이 드러난다. 해시를 맞춰 봤다면 받는 순간 다름이 드러났다">
+<defs><marker id="packet-adv-checksum-pass-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(16 60) scale(0.9)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="43" y="146" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">DB 서버</text>
+<rect x="150" y="64" width="120" height="60" rx="8" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="210.0" y="91.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">스위치</text>
+<text x="210.0" y="111.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">메모리 고장</text>
+<path d="M253 65 L267 79 M267 65 L253 79" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+<g transform="translate(330 66) scale(0.8)"><path d="M18 18 L12 2 M62 18 L68 2" class="f-line" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/><rect x="2" y="18" width="76" height="28" rx="6" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/><circle cx="16" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="28" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="40" cy="32" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="362" y="130" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">라우터</text>
+<g transform="translate(560 60) scale(0.9)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="587" y="146" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">백업 서버</text>
+<path d="M76 94 H144" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#packet-adv-checksum-pass-head)"/>
+<path d="M274 94 H324" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#packet-adv-checksum-pass-head)"/>
+<path d="M400 94 H552" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#packet-adv-checksum-pass-head)"/>
+<text x="210" y="150" class="f-bad" fill="#dc2626" font-size="12" font-weight="700" text-anchor="middle">장비 안에서 비트 하나 바뀜</text>
+<path d="M293 150 L297.7 154.9 L307 144.4" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="312" y="155" class="f-sm" fill="#556274" font-size="12">링크 검사 통과 (새로 계산)</text>
+<path d="M433 180 L437.7 184.9 L447 174.4" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="452" y="185" class="f-sm" fill="#556274" font-size="12">TCP 체크섬 통과</text>
+<rect x="16" y="196" width="296" height="70" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="30" y="222" class="f-b" fill="#0f172a" font-size="13" font-weight="700">석 달 뒤 복구 연습</text>
+<text x="30" y="246" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">"데이터가 손상됐다" · 압축 해제 실패</text>
+<rect x="330" y="196" width="294" height="70" rx="6" class="f-hl" fill="#eef2ff"/>
+<text x="344" y="222" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">해시를 맞춰 봤다면</text>
+<text x="344" y="246" class="f-new" fill="#4f46e5" font-size="13" font-weight="700">받은 날 sha256 불일치 → 다시 받음</text>
+<text x="320" y="300" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">구간 검사값은 구간마다 새로 만들고, 16비트 합은 드물게 같은 값을 낸다</text>
+<text x="320" y="324" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">끝에서 끝까지 내용을 확인하는 것은 앱의 해시뿐이다</text>
+</svg>

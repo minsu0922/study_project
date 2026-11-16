@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="홉 그림. 휴대폰에서 공유기까지는 와이파이 운송장에 TTL 64, 공유기에서 라우터까지는 유선 운송장에 TTL 63, 라우터에서 서버까지는 다른 유선 운송장에 TTL 62가 붙는다. 운송장은 구간마다 새로 붙고 TTL만 하나씩 줄며, 안쪽의 IP 주소와 TCP 상자는 그대로 간다">
+<defs><marker id="packet-adv-hops-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(20 60) scale(1.1)"><rect x="3" y="2" width="24" height="46" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="7" y="8" width="16" height="30" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><circle cx="15" cy="43" r="2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<g transform="translate(150 56) scale(0.9)"><path d="M18 18 L12 2 M62 18 L68 2" class="f-line" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/><rect x="2" y="18" width="76" height="28" rx="6" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/><circle cx="16" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="28" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="40" cy="32" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="186" y="118" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">공유기</text>
+<g transform="translate(330 56) scale(0.9)"><path d="M18 18 L12 2 M62 18 L68 2" class="f-line" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/><rect x="2" y="18" width="76" height="28" rx="6" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/><circle cx="16" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="28" cy="32" r="3" class="f-dot" fill="#4f46e5"/><circle cx="40" cy="32" r="3" class="f-dot" fill="#4f46e5"/></g>
+<text x="366" y="118" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">라우터</text>
+<g transform="translate(560 46) scale(0.9)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M60 90 H146" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#packet-adv-hops-head)"/>
+<rect x="39.0" y="150" width="128" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="103.0" y="170" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">와이파이 운송장</text>
+<rect x="47.0" y="184" width="112" height="30" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="103.0" y="204" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">IP · TTL 64</text>
+<rect x="55.0" y="218" width="96" height="30" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="103.0" y="238" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP 상자</text>
+<path d="M226 90 H326" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#packet-adv-hops-head)"/>
+<rect x="212.0" y="150" width="128" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="276.0" y="170" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">유선 A 운송장</text>
+<rect x="220.0" y="184" width="112" height="30" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="276.0" y="204" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">IP · TTL 63</text>
+<rect x="228.0" y="218" width="96" height="30" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="276.0" y="238" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP 상자</text>
+<path d="M406 90 H552" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#packet-adv-hops-head)"/>
+<rect x="415.0" y="150" width="128" height="30" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="479.0" y="170" class="f-acc" fill="#4f46e5" font-size="12" font-weight="700" text-anchor="middle">유선 B 운송장</text>
+<rect x="423.0" y="184" width="112" height="30" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="479.0" y="204" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">IP · TTL 62</text>
+<rect x="431.0" y="218" width="96" height="30" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="479.0" y="238" class="f-t" fill="#0f172a" font-size="12" text-anchor="middle">TCP 상자</text>
+<text x="16" y="290" class="f-sm" fill="#556274" font-size="12">맨 위 칸만 구간마다 바뀌고, 가운데 칸은 TTL 숫자만 준다. 맨 아래 칸은 열지 않는다</text>
+<text x="320" y="316" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">NAT를 하는 공유기라면 IP 주소와 TCP 포트도 바꿔 적는다</text>
+</svg>

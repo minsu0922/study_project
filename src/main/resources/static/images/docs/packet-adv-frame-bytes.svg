@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" role="img" aria-label="막대 그림. 이더넷 프레임 한 장을 바이트 순서로 펼치면 링크 헤더 14바이트, IP 헤더 20바이트, TCP 헤더 32바이트, 데이터 1,448바이트, 링크 검사값 4바이트다. 데이터 칸은 길어서 중간을 줄여 그렸다. 바깥 상자부터 링크 운송장, 최종 주소 송장, 안쪽 상자 송장 순서다">
+<defs><marker id="packet-adv-frame-bytes-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="34" class="f-b" fill="#0f172a" font-size="14" font-weight="700">프레임 한 장 · 1,518바이트</text>
+<rect x="30" y="70" width="61.60000000000001" height="56" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="60.800000000000004" y="104" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">링크</text>
+<text x="60.800000000000004" y="148" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">14B</text>
+<rect x="93.60000000000001" y="70" width="88.0" height="56" rx="3" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="137.60000000000002" y="104" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">IP</text>
+<text x="137.60000000000002" y="148" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">20B</text>
+<rect x="183.60000000000002" y="70" width="140.8" height="56" rx="3" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="254.00000000000003" y="104" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">TCP</text>
+<text x="254.00000000000003" y="148" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">32B</text>
+<rect x="326.40000000000003" y="70" width="250" height="56" rx="3" class="f-hl" fill="#eef2ff"/>
+<text x="451.40000000000003" y="104" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle">데이터</text>
+<text x="451.40000000000003" y="148" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">1,448B</text>
+<path d="M516.4000000000001 64 L526.4000000000001 132 M526.4000000000001 64 L536.4000000000001 132" class="f-line" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<rect x="578.4000000000001" y="70" width="17.6" height="56" rx="3" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="587.2" y="148" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="end">검사 4B</text>
+<text x="30" y="192" class="f-acc" fill="#4f46e5" font-size="13" font-weight="700">바깥부터 벗긴다</text>
+<text x="30" y="216" class="f-t" fill="#0f172a" font-size="13">링크 운송장(다음 센터까지) → 최종 주소 송장 → 안쪽 상자 송장 → 내용물</text>
+<text x="30" y="244" class="f-sm" fill="#556274" font-size="12">TCP 칸 32바이트 = 기본 20 + 시각 기록 옵션 12</text>
+<text x="320" y="286" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">데이터 칸만 중간을 줄였고, 나머지 칸은 바이트 크기에 맞췄다</text>
+</svg>

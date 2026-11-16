@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="실무 지도. 개발자 PC에서 ① 패킷 캡처 도구로 프레임을 층별로 벗겨 보고, ② traceroute로 거쳐 가는 라우터를 찾고, ③ 캡처 바이트를 직접 읽는 코드에서는 길이 칸을 읽는다. 서버 사이에는 ④ 큰 파일을 옮긴 뒤 해시로 확인할지가, 단말기와 수집 서버 사이에는 ⑤ 작은 데이터를 묶어 보낼지가 있다">
+<defs><marker id="packet-adv-prac-map-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(20 50) scale(1.2)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="56" y="122" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">개발자 PC</text>
+<circle cx="120" cy="60" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="120" y="65" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="140" y="65" class="f-t" fill="#0f172a" font-size="12">캡처 도구</text>
+<circle cx="120" cy="92" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="120" y="97" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="140" y="97" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">traceroute</text>
+<circle cx="120" cy="124" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="120" y="129" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="140" y="129" class="f-t" fill="#0f172a" font-size="12">바이트 읽는 코드</text>
+<g transform="translate(330 40) scale(0.8)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<g transform="translate(520 40) scale(0.8)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M384 76 H514" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#packet-adv-prac-map-head)"/>
+<text x="450" y="66" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">백업 40GB</text>
+<circle cx="450" cy="100" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="450" y="105" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<g transform="translate(330 170) scale(1.0)"><rect x="3" y="2" width="24" height="46" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="7" y="8" width="16" height="30" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><circle cx="15" cy="43" r="2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<g transform="translate(370 170) scale(1.0)"><rect x="3" y="2" width="24" height="46" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="7" y="8" width="16" height="30" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><circle cx="15" cy="43" r="2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="370" y="240" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">단말기 2,000대</text>
+<g transform="translate(520 166) scale(0.8)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M410 196 H514" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#packet-adv-prac-map-head)"/>
+<circle cx="460" cy="220" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="460" y="225" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<circle cx="34" cy="281" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="286" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="54" y="286" class="f-t" fill="#0f172a" font-size="13">캡처 도구로 층별 칸을 본다</text>
+<circle cx="334" cy="281" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="286" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="354" y="286" class="f-t" fill="#0f172a" font-size="13">TTL을 늘려 길을 찾는다</text>
+<circle cx="34" cy="307" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="312" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="54" y="312" class="f-t" fill="#0f172a" font-size="13">헤더 길이는 길이 칸을 읽는다</text>
+<circle cx="334" cy="307" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="312" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<text x="354" y="312" class="f-t" fill="#0f172a" font-size="13">큰 파일은 해시로 다시 확인</text>
+<circle cx="34" cy="333" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="338" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<text x="54" y="338" class="f-t" fill="#0f172a" font-size="13">작은 데이터는 모아 보낸다</text>
+</svg>
