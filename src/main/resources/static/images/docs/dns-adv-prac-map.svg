@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="실무 지도. 권한 서버의 장부 줄에는 ① TTL을 몇 초로 둘지가 있다. 앱의 설정 파일에는 ② 접속 주소를 IP로 적을지 이름으로 적을지가, 업체가 운영하는 서버와 내 이름 사이에는 ③ CNAME으로 붙일지가, 자바 앱 안에는 ④ JVM DNS 캐시와 커넥션 풀 연결 수명이 있다">
+<defs><marker id="dns-adv-prac-map-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="16" y="40" width="200" height="110" rx="8" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="116.0" y="100.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">권한 서버</text>
+<text x="30" y="130" class="f-mono" fill="#0f172a" font-size="11" font-family="ui-monospace, Consolas, monospace">db.internal  A  10.0.1.5</text>
+<circle cx="196" cy="60" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="196" y="65" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<rect x="250" y="40" width="370" height="150" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="264" y="62" class="f-b" fill="#0f172a" font-size="14" font-weight="700">자바 앱</text>
+<rect x="264" y="76" width="160" height="96" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="344.0" y="121.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">설정 파일</text>
+<text x="344.0" y="141.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">url: db.internal</text>
+<circle cx="410" cy="90" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="410" y="95" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<rect x="440" y="76" width="166" height="96" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="523.0" y="121.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">JVM</text>
+<text x="523.0" y="141.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">DNS 캐시 · 커넥션 풀</text>
+<circle cx="596" cy="90" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="596" y="95" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<path d="M264 140 C230 140 220 120 220 110" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#dns-adv-prac-map-head)"/>
+<text x="120" y="172" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">이름을 묻는다</text>
+<rect x="330" y="220" width="290" height="80" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="475.0" y="257.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">업체 서버</text>
+<text x="475.0" y="277.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">shop-123.host.example</text>
+<rect x="16" y="220" width="220" height="80" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="126.0" y="257.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">내 이름</text>
+<text x="126.0" y="277.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">shop.example.com</text>
+<path d="M240 260 H324" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#dns-adv-prac-map-head)"/>
+<text x="282" y="250" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">CNAME</text>
+<circle cx="282" cy="284" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="282" y="289" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<circle cx="34" cy="331" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="336" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="54" y="336" class="f-t" fill="#0f172a" font-size="13">레코드 TTL을 몇 초로 둘지</text>
+<circle cx="334" cy="331" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="336" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="354" y="336" class="f-t" fill="#0f172a" font-size="13">설정에 IP를 적을지 이름을 적을지</text>
+<circle cx="34" cy="357" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="362" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="54" y="362" class="f-t" fill="#0f172a" font-size="13">업체 서버에 CNAME으로 붙일지</text>
+<circle cx="334" cy="357" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="362" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<text x="354" y="362" class="f-t" fill="#0f172a" font-size="13">JVM DNS 캐시와 연결 최대 수명</text>
+</svg>

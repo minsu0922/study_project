@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="실무 지도. 브라우저 보관함의 쿠키 한 줄은 이름·값·도메인·경로 칸으로 나뉜다. 이름 칸에는 ③ 남과 겹치지 않는 이름이, 값 칸에는 ④ 로그인 쿠키에 번호만 담을지와 ⑤ URL 인코딩, ⑥ 서명만 할지 서버에 둘지가, 도메인 칸에는 ② 하위 사이트끼리 나눌지가, 맡기는 응답과 지우는 응답에는 ① 같은 범위를 쓰는지가 있다">
+<defs><marker id="cookie-adv-prac-map-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="34" class="f-b" fill="#0f172a" font-size="14" font-weight="700">브라우저 보관함의 쿠키 한 줄</text>
+<rect x="16" y="50" width="130" height="34" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="28" y="72" class="f-b" fill="#0f172a" font-size="13" font-weight="700">이름</text>
+<rect x="16" y="86" width="130" height="40" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="28" y="111" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">shop_lang</text>
+<rect x="150" y="50" width="220" height="34" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="162" y="72" class="f-b" fill="#0f172a" font-size="13" font-weight="700">값</text>
+<rect x="150" y="86" width="220" height="40" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="162" y="111" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">ko · 번호 · 서명</text>
+<rect x="374" y="50" width="140" height="34" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="386" y="72" class="f-b" fill="#0f172a" font-size="13" font-weight="700">도메인</text>
+<rect x="374" y="86" width="140" height="40" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="386" y="111" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">example.com</text>
+<rect x="518" y="50" width="106" height="34" rx="4" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="530" y="72" class="f-b" fill="#0f172a" font-size="13" font-weight="700">경로</text>
+<rect x="518" y="86" width="106" height="40" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="530" y="111" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">/</text>
+<circle cx="116" cy="146" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="116" y="151" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<circle cx="200" cy="146" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="200" y="151" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<circle cx="260" cy="146" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="260" y="151" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<circle cx="320" cy="146" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="320" y="151" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">6</text>
+<circle cx="444" cy="146" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="444" y="151" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<rect x="16" y="190" width="280" height="70" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="156.0" y="222.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">맡기는 응답</text>
+<text x="156.0" y="242.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">Set-Cookie: …; Path=/</text>
+<rect x="344" y="190" width="280" height="70" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="484.0" y="222.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">지우는 응답</text>
+<text x="484.0" y="242.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">…; Max-Age=0; Path=/</text>
+<path d="M300 225 H340" class="f-line" fill="none" stroke="#0f172a" stroke-width="2.5"/>
+<circle cx="320" cy="225" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="320" y="230" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="320" y="280" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">같은 함수에서 만든다</text>
+<circle cx="34" cy="305" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="310" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="54" y="310" class="f-t" fill="#0f172a" font-size="13">맡기기와 지우기가 같은 범위</text>
+<circle cx="334" cy="305" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="310" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="354" y="310" class="f-t" fill="#0f172a" font-size="13">나눌 까닭이 없으면 호스트 전용</text>
+<circle cx="34" cy="331" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="336" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="54" y="336" class="f-t" fill="#0f172a" font-size="13">서비스 이름 붙이기 · __Host-</text>
+<circle cx="334" cy="331" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="336" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<text x="354" y="336" class="f-t" fill="#0f172a" font-size="13">로그인 쿠키에는 세션 번호만</text>
+<circle cx="34" cy="357" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="362" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<text x="54" y="362" class="f-t" fill="#0f172a" font-size="13">한글·기호는 URL 인코딩</text>
+<circle cx="334" cy="357" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="362" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">6</text>
+<text x="354" y="362" class="f-t" fill="#0f172a" font-size="13">한 번 쓸 값은 서명 말고 서버에</text>
+</svg>

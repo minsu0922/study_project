@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="실무 지도. 게이트웨이의 HTTP/2 클라이언트에는 ① 연결 수가, 그 앞의 로드 밸런서에는 ② 연결 단위로 나눌지 요청 단위로 나눌지가, 뒤쪽 서버에는 ③ 연결 최대 수명과 ④ 배포 때 GOAWAY가 있다. 손님 쪽 앞단에는 ⑤ HTTP/3를 HTTP/2와 함께 열지가, 앞단과 뒤쪽 사이에는 ⑥ 어느 판으로 이을지가 있다">
+<defs><marker id="httpver-adv-prac-map-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(16 70) scale(1.1)"><rect x="3" y="2" width="24" height="46" rx="5" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="7" y="8" width="16" height="30" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><circle cx="15" cy="43" r="2" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="33" y="140" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">손님</text>
+<rect x="70" y="60" width="120" height="70" rx="8" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="130.0" y="92.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">앞단</text>
+<text x="130.0" y="112.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">h3 · h2</text>
+<circle cx="130" cy="150" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="130" y="155" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<rect x="230" y="60" width="130" height="70" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="295.0" y="92.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">게이트웨이</text>
+<text x="295.0" y="112.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">HTTP/2 클라이언트</text>
+<circle cx="340" cy="150" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="340" y="155" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<path d="M50 95 H66" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#httpver-adv-prac-map-head)"/>
+<path d="M194 95 H226" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#httpver-adv-prac-map-head)"/>
+<circle cx="210" cy="150" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="210" y="155" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">6</text>
+<rect x="400" y="60" width="90" height="70" rx="8" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="445.0" y="92.0" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">LB</text>
+<text x="445.0" y="112.0" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">L4 · L7</text>
+<circle cx="445" cy="150" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="445" y="155" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<path d="M364 95 H396" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#httpver-adv-prac-map-head)"/>
+<g transform="translate(520 30) scale(0.7)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M494 95 L514 54" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#httpver-adv-prac-map-head)"/>
+<g transform="translate(520 90) scale(0.7)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M494 95 L514 114" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#httpver-adv-prac-map-head)"/>
+<g transform="translate(520 150) scale(0.7)"><rect x="4" y="2" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="12" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="25" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="35" r="3" class="f-dot" fill="#4f46e5"/><rect x="4" y="48" width="52" height="20" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><circle cx="46" cy="58" r="3" class="f-dot" fill="#4f46e5"/></g>
+<path d="M494 95 L514 174" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#httpver-adv-prac-map-head)"/>
+<circle cx="600" cy="70" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="600" y="75" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<circle cx="600" cy="130" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="600" y="135" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<text x="16" y="236" class="f-sm" fill="#556274" font-size="12">연결 하나가 몇 시간씩 산다 · 그 연결이 어디에 붙는지가 갈림길이다</text>
+<circle cx="34" cy="265" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="270" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="54" y="270" class="f-t" fill="#0f172a" font-size="13">동시 요청 ÷ 스트림 상한만큼 연결</text>
+<circle cx="334" cy="265" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="270" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="354" y="270" class="f-t" fill="#0f172a" font-size="13">HTTP/2면 요청 단위 L7</text>
+<circle cx="34" cy="291" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="296" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="54" y="296" class="f-t" fill="#0f172a" font-size="13">쏠리면 연결 최대 수명</text>
+<circle cx="334" cy="291" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="296" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<text x="354" y="296" class="f-t" fill="#0f172a" font-size="13">GOAWAY 뒤 받은 스트림까지 처리</text>
+<circle cx="34" cy="317" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="322" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<text x="54" y="322" class="f-t" fill="#0f172a" font-size="13">HTTP/3는 HTTP/2와 함께 연다</text>
+<circle cx="334" cy="317" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="322" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">6</text>
+<text x="354" y="322" class="f-t" fill="#0f172a" font-size="13">사설망 안쪽은 1.1 풀로도 충분</text>
+</svg>

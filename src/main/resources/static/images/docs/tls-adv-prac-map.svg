@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="실무 지도. 로드 밸런서에는 ① 인증서 만료 관리와 ② 체인 파일, ④ TLS를 끝낼 위치, ⑤ HSTS, ⑥ 0-RTT 허용 범위가 모여 있다. 앱이 사내 API를 부르는 자리에는 ③ 신뢰 저장소에 사내 뿌리 인증서를 더하는 일이 있다">
+<defs><marker id="tls-adv-prac-map-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<g transform="translate(20 80) scale(1.1)"><rect x="8" y="2" width="44" height="30" rx="3" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/><rect x="13" y="7" width="34" height="20" rx="1" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/><path d="M2 36 h56 l-4 6 h-48 z" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/></g>
+<text x="53" y="148" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">브라우저</text>
+<rect x="130" y="40" width="220" height="170" rx="8" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="240" y="64" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">로드 밸런서</text>
+<rect x="146" y="78" width="188" height="40" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="158" y="103" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">fullchain.pem · 만료일</text>
+<circle cx="316" cy="82" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="316" y="87" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<circle cx="316" cy="114" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="316" y="119" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="146" y="148" class="f-t" fill="#0f172a" font-size="13">TLS 종료 · HSTS · 0-RTT</text>
+<circle cx="170" cy="180" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="170" y="185" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<circle cx="220" cy="180" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="220" y="185" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<circle cx="270" cy="180" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="270" y="185" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">6</text>
+<g transform="translate(98 84) scale(1.0)"><path d="M4 9 V6 a5 5 0 0 1 10 0 V9" class="f-line" fill="none" stroke="#0f172a" stroke-width="2"/><rect x="1" y="9" width="16" height="12" rx="2" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/></g>
+<path d="M92 110 H126" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#tls-adv-prac-map-head)"/>
+<path d="M354 110 H400" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#tls-adv-prac-map-head)"/>
+<text x="378" y="100" class="f-bad" fill="#dc2626" font-size="12" font-weight="700" text-anchor="middle">평문</text>
+<rect x="406" y="40" width="214" height="170" rx="8" class="f-house" fill="#f1f5f9" stroke="#556274" stroke-width="1.5"/>
+<text x="420" y="64" class="f-b" fill="#0f172a" font-size="14" font-weight="700">앱 서버 · 자바</text>
+<rect x="420" y="120" width="186" height="44" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="432" y="147" class="f-t" fill="#0f172a" font-size="12">신뢰 저장소 + 사내 뿌리</text>
+<circle cx="596" cy="124" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="596" y="129" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="420" y="196" class="f-sm" fill="#556274" font-size="12">→ 사내 API 호출</text>
+<circle cx="34" cy="257" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="262" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">1</text>
+<text x="54" y="262" class="f-t" fill="#0f172a" font-size="13">자동 갱신 + 바깥에서 만료일 감시</text>
+<circle cx="334" cy="257" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="262" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">2</text>
+<text x="354" y="262" class="f-t" fill="#0f172a" font-size="13">중간 인증서까지 이은 체인 파일</text>
+<circle cx="34" cy="283" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="288" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">3</text>
+<text x="54" y="288" class="f-t" fill="#0f172a" font-size="13">검증은 두고 사내 뿌리만 더한다</text>
+<circle cx="334" cy="283" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="288" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">4</text>
+<text x="354" y="288" class="f-t" fill="#0f172a" font-size="13">앞단 종료면 X-Forwarded-Proto</text>
+<circle cx="34" cy="309" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="34" y="314" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">5</text>
+<text x="54" y="314" class="f-t" fill="#0f172a" font-size="13">하위 도메인 준비 뒤 HSTS</text>
+<circle cx="334" cy="309" r="13" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+<text x="334" y="314" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">6</text>
+<text x="354" y="314" class="f-t" fill="#0f172a" font-size="13">0-RTT는 다시 보내도 되는 요청만</text>
+</svg>
