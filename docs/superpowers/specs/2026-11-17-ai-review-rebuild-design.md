@@ -16,7 +16,7 @@
 | AI A: 보기만 보고 단서 찾기 | 코드의 길이 1.3배 규칙과 겹친다. 그 규칙에 걸린 문제만 A를 부른다 |
 | AI C: 다 푼 뒤 해설 대조·고친 문장 | 해설은 "정답과 반대로 말하는가"만 본다. 문서를 받지 않는다 |
 
-검수를 엮는 코드도 두 벌이다. 배치(`DraftGeneratorCli`)와 관리 화면(`LlmProblemService`)이 따로 엮어서, 문서 지적 연결이 관리 화면 경로에서 빠졌다.
+검수를 엮는 코드도 두 벌이다. 배치(`DraftGeneratorCli`)와 관리 화면(`LlmProblemService`)이 따로 엮어서 문서 지적 연결이 관리 화면 경로에서 빠졌다.
 
 사용자는 해설을 이 서비스의 핵심 가치로 본다. 그런데 지금은 해설을 깊게 보는 단계가 없다.
 
@@ -70,14 +70,14 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 // facts: 문서 파일에 실린 사실 검수 지적. 관리 화면 경로처럼 없으면 null
 ```
 
-관리 화면은 지금처럼 초안을 먼저 저장한다. 검수(30초~1분) 중에 앱이 꺼져도 요금을 낸 생성 결과가 남게 하려는 것이다. 검수가 끝나면 `Reviewed.problems`로 저장한 초안의 해설·오답 설명을 고쳐 다시 저장한다.
+관리 화면은 지금처럼 초안을 먼저 저장한다. 그래야 검수(30초~1분) 중에 앱이 꺼져도 요금을 낸 생성 결과가 남는다. 검수가 끝나면 `Reviewed.problems`로 저장한 초안의 해설·오답 설명을 고쳐 다시 저장한다.
 
 ### 1. 코드 검사
 
 | 구분 | 할 일 |
 |---|---|
 | 버리는 규칙(`ProblemItemRule.defectOf`) | 그대로 둔다 |
-| 경고 규칙 | 한 함수(`checksOf`)로 모은다. 생성 요약(`YieldReporter`)과 검수함이 같은 함수를 부른다 |
+| 경고 규칙 | 그대로 둔다. 생성 요약(`YieldReporter`)과 검수함(`checksOf`)이 이미 같은 함수(`qualityWarningsOf`)를 부른다 |
 | 해설 형식 | 새 `ExplanationFormRule`(A4·B1·B3·B5·C2·C4)이 맡는다. `ProblemItemRule`의 해설 길이·절 안내·오답 설명 길이 경고는 이것으로 옮긴다 |
 | 경고의 쓰임 | 편집 호출에 "코드가 찾은 문제"로 넘긴다. 편집이 고친 뒤 다시 돌려 사라졌는지 본다 |
 | 단서 경고 세 개 | 지운다. "정답이 가장 긴 보기(1.3배)", "정답이 질문을 되풀이함", 묶음의 "정답이 가장 긴 문항 몰림"이다. AI의 문장 비교·길이 판정과 같은 근거라 믿기 어렵다(사용자 결정, 2026-11-17). 생성 프롬프트의 보기 길이 지침은 둔다 |
@@ -86,7 +86,7 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 
 ### 2. 풀이 호출
 
-지금 B를 줄여 쓴다. 보기를 섞고, 정답 표시와 해설을 가리고, 근거 문서를 준다. 사고 과정(thinking)을 켠다.
+지금 B를 줄여 쓴다. 보기를 섞고 정답 표시와 해설을 가리고 근거 문서를 준다. 사고 과정(thinking)을 켠다.
 
 | 칸 | 뜻 | 지금 B와 견주면 |
 |---|---|---|
@@ -178,7 +178,7 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 
 ## 재기
 
-병합 전에 `evalProblemReview`로 잰다. 작업은 작업용 브랜치에서 하고, 문턱을 넘으면 main에 합친다. 측정하지 않은 검수가 매일 배치에서 돌지 않게 하려는 것이다.
+병합 전에 `evalProblemReview`로 잰다. 작업은 작업용 브랜치에서 하고 문턱을 넘으면 main에 합친다. 그래야 측정하지 않은 검수가 매일 배치에서 돌지 않는다.
 
 1. 지금 표본(`eval-samples/problem-review.json`)으로 정답 결함 적발률이 지금(5/7) 아래로 떨어지지 않는지 본다.
 2. 해설 결함을 심은 표본을 더한다. 기준마다 1~2개, 멀쩡한 문제 10개를 섞는다.
@@ -200,3 +200,38 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 - 풀이·편집 응답의 필드 이름과 순서. 이유를 먼저, 결론을 나중에 쓰는 지금 관례를 따른다.
 - `ExplanationFormRule`의 정확한 문자열 규칙. 654문제 측정으로 다듬는다.
 - 검수함에서 옛 글과 새 글을 나란히 보여 주는 화면 모양.
+
+<!-- HUMANIZE-SUMMARY v1.6.1
+run_id: 2026-11-17-001-7b8b
+metrics:
+  char_in: 7052
+  char_out: 7044
+  change_rate: 약 1% (자가 추정, 확정은 verify_change_rate.py)
+  self_check: 6/6
+  grade: B
+categories:  # before → after
+  C-11 연결어미 뒤 쉼표: 4 → 0
+  I-3 '~하려는 것이다' 결말: 2 → 0
+self_check:
+  - 고유명사·수치·인용·내용 앵커 100% 보존: ✅ (표·제목·코드 블록·인라인 코드·수치·경로 무수정, 표 행·목록 항목 수 동일)
+  - 변경률 30% 이하: ✅
+  - 장르 이탈 없음: ✅
+  - register 보존: ✅ (평서 '~다' 종결 유지)
+  - S1 잔존 0건: ✅
+  - 인공 표현 추가 없음: ✅
+highlights:
+  - id: I-3
+    before: "검수(30초~1분) 중에 앱이 꺼져도 요금을 낸 생성 결과가 남게 하려는 것이다."
+    after: "그래야 검수(30초~1분) 중에 앱이 꺼져도 요금을 낸 생성 결과가 남는다."
+  - id: I-3
+    before: "측정하지 않은 검수가 매일 배치에서 돌지 않게 하려는 것이다."
+    after: "그래야 측정하지 않은 검수가 매일 배치에서 돌지 않는다."
+  - id: C-11
+    before: "보기를 섞고, 정답 표시와 해설을 가리고, 근거 문서를 준다."
+    after: "보기를 섞고 정답 표시와 해설을 가리고 근거 문서를 준다."
+  - id: C-11
+    before: "따로 엮어서, 문서 지적 연결이 관리 화면 경로에서 빠졌다."
+    after: "따로 엮어서 문서 지적 연결이 관리 화면 경로에서 빠졌다."
+residual_findings: 표 안 문장(A-8 후보 '고쳐진', C-11 후보 쉼표)은 보존 지침에 따라 손대지 않음. lexical_diversity S1 트리거는 용어 반복이 의미상 필요한 설계 문서라 보존.
+grade_reason: "B — S1 0건, 자체검증 6항 통과. 원문이 이미 잘 쓴 글이라 보수 강도로 4곳만 손대 변경률이 A 하한(10%)에 못 미침."
+-->
