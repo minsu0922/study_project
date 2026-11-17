@@ -45,6 +45,44 @@ class ProblemReviewEvalCliTest {
     }
 
     @Test
+    @DisplayName("해설을 바꾸면 해설만 바뀐다")
+    void replacesExplanation() {
+        GeneratedProblemItem changed = ProblemReviewEvalCli.mutate(MC,
+                List.of(new Mutation(null, null, null, "새 해설", null, null)));
+
+        assertThat(changed.explanation()).isEqualTo("새 해설");
+        assertThat(changed.choices()).isEqualTo(MC.choices());
+    }
+
+    @Test
+    @DisplayName("오답 설명을 바꾸면 그 보기의 오답 설명만 바뀐다")
+    void replacesRationale() {
+        GeneratedProblemItem changed = ProblemReviewEvalCli.mutate(MC,
+                List.of(new Mutation(null, null, null, null, 2, "틀렸다")));
+
+        assertThat(changed.choices()).extracting(GeneratedChoice::rationale).containsExactly("", "", "틀렸다", "");
+        assertThat(changed.explanation()).isEqualTo("해설");
+    }
+
+    @Test
+    @DisplayName("묶음이 빼라고 적은 종류는 헛경보로 세지 않는다")
+    void ignoresListedTypes() {
+        Group g = new Group("g", "doc.json", "BEGINNER", Difficulty.BEGINNER, List.of(
+                new ProblemRef("b.json", 0, null, null, null)), List.of(FindingType.EXPLANATION_REWRITTEN));
+
+        GroupScore score = ProblemReviewEvalCli.score(g, List.of(new Finding(0, FindingType.EXPLANATION_REWRITTEN, "옛 해설")));
+
+        assertThat(score.falseAlarms()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("해설 형식 경고는 해설 고친 안 지적으로 옮긴다")
+    void mapsFormWarnings() {
+        assertThat(ProblemReviewEvalCli.ruleTypeOf("해설 형식 [B5] \"그래서\"로 시작하는 맺음 줄이 없음"))
+                .isEqualTo(FindingType.EXPLANATION_SUGGESTED);
+    }
+
+    @Test
     @DisplayName("심은 문제는 기대한 종류가 나와야 적발이고, 멀쩡한 문제의 지적은 헛경보 후보다")
     void scoresGroup() {
         Group g = new Group("g", "doc.json", "BEGINNER", Difficulty.BEGINNER, List.of(

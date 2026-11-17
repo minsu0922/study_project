@@ -203,4 +203,17 @@ class ProblemEditorTest {
         assertThat(ProblemEditor.PROMPT).contains("[해설]").contains("[오답 설명]").doesNotContain("[제목]");
         assertThat(ProblemSolver.PROMPT).contains("answerInQuestionQuote");
     }
+
+    @Test
+    @DisplayName("코드가 짧은 오답 설명을 찾았는데 편집이 고치지 않으면 고친 안 없이 지적한다")
+    void unfixedShortRationaleIsReported() {
+        List<GeneratedChoice> choices = new java.util.ArrayList<>(item(NEW).choices());
+        choices.set(3, new GeneratedChoice("도착 순서", false, "틀렸다."));
+        Shown s = new Shown(0, new GeneratedProblemItem("두 탭의 연결을 가르는 값은?", "", NEW, choices), List.of(0, 1, 2, 3));
+
+        assertThat(findings(s, edit("", List.of(), "", List.of(), "", ""), Map.of())).singleElement().satisfies(x -> {
+            assertThat(x.type()).isEqualTo(FindingType.EXPLANATION_SUGGESTED);
+            assertThat(x.message()).contains("C2");
+        });
+    }
 }

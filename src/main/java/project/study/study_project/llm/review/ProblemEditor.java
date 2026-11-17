@@ -185,6 +185,14 @@ public final class ProblemEditor {
                         new Suggestion(FixTarget.RATIONALE, idx, text)));
             }
         }
+        // 코드가 C2를 찾았는데 고친 뒤에도 남아 있으면 따로 알린다. 해설 지적에 섞이지 않는 기준이라 빠지기 쉽다
+        boolean rationaleStillShort = ExplanationFormRule.issuesOf(withExplanationAndChoices(item, item.explanation(), choices), slug, md)
+                .stream().anyMatch(i -> i.criterion().equals("C2"));
+        if (rationaleStillShort) {
+            out.add(new Finding(s.index(), FindingType.EXPLANATION_SUGGESTED,
+                    "오답 설명이 기준 C2에 걸렸지만 고친 글이 없습니다",
+                    form.stream().filter(i -> i.criterion().equals("C2")).map(FormIssue::message).findFirst().orElse(null)));
+        }
 
         String original = blankToEmpty(item.explanation()).strip();
         String rewritten = e.rewrittenExplanation() == null ? "" : e.rewrittenExplanation().strip();
