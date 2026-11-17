@@ -99,11 +99,8 @@ public final class ProblemReviewEvalCli {
 
     /** 규칙 경고를 AI 지적 종류로 옮긴다. 대응하는 AI 지적이 없는 경고(제목·해설 형식 등)는 null. */
     static FindingType ruleTypeOf(String warning) {
-        if (warning.startsWith("정답이 가장 긴 보기") || warning.contains("같은 문장을 되풀이함")) {
+        if (warning.contains("같은 문장을 되풀이함")) {
             return FindingType.CHOICE_CUE_LEAK;
-        }
-        if (warning.startsWith("정답 보기가 질문을")) {
-            return FindingType.QUESTION_REVEALS;
         }
         if (warning.startsWith("초급 지문이 김") || warning.startsWith("중급 지문이 김")
                 || warning.contains("에 열지 않은 형태") || warning.startsWith("상황 적용형이")) {

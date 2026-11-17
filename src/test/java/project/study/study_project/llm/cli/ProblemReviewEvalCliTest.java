@@ -78,10 +78,8 @@ class ProblemReviewEvalCliTest {
     @Test
     @DisplayName("규칙 경고를 같은 뜻의 AI 지적 종류로 옮기고, 대응이 없는 경고는 버린다")
     void mapsRuleWarningsToFindingTypes() {
-        assertThat(ProblemReviewEvalCli.ruleTypeOf("정답이 가장 긴 보기 (60자 vs 최단 30자, 2.00배 — 기준 1.5배 이하)"))
+        assertThat(ProblemReviewEvalCli.ruleTypeOf("보기 4개가 같은 문장을 되풀이함 (22자 \"x\")"))
                 .isEqualTo(FindingType.CHOICE_CUE_LEAK);
-        assertThat(ProblemReviewEvalCli.ruleTypeOf("정답 보기가 질문을 12자 되풀이함 (\"x\" — 오답은 2자)"))
-                .isEqualTo(FindingType.QUESTION_REVEALS);
         assertThat(ProblemReviewEvalCli.ruleTypeOf("초급 지문이 김 (150자, 기준 120자 — 상황 서술이 붙었을 수 있다)"))
                 .isEqualTo(FindingType.DIFFICULTY_MISMATCH);
         assertThat(ProblemReviewEvalCli.ruleTypeOf("제목 없음")).isNull();

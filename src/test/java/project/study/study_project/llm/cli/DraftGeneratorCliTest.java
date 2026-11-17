@@ -889,7 +889,7 @@ class DraftGeneratorCliTest {
         // 숫자를 직접 적지 않는다 — EXPLANATION_MIN을 옮긴 날 이 테스트가 함께 따라와야 한다.
         // 2026-08-27에 실제로 400→200으로 옮겼고, 박아 둔 "399자"가 그때 깨졌다.
         assertThat(yield.warnings())
-                .filteredOn(w -> w.contains("해설이 짧음"))
+                .filteredOn(w -> w.contains("[C4]"))
                 .singleElement().asString()
                 .contains("%d자".formatted(ProblemItemRule.EXPLANATION_MIN - 1));
     }
@@ -1113,60 +1113,6 @@ class DraftGeneratorCliTest {
     }
 
     /**
-     * <b>정답이 가장 긴 보기</b>인 상태. 실물 22문항 중 18개(82%)가 그랬다 —
-     * 균등하면 25%다. 그 상태면 학습자가 지문을 읽지 않고 제일 긴 보기만 골라도 맞는다.
-     *
-     * <p>정답이 4번에 한 번도 없던 사고와 같은 종류인데, 고칠 방법이 다르다.
-     * 위치는 내보낼 때 섞어서 없앴지만 <b>길이는 섞을 수 없다</b>.
-     */
-    @Test
-    @DisplayName("정답이 유독 길면 알린다 — 실물 82%가 그랬고, 길이는 섞어서 고칠 수 없다")
-    void warnsWhenTheCorrectChoiceIsTheLongest() {
-        List<GeneratedProblemItem> problems = List.of(withTitle(new GeneratedProblemItem(
-                "무엇인가?", "", goodExplanation(), List.of(
-                new GeneratedProblemItem.GeneratedChoice("가".repeat(60), true),
-                new GeneratedProblemItem.GeneratedChoice("나".repeat(30), false),
-                new GeneratedProblemItem.GeneratedChoice("다".repeat(32), false),
-                new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false)))));
-
-        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
-                .warnings()).singleElement().asString()
-                .contains("정답이 가장 긴 보기")
-                .as("몇 배인지 보여야 얼마나 줄일지 정해진다")
-                .contains("2.00배");
-    }
-
-    /**
-     * 문턱을 <b>둘 다</b> 넘어야 경고한다. 정답이 우연히 최장인 경우는 넷 중 하나꼴로 늘
-     * 생기므로 그것만으로 울리면 4분의 1이 헛울리고, 비율만 보면 오답이 유독 긴
-     * 멀쩡한 문제까지 걸린다.
-     */
-    @Test
-    @DisplayName("정답이 최장이어도 편차가 작으면 조용하다 — 넷 중 하나는 늘 최장이다")
-    void staysQuietWhenTheLongestAnswerIsOnlySlightlyLonger() {
-        List<GeneratedProblemItem> problems = List.of(withTitle(new GeneratedProblemItem(
-                "무엇인가?", "", goodExplanation(), List.of(
-                new GeneratedProblemItem.GeneratedChoice("가".repeat(44), true),  // 1.26배
-                new GeneratedProblemItem.GeneratedChoice("나".repeat(35), false),
-                new GeneratedProblemItem.GeneratedChoice("다".repeat(40), false),
-                new GeneratedProblemItem.GeneratedChoice("라".repeat(42), false)))));
-
-        assertThat(YieldReporter.checkYield(problems, 1, ProblemType.MULTIPLE_CHOICE, null)
-                .warnings()).isEmpty();
-
-        // 오답이 유독 긴 것은 찍히는 단서가 아니다 — 걸리면 안 된다.
-        List<GeneratedProblemItem> longDistractor = List.of(withTitle(new GeneratedProblemItem(
-                "무엇인가?", "", goodExplanation(), List.of(
-                new GeneratedProblemItem.GeneratedChoice("가".repeat(30), true),
-                new GeneratedProblemItem.GeneratedChoice("나".repeat(70), false),
-                new GeneratedProblemItem.GeneratedChoice("다".repeat(32), false),
-                new GeneratedProblemItem.GeneratedChoice("라".repeat(34), false)))));
-
-        assertThat(YieldReporter.checkYield(longDistractor, 1, ProblemType.MULTIPLE_CHOICE, null)
-                .warnings()).isEmpty();
-    }
-
-    /**
      * 지문·보기·해설은 화면에 <b>평문 그대로</b> 나간다({@code player.js}의 {@code escapeHtml}).
      * 백틱과 별표가 글자로 보인다. 문서 본문만 마크다운으로 렌더링되므로 헷갈리기 쉽다.
      */
@@ -1180,7 +1126,7 @@ class DraftGeneratorCliTest {
 
         // 해설의 줄바꿈·하이픈 목록은 CSS(white-space: pre-wrap)로 살아난다 — 막으면 안 된다.
         List<GeneratedProblemItem> withList = List.of(multipleChoice("무엇인가?",
-                goodExplanation() + "\n- 첫째 오답은 이런 오해다.\n- 둘째 오답은 저런 오해다."));
+                goodExplanation().replace("그래서", "- 첫째 오답은 이런 오해다.\n- 둘째 오답은 저런 오해다.\n그래서")));
         assertThat(YieldReporter.checkYield(withList, 1, ProblemType.MULTIPLE_CHOICE, null)
                 .warnings()).isEmpty();
     }
@@ -1480,12 +1426,14 @@ class DraftGeneratorCliTest {
      * {@code QUOTED_CHOICE_REFERENCE} 주석에 적혀 있고, 여기서 그 사실을 한 번 더 드러낸다.
      */
     private static String goodExplanation() {
-        String body = "정답인 이유는 원리가 이 상황에 그대로 적용되기 때문이다. "
-                + "\"오답 보기 하나\"는 두 개념을 뒤섞은 오해다. "
-                + "\"오답 보기 둘\"은 조건이 다른 경우를 옮겨 온 것이다. "
-                + "\"오답 보기 셋\"은 원인과 결과를 뒤집어 읽은 것이다. "
-                + "(문서의 '무엇인가' 절을 다시 읽어 보라) ";
-        return body + "해".repeat(ProblemItemRule.EXPLANATION_MIN + 20 - body.length());
+        // 해설 형식 검사(ExplanationFormRule)를 통과하는 꼴: 규칙 → 걸음 셋 → 그래서 → 절 안내
+        return """
+                규칙: 원리가 이 상황에 그대로 적용되면 그 원리가 가리키는 쪽이 답이다. 조건을 하나씩 짚어 본다.
+                첫 걸음: 지문의 조건을 원리에 넣어 본다. 조건이 원리의 전제와 맞는다.
+                둘째 걸음: 원리가 내놓는 결과를 적는다. 결과는 보기 하나와 같다.
+                셋째 걸음: 다른 보기의 결과와 견준다. 조건이 달라 그쪽 결과는 나오지 않는다.
+                그래서 원리가 가리키는 보기가 정답이다.
+                (문서의 '무엇인가' 절을 다시 읽어 보라)""";
     }
 
     /**

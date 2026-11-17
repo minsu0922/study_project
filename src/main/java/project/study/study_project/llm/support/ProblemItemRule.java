@@ -321,9 +321,8 @@ public final class ProblemItemRule {
     /**
      * 목록에서 가장 긴 것이 가장 짧은 것의 {@link #CHOICE_LENGTH_RATIO}배를 넘으면 그 사실을, 아니면 {@code null}.
      *
-     * <p>객관식의 {@link #choiceLengthBiasOf}와 <b>재는 것이 다르다</b>. 그쪽은 "정답이 가장 긴가"를
-     * 함께 보지만(정답에만 조건이 붙어 길어지는 성향), 짝짓기에는 정답 보기가 없어 볼 것이 없다.
-     * 남는 것은 길이 편차뿐이고, 그것만으로도 "유독 긴 하나부터 짝지어진다"는 요령이 생긴다.
+     * <p>짝짓기에는 정답 보기가 없어 길이 편차만 본다. 그것만으로도 "유독 긴 하나부터 짝지어진다"는
+     * 요령이 생긴다.
      */
     private static String lengthBiasOf(List<String> texts) {
         int longest = 0;
@@ -362,6 +361,19 @@ public final class ProblemItemRule {
     }
 
     /**
+     * 해설 형식 검사(ExplanationFormRule)를 경고 문구로 옮긴다. 근거 문서가 없으면 절 안내(A4)는 보지 않는다.
+     * 오답 설명이 하나도 없는 옛 초안은 C2를 달지 않는다 — 승인하면 화면이 통짜 해설로 그려 고칠 것이 없다.
+     */
+    private static List<String> formWarningsOf(GeneratedProblemItem item, boolean hasSourceDocument) {
+        boolean anyRationale = safeChoices(item).stream().anyMatch(c -> !c.correct() && !isBlank(c.rationale()));
+        return ExplanationFormRule.issuesOf(item, null, null).stream()
+                .filter(i -> hasSourceDocument || !i.criterion().equals("A4"))
+                .filter(i -> anyRationale || !i.criterion().equals("C2"))
+                .map(i -> "해설 형식 [%s] %s".formatted(i.criterion(), i.message()))
+                .toList();
+    }
+
+    /**
      * 오답마다 설명이 붙었는가 — <b>2026-08-27에 대리 지표를 버리고 실물을 세게 됐다.</b>
      *
      * <p>전에는 해설 안의 큰따옴표 인용 개수를 세어 "해설이 짚은 오답이 적음"을 알렸다
@@ -393,33 +405,7 @@ public final class ProblemItemRule {
         }
 
         List<String> warnings = new ArrayList<>();
-        long wrong = choices.stream().filter(c -> !c.correct()).count();
-        long explained = choices.stream()
-                .filter(c -> !c.correct() && !isBlank(c.rationale()))
-                .count();
-
-        // 하나도 없는 것은 <경고하지 않는다>. 처음에는 "옛 형식입니다"라고 알리게 만들었다가
-        // 되돌렸다 — 이 필드가 생기기 전에 만들어진 초안은 전부 여기 걸리는데, 검수자가 할 수
-        // 있는 일이 없다(승인하면 화면이 알아서 통짜 해설로 그린다). 고칠 것이 없는데 뜨는
-        // 경고는 그 목록 전체를 안 보게 만든다. 이 저장소가 여러 번 확인한 실패 방식이다.
-        //
-        // <일부만 채워진 것>은 다르다. 화면이 새 형식으로 판정해 오답 분석 칸을 그리는데
-        // 한 자리가 비어 나온다. 승인 전에 사람이 한 줄 채워야 하고, 그건 사람만 할 수 있다.
-        if (explained > 0 && explained < wrong) {
-            warnings.add("오답 설명이 빠진 보기가 있음 (%d개 중 %d개만 채워짐 — 화면에 빈 칸이 생긴다)"
-                    .formatted(wrong, explained));
-        }
-
-        // 채워졌더라도 한 마디로 때운 것은 없는 것과 같다 — RATIONALE_MIN 주석 참고.
-        long tooShort = choices.stream()
-                .filter(c -> !c.correct() && !isBlank(c.rationale()))
-                .filter(c -> c.rationale().trim().length() < RATIONALE_MIN)
-                .count();
-        if (tooShort > 0) {
-            warnings.add("오답 설명이 너무 짧음 (%d개가 %d자 미만 — 어떤 오해인지가 안 들어간다)"
-                    .formatted(tooShort, RATIONALE_MIN));
-        }
-
+        // 빠지거나 짧은 오답 설명은 해설 형식 검사(C2)가 본다 — formWarningsOf
         if (choices.stream().anyMatch(c -> c.correct() && !isBlank(c.rationale()))) {
             warnings.add("정답 보기에 오답 설명이 붙음 (저장할 때 버려진다 — 근거는 해설에 써야 한다)");
         }
@@ -711,20 +697,6 @@ public final class ProblemItemRule {
     public static final double CHOICE_LENGTH_RATIO = 1.5;
 
     /**
-     * 한 배치에서 정답이 <b>가장 긴 보기</b>인 문항이 이만큼 모여야 쏠림으로 본다 — 2026-10-10 신설.
-     * 과반이라는 조건이 함께 붙는다({@link #correctLongestSkewOf}).
-     *
-     * <p><b>왜 항목별 검사로는 부족했나.</b> 승인된 객관식 170문제를 재니 정답이 최장인 것이
-     * 95개(56%)였는데, 위 {@link #CHOICE_LENGTH_RATIO} 경고가 잡은 것은 27개뿐이었다. 나머지는
-     * 1.5배 안에서 조금씩만 길었다 — 정답 평균이 오답 평균의 1.16배다. 한 문제만 보면 우연
-     * (넷 중 하나)과 구별이 안 되므로, 여럿을 모아 세는 수밖에 없다.
-     *
-     * <p><b>3인 이유.</b> 우연이면 문항마다 1/4이다. 고급은 한 번에 셋을 만드는데 그중 둘이
-     * 최장일 확률은 16%라 자주 헛울리고, 셋 다일 확률은 2%다. 다섯 중 셋은 10%, 일곱 중 넷은 7%.
-     */
-    static final int CORRECT_LONGEST_MIN = 3;
-
-    /**
      * <b>모든 보기</b>가 공유하는 구절이 이만큼(공백 뺀 글자 수)을 넘으면 되풀이로 본다 — 2026-09-08 신설.
      *
      * <p><b>10인 근거는 실측이다.</b> 지금까지 만든 객관식 초안 128개에서 "네 보기 전부에 들어 있는
@@ -743,8 +715,7 @@ public final class ProblemItemRule {
      * 공유 구절이 <b>가장 긴 보기</b>의 이 비율을 넘어야 되풀이로 본다.
      *
      * <p><b>왜 길이만으로 재지 않는가.</b> 보기가 긴 고급 문제는 80자짜리 네 개가 12자쯤을 자연스럽게
-     * 나눠 가진다. 그건 주제를 공유하는 것뿐이라 결함이 아니다({@link #GIVEAWAY_MARGIN}이 정답 겹침을
-     * 오답 겹침과 견주는 것과 같은 이유 — <b>절대량이 아니라 비중</b>이 문제다).
+     * 나눠 가진다. 그건 주제를 공유하는 것뿐이라 결함이 아니다 — <b>절대량이 아니라 비중</b>이 문제다.
      * 잡으려는 것은 보기가 <b>사실상 한 문장</b>이고 앞의 용어만 갈리는 모양이라, 공유 구절이
      * 보기 대부분을 차지해야 한다.
      *
@@ -756,58 +727,6 @@ public final class ProblemItemRule {
      * 문장"일 때만 걸린다 — 그게 실제로 문제가 되는 상태다.
      */
     public static final double SHARED_CHOICE_MIN_SHARE = 0.5;
-
-    /**
-     * 정답 보기가 질문과 이만큼(공백 뺀 글자 수) 이어 붙게 겹치면 <b>구절을 옮겨 적은 것</b>으로 본다.
-     *
-     * <p><b>12인 이유는 실측이다.</b> 승인된 객관식 81개를 재 보니 정답 겹침이 12자 이상이면서
-     * 오답보다 4자 넘게 앞선 것이 4개(5%)였고, 그중 둘이 사람이 읽고 "답이 보인다"고 지적한
-     * 문제였다(BSS 14자, 경쟁 상태 27자). 문턱을 8자로 내리면 "Content-Type"처럼 <b>고유명사가
-     * 길어서</b> 겹치는 정상 문제가 함께 걸린다.
-     *
-     * <p>한국어 12자는 "초기값이 없는 전역·정적 변수가" 정도다 — 우연히 같아지는 길이가 아니다.
-     */
-    public static final int GIVEAWAY_MIN_RUN = 12;
-
-    /**
-     * 정답 겹침이 오답 겹침보다 이만큼 앞서야 경고한다.
-     *
-     * <p><b>왜 차이를 보는가.</b> 질문이 "TCP 혼잡 제어에서 ..."로 시작하면 네 보기 모두 그 말을
-     * 담는 것이 정상이다. 그건 결함이 아니라 주제를 공유하는 것뿐이다. 문자열만 견줘 답이
-     * 좁혀지는 것은 <b>정답만</b> 유독 겹칠 때이고, 실측에서 "Write-Through"가 정확히 그 경우였다
-     * (정답 13자 겹침 / 오답도 13자 → 걸리지 않는다, 걸려서도 안 된다).
-     */
-    public static final int GIVEAWAY_MARGIN = 4;
-
-    /**
-     * 네 보기가 모두 {@code 용어 — 뜻} 꼴일 때 쓰는 겹침 문턱. 일반 문턱({@link #GIVEAWAY_MIN_RUN})의 절반이다.
-     *
-     * <p><b>왜 이 꼴만 따로 낮추는가 (2026-09-25).</b> 이 꼴에서 결함은 늘 같은 모양이다 — 질문이
-     * 뜻을 풀어 써 놓고 "용어와 그 뜻"을 물으면, 정답 보기의 뜻 부분이 질문을 <b>말만 바꿔</b>
-     * 되받는다. 모델은 구절을 통째로 옮기지 않고 "컴파일 도중에 만들어 내는"을 "컴파일 도중에
-     * 끼어들어 … 만들어 내는"처럼 쪼개 쓰므로, 이어 붙은 겹침은 6~10자에 그친다. 2026-09-24 배치의
-     * 다섯 문제가 전부 이 모양으로 12자 문턱 아래를 지나갔고, 사람이 다섯 번 같은 사유로 거절했다.
-     *
-     * <p><b>왜 전체 문턱을 내리지 않는가.</b> 일반 문장 보기에서 8자대 겹침은 "Content-Type"·
-     * "HTML 이스케이프"처럼 <b>고유명사가 길어서</b> 생기는 정상 겹침이다(둘 다 승인된 실물).
-     * {@code 용어 — 뜻} 꼴에서는 고유명사가 대시 앞 용어 자리에 들어가, 질문과 겹칠 일이 거의 없다.
-     *
-     * <p><b>실측(초안 179개).</b> 이 꼴 31개 중 6자·차이 3자에 걸리는 것이 11개(전체의 6%)다.
-     * 거절·지적된 실물 8개가 전부 들어가고, 나머지 셋(프로그램 카운터·파일 디스크립터·캐시 TTL)도
-     * 질문의 뜻 풀이를 정답이 되받는 같은 모양이다. 걸리면 안 되는 쪽 중 가장 가까운 것은
-     * "브라우저 파싱 부품"(7자, 차이 2자)이라 {@link #TERM_PAIR_GIVEAWAY_MARGIN}의 여유는 1자뿐이다 —
-     * 문턱을 고칠 때는 이 둘을 다시 재라.
-     */
-    public static final int TERM_PAIR_GIVEAWAY_MIN_RUN = 6;
-
-    /**
-     * {@code 용어 — 뜻} 꼴에서 정답 겹침이 오답 겹침보다 앞서야 하는 차이.
-     *
-     * <p>일반 문턱(4)보다 1 낮은 이유: 2026-09-24 "동적 쿼리" 문제는 정답 7자 / 오답 4자로 차이가 3이었다.
-     * 오답("바인딩 파라미터 — … 실행할 때 따로 넘기는")이 "실행할 때"를 우연히 나눠 가졌을 뿐, 정답만
-     * 질문의 뜻 풀이를 되받는 결함은 그대로였다.
-     */
-    public static final int TERM_PAIR_GIVEAWAY_MARGIN = 3;
 
     /**
      * 지문·보기·해설에 섞인 마크다운 문법.
@@ -995,29 +914,14 @@ public final class ProblemItemRule {
         String explanation = item.explanation();
         if (isBlank(explanation)) {
             warnings.add("해설 없음");
-        } else {
-            int length = explanation.trim().length();
-            if (length < EXPLANATION_MIN) {
-                warnings.add("해설이 짧음 (%d자, 기준 %d자)".formatted(length, EXPLANATION_MIN));
-            } else if (length > EXPLANATION_MAX) {
-                warnings.add("해설이 김 (%d자, 기준 %d자)".formatted(length, EXPLANATION_MAX));
-            }
-            // 보기 번호 지칭은 2026-08-25에 defectOf(차단)로 올라갔다 — 여기서 다시 세지 않는다.
-            // 두 곳에서 보면 차단으로 버려진 항목이 경고 목록에도 뜨거나, 문구가 갈라진다.
-
-            // 근거 문서로 돌아갈 한 줄이 있는가 — 문서를 근거로 만든 문제에만 해당한다.
-            // 학습자가 틀린 뒤 돌아갈 유일한 입구라, 빠지면 해설이 그 자리에서 끝나 버린다.
-            if (hasSourceDocument && contextOf(DOCUMENT_SECTION_HINT, explanation) == null) {
-                warnings.add("해설에 다시 읽을 문서 절이 없음 (틀린 학습자가 돌아갈 곳이 사라진다)");
-            } else if (hasSourceDocument && difficulty == Difficulty.INTERMEDIATE
-                    && !explanation.contains("입문편") && !explanation.contains("심화편")) {
-                // 2026-09-17: 중급은 두 편에서 캔다(DocumentEditionRule.bodyFor). 절 이름만 적으면
-                // 어느 글을 열지 정할 수 없다 — '## 용어 한눈에'는 두 편에 다 있고, 근거 문서
-                // 링크는 한 편으로만 간다. 09-17 실물에서 입문편 절을 가리킨 문제의 링크가
-                // 심화편으로 가 있었다. 편만 적혀 있으면 그 자리에서 알아볼 수 있다.
-                warnings.add("해설이 편을 밝히지 않음 (중급은 두 편에서 캔다 — \"입문편의 ○○ 절\"처럼 적는다)");
-            }
+        } else if (hasSourceDocument && difficulty == Difficulty.INTERMEDIATE
+                && contextOf(DOCUMENT_SECTION_HINT, explanation) != null
+                && !explanation.contains("입문편") && !explanation.contains("심화편")) {
+            // 2026-09-17: 중급은 두 편에서 캔다(DocumentEditionRule.bodyFor). 절 이름만 적으면
+            // 어느 글을 열지 정할 수 없다 — '## 용어 한눈에'는 두 편에 다 있다.
+            warnings.add("해설이 편을 밝히지 않음 (중급은 두 편에서 캔다 — \"입문편의 ○○ 절\"처럼 적는다)");
         }
+        warnings.addAll(formWarningsOf(item, hasSourceDocument));
 
         warnings.addAll(rationaleWarningsOf(item));
 
@@ -1083,18 +987,7 @@ public final class ProblemItemRule {
                     .formatted(choices.size(), EXPECTED_CHOICES, EXPECTED_CHOICES));
         }
 
-        String lengthBias = choiceLengthBiasOf(item);
-        if (lengthBias != null) {
-            warnings.add(lengthBias);
-        }
-
-        String giveaway = answerGiveawayOf(item);
-        if (giveaway != null) {
-            warnings.add(giveaway);
-        }
-
-        // 보기끼리 같은 문장을 되풀이하는가 — 위 giveaway와 재는 축이 다르다(질문 대 정답 vs 보기끼리).
-        // 네 보기가 <똑같이> 겹치면 giveaway는 차이가 0이라 조용하다. sharedChoiceTextOf 주석 참고.
+        // 보기끼리 같은 문장을 되풀이하는가 — sharedChoiceTextOf 주석 참고.
         String shared = sharedChoiceTextOf(item);
         if (shared != null) {
             warnings.add(shared);
@@ -1250,14 +1143,6 @@ public final class ProblemItemRule {
             }
         }
 
-        // 정답 최장 쏠림 — 항목별 경고가 못 잡는 "조금씩만 긴" 정답을 배치로 모아 센다.
-        if (type == null || type == ProblemType.MULTIPLE_CHOICE) {
-            String skew = correctLongestSkewOf(items);
-            if (skew != null) {
-                warnings.add(skew);
-            }
-        }
-
         // 마지막 물음이 겹치는가 — 난이도와 무관하다(초급도 "~은?"이 반복될 수 있다).
         String repeated = repeatedQuestionTailOf(items);
         if (repeated != null) {
@@ -1265,46 +1150,6 @@ public final class ProblemItemRule {
                     .formatted(repeated));
         }
         return warnings;
-    }
-
-    /**
-     * 정답이 <b>혼자 가장 긴</b> 문항이 배치의 과반이면서 {@link #CORRECT_LONGEST_MIN}개 이상이면
-     * 그 사실을, 아니면 {@code null}.
-     *
-     * <p>정답 보기가 정확히 하나인 항목만 센다 — 유형을 모르고 부른 경우에도 짝짓기·순서 배열이
-     * 섞여 들지 않게 한다. 오답과 길이가 같으면 세지 않는다. 그때는 "제일 긴 것"이 둘이라
-     * 길이만으로는 답이 하나로 좁혀지지 않는다.
-     */
-    private static String correctLongestSkewOf(List<GeneratedProblemItem> items) {
-        int measured = 0;
-        List<Integer> skewed = new ArrayList<>();
-        for (int i = 0; i < items.size(); i++) {
-            List<GeneratedProblemItem.GeneratedChoice> choices = safeChoices(items.get(i));
-            if (choices.size() < MIN_CHOICES
-                    || choices.stream().filter(GeneratedProblemItem.GeneratedChoice::correct).count() != 1) {
-                continue;
-            }
-            measured++;
-            int correct = 0;
-            int longestWrong = 0;
-            for (GeneratedProblemItem.GeneratedChoice choice : choices) {
-                int length = choice.text() == null ? 0 : choice.text().trim().length();
-                if (choice.correct()) {
-                    correct = length;
-                } else {
-                    longestWrong = Math.max(longestWrong, length);
-                }
-            }
-            if (correct > longestWrong) {
-                skewed.add(i + 1);
-            }
-        }
-        if (skewed.size() < CORRECT_LONGEST_MIN || skewed.size() * 2 <= measured) {
-            return null;
-        }
-        String positions = String.join("·", skewed.stream().map(String::valueOf).toList());
-        return "정답이 가장 긴 문항이 %d개 중 %d개 (%s번 — 우연이면 넷 중 하나다. 긴 보기만 골라도 맞는다)"
-                .formatted(measured, skewed.size(), positions);
     }
 
     /**
@@ -1433,64 +1278,6 @@ public final class ProblemItemRule {
     }
 
     /**
-     * 정답 보기가 <b>질문 문장을 그대로 되풀이하는가</b> — 되풀이하면 그 사실을, 아니면 {@code null}.
-     *
-     * <h2>왜 필요한가 (2026-09-04)</h2>
-     *
-     * <p>짝짓기에는 이미 같은 검사가 있다({@code typeWarningsOf}의 "오른쪽에 왼쪽 용어가 그대로
-     * 있음"). 객관식에만 없었고, 그래서 <b>질문을 27자 통째로 복사한 정답 보기</b>가 검수를
-     * 그냥 통과했다(실물: "두 스레드가 같은 자리를 동시에 읽고 쓰는 순서에 따라 결과가 달라지는
-     * 상황을 가리키는 용어는?" → 정답 "경쟁 상태 — 두 스레드가 같은 자리를 동시에 읽고 쓰는
-     * 순서에 따라 결과가 달라진다"). 아는 것이 없어도 <b>가장 비슷한 문장을 고르면</b> 맞는다.
-     *
-     * <h2>왜 어절이 아니라 부분문자열인가</h2>
-     *
-     * <p>어절 겹침으로 재면 "스레드"·"메모리" 같은 낱말이 겹치는 정상 문제까지 걸린다. 문제는
-     * 낱말이 아니라 <b>구절이 통째로 옮겨진 것</b>이라, 가장 긴 공통 부분문자열이 실제로 재려는
-     * 것과 맞는다. 공백을 지우고 재는 이유는 띄어쓰기만 바꿔도 피해 가는 검사를 막기 위해서다.
-     *
-     * <h2>왜 오답과 견주는가</h2>
-     *
-     * <p>정답만 보면 안 된다. 질문이 "TCP 혼잡 제어에서 ..."로 시작하면 <b>네 보기 모두</b>
-     * "TCP 혼잡 제어"를 담는 것이 정상이고, 그건 결함이 아니다. 결함은 <b>정답만</b> 길게
-     * 겹치는 경우다 — 그때만 문자열 비교로 답이 좁혀진다. 그래서 차이를 본다.
-     *
-     * <p>차단이 아니라 경고인 이유는 이 절의 다른 규칙과 같다. 정의를 묻는 초급 문제는 질문과
-     * 정답이 어느 정도 겹칠 수밖에 없고, 어디까지가 과한지는 사람이 볼 몫이다.
-     */
-    private static String answerGiveawayOf(GeneratedProblemItem item) {
-        List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
-        if (choices == null || choices.size() < MIN_CHOICES || isBlank(item.question())) {
-            return null; // 객관식이 아니거나 이미 규약 위반 — defectOf가 볼 몫이다
-        }
-
-        String question = squeeze(item.question());
-        int correctOverlap = -1;
-        int wrongOverlap = 0;
-        String fragment = "";
-        for (GeneratedProblemItem.GeneratedChoice choice : choices) {
-            String text = squeeze(choice.text());
-            int overlap = longestCommonRun(question, text);
-            if (choice.correct()) {
-                correctOverlap = overlap;
-                fragment = longestCommonFragment(question, text);
-            } else {
-                wrongOverlap = Math.max(wrongOverlap, overlap);
-            }
-        }
-        // "용어 — 뜻" 꼴은 문턱을 따로 쓴다 — 말만 바꿔 되받는 겹침이 짧게 끊겨 나오기 때문이다
-        // (TERM_PAIR_GIVEAWAY_MIN_RUN 주석의 실측 참고).
-        boolean termPairs = choices.stream().allMatch(c -> c.text() != null && c.text().contains("—"));
-        int minRun = termPairs ? TERM_PAIR_GIVEAWAY_MIN_RUN : GIVEAWAY_MIN_RUN;
-        int margin = termPairs ? TERM_PAIR_GIVEAWAY_MARGIN : GIVEAWAY_MARGIN;
-        if (correctOverlap < minRun || correctOverlap - wrongOverlap < margin) {
-            return null;
-        }
-        return "정답 보기가 질문을 %d자 되풀이함 (\"%s\" — 오답은 %d자, 문장만 견줘도 답이 좁혀진다)"
-                .formatted(correctOverlap, snippetOf(fragment), wrongOverlap);
-    }
-
-    /**
      * <b>보기 전부가 같은 문장을 되풀이하는가</b> — 되풀이하면 그 사실을, 아니면 {@code null}.
      *
      * <h2>왜 필요한가 (2026-09-08 실물)</h2>
@@ -1507,13 +1294,6 @@ public final class ProblemItemRule {
      * 오답 설명이 보기와 <b>어긋난다</b>는 점이다 — 보기는 "큐가 후입선출"이라고 적어 놓고, 그 설명은
      * "먼저 넣은 것을 먼저 꺼내는 것이 큐"라고 말한다. 학습자는 둘 중 어느 쪽을 믿을지 알 수 없다.
      *
-     * <h2>왜 기존 검사가 못 잡았나</h2>
-     *
-     * <p>{@link #answerGiveawayOf}가 겹침을 재긴 한다. 하지만 그것은 <b>정답만 유독</b> 질문과
-     * 겹치는 경우를 찾는다({@link #GIVEAWAY_MARGIN}). 이 문제는 네 보기가 <b>똑같이</b> 겹쳐서
-     * 차이가 0이라 조용히 통과했다 — 그 검사가 "주제를 공유하는 것은 정상"이라며 일부러 넘기는
-     * 모양과 구분이 안 됐다. 재는 축이 다르다: 그쪽은 <b>질문 대 정답</b>, 여기는 <b>보기끼리</b>다.
-     *
      * <p>짝짓기에는 같은 취지의 검사가 이미 있다({@code typeWarningsOf}의 "오른쪽이 겹친다" 차단).
      * 객관식에서 보기를 {@code 용어 — 뜻} 꼴로 쓰면 사실상 같은 사고인데 그쪽만 비어 있었다.
      *
@@ -1526,8 +1306,7 @@ public final class ProblemItemRule {
      *
      * <p><b>정답이 정확히 하나일 때만 본다.</b> 순서 배열은 항목들이 "~한다"로 끝나 구절을 나눠
      * 가지는 것이 정상이고, 짝짓기는 왼쪽이 용어라 애초에 겹칠 것이 없다. 유형 값을 못 믿는
-     * 경로가 있어({@code type}이 {@code null}로 들어오는 옛 초안) 유형 대신 <b>모양</b>으로 가른다 —
-     * {@link #choiceLengthBiasOf}·{@link #answerGiveawayOf}가 쓰는 방법과 같다.
+     * 경로가 있어({@code type}이 {@code null}로 들어오는 옛 초안) 유형 대신 <b>모양</b>으로 가른다.
      */
     private static String sharedChoiceTextOf(GeneratedProblemItem item) {
         List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
@@ -1591,11 +1370,6 @@ public final class ProblemItemRule {
         return text == null ? "" : text.replaceAll("\\s+", "");
     }
 
-    /** 가장 긴 공통 부분문자열의 <b>길이</b>. */
-    private static int longestCommonRun(String a, String b) {
-        return longestCommonFragment(a, b).length();
-    }
-
     /**
      * 가장 긴 공통 부분문자열 자체 — 경고 메시지에 <b>무엇이 겹쳤는지</b>를 실으려고 문자열로 돌려준다.
      *
@@ -1622,41 +1396,6 @@ public final class ProblemItemRule {
             previous = current;
         }
         return a.substring(endOfBest - best, endOfBest);
-    }
-
-    /**
-     * 정답이 가장 긴 보기이면서 길이 편차까지 큰가 — 자세한 배경은 {@link #CHOICE_LENGTH_RATIO}.
-     * 아니면 {@code null}.
-     */
-    private static String choiceLengthBiasOf(GeneratedProblemItem item) {
-        List<GeneratedProblemItem.GeneratedChoice> choices = item.choices();
-        if (choices == null || choices.size() < MIN_CHOICES) {
-            return null; // 객관식이 아니거나 이미 규약 위반 — defectOf가 볼 몫이다
-        }
-
-        int longest = 0;
-        int shortest = Integer.MAX_VALUE;
-        int correct = -1;
-        for (GeneratedProblemItem.GeneratedChoice choice : choices) {
-            int length = choice.text() == null ? 0 : choice.text().trim().length();
-            longest = Math.max(longest, length);
-            shortest = Math.min(shortest, length);
-            if (choice.correct()) {
-                correct = length;
-            }
-        }
-        if (shortest <= 0 || correct != longest) {
-            return null;
-        }
-
-        double ratio = (double) longest / shortest;
-        if (ratio <= CHOICE_LENGTH_RATIO) {
-            return null;
-        }
-        // 소수 둘째 자리까지 보여 준다. 한 자리면 86/57=1.508이 "1.5배 — 기준 1.5배"로 찍혀,
-        // 왜 걸렸는지 알 수 없는 경고가 된다(실물에서 실제로 그렇게 나왔다).
-        return "정답이 가장 긴 보기 (%d자 vs 최단 %d자, %.2f배 — 기준 %.1f배 이하)"
-                .formatted(longest, shortest, ratio, CHOICE_LENGTH_RATIO);
     }
 
     /** 화면에 글자로 보일 마크다운이 섞였는가 — 자세한 배경은 {@link #MARKDOWN_SYNTAX}. */
