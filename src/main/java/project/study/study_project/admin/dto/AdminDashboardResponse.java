@@ -41,8 +41,6 @@ public record AdminDashboardResponse(
      *
      * @param pendingProblemDrafts  검수 대기 문제 초안
      * @param pendingDocumentDrafts 검수 대기 문서 초안
-     * @param untitledProblems      목록 제목이 없는 문제 — 학습자 목록에 지문 조각이 뜬다
-     * @param missingRationale      오답 설명이 빠진 문제 — 틀려도 "왜 아닌지"가 안 뜬다
      * @param batchEnabled          일일 배치가 켜져 있는지. 꺼져 있으면 <b>초안이 안 들어오는
      *                              이유</b>가 이것인데, 지금까지 화면 어디에도 안 보였다
      * @param emptyCells            출제가 하나도 없는 (분야 × 난이도) 칸 수
@@ -57,8 +55,6 @@ public record AdminDashboardResponse(
     public record Todo(
             long pendingProblemDrafts,
             long pendingDocumentDrafts,
-            long untitledProblems,
-            long missingRationale,
             boolean batchEnabled,
             int emptyCells,
             int plannedCells

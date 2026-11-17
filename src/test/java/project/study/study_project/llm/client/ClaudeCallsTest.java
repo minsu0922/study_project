@@ -30,6 +30,12 @@ class ClaudeCallsTest {
         ClaudeCalls.resetForTest();
     }
 
+    /** 구조화 출력 견본. 제목 백필이 쓰던 모양을 그대로 옮겼다(2026-11-17 백필을 지우며 테스트로 내림) */
+    record GeneratedTitle(long problemId, String title) {
+        record Batch(java.util.List<GeneratedTitle> titles) {
+        }
+    }
+
     private static StructuredMessageCreateParams<GeneratedTitle.Batch> params() {
         return MessageCreateParams.builder()
                 .model("claude-opus-5")

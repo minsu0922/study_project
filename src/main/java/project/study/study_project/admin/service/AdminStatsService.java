@@ -140,8 +140,6 @@ public class AdminStatsService {
         var todo = new AdminDashboardResponse.Todo(
                 problemDraftRepository.countByStatus(DraftStatus.PENDING),
                 documentDraftRepository.countByStatus(DraftStatus.PENDING),
-                problemRepository.countByTitleIsNull(),
-                problemRepository.countWithMissingRationale(),
                 batchEnabled, emptyCells, plannedCells);
 
         return new AdminDashboardResponse(totals, matrix, domainStats, llmReview, todo);
