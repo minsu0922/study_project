@@ -319,7 +319,13 @@
         },
         {
           "batch": "generated/2026-10-28-subnet-adv.json",
-          "index": 0
+          "index": 0,
+          "note": "원래 결함 B5: \"그래서\" 맺음 줄이 없다. 2026-11-17 첫 측정에서 AI가 찾았고 규칙도 잡는다",
+          "expect": [
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
+          ]
         },
         {
           "batch": "generated/2026-10-28-subnet-adv.json",
