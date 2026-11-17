@@ -168,7 +168,7 @@ public final class ProblemReview {
         ANSWER_MISMATCH("정답 의심", Grade.DEFECT),
         OTHER_CORRECT("정답이 둘일 수 있음", Grade.DEFECT),
         CHOICE_CUE_LEAK("보기 단서 누설", Grade.POLISH),
-        QUESTION_REVEALS("질문이 답을 드러냄", Grade.POLISH),
+        QUESTION_REVEALS("질문에 정답이 적힘", Grade.POLISH),
         NO_SUPPORT("문서에 근거 없음", Grade.DEFECT),
         /** AI가 낸 지적이 아니다. 문서 사실 검수 지적과 근거 인용을 코드가 대조한다({@code FlaggedSourceRule}). */
         SOURCE_FLAGGED("근거 문단에 사실 지적", Grade.DEFECT),
