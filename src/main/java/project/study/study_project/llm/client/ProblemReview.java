@@ -173,6 +173,10 @@ public final class ProblemReview {
         /** AI가 낸 지적이 아니다. 문서 사실 검수 지적과 근거 인용을 코드가 대조한다({@code FlaggedSourceRule}). */
         SOURCE_FLAGGED("근거 문단에 사실 지적", Grade.DEFECT),
         EXPLANATION_MISMATCH("해설 어긋남", Grade.DEFECT),
+        /** 아래 셋은 편집 호출이 낸다. 고쳐 넣은 둘은 들여올 때 처리된 것으로 저장한다(옛 글은 근거에 있다) */
+        EXPLANATION_REWRITTEN("AI가 해설을 고침", Grade.POLISH),
+        RATIONALE_REWRITTEN("AI가 오답 설명을 고침", Grade.POLISH),
+        EXPLANATION_SUGGESTED("해설 고친 안", Grade.POLISH),
         /** 문제에 붙은 로그·표·그림이 사실과 어긋나거나 정답을 받치지 못한다. 틀린 그림은 학습자가 그대로 외운다. */
         EXHIBIT_MISMATCH("자료 어긋남", Grade.DEFECT),
         /** 아래 셋은 AI가 아니라 코드 문제의 실행 결과를 코드가 대조한다({@code CodeFactChecker}). */
