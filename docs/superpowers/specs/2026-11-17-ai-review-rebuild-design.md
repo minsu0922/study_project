@@ -80,6 +80,7 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 | 경고 규칙 | 한 함수(`checksOf`)로 모은다. 생성 요약(`YieldReporter`)과 검수함이 같은 함수를 부른다 |
 | 해설 형식 | 새 `ExplanationFormRule`(A4·B1·B3·B5·C2·C4)이 맡는다. `ProblemItemRule`의 해설 길이·절 안내·오답 설명 길이 경고는 이것으로 옮긴다 |
 | 경고의 쓰임 | 편집 호출에 "코드가 찾은 문제"로 넘긴다. 편집이 고친 뒤 다시 돌려 사라졌는지 본다 |
+| 단서 경고 세 개 | 지운다. "정답이 가장 긴 보기(1.3배)", "정답이 질문을 되풀이함", 묶음의 "정답이 가장 긴 문항 몰림"이다. AI의 문장 비교·길이 판정과 같은 근거라 믿기 어렵다(사용자 결정, 2026-11-17). 생성 프롬프트의 보기 길이 지침은 둔다 |
 
 해설 형식 규칙은 켜기 전에 승인된 문제 654개에 돌려 헛경보 비율을 잰다. 요금은 들지 않는다. 사람이 이미 통과시킨 해설을 절반쯤 건다면 해설이 아니라 규칙이 틀린 것이니, 규칙을 고친다.
 
@@ -92,10 +93,12 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 | `answerReason`, `chosenNo` | 직접 푼 이유와 고른 보기 | 그대로 |
 | `otherCorrectNo`, 이유 | 정답으로 방어할 수 있는 다른 보기 | 그대로 |
 | `supportQuote` | 정답을 받치는 문서 문장, 글자 그대로 | 그대로. 코드가 원문과 대조한다 |
-| `revealReason` | 질문 문장 비교만으로 답이 좁혀지면 그 이유 | 그대로 |
-| `cueReason`, `cueNo` | 보기 모양(길이·말투)만으로 답이 보였으면 그 이유와 보기 | 새 칸. A 호출을 대신한다 |
+| `answerInQuestionQuote` | 질문 안에 정답이 그대로 적혀 있으면 그 구절을 글자 그대로. 아니면 빈 문자열 | `revealReason`을 좁혔다. 코드가 그 구절이 질문에 있는지 대조한다 |
 
-뺀 칸은 난이도 관찰 셋(`asksDefinition`·`conditionQuote`·`elsewhereCount`)과 의견 넷(`awkwardQuote`·`awkwardFix`·`readabilityNote`·`overallNote`)이다.
+뺀 칸은 이렇다.
+
+- 난이도 관찰 셋(`asksDefinition`·`conditionQuote`·`elsewhereCount`)과 의견 넷(`awkwardQuote`·`awkwardFix`·`readabilityNote`·`overallNote`).
+- 문장 비교·길이·말투로 단서를 찾는 판정. 사용자가 검수해 보니 엉터리였다(2026-11-17). 질문에 정답이 그대로 적힌 경우만 남긴다.
 
 ### 3. 편집 호출
 
@@ -106,7 +109,7 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 - 문제마다 할 일:
   1. 해설·오답 설명을 기준표(A1~C4)로 보고, 걸린 기준과 걸린 문장 인용을 적는다.
   2. 걸린 기준이 있으면 고친 해설 전체와 고친 오답 설명(걸린 보기만)을 낸다.
-  3. 풀이가 `cueReason`이나 `revealReason`을 냈거나 코드가 길이 단서를 걸었으면, 고친 보기나 고친 질문을 하나 낸다. 뜻과 정답은 그대로 둔다.
+  3. 풀이가 `answerInQuestionQuote`를 냈으면, 그 구절을 걷어 낸 고친 질문을 하나 낸다. 뜻과 정답은 그대로 둔다.
 - 지킬 것: 정답과 보기 뜻은 그대로 둔다. 근거 문서에 없는 사실을 더하지 않는다. 해설은 생성 프롬프트 `[해설]`·`[오답 설명]` 절의 꼴을 따른다.
 
 ### 4. 코드 재검사
@@ -126,7 +129,7 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 |---|---|---|
 | 결함 | 사람이 반드시 봐야 한다. 고칠 글이 없다 | 정답 의심, 정답이 둘일 수 있음, 문서에 근거 없음, 근거 문단에 사실 지적, 자료 어긋남 |
 | 고쳐 넣음 | AI가 고쳐 넣었다. 옛 글이 detail에 있다. 처리된 것으로 저장한다 | 해설 고침, 오답 설명 고침 |
-| 제안 | 고친 안이 붙어 있다. 검수함에서 눌러 적용한다 | 보기 단서 누설, 질문이 답을 드러냄, 해설 고친 안(재검사 실패) |
+| 제안 | 고친 안이 붙어 있다. 검수함에서 눌러 적용한다 | 질문에 정답이 적힘, 해설 고친 안(재검사 실패) |
 
 옛 종류(`DIFFICULTY_MISMATCH`, `AWKWARD_SENTENCE` 등)는 enum에 남겨 둔다. 승인된 문제 654개와 대기 초안의 저장된 지적을 읽을 때 필요하다. 새 코드는 만들지 않는다. 코드 문제 검수가 쓰는 종류(`CODE_COMMENT_REVEALS` 등)도 그대로 둔다.
 
@@ -158,8 +161,9 @@ ProblemReviewPipeline.review(List<GeneratedProblemItem> problems, SourceDocument
 
 | 지움 | 이유 |
 |---|---|
-| A 호출(`choice-only.txt`, `ChoiceOnlyBatch`) | 풀이의 `cueReason`과 코드 길이 규칙이 대신한다 |
+| A 호출(`choice-only.txt`, `ChoiceOnlyBatch`) | 보기 모양으로 단서를 찾는 판정이 엉터리였다(사용자 검수, 2026-11-17) |
 | C 호출(`after-solve.txt`, `AfterSolve*`) | 편집 호출이 대신한다 |
+| 코드 단서 경고 세 개(`ProblemItemRule`의 정답 길이 쏠림·질문 되풀이·묶음 몰림) | 길이와 문장 비교로 거는 판정이라 AI 쪽과 함께 뺀다 |
 | 난이도 관찰·판정 코드, 의견 칸 | 헛경보가 많고, 의견은 고쳐지지 않았다 |
 | 제목·오답 설명 백필(`ProblemTitleBackfillService`, `ChoiceRationaleBackfillService`, `ClaudeTitleGenerator`, `ClaudeRationaleGenerator`, `admin/backfill.html`, 프롬프트 `title/`·`rationale/`) | 채울 데이터가 0건이다. 생성기가 두 칸을 늘 채운다. 사용자 승인(2026-11-17) |
 
