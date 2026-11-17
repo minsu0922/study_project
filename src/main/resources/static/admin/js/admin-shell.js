@@ -51,7 +51,6 @@ const ADMIN_MENUS = [
   { group: "AI 생성", items: [
     { key: "generate",  label: "직접 생성",   href: "/admin/generate.html",  icon: "sparkles" },
     { key: "topics",    label: "주제 대기열", href: "/admin/topics.html",    icon: "queue" },
-    { key: "backfill",  label: "일괄 보정",   href: "/admin/backfill.html",  icon: "wand" },
   ]},
   // 배치는 일의 단계가 아니라 <기계>다. 상태(현황)와 설정(분야)은 한 기계의 두 면이라 나란히 둔다.
   { group: "배치", items: [
@@ -500,7 +499,6 @@ async function refreshAdminBadges() {
 
   setBadge("llm", problems + documents, false);
   setBadge("topics", topics === 0 ? "범위 없음" : null, topics === 0);
-  setBadge("backfill", c.untitled + c.missingRationale, false);
   setBadge("reports", reports + errata, reports + errata > 0);
   setBadge("comments", commentReports, commentReports > 0);
   renderBatchChip(c);

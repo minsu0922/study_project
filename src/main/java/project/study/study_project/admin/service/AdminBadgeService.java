@@ -10,11 +10,9 @@ import project.study.study_project.discussion.service.CommentReportService;
 import project.study.study_project.discussion.service.PostService;
 import project.study.study_project.llm.domain.TopicKind;
 import project.study.study_project.llm.dto.GeneratedPublishSummary;
-import project.study.study_project.llm.service.ChoiceRationaleBackfillService;
 import project.study.study_project.llm.service.GeneratedPublisher;
 import project.study.study_project.llm.service.LlmDocumentService;
 import project.study.study_project.llm.service.LlmProblemService;
-import project.study.study_project.llm.service.ProblemTitleBackfillService;
 import project.study.study_project.llm.service.TopicQueueService;
 import project.study.study_project.report.service.ProblemReportService;
 
@@ -35,8 +33,6 @@ public class AdminBadgeService {
     private final ProblemReportService problemReportService;
     private final CommentReportService commentReportService;
     private final PostService postService;
-    private final ProblemTitleBackfillService titleBackfillService;
-    private final ChoiceRationaleBackfillService rationaleBackfillService;
     /** 설정으로 끄면 빈이 없다. 그때 칩은 숨는다 */
     private final ObjectProvider<GeneratedPublisher> generatedPublisher;
 
@@ -55,8 +51,6 @@ public class AdminBadgeService {
                 problemReportService.pendingCount(),
                 commentReportService.pendingCount(),
                 postService.errataPendingCount(),
-                titleBackfillService.untitledCount(),
-                rationaleBackfillService.missingRationaleCount(),
                 batchEnabled,
                 topicQueueService.count(TopicKind.CODE),
                 AdminCodeBatchService.nextRunAt(LocalDateTime.now(ZoneId.of("Asia/Seoul"))),
