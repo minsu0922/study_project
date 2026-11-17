@@ -328,9 +328,9 @@ public class LlmProblemService {
         // 검수보다 먼저 저장한다. 검수(30초~1분) 중에 앱이 꺼져도 요금을 낸 생성 결과는 남는다
         List<GeneratedProblemDraft> drafts = saveDrafts(domain, difficulty, type, items, model, documentSlug, document);
         if (shouldReview(request, type)) {
-            List<ProblemReview.Finding> findings = review(items, difficulty, document);
-            if (findings != null) {
-                attachFindings(items, drafts, findings);
+            ProblemReviewer.Reviewed reviewed = review(items, document);
+            if (reviewed != null) {
+                attachReview(drafts, reviewed);
             }
         }
         return drafts.stream().map(this::toResponse).toList();
@@ -342,29 +342,44 @@ public class LlmProblemService {
     }
 
     /**
-     * @return 지적 목록. 검수가 실패하면 {@code null} — 초안은 지적 없이 그대로 저장한다.
+     * @return 고친 문제와 지적. 검수가 실패하면 {@code null} — 초안은 지적 없이 그대로 둔다.
      *         요금을 낸 생성 결과를 검수 실패 때문에 버리면 손해가 더 크다(배치와 같은 판단)
      */
-    private List<ProblemReview.Finding> review(List<GeneratedProblemItem> items, Difficulty difficulty,
-                                               SourceDocument document) {
+    private ProblemReviewer.Reviewed review(List<GeneratedProblemItem> items, SourceDocument document) {
         try {
-            return problemReviewers.getObject().review(items, difficulty, document);
+            // 관리 화면 경로에는 문서 사실 검수 지적이 없다(배치 문서 파일에만 실린다)
+            return problemReviewers.getObject().review(items, document, null);
         } catch (RuntimeException e) {
             log.warn("관리 화면 생성: AI 검수 실패, 지적 없이 저장 — {}", e.getMessage());
             return null;
         }
     }
 
-    /** 지적을 질문으로 짝지어 초안에 적는다. 지적이 없는 초안에도 빈 목록을 적어 "검수함"을 남긴다 */
-    private void attachFindings(List<GeneratedProblemItem> items, List<GeneratedProblemDraft> drafts,
-                                List<ProblemReview.Finding> findings) {
-        DraftAiFinding.Grouped grouped = DraftAiFinding.groupByQuestion(items, findings);
+    /**
+     * AI가 고쳐 넣은 해설·오답 설명을 저장한 초안에 옮기고 지적을 적는다. 지적이 없는 초안에도 빈 목록을 적어
+     * "검수함"을 남긴다. 초안과 문제는 목록 위치로 짝짓는다 — 질문 글이 같은 두 문제도 섞이지 않는다.
+     */
+    private void attachReview(List<GeneratedProblemDraft> drafts, ProblemReviewer.Reviewed reviewed) {
+        DraftAiFinding.Grouped grouped = DraftAiFinding.groupByQuestion(reviewed.problems(), reviewed.findings());
         try {
-            for (GeneratedProblemDraft draft : drafts) {
-                draft.recordAiFindings(objectMapper.writeValueAsString(grouped.of(draft.getQuestion())));
+            for (int i = 0; i < drafts.size() && i < reviewed.problems().size(); i++) {
+                GeneratedProblemDraft draft = drafts.get(i);
+                GeneratedProblemItem item = reviewed.problems().get(i);
+                List<DraftAiFinding> mine = grouped.of(draft.getQuestion());
+                String findingsJson = objectMapper.writeValueAsString(mine);
+                // 저장할 때와 같은 함수로 만들어 견준다. 고친 것이 없으면 해설·보기를 다시 쓰지 않는다
+                String choicesJson = writeChoicesJson(item.choices());
+                String explanation = Texts.trimToNull(item.explanation());
+                boolean changed = !java.util.Objects.equals(draft.getExplanation(), explanation)
+                        || !java.util.Objects.equals(draft.getChoicesJson(), choicesJson);
+                if (changed) {
+                    draft.applyAiSuggestion(draft.getQuestion(), explanation, choicesJson, findingsJson);
+                } else {
+                    draft.recordAiFindings(findingsJson);
+                }
             }
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            log.warn("관리 화면 생성: AI 검수 지적을 적지 못함 — {}", e.getMessage());
+            log.warn("관리 화면 생성: AI 검수 결과를 적지 못함 — {}", e.getMessage());
             return;
         }
         draftRepository.saveAll(drafts);

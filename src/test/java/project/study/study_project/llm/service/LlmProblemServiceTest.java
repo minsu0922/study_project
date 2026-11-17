@@ -78,6 +78,8 @@ class LlmProblemServiceTest {
     /** 정해진 지적을 돌려주거나 던지는 가짜 검수기. 받은 인자를 기록한다 */
     static class FakeReviewer implements ProblemReviewer {
         List<ProblemReview.Finding> toReturn = List.of();
+        /** 검수가 고쳐 돌려줄 문제. null이면 받은 그대로 */
+        List<GeneratedProblemItem> problemsToReturn;
         RuntimeException toThrow;
         int calls;
         SourceDocument calledSource;
@@ -85,15 +87,15 @@ class LlmProblemServiceTest {
         Runnable beforeReview = () -> { };
 
         @Override
-        public List<ProblemReview.Finding> review(List<GeneratedProblemItem> problems, Difficulty labeled,
-                                                  SourceDocument source) {
+        public Reviewed review(List<GeneratedProblemItem> problems, SourceDocument source,
+                               List<project.study.study_project.llm.client.FactCheckFinding> facts) {
             calls++;
             calledSource = source;
             beforeReview.run();
             if (toThrow != null) {
                 throw toThrow;
             }
-            return toReturn;
+            return new Reviewed(problemsToReturn == null ? problems : problemsToReturn, toReturn);
         }
     }
 
@@ -282,6 +284,39 @@ class LlmProblemServiceTest {
 
             assertThat(saved).hasSize(1);
             assertThat(saved.get(0).getAiFindingsJson()).isNull();
+        }
+
+        @Test
+        @DisplayName("관리 화면 생성은 AI가 고친 해설과 오답 설명으로 초안을 고친다")
+        void appliesRewrittenExplanation() {
+            GeneratedProblemItem original = mcItem("문제1", 0);
+            fakeGenerator.toReturn = List.of(original);
+            List<GeneratedProblemItem.GeneratedChoice> choices = new java.util.ArrayList<>(original.choices());
+            choices.set(1, new GeneratedProblemItem.GeneratedChoice("보기2", false, "고친 오답 설명입니다"));
+            fakeReviewer.problemsToReturn = List.of(new GeneratedProblemItem("문제1", "", "고친 해설입니다.", choices));
+            fakeReviewer.toReturn = List.of(new ProblemReview.Finding(0, ProblemReview.FindingType.EXPLANATION_REWRITTEN,
+                    "AI가 해설을 고쳐 넣었습니다", "옛 해설:\n해설입니다."));
+
+            List<GeneratedProblemDraft> saved = savedDrafts(() ->
+                    service.generateFromDocument(request(ProblemType.MULTIPLE_CHOICE, null), uploaded));
+
+            assertThat(saved.get(0).getExplanation()).isEqualTo("고친 해설입니다.");
+            assertThat(saved.get(0).getChoicesJson()).contains("고친 오답 설명입니다");
+            assertThat(saved.get(0).getAiFindingsJson()).contains("EXPLANATION_REWRITTEN");
+        }
+
+        @Test
+        @DisplayName("질문이 같은 두 문제도 목록 위치로 짝지어 고친다")
+        void matchesDraftsByPosition() {
+            fakeGenerator.toReturn = List.of(mcItem("같은 질문", 0), mcItem("같은 질문", 1));
+            fakeReviewer.problemsToReturn = List.of(mcItem("같은 질문", 0),
+                    new GeneratedProblemItem("같은 질문", "", "둘째만 고친 해설", mcItem("같은 질문", 1).choices()));
+
+            List<GeneratedProblemDraft> saved = savedDrafts(() ->
+                    service.generateFromDocument(request(ProblemType.MULTIPLE_CHOICE, null), uploaded));
+
+            assertThat(saved).extracting(GeneratedProblemDraft::getExplanation)
+                    .containsExactly("해설입니다.", "둘째만 고친 해설");
         }
 
         /** 마지막으로 저장한 초안 목록. 지적은 첫 저장 뒤에 적고 다시 저장한다 */

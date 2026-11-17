@@ -3,7 +3,7 @@ package project.study.study_project.llm.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.llm.client.ClaudeProblemReviewer;
+import project.study.study_project.llm.review.ProblemReviewPipeline;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.GeneratedProblemItem.GeneratedChoice;
@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 문제 검수 적발률 측정 — docs/22 §4. 승인된 문제에 오류를 심고 {@link ClaudeProblemReviewer}로 채점한다.
+ * 문제 검수 적발률 측정 — docs/22 §4. 승인된 문제에 오류를 심고 {@link ProblemReviewPipeline}로 채점한다.
  * 실제 API를 부르므로 {@code evalProblemReview} 태스크로만 돈다.
  *
  * <pre>
@@ -71,11 +71,11 @@ public final class ProblemReviewEvalCli {
         }
 
         System.out.printf("문제 검수 적발률 측정: 모델 %s, 묶음 %d개%n", model, prepared.size());
-        ClaudeProblemReviewer reviewer = new ClaudeProblemReviewer(model);
+        ProblemReviewPipeline reviewer = new ProblemReviewPipeline(model);
         List<GroupScore> scores = new ArrayList<>();
         for (Prepared p : prepared) {
             System.out.printf("  %s 검수 중...%n", p.group().id());
-            List<Finding> findings = reviewer.review(p.problems(), p.group().difficulty(), p.source());
+            List<Finding> findings = reviewer.review(p.problems(), p.source(), null).findings();
             scores.add(score(p.group(), findings));
         }
 

@@ -95,6 +95,13 @@ public record GeneratedBatchFile(
                 documentSlug, problems, shortfallReasons, findings, codeTopic, codeParts);
     }
 
+    /** 검수가 고친 문제와 지적으로 바꾼 사본. AI가 해설·오답 설명을 고쳐 넣으면 문제도 바뀐다. */
+    public GeneratedBatchFile withProblemsAndFindings(List<GeneratedProblemItem> reviewedProblems,
+                                                      List<ProblemReview.Finding> findings) {
+        return new GeneratedBatchFile(note, date, generatedAt, domain, difficulty, type, model,
+                documentSlug, reviewedProblems, shortfallReasons, findings, codeTopic, codeParts);
+    }
+
     /** 코드 문제 파일로 만든 사본. */
     public GeneratedBatchFile withCode(String topic, List<CodeProblem.Part> parts) {
         return new GeneratedBatchFile(note, date, generatedAt, domain, difficulty, type, model,

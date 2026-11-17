@@ -1902,11 +1902,12 @@ class DraftGeneratorCliTest {
                 project.study.study_project.llm.client.ProblemReview.FindingType.ANSWER_MISMATCH,
                 "검수 AI는 다른 보기를 골랐습니다", "AI가 고른 보기: 「테이블」\n고른 이유: 표라서");
 
-        var reported = BatchReports.reportProblemReview((p, d, s) -> List.of(finding),
-                List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
-        var failed = BatchReports.reportProblemReview((p, d, s) -> {
+        var reported = BatchReports.reportProblemReview(
+                (p, s, f) -> new project.study.study_project.llm.client.ProblemReviewer.Reviewed(p, List.of(finding)),
+                List.of(problem), source, null, LocalDate.of(2026, 9, 27));
+        var failed = BatchReports.reportProblemReview((p, s, f) -> {
             throw new IllegalStateException("API 오류");
-        }, List.of(problem), Difficulty.BEGINNER, source, LocalDate.of(2026, 9, 27));
+        }, List.of(problem), source, null, LocalDate.of(2026, 9, 27));
 
         assertThat(reported.rendered()).contains("문제 검수: 1건",
                 "1번 「스키마의 뜻」 [정답 의심] 검수 AI는 다른 보기를 골랐습니다",
@@ -1928,7 +1929,7 @@ class DraftGeneratorCliTest {
                 project.study.study_project.llm.client.ProblemReview.FindingType.CHOICE_CUE_LEAK,
                 "4번만 길다");
 
-        DraftGeneratorCli.attachReviewFindings(file, before, List.of(finding));
+        DraftGeneratorCli.attachReviewFindings(file, before.withReviewFindings(List.of(finding)));
 
         GeneratedBatchFile after = DraftGeneratorCli.MAPPER.readValue(file.toFile(), GeneratedBatchFile.class);
         // 옛 파일(칸이 없음)은 null로 읽혀야 흡수가 그대로 돈다
@@ -1947,7 +1948,7 @@ class DraftGeneratorCliTest {
         // 임시 파일 자리를 폴더가 막고 있으면 쓰기가 실패한다
         java.nio.file.Files.createDirectory(dir.resolve("2026-09-20.json.tmp"));
 
-        DraftGeneratorCli.attachReviewFindings(file, batch, List.of());
+        DraftGeneratorCli.attachReviewFindings(file, batch.withReviewFindings(List.of()));
 
         assertThat(DraftGeneratorCli.MAPPER.readValue(file.toFile(), GeneratedBatchFile.class)).isEqualTo(batch);
     }
