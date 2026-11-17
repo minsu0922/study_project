@@ -42,9 +42,6 @@ class PromptsTest {
         assertThat(ClaudeCodeProblemGenerator.SYSTEM_PROMPT).contains(ClaudeCodeProblemGenerator.DIFFICULTY_GUIDE);
         assertThat(ClaudeCodeProblemReviewer.SOLVE_PROMPT).endsWith(ClaudeCodeProblemGenerator.DIFFICULTY_GUIDE);
         assertThat(ClaudeDocumentFactChecker.WEB_SEARCH_RULE).doesNotContain("%d");
-        assertThat(ClaudeProblemReviewer.JUDGE_PROMPT).isNotBlank();
-        assertThat(ClaudeRationaleGenerator.SYSTEM_PROMPT).isNotBlank();
-        assertThat(ClaudeTitleGenerator.SYSTEM_PROMPT).isNotBlank();
     }
 
     @Test

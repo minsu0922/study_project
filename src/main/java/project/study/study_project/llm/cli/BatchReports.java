@@ -1,6 +1,5 @@
 package project.study.study_project.llm.cli;
 
-import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.llm.client.ClaudeCalls;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.DocumentFactChecker;
@@ -70,10 +69,14 @@ final class BatchReports {
      * 문제 검수 보고 결과.
      *
      * @param rendered 요약 화면에 쓴 글
-     * @param findings 지적 목록. 검수가 실패했으면 {@code null} — 빈 목록("지적 없음")과 구별해야
+     * @param reviewed 고친 문제와 지적. 검수가 실패했으면 {@code null} — 빈 지적("지적 없음")과 구별해야
      *                 검수함이 "검수를 못 돌린 문제"를 멀쩡한 문제로 보여 주지 않는다
      */
-    record ProblemReviewReport(String rendered, List<ProblemReview.Finding> findings) {
+    record ProblemReviewReport(String rendered, ProblemReviewer.Reviewed reviewed) {
+
+        List<ProblemReview.Finding> findings() {
+            return reviewed == null ? null : reviewed.findings();
+        }
     }
 
     /**
@@ -81,19 +84,28 @@ final class BatchReports {
      * 파일은 이미 저장됐고, 검수는 덧붙이는 단계다.
      */
     static ProblemReviewReport reportProblemReview(ProblemReviewer reviewer, List<GeneratedProblemItem> problems,
-                                                   Difficulty difficulty, SourceDocument source, LocalDate date) {
+                                                   SourceDocument source, List<FactCheckFinding> facts, LocalDate date) {
         String rendered;
-        List<ProblemReview.Finding> findings = null;
+        ProblemReviewer.Reviewed reviewed = null;
         try {
-            findings = reviewer.review(problems, difficulty, source);
-            rendered = renderProblemReview(date, problems, findings);
+            reviewed = reviewer.review(problems, source, facts);
+            rendered = renderProblemReview(date, problems, reviewed.findings()) + renderRewrites(reviewed.findings());
         } catch (RuntimeException e) {
             rendered = "⚠️ **%s 문제 검수 실패** — 문제는 저장했습니다. 승인 전에 사람이 풀어 보세요 (%s)%n"
                     .formatted(date, e.getMessage());
         }
         System.out.println(rendered);
         appendToStepSummary(rendered);
-        return new ProblemReviewReport(rendered, findings);
+        return new ProblemReviewReport(rendered, reviewed);
+    }
+
+    /** AI가 고쳐 넣은 수. 없으면 빈 문자열 */
+    static String renderRewrites(List<ProblemReview.Finding> findings) {
+        long explanations = findings.stream().filter(f -> f.type() == ProblemReview.FindingType.EXPLANATION_REWRITTEN).count();
+        long rationales = findings.stream().filter(f -> f.type() == ProblemReview.FindingType.RATIONALE_REWRITTEN).count();
+        return explanations + rationales == 0 ? ""
+                : "✏️ 해설 %d건·오답 설명 %d건을 AI가 고쳐 넣었습니다. 옛 글은 검수함 지적에 있습니다%n"
+                .formatted(explanations, rationales);
     }
 
     static String renderProblemReview(LocalDate date, List<GeneratedProblemItem> problems,

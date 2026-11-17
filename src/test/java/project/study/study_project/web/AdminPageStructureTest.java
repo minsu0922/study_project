@@ -41,7 +41,6 @@ class AdminPageStructureTest {
     private static final List<String> ADMIN_PAGES = List.of(
             "index.html",
             "audit.html",
-            "backfill.html",
             "batch.html",
             "comments.html",
             "distribution.html",

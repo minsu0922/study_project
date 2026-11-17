@@ -8,13 +8,13 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
 import project.study.study_project.llm.client.ClaudeCalls;
 import project.study.study_project.llm.client.ClaudeProblemGenerator;
-import project.study.study_project.llm.client.ClaudeProblemReviewer;
+import project.study.study_project.llm.client.ProblemReviewer;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.ProblemReview;
 import project.study.study_project.llm.client.RejectionNote;
 import project.study.study_project.llm.client.SourceDocument;
 import project.study.study_project.llm.dto.GeneratedBatchFile;
-import project.study.study_project.llm.support.FlaggedSourceRule;
+import project.study.study_project.llm.review.ProblemReviewPipeline;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
 
@@ -298,16 +298,14 @@ public final class DraftGeneratorCli {
 
         // 문제 검수(docs/22 §3.2~3.4). 객관식이고 근거 문서가 있을 때만 — 근거 대조에 문서가 필요하다
         if (type == ProblemType.MULTIPLE_CHOICE && source != null) {
-            List<ProblemReview.Finding> findings = BatchReports.reportProblemReview(
-                    new ClaudeProblemReviewer(model), kept, difficulty, source, date).findings();
-            List<ProblemReview.Finding> flagged = BatchReports.reportFlaggedSources(
-                    kept, FlaggedSourceRule.link(kept, source.contentMd(), resolved.factFindings()), date);
-            // 검수가 실패한 날은 문서 지적만 따로 싣지 않는다. 목록이 있으면 검수함이
+            ProblemReviewer.Reviewed reviewed = BatchReports.reportProblemReview(
+                    new ProblemReviewPipeline(model), kept, source, resolved.factFindings(), date).reviewed();
+            // 검수가 실패한 날은 파일을 다시 쓰지 않는다. 지적 목록이 있으면 검수함이
             // "AI 검수를 돌렸다"로 읽는다(null과 빈 목록의 구별, docs/22 §6)
-            if (findings != null) {
-                List<ProblemReview.Finding> all = new ArrayList<>(findings);
-                all.addAll(flagged);
-                attachReviewFindings(outFile, batch, all);
+            if (reviewed != null) {
+                BatchReports.reportFlaggedSources(kept, reviewed.findings().stream()
+                        .filter(f -> f.type() == ProblemReview.FindingType.SOURCE_FLAGGED).toList(), date);
+                attachReviewFindings(outFile, batch.withProblemsAndFindings(reviewed.problems(), reviewed.findings()));
             }
         }
     }
@@ -319,11 +317,10 @@ public final class DraftGeneratorCli {
      * 커밋 스텝이 돌지 않아 요금을 낸 문제까지 버려진다. 임시 파일에 쓰고 바꿔치는 이유도 같다 —
      * 쓰다 끊기면 멀쩡하던 파일이 반쪽이 된다.
      */
-    static void attachReviewFindings(Path outFile, GeneratedBatchFile batch, List<ProblemReview.Finding> findings) {
+    static void attachReviewFindings(Path outFile, GeneratedBatchFile reviewed) {
         Path temp = outFile.resolveSibling(outFile.getFileName() + ".tmp");
         try {
-            Files.writeString(temp, FileFormats.toJson(MAPPER, FileFormats.Kind.BATCH_PROBLEMS,
-                    batch.withReviewFindings(findings)));
+            Files.writeString(temp, FileFormats.toJson(MAPPER, FileFormats.Kind.BATCH_PROBLEMS, reviewed));
             Files.move(temp, outFile, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             BatchReports.announce("⚠️ 검수 지적을 파일에 싣지 못했습니다 — 문제는 저장했고, 지적은 위 요약에만 있습니다 (%s)"

@@ -3,7 +3,7 @@ package project.study.study_project.llm.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import project.study.study_project.llm.support.JsonMappers;
 import project.study.study_project.global.common.Difficulty;
-import project.study.study_project.llm.client.ClaudeProblemReviewer;
+import project.study.study_project.llm.review.ProblemReviewPipeline;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.client.GeneratedProblemItem;
 import project.study.study_project.llm.client.GeneratedProblemItem.GeneratedChoice;
@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 문제 검수 적발률 측정 — docs/22 §4. 승인된 문제에 오류를 심고 {@link ClaudeProblemReviewer}로 채점한다.
+ * 문제 검수 적발률 측정 — docs/22 §4. 승인된 문제에 오류를 심고 {@link ProblemReviewPipeline}로 채점한다.
  * 실제 API를 부르므로 {@code evalProblemReview} 태스크로만 돈다.
  *
  * <pre>
@@ -71,11 +71,11 @@ public final class ProblemReviewEvalCli {
         }
 
         System.out.printf("문제 검수 적발률 측정: 모델 %s, 묶음 %d개%n", model, prepared.size());
-        ClaudeProblemReviewer reviewer = new ClaudeProblemReviewer(model);
+        ProblemReviewPipeline reviewer = new ProblemReviewPipeline(model);
         List<GroupScore> scores = new ArrayList<>();
         for (Prepared p : prepared) {
             System.out.printf("  %s 검수 중...%n", p.group().id());
-            List<Finding> findings = reviewer.review(p.problems(), p.group().difficulty(), p.source());
+            List<Finding> findings = reviewer.review(p.problems(), p.source(), null).findings();
             scores.add(score(p.group(), findings));
         }
 
@@ -99,11 +99,11 @@ public final class ProblemReviewEvalCli {
 
     /** 규칙 경고를 AI 지적 종류로 옮긴다. 대응하는 AI 지적이 없는 경고(제목·해설 형식 등)는 null. */
     static FindingType ruleTypeOf(String warning) {
-        if (warning.startsWith("정답이 가장 긴 보기") || warning.contains("같은 문장을 되풀이함")) {
-            return FindingType.CHOICE_CUE_LEAK;
+        if (warning.startsWith("해설 형식 [")) {
+            return FindingType.EXPLANATION_SUGGESTED;
         }
-        if (warning.startsWith("정답 보기가 질문을")) {
-            return FindingType.QUESTION_REVEALS;
+        if (warning.contains("같은 문장을 되풀이함")) {
+            return FindingType.CHOICE_CUE_LEAK;
         }
         if (warning.startsWith("초급 지문이 김") || warning.startsWith("중급 지문이 김")
                 || warning.contains("에 열지 않은 형태") || warning.startsWith("상황 적용형이")) {
@@ -156,8 +156,18 @@ public final class ProblemReviewEvalCli {
                 }
                 choices.set(m.choice(), new GeneratedChoice(m.text(), c.correct(), c.rationale(), c.matchText()));
             }
+            if (m.rationaleOf() != null) {
+                GeneratedChoice c = choices.get(m.rationaleOf());
+                choices.set(m.rationaleOf(), new GeneratedChoice(c.text(), c.correct(), m.rationale(), c.matchText()));
+            }
         }
-        return new GeneratedProblemItem(p.question(), p.exhibit(), p.answer(), p.explanation(), choices,
+        String explanation = p.explanation();
+        for (Mutation m : mutations) {
+            if (m.explanation() != null) {
+                explanation = m.explanation();
+            }
+        }
+        return new GeneratedProblemItem(p.question(), p.exhibit(), p.answer(), explanation, choices,
                 p.sourceQuote(), p.title(), p.questionKind(), p.skipReason());
     }
 
@@ -176,7 +186,7 @@ public final class ProblemReviewEvalCli {
                     .filter(f -> f.type().grade() != Grade.OPINION)
                     .toList();
             if (ref.expectOrEmpty().isEmpty()) {
-                falseAlarms.addAll(mine);
+                mine.stream().filter(f -> !g.ignoreOrEmpty().contains(f.type())).forEach(falseAlarms::add);
             } else if (mine.stream().anyMatch(f -> ref.expectOrEmpty().contains(f.type()))) {
                 caught.add(ref.label(i));
             } else {
@@ -223,7 +233,20 @@ public final class ProblemReviewEvalCli {
     }
 
     /** difficulty는 이 묶음을 "몇 급으로 냈다"고 알리는 라벨이다. 일부러 틀리게 붙여 난이도 오류를 심는다. */
-    record Group(String id, String document, String edition, Difficulty difficulty, List<ProblemRef> problems) {
+    /**
+     * @param ignore 이 묶음에서 헛경보로 세지 않을 지적 종류. 해설 형식이 생기기 전(2026-10-25) 문제로 만든 묶음은
+     *               해설 지적을 빼고 정답 검사만 잰다
+     */
+    record Group(String id, String document, String edition, Difficulty difficulty, List<ProblemRef> problems,
+                 List<FindingType> ignore) {
+
+        Group(String id, String document, String edition, Difficulty difficulty, List<ProblemRef> problems) {
+            this(id, document, edition, difficulty, problems, null);
+        }
+
+        List<FindingType> ignoreOrEmpty() {
+            return ignore == null ? List.of() : ignore;
+        }
     }
 
     record ProblemRef(String batch, int index, String note, List<Mutation> mutations, List<FindingType> expect) {
@@ -241,8 +264,16 @@ public final class ProblemReviewEvalCli {
         }
     }
 
-    /** moveAnswerTo: 정답 표시를 이 보기(0부터)로 옮긴다. choice·text: 그 보기 문장을 바꾼다. */
-    record Mutation(Integer moveAnswerTo, Integer choice, String text) {
+    /**
+     * moveAnswerTo: 정답 표시를 이 보기(0부터)로 옮긴다. choice·text: 그 보기 문장을 바꾼다.
+     * explanation: 해설 전체를 바꾼다. rationaleOf·rationale: 그 보기(0부터)의 오답 설명을 바꾼다.
+     */
+    record Mutation(Integer moveAnswerTo, Integer choice, String text, String explanation, Integer rationaleOf,
+                    String rationale) {
+
+        Mutation(Integer moveAnswerTo, Integer choice, String text) {
+            this(moveAnswerTo, choice, text, null, null, null);
+        }
     }
 
     record Prepared(Group group, SourceDocument source, List<GeneratedProblemItem> problems) {

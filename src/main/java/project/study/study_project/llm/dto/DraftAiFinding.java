@@ -27,6 +27,9 @@ public record DraftAiFinding(ProblemReview.FindingType type, String message, Str
                              @JsonInclude(JsonInclude.Include.NON_NULL) String resolution)
         implements FindingList.Resolvable<DraftAiFinding> {
 
+    /** AI가 해설·오답 설명을 고쳐 초안에 이미 넣은 지적의 처리 기록. 옛 글은 근거(detail)에 있다 */
+    public static final String AI_INSERTED = "AI가 고쳐 넣음";
+
     public DraftAiFinding(ProblemReview.FindingType type, String message, String detail) {
         this(type, message, detail, null, null);
     }
@@ -52,9 +55,15 @@ public record DraftAiFinding(ProblemReview.FindingType type, String message, Str
             }
             String question = Texts.trimToNull(problems.get(finding.problemIndex()).question());
             byQuestion.computeIfAbsent(question, q -> new ArrayList<>())
-                    .add(new DraftAiFinding(finding.type(), finding.message(), finding.detail(), finding.suggestion()));
+                    .add(new DraftAiFinding(finding.type(), finding.message(), finding.detail(), finding.suggestion(),
+                            inserted(finding.type()) ? AI_INSERTED : null));
         }
         return new Grouped(byQuestion, dropped);
+    }
+
+    private static boolean inserted(ProblemReview.FindingType type) {
+        return type == ProblemReview.FindingType.EXPLANATION_REWRITTEN
+                || type == ProblemReview.FindingType.RATIONALE_REWRITTEN;
     }
 
     /** @param dropped 짝을 못 찾아 버린 지적 */

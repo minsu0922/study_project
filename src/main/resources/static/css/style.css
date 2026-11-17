@@ -1584,6 +1584,11 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 .ai-suggestion { margin: 8px 0 4px 22px; display: grid; gap: 4px; }
 .ai-suggestion > div { display: flex; gap: 8px; line-height: 1.5; }
 .ai-suggestion button { justify-self: start; margin-top: 4px; }
+/* AI가 고쳐 넣은 해설 — 옛 글(흐리게)과 지금 글을 나란히. 좁은 화면에서는 위아래로 쌓인다 */
+.ai-rewrite { margin: 8px 0 4px 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.ai-rewrite-old, .ai-rewrite-new { white-space: pre-wrap; line-height: 1.55; }
+.ai-rewrite-old { color: var(--muted); }
+.ai-rewrite-new { font-weight: 500; }
 /* 의견은 접어 둔다. 지적 상자와 같은 무게로 보이면 검수자가 둘을 같은 것으로 읽는다 */
 .ai-opinions { margin: 6px 0 10px; color: var(--muted); font-size: var(--fs-1); }
 .ai-opinions summary { cursor: pointer; }

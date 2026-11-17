@@ -119,7 +119,7 @@ class PromptEvalCliTest {
         // 세면 검사가 하나 늘 때마다 상관없는 테스트가 따라 깨진다.
         assertThat(r.warnings())
                 .as("숫자가 다른 두 건이 한 항목으로 묶여야 표가 읽힌다")
-                .containsEntry("해설이 짧음", 2);
+                .containsEntry("해설 형식 [C4] 해설 길이가 기준 밖", 2);
     }
 
     @Test

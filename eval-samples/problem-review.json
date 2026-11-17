@@ -1,5 +1,5 @@
 {
-  "note": "문제 검수 적발률 표본(docs/22 §4). 승인된 문제에 mutations로 오류를 심고 expect에 적은 종류의 지적이 나오는지 본다. expect가 없는 문제는 헛경보를 세는 대조군이다. moveAnswerTo·choice는 0부터 센다.",
+  "note": "문제 검수 적발률 표본(docs/22 §4). 승인된 문제에 mutations로 오류를 심고 expect에 적은 종류의 지적이 나오는지 본다. expect가 없는 문제는 헛경보를 세는 대조군이다. moveAnswerTo·choice는 0부터 센다. 2026-11-17: 풀이·편집 검수로 바꾸며 단서·난이도 기대값을 지웠다. explanation·rationaleOf·rationale로 해설 결함을 심는다. ignore에 적은 종류는 헛경보로 세지 않는다.",
   "groups": [
     {
       "id": "flyway-beginner",
@@ -19,8 +19,7 @@
           ],
           "expect": [
             "OTHER_CORRECT",
-            "ANSWER_MISMATCH",
-            "QUESTION_REVEALS"
+            "ANSWER_MISMATCH"
           ]
         },
         {
@@ -30,24 +29,12 @@
         {
           "batch": "generated/2026-09-16.json",
           "index": 2,
-          "note": "원래 결함: 정답 보기가 가장 길다(1.59배). 2026-09-27 기존 규칙이 찾았고 AI는 놓침",
-          "expect": [
-            "CHOICE_CUE_LEAK"
-          ]
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 원래 결함: 정답 보기가 가장 길다(1.59배). 2026-09-27 기존 규칙이 찾았고 AI는 놓침"
         },
         {
           "batch": "generated/2026-09-16.json",
           "index": 3,
-          "note": "정답 보기만 길게 늘임",
-          "mutations": [
-            {
-              "choice": 0,
-              "text": "관리 대상 데이터베이스 안에 만들어지며, 어떤 스크립트를 언제 실행해 성공했는지가 한 줄씩 적히고, 체크섬과 실행 시간까지 함께 남아 다음 실행 때 무엇을 건너뛸지 정하는 근거가 된다"
-            }
-          ],
-          "expect": [
-            "CHOICE_CUE_LEAK"
-          ]
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 정답 보기만 길게 늘임"
         },
         {
           "batch": "generated/2026-09-16.json",
@@ -70,6 +57,12 @@
           "batch": "generated/2026-09-16.json",
           "index": 6
         }
+      ],
+      "ignore": [
+        "EXPLANATION_REWRITTEN",
+        "RATIONALE_REWRITTEN",
+        "EXPLANATION_SUGGESTED",
+        "EXPLANATION_MISMATCH"
       ]
     },
     {
@@ -94,10 +87,7 @@
         {
           "batch": "generated/2026-09-20.json",
           "index": 1,
-          "note": "원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음",
-          "expect": [
-            "CHOICE_CUE_LEAK"
-          ]
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음"
         },
         {
           "batch": "generated/2026-09-20.json",
@@ -106,38 +96,28 @@
         {
           "batch": "generated/2026-09-20.json",
           "index": 3,
-          "note": "원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음",
-          "expect": [
-            "CHOICE_CUE_LEAK"
-          ]
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음"
         },
         {
           "batch": "generated/2026-09-20.json",
           "index": 4,
-          "note": "원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음",
-          "expect": [
-            "CHOICE_CUE_LEAK"
-          ]
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음"
         },
         {
           "batch": "generated/2026-09-20.json",
           "index": 5,
-          "note": "정답 보기가 질문 문장을 되받게 바꿈",
-          "mutations": [
-            {
-              "choice": 0,
-              "text": "헤더 — 요청 한 통을 이루는 네 부분 가운데 쿠키와 토큰이 실려 가는 칸이다"
-            }
-          ],
-          "expect": [
-            "QUESTION_REVEALS",
-            "CHOICE_CUE_LEAK"
-          ]
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 정답 보기가 질문 문장을 되받게 바꿈"
         },
         {
           "batch": "generated/2026-09-20.json",
           "index": 6
         }
+      ],
+      "ignore": [
+        "EXPLANATION_REWRITTEN",
+        "RATIONALE_REWRITTEN",
+        "EXPLANATION_SUGGESTED",
+        "EXPLANATION_MISMATCH"
       ]
     },
     {
@@ -153,26 +133,227 @@
         {
           "batch": "generated/2026-09-22.json",
           "index": 3,
-          "note": "원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음",
-          "expect": [
-            "CHOICE_CUE_LEAK"
-          ]
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 원래 결함: 정답 보기가 가장 길다(1.5배 규칙 아래라 기존 규칙은 못 잡음). 2026-09-27 첫 측정에서 찾음"
         },
         {
           "batch": "generated/2026-09-23.json",
           "index": 0,
-          "note": "고급 문제를 중급 묶음에 섞음. 다른 조건에서 맞는 오답 3개(엔티티 치환·퍼센트 인코딩·살균). 2026-09-28에 약한 고급(2번)과 교체",
-          "expect": [
-            "DIFFICULTY_MISMATCH"
-          ]
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 고급 문제를 중급 묶음에 섞음. 다른 조건에서 맞는 오답 3개(엔티티 치환·퍼센트 인코딩·살균). 2026-09-28에 약한 고급(2번)과 교체"
         },
         {
           "batch": "generated/2026-09-23.json",
           "index": 1,
-          "note": "고급 문제를 중급 묶음에 섞음. 다른 조건에서 맞는 오답 3개(HttpOnly·살균·nonce CSP). 2026-09-28에 약한 고급(3번)과 교체",
+          "note": "2026-11-17 단서·난이도 판정을 빼며 대조군으로 돌림. 옛 메모: 고급 문제를 중급 묶음에 섞음. 다른 조건에서 맞는 오답 3개(HttpOnly·살균·nonce CSP). 2026-09-28에 약한 고급(3번)과 교체"
+        }
+      ],
+      "ignore": [
+        "EXPLANATION_REWRITTEN",
+        "RATIONALE_REWRITTEN",
+        "EXPLANATION_SUGGESTED",
+        "EXPLANATION_MISMATCH"
+      ]
+    },
+    {
+      "id": "explanation-port",
+      "document": "generated/documents/2026-10-27.json",
+      "edition": "ADVANCED",
+      "difficulty": "INTERMEDIATE",
+      "problems": [
+        {
+          "batch": "generated/2026-10-27-port-int.json",
+          "index": 0,
+          "note": "A3 예시 값 틀림: 둘째 탭 상대 포트를 51000으로 바꿔 \"상대 포트만 다르다\"와 어긋나게 함",
+          "mutations": [
+            {
+              "explanation": "규칙: 연결 하나는 내 IP 주소·내 포트·상대 IP 주소·상대 포트 네 값으로 갈린다. 네 값 중 하나만 달라도 다른 연결이다.\n그림의 두 연결을 서버 쪽에서 적어 보자.\n첫 탭 연결: 서버 IP·443, 상대 IP는 PC 주소, 상대 포트 51000.\n둘째 탭 연결: 서버 IP·443, 상대 IP는 같은 PC 주소, 상대 포트 51000.\n네 값을 견준다: 서버 쪽 두 값과 상대 IP는 같고, 상대 포트만 다르다.\n답장도 이 값을 따라 51000과 51001로 따로 돌아간다.\n그래서 두 연결을 가르는 값은 접속한 쪽의 포트 번호다.\n(심화편의 '리슨 소켓 하나가 연결 수천 개를 받는 방식' 절을 다시 읽어 보라)"
+            }
+          ],
           "expect": [
-            "DIFFICULTY_MISMATCH"
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
           ]
+        },
+        {
+          "batch": "generated/2026-10-27-port-int.json",
+          "index": 1,
+          "note": "A4 없는 절을 안내함",
+          "mutations": [
+            {
+              "explanation": "규칙: 노출 범위는 포트가 아니라 바인드 주소가 정한다. 루프백 주소 127.0.0.1은 같은 컴퓨터 안에서 보낸 접속만, 와일드카드 주소 0.0.0.0은 모든 랜카드로 온 접속을 받는다.\n앱을 127.0.0.1:8080에 바인드했다고 따라가 보자.\n같은 서버의 프록시가 127.0.0.1:8080으로 보낸다: 같은 컴퓨터 안이라 앱에 닿는다.\n같은 망의 다른 PC가 서버 IP:8080으로 보낸다: 그 주소에는 기다리는 소켓이 없어 거부된다.\n0.0.0.0에 바인드했다면 그 PC의 접속도 앱에 닿는다.\n그래서 프록시만 닿게 하려면 127.0.0.1에 바인드한다.\n(심화편의 '바인드 주소가 노출 범위를 정하는 방식' 절을 다시 읽어 보라)"
+            }
+          ],
+          "expect": [
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-27-port-int.json",
+          "index": 2,
+          "note": "A1 그래서 줄이 오답(공격을 덜 받아서)을 정답처럼 맺음",
+          "mutations": [
+            {
+              "explanation": "규칙: 접속은 언제나 찾아가는 쪽이 첫 패킷을 보내며 시작한다. 첫 패킷의 받는 칸에 서버 번호를 적어야 하므로, 그 번호는 접속 전에 이미 알고 있어야 한다.\n처음 가 보는 웹사이트에 접속하는 장면을 따라가 보자.\n브라우저가 첫 패킷을 만든다: 받는 칸에 서버 포트를 적어야 한다.\n서버에 번호를 물어보려 해도: 그 질문 자체가 서버에 닿을 번호를 필요로 한다.\n그래서 모두가 아는 443을 적어 보낸다: 서버가 443에서 기다리고 있어 닿는다.\n서버는 받은 패킷의 보내는 칸에서 브라우저 번호를 알게 되니, 브라우저 번호는 미리 정할 필요가 없다.\n그래서 서버 번호를 정해 두는 이유는 모두가 아는 번호라 바깥 공격을 덜 받기 때문이다.\n(심화편의 '면접에서 이렇게 물어본다' 절을 다시 읽어 보라)"
+            }
+          ],
+          "expect": [
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-27-port-int.json",
+          "index": 3,
+          "note": "B5 그래서 맺음 줄을 지움",
+          "mutations": [
+            {
+              "explanation": "규칙: 리슨 소켓은 포트에 바인드해 새 접속을 기다리기만 하고, 접속을 받아들일 때마다 그 연결 전용 연결 소켓이 새로 생긴다. 연결 소켓의 서버 쪽 포트는 리슨 소켓과 같다.\n8080에서 기다리는 서버에 접속 두 개가 오는 장면을 따라가 보자.\n리슨 소켓이 0.0.0.0:8080에서 기다린다.\n첫 접속을 받아들인다: 서버 8080, 상대 51834인 연결 소켓이 생긴다.\n둘째 접속을 받아들인다: 서버 8080, 상대 60211인 연결 소켓이 또 생긴다.\n두 연결 소켓 모두 서버 쪽 포트는 8080이고, 리슨 소켓은 계속 다음 접속을 기다린다.\n(심화편의 '리슨 소켓 하나가 연결 수천 개를 받는 방식' 절을 다시 읽어 보라)"
+            }
+          ],
+          "expect": [
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-27-port-int.json",
+          "index": 4,
+          "note": "C2 셋째 보기 오답 설명을 \"틀렸다.\" 한마디로",
+          "mutations": [
+            {
+              "rationaleOf": 2,
+              "rationale": "틀렸다."
+            }
+          ],
+          "expect": [
+            "RATIONALE_REWRITTEN",
+            "EXPLANATION_SUGGESTED"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-27-port-adv.json",
+          "index": 0
+        },
+        {
+          "batch": "generated/2026-10-27-port-adv.json",
+          "index": 1
+        },
+        {
+          "batch": "generated/2026-10-27-port-adv.json",
+          "index": 2
+        }
+      ]
+    },
+    {
+      "id": "explanation-subnet",
+      "document": "generated/documents/2026-10-28.json",
+      "edition": "ADVANCED",
+      "difficulty": "INTERMEDIATE",
+      "problems": [
+        {
+          "batch": "generated/2026-10-28-subnet-int.json",
+          "index": 0,
+          "note": "B3 예시를 값 없는 두 줄로 바꿈",
+          "mutations": [
+            {
+              "explanation": "규칙: 서브넷의 주소 가운데 호스트 부분이 모두 0인 네트워크 주소와 모두 1인 브로드캐스트 주소는 기기에 주지 않는다. 그래서 어느 크기든 둘이 빠진다.\n차트의 /24 막대를 따라가 보자.\n주소 몇 개가 쓰이지 않는다.\n그만큼 막대가 낮아진다.\n그래서 막대마다 둘씩 적은 이유는 이 두 주소를 기기에 주지 않아서다.\n(심화편의 '서브넷 크기와 기기에 줄 수 있는 주소' 절을 다시 읽어 보라)"
+            }
+          ],
+          "expect": [
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-28-subnet-int.json",
+          "index": 1,
+          "note": "A4 근거는 심화편인데 입문편 절을 안내함",
+          "mutations": [
+            {
+              "explanation": "규칙: 규칙 하나가 덮는 범위는 접두사가 정한다. 접두사가 길수록 범위가 좁고, 하나 짧아질 때마다 두 배가 된다.\n받는 쪽 주소 10.0.9.77이 어느 규칙에 드는지 따라가 보자.\n/32로 적었을 때: 32비트 전부를 견줘 10.0.9.20 하나만 맞는다. 77은 이 규칙을 타지 않는다.\n/24로 적었을 때: 앞 세 칸만 견준다. 10.0.9까지 같으니 77도 이 규칙을 탄다.\n/24가 덮는 범위를 센다: 10.0.9.0부터 255까지 256개다.\n그래서 /32는 주소 1개, /24는 같은 대역 256개를 덮는다.\n(입문편의 '서브넷 크기와 기기에 줄 수 있는 주소' 절을 다시 읽어 보라)"
+            }
+          ],
+          "expect": [
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-28-subnet-int.json",
+          "index": 2,
+          "note": "C1 해설이 오답을 하나씩 늘어놓음",
+          "mutations": [
+            {
+              "explanation": "규칙: 최장 접두사 일치(맞는 규칙 가운데 접두사가 가장 긴 규칙을 고르는 계산)로 고른다. 접두사가 길수록 가리키는 범위가 좁다.\n10.9.1.1로 보내는 장면을 따라가 보자.\n0.0.0.0/0 규칙을 본다: 접두사가 0이라 모든 주소에 맞는다. 10.9.1.1도 맞는다.\n10.0.0.0/8 규칙을 본다: 앞 8비트 10이 같으니 맞는다.\n두 규칙의 접두사를 견준다: 8이 0보다 길다.\n10.0.0.0/8 규칙이 가리키는 라우터로 나간다.\n먼저 적힌 규칙을 고른다는 보기는 틀렸다. 표는 적힌 순서로 고르지 않는다.\n넓은 규칙을 고른다는 보기도 틀렸다. 그러면 기본 게이트웨이가 늘 이긴다.\n번갈아 보낸다는 보기도 틀렸다. 접두사가 다른 규칙은 짐을 나누는 짝이 아니다.\n그래서 둘 다 맞으면 접두사가 더 긴, 더 좁은 범위의 규칙이 이긴다.\n(심화편의 '라우팅 테이블이 여러 규칙 중 하나를 고르는 방식' 절을 다시 읽어 보라)"
+            }
+          ],
+          "expect": [
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-28-subnet-int.json",
+          "index": 3,
+          "note": "C3 둘째 보기 오답 설명이 다른 보기를 가리킴",
+          "mutations": [
+            {
+              "rationaleOf": 1,
+              "rationale": "바로 앞 보기와 달리 접두사 0 규칙이 늘 진다고 본 것인데, 앞 보기에서 설명한 대로 바깥 주소에는 이 규칙만 맞는다."
+            }
+          ],
+          "expect": [
+            "RATIONALE_REWRITTEN"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-28-subnet-int.json",
+          "index": 4
+        },
+        {
+          "batch": "generated/2026-10-28-subnet-adv.json",
+          "index": 0,
+          "note": "원래 결함 B5: \"그래서\" 맺음 줄이 없다. 2026-11-17 첫 측정에서 AI가 찾았고 규칙도 잡는다",
+          "expect": [
+            "EXPLANATION_REWRITTEN",
+            "EXPLANATION_MISMATCH",
+            "EXPLANATION_SUGGESTED"
+          ]
+        },
+        {
+          "batch": "generated/2026-10-28-subnet-adv.json",
+          "index": 1
+        },
+        {
+          "batch": "generated/2026-10-28-subnet-adv.json",
+          "index": 2
+        }
+      ]
+    },
+    {
+      "id": "explanation-dns",
+      "document": "generated/documents/2026-10-26.json",
+      "edition": "ADVANCED",
+      "difficulty": "ADVANCED",
+      "problems": [
+        {
+          "batch": "generated/2026-10-26-dns-adv.json",
+          "index": 0
+        },
+        {
+          "batch": "generated/2026-10-26-dns-adv.json",
+          "index": 1
+        },
+        {
+          "batch": "generated/2026-10-26-dns-adv.json",
+          "index": 2
         }
       ]
     }

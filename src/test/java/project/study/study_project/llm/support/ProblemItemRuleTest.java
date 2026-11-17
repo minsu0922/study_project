@@ -256,7 +256,7 @@ class ProblemItemRuleTest {
             String noHint = goodExplanation().replaceAll("\\(문서의.*", "");
 
             assertThat(warnings(noHint, true))
-                    .anySatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"));
+                    .anySatisfy(w -> assertThat(w).contains("다시 읽을 절 안내가 없음"));
         }
 
         /**
@@ -269,7 +269,7 @@ class ProblemItemRuleTest {
             String noHint = goodExplanation().replaceAll("\\(문서의.*", "");
 
             assertThat(warnings(noHint, false))
-                    .noneSatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"));
+                    .noneSatisfy(w -> assertThat(w).contains("다시 읽을 절 안내가 없음"));
         }
 
         /**
@@ -294,7 +294,7 @@ class ProblemItemRuleTest {
                 String explanation = "정답 근거를 길게 설명한다. ".repeat(20) + line;
                 assertThat(warnings(explanation, true))
                         .as("이 줄이 헛걸리면 경고가 통째로 죽는다: %s", line)
-                        .noneSatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"));
+                        .noneSatisfy(w -> assertThat(w).contains("다시 읽을 절 안내가 없음"));
             }
         }
 
@@ -316,7 +316,7 @@ class ProblemItemRuleTest {
                 String explanation = "정답 근거를 길게 설명한다. ".repeat(20) + line;
                 assertThat(warnings(explanation, true))
                         .as("이 줄이 헛걸리면 경고가 통째로 죽는다: %s", line)
-                        .noneSatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"));
+                        .noneSatisfy(w -> assertThat(w).contains("다시 읽을 절 안내가 없음"));
             }
         }
     }
@@ -551,7 +551,7 @@ class ProblemItemRuleTest {
         @DisplayName("셋 중 하나만 채우면 알린다 — 화면에 빈 칸이 생긴다")
         void warnsWhenSomeWrongChoicesHaveNoRationale() {
             assertThat(warningsFor(withRationales(1, GOOD)))
-                    .anySatisfy(w -> assertThat(w).contains("오답 설명이 빠진 보기가 있음"));
+                    .anySatisfy(w -> assertThat(w).contains("오답 설명이 비었거나"));
         }
 
         /**
@@ -571,7 +571,7 @@ class ProblemItemRuleTest {
         @DisplayName("한 마디로 때운 설명은 알린다 — 어떤 오해인지가 안 들어간다")
         void warnsWhenRationaleIsTooShort() {
             assertThat(warningsFor(withRationales(3, "틀렸다")))
-                    .anySatisfy(w -> assertThat(w).contains("오답 설명이 너무 짧음"));
+                    .anySatisfy(w -> assertThat(w).contains("오답 설명이 비었거나"));
         }
 
         /**
@@ -605,159 +605,6 @@ class ProblemItemRuleTest {
 
             assertThat(ProblemItemRule.defectOf(item, ProblemType.MULTIPLE_CHOICE))
                     .contains("오답 설명이 보기를 번호로 가리킴");
-        }
-    }
-
-    /**
-     * <b>정답 보기가 질문을 되풀이하면 경고한다</b>(2026-09-04).
-     *
-     * <p>짝짓기에는 같은 검사가 처음부터 있었다("오른쪽에 왼쪽 용어가 그대로 있음"). 객관식에만
-     * 없어서, 질문을 <b>27자 통째로 복사한</b> 정답 보기가 검수를 그냥 통과해 사이트에 올라갔다.
-     * 아래 두 사례는 그때 실제로 걸러졌어야 할 실물이다 — 지어낸 예가 아니라 승인된 문제다.
-     *
-     * <p>여기서 지키는 것은 <b>양쪽 경계</b>다. 문턱만 재면 헛울리는 쪽을 놓친다 — 네 보기가
-     * 다 같은 주제어를 담는 것은 정상이고, 그걸 걸러 내면 정의를 묻는 초급 문제가 매번 경고를 단다.
-     */
-    @Nested
-    @DisplayName("정답 보기가 질문을 되풀이하면 경고한다")
-    class AnswerGiveaway {
-
-        private List<String> warningsFor(String question,
-                                         String correct, String w1, String w2, String w3) {
-            GeneratedProblemItem item = new GeneratedProblemItem(question, "", goodExplanation(),
-                    List.of(new GeneratedProblemItem.GeneratedChoice(correct, true),
-                            new GeneratedProblemItem.GeneratedChoice(w1, false),
-                            new GeneratedProblemItem.GeneratedChoice(w2, false),
-                            new GeneratedProblemItem.GeneratedChoice(w3, false)),
-                    // 유형은 비워 둔다 — 이 규칙은 형태와 무관하고, 값을 넣으면 형태 규칙의
-                    // 경고가 함께 섞여 "무엇 때문에 걸렸는지"가 흐려진다.
-                    "", "제목", null);
-            return ProblemItemRule.qualityWarningsOf(item, Difficulty.BEGINNER, true);
-        }
-
-        /** 실물 #11392 — 겹침 27자. 승인된 객관식 81개 중 가장 심했다. */
-        @Test
-        @DisplayName("질문 문장을 통째로 옮긴 정답은 걸린다 — 27자짜리가 실제로 통과했다")
-        void catchesVerbatimCopy() {
-            assertThat(warningsFor(
-                    "두 스레드가 같은 자리를 동시에 읽고 쓰는 순서에 따라 결과가 달라지는 상황을 가리키는 용어는?",
-                    "경쟁 상태 — 두 스레드가 같은 자리를 동시에 읽고 쓰는 순서에 따라 결과가 달라진다",
-                    "스택 오버플로 — 호출이 너무 깊어져 스택 영역을 넘어선 상태다",
-                    "가시성 — 한 스레드가 쓴 값이 다른 스레드에게 보이는지의 문제다",
-                    "뮤텍스 — 여럿 중 하나만 통과시키고 나머지를 기다리게 하는 자물쇠다"))
-                    .anySatisfy(w -> assertThat(w).contains("질문을").contains("되풀이"));
-        }
-
-        /**
-         * 실물 #11390 — 겹침 14자, 오답도 9자 겹친다("전역·정적 변수가"를 나눠 갖는다).
-         * 차이만 보면 5자라 놓친다. 그래서 <b>절대 길이도 함께</b> 본다.
-         */
-        @Test
-        @DisplayName("오답도 어느 정도 겹치는 경우까지 잡는다 — 차이만 보면 놓친다")
-        void catchesCopyEvenWhenDistractorsShareWords() {
-            assertThat(warningsFor(
-                    "프로세스 주소 공간에서 초기값이 없는 전역·정적 변수가 놓이며 0으로 채워져 시작하는 영역의 이름은?",
-                    "BSS — 초기값이 없는 전역·정적 변수가 0으로 채워져 시작하는 영역",
-                    "데이터 — 초기값이 있는 전역·정적 변수가 들어가는 영역",
-                    "힙 — 실행 중에 요청해서 받는 메모리로 객체가 사는 영역",
-                    "코드 — 실행 파일에서 읽어 온 기계어 명령이 놓이는 영역"))
-                    .anySatisfy(w -> assertThat(w).contains("질문을").contains("되풀이"));
-        }
-
-        /**
-         * <b>헛울리면 안 되는 쪽.</b> 질문이 주제어를 말하면 네 보기가 모두 그 말을 담는 것이
-         * 정상이다. 실측에서 "Write-Through"가 정확히 이 모양이었다(정답 13자 / 오답 13자).
-         */
-        @Test
-        @DisplayName("네 보기가 다 같은 주제어를 담으면 조용하다 — 그건 결함이 아니다")
-        void staysQuietWhenAllChoicesShareTheSubject() {
-            assertThat(warningsFor(
-                    "Write-Through 캐시 쓰기 전략을 골랐을 때 가장 먼저 나타나는 특징은?",
-                    "Write-Through 전략은 쓰기 지연이 늘어나는 대신 값이 어긋날 틈이 없다",
-                    "Write-Through 전략은 쓰기가 즉시 끝나고 나중에 원본에 반영된다",
-                    "Write-Through 전략은 원본만 고치고 캐시는 지워 다음 조회에 채운다",
-                    "Write-Through 전략은 읽기를 원본으로 우회시켜 캐시를 비워 둔다"))
-                    .noneSatisfy(w -> assertThat(w).contains("되풀이"));
-        }
-
-        /** 낱말 몇 개가 겹치는 것은 정상이다 — 어절이 아니라 <b>이어 붙은 구절</b>만 본다. */
-        @Test
-        @DisplayName("낱말만 겹치는 것은 조용하다 — 구절이 옮겨진 것만 본다")
-        void staysQuietOnScatteredWordOverlap() {
-            assertThat(warningsFor(
-                    "스레드를 하나 더 만들 때 새로 생기는 메모리 영역은 무엇인가?",
-                    "스택 한 벌과 레지스터 저장 자리가 생긴다",
-                    "힙 전체가 한 벌 더 복사된다",
-                    "코드 영역이 스레드 수만큼 늘어난다",
-                    "파일 디스크립터 표가 새로 만들어진다"))
-                    .noneSatisfy(w -> assertThat(w).contains("되풀이"));
-        }
-
-        /**
-         * 실물 2026-09-24 — 겹침 9자, 오답 최대 2자. 12자 문턱 아래라 조용히 지나갔고, 같은 배치의
-         * 다섯 문제가 모두 "정답이 보기에 들어 있다"로 거절됐다. 질문이 뜻을 풀어 쓰고 "용어와 그 뜻"을
-         * 물으면, 정답의 뜻 부분이 질문을 말만 바꿔 되받는다.
-         */
-        @Test
-        @DisplayName("용어 — 뜻 꼴은 짧은 되받기도 잡는다 — 말을 바꿔 쓰면 겹침이 6~10자로 끊긴다")
-        void catchesParaphrasedDefinitionInTermPairs() {
-            assertThat(warningsFor(
-                    "데이터베이스 표의 한 줄에 대응하도록 만들어 둔 자바 클래스를 부르는 용어와 그 뜻으로 옳은 것은?",
-                    "엔티티 — 표 한 줄에 대응하도록 만든 자바 클래스",
-                    "ORM — 객체를 다루면 표가 바뀌게 해 주는 매핑 기술",
-                    "JPQL — 엔티티 이름과 필드 이름으로 쓰는 질의어",
-                    "JPAQueryFactory — 질의문 조립을 시작하는 입구 객체"))
-                    .anySatisfy(w -> assertThat(w).contains("질문을").contains("되풀이"));
-        }
-
-        /**
-         * 실물 2026-09-24 — 정답 7자 / 오답 4자로 차이가 3뿐이다. 오답이 "실행할 때"를 우연히
-         * 나눠 가졌을 뿐 결함은 같다. 용어 — 뜻 꼴의 차이 문턱을 3으로 둔 이유다.
-         */
-        @Test
-        @DisplayName("오답이 몇 글자 나눠 가져도 용어 — 뜻 꼴이면 잡는다")
-        void catchesTermPairEvenWhenDistractorSharesAFewChars() {
-            assertThat(warningsFor(
-                    "검색 화면처럼 사용자가 어떤 입력만 채울지 미리 알 수 없어, 실행할 때가 되어야 조건이 정해지는 질의문을 부르는 용어와 그 뜻은?",
-                    "동적 쿼리 — 실행할 때가 되어서야 어떤 조건이 들어갈지 정해지는 질의문",
-                    "바인딩 파라미터 — 값을 비워 두었다가 실행할 때 따로 넘기는 자리",
-                    "Q 타입 — 엔티티마다 자동으로 만들어지는 짝 클래스",
-                    "JDBC — 자바가 데이터베이스에 연결해 결과를 받아 오는 표준 방식"))
-                    .anySatisfy(w -> assertThat(w).contains("질문을").contains("되풀이"));
-        }
-
-        /**
-         * <b>헛울리면 안 되는 쪽</b>, 실물 2026-09-21(승인됨) — 정답 7자 / 오답 5자, 차이 2.
-         * 오답들도 "글자 흐름을 … 잘라"를 고르게 나눠 가져 문장만으로는 답이 좁혀지지 않는다.
-         * 용어 — 뜻 꼴에서 걸리면 안 되는 것 중 가장 가까운 실물이라, 차이 문턱의 경계를 지킨다.
-         */
-        @Test
-        @DisplayName("용어 — 뜻 꼴이라도 오답이 고르게 겹치면 조용하다")
-        void staysQuietWhenTermPairDistractorsShareEvenly() {
-            assertThat(warningsFor(
-                    "브라우저 파싱 과정에서 글자를 의미 단위로 잘라 내는 부품의 이름과 그 역할로 옳은 것은?",
-                    "토크나이저(tokenizer) — 글자 흐름을 태그 시작, 속성 이름, 텍스트 같은 의미 단위로 잘라 준다",
-                    "DOM(document object model) — 글자를 훑어 태그와 텍스트로 잘라 내는 브라우저 부품이다",
-                    "DOCTYPE — 문서의 글자 흐름을 태그·속성·텍스트 단위로 나누는 선언이다",
-                    "엔티티 참조 — 글자 흐름을 읽어 태그와 텍스트의 경계를 판단하는 표기다"))
-                    .noneSatisfy(w -> assertThat(w).contains("되풀이"));
-        }
-
-        /**
-         * <b>낮춘 문턱이 일반 보기로 새지 않는가</b>, 실물 2026-09-22(승인됨) — 정답 9자 겹침은
-         * "HTML 이스케이프"라는 고유명사가 길어서 생긴 정상 겹침이다. 보기가 용어 — 뜻 꼴이 아니므로
-         * 12자 문턱이 그대로 적용돼야 한다.
-         */
-        @Test
-        @DisplayName("일반 문장 보기는 12자 문턱 그대로다 — 긴 고유명사 겹침은 결함이 아니다")
-        void keepsGeneralThresholdForPlainChoices() {
-            assertThat(warningsFor(
-                    "프로필 화면에 회원이 직접 입력한 개인 홈페이지 주소를 링크로 걸어 주는 기능을 넣었다. 템플릿에서 href=\"{{url}}\" 로 출력하고 값에는 HTML 이스케이프를 적용했다. 이 상황을 가장 정확히 설명한 것은?",
-                    "HTML 이스케이프는 문법상 특별한 글자를 바꾸는 방어인데, 이 값은 특수문자가 하나도 없어 그대로 통과하고 스킴 자체가 코드 실행 지시가 된다",
-                    "이스케이프 라이브러리가 콜론을 변환 대상에 넣지 않아서 생긴 구멍이며, 콜론을 엔티티로 치환하면 막힌다",
-                    "템플릿이 이미 이스케이프한 값에 코드가 한 번 더 이스케이프를 걸어, 브라우저 디코딩 과정에서 원래 문자열로 되살아난 것이다",
-                    "서버가 만든 HTML은 안전했지만 브라우저 스크립트가 링크를 다시 조립하면서 서버의 인코딩이 무효가 된 것이다"))
-                    .noneSatisfy(w -> assertThat(w).contains("되풀이"));
         }
     }
 
@@ -944,7 +791,7 @@ class ProblemItemRuleTest {
                             + "둘 중 하나라도 커지면 기동 시 실행은 재시작 루프를 만든다.",
                     Difficulty.INTERMEDIATE);
 
-            assertThat(warnings).anySatisfy(w -> assertThat(w).contains("다시 읽을 문서 절이 없음"))
+            assertThat(warnings).anySatisfy(w -> assertThat(w).contains("다시 읽을 절 안내가 없음"))
                     .noneSatisfy(w -> assertThat(w).contains("편을 밝히지 않음"));
         }
     }
@@ -990,99 +837,6 @@ class ProblemItemRuleTest {
         void staysQuietOnNounPhrase() {
             assertThat(warningsForTitle("커넥션 풀이 고갈될 때의 대기 동작 (HikariCP)"))
                     .noneSatisfy(w -> assertThat(w).contains("제목"));
-        }
-    }
-
-    /**
-     * 정답 최장 쏠림 — 2026-10-10 신설.
-     *
-     * <p>항목별 경고({@code "정답이 가장 긴 보기"})는 편차가 1.5배를 넘을 때만 울린다. 승인된
-     * 객관식 170문제를 재 보니 정답이 최장인 것이 95개(56%)였는데 그 경고가 잡은 것은 27개뿐이었다 —
-     * 나머지는 1.5배 안에서 <b>조금씩만</b> 길었다. 한 문제만 봐서는 우연과 구별이 안 되고,
-     * 여럿을 모아야 보이는 쏠림이라 배치 단위로 잰다.
-     */
-    @Nested
-    @DisplayName("정답이 가장 긴 보기인 문항이 배치의 과반이면 알린다")
-    class CorrectLongestSkew {
-
-        /** 정답이 오답보다 {@code margin}글자 길다(음수면 짧다). 편차는 1.5배에 한참 못 미친다. */
-        private static GeneratedProblemItem lengthItem(int index, int margin) {
-            return new GeneratedProblemItem("물음 " + index + "은 무엇인가?", "", goodExplanation(), List.of(
-                    new GeneratedProblemItem.GeneratedChoice("가".repeat(40 + margin), true),
-                    new GeneratedProblemItem.GeneratedChoice("나".repeat(40), false),
-                    new GeneratedProblemItem.GeneratedChoice("다".repeat(38), false),
-                    new GeneratedProblemItem.GeneratedChoice("라".repeat(39), false)),
-                    "", "제목 " + index, null);
-        }
-
-        private static List<GeneratedProblemItem> batchOf(int... margins) {
-            List<GeneratedProblemItem> out = new ArrayList<>();
-            for (int i = 0; i < margins.length; i++) {
-                out.add(lengthItem(i, margins[i]));
-            }
-            return out;
-        }
-
-        @Test
-        @DisplayName("다섯 중 셋이 정답 최장이면 알린다 — 항목별 경고는 하나도 안 울리는 상태다")
-        void warnsWhenMostCorrectChoicesAreTheLongest() {
-            List<GeneratedProblemItem> batch = batchOf(5, 5, 5, -3, -3);
-
-            assertThat(batch).allSatisfy(i -> assertThat(
-                    ProblemItemRule.qualityWarningsOf(i, Difficulty.INTERMEDIATE, true))
-                    .as("1.5배 안이라 항목별 검사는 조용하다 — 그래서 배치 검사가 따로 있다")
-                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 보기")));
-
-            assertThat(ProblemItemRule.batchWarningsOf(batch, Difficulty.INTERMEDIATE, ProblemType.MULTIPLE_CHOICE))
-                    .anySatisfy(w -> assertThat(w)
-                            .contains("정답이 가장 긴 문항이 5개 중 3개")
-                            .as("몇 번째인지 보여야 어느 정답을 줄일지 정해진다")
-                            .contains("1·2·3번"));
-        }
-
-        @Test
-        @DisplayName("고급 세 문제는 셋이 전부 최장일 때만 알린다 — 둘은 우연으로 흔하다")
-        void needsAllThreeInABatchOfThree() {
-            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, -3), Difficulty.ADVANCED,
-                    ProblemType.MULTIPLE_CHOICE))
-                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
-
-            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, 5), Difficulty.ADVANCED,
-                    ProblemType.MULTIPLE_CHOICE))
-                    .anySatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항이 3개 중 3개"));
-        }
-
-        @Test
-        @DisplayName("일곱 중 셋은 조용하다 — 과반이 아니면 우연과 구별되지 않는다")
-        void staysQuietBelowHalf() {
-            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, 5, -3, -3, -3, -3), Difficulty.BEGINNER,
-                    ProblemType.MULTIPLE_CHOICE))
-                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
-        }
-
-        /** 길이가 같은 오답이 있으면 "제일 긴 것을 고른다"가 답 하나로 좁혀지지 않는다. */
-        @Test
-        @DisplayName("오답과 길이가 같으면 최장으로 세지 않는다 — 긴 것만 골라서는 못 맞힌다")
-        void tiesDoNotCount() {
-            assertThat(ProblemItemRule.batchWarningsOf(batchOf(0, 0, 0, 0, 0), Difficulty.INTERMEDIATE,
-                    ProblemType.MULTIPLE_CHOICE))
-                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
-        }
-
-        /** 유형을 모르는 호출(옛 초안을 다시 재는 경로)도 객관식 모양이면 잰다. */
-        @Test
-        @DisplayName("유형을 안 넘겨도 잰다 — 정답 보기가 하나인 항목만 센다")
-        void worksWithoutType() {
-            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, 5), Difficulty.ADVANCED))
-                    .anySatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항이 3개 중 3개"));
-        }
-
-        /** 짝짓기·순서 배열의 보기에는 정답 표시가 없거나 전부라서, 최장을 물을 대상이 없다. */
-        @Test
-        @DisplayName("객관식이 아닌 유형에는 재지 않는다")
-        void skipsOtherTypes() {
-            assertThat(ProblemItemRule.batchWarningsOf(batchOf(5, 5, 5), Difficulty.BEGINNER, ProblemType.MATCHING))
-                    .noneSatisfy(w -> assertThat(w).contains("정답이 가장 긴 문항"));
         }
     }
 

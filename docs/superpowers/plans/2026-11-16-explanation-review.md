@@ -1,5 +1,7 @@
 # 해설 검수 강화 Implementation Plan
 
+> 2026-11-17: 이 문서는 [문제 AI 검수 다시 짜기 설계](../specs/2026-11-17-ai-review-rebuild-design.md)로 대신했다. 해설 기준표만 그쪽이 가져다 쓴다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 문제 검수에 해설 검수 호출 D를 더해, 기준표 A·B·C에 걸린 해설과 오답 설명을 AI가 고쳐 초안에 넣고 옛 글을 지적에 남긴다.
