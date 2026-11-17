@@ -1,5 +1,7 @@
 package project.study.study_project.llm.client;
 
+import project.study.study_project.llm.review.QuoteMatch;
+
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.models.messages.MessageCreateParams;
@@ -393,16 +395,12 @@ public class ClaudeCodeProblemReviewer {
     }
 
     private static boolean appearsIn(Item item, String quote) {
-        String q = ClaudeDocumentFactChecker.normalize(quote);
-        if (q.isEmpty()) {
-            return false;
-        }
-        List<String> texts = new ArrayList<>(List.of(item.question(), item.explanation()));
+        List<String> texts = new ArrayList<>(java.util.Arrays.asList(item.question(), item.explanation()));
         for (Choice c : item.choices()) {
             texts.add(c.text());
             texts.add(c.rationale());
         }
-        return texts.stream().anyMatch(t -> t != null && ClaudeDocumentFactChecker.normalize(t).contains(q));
+        return QuoteMatch.in(quote, texts.toArray(String[]::new));
     }
 
     private static boolean isBlank(String s) {
