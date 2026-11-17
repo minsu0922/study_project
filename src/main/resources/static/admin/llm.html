@@ -475,11 +475,37 @@ const isOpenFinding = f => !isOpinion(f) && !f.resolution;
 /** 직접 고치기 칸이 지금 글을 채워 넣을 때 쓴다. 목록을 다시 그릴 때마다 새로 담긴다. */
 const aiEditDrafts = new Map();
 
+/** AI가 고쳐 초안에 넣은 지적 종류. 들여올 때 처리된 것으로 저장된다(DraftAiFinding.AI_INSERTED) */
+const REWRITE_TYPES = ["EXPLANATION_REWRITTEN", "RATIONALE_REWRITTEN"];
+const rewroteBadgeOf = d => (d.aiFindings ?? []).some(f => REWRITE_TYPES.includes(f.type))
+  ? `<span class="badge orange">AI가 해설을 고침</span>` : "";
+
+/**
+ * 고쳐 넣은 지적의 근거 칸. 근거 끝의 "옛 해설:"·"옛 오답 설명:" 아래 글을 지금 글과 나란히 보여 준다.
+ * 일괄 승인에 그대로 두는 대신(2026-11-16 결정) 무엇이 바뀌었는지 여기서 확인한다.
+ */
+function rewriteCompareOf(d, f) {
+  const lines = f.details ?? [];
+  const at = lines.findIndex(l => l.startsWith("옛 해설:") || l.startsWith("옛 오답 설명:"));
+  if (at < 0) return null;
+  const reasons = lines.slice(0, at);
+  const old = [lines[at].replace(/^옛 (해설|오답 설명):\s*/, ""), ...lines.slice(at + 1)].filter(Boolean).join("\n");
+  const no = /(\d+)번째 보기/.exec(f.message ?? "");
+  const now = f.type === "EXPLANATION_REWRITTEN" ? d.explanation : d.choices?.[Number(no?.[1]) - 1]?.rationale;
+  return `
+        ${reasons.length ? `<ul>${reasons.map(l => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}
+        <div class="ai-rewrite">
+          <div><div class="meta">옛 글</div><div class="ai-rewrite-old">${escapeHtml(old)}</div></div>
+          <div><div class="meta">지금 글</div><div class="ai-rewrite-new">${escapeHtml(now ?? "")}</div></div>
+        </div>`;
+}
+
 function aiFindingItemOf(d, f) {
+  const compare = REWRITE_TYPES.includes(f.type) ? rewriteCompareOf(d, f) : null;
   return `
       <div class="ai-finding">
         <div><span class="badge gray">${escapeHtml(f.label)}</span> <b>${escapeHtml(f.message)}</b></div>
-        ${(f.details ?? []).length ? `<ul>${f.details.map(l => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}
+        ${compare ?? ((f.details ?? []).length ? `<ul>${f.details.map(l => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : "")}
         ${f.resolution ? `<div class="meta"><b>처리</b> ${escapeHtml(f.resolution)}</div>` : ""}
         ${f.resolution ? "" : aiSuggestionOf(d, f)}
         ${aiResolveOf(d, f)}
@@ -944,6 +970,7 @@ async function loadDrafts(jumpToLast = false) {
           <span class="badge gray">${escapeHtml(typeLabel(d.type))}</span>
           ${d.questionKindLabel ? `<span class="badge">${escapeHtml(d.questionKindLabel)}</span>` : ""}
           ${d.codeKindLabel ? `<span class="badge">코드 · ${escapeHtml(d.codeKindLabel)}</span>` : ""}
+          ${rewroteBadgeOf(d)}
           <span class="meta">${escapeHtml(d.model)}</span>
         </div>
         ${warningBoxOf(d)}
