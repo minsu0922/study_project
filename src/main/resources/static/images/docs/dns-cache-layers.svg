@@ -5,7 +5,7 @@
 <rect x="22" y="96" width="116" height="44" rx="4" class="f-hl" fill="#eef2ff"/>
 <text x="80" y="84" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">브라우저 캐시</text>
 <text x="80" y="116" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">있음</text>
-<text x="80" y="134" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">93.184.216.34</text>
+<text x="80" y="134" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">203.0.113.10</text>
 <path d="M146 104 H168" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5"/>
 <rect x="172" y="60" width="128" height="88" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
 <text x="236" y="84" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">운영체제 캐시</text>

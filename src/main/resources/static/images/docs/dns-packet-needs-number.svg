@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" role="img" aria-label="두 줄 그림. 받는 곳에 이름 shop.example.com만 적은 패킷은 내 컴퓨터를 떠나지 못한다. 길 위의 장치는 이름을 읽지 못한다. 받는 곳에 IP 주소 203.0.113.10을 적은 패킷은 길 위의 장치가 번호를 보고 넘겨 서버에 닿는다">
+<defs><marker id="dns-packet-needs-number-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="36" class="f-acc" fill="#4f46e5" font-size="15" font-weight="700">① 받는 곳에 이름만 적은 패킷</text>
+<rect x="16" y="56" width="110" height="96" rx="8" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="71" y="110" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">내 컴퓨터</text>
+<rect x="142" y="70" width="210" height="68" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<path d="M142 70 L247 104 L352 70" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<text x="154" y="118" class="f-sm" fill="#556274" font-size="13">받는 곳</text>
+<text x="210" y="128" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">shop.example.com</text>
+<path d="M360 104 H446" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 5"/>
+<path d="M392 88 L414 120 M414 88 L392 120" class="f-strike" fill="none" stroke="#dc2626" stroke-width="3"/>
+<rect x="452" y="56" width="172" height="96" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="538" y="96" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">길 위의 장치</text>
+<text x="538" y="124" class="f-bad" fill="#dc2626" font-size="14" font-weight="700" text-anchor="middle">이름은 못 읽는다</text>
+<text x="16" y="180" class="f-sm" fill="#556274" font-size="14">받는 칸에는 번호만 들어간다. 번호가 없으면 패킷은 출발조차 못 한다</text>
+<text x="16" y="226" class="f-acc" fill="#4f46e5" font-size="15" font-weight="700">② 받는 곳에 IP 주소를 적은 패킷</text>
+<rect x="16" y="246" width="110" height="96" rx="8" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="71" y="300" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">내 컴퓨터</text>
+<rect x="142" y="260" width="210" height="68" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<path d="M142 260 L247 294 L352 260" class="f-flap" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+<rect x="200" y="302" width="146" height="22" rx="3" class="f-hl" fill="#eef2ff"/>
+<text x="154" y="318" class="f-sm" fill="#556274" font-size="13">받는 곳</text>
+<text x="210" y="318" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace">203.0.113.10</text>
+<path d="M360 294 H446" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#dns-packet-needs-number-head)"/>
+<rect x="452" y="246" width="172" height="96" rx="8" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="538" y="286" class="f-b" fill="#0f172a" font-size="15" font-weight="700" text-anchor="middle">길 위의 장치</text>
+<text x="538" y="314" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" text-anchor="middle">번호를 보고 넘긴다</text>
+<text x="16" y="370" class="f-sm" fill="#556274" font-size="14">전화도 같다. 가게 이름이 아니라 전화번호를 눌러야 걸린다</text>
+</svg>

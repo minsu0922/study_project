@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 340" role="img" aria-label="두 칸 그림. 왼쪽: 서버를 옮겨 번호가 203.0.113.10에서 198.51.100.20으로 바뀌어도 간판의 이름 shop.example.com은 그대로라 사용자는 같은 이름으로 찾아온다. 오른쪽: 이름 하나가 번호 둘 203.0.113.10과 203.0.113.20을 가리킨다. 이름만 봐서는 서버가 몇 대인지 모른다">
+<defs><marker id="dns-name-stays-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="36" class="f-acc" fill="#4f46e5" font-size="15" font-weight="700">① 서버를 옮겨도 이름은 그대로</text>
+<rect x="30" y="56" width="250" height="52" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="155" y="88" class="f-mono" fill="#0f172a" font-size="16" font-weight="700" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">shop.example.com</text>
+<line x1="70" y1="108" x2="70" y2="128" class="f-line" stroke="#0f172a" stroke-width="1.5"/>
+<line x1="240" y1="108" x2="240" y2="128" class="f-line" stroke="#0f172a" stroke-width="1.5"/>
+<text x="155" y="150" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">간판 아래 적힌 번호</text>
+<rect x="30" y="164" width="250" height="44" rx="4" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="155" y="192" class="f-mono" fill="#0f172a" font-size="14" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">옛 번호 203.0.113.10</text>
+<line x1="56" y1="187" x2="254" y2="187" class="f-strike" stroke="#dc2626" stroke-width="2.5"/>
+<path d="M155 212 V234" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#dns-name-stays-head)"/>
+<rect x="30" y="240" width="250" height="44" rx="4" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<rect x="36" y="246" width="238" height="32" rx="3" class="f-hl" fill="#eef2ff"/>
+<text x="155" y="268" class="f-new" fill="#4f46e5" font-size="14" font-weight="700" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">새 번호 198.51.100.20</text>
+<text x="155" y="316" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">사용자는 같은 이름으로 찾아온다</text>
+<line x1="320" y1="40" x2="320" y2="320" class="f-line" stroke="#0f172a" stroke-width="1" stroke-dasharray="3 5"/>
+<text x="344" y="36" class="f-acc" fill="#4f46e5" font-size="15" font-weight="700">② 이름 하나에 번호 둘</text>
+<rect x="360" y="56" width="250" height="52" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="485" y="88" class="f-mono" fill="#0f172a" font-size="16" font-weight="700" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">shop.example.com</text>
+<path d="M440 108 L404 176" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#dns-name-stays-head)"/>
+<path d="M530 108 L566 176" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#dns-name-stays-head)"/>
+<rect x="340" y="182" width="136" height="76" rx="8" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="408" y="212" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">서버 1</text>
+<text x="408" y="238" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">203.0.113.10</text>
+<rect x="494" y="182" width="136" height="76" rx="8" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="562" y="212" class="f-b" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">서버 2</text>
+<text x="562" y="238" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace" text-anchor="middle">203.0.113.20</text>
+<text x="485" y="316" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">이름만 봐서는 서버가 몇 대인지 모른다</text>
+</svg>
