@@ -319,6 +319,21 @@ class LlmProblemServiceTest {
                     .containsExactly("해설입니다.", "둘째만 고친 해설");
         }
 
+        @Test
+        @DisplayName("규약 위반으로 버린 문제가 있어도 고친 해설은 제 초안에 들어간다")
+        void alignsDespiteDroppedProblems() {
+            GeneratedProblemItem dropped = new GeneratedProblemItem("", "", "해설입니다.", mcItem("x", 0).choices());
+            fakeGenerator.toReturn = List.of(dropped, mcItem("남은 문제", 0));
+            fakeReviewer.problemsToReturn = List.of(dropped,
+                    new GeneratedProblemItem("남은 문제", "", "남은 문제의 고친 해설", mcItem("남은 문제", 0).choices()));
+
+            List<GeneratedProblemDraft> saved = savedDrafts(() ->
+                    service.generateFromDocument(request(ProblemType.MULTIPLE_CHOICE, null), uploaded));
+
+            assertThat(saved).extracting(GeneratedProblemDraft::getQuestion).containsExactly("남은 문제");
+            assertThat(saved.get(0).getExplanation()).isEqualTo("남은 문제의 고친 해설");
+        }
+
         /** 마지막으로 저장한 초안 목록. 지적은 첫 저장 뒤에 적고 다시 저장한다 */
         @SuppressWarnings("unchecked")
         private List<GeneratedProblemDraft> savedDrafts(Runnable action) {

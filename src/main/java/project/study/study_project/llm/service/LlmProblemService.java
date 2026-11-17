@@ -357,14 +357,23 @@ public class LlmProblemService {
 
     /**
      * AI가 고쳐 넣은 해설·오답 설명을 저장한 초안에 옮기고 지적을 적는다. 지적이 없는 초안에도 빈 목록을 적어
-     * "검수함"을 남긴다. 초안과 문제는 목록 위치로 짝짓는다 — 질문 글이 같은 두 문제도 섞이지 않는다.
+     * "검수함"을 남긴다. 저장할 때 규약 위반 문제는 빠지므로, 순서를 따라가며 질문이 같은 문제를 짝짓는다.
+     * 질문이 같은 두 문제도 순서대로 하나씩 짝지어져 섞이지 않는다.
      */
     private void attachReview(List<GeneratedProblemDraft> drafts, ProblemReviewer.Reviewed reviewed) {
         DraftAiFinding.Grouped grouped = DraftAiFinding.groupByQuestion(reviewed.problems(), reviewed.findings());
+        List<GeneratedProblemItem> problems = reviewed.problems();
+        int next = 0;
         try {
-            for (int i = 0; i < drafts.size() && i < reviewed.problems().size(); i++) {
-                GeneratedProblemDraft draft = drafts.get(i);
-                GeneratedProblemItem item = reviewed.problems().get(i);
+            for (GeneratedProblemDraft draft : drafts) {
+                while (next < problems.size()
+                        && !java.util.Objects.equals(Texts.trimToNull(problems.get(next).question()), draft.getQuestion())) {
+                    next++;
+                }
+                if (next >= problems.size()) {
+                    break;
+                }
+                GeneratedProblemItem item = problems.get(next++);
                 List<DraftAiFinding> mine = grouped.of(draft.getQuestion());
                 String findingsJson = objectMapper.writeValueAsString(mine);
                 // 저장할 때와 같은 함수로 만들어 견준다. 고친 것이 없으면 해설·보기를 다시 쓰지 않는다
