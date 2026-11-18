@@ -118,6 +118,69 @@ class PolishPreservationTest {
                 .anySatisfy(d -> assertThat(d).contains("대부분"));
     }
 
+    private static final String HEDGED = """
+            # 캐시
+
+            ## 무엇인가
+
+            - **캐시(cache)** — 자주 쓰는 값을 가까이 두는 `저장소`다.
+
+            > **캐시는 원본보다 늦을 수 있다.**
+
+            캐시는 오래된 값을 돌려줄 수 있다. 서버가 멈출 수도 있다. 응답이 늦을 수 있다.
+            값이 바뀔 수 있다. 연결이 끊길 수 있다. 다시 물을 수 있다. 줄이 밀릴 수 있다.
+            표가 커질 수 있다. 장부가 낡을 수 있다. 답이 틀릴 수 있다.
+            """;
+
+    @Test
+    @DisplayName("결론 상자 문장이 바뀌면 걸린다")
+    void changedConclusionBoxFails() {
+        assertThat(differences(HEDGED, HEDGED.replace("> **캐시는 원본보다 늦을 수 있다.**", "> **캐시는 원본보다 늦다.**")))
+                .anySatisfy(d -> assertThat(d).contains("인용 상자"));
+    }
+
+    @Test
+    @DisplayName("용어 정의 줄 앞부분이 바뀌면 걸린다")
+    void changedDefinitionHeadFails() {
+        assertThat(differences(HEDGED, HEDGED.replace("- **캐시(cache)** —", "- **캐시** —")))
+                .anySatisfy(d -> assertThat(d).contains("정의 줄"));
+    }
+
+    @Test
+    @DisplayName("백틱 안 글자가 바뀌면 걸린다")
+    void changedInlineCodeFails() {
+        assertThat(differences(HEDGED, HEDGED.replace("`저장소`", "`보관소`")))
+                .anySatisfy(d -> assertThat(d).contains("백틱"));
+    }
+
+    @Test
+    @DisplayName("가능 표현이 30% 넘게 줄면 걸린다 — 가능성을 단정으로 바꾸면 사실이 과장된다")
+    void possibilityDroppedTooMuchFails() {
+        // 11개 → 7개(약 36% 감소)
+        String polished = HEDGED.replace("돌려줄 수 있다", "돌려준다").replace("멈출 수도 있다", "멈춘다")
+                .replace("응답이 늦을 수 있다.", "응답이 늦다.").replace("바뀔 수 있다", "바뀐다");
+
+        assertThat(differences(HEDGED, polished)).anySatisfy(d -> assertThat(d).contains("가능 표현"));
+    }
+
+    @Test
+    @DisplayName("가능 표현이 30% 안에서 줄거나 늘면 통과한다")
+    void possibilityWithinToleranceOrMorePasses() {
+        // 11개 → 9개(약 18% 감소)
+        String fewer = HEDGED.replace("돌려줄 수 있다", "돌려준다").replace("멈출 수도 있다", "멈춘다");
+        String more = HEDGED.replace("돌려줄 수 있다.", "돌려줄 수 있다. 늦게 올 수도 있다.");
+
+        assertThat(differences(HEDGED, fewer)).isEmpty();
+        assertThat(differences(HEDGED, more)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("다른 점 문장은 한 줄이고 펜스를 담지 않는다 — Actions 요약에서 펜스가 열리면 아래가 전부 코드로 보인다")
+    void differenceMessageIsOneLineWithoutFence() {
+        assertThat(differences(ORIGINAL, ORIGINAL.replace("nslookup shop", "dig shop")))
+                .allSatisfy(d -> assertThat(d).doesNotContain("\n").doesNotContain("```"));
+    }
+
     @Test
     @DisplayName("조건어 목록은 정도 부사 15개다")
     void conditionWordsAreFifteen() {

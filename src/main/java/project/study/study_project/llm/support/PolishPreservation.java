@@ -24,7 +24,16 @@ public final class PolishPreservation {
             "기본적으로", "대부분", "대개", "보통", "주로", "흔히", "일반적으로", "거의",
             "가끔", "종종", "드물게", "최대", "최소", "적어도", "늦어도");
 
+    /**
+     * 가능 표현("수 있"·"수도 있")이 이 비율보다 많이 줄면 원본을 쓴다(사용자 확정 2026-11-18, 예시 값 30%).
+     * 윤문이 남발을 덜어내는 것은 허용하되, 가능성을 단정으로 바꿔 사실을 과장하는 것은 막는다.
+     */
+    static final double POSSIBILITY_MAX_DROP = 0.3;
+
     private static final Pattern FENCE = Pattern.compile("(?ms)^```.*?^```[ \\t]*$");
+    private static final Pattern QUOTE_LINE = Pattern.compile("(?m)^>.*$");
+    private static final Pattern DEFINITION_HEAD = Pattern.compile("(?m)^- \\*\\*[^*\\n]+\\*\\* —");
+    private static final Pattern INLINE_CODE = Pattern.compile("`[^`\\n]+`");
     private static final Pattern HEADING = Pattern.compile("(?m)^#{1,6} .*$");
     private static final Pattern FIGURE = Pattern.compile("!\\[[^\\]]*\\]\\([^)]*\\)");
     private static final Pattern LINK = Pattern.compile("(?<!!)\\[[^\\]]*\\]\\([^)]*\\)");
@@ -58,6 +67,17 @@ public final class PolishPreservation {
         }
 
         compareList(out, "용어 한눈에 표의 용어", glossaryTerms(proseBefore), glossaryTerms(proseAfter));
+        // 「글의 주제」 상자와 결론 상자. brief가 없는 날은 형식 검사가 상자를 대조하지 못해 여기서 본다
+        compareList(out, "인용 상자", all(QUOTE_LINE, proseBefore), all(QUOTE_LINE, proseAfter));
+        compareList(out, "용어 정의 줄", all(DEFINITION_HEAD, proseBefore), all(DEFINITION_HEAD, proseAfter));
+        // 문장 순서는 바뀔 수 있어 백틱 글자는 순서 없이 비교한다
+        compareList(out, "백틱 안 글자", sorted(all(INLINE_CODE, proseBefore)), sorted(all(INLINE_CODE, proseAfter)));
+
+        int possibleBefore = count(proseBefore, "수 있") + count(proseBefore, "수도 있");
+        int possibleAfter = count(proseAfter, "수 있") + count(proseAfter, "수도 있");
+        if (possibleAfter < possibleBefore * (1 - POSSIBILITY_MAX_DROP)) {
+            out.add("가능 표현(수 있다)이 너무 많이 줄었습니다: %d → %d".formatted(possibleBefore, possibleAfter));
+        }
 
         for (String word : CONDITION_WORDS) {
             int b = count(proseBefore, word);
@@ -83,7 +103,25 @@ public final class PolishPreservation {
         missing.removeAll(after);
         List<String> added = new ArrayList<>(after);
         added.removeAll(before);
-        out.add("%s이(가) 다릅니다: 빠짐 %s, 생김 %s".formatted(name, missing, added));
+        out.add("%s이(가) 다릅니다(%d개 → %d개): 빠짐 %s, 생김 %s".formatted(
+                name, before.size(), after.size(), brief(missing), brief(added)));
+    }
+
+    /**
+     * 사유는 Actions 요약에 그대로 찍힌다. 코드 블록 전문이 들어가면 ``` 줄이 펜스를 열어
+     * 그 아래 요약이 전부 코드로 보이므로, 항목마다 첫 줄 40자만 남기고 펜스 기호를 뺀다.
+     */
+    private static List<String> brief(List<String> items) {
+        return items.stream().map(s -> {
+            String line = s.replace("```", "").strip();
+            int nl = line.indexOf('\n');
+            line = nl < 0 ? line : line.substring(0, nl);
+            return line.length() > 40 ? line.substring(0, 40) + "…" : line;
+        }).toList();
+    }
+
+    private static List<String> sorted(List<String> items) {
+        return items.stream().sorted().toList();
     }
 
     private static List<String> all(Pattern p, String s) {

@@ -77,14 +77,24 @@ class PolishStepTest {
     }
 
     @Test
-    @DisplayName("「글의 주제」 상자를 고치면 새 형식 경고로 원본을 쓴다")
+    @DisplayName("「글의 주제」 상자를 고치면 원본을 쓴다 — brief가 없는 날도 인용 상자 대조가 잡는다")
     void keepsOriginalWhenTopicBoxChanges() {
         String polished = BODY.replace("> 이 글은 그 과정을 따라간다.", "> 이 글은 그 과정을 차례로 따라간다.");
+
+        assertThat(PolishStep.decide(returning(polished), ORIGINAL, BOX).applied()).isFalse();
+        assertThat(PolishStep.decide(returning(polished), ORIGINAL, null).reason())
+                .startsWith("보존 대조 실패").contains("인용 상자");
+    }
+
+    @Test
+    @DisplayName("보존 대조를 통과해도 새 형식 경고가 생기면 원본을 쓴다")
+    void keepsOriginalWhenNewValidatorWarningAppears() {
+        String polished = BODY.replace("리졸버에 대해 설명하는 것이다.", "<mark>리졸버</mark>를 설명한다.");
 
         PolishOutcome outcome = PolishStep.decide(returning(polished), ORIGINAL, BOX);
 
         assertThat(outcome.applied()).isFalse();
-        assertThat(outcome.reason()).startsWith("새 형식 경고").contains("글의 주제");
+        assertThat(outcome.reason()).startsWith("새 형식 경고");
     }
 
     @Test
