@@ -72,6 +72,58 @@ class DocumentFactFindingsTest {
         assertThat(resolved.factFindings()).isNull();
     }
 
+    private static GeneratedDocumentItem item(String slug, String content) {
+        return new GeneratedDocumentItem("제목", slug, content, List.of("net"));
+    }
+
+    @Test
+    @DisplayName("윤문본과 원본을 함께 실은 파일이 엄격한 읽기로 왕복한다")
+    void polishedFileRoundTripsStrictly(@TempDir Path tmp) throws Exception {
+        GeneratedDocumentFile polished = file().withPolished(
+                item("test-slug", "# 입문편\n\n## 무엇인가\n고친 정의.\n"), null,
+                item("test-slug", "# 입문편\n\n## 무엇인가\n정의.\n"), null);
+        Path out = tmp.resolve("x.json");
+        Files.writeString(out, project.study.study_project.llm.support.FileFormats.toJson(
+                project.study.study_project.llm.support.JsonMappers.STRICT,
+                project.study.study_project.llm.support.FileFormats.Kind.DOCUMENTS, polished));
+
+        GeneratedDocumentFile read = project.study.study_project.llm.support.FileFormats.read(
+                project.study.study_project.llm.support.JsonMappers.STRICT, out,
+                project.study.study_project.llm.support.FileFormats.Kind.DOCUMENTS, GeneratedDocumentFile.class);
+
+        assertThat(read.document().contentMd()).contains("고친 정의.");
+        assertThat(read.originalDocument().contentMd()).contains("\n정의.");
+        assertThat(read.originalAdvancedDocument()).isNull();
+    }
+
+    @Test
+    @DisplayName("원본 칸이 없는 옛 문서 파일도 읽히고, 원본 칸은 null이다")
+    void oldFileWithoutOriginalsParses(@TempDir Path tmp) throws Exception {
+        Path out = write(tmp, file());
+        var tree = (com.fasterxml.jackson.databind.node.ObjectNode) MAPPER.readTree(out.toFile());
+        tree.remove("originalDocument");
+        tree.remove("originalAdvancedDocument");
+        MAPPER.writeValue(out.toFile(), tree);
+
+        GeneratedDocumentFile read = project.study.study_project.llm.support.JsonMappers.STRICT
+                .readValue(out.toFile(), GeneratedDocumentFile.class);
+
+        assertThat(read.originalDocument()).isNull();
+        assertThat(read.originalAdvancedDocument()).isNull();
+    }
+
+    @Test
+    @DisplayName("윤문한 파일에 사실 검수 지적을 붙여도 원본 칸이 남는다")
+    void findingsKeepOriginals() {
+        GeneratedDocumentFile polished = file().withPolished(
+                item("test-slug", "고친 본문"), null, item("test-slug", "원고"), null);
+
+        GeneratedDocumentFile withFindings = polished.withFactFindings(List.of(FINDING));
+
+        assertThat(withFindings.originalDocument().contentMd()).isEqualTo("원고");
+        assertThat(withFindings.factFindings()).containsExactly(FINDING);
+    }
+
     @Test
     @DisplayName("두 편 다 검수하지 못하면 null, 한 편이라도 했으면 그 지적만 싣는다")
     void mergesEditionFindings() {

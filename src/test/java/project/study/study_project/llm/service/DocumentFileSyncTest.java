@@ -79,6 +79,24 @@ class DocumentFileSyncTest {
                 .isEqualTo("고친 문장");
     }
 
+    /** 윤문 전 원본 칸(2026-11-18)은 통째로 다시 쓰는 경로에서 새 생성자로 옮기지 않으면 조용히 사라진다. */
+    @Test
+    @DisplayName("통째로 다시 써도 윤문 전 원본 칸이 남는다")
+    void wholeRewriteKeepsOriginals() throws Exception {
+        Path dir = Files.createDirectories(root.resolve("documents"));
+        Path file = dir.resolve("2026-10-22.json");
+        Files.writeString(file, """
+                {"date":"2026-10-22","domain":"%s","model":"m",
+                 "document":{"title":"t","slug":"net","contentMd":"\\uD2C0\\uB9B0 \\uBB38\\uC7A5","tags":[]},
+                 "originalDocument":{"title":"t","slug":"net","contentMd":"윤문 전 원고","tags":[]}}
+                """.formatted(TestDomains.SYSTEM_DESIGN.value()));
+
+        assertThat(sync().replaceContent("net", "틀린 문장", "고친 문장")).contains("2026-10-22.json");
+        GeneratedDocumentFile after = JsonMappers.STRICT.readValue(file.toFile(), GeneratedDocumentFile.class);
+        assertThat(after.document().contentMd()).isEqualTo("고친 문장");
+        assertThat(after.originalDocument().contentMd()).isEqualTo("윤문 전 원고");
+    }
+
     private DocumentFileSync sync() {
         return new DocumentFileSync(root.toString());
     }
