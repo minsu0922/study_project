@@ -144,6 +144,8 @@ class ClaudeDocumentPolisherTest {
                 .as("B 군더더기").contains("정리하면")
                 .as("C 같은 틀 반복").contains("점을 보면 된다").contains("A가 아니라 B")
                 .as("D 문장 길이").contains("한 문장은 60자까지다")
+                .as("문단 쪼개기가 지나쳤다(2026-11-18 DNS 시험 윤문). 한 문장짜리 문단을 막는다")
+                .contains("한 문장짜리 문단을 만들지 마라")
                 .as("E 줄바꿈").contains("굵은 글씨 한 줄 바로 아래에 본문을 붙여 쓰지 마라")
                 .contains("한 문단에는 이야기 하나만 담는다").contains("줄표는 문장 끝에서만 쓴다")
                 .as("앞뒤에 말을 붙이면 보존 대조에서 원본으로 돌아간다").contains("본문만 내놓는다");
