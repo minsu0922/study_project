@@ -130,7 +130,13 @@ sequenceDiagram
     R->>C: 심화편 써 줘 (입문편 전문 첨부)
     C-->>R: 심화편
     R->>F: 두 편 저장
-    R->>C: 두 편 사실 검수
+    opt polish-enabled가 켜져 있으면
+        R->>C: 두 편 윤문 (동시)
+        C-->>R: 문장만 고친 본문
+        R->>R: 보존 대조 · 새 형식 경고 비교
+        R->>F: 통과한 편만 윤문본으로 바꾸고 원고는 원본 칸에
+    end
+    R->>C: 두 편 사실 검수 (동시)
     C-->>R: 틀린 문장 지적
     R->>F: 지적(factFindings) 덧붙여 다시 저장
     R->>Q: 사용 기록 파일에 사용 날짜 찍기
@@ -141,10 +147,19 @@ sequenceDiagram
 2. `_existing-documents.json`을 읽어 이미 있는 제목을 피하게 한다.
 3. 입문편을 만들고 그 전문을 넘겨 심화편을 만든다. 심화편이 실패해도 입문편은 저장한다.
 4. 두 편을 `generated/documents/<날짜>.json`에 쓴다.
-5. AI가 두 편을 사실 검수한다. 지적은 같은 파일의 `factFindings`에 덧붙인다.
-6. 주제 대기열에 "이 날짜에 썼음"을 찍는다. 대기열 파일도 함께 커밋된다.
+5. `polish-enabled`가 켜져 있으면 두 편을 동시에 윤문한다. 내용은 그대로 두고 문장만 고친다.
+   코드가 소제목·수치·코드·그림·용어·조건어를 원고와 대조하고, 새 형식 경고가 생겼는지 본다.
+   통과한 편만 윤문본으로 바꿔 쓰고, 원고는 `originalDocument`·`originalAdvancedDocument` 칸에 남긴다.
+   걸린 편은 원고를 그대로 쓴다. 편마다 결과 한 줄이 Actions 요약에 남는다.
+6. 형식 검사를 돌린다. 윤문 뒤라 실제로 나가는 본문을 검사한다.
+7. AI가 두 편을 동시에 사실 검수한다. 지적은 같은 파일의 `factFindings`에 덧붙인다.
+8. 주제 대기열에 "이 날짜에 썼음"을 찍는다. 대기열 파일도 함께 커밋된다.
 
-코드 위치: `llm/cli/DocumentBatch.java`
+코드 위치: `llm/cli/DocumentBatch.java`, 윤문 판단은 `llm/cli/PolishStep.java`
+
+윤문을 켜는 순서가 정해져 있다. 문서 파일을 읽는 쪽은 모르는 칸이 있으면 실패한다.
+그래서 로컬 앱이 이 코드를 먼저 받은 뒤에 `application.yml`의 `polish-enabled`를 켠다.
+켜기 전에 `evalPolish`로 윤문 전후를 비교한다(실제 API 호출이라 요금이 든다).
 
 ---
 
