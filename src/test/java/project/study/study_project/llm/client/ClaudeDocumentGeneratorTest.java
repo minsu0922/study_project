@@ -1024,20 +1024,22 @@ class ClaudeDocumentGeneratorTest {
      * 문장을 가장 길게 만든다(146자·137자 실물). 줄표 자체를 금지하지 않은 이유는 그것이
      * 이 문서들의 글맛이기 때문이다 — 자리만 문장 끝으로 옮긴다.
      */
+    /** 2026-11-18부터 이 규칙은 윤문 단계가 맡는다. 생성 쪽에 다시 넣으면 규칙이 두 곳으로 갈린다. */
     @Test
-    @DisplayName("답변용 문체 규칙이 두 편의 [덜어낼 것]에도 실린다 — 규칙이 두 곳에 갈려 있었다")
-    void bothPromptsCarryTheAnswerStyleRules() {
+    @DisplayName("답변용 문체 규칙이 윤문 프롬프트에 실리고 생성 프롬프트에서는 빠진다")
+    void answerStyleRulesLiveInThePolishPrompt() {
+        assertThat(ClaudeDocumentPolisher.SYSTEM_PROMPT)
+                .as("번역투 — 문서에 13건 나왔다")
+                .contains("\"~에 대해/~에 대한\"")
+                .as("형식명사 — 문서에 31건 나왔다(~하는 것 21, 것이다 10)")
+                .contains("\"~하는 것\"")
+                .as("가능 표현 남발 — 문서에 16건 나왔다")
+                .contains("\"~할 수 있다\" 남발")
+                .as("줄표는 문장 끝에서만 — 문장 가운데를 끊는 정의가 문장을 가장 길게 만든다")
+                .contains("줄표는 문장 끝에서만 쓴다");
         for (String prompt : List.of(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT,
                 ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)) {
-            assertThat(prompt)
-                    .as("번역투 — 문서에 13건 나왔다")
-                    .contains("\"~에 대해/~에 대한\"")
-                    .as("형식명사 — 문서에 31건 나왔다(~하는 것 21, 것이다 10)")
-                    .contains("\"~하는 것\"")
-                    .as("가능 표현 남발 — 문서에 16건 나왔다")
-                    .contains("\"~할 수 있다\" 남발")
-                    .as("줄표는 문장 끝에서만 — 문장 가운데를 끊는 정의가 문장을 가장 길게 만든다")
-                    .contains("줄표는 문장 끝에서만 쓴다");
+            assertThat(prompt).doesNotContain("\"~에 대해/~에 대한\"").doesNotContain("\"~할 수 있다\" 남발");
         }
     }
 
@@ -1054,16 +1056,19 @@ class ClaudeDocumentGeneratorTest {
      * 준다 — 둘을 가르는 문장은 표로 옮기라고. 이 저장소가 여러 번 확인한 것이,
      * 금지만 하면 모델이 다른 곳으로 새고 갈 곳을 주면 지킨다는 것이다.
      */
+    /** 문장을 끊는 일은 윤문이, 표로 옮기는 일은 생성이 한다. 표는 구조라 윤문이 만들 수 없다(보존 대조). */
     @Test
-    @DisplayName("문장 60자 상한과 '둘을 가르면 표로'가 두 편에 모두 실린다")
-    void bothPromptsCapSentenceLength() {
+    @DisplayName("문장 60자 상한은 윤문 프롬프트에, '둘을 가르면 표로'는 두 생성 프롬프트에 실린다")
+    void sentenceCapInPolishTableRuleInGeneration() {
+        assertThat(ClaudeDocumentPolisher.SYSTEM_PROMPT)
+                .as("상한이 없으면 100자짜리 세 문장도 '한 문단 3문장' 규칙을 통과한다")
+                .contains("한 문장은 60자까지다");
         for (String prompt : List.of(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT,
                 ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)) {
             assertThat(prompt)
-                    .as("상한이 없으면 100자짜리 세 문장도 '한 문단 3문장' 규칙을 통과한다")
-                    .contains("한 문장은 60자까지다")
                     .as("상한만 걸고 갈 곳을 안 주면 모델은 쉼표로 이어 붙여 상한을 피한다")
-                    .contains("둘 이상을 가르는 문장은 표로 옮겨라");
+                    .contains("둘 이상을 가르는 문장은 표로 옮겨라")
+                    .doesNotContain("한 문장은 60자까지다");
         }
     }
 
@@ -1135,17 +1140,21 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("항목은 소제목·꼬리표·상자로 쓴다 — 굵은 줄 아래 붙여 쓰면 화면에서 한 문단으로 뭉친다")
     void bothPromptsFixHowItemsRender() {
+        assertThat(ClaudeDocumentPolisher.SYSTEM_PROMPT)
+                .as("줄바꿈 다듬기는 윤문이 맡는다(2026-11-18)")
+                .contains("굵은 글씨 한 줄 바로 아래에 본문을 붙여 쓰지 마라")
+                .contains("한 문단에는 이야기 하나만 담는다");
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .contains("[강조와 줄바꿈]")
-                .contains("굵은 글씨 한 줄 바로 아래에 본문을 붙여 쓰지 마라")
-                .contains("한 문단에는 이야기 하나만 담는다")
+                .as("항목 이름을 소제목으로 다는 일은 구조라 생성에 남는다")
+                .contains("항목에 이름을 붙일 때는 소제목")
                 .as("입문편 오해 항목")
                 .contains("### ~~\"(믿기 쉬운 문장)\"~~")
                 .contains("> **(맞는 사실 한 문장)**");
 
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
                 .contains("[강조와 줄바꿈]")
-                .contains("굵은 글씨 한 줄 바로 아래에 본문을 붙여 쓰지 마라")
+                .contains("항목에 이름을 붙일 때는")
                 .as("실패 조건 항목은 #### 제목 아래 꼬리표 목록이다 — 검증기가 #### 제목으로 센다")
                 .contains("#### (항목 이름)")
                 .contains("- `증상`").contains("- `원인`").contains("- `대처`")

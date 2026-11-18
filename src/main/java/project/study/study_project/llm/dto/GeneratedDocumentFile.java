@@ -45,6 +45,8 @@ import java.util.List;
  *                         2026-09-03 이전 파일과 심화편 생성이 실패한 날에는 {@code null}
  * @param factFindings     두 편의 사실 검수 지적(docs/22 §6). 문제를 만드는 날 근거 문장과 대조한다.
  *                         2026-10-13 이전 파일과 검수가 두 편 다 실패한 날에는 {@code null}
+ * @param originalDocument         윤문을 채택했을 때 윤문 전 입문편(2026-11-18). 윤문하지 않았거나 원본을 쓴 편은 {@code null}
+ * @param originalAdvancedDocument 같은 뜻의 심화편 칸. 윤문 전후를 되짚을 기록은 이 두 칸뿐이다(한 커밋에 들어가 git에 안 남는다)
  */
 @JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
 public record GeneratedDocumentFile(
@@ -55,7 +57,9 @@ public record GeneratedDocumentFile(
         String model,
         GeneratedDocumentItem document,
         GeneratedDocumentItem advancedDocument,
-        List<FactCheckFinding> factFindings
+        List<FactCheckFinding> factFindings,
+        GeneratedDocumentItem originalDocument,
+        GeneratedDocumentItem originalAdvancedDocument
 ) {
 
     public GeneratedDocumentFile(String note, String date, String generatedAt, DomainCode domain, String model,
@@ -63,7 +67,22 @@ public record GeneratedDocumentFile(
         this(note, date, generatedAt, domain, model, document, advancedDocument, null);
     }
 
+    public GeneratedDocumentFile(String note, String date, String generatedAt, DomainCode domain, String model,
+                                 GeneratedDocumentItem document, GeneratedDocumentItem advancedDocument,
+                                 List<FactCheckFinding> factFindings) {
+        this(note, date, generatedAt, domain, model, document, advancedDocument, factFindings, null, null);
+    }
+
     public GeneratedDocumentFile withFactFindings(List<FactCheckFinding> findings) {
-        return new GeneratedDocumentFile(note, date, generatedAt, domain, model, document, advancedDocument, findings);
+        return new GeneratedDocumentFile(note, date, generatedAt, domain, model, document, advancedDocument, findings,
+                originalDocument, originalAdvancedDocument);
+    }
+
+    /** 윤문본을 본문 칸에, 윤문 전 원고를 원본 칸에 둔다. 채택하지 않은 편은 원본 칸에 {@code null}을 넘긴다. */
+    public GeneratedDocumentFile withPolished(GeneratedDocumentItem document, GeneratedDocumentItem advancedDocument,
+                                              GeneratedDocumentItem originalDocument,
+                                              GeneratedDocumentItem originalAdvancedDocument) {
+        return new GeneratedDocumentFile(note, date, generatedAt, domain, model, document, advancedDocument,
+                factFindings, originalDocument, originalAdvancedDocument);
     }
 }

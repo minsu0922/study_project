@@ -130,7 +130,8 @@ public class DocumentFileSync {
             GeneratedDocumentFile target = new GeneratedDocumentFile(parsed.note(), parsed.date(), parsed.generatedAt(),
                     parsed.domain(), parsed.model(),
                     beginner != null ? beginner : parsed.document(),
-                    advanced != null ? advanced : parsed.advancedDocument(), parsed.factFindings());
+                    advanced != null ? advanced : parsed.advancedDocument(), parsed.factFindings(),
+                    parsed.originalDocument(), parsed.originalAdvancedDocument());
             write(file, rewritten(raw, parsed, target));
             return Optional.of(file.getFileName().toString());
         } catch (IOException | IllegalArgumentException e) {

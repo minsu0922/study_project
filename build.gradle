@@ -323,6 +323,26 @@ tasks.register('evalProblemReview', JavaExec) {
     }
 }
 
+// 문서 윤문 전후 비교(설계 2026-11-18) — 표본 4편 × 2편이면 윤문 8회 + 사실 검수 16회. --skip-facts=true면 윤문 8회만.
+//   .\gradlew.bat evalPolish -PevalArgs="--label=first"
+tasks.register('evalPolish', JavaExec) {
+    group = 'llm'
+    description = '표본 문서를 윤문해 채택률·형식 경고·사실 지적을 전후로 비교하고 eval/에 보고서를 남긴다'
+    mainClass = 'project.study.study_project.llm.cli.PolishEvalCli'
+    classpath = sourceSets.main.runtimeClasspath
+
+    String polishApiKey = project.findProperty('anthropicApiKey') ?: System.getenv('ANTHROPIC_API_KEY')
+    if (polishApiKey) {
+        environment 'ANTHROPIC_API_KEY', polishApiKey
+    }
+    if (project.hasProperty('evalArgs')) {
+        String raw = project.property('evalArgs').toString().trim()
+        if (!raw.isEmpty()) {
+            args raw.split(/\s+/)
+        }
+    }
+}
+
 // 사실 검수 적발률 측정(docs/22 §4) — 오류를 심은 표본으로 검수기를 채점한다.
 //   .\gradlew.bat evalReview -PevalArgs="--label=opus"
 // evalPrompt와 같은 이유로 check/build에 엮지 않는다. 표본 5편이면 API 5회다.

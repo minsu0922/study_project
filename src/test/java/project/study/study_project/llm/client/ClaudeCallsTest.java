@@ -51,11 +51,12 @@ class ClaudeCallsTest {
         int polls;
         int pollsUntilEnd = 2;
         Raw batchResult = new Raw(JSON, 1000, 200, 0, false);
+        Raw sendResult = new Raw(JSON, 1000, 200, 0, false);
 
         @Override
         public Raw send(MessageCreateParams params) {
             calls.add("send");
-            return new Raw(JSON, 1000, 200, 0, false);
+            return sendResult;
         }
 
         @Override
@@ -165,6 +166,25 @@ class ClaudeCallsTest {
         ClaudeCalls.create("제목 생성", params());
 
         assertThat(fake.calls).containsExactly("submit", "result", "send");
+    }
+
+    /** 윤문은 본문 전체를 다시 쓰므로, 상한에서 잘린 응답을 성공으로 받으면 뒷부분이 사라진 문서가 나간다. */
+    @Test
+    @DisplayName("MAX_TOKENS에서 잘린 응답은 truncated로 알린다")
+    void reportsTruncatedResponse() {
+        FakeTransport fake = new FakeTransport();
+        fake.sendResult = new Raw(JSON, 1000, 64_000, 0, false, "", true);
+        ClaudeCalls.useTransport(fake, ms -> { });
+
+        assertThat(ClaudeCalls.create("문서 윤문(입문편)", params()).truncated()).isTrue();
+    }
+
+    @Test
+    @DisplayName("정상으로 끝난 응답은 truncated가 아니다")
+    void normalResponseIsNotTruncated() {
+        ClaudeCalls.useTransport(new FakeTransport(), ms -> { });
+
+        assertThat(ClaudeCalls.create("제목 생성", params()).truncated()).isFalse();
     }
 
     @Test
