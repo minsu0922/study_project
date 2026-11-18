@@ -29,4 +29,25 @@ class BatchOptionsModelTest {
     void defaultWhenMissing() {
         assertThat(BatchOptions.configuredModel(Map.of())).isEqualTo(BatchOptions.DEFAULT_MODEL);
     }
+
+    /** batch-enabled와 반대로, 키가 없으면 꺼진 것으로 본다. 평가 전에 윤문이 저절로 켜지면 안 된다. */
+    @Test
+    @DisplayName("윤문 설정이 없으면 꺼진 것으로 본다")
+    void polishOffWhenMissing() {
+        assertThat(BatchOptions.polishEnabled(Map.of())).isFalse();
+    }
+
+    @Test
+    @DisplayName("윤문 설정을 true로 두면 켜진다")
+    void polishOnWhenTrue() {
+        assertThat(BatchOptions.polishEnabled(Map.of("polish-enabled", true))).isTrue();
+    }
+
+    @Test
+    @DisplayName("application.yml에는 윤문이 꺼진 채로 들어 있다")
+    void polishOffInApplicationYml() throws Exception {
+        Map<String, Object> generation = BatchOptions.readGenerationConfig();
+        assertThat(generation).containsEntry("polish-enabled", false);
+        assertThat(BatchOptions.polishEnabled(generation)).isFalse();
+    }
 }

@@ -6,6 +6,7 @@ import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.FileFormats;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
+import project.study.study_project.llm.client.ClaudeDocumentPolisher;
 import project.study.study_project.llm.client.DocumentFactChecker;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
@@ -64,7 +65,8 @@ final class DocumentBatch {
      * </ul>
      */
     static void generateDocument(Map<String, String> opts, String model, DomainSettings settings,
-                                         List<DomainCode> batchDomains, LocalDate cycleAnchor) throws Exception {
+                                         List<DomainCode> batchDomains, LocalDate cycleAnchor,
+                                         boolean polishEnabled) throws Exception {
         LocalDate date = BatchOptions.resolveDate(opts);
         // main()이 이미 같은 opts로 outDir을 정해 뒀지만, 이 메서드는 main()의 지역 변수를
         // 볼 수 없어 resolveOutDir로 다시 구한다 — opts가 같으므로 값은 항상 같다.
@@ -176,19 +178,36 @@ final class DocumentBatch {
                         advanced == null ? "없음" : "%,d자".formatted(advanced.contentMd().length()),
                         advanced == null ? "— 고급 날은 입문편으로 폴백합니다" : advanced.title()));
 
-        // 문제 쪽의 수확량 점검에 해당하는 자리다. 지금까지 문서에는 이런 점검이 없었고,
-        // 검증은 <며칠 뒤 승인 화면에서만> 돌았다. 그 사이 이 문서로 사흘 치 문제가 만들어진다.
+        // 윤문(설계 2026-11-18). 원본을 먼저 저장해 두었으므로 여기서 job이 죽어도 생성 요금은 남는다
+        if (polishEnabled) {
+            BothEditions.Pair<PolishOutcome> outcomes = PolishStep.polishBoth(
+                    new ClaudeDocumentPolisher(model), document, advanced, brief);
+            BatchReports.announce(PolishStep.summaryLine("입문편", outcomes.beginner()));
+            if (outcomes.advanced() != null) {
+                BatchReports.announce(PolishStep.summaryLine("심화편", outcomes.advanced()));
+            }
+            file = applyPolish(outFile, file, outcomes);
+            document = file.document();
+            advanced = file.advancedDocument();
+        }
+
+        // 문제 쪽의 수확량 점검에 해당하는 자리다. 윤문 뒤에 두어 실제로 나가는 본문을 검사한다.
+        // 검증이 <며칠 뒤 승인 화면에서만> 돌면 그 사이 이 문서로 사흘 치 문제가 만들어진다.
         BatchReports.reportDraftChecks(document, date, brief == null ? null : brief.beginnerTopicBox());
         if (advanced != null) {
             BatchReports.reportDraftChecks(advanced, date, brief == null ? null : brief.advancedTopicBox());
         }
 
-        // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다
+        // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다.
+        // 두 편을 동시에 보낸다 — 배치 호출이 편마다 최대 45분이라 차례로 보내면 job 제한에 가까워진다
         DocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
-        List<FactCheckFinding> beginnerFacts = BatchReports.checkFacts(factChecker, document, date).findings();
-        List<FactCheckFinding> advancedFacts = advanced == null ? null
-                : BatchReports.checkFacts(factChecker, advanced, date).findings();
-        List<FactCheckFinding> facts = mergeFactFindings(beginnerFacts, advancedFacts);
+        GeneratedDocumentItem beginnerFinal = document;
+        GeneratedDocumentItem advancedFinal = advanced;
+        BothEditions.Pair<List<FactCheckFinding>> checked = BothEditions.run(
+                () -> BatchReports.checkFacts(factChecker, beginnerFinal, date).findings(),
+                advancedFinal == null ? null
+                        : () -> BatchReports.checkFacts(factChecker, advancedFinal, date).findings());
+        List<FactCheckFinding> facts = mergeFactFindings(checked.beginner(), checked.advanced());
         if (facts != null) {
             attachFactFindings(outFile, file, facts);
         }
@@ -225,19 +244,59 @@ final class DocumentBatch {
      * {@code DraftGeneratorCli.attachReviewFindings}와 같다.
      */
     static void attachFactFindings(Path outFile, GeneratedDocumentFile file, List<FactCheckFinding> findings) {
+        String error = replaceFile(outFile, file.withFactFindings(findings));
+        if (error != null) {
+            BatchReports.announce("⚠️ 사실 검수 지적을 파일에 싣지 못했습니다 — 문서는 저장했고, 지적은 위 요약에만 있습니다 (%s)"
+                    .formatted(error));
+        }
+    }
+
+    /**
+     * 채택된 윤문본으로 문서 파일을 바꿔 쓴다. 원본 칸에는 채택된 편의 원고만 넣는다.
+     * 둘 다 원본 유지면 쓰지 않는다. 쓰기에 실패하면 알리고 원고 파일을 그대로 쓴다 — 문제 배치가 그 파일을 읽는다.
+     *
+     * @return 이후 단계가 이어 쓸 파일 내용(사실 검수 지적이 이 위에 붙는다)
+     */
+    static GeneratedDocumentFile applyPolish(Path outFile, GeneratedDocumentFile file,
+                                             BothEditions.Pair<PolishOutcome> outcomes) {
+        PolishOutcome b = outcomes.beginner();
+        PolishOutcome a = outcomes.advanced();
+        boolean beginnerApplied = b != null && b.applied();
+        boolean advancedApplied = a != null && a.applied();
+        if (!beginnerApplied && !advancedApplied) {
+            return file;
+        }
+        GeneratedDocumentFile polished = file.withPolished(
+                beginnerApplied ? b.chosen() : file.document(),
+                advancedApplied ? a.chosen() : file.advancedDocument(),
+                beginnerApplied ? file.document() : null,
+                advancedApplied ? file.advancedDocument() : null);
+        String error = replaceFile(outFile, polished);
+        if (error != null) {
+            BatchReports.announce("⚠️ 윤문본을 파일에 싣지 못해 원고를 그대로 씁니다 (%s)".formatted(error));
+            return file;
+        }
+        return polished;
+    }
+
+    /**
+     * 임시 파일에 쓴 뒤 바꿔 끼운다. 쓰다가 죽어도 원래 파일이 반쪽으로 남지 않는다.
+     *
+     * @return 실패하면 사유, 성공하면 {@code null}
+     */
+    private static String replaceFile(Path outFile, GeneratedDocumentFile file) {
         Path temp = outFile.resolveSibling(outFile.getFileName() + ".tmp");
         try {
-            Files.writeString(temp, FileFormats.toJson(MAPPER, FileFormats.Kind.DOCUMENTS,
-                    file.withFactFindings(findings)));
+            Files.writeString(temp, FileFormats.toJson(MAPPER, FileFormats.Kind.DOCUMENTS, file));
             Files.move(temp, outFile, StandardCopyOption.REPLACE_EXISTING);
+            return null;
         } catch (IOException e) {
-            BatchReports.announce("⚠️ 사실 검수 지적을 파일에 싣지 못했습니다 — 문서는 저장했고, 지적은 위 요약에만 있습니다 (%s)"
-                    .formatted(e.getMessage()));
             try {
                 Files.deleteIfExists(temp);
             } catch (IOException ignored) {
                 // 임시 파일이 남아도 들여오기 대상(*.json)이 아니라 해가 없다
             }
+            return e.getMessage();
         }
     }
 

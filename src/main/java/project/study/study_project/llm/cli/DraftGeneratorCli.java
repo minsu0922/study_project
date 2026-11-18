@@ -160,7 +160,8 @@ public final class DraftGeneratorCli {
             // settings(DomainSettings)를 카탈로그 그대로 넘긴다 — hints()만 뽑아 넘기면 분야
             // 이름은 여전히 DefaultDomains 고정값을 쓰게 되어, 관리 화면에서 고친 이름이
             // 배치 프롬프트에는 반영되지 않는다(Task 4, 스펙 6절 버그의 배치 쪽 절반).
-            DocumentBatch.generateDocument(opts, model, settings, batchDomains, cycleAnchor);
+            DocumentBatch.generateDocument(opts, model, settings, batchDomains, cycleAnchor,
+                    BatchOptions.polishEnabled(generation));
             return;
         }
         if (action == BatchOptions.BatchAction.SKIP) {

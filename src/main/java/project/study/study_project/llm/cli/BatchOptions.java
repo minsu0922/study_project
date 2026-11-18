@@ -342,6 +342,14 @@ final class BatchOptions {
         return (String) generation.getOrDefault("model", DEFAULT_MODEL);
     }
 
+    /**
+     * 문서 윤문 단계를 켤지({@code llm.generation.polish-enabled}). {@code batch-enabled}와 달리 키가 없으면 끈다.
+     * 평가(evalPolish)로 효과를 보기 전에 저절로 켜지면 요금과 문서가 함께 바뀐다.
+     */
+    static boolean polishEnabled(Map<String, Object> generation) {
+        return Boolean.TRUE.equals(generation.get("polish-enabled"));
+    }
+
     /** {@code --model}이 있으면 그것, 없으면 설정값. 옵션이 있으면 설정 파일을 읽지 않는다. */
     static String resolveModel(Map<String, String> opts) throws Exception {
         return isSet(opts.get("model")) ? opts.get("model") : configuredModel(readGenerationConfig());
