@@ -42,6 +42,7 @@ class PromptsTest {
         assertThat(ClaudeCodeProblemGenerator.SYSTEM_PROMPT).contains(ClaudeCodeProblemGenerator.DIFFICULTY_GUIDE);
         assertThat(ClaudeCodeProblemReviewer.SOLVE_PROMPT).endsWith(ClaudeCodeProblemGenerator.DIFFICULTY_GUIDE);
         assertThat(ClaudeDocumentFactChecker.WEB_SEARCH_RULE).doesNotContain("%d");
+        assertThat(ClaudeDocumentPolisher.SYSTEM_PROMPT).contains("내용은 그대로");
     }
 
     @Test
