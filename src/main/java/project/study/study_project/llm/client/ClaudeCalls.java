@@ -59,9 +59,10 @@ public final class ClaudeCalls {
      * @param value      응답 JSON을 읽은 값. 텍스트 블록이 없으면 null
      * @param pauseTurn  서버 도구(웹 검색)가 길어져 중간에 멈췄는지
      * @param thinking   모델이 남긴 사고 요약. 요청이 요약을 켜지 않았거나 남긴 것이 없으면 빈 문자열
+     * @param truncated  출력이 max_tokens에서 잘렸는지. 본문 전체를 다시 받는 호출은 이걸 실패로 봐야 한다
      */
     public record Result<T>(T value, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn,
-                            String thinking) {
+                            String thinking, boolean truncated) {
     }
 
     /** 호출 한 건의 사용량. {@code batch}는 실제로 배치 요금이 적용됐는지다(시간 초과로 바로 부르면 false). */
@@ -71,9 +72,14 @@ public final class ClaudeCalls {
 
     /** 전송 결과 중 우리가 쓰는 것만. SDK의 Message를 테스트에서 만들 수 있게 얇게 옮겨 둔다. */
     record Raw(String lastText, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn,
-               String thinking) {
+               String thinking, boolean truncated) {
         Raw(String lastText, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn) {
             this(lastText, inputTokens, outputTokens, webSearches, pauseTurn, "");
+        }
+
+        Raw(String lastText, long inputTokens, long outputTokens, long webSearches, boolean pauseTurn,
+            String thinking) {
+            this(lastText, inputTokens, outputTokens, webSearches, pauseTurn, thinking, false);
         }
     }
 
@@ -144,7 +150,7 @@ public final class ClaudeCalls {
                 response.webSearches(), batched));
         return new Result<>(parse(response.lastText(), params.outputType()),
                 response.inputTokens(), response.outputTokens(), response.webSearches(), response.pauseTurn(),
-                response.thinking());
+                response.thinking(), response.truncated());
     }
 
     /** @return 배치 결과. 시간 초과·실패면 null — 호출부가 바로 호출로 대신한다 */
@@ -271,7 +277,8 @@ public final class ClaudeCalls {
                     .collect(java.util.stream.Collectors.joining("\n"));
             return new Raw(lastText, m.usage().inputTokens(), m.usage().outputTokens(),
                     m.usage().serverToolUse().map(u -> u.webSearchRequests()).orElse(0L),
-                    m.stopReason().filter(r -> r.equals(StopReason.PAUSE_TURN)).isPresent(), thinking);
+                    m.stopReason().filter(r -> r.equals(StopReason.PAUSE_TURN)).isPresent(), thinking,
+                    m.stopReason().filter(r -> r.equals(StopReason.MAX_TOKENS)).isPresent());
         }
     }
 }
