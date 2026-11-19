@@ -491,9 +491,9 @@ class ClaudeDocumentGeneratorTest {
     void analogySentenceStartsWithMarker() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("2026-11-19 TCP·HTTP 시험 윤문: \"수도관 앞에서는…\"이 실제 장면처럼 읽혔다")
-                .contains("비유 문장은 비유임을 알리는 말로 시작한다");
+                .contains("비유 문장은 비유임을 드러낸다").contains("문장 앞에 와도, 끝에 와도 된다");
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
-                .contains("비유 문장은 비유임을 알리는 말로 시작한다");
+                .contains("비유 문장은 비유임을 드러낸다").contains("문장 앞에 와도, 끝에 와도 된다");
     }
 
     /**
