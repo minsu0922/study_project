@@ -154,6 +154,20 @@ class PolishPreservationTest {
     }
 
     @Test
+    @DisplayName("끊은 문장의 주어로 백틱 글자를 한 번 더 쓰는 것은 통과한다 — 2026-11-19 `HEAD` 59→60개로 윤문본이 버려졌다")
+    void repeatedInlineCodeAsSubjectPasses() {
+        String polished = HEDGED.replace("가까이 두는 `저장소`다.", "가까이 두는 `저장소`다. `저장소`는 작다.");
+        assertThat(differences(HEDGED, polished)).noneSatisfy(d -> assertThat(d).contains("백틱"));
+    }
+
+    @Test
+    @DisplayName("원고에 있던 백틱 글자가 통째로 사라지면 걸린다")
+    void droppedInlineCodeFails() {
+        assertThat(differences(HEDGED, HEDGED.replace("`저장소`", "저장소")))
+                .anySatisfy(d -> assertThat(d).contains("백틱"));
+    }
+
+    @Test
     @DisplayName("가능 표현이 30% 넘게 줄면 걸린다 — 가능성을 단정으로 바꾸면 사실이 과장된다")
     void possibilityDroppedTooMuchFails() {
         // 11개 → 7개(약 36% 감소)

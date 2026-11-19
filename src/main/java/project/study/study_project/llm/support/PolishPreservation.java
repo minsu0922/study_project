@@ -70,8 +70,8 @@ public final class PolishPreservation {
         // 「글의 주제」 상자와 결론 상자. brief가 없는 날은 형식 검사가 상자를 대조하지 못해 여기서 본다
         compareList(out, "인용 상자", all(QUOTE_LINE, proseBefore), all(QUOTE_LINE, proseAfter));
         compareList(out, "용어 정의 줄", all(DEFINITION_HEAD, proseBefore), all(DEFINITION_HEAD, proseAfter));
-        // 문장 순서는 바뀔 수 있어 백틱 글자는 순서 없이 비교한다
-        compareList(out, "백틱 안 글자", sorted(all(INLINE_CODE, proseBefore)), sorted(all(INLINE_CODE, proseAfter)));
+        // 순서와 횟수는 보지 않는다. 문장을 끊으며 주어로 한 번 더 쓰는 일이 잦고(`HEAD`는 …), 빠지거나 생긴 글자만 사고다
+        compareList(out, "백틱 안 글자", distinct(all(INLINE_CODE, proseBefore)), distinct(all(INLINE_CODE, proseAfter)));
 
         int possibleBefore = count(proseBefore, "수 있") + count(proseBefore, "수도 있");
         int possibleAfter = count(proseAfter, "수 있") + count(proseAfter, "수도 있");
@@ -120,8 +120,8 @@ public final class PolishPreservation {
         }).toList();
     }
 
-    private static List<String> sorted(List<String> items) {
-        return items.stream().sorted().toList();
+    private static List<String> distinct(List<String> items) {
+        return items.stream().distinct().sorted().toList();
     }
 
     private static List<String> all(Pattern p, String s) {
