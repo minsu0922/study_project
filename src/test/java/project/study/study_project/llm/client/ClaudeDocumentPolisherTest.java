@@ -145,6 +145,8 @@ class ClaudeDocumentPolisherTest {
                 .contains("\"~하는 경우\", \"~로 인해\", \"~에 의해\"").contains("대명사 \"이는\"").contains("일상 외래어")
                 .as("고친 문장이 \"~보자\", \"~하자\"로 끝났다(2026-11-19 HTTP 시험 윤문). 고친 문장은 평서문으로 끝낸다")
                 .contains("청유형·명령형").contains("볼 곳을 평서문으로 직접 쓴다").doesNotContain("한다고 하자\"처럼")
+                .as("알림말을 지워 비유가 실제 장면처럼 읽혔다(2026-11-19 TCP·HTTP 시험 윤문). 알림말은 지우지 않는다")
+                .contains("비유 문장은 비유임을 알리는 말로 시작한다").doesNotContain("비유 문장을 바로 쓴다")
                 .as("B 군더더기").contains("정리하면")
                 .as("C 같은 틀 반복").contains("점을 보면 된다").contains("A가 아니라 B")
                 .as("D 문장 길이").contains("한 문장은 60자까지다")

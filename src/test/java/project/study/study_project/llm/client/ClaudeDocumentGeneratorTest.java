@@ -486,6 +486,16 @@ class ClaudeDocumentGeneratorTest {
                 .contains("그 절의 설명을 한 낱말에만 기대지 마라");
     }
 
+    @Test
+    @DisplayName("비유 문장은 비유임을 알리는 말로 시작한다 — 알림말 없는 비유를 실제 장면으로 읽었다")
+    void analogySentenceStartsWithMarker() {
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .as("2026-11-19 TCP·HTTP 시험 윤문: \"수도관 앞에서는…\"이 실제 장면처럼 읽혔다")
+                .contains("비유 문장은 비유임을 알리는 말로 시작한다");
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .contains("비유 문장은 비유임을 알리는 말로 시작한다");
+    }
+
     /**
      * <b>새 절 둘에 완성 예시가 붙어 있는지.</b> 8/18 재생성분에서 {@code ## 언제 깨지는가}의
      * 항목 형식이 흔들렸다 — 전에는 {@code **1. 쓰기 스큐**}였는데 번호가 사라졌고, 검증기가
