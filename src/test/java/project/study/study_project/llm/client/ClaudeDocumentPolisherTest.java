@@ -143,6 +143,8 @@ class ClaudeDocumentPolisherTest {
                 .as("A 번역투·흐린 말").contains("\"~에 대해/~에 대한\"").contains("\"~하는 것\"").contains("\"~할 수 있다\" 남발")
                 .as("전역 문체 기준에서 옮긴 세 줄(2026-11-19)")
                 .contains("\"~하는 경우\", \"~로 인해\", \"~에 의해\"").contains("대명사 \"이는\"").contains("일상 외래어")
+                .as("고친 문장이 \"~보자\", \"~하자\"로 끝났다(2026-11-19 HTTP 시험 윤문). 고친 문장은 평서문으로 끝낸다")
+                .contains("청유형·명령형").contains("볼 곳을 평서문으로 직접 쓴다").doesNotContain("한다고 하자\"처럼")
                 .as("B 군더더기").contains("정리하면")
                 .as("C 같은 틀 반복").contains("점을 보면 된다").contains("A가 아니라 B")
                 .as("D 문장 길이").contains("한 문장은 60자까지다")
