@@ -47,6 +47,7 @@ import java.util.List;
  *                         2026-10-13 이전 파일과 검수가 두 편 다 실패한 날에는 {@code null}
  * @param originalDocument         윤문을 채택했을 때 윤문 전 입문편(2026-11-18). 윤문하지 않았거나 원본을 쓴 편은 {@code null}
  * @param originalAdvancedDocument 같은 뜻의 심화편 칸. 윤문 전후를 되짚을 기록은 이 두 칸뿐이다(한 커밋에 들어가 git에 안 남는다)
+ * @param readerFindings   편별 독자 점검 지적(2026-11-20). 독자 점검을 안 돌린 파일은 {@code null}
  */
 @JsonIgnoreProperties({FileFormats.FIELD}) // 형식 버전은 FileFormats가 확인한다. 직접 읽는 곳이 이 칸 때문에 실패하지 않게 한다
 public record GeneratedDocumentFile(
@@ -59,7 +60,8 @@ public record GeneratedDocumentFile(
         GeneratedDocumentItem advancedDocument,
         List<FactCheckFinding> factFindings,
         GeneratedDocumentItem originalDocument,
-        GeneratedDocumentItem originalAdvancedDocument
+        GeneratedDocumentItem originalAdvancedDocument,
+        ReaderFindings readerFindings
 ) {
 
     public GeneratedDocumentFile(String note, String date, String generatedAt, DomainCode domain, String model,
@@ -73,9 +75,22 @@ public record GeneratedDocumentFile(
         this(note, date, generatedAt, domain, model, document, advancedDocument, factFindings, null, null);
     }
 
+    public GeneratedDocumentFile(String note, String date, String generatedAt, DomainCode domain, String model,
+                                 GeneratedDocumentItem document, GeneratedDocumentItem advancedDocument,
+                                 List<FactCheckFinding> factFindings, GeneratedDocumentItem originalDocument,
+                                 GeneratedDocumentItem originalAdvancedDocument) {
+        this(note, date, generatedAt, domain, model, document, advancedDocument, factFindings,
+                originalDocument, originalAdvancedDocument, null);
+    }
+
     public GeneratedDocumentFile withFactFindings(List<FactCheckFinding> findings) {
         return new GeneratedDocumentFile(note, date, generatedAt, domain, model, document, advancedDocument, findings,
-                originalDocument, originalAdvancedDocument);
+                originalDocument, originalAdvancedDocument, readerFindings);
+    }
+
+    public GeneratedDocumentFile withReaderFindings(ReaderFindings findings) {
+        return new GeneratedDocumentFile(note, date, generatedAt, domain, model, document, advancedDocument, factFindings,
+                originalDocument, originalAdvancedDocument, findings);
     }
 
     /** 윤문본을 본문 칸에, 윤문 전 원고를 원본 칸에 둔다. 채택하지 않은 편은 원본 칸에 {@code null}을 넘긴다. */
@@ -83,6 +98,6 @@ public record GeneratedDocumentFile(
                                               GeneratedDocumentItem originalDocument,
                                               GeneratedDocumentItem originalAdvancedDocument) {
         return new GeneratedDocumentFile(note, date, generatedAt, domain, model, document, advancedDocument,
-                factFindings, originalDocument, originalAdvancedDocument);
+                factFindings, originalDocument, originalAdvancedDocument, readerFindings);
     }
 }

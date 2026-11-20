@@ -97,6 +97,26 @@ class DocumentFileSyncTest {
         assertThat(after.originalDocument().contentMd()).isEqualTo("윤문 전 원고");
     }
 
+    @Test
+    @DisplayName("통째로 다시 써도 독자 점검 칸이 남는다")
+    void wholeRewriteKeepsReaderFindings() throws Exception {
+        Path dir = Files.createDirectories(root.resolve("documents"));
+        Path file = dir.resolve("2026-10-23.json");
+        Files.writeString(file, """
+                {"date":"2026-10-23","domain":"%s","model":"m",
+                 "document":{"title":"t","slug":"net","contentMd":"\\uD2C0\\uB9B0 \\uBB38\\uC7A5","tags":[]},
+                 "readerFindings":{"beginner":[{"kind":"BLOCK","type":"UNDEFINED_TERM","weight":"PAUSE","section":"s",
+                   "quote":"틀린 문장","earlier":"","reason":"r","suggestion":{"op":"NEED_HUMAN","target":"","text":"","note":"n"}}],
+                   "advanced":null}}
+                """.formatted(TestDomains.SYSTEM_DESIGN.value()));
+
+        assertThat(sync().replaceContent("net", "틀린 문장", "고친 문장")).contains("2026-10-23.json");
+        GeneratedDocumentFile after = JsonMappers.STRICT.readValue(file.toFile(), GeneratedDocumentFile.class);
+        assertThat(after.document().contentMd()).isEqualTo("고친 문장");
+        assertThat(after.readerFindings().beginner()).singleElement()
+                .satisfies(f -> assertThat(f.quote()).isEqualTo("틀린 문장"));
+    }
+
     private DocumentFileSync sync() {
         return new DocumentFileSync(root.toString());
     }

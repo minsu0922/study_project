@@ -124,6 +124,36 @@ class DocumentFactFindingsTest {
         assertThat(withFindings.factFindings()).containsExactly(FINDING);
     }
 
+    private static final project.study.study_project.llm.client.ReaderFinding READER = new project.study.study_project.llm.client.ReaderFinding(
+            project.study.study_project.llm.client.ReaderFinding.Kind.BLOCK,
+            project.study.study_project.llm.client.ReaderFinding.Type.UNDEFINED_TERM,
+            project.study.study_project.llm.client.ReaderFinding.Weight.PAUSE, "무엇인가", "정의.", "", "모른다",
+            new project.study.study_project.llm.client.ReaderFinding.Suggestion(
+                    project.study.study_project.llm.client.ReaderFinding.Op.REPLACE, "정의.", "정의다.", "본문"));
+
+    @Test
+    @DisplayName("독자 점검 칸이 없는 옛 문서 파일도 엄격한 읽기로 읽히고, 그 칸은 null이다")
+    void oldFileWithoutReaderFindingsStillReads(@TempDir Path tmp) throws Exception {
+        Path out = write(tmp, file());
+        var tree = (com.fasterxml.jackson.databind.node.ObjectNode) MAPPER.readTree(out.toFile());
+        tree.remove("readerFindings");
+        MAPPER.writeValue(out.toFile(), tree);
+
+        assertThat(readStrict(out).readerFindings()).isNull();
+    }
+
+    @Test
+    @DisplayName("독자 점검을 실은 파일이 엄격한 읽기로 왕복하고, 사실 검수·윤문을 붙여도 칸이 남는다")
+    void readerFindingsRoundTripAndSurviveOtherSteps(@TempDir Path tmp) throws Exception {
+        var reader = new project.study.study_project.llm.dto.ReaderFindings(List.of(READER), null);
+        GeneratedDocumentFile file = file().withReaderFindings(reader);
+
+        assertThat(readStrict(write(tmp, file)).readerFindings()).isEqualTo(reader);
+        assertThat(file.withFactFindings(List.of(FINDING)).readerFindings()).isEqualTo(reader);
+        assertThat(file.withPolished(item("test-slug", "고친 본문"), null, item("test-slug", "원고"), null)
+                .readerFindings()).isEqualTo(reader);
+    }
+
     private static GeneratedDocumentFile twoEditions() {
         return new GeneratedDocumentFile("테스트", DATE.toString(), DATE + "T00:00:00Z", TestDomains.NETWORK,
                 "test-model", item("test-slug", "입문 원고"), item("test-slug-advanced", "심화 원고"));
