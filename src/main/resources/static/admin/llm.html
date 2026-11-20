@@ -1361,9 +1361,13 @@ async function loadDocDrafts() {
           <span class="meta">${escapeHtml(d.model)} · ${d.contentLength}자</span>
         </div>
         <h3 style="margin:10px 0 2px">${escapeHtml(d.title)}</h3>
-        <div class="meta">/${escapeHtml(d.slug)} ·
-          <a href="/admin/doc-review.html?id=${d.id}" target="_blank" rel="noopener">나란히 검수 ↗</a>
-          ${d.readerFindings ? `<span class="meta">· 독자 점검 ${d.readerFindings.filter(f => f.status === "OPEN").length}건</span>` : ""}</div>
+        <div class="meta">/${escapeHtml(d.slug)}</div>
+        <!-- 검수는 이 화면에서 하는 것이 주 경로다. 목록에 묻히지 않게 제목 바로 아래 큰 단추로 둔다 -->
+        <div class="review-open-row">
+          <a class="btn" href="/admin/doc-review.html?id=${d.id}" target="_blank" rel="noopener">본문과 지적을 나란히 보며 검수 ↗</a>
+          <span class="meta">사실 검수 ${(d.factFindings ?? []).filter(f => f.status === "OPEN").length}건
+            · 독자 점검 ${d.readerFindings == null ? "안 돌림" : d.readerFindings.filter(f => f.status === "OPEN").length + "건"}</span>
+        </div>
         ${blockingBox}${warningBox}${factFindingsBoxOf(d)}
         ${sectionOutlineOf(d.contentMd)}
         <div class="draft-diagrams" id="diag-${d.id}"></div>
