@@ -12,8 +12,11 @@ public final class SuggestionZones {
     private SuggestionZones() {
     }
 
-    /** {@code [start, end)}가 금지 자리에 걸치면 true. */
+    /** {@code [start, end)}가 금지 자리에 걸치거나 강조·코드 표시를 반만 걸치면 true. */
     public static boolean forbidden(String contentMd, int start, int end) {
+        if (halfMarkup(contentMd.substring(start, end))) {
+            return true;
+        }
         boolean inFence = false;
         int lineStart = 0;
         while (lineStart <= contentMd.length()) {
@@ -36,6 +39,16 @@ public final class SuggestionZones {
             lineStart = nl + 1;
         }
         return false;
+    }
+
+    /**
+     * 자리 안의 {@code **}나 백틱 수가 홀수면 강조 구간을 반만 걸친 것이다. 그대로 바꾸면 짝이 깨져
+     * 같은 문단 뒤쪽까지 굵어지거나 코드로 보인다. 검증기에는 짝 검사가 없어 여기서 막는다.
+     */
+    private static boolean halfMarkup(String span) {
+        int bold = (span.length() - span.replace("**", "").length()) / 2;
+        int ticks = span.length() - span.replace("`", "").length();
+        return bold % 2 == 1 || ticks % 2 == 1;
     }
 
     private static boolean lockedLine(String trimmed) {

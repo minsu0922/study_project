@@ -93,5 +93,8 @@ class DocumentBatchReaderCheckTest {
         GeneratedDocumentFile after = read(out);
         assertThat(after.factFindings()).hasSize(2);
         assertThat(after.readerFindings()).isNull();
+        assertThat(Files.readString(out))
+                .as("칸을 null로라도 쓰면 이 코드 전의 앱이 엄격한 읽기로 그 파일 흡수에 실패한다")
+                .doesNotContain("readerFindings");
     }
 }

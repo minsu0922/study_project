@@ -64,6 +64,19 @@ class SuggestionZonesTest {
     }
 
     @Test
+    @DisplayName("강조 표시를 반만 걸친 자리는 고치지 않는다 — 수락하면 ** 짝이 깨져 뒤 문장까지 굵어진다")
+    void halfEmphasisForbidden() {
+        String md = "DNS는 **이름을 주소로** 바꾼다. `dig` 명령을 쓴다.";
+        int[] half = TextSpans.locateOnce(md, "주소로 바꾼다.").orElseThrow();
+        int[] whole = TextSpans.locateOnce(md, "DNS는 이름을 주소로 바꾼다.").orElseThrow();
+        int[] halfTick = TextSpans.locateOnce(md, "dig 명령을").orElseThrow();
+
+        assertThat(SuggestionZones.forbidden(md, half[0], half[1])).isTrue();
+        assertThat(SuggestionZones.forbidden(md, whole[0], whole[1])).isFalse();
+        assertThat(SuggestionZones.forbidden(md, halfTick[0], halfTick[1])).isFalse();
+    }
+
+    @Test
     @DisplayName("용어 정의 줄의 앞부분(줄표까지)은 고치지 않는다")
     void definitionHeadForbidden() {
         assertThat(forbidden("리졸버(resolver)")).isTrue();

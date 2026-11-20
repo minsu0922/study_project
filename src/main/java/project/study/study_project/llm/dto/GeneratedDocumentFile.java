@@ -61,6 +61,8 @@ public record GeneratedDocumentFile(
         List<FactCheckFinding> factFindings,
         GeneratedDocumentItem originalDocument,
         GeneratedDocumentItem originalAdvancedDocument,
+        // 안 돌린 날은 칸을 쓰지 않는다. null로라도 쓰면 이 칸을 모르는 옛 앱이 엄격한 읽기로 파일 흡수에 실패한다
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
         ReaderFindings readerFindings
 ) {
 
