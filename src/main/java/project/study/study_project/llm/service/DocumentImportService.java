@@ -10,7 +10,9 @@ import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.domain.ImportedDraftFile;
+import project.study.study_project.llm.client.ReaderFinding;
 import project.study.study_project.llm.dto.DraftFactFinding;
+import project.study.study_project.llm.dto.DraftReaderFinding;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
@@ -19,6 +21,7 @@ import project.study.study_project.domainsetting.support.DomainCatalog;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * 문서 생성 결과 파일 한 개를 검수 대기 초안으로 흡수한다 — docs/15.
@@ -103,13 +106,13 @@ public class DocumentImportService {
         String model = DraftFileChecks.modelOf(parsed.model());
 
         String key = importKey(file.getFileName().toString());
-        int saved = saveOne(parsed, document, model, key);
+        int saved = saveOne(parsed, document, false, model, key);
 
         // 심화편은 없을 수 있다 — 옛 파일과 심화편 생성만 실패한 날. 그건 결함이 아니라
         // 정상 경로이므로 예외를 던지지 않는다(GeneratedDocumentFile.advancedDocument 주석).
         GeneratedDocumentItem advanced = parsed.advancedDocument();
         if (advanced != null && advanced.contentMd() != null && !advanced.contentMd().isBlank()) {
-            saved += saveOne(parsed, advanced, model, key);
+            saved += saveOne(parsed, advanced, true, model, key);
         }
 
         importedFileRepository.save(ImportedDraftFile.of(key, saved));
@@ -157,11 +160,21 @@ public class DocumentImportService {
                         .map(DraftFactFinding::of).toList());
     }
 
+    /** 독자 점검은 파일에 편별로 나뉘어 있다. 칸이 없거나 그 편을 못 돌렸으면 {@code null}(안 돌림) */
+    private String readerFindingsJsonOf(GeneratedDocumentFile parsed, boolean advanced) throws IOException {
+        if (parsed.readerFindings() == null) {
+            return null;
+        }
+        List<ReaderFinding> mine = advanced ? parsed.readerFindings().advanced() : parsed.readerFindings().beginner();
+        return mine == null ? null : objectMapper.writeValueAsString(mine.stream().map(DraftReaderFinding::of).toList());
+    }
+
     /** 한 편을 초안으로 저장하고 로그를 남긴다 — 두 편의 처리가 갈리지 않도록 한 곳에 둔다. */
-    private int saveOne(GeneratedDocumentFile parsed, GeneratedDocumentItem item,
+    private int saveOne(GeneratedDocumentFile parsed, GeneratedDocumentItem item, boolean advanced,
                         String model, String key) throws IOException {
         GeneratedDocumentDraft draft = llmDocumentService.saveDraft(parsed.domain(), item, model);
         draft.recordFactFindings(factFindingsJsonOf(parsed, item));
+        draft.recordReaderFindings(readerFindingsJsonOf(parsed, advanced));
         log.info("문서 초안 흡수: {} — \"{}\" ({}, {}, 본문 {}자)",
                 key, draft.getTitle(), parsed.domain(),
                 ClaudeDocumentGenerator.editionOf(draft.getContentMd()).getDisplayName(),

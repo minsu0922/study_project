@@ -97,6 +97,11 @@ public class GeneratedDocumentDraft {
     @Column(name = "fact_findings_json")
     private String factFindingsJson;
 
+    /** 독자 점검 지적 {@code DraftReaderFinding} 목록 JSON(V49). 점검을 안 돌렸으면 {@code null}. 승인을 막지 않는다. */
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    @Column(name = "reader_findings_json")
+    private String readerFindingsJson;
+
     private GeneratedDocumentDraft(DomainCode domain, String title, String slug,
                                    String contentMd, String tagsJson, String model) {
         this.domain = domain;
@@ -117,6 +122,22 @@ public class GeneratedDocumentDraft {
     /** 흡수할 때 배치 파일의 사실 검수 지적 중 이 편 것을 담는다. 처리 상태와 상관없이 기록이다. */
     public void recordFactFindings(String factFindingsJson) {
         this.factFindingsJson = factFindingsJson;
+    }
+
+    /** 흡수할 때 배치 파일의 그 편 독자 점검 지적을 담는다. */
+    public void recordReaderFindings(String readerFindingsJson) {
+        this.readerFindingsJson = readerFindingsJson;
+    }
+
+    /**
+     * 독자 점검 지적을 처리한다(수락이면 본문도 바뀐다). 대기 중인 초안만 고칠 수 있다.
+     *
+     * @param contentMd 본문을 고치지 않았으면 지금 값 그대로 넘긴다
+     */
+    public void resolveReaderFinding(String contentMd, String readerFindingsJson) {
+        requirePending();
+        this.contentMd = contentMd;
+        this.readerFindingsJson = readerFindingsJson;
     }
 
     /** 승인 처리 — 생성된 document.id를 이력으로 남긴다. 이미 처리된 초안이면 LLM_002. */

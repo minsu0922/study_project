@@ -382,6 +382,48 @@ class DocumentImportServiceTest {
                 project.study.study_project.llm.client.FactCheckFinding.Confidence.HIGH);
     }
 
+    /* ── 2026-11-20: 독자 점검 지적을 편마다 담는다(V49) ─────────────── */
+
+    private static project.study.study_project.llm.client.ReaderFinding reader(String quote) {
+        return new project.study.study_project.llm.client.ReaderFinding(
+                project.study.study_project.llm.client.ReaderFinding.Kind.BLOCK,
+                project.study.study_project.llm.client.ReaderFinding.Type.UNDEFINED_TERM,
+                project.study.study_project.llm.client.ReaderFinding.Weight.PAUSE, "왜 필요한가", quote, "", "모른다",
+                new project.study.study_project.llm.client.ReaderFinding.Suggestion(
+                        project.study.study_project.llm.client.ReaderFinding.Op.NEED_HUMAN, "", "", "물음"));
+    }
+
+    @Test
+    @DisplayName("독자 점검 지적은 편별 목록이 그 편 초안에 담긴다")
+    void importStoresReaderFindingsPerEdition() throws Exception {
+        GeneratedDocumentItem beginner = itemWith("캐시 전략", "cache-strategy", "입문 문장이다.");
+        GeneratedDocumentItem advanced = itemWith("캐시 심화", "cache-strategy-advanced", "심화 문장이다.");
+        GeneratedDocumentFile file = new GeneratedDocumentFile("테스트용", "2026-11-20", "2026-11-20T00:00:00Z",
+                TestDomains.SYSTEM_DESIGN, "claude-opus-5", beginner, advanced)
+                .withReaderFindings(new project.study.study_project.llm.dto.ReaderFindings(
+                        List.of(reader("입문 문장이다."), reader("입문 문장이다.")), List.of(reader("심화 문장이다."))));
+        Path path = tempDir.resolve("2026-11-20.json");
+        objectMapper.writeValue(path.toFile(), file);
+
+        service.importFile(path);
+
+        ArgumentCaptor<GeneratedDocumentDraft> captor = ArgumentCaptor.forClass(GeneratedDocumentDraft.class);
+        verify(draftRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        List<?> beg = objectMapper.readValue(captor.getAllValues().get(0).getReaderFindingsJson(), List.class);
+        List<?> adv = objectMapper.readValue(captor.getAllValues().get(1).getReaderFindingsJson(), List.class);
+        assertThat(beg).hasSize(2);
+        assertThat(adv).hasSize(1);
+        assertThat(captor.getAllValues().get(1).getReaderFindingsJson()).contains("심화 문장이다.");
+    }
+
+    @Test
+    @DisplayName("파일에 독자 점검 칸이 없으면 초안의 독자 점검은 null이다")
+    void importWithoutReaderFindingsLeavesNull() throws Exception {
+        service.importFile(writeDocumentFile("2026-08-12.json", "claude-opus-5",
+                item("캐시 전략", "cache-strategy", List.of())));
+        assertThat(capturedDraft().getReaderFindingsJson()).isNull();
+    }
+
     private Path writeFileWithFacts(String filename, GeneratedDocumentItem document, GeneratedDocumentItem advanced,
                                     List<project.study.study_project.llm.client.FactCheckFinding> facts) throws Exception {
         GeneratedDocumentFile file = new GeneratedDocumentFile(
