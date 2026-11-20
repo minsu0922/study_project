@@ -7,7 +7,12 @@ import project.study.study_project.llm.support.FileFormats;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeDocumentPolisher;
+import project.study.study_project.llm.client.ClaudeDocumentReaderCheck;
+import project.study.study_project.llm.client.DocumentEdition;
 import project.study.study_project.llm.client.DocumentFactChecker;
+import project.study.study_project.llm.client.DocumentReaderCheck;
+import project.study.study_project.llm.client.ReaderFinding;
+import project.study.study_project.llm.dto.ReaderFindings;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
@@ -66,7 +71,7 @@ final class DocumentBatch {
      */
     static void generateDocument(Map<String, String> opts, String model, DomainSettings settings,
                                          List<DomainCode> batchDomains, LocalDate cycleAnchor,
-                                         boolean polishEnabled) throws Exception {
+                                         boolean polishEnabled, boolean readerCheckEnabled) throws Exception {
         LocalDate date = BatchOptions.resolveDate(opts);
         // main()이 이미 같은 opts로 outDir을 정해 뒀지만, 이 메서드는 main()의 지역 변수를
         // 볼 수 없어 resolveOutDir로 다시 구한다 — opts가 같으므로 값은 항상 같다.
@@ -198,19 +203,10 @@ final class DocumentBatch {
             BatchReports.reportDraftChecks(advanced, date, brief == null ? null : brief.advancedTopicBox());
         }
 
-        // 사실 검수(docs/22 §3.1). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다.
-        // 두 편을 동시에 보낸다 — 배치 호출이 편마다 최대 45분이라 차례로 보내면 job 제한에 가까워진다
-        DocumentFactChecker factChecker = new ClaudeDocumentFactChecker(model);
-        GeneratedDocumentItem beginnerFinal = document;
-        GeneratedDocumentItem advancedFinal = advanced;
-        BothEditions.Pair<List<FactCheckFinding>> checked = BothEditions.run(
-                () -> BatchReports.checkFacts(factChecker, beginnerFinal, date).findings(),
-                advancedFinal == null ? null
-                        : () -> BatchReports.checkFacts(factChecker, advancedFinal, date).findings());
-        List<FactCheckFinding> facts = mergeFactFindings(checked.beginner(), checked.advanced());
-        if (facts != null) {
-            attachFactFindings(outFile, file, facts);
-        }
+        // 사실 검수(docs/22 §3.1)와 독자 점검(설계 2026-11-20). 파일을 쓴 뒤에 도는 이유: 검수가 실패해도 문서는 남아야 한다
+        checkAndAttach(outFile, file, date, new ClaudeDocumentFactChecker(model),
+                readerCheckEnabled ? new ClaudeDocumentReaderCheck(model) : null,
+                queue.earlierUsedTopicsInBlock(picked));
 
         // 사용 표시는 <저장이 끝난 뒤> 찍는다(TopicQueue.markUsed 주석). 여기서 실패해도
         // 문서는 이미 파일에 있으므로 job을 죽이지 않는다 — 대신 다음 주기에 같은 주제가
@@ -221,6 +217,50 @@ final class DocumentBatch {
             BatchReports.appendToStepSummary("⚠️ `%s`에 사용 기록을 못 남겼습니다 — \"%s\" 범위가 다음 문서일에 또 걸릴 수 있습니다.%n"
                     .formatted(TopicQueue.FILE_NAME, picked.topic()));
         }
+    }
+
+    /**
+     * 사실 검수와 독자 점검을 동시에 돌려 결과를 문서 파일에 한 번에 싣는다. 단계마다 두 편도 동시에 보낸다 —
+     * 배치 호출이 편마다 최대 45분이라 차례로 보내면 job 제한(300분)에 가까워진다.
+     * 독자 점검이 한 편에서 실패하면 그 편 칸만 {@code null}로 두고 나머지는 싣는다.
+     *
+     * @param readerCheck 독자 점검이 꺼져 있으면 {@code null}. 그때는 파일에 독자 점검 칸을 만들지 않는다
+     * @return 실제로 파일에 쓴 내용(쓰기에 실패했으면 받은 그대로)
+     */
+    static GeneratedDocumentFile checkAndAttach(Path outFile, GeneratedDocumentFile file, LocalDate date,
+                                                DocumentFactChecker factChecker, DocumentReaderCheck readerCheck,
+                                                List<String> earlierTopics) {
+        GeneratedDocumentItem beginner = file.document();
+        GeneratedDocumentItem advanced = file.advancedDocument();
+        ParallelSteps.Pair<BothEditions.Pair<List<FactCheckFinding>>, BothEditions.Pair<List<ReaderFinding>>> both =
+                ParallelSteps.run(
+                        () -> BothEditions.run(
+                                () -> BatchReports.checkFacts(factChecker, beginner, date).findings(),
+                                advanced == null ? null : () -> BatchReports.checkFacts(factChecker, advanced, date).findings()),
+                        () -> readerCheck == null ? null : BothEditions.run(
+                                () -> BatchReports.checkReader(readerCheck, beginner, DocumentEdition.BEGINNER,
+                                        earlierTopics, null, date),
+                                advanced == null ? null : () -> BatchReports.checkReader(readerCheck, advanced,
+                                        DocumentEdition.ADVANCED, earlierTopics, beginner.contentMd(), date)));
+        GeneratedDocumentFile target = file;
+        List<FactCheckFinding> facts = mergeFactFindings(both.first().beginner(), both.first().advanced());
+        if (facts != null) {
+            target = target.withFactFindings(facts);
+        }
+        BothEditions.Pair<List<ReaderFinding>> readers = both.second();
+        if (readers != null && (readers.beginner() != null || readers.advanced() != null)) {
+            target = target.withReaderFindings(new ReaderFindings(readers.beginner(), readers.advanced()));
+        }
+        if (target == file) {
+            return file;
+        }
+        String error = replaceFile(outFile, target);
+        if (error != null) {
+            BatchReports.announce("⚠️ 검수 결과를 파일에 싣지 못했습니다 — 문서는 저장했고, 지적은 위 요약에만 있습니다 (%s)"
+                    .formatted(error));
+            return file;
+        }
+        return target;
     }
 
     /** 두 편의 지적을 한 목록으로 합친다. 두 편 다 검수하지 못했으면 {@code null}이다. */

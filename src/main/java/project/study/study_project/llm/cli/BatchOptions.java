@@ -350,6 +350,11 @@ final class BatchOptions {
         return Boolean.TRUE.equals(generation.get("polish-enabled"));
     }
 
+    /** 독자 점검 단계를 켤지({@code llm.generation.reader-check-enabled}). 윤문과 같이 키가 없으면 끈다. */
+    static boolean readerCheckEnabled(Map<String, Object> generation) {
+        return Boolean.TRUE.equals(generation.get("reader-check-enabled"));
+    }
+
     /** {@code --model}이 있으면 그것, 없으면 설정값. 옵션이 있으면 설정 파일을 읽지 않는다. */
     static String resolveModel(Map<String, String> opts) throws Exception {
         return isSet(opts.get("model")) ? opts.get("model") : configuredModel(readGenerationConfig());

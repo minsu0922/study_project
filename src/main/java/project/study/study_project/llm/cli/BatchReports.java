@@ -226,6 +226,33 @@ final class BatchReports {
         return new FactCheckReport(rendered, findings);
     }
 
+    /**
+     * 독자 점검 한 편. 실패해도 문서 저장과 사실 검수는 이어 가야 하므로 예외를 삼키고 {@code null}을 준다.
+     *
+     * @return 지적 목록. 점검이 실패했으면 {@code null} — "지적 없음"과 구별한다
+     */
+    static List<project.study.study_project.llm.client.ReaderFinding> checkReader(
+            project.study.study_project.llm.client.DocumentReaderCheck checker, GeneratedDocumentItem document,
+            project.study.study_project.llm.client.DocumentEdition edition, List<String> earlierTopics,
+            String beginnerContentMd, LocalDate date) {
+        String name = edition.getDisplayName();
+        String rendered;
+        List<project.study.study_project.llm.client.ReaderFinding> findings = null;
+        try {
+            findings = checker.check(document.title(), document.contentMd(), edition, earlierTopics, beginnerContentMd);
+            long blocks = findings.stream().filter(f -> f.kind() == project.study.study_project.llm.client.ReaderFinding.Kind.BLOCK).count();
+            long suggestions = findings.stream().filter(f -> f.suggestion() != null
+                    && f.suggestion().op() != project.study.study_project.llm.client.ReaderFinding.Op.NEED_HUMAN).count();
+            rendered = "🔎 %s 독자 점검(%s) %d건 — 막힘 %d · 되풀이 %d · 제안 %d%n"
+                    .formatted(date, name, findings.size(), blocks, findings.size() - blocks, suggestions);
+        } catch (RuntimeException e) {
+            rendered = "⚠️ %s 독자 점검(%s) 실패 — 문서는 저장했습니다 (%s)%n".formatted(date, name, e.getMessage());
+        }
+        System.out.println(rendered);
+        appendToStepSummary(rendered);
+        return findings;
+    }
+
     static String renderFactCheck(LocalDate date, String edition, List<FactCheckFinding> findings) {
         if (findings.isEmpty()) {
             return "🔎 %s %s 사실 검수: 지적 없음%n".formatted(date, edition);

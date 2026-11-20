@@ -44,6 +44,20 @@ class BatchOptionsModelTest {
     }
 
     @Test
+    @DisplayName("독자 점검 설정이 없으면 꺼진 것으로 보고, true면 켠다")
+    void readerCheckOffWhenMissingOnWhenTrue() {
+        assertThat(BatchOptions.readerCheckEnabled(Map.of())).isFalse();
+        assertThat(BatchOptions.readerCheckEnabled(Map.of("reader-check-enabled", true))).isTrue();
+    }
+
+    @Test
+    @DisplayName("application.yml에는 독자 점검이 꺼진 채로 들어 있다")
+    void readerCheckOffInApplicationYml() throws Exception {
+        Map<String, Object> generation = BatchOptions.readGenerationConfig();
+        assertThat(generation).containsEntry("reader-check-enabled", false);
+    }
+
+    @Test
     @DisplayName("application.yml에는 윤문이 꺼진 채로 들어 있다")
     void polishOffInApplicationYml() throws Exception {
         Map<String, Object> generation = BatchOptions.readGenerationConfig();
