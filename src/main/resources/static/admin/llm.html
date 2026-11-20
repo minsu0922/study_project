@@ -1361,7 +1361,9 @@ async function loadDocDrafts() {
           <span class="meta">${escapeHtml(d.model)} · ${d.contentLength}자</span>
         </div>
         <h3 style="margin:10px 0 2px">${escapeHtml(d.title)}</h3>
-        <div class="meta">/${escapeHtml(d.slug)}</div>
+        <div class="meta">/${escapeHtml(d.slug)} ·
+          <a href="/admin/doc-review.html?id=${d.id}" target="_blank" rel="noopener">나란히 검수 ↗</a>
+          ${d.readerFindings ? `<span class="meta">· 독자 점검 ${d.readerFindings.filter(f => f.status === "OPEN").length}건</span>` : ""}</div>
         ${blockingBox}${warningBox}${factFindingsBoxOf(d)}
         ${sectionOutlineOf(d.contentMd)}
         <div class="draft-diagrams" id="diag-${d.id}"></div>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 나란히 검수 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다 — FOUC 방지. */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+<!-- 문서 화면(document.html)과 같은 라이브러리·같은 integrity. 승인 전 글이라 DOMPurify를 반드시 거친다 -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"
+        integrity="sha384-NNQgBjjuhtXzPmmy4gurS5X7P4uTt1DThyevz4Ua0IVK5+kazYQI1W27JHjbbxQz"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"
+        integrity="sha384-JEyTNhjM6R1ElGoJns4U2Ln4ofPcqzSsynQkmEc/KGy6336qAZl70tDLufbkla+3"
+        crossorigin="anonymous"></script>
+</head>
+<body class="admin-shell">
+<div id="shell"></div>
+
+<main class="container admin review-page">
+  <p class="meta"><a href="/admin/llm.html">← 검수함</a></p>
+  <div id="guard"></div>
+
+  <div id="adminUi" hidden>
+    <div id="rvMessage"></div>
+    <div class="card review-head" id="rvHead"></div>
+    <div class="review-cols">
+      <article class="doc-body review-doc" id="rvDoc"></article>
+      <aside class="review-panel" id="rvPanel" aria-label="검수 지적"></aside>
+    </div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script src="/admin/js/admin-shell.js"></script>
+<script src="/admin/js/admin-common.js"></script>
+<script src="/admin/js/doc-review.js"></script>
+</body>
+</html>

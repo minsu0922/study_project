@@ -172,6 +172,7 @@
    * 글자는 읽혀야 한다. */
   --correct-fg: #15803d;
   --wrong-fg: #b91c1c;
+  --review-block: #c2410c;      /* 나란히 검수: 독자 점검 막힘 칠(주황) */
   /* 삭제 버튼의 면색. --wrong(#dc2626)을 그대로 쓰면 그 위의 흰 글자가 4.83:1이라
      13px 버튼 글자로는 얇게 보인다. 되돌릴 수 없는 동작의 이름표라 더 또렷해야 한다.
      --wrong을 통째로 어둡게 하지 않은 이유: 그 값은 글자·테두리에도 쓰여서,
@@ -295,6 +296,7 @@
   /* 판이 아주 어두워서 면색을 그대로 글자로 써도 넉넉하다(7.69 / 5.36) */
   --correct-fg: #34d399;
   --wrong-fg: #fca5a5;   /* 오류 <글자>. #f87171은 --wrong-bg 위에서 5.36:1이라 한 단계 밝혔다(7.81:1) */
+  --review-block: #fb923c;
   /* 다크에서는 면이 밝고 글자가 어둡다(--on-primary). 이미 6.45:1이라 그대로 쓴다 —
      라이트처럼 어둡게 만들면 어두운 배경에 묻혀 "삭제"라는 신호가 죽는다. */
   --danger-solid: #f87171;
@@ -356,6 +358,7 @@
     /* 판이 아주 어두워서 면색을 그대로 글자로 써도 넉넉하다(7.69 / 5.36) */
     --correct-fg: #34d399;
     --wrong-fg: #fca5a5;   /* 오류 <글자>. #f87171은 --wrong-bg 위에서 5.36:1이라 한 단계 밝혔다(7.81:1) */
+    --review-block: #fb923c;
     --danger-solid: #f87171;
 
     --review: #fbbf24;
@@ -3674,4 +3677,46 @@ a.batch-chip:hover { border-color: var(--primary); background: var(--primary-sof
 @media (max-width: 560px) {
   .domain-line { grid-template-columns: auto auto 1.4rem minmax(0, 1fr) auto; }
   .domain-hint-summary { display: none; }
+}
+
+/* ═══════════ 나란히 검수(admin/doc-review.html, 설계 2026-11-20) ═══════════
+ * 왼쪽 렌더링한 본문, 오른쪽 붙박이 지적 패널. 색은 사실 검수(--wrong)·독자 막힘(--review-block)·
+ * 독자 되풀이(--primary)를 바탕에 옅게 섞어 칠한다. 테마 변수에서 섞으므로 다크에서도 그대로 맞는다. */
+.container.admin.review-page { max-width: 1400px; }
+.review-head-top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.review-title { font-size: 1.35rem; margin: 10px 0 6px; text-wrap: balance; }
+.review-cols { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 18px; align-items: start; margin-top: 14px; }
+.review-doc { min-width: 0; }
+.review-raw { white-space: pre-wrap; word-break: break-word; font-size: .85rem; background: none; padding: 0; }
+.review-panel { position: sticky; top: calc(var(--shell-top-h) + 12px); max-height: calc(100vh - var(--shell-top-h) - 24px); overflow-y: auto; min-width: 0;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.review-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.review-tabs button { padding: 5px 10px; font-size: .85rem; }
+.review-legend { margin: 8px 0; }
+.review-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.review-card { border: 1px solid var(--border); border-left: 4px solid var(--hl-color, var(--border)); border-radius: 8px;
+  padding: 10px 12px; font-size: .88rem; line-height: 1.6; scroll-margin-top: 12px; }
+.review-card p { margin: 4px 0; }
+.review-card-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.review-where { margin-left: auto; font-size: .8rem; }
+.review-quote { font-weight: 600; }
+.review-sug { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: var(--fill); }
+.review-sug.need-human { border: 1px dashed var(--review-block); }
+.review-sug-op { font-weight: 700; font-size: .8rem; color: var(--review-block); }
+.review-lab { display: inline-block; min-width: 34px; font-size: .75rem; color: var(--muted); }
+.review-sug del { background: var(--wrong-bg); color: var(--wrong-fg); }
+.review-sug ins { background: var(--correct-bg); color: var(--correct); text-decoration: none; }
+.hl-fact { --hl-color: var(--wrong); }
+.hl-block { --hl-color: var(--review-block); }
+.hl-repeat { --hl-color: var(--primary); }
+mark.hl { background: color-mix(in srgb, var(--hl-color) 18%, transparent); color: inherit;
+  box-shadow: inset 0 -2px var(--hl-color); border-radius: 2px; padding: 0 1px; }
+a.hl-num { display: inline-block; min-width: 26px; margin-right: 3px; padding: 0 5px; border-radius: 9px; text-align: center;
+  font-size: .72rem; font-weight: 700; line-height: 18px; color: var(--card); background: var(--hl-color); text-decoration: none;
+  vertical-align: 1px; scroll-margin-top: calc(var(--shell-top-h) + 40px); }
+a.hl-num:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.review-card:target, a.hl-num:target { outline: 2px solid var(--hl-color); outline-offset: 2px; }
+@media (max-width: 900px) {
+  .review-cols { grid-template-columns: minmax(0, 1fr); }
+  .review-panel { position: static; max-height: none; }
 }
