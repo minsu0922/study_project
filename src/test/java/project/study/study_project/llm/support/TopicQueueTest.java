@@ -95,6 +95,37 @@ class TopicQueueTest {
                 .containsExactly("공인 IP와 사설 IP", "포트");
     }
 
+    @Test
+    @DisplayName("고른 주제 앞쪽에서 이미 문서가 나온 같은 분야 주제만 코스 순서로 준다 — 독자 점검의 '읽은 글'")
+    void earlierUsedTopicsKeepCourseOrderAndSkipUnused() throws Exception {
+        write("""
+                { "topics": [
+                  { "domain": "OS", "topic": "프로세스", "lastUsedAt": "2026-08-01" },
+                  { "domain": "NETWORK", "topic": "패킷과 프로토콜 — 사진을 쪼개는 이유", "lastUsedAt": "2026-10-31" },
+                  { "domain": "NETWORK", "topic": "서브넷 마스크" },
+                  { "domain": "NETWORK", "topic": "포트", "lastUsedAt": "2026-10-27" },
+                  { "domain": "NETWORK", "topic": "DNS" }
+                ] }
+                """);
+        TopicQueue queue = TopicQueue.read(dir);
+
+        assertThat(queue.earlierUsedTopicsInBlock(new TopicQueue.Picked(4, TestDomains.NETWORK, "DNS")))
+                .as("안 쓴 서브넷 마스크는 빼고, 분야가 다른 프로세스에서 멈춘다")
+                .containsExactly("패킷과 프로토콜", "포트");
+    }
+
+    @Test
+    @DisplayName("블록의 첫 주제이거나 고른 주제가 없으면 빈 목록이다")
+    void earlierUsedTopicsEmptyAtBlockStart() throws Exception {
+        write("""
+                { "topics": [ { "domain": "NETWORK", "topic": "DNS" } ] }
+                """);
+        TopicQueue queue = TopicQueue.read(dir);
+
+        assertThat(queue.earlierUsedTopicsInBlock(new TopicQueue.Picked(0, TestDomains.NETWORK, "DNS"))).isEmpty();
+        assertThat(queue.earlierUsedTopicsInBlock(null)).isEmpty();
+    }
+
     /* ── 고르기 ───────────────────────────────────────────────── */
 
     @Test

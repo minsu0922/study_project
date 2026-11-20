@@ -302,6 +302,32 @@ public final class TopicQueue {
         return later;
     }
 
+    /**
+     * 같은 분야 블록에서 이 편 앞에 오고 이미 문서가 나온 주제들 — 독자 점검이 "독자가 읽은 글"로 싣는다.
+     * 아직 안 나온 주제를 넣으면 독자가 읽지 않은 글을 읽은 것으로 쳐, 진짜 막힘을 놓친다.
+     * 코스 순서(앞→뒤)로 준다.
+     */
+    public List<String> earlierUsedTopicsInBlock(Picked picked) {
+        List<String> earlier = new ArrayList<>();
+        if (picked == null) {
+            return earlier;
+        }
+        List<TopicQueueFile.Entry> topics = file.topics();
+        for (int i = Math.min(picked.index(), topics.size()) - 1; i >= 0; i--) {
+            TopicQueueFile.Entry entry = topics.get(i);
+            if (!isUsable(entry) || !picked.domain().equals(parseDomain(entry.domain()))) {
+                break;
+            }
+            if (entry.isNeverUsed()) {
+                continue;
+            }
+            String topic = entry.topic().trim();
+            int dash = topic.indexOf(" — ");
+            earlier.add(0, dash < 0 ? topic : topic.substring(0, dash).trim());
+        }
+        return earlier;
+    }
+
     /** 쓸 수 있는 범위 수 — "등록된 범위 3개"처럼 사람에게 알리는 용도. 형식 오류는 세지 않는다. */
     public int size() {
         return (int) file.topics().stream().filter(TopicQueue::isUsable).count();
