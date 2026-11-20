@@ -21,6 +21,7 @@ import java.util.List;
  * @param checks        자동 검증에서 걸린 항목 전부(없으면 빈 목록)
  * @param blocked       {@code checks}에 BLOCKING이 하나라도 있어 승인이 막힌 상태인지
  * @param factFindings  AI 사실 검수 지적. 검수를 안 돌렸으면 {@code null}, 돌렸는데 없으면 빈 목록
+ * @param readerFindings 독자 점검 지적(V49). 안 돌렸으면 {@code null}. 승인을 막지 않는다
  */
 public record LlmDocumentDraftResponse(
         Long id,
@@ -39,7 +40,8 @@ public record LlmDocumentDraftResponse(
         LocalDateTime reviewedAt,
         List<DraftCheck> checks,
         boolean blocked,
-        List<FactFinding> factFindings
+        List<FactFinding> factFindings,
+        List<ReaderFindingView> readerFindings
 ) {
 
     /**
@@ -55,5 +57,19 @@ public record LlmDocumentDraftResponse(
     public record FactFinding(String kind, String label, boolean confident, String quote, String reason,
                               String correction, String sourceUrl, String paragraph, String resolution,
                               String status) {
+    }
+
+    /**
+     * 독자 점검 지적 한 건의 화면용 모습.
+     *
+     * @param op         REPLACE·INSERT_AFTER·DELETE·NEED_HUMAN
+     * @param acceptable 지금 본문에 그대로 수락할 수 있으면 true — 미처리이고, 사람 확인이 아니고,
+     *                   target을 본문에서 한 곳으로 찾았고, 금지 자리가 아닐 때
+     * @param status     OPEN(미처리)·ACCEPTED(수락)·DISMISSED(넘김)
+     */
+    public record ReaderFindingView(String kind, String kindLabel, String type, String typeLabel, String weight,
+                                    String section, String quote, String earlier, String reason,
+                                    String op, String target, String text, String note,
+                                    boolean acceptable, String resolution, String status) {
     }
 }

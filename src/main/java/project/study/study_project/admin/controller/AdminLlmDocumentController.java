@@ -57,6 +57,12 @@ public class AdminLlmDocumentController {
     }
 
     /** 검수 대기 건수 — 관리자 화면 배지용. */
+    /** 나란히 검수 화면이 초안 하나를 받는다(설계 2026-11-20 §5). */
+    @GetMapping("/{id}")
+    public ApiResponse<LlmDocumentDraftResponse> getOne(@PathVariable Long id) {
+        return ApiResponse.ok(llmDocumentService.getDraft(id));
+    }
+
     @GetMapping("/pending-count")
     public ApiResponse<Map<String, Long>> pendingCount() {
         return ApiResponse.ok(Map.of("count", llmDocumentService.pendingCount()));
@@ -113,5 +119,18 @@ public class AdminLlmDocumentController {
         String text = body != null ? body.get("text") : null;
         String note = body != null ? body.get("note") : null;
         return ApiResponse.ok(llmDocumentService.resolveFactFinding(id, index, text, note));
+    }
+
+    /** 독자 점검 제안 수락 — 본문의 그 문장만 제안대로 고친다. 사람 확인 지적·바뀐 문장·금지 자리는 400. */
+    @PostMapping("/{id}/reader-findings/{index}/accept")
+    public ApiResponse<LlmDocumentDraftResponse> acceptReaderFinding(@PathVariable Long id, @PathVariable int index) {
+        return ApiResponse.ok(llmDocumentService.acceptReaderFinding(id, index));
+    }
+
+    /** 독자 점검 지적 넘김 — {@code {"note": "이유(선택)"}}. 본문은 그대로다. */
+    @PostMapping("/{id}/reader-findings/{index}/dismiss")
+    public ApiResponse<LlmDocumentDraftResponse> dismissReaderFinding(@PathVariable Long id, @PathVariable int index,
+                                                                      @RequestBody(required = false) Map<String, String> body) {
+        return ApiResponse.ok(llmDocumentService.dismissReaderFinding(id, index, body != null ? body.get("note") : null));
     }
 }

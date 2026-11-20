@@ -26,6 +26,10 @@ import project.study.study_project.global.response.PageResponse;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.dto.DraftFactFinding;
+import project.study.study_project.llm.dto.DraftReaderFinding;
+import project.study.study_project.llm.client.ReaderFinding;
+import project.study.study_project.llm.support.SuggestionZones;
+import project.study.study_project.llm.support.TextSpans;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
@@ -297,7 +301,148 @@ public class LlmDocumentService {
                 d.getContentMd() == null ? 0 : d.getContentMd().length(),
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedDocumentId(),
                 d.getCreatedAt(), d.getReviewedAt(),
-                checks, DocumentDraftValidator.hasBlocking(checks), readFactFindings(d));
+                checks, DocumentDraftValidator.hasBlocking(checks), readFactFindings(d), readReaderFindings(d));
+    }
+
+    /** 검수 화면(나란히 검수)이 초안 하나를 받는다. */
+    @Transactional(readOnly = true)
+    public LlmDocumentDraftResponse getDraft(Long id) {
+        return toResponse(findDraft(id));
+    }
+
+    /**
+     * 저장된 독자 점검 지적을 화면용으로 읽는다. 안 돌렸으면 {@code null}.
+     * 읽다 실패해도 {@code null}로 넘긴다 — 지적 한 칸 때문에 검수 화면 전체가 안 열리면 안 된다.
+     */
+    private List<LlmDocumentDraftResponse.ReaderFindingView> readReaderFindings(GeneratedDocumentDraft d) {
+        if (d.getReaderFindingsJson() == null) {
+            return null;
+        }
+        try {
+            return storedReaderFindingsOf(d).stream().map(f -> readerView(d.getContentMd(), f)).toList();
+        } catch (JsonProcessingException | RuntimeException e) {
+            log.warn("문서 초안 #{}의 독자 점검 지적을 읽지 못함: {}", d.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    private static LlmDocumentDraftResponse.ReaderFindingView readerView(String content, DraftReaderFinding stored) {
+        ReaderFinding f = stored.finding();
+        ReaderFinding.Suggestion s = f.suggestion();
+        ReaderFinding.Op op = s == null || s.op() == null ? ReaderFinding.Op.NEED_HUMAN : s.op();
+        boolean acceptable = stored.status() == DraftReaderFinding.Status.OPEN && op != ReaderFinding.Op.NEED_HUMAN
+                && TextSpans.locateOnce(content, s.target())
+                .filter(at -> !SuggestionZones.forbidden(content, at[0], at[1])).isPresent();
+        return new LlmDocumentDraftResponse.ReaderFindingView(
+                f.kind() == null ? null : f.kind().name(), f.kind() == ReaderFinding.Kind.REPEAT ? "되풀이" : "막힘",
+                f.type() == null ? null : f.type().name(), readerTypeLabel(f.type()),
+                f.weight() == null ? null : f.weight().name(), f.section(), f.quote(), f.earlier(), f.reason(),
+                op.name(), s == null ? "" : s.target(), s == null ? "" : s.text(), s == null ? "" : s.note(),
+                acceptable, stored.resolution(), stored.status().name());
+    }
+
+    private static String readerTypeLabel(ReaderFinding.Type type) {
+        if (type == null) {
+            return "지적";
+        }
+        return switch (type) {
+            case UNDEFINED_TERM -> "풀지 않은 말";
+            case UNCLEAR_SENTENCE -> "안 잡히는 문장";
+            case SKIPPED_STEP -> "건너뛴 단계";
+            case ANALOGY -> "비유";
+            case FIGURE -> "그림·표";
+            case NUMBER_MISMATCH -> "수치 안 맞음";
+            case REPEAT -> "되풀이";
+        };
+    }
+
+    private List<DraftReaderFinding> storedReaderFindingsOf(GeneratedDocumentDraft d) throws JsonProcessingException {
+        return objectMapper.readValue(d.getReaderFindingsJson(), new TypeReference<>() {
+        });
+    }
+
+    private List<DraftReaderFinding> pendingReaderFindings(GeneratedDocumentDraft draft) {
+        if (draft.getStatus() != DraftStatus.PENDING) {
+            throw new BusinessException(ErrorCode.LLM_002);
+        }
+        return FindingList.read(objectMapper, draft.getReaderFindingsJson(), new TypeReference<>() {
+        }, "독자 점검 지적");
+    }
+
+    /**
+     * 독자 점검 제안을 수락한다(설계 2026-11-20 §4). target 자리만 제안대로 고치고 배치 파일도 함께 고친다.
+     * 다른 제안을 먼저 수락해 문장이 바뀌었거나, 금지 자리이거나, 고친 뒤 검증에 새로 걸리면 받지 않는다.
+     */
+    @Transactional
+    public LlmDocumentDraftResponse acceptReaderFinding(Long draftId, int findingIndex) {
+        GeneratedDocumentDraft draft = findDraft(draftId);
+        List<DraftReaderFinding> findings = pendingReaderFindings(draft);
+        DraftReaderFinding stored = FindingList.requireOpen(findings, findingIndex, DraftReaderFinding::resolution);
+        ReaderFinding.Suggestion s = stored.finding().suggestion();
+        if (s == null || s.op() == null || s.op() == ReaderFinding.Op.NEED_HUMAN) {
+            throw new BusinessException(ErrorCode.COMMON_001, "사람 확인이 필요한 지적은 수락할 수 없습니다. 넘김으로 처리하세요.");
+        }
+        String before = draft.getContentMd();
+        int[] at = TextSpans.locateOnce(before, s.target())
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_001, "제안한 문장이 본문에서 바뀌었습니다."));
+        if (SuggestionZones.forbidden(before, at[0], at[1])) {
+            throw new BusinessException(ErrorCode.COMMON_001, "제목·코드·그림·표·인용 상자는 제안으로 고치지 않습니다.");
+        }
+        String old = before.substring(at[0], at[1]);
+        String text = s.text() == null ? "" : s.text().strip();
+        String after = switch (s.op()) {
+            case REPLACE -> before.substring(0, at[0]) + text + before.substring(at[1]);
+            case INSERT_AFTER -> before.substring(0, at[1]) + " " + text + before.substring(at[1]);
+            case DELETE -> joinAround(before.substring(0, at[0]), before.substring(at[1]));
+            case NEED_HUMAN -> throw new IllegalStateException("사람 확인 지적은 위에서 걸렀다");
+        };
+        if (blockingCount(draft, after) > blockingCount(draft, before)) {
+            throw new BusinessException(ErrorCode.COMMON_001, "제안을 넣으면 문서 검증에 걸립니다.");
+        }
+        String synced = documentFileSync.replaceContent(draft.getSlug(), before, after)
+                .map(name -> "배치 파일 " + name + "도 고침")
+                .orElse("배치 파일은 못 찾아 그대로");
+        String changed = switch (s.op()) {
+            case INSERT_AFTER -> oneLine(old) + " " + oneLine(text);
+            case DELETE -> "(지움)";
+            default -> oneLine(text);
+        };
+        String resolution = DraftReaderFinding.ACCEPTED_PREFIX
+                + "「%s」 → 「%s」(%s)".formatted(oneLine(old), changed, synced);
+        draft.resolveReaderFinding(after,
+                FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, resolution)));
+        log.info("문서 초안 #{}: 독자 점검 제안 수락({})", draft.getId(), s.op());
+        return toResponse(draft);
+    }
+
+    /** 독자 점검 지적을 넘긴다. 본문은 그대로다. 이유는 적어도 되고 안 적어도 된다. */
+    @Transactional
+    public LlmDocumentDraftResponse dismissReaderFinding(Long draftId, int findingIndex, String note) {
+        GeneratedDocumentDraft draft = findDraft(draftId);
+        List<DraftReaderFinding> findings = pendingReaderFindings(draft);
+        FindingList.requireOpen(findings, findingIndex, DraftReaderFinding::resolution);
+        String why = Texts.trimToNull(note);
+        String resolution = why == null ? DraftReaderFinding.DISMISSED_PREFIX
+                : DraftReaderFinding.DISMISSED_PREFIX + ": " + oneLine(why);
+        draft.resolveReaderFinding(draft.getContentMd(),
+                FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, resolution)));
+        return toResponse(draft);
+    }
+
+    /** 문장을 지운 자리의 공백을 정리한다. 앞뒤 공백이 겹치면 하나만 남기고, 줄 끝이면 공백을 떼어 낸다. */
+    private static String joinAround(String head, String tail) {
+        String h = head.endsWith(" ") ? head.stripTrailing() : head;
+        if (tail.isEmpty() || tail.startsWith("\n") || tail.startsWith("\r")) {
+            return h + tail;
+        }
+        String t = tail.startsWith(" ") ? tail.stripLeading() : tail;
+        boolean hadSpace = head.endsWith(" ") || tail.startsWith(" ");
+        return hadSpace && !h.isEmpty() && !h.endsWith("\n") ? h + " " + t : h + t;
+    }
+
+    private static long blockingCount(GeneratedDocumentDraft d, String content) {
+        return DocumentDraftValidator.validate(d.getTitle(), d.getSlug(), content).stream()
+                .filter(c -> c.severity() == DraftCheck.Severity.BLOCKING).count();
     }
 
     /**
