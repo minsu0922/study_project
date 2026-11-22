@@ -422,6 +422,29 @@ class DocumentImportServiceTest {
         service.importFile(writeDocumentFile("2026-08-12.json", "claude-opus-5",
                 item("캐시 전략", "cache-strategy", List.of())));
         assertThat(capturedDraft().getReaderFindingsJson()).isNull();
+        assertThat(capturedDraft().getDedupRemovalsJson()).isNull();
+    }
+
+    @Test
+    @DisplayName("중복 제거 기록은 편별 목록이 그 편 초안에 담긴다")
+    void importStoresDedupRemovalsPerEdition() throws Exception {
+        GeneratedDocumentItem beginner = itemWith("캐시 전략", "cache-strategy", "입문 문장이다.");
+        GeneratedDocumentItem advanced = itemWith("캐시 심화", "cache-strategy-advanced", "심화 문장이다.");
+        var removal = new project.study.study_project.llm.dto.DedupRemoval("지운 문장.", "남긴 문장.", "본론", "같은 말");
+        GeneratedDocumentFile file = new GeneratedDocumentFile("테스트용", "2026-11-22", "2026-11-22T00:00:00Z",
+                TestDomains.SYSTEM_DESIGN, "claude-opus-5", beginner, advanced)
+                .withDeduped(beginner, advanced, beginner, null,
+                        new project.study.study_project.llm.dto.DedupRemovals(List.of(removal), null));
+        Path path = tempDir.resolve("2026-11-22.json");
+        java.nio.file.Files.writeString(path, project.study.study_project.llm.support.FileFormats.toJson(
+                objectMapper, project.study.study_project.llm.support.FileFormats.Kind.DOCUMENTS, file));
+
+        service.importFile(path);
+
+        ArgumentCaptor<GeneratedDocumentDraft> captor = ArgumentCaptor.forClass(GeneratedDocumentDraft.class);
+        verify(draftRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(0).getDedupRemovalsJson()).contains("지운 문장.");
+        assertThat(captor.getAllValues().get(1).getDedupRemovalsJson()).isNull();
     }
 
     private Path writeFileWithFacts(String filename, GeneratedDocumentItem document, GeneratedDocumentItem advanced,

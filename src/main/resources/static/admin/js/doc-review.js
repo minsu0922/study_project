@@ -402,13 +402,48 @@ function renderPanel(items) {
       ${tabButton("fact", `사실 검수 ${openFacts.length}`)}
       ${tabButton("reader", `독자 점검 ${openReaders.length}`)}
       ${tabButton("figure", `손그림 ${figures.pending.length}`)}
+      ${tabButton("dedup", `중복 제거 ${(draft.dedupRemovals ?? []).length}`)}
       ${tabButton("done", `처리함 ${done.length}`)}
     </div>
-    ${tab === "figure" ? figurePanel(figures) : `
+    ${tab === "figure" ? figurePanel(figures) : tab === "dedup" ? dedupPanel() : `
     <p class="meta review-legend"><mark class="hl hl-fact">사실 검수</mark> <mark class="hl hl-block">독자 막힘</mark> <mark class="hl hl-repeat">독자 되풀이</mark></p>
     ${shown.length ? `<ol class="review-cards">${shown.map(cardOf).join("")}</ol>` : `<p class="meta">${empty}</p>`}`}`;
   panel.querySelectorAll("[data-tab]").forEach(b => { b.onclick = () => { tab = b.dataset.tab; render(); }; });
   panel.querySelectorAll("[data-act]").forEach(b => { b.onclick = () => onCardAction(b); });
+  panel.querySelectorAll("[data-copy]").forEach(b => { b.onclick = () => copyRemoved(b); });
+}
+
+/** 중복 제거로 지운 문장. 본문에 없는 글이라 칠하지 않고 패널에서만 보여 준다 */
+function dedupPanel() {
+  const removals = draft.dedupRemovals;
+  if (removals == null) return `<p class="meta">중복 제거를 적용하지 않은 초안입니다.</p>`;
+  return `<p class="meta">앞 문장을 새 정보 없이 되풀이한다고 보고 지운 문장입니다. 되살리려면 복사한 뒤, 같은 문단의 지적에서 「직접 고치기」로 넣거나 승인 뒤 문서 수정 화면에 넣으세요.</p>
+    <ol class="review-cards">${removals.map(dedupCard).join("")}</ol>`;
+}
+
+function dedupCard(r, i) {
+  return `
+    <li class="review-card hl-repeat">
+      <div class="review-card-head">
+        <span class="hl-num hl-repeat">중${i + 1}</span>
+        <span class="meta">${escapeHtml(r.section ?? "")}</span>
+      </div>
+      <div class="review-sug">
+        <div><span class="review-lab">지움</span><del>${escapeHtml(r.removed ?? "")}</del></div>
+        <div><span class="review-lab">남김</span>${escapeHtml(r.kept ?? "")}</div>
+      </div>
+      ${r.reason ? `<p>이유: ${escapeHtml(r.reason)}</p>` : ""}
+      <div class="row-actions"><button class="btn-outline" data-copy="${i}">지운 문장 복사</button></div>
+    </li>`;
+}
+
+async function copyRemoved(btn) {
+  try {
+    await navigator.clipboard.writeText(draft.dedupRemovals[Number(btn.dataset.copy)].removed);
+    btn.textContent = "복사했습니다";
+  } catch {
+    btn.textContent = "복사하지 못했습니다";
+  }
 }
 
 function tabButton(key, label) {
