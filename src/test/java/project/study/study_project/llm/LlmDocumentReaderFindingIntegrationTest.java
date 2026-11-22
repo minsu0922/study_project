@@ -179,6 +179,35 @@ class LlmDocumentReaderFindingIntegrationTest {
     }
 
     @Test
+    @DisplayName("제안이 없는 지적도 문단을 직접 고쳐 처리하고, 처리 뒤에는 고치기 칸을 주지 않는다")
+    void editReplacesParagraphForNeedHuman() throws Exception {
+        GeneratedDocumentDraft draft = draftWith(BODY, finding(Op.NEED_HUMAN, "", ""));
+        assertThat(llmDocumentService.getDraft(draft.getId()).readerFindings().get(0).paragraph()).isEqualTo(BODY);
+
+        var after = llmDocumentService.editReaderFinding(draft.getId(), 0, "캐시는 자주 쓰는 값을 가까이 둔다.");
+
+        assertThat(after.contentMd()).contains("캐시는 자주 쓰는 값을 가까이 둔다.").doesNotContain(BODY).contains("## 무엇인가");
+        assertThat(after.readerFindings().get(0).status()).isEqualTo("EDITED");
+        assertThat(after.readerFindings().get(0).resolution()).startsWith("직접 수정: ").contains("배치 파일");
+        assertThat(after.readerFindings().get(0).paragraph()).isNull();
+    }
+
+    @Test
+    @DisplayName("빈 글·그대로인 글·검증에 걸리는 글은 직접 수정으로 받지 않고 본문을 지킨다")
+    void editRejectsBadText() throws Exception {
+        GeneratedDocumentDraft draft = draftWith(BODY, finding(Op.NEED_HUMAN, "", ""));
+        String before = draft.getContentMd();
+
+        assertThatThrownBy(() -> llmDocumentService.editReaderFinding(draft.getId(), 0, "  "))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("비어 있습니다");
+        assertThatThrownBy(() -> llmDocumentService.editReaderFinding(draft.getId(), 0, BODY))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("바뀐 곳이 없습니다");
+        assertThatThrownBy(() -> llmDocumentService.editReaderFinding(draft.getId(), 0, "캐시는 <b>빠르다</b>."))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("문서 검증에 걸립니다");
+        assertThat(draftRepository.findById(draft.getId()).orElseThrow().getContentMd()).isEqualTo(before);
+    }
+
+    @Test
     @DisplayName("독자 점검을 안 돌린 초안은 응답의 독자 점검이 null이다")
     void responseReaderFindingsNullWhenNotRun() {
         GeneratedDocumentDraft draft = llmDocumentService.saveDraft(TestDomains.SYSTEM_DESIGN,

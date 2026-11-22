@@ -65,11 +65,12 @@ public record LlmDocumentDraftResponse(
      * @param op         REPLACE·INSERT_AFTER·DELETE·NEED_HUMAN
      * @param acceptable 지금 본문에 그대로 수락할 수 있으면 true — 미처리이고, 사람 확인이 아니고,
      *                   target을 본문에서 한 곳으로 찾았고, 금지 자리가 아닐 때
-     * @param status     OPEN(미처리)·ACCEPTED(수락)·DISMISSED(넘김)
+     * @param paragraph  지적된 문장이 든 문단(마크다운 원문). 직접 고치기 칸에 채운다. 처리했거나 본문에서 사라졌으면 {@code null}
+     * @param status     OPEN(미처리)·ACCEPTED(수락)·EDITED(직접 수정)·DISMISSED(넘김)
      */
     public record ReaderFindingView(String kind, String kindLabel, String type, String typeLabel, String weight,
                                     String section, String quote, String earlier, String reason,
                                     String op, String target, String text, String note,
-                                    boolean acceptable, String resolution, String status) {
+                                    boolean acceptable, String paragraph, String resolution, String status) {
     }
 }

@@ -3,6 +3,7 @@
  *   GET  /api/admin/llm-documents/{id}
  *   POST /api/admin/llm-documents/{id}/fact-findings/{i}/resolve   {"text"} 고침 · {"note"} 헛경보
  *   POST /api/admin/llm-documents/{id}/reader-findings/{i}/accept
+ *   POST /api/admin/llm-documents/{id}/reader-findings/{i}/edit    {"text"} 문단 직접 수정
  *   POST /api/admin/llm-documents/{id}/reader-findings/{i}/dismiss {"note"(선택)}
  *   POST /api/admin/llm-documents/{id}/approve · /reject
  * 승인 전 글은 남이 쓴 글이라 innerHTML로 넣을 때 반드시 DOMPurify를 거친다. */
@@ -387,12 +388,18 @@ function readerCard(it) {
       <p>${escapeHtml(f.reason ?? "")}</p>
       ${f.earlier ? `<p class="meta">앞에서 읽은 문장: ${escapeHtml(f.earlier)}</p>` : ""}
       ${suggestionBox(f)}
-      ${f.resolution ? `<p class="meta"><span class="badge ${f.status === "ACCEPTED" ? "green" : "gray"}">${f.status === "ACCEPTED" ? "수락" : "넘김"}</span> ${escapeHtml(f.resolution)}</p>` : ""}
+      ${f.resolution ? `<p class="meta"><span class="badge ${f.status === "DISMISSED" ? "gray" : "green"}">${{ ACCEPTED: "수락", EDITED: "직접 수정" }[f.status] ?? "넘김"}</span> ${escapeHtml(f.resolution)}</p>` : ""}
       ${pending ? `
       <div class="row-actions">
         ${f.acceptable ? `<button data-act="reader-accept" data-i="${it.index}">제안 수락</button>` : ""}
+        ${f.paragraph != null ? `<button class="btn-outline" data-act="reader-edit-open" data-i="${it.index}">직접 고치기</button>` : ""}
         <button class="btn-outline" data-act="reader-dismiss-open" data-i="${it.index}">넘김</button>
       </div>
+      ${f.paragraph != null ? `
+      <div id="readerEdit-${it.index}" hidden>
+        <textarea id="readerEditText-${it.index}" rows="6" maxlength="20000" style="width:100%">${escapeHtml(f.paragraph)}</textarea>
+        <div class="row-actions"><button data-act="reader-edit" data-i="${it.index}">고친 문단 적용</button></div>
+      </div>` : ""}
       <div id="readerDismiss-${it.index}" hidden>
         <input id="readerDismissNote-${it.index}" type="text" maxlength="300" style="width:100%" placeholder="넘기는 이유 (선택)">
         <div class="row-actions"><button data-act="reader-dismiss" data-i="${it.index}">넘기기</button></div>
@@ -446,6 +453,9 @@ async function onCardAction(btn) {
     case "fact-fix-open": toggle(`factFix-${i}`); return;
     case "fact-false-open": toggle(`factFalse-${i}`); return;
     case "reader-dismiss-open": toggle(`readerDismiss-${i}`); return;
+    case "reader-edit-open": toggle(`readerEdit-${i}`); return;
+    case "reader-edit":
+      return act(btn, `/reader-findings/${i}/edit`, { text: document.getElementById(`readerEditText-${i}`).value });
     case "fact-fix":
       return act(btn, `/fact-findings/${i}/resolve`, { text: document.getElementById(`factFixText-${i}`).value });
     case "fact-false":

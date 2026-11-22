@@ -127,7 +127,14 @@ public class AdminLlmDocumentController {
         return ApiResponse.ok(llmDocumentService.acceptReaderFinding(id, index));
     }
 
-    /** 독자 점검 지적 넘김 — {@code {"note": "이유(선택)"}}. 본문은 그대로다. */
+    /** 독자 점검 지적 직접 수정 — {@code {"text": "고친 문단"}}. 빈 글·그대로인 글·검증에 걸리는 글은 400. */
+    @PostMapping("/{id}/reader-findings/{index}/edit")
+    public ApiResponse<LlmDocumentDraftResponse> editReaderFinding(@PathVariable Long id, @PathVariable int index,
+                                                                   @RequestBody(required = false) Map<String, String> body) {
+        return ApiResponse.ok(llmDocumentService.editReaderFinding(id, index, body != null ? body.get("text") : null));
+    }
+
+    /** 독자 점검 지적 넘김 —{@code {"note": "이유(선택)"}}. 본문은 그대로다. */
     @PostMapping("/{id}/reader-findings/{index}/dismiss")
     public ApiResponse<LlmDocumentDraftResponse> dismissReaderFinding(@PathVariable Long id, @PathVariable int index,
                                                                       @RequestBody(required = false) Map<String, String> body) {

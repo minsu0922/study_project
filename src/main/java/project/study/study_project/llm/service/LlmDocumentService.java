@@ -338,7 +338,8 @@ public class LlmDocumentService {
                 f.type() == null ? null : f.type().name(), readerTypeLabel(f.type()),
                 f.weight() == null ? null : f.weight().name(), f.section(), f.quote(), f.earlier(), f.reason(),
                 op.name(), s == null ? "" : s.target(), s == null ? "" : s.text(), s == null ? "" : s.note(),
-                acceptable, stored.resolution(), stored.status().name());
+                acceptable, stored.status() == DraftReaderFinding.Status.OPEN ? paragraphOf(content, f.quote()) : null,
+                stored.resolution(), stored.status().name());
     }
 
     private static String readerTypeLabel(ReaderFinding.Type type) {
@@ -412,6 +413,43 @@ public class LlmDocumentService {
         draft.resolveReaderFinding(after,
                 FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, resolution)));
         log.info("문서 초안 #{}: 독자 점검 제안 수락({})", draft.getId(), s.op());
+        return toResponse(draft);
+    }
+
+    /**
+     * 독자 점검 지적이 가리킨 문단을 검수자가 쓴 글로 바꾼다. AI가 고칠 문장을 내지 못한 지적도 이 길로 처리한다.
+     * 사람이 직접 쓴 글이라 금지 자리는 보지 않고, 문서 검증에 새로 걸리는 글만 받지 않는다.
+     */
+    @Transactional
+    public LlmDocumentDraftResponse editReaderFinding(Long draftId, int findingIndex, String text) {
+        GeneratedDocumentDraft draft = findDraft(draftId);
+        List<DraftReaderFinding> findings = pendingReaderFindings(draft);
+        DraftReaderFinding stored = FindingList.requireOpen(findings, findingIndex, DraftReaderFinding::resolution);
+        String before = draft.getContentMd();
+        String paragraph = paragraphOf(before, stored.finding().quote());
+        if (paragraph == null) {
+            throw new BusinessException(ErrorCode.COMMON_001, "지적된 문장이 본문에 없습니다. 이미 고친 문단입니다.");
+        }
+        String replaced = Texts.trimToNull(text);
+        if (replaced == null) {
+            throw new BusinessException(ErrorCode.COMMON_001, "고친 문단이 비어 있습니다.");
+        }
+        if (replaced.equals(paragraph)) {
+            throw new BusinessException(ErrorCode.COMMON_001, "바뀐 곳이 없습니다. 고치지 않을 지적은 넘김으로 처리하세요.");
+        }
+        int at = before.indexOf(paragraph);
+        String after = before.substring(0, at) + replaced + before.substring(at + paragraph.length());
+        if (blockingCount(draft, after) > blockingCount(draft, before)) {
+            throw new BusinessException(ErrorCode.COMMON_001, "고친 글이 문서 검증에 걸립니다.");
+        }
+        String synced = documentFileSync.replaceContent(draft.getSlug(), before, after)
+                .map(name -> "배치 파일 " + name + "도 고침")
+                .orElse("배치 파일은 못 찾아 그대로");
+        String resolution = DraftReaderFinding.EDITED_PREFIX
+                + "「%s」 → 「%s」(%s)".formatted(oneLine(paragraph), oneLine(replaced), synced);
+        draft.resolveReaderFinding(after,
+                FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, resolution)));
+        log.info("문서 초안 #{}: 독자 점검 지적 직접 수정", draft.getId());
         return toResponse(draft);
     }
 
