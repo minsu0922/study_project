@@ -60,6 +60,49 @@ class DocumentEditionRuleTest {
         assertThat(DocumentEditionRule.pick(both(), null).slug()).isEqualTo("probe");
     }
 
+    @Test
+    @DisplayName("실무 절은 소제목과 코드 주석을 지나 다음 ## 절 앞까지 통째로 중급 재료가 된다")
+    void intermediateBodyKeepsWholePracticeSection() {
+        String beginner = """
+                # 제목
+
+                ## 본론
+
+                ### 왜 이렇게 설계됐는가
+
+                설계 이유
+
+                ### 다음 소제목
+
+                설계 절 밖의 글
+
+                ## 실무에서는 이렇게 쓴다
+
+                ### 상황
+
+                장면 설명
+
+                ```bash
+                # 코드 주석
+                실행 명령
+                ```
+
+                ### 헷갈리기 쉬운 점
+
+                오해 설명
+
+                ## 정리
+
+                정리 문장
+                """;
+
+        String body = DocumentEditionRule.bodyFor(
+                file(item("probe", beginner), item("probe-advanced", "# 심화")), Difficulty.INTERMEDIATE);
+
+        assertThat(body).contains("설계 이유", "장면 설명", "실행 명령", "오해 설명")
+                .doesNotContain("설계 절 밖의 글", "정리 문장");
+    }
+
     /**
      * <b>중급이 읽는 본문에 입문편 두 절이 붙는지</b>(2026-09-17).
      *

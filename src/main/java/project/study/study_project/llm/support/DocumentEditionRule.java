@@ -166,18 +166,20 @@ public final class DocumentEditionRule {
      * 입문편에서 중급 절만 오려 낸다. 없는 절은 조용히 건너뛴다 — 옛 문서에는 이름이 다르거나
      * 아예 없는데, 그렇다고 오늘 배치를 멈출 이유는 없다(있는 것만 붙이면 그만이다).
      *
-     * <p>자르는 끝은 <b>다음 제목 줄</b>이다. {@code ### 왜 이렇게 설계됐는가}는 본론 절 안의
-     * 소제목이라 {@code ##}까지 기다리면 그 뒤 본문을 통째로 끌고 온다.
+     * <p>{@code ###} 절은 다음 제목에서, {@code ##} 절은 다음 {@code ##}에서 끊는다. 실무 절을 첫
+     * 소제목에서 끊으면 본문 대부분이 빠진다. 코드 속 {@code #} 주석은 제목으로 보지 않는다.
      */
     private static String excerptOf(String beginnerBody) {
+        String structure = maskFencedCode(beginnerBody);
         StringBuilder sb = new StringBuilder();
         for (String heading : BEGINNER_SECTIONS_FOR_INTERMEDIATE) {
-            int start = beginnerBody.indexOf("\n" + heading);
+            int start = structure.indexOf("\n" + heading);
             if (start < 0) {
                 continue;
             }
             start++; // 앞의 개행은 빼고 제목 줄부터
-            Matcher next = NEXT_HEADING.matcher(beginnerBody);
+            Pattern boundary = heading.startsWith("### ") ? NEXT_HEADING : NEXT_SECTION;
+            Matcher next = boundary.matcher(structure);
             int end = next.find(start + heading.length()) ? next.start() : beginnerBody.length();
             if (!sb.isEmpty()) {
                 sb.append("\n\n");
@@ -189,6 +191,25 @@ public final class DocumentEditionRule {
 
     /** 다음 제목 줄({@code #}~{@code ###}) — 오려 낼 끝을 여기서 끊는다. */
     private static final Pattern NEXT_HEADING = Pattern.compile("(?m)^#{1,3} ");
+
+    /** 다음 절 제목 줄({@code #}·{@code ##}) — 소제목까지 품는 절의 끝이다. */
+    private static final Pattern NEXT_SECTION = Pattern.compile("(?m)^#{1,2} ");
+
+    private static final Pattern FENCED_CODE = Pattern.compile("(?s)```.*?```");
+
+    /** 위치가 원문과 같도록 코드블록 안을 공백으로 지운 사본. */
+    private static String maskFencedCode(String body) {
+        StringBuilder masked = new StringBuilder(body);
+        Matcher m = FENCED_CODE.matcher(body);
+        while (m.find()) {
+            for (int i = m.start(); i < m.end(); i++) {
+                if (body.charAt(i) != '\n') {
+                    masked.setCharAt(i, ' ');
+                }
+            }
+        }
+        return masked.toString();
+    }
 
     /** 칸은 있는데 본문이 빈 경우가 있다(심화편 생성만 실패한 날) — 그때도 없는 것으로 본다. */
     private static boolean hasBody(GeneratedDocumentItem item) {
