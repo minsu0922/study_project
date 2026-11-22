@@ -110,7 +110,7 @@ class LlmDocumentServiceTest {
 
         assertThatThrownBy(() -> service.approve(1L))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("## 왜 필요한가");
+                .hasMessageContaining("## 무엇이고 왜 필요한가");
 
         verify(adminDocumentService, never()).create(any());
     }

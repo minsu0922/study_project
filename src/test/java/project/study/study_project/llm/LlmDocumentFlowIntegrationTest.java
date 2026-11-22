@@ -231,7 +231,7 @@ class LlmDocumentFlowIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("LLM_005"))
                 .andExpect(jsonPath("$.error.message").value(
-                        org.hamcrest.Matchers.containsString("## 왜 필요한가")));
+                        org.hamcrest.Matchers.containsString("## 무엇이고 왜 필요한가")));
     }
 
     /**

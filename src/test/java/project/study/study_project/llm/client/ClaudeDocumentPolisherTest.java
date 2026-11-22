@@ -152,7 +152,7 @@ class ClaudeDocumentPolisherTest {
                 .contains("\"~로 치면\"은 대상을 비유 속 자리에 짝지을 때만").contains("같은 알림말은 두 번까지")
                 .contains("이미 비유를 연 문단").doesNotContain("앞쪽 알림말로 옮긴다")
                 .as("되풀이를 허용한 절과 대사의 길이를 분명히 한다(2026-11-19 프롬프트 대조)")
-                .contains("「핵심 요약」, 「용어 한눈에」, 「한 줄로 정리하면」").contains("큰따옴표 안의 대사는 끊지 않는다")
+                .contains("「핵심 요약」, 「용어 한눈에」, 「정리」, 「한 줄로 정리하면」").contains("큰따옴표 안의 대사는 끊지 않는다")
                 .as("B 군더더기").contains("정리하면")
                 .as("C 같은 틀 반복").contains("점을 보면 된다").contains("A가 아니라 B")
                 .as("D 문장 길이").contains("한 문장은 60자까지다")

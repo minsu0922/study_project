@@ -11,6 +11,16 @@ import static project.study.study_project.llm.support.PolishPreservation.differe
  */
 class PolishPreservationTest {
 
+    @Test
+    @DisplayName("「정리」 아래 ### 용어 표의 용어가 바뀌어도 잡는다")
+    void detectsChangedTermInMergedGlossary() {
+        String before = "# 제목\n\n## 정리\n\n\"답\"\n\n### 용어 한눈에\n\n"
+                + "| 용어 | 뜻 |\n|---|---|\n| 캐시 | 임시 저장소 |\n";
+
+        assertThat(differences(before, before.replace("| 캐시 |", "| 버퍼 |")))
+                .anyMatch(d -> d.contains("용어 한눈에"));
+    }
+
     private static final String ORIGINAL = """
             # 이름 풀이 과정
 

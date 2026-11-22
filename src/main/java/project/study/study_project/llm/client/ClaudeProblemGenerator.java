@@ -74,7 +74,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
      * {@code REQUIRED_SECTIONS}를 {@code llm.support}의 검증기에 열어 둔 것과 같은 판단.
      */
     public static final Map<Difficulty, List<String>> SOURCE_SECTIONS = Map.of(
-            Difficulty.BEGINNER, List.of("## 바탕이 되는 개념", "## 무엇인가"),
+            // 맨 뒤는 절을 합치기 전 입문편의 이름이다. 이미 나간 문서도 초급 재료를 찾게 남긴다.
+            Difficulty.BEGINNER, List.of("## 바탕이 되는 개념", "## 무엇이고 왜 필요한가", "## 무엇인가"),
             // 중급은 2026-09-14부터 심화편을 근거로 삼는다(DraftGeneratorCli.editionFor).
             // 그래서 심화편 절이 맨 앞에 온다. 뒤의 두 입문편 절을 지우지 않은 이유:
             // 심화편이 없는 옛 문서(09-03 이전 단일 문서)와 심화편 생성만 실패한 날에는
@@ -625,8 +626,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             // 많이 쌓인다. 한 절만 지목하던 문장을 그대로 두면 새 절이 있어도 안 캔다.
             case BEGINNER -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(상위 개념과 그 구성 요소)과 "
                     .formatted(sections.get(0))
-                    + "'%s' 절(정의·용어 설명), 그리고 본론의 기본 동작 부분을 쓴다. "
-                    .formatted(sections.get(1))
+                    + "'%s' 절의 정의·역할 부분(옛 문서에서는 '%s' 절), 그리고 본론의 기본 동작 부분을 쓴다. "
+                    .formatted(sections.get(1), sections.get(2))
                     + "문서를 읽은 사람이라면 풀 수 있어야 한다.";
             // 2026-09-14: 중급이 심화편으로 옮겨 가면서 주 재료가 바뀌었다. 세 절을 모두
             // 부르는 이유는 SOURCE_SECTIONS 주석에 적은 폴백 때문이다 — 심화편이 없는 옛

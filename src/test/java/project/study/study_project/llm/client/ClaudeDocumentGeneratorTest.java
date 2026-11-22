@@ -642,7 +642,7 @@ class ClaudeDocumentGeneratorTest {
     void putsDefinitionFirstAndBansFiller() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("개념·용어 정의가 문서의 첫 절이어야 한다")
-                .contains("## 무엇인가")
+                .contains("## 무엇이고 왜 필요한가")
                 .contains("첫 문장이 이 개념의 정의다")
                 .as("추상적 금지보다 실물 예시가 훨씬 잘 지켜진다")
                 .contains("[덜어낼 것]")
@@ -665,7 +665,7 @@ class ClaudeDocumentGeneratorTest {
     @DisplayName("핵심 용어는 하이픈 목록으로 요구한다 — 줄만 바꾸면 화면에서 한 문단으로 붙는다")
     void requiresBulletedTermList() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
-                .contains("핵심 용어 3~5개를 하이픈 목록으로 정의한다")
+                .contains("핵심 용어와 구성 요소의 역할 3~5개를 하이픈 목록으로 정의한다")
                 .as("왜 하이픈이어야 하는지를 함께 적어야 모델이 규칙을 지킨다")
                 .contains("줄만 바꾸면 마크다운이 한 문단으로 붙여 버린다");
     }
@@ -713,7 +713,7 @@ class ClaudeDocumentGeneratorTest {
                 .contains("비교·대조는 마크다운 표로 쓴다")
                 .contains("ASCII로 칸을 맞추지 마라")
                 .as("순서 있는 흐름의 대체 수단까지 줘야 ASCII로 돌아가지 않는다")
-                .contains("순서가 있는 흐름은 번호 목록으로 쓴다")
+                .contains("그림이나 코드로 보여 주지 못하는 순서만 번호 목록으로 쓴다")
                 .as("굵은 글씨 한 줄은 마크다운에서 그냥 문단이라 위계를 못 만든다")
                 .contains("### 왜 이렇게 설계됐는가");
     }
@@ -858,8 +858,8 @@ class ClaudeDocumentGeneratorTest {
     @DisplayName("상위 개념 전용 절이 맨 앞에 있다 — 주제를 좁히랬더니 기본 개념을 통째로 건너뛰었다")
     void putsFoundationSectionFirst() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_REQUIRED_SECTIONS)
-                .as("이 절은 '## 무엇인가'보다 앞에 온다 — 목록 순서가 곧 문서 순서다")
-                .containsSubsequence("## 바탕이 되는 개념", "## 무엇인가");
+                .as("이 절은 정의 절보다 앞에 온다 — 목록 순서가 곧 문서 순서다")
+                .containsSubsequence("## 바탕이 되는 개념", "## 무엇이고 왜 필요한가");
 
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("좁은 주제가 아니라 그 주제가 딛고 선 상위 개념을 다루는 자리다")
@@ -893,7 +893,7 @@ class ClaudeDocumentGeneratorTest {
     void allowsSummaryAndCodeExamples() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("요약은 정의상 되풀이라, 예외라고 적지 않으면 담백 규칙에 밀려 사라진다")
-                .contains("이 절은 아래 [덜어낼 것]의 되풀이 금지에서 예외다")
+                .contains("「정리」만 예외다")
                 .as("2026-11-13 개수를 뺐다 — 개수를 채우려고 붙인 예제가 나왔다")
                 .contains("[코드 예제]")
                 .contains("직접 봐야 이해되는 자리에 예제를 넣는다")
@@ -1097,9 +1097,9 @@ class ClaudeDocumentGeneratorTest {
         String advanced = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
 
         assertThat(beginner.indexOf("> **글의 주제**"))
-                .as("입문편: 제목 아래, 핵심 요약보다 먼저")
+                .as("입문편: 제목 아래, 바탕이 되는 개념보다 먼저")
                 .isPositive()
-                .isLessThan(beginner.indexOf("\n## 핵심 요약"));
+                .isLessThan(beginner.indexOf("\n## 바탕이 되는 개념"));
         assertThat(advanced.indexOf("> **글의 주제**"))
                 .as("심화편: 제목 아래, 핵심 요약보다 먼저")
                 .isPositive()
@@ -1110,7 +1110,7 @@ class ClaudeDocumentGeneratorTest {
                 .contains("독자가 매일 겪는 장면 하나로 시작해")
                 .as("옛 질문 줄을 다시 시키면 질문이 두 군데가 된다")
                 .doesNotContain("> 이 글이 답하는 질문:")
-                .contains("## 한 줄로 정리하면")
+                .contains("\n## 정리\n")
                 .contains("「글의 주제」가 던진 궁금증에 그대로 답이 되어야 한다");
 
         assertThat(advanced)

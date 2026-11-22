@@ -71,7 +71,7 @@ class ClaudeProblemGeneratorPromptTest {
         String intermediate = prompt(Difficulty.INTERMEDIATE, DOC);
         String advanced = prompt(Difficulty.ADVANCED, DOC);
 
-        assertThat(beginner).contains("정의·용어 설명");
+        assertThat(beginner).contains("정의·역할 부분");
         assertThat(intermediate).contains("왜 이렇게 설계됐는가");
         assertThat(advanced).as("문서에 면접 질문 절을 넣어 둔 것이 여기서 회수된다")
                 .contains("면접에서 이렇게 물어본다");

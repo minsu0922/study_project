@@ -21,6 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class DocumentPageMetaTest {
 
+    @Test
+    @DisplayName("합친 입문편은 「정리」 첫 문단의 답을 검색 설명으로 쓴다")
+    void describesFromMergedSummarySection() {
+        String md = "# 제목\n\n## 바탕이 되는 개념\n\n배경.\n\n## 정리\n\n\"세 층이 나눠 처리한다.\"\n\n"
+                + "- **첫 결론** — 설명.\n\n### 용어 한눈에\n\n| 용어 | 뜻 |\n";
+
+        assertThat(DocumentPageMeta.descriptionOf(md)).isEqualTo("세 층이 나눠 처리한다.");
+    }
+
     private static DocumentDetailResponse doc(String title, String contentMd, String edition) {
         return new DocumentDetailResponse(1L, TestDomains.DATABASE, "데이터베이스", title, "slug",
                 contentMd, null, List.of(), null, null, edition, edition == null ? null : "slug-pair");

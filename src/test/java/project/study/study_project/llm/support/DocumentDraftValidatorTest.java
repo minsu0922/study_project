@@ -193,8 +193,23 @@ class DocumentDraftValidatorTest {
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content))
                 .anySatisfy(c -> {
                     assertThat(c.isBlocking()).isTrue();
-                    assertThat(c.message()).contains("## 자주 하는 오해");
+                    assertThat(c.message()).contains("## 무엇이고 왜 필요한가");
                 });
+    }
+
+    @Test
+    @DisplayName("합친 입문편은 새 필수 절만 보고, 빠지면 새 절 이름으로 알려 준다")
+    void checksMergedBeginnerSections() {
+        String complete = "# " + TITLE + "\n\n## 바탕이 되는 개념\n내용\n\n## 무엇이고 왜 필요한가\n내용\n\n"
+                + "## 실무에서는 이렇게 쓴다\n내용\n\n## 정리\n\"답\"\n\n### 용어 한눈에\n| 용어 | 뜻 |\n";
+        String missingSummary = complete.replace("## 정리", "## 다른 절");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", complete))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("필수 절"));
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", missingSummary))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("필수 절이 없습니다: ## 정리"));
     }
 
     @Test
@@ -246,11 +261,12 @@ class DocumentDraftValidatorTest {
         // 2026-11-10에 참고 자료 없음 경고가 늘어 15가 됐다.
         // 2026-11-13에 짝짓기 재료·본론 개수·코드 예제 경고를 빼서 12가 됐다(실측에서 지금 문서에 0건).
         // 같은 날 「글의 주제」 상자 없음(차단)이 늘어 13이 됐다.
-        assertThat(checks).hasSize(13);
+        // 2026-11-22에 입문편 필수 절을 8개에서 5개로 합쳐 빠진 절이 줄고 11이 됐다.
+        assertThat(checks).hasSize(11);
         assertThat(checks).extracting(DraftCheck::message)
                 .anyMatch(m -> m.contains("slug"))
                 .anyMatch(m -> m.contains("본문 제목"))
-                .anyMatch(m -> m.contains("## 자주 하는 오해"))
+                .anyMatch(m -> m.contains("## 정리"))
                 .noneMatch(m -> m.contains("짝짓기"));
     }
 

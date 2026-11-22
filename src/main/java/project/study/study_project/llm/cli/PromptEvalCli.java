@@ -353,6 +353,9 @@ public final class PromptEvalCli {
                 .flatMap(List::stream)
                 .distinct()
                 .filter(section -> !ClaudeDocumentGenerator.LEGACY_SECTIONS.contains(section))
+                .filter(section -> !section.equals("## 무엇인가")) // 새 입문편에는 없는 옛 이름
+                // 옛 입문편에는 합친 절 대신 「무엇인가」가 있다
+                .filter(section -> !(section.equals("## 무엇이고 왜 필요한가") && contentMd.contains("## 무엇인가")))
                 .filter(section -> !contentMd.contains(section))
                 .toList();
     }

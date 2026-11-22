@@ -148,8 +148,10 @@ public final class PolishPreservation {
         boolean inSection = false;
         boolean headerSeen = false;
         for (String line : prose.split("\n")) {
-            if (line.startsWith("## ")) {
-                inSection = line.strip().equals("## 용어 한눈에");
+            // 새 입문편은 표가 「정리」 아래 ### 소제목이다
+            if (line.startsWith("## ") || line.startsWith("### ")) {
+                String heading = line.strip();
+                inSection = heading.equals("## 용어 한눈에") || heading.equals("### 용어 한눈에");
                 headerSeen = false;
                 continue;
             }

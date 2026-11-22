@@ -279,7 +279,7 @@ public final class DocumentDraftValidator {
      */
     private static void checkRequiredSections(String structure, DocumentEdition edition,
                                               List<DraftCheck> checks) {
-        for (String section : ClaudeDocumentGenerator.requiredSections(edition)) {
+        for (String section : ClaudeDocumentGenerator.requiredSections(edition, structure)) {
             if (!hasSectionHeading(structure, section)) {
                 checks.add(DraftCheck.blocking(
                         "%s에 필수 절이 없습니다: %s".formatted(edition.getDisplayName(), section)));
@@ -467,9 +467,10 @@ public final class DocumentDraftValidator {
     }
 
     /** 본론이 시작되기 직전 절 — 편마다 다르다. 본론은 이 뒤의, 이름이 정해진 절이 아닌 ## 절이다. */
-    private static final String BEGINNER_BEFORE_MAIN = "왜 필요한가";
-    private static final String ADVANCED_BEFORE_MAIN = "이 글을 읽기 전에";
+    private static final List<String> BEGINNER_BEFORE_MAIN = List.of("무엇이고 왜 필요한가", "왜 필요한가");
+    private static final List<String> ADVANCED_BEFORE_MAIN = List.of("이 글을 읽기 전에");
     private static final List<String> FIXED_SECTIONS = List.of(
+            "무엇이고 왜 필요한가", "정리",
             "용어 한눈에", "참고 자료", "실무에서는 이렇게 쓴다", "실무에서 어디에 나타나는가",
             "어떤 때 통하지 않는가", "자주 하는 오해", "한 줄로 정리하면", "면접에서 이렇게 물어본다",
             "면접 한 줄 요약", "핵심 요약", "바탕이 되는 개념", "무엇인가", "실제로는 어디에서 만나는가",
@@ -486,7 +487,7 @@ public final class DocumentDraftValidator {
             return;
         }
         List<String> missing = new ArrayList<>();
-        String before = edition == DocumentEdition.BEGINNER ? BEGINNER_BEFORE_MAIN : ADVANCED_BEFORE_MAIN;
+        List<String> before = edition == DocumentEdition.BEGINNER ? BEGINNER_BEFORE_MAIN : ADVANCED_BEFORE_MAIN;
         Matcher h2 = H2_PATTERN.matcher(structure);
         List<int[]> spans = new ArrayList<>();
         List<String> names = new ArrayList<>();
@@ -503,7 +504,7 @@ public final class DocumentDraftValidator {
                     missing.add("## " + name);
                 }
             }
-            if (name.startsWith(before)) {
+            if (before.stream().anyMatch(name::startsWith)) {
                 inMain = true;
             }
         }

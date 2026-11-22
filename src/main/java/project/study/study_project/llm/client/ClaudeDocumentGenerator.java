@@ -19,6 +19,7 @@ import project.study.study_project.llm.support.TopicBoxes;
 import project.study.study_project.llm.support.TopicBrief;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Claude API 기반 개념 문서 생성기 — 설계 docs/15.
@@ -471,6 +472,15 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      * 초급자가 가장 값을 보는 절이라 독립시켜 입문편에 남겼다.
      */
     public static final List<String> BEGINNER_REQUIRED_SECTIONS = List.of(
+            "## 바탕이 되는 개념",
+            "## 무엇이고 왜 필요한가",
+            "## 실무에서는 이렇게 쓴다",
+            "## 정리",
+            "### 용어 한눈에"
+    );
+
+    /** 절을 합치기 전 입문편의 필수 절. 이미 나간 문서와 대기 중인 초안을 막지 않으려고 남긴다. */
+    public static final List<String> LEGACY_BEGINNER_REQUIRED_SECTIONS = List.of(
             "## 핵심 요약",
             "## 바탕이 되는 개념",
             "## 무엇인가",
@@ -480,6 +490,9 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
             "## 자주 하는 오해",
             "## 한 줄로 정리하면"
     );
+
+    /** 옛 입문편을 가르는 절. 새 구조에는 이 제목이 없다. */
+    private static final Pattern LEGACY_BEGINNER_HEADING = Pattern.compile("(?m)^## 무엇인가");
 
     /**
      * 심화편의 필수 절 — {@code ## 핵심 요약} 하나를 빼면 입문편과 <b>이름이 겹치지 않는다</b>.
@@ -555,6 +568,14 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
     /** 편에 해당하는 필수 절 목록. */
     public static List<String> requiredSections(DocumentEdition edition) {
         return edition == DocumentEdition.ADVANCED ? ADVANCED_REQUIRED_SECTIONS : BEGINNER_REQUIRED_SECTIONS;
+    }
+
+    /** 본문이 옛 입문편 구조면 옛 필수 절을, 아니면 지금 필수 절을 돌려준다. */
+    public static List<String> requiredSections(DocumentEdition edition, String structure) {
+        if (edition == DocumentEdition.BEGINNER && LEGACY_BEGINNER_HEADING.matcher(structure).find()) {
+            return LEGACY_BEGINNER_REQUIRED_SECTIONS;
+        }
+        return requiredSections(edition);
     }
 
     /**
