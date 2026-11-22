@@ -3716,6 +3716,11 @@ a.hl-num { display: inline-block; min-width: 26px; margin-right: 3px; padding: 0
   vertical-align: 1px; scroll-margin-top: calc(var(--shell-top-h) + 40px); }
 a.hl-num:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .review-card:target, a.hl-num:target { outline: 2px solid var(--hl-color); outline-offset: 2px; }
+.figure-card { --hl-color: var(--review-block); }
+.figure-ask { margin: 14px 0 6px; padding: 8px 12px; border: 1px dashed var(--review-block); border-radius: 6px;
+  background: var(--fill); font-size: .88rem; line-height: 1.6; scroll-margin-top: calc(var(--shell-top-h) + 40px); }
+.figure-ask b { color: var(--review-block); }
+.figure-ask:target, .doc-figure:target { outline: 2px solid var(--review-block); outline-offset: 2px; }
 @media (max-width: 900px) {
   .review-cols { grid-template-columns: minmax(0, 1fr); }
   .review-panel { position: static; max-height: none; }

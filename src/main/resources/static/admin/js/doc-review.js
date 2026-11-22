@@ -63,6 +63,81 @@ function collectItems() {
   return items;
 }
 
+/* ── 손그림 ─────────────────────────────────────────────── */
+
+const FIGURE_REQUEST = "%% 손그림:";
+const HAND_FIGURE_LINE = /^!\[([^\]]*)\]\((\/images\/docs\/[^)\s]+\.svg)\)\s*$/;
+
+/** 본문을 줄로 읽어 손그림 대기(mermaid 안 요청)와 이미 넣은 손그림을 절 이름과 함께 모은다 */
+function collectFigures(md) {
+  const pending = [], done = [];
+  const lines = (md ?? "").split("\n");
+  let section = "";
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = line.match(/^\s*(```|~~~)\s*(\S*)/);
+    if (fence) {
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim().startsWith(fence[1])) j++;
+      if (fence[2].startsWith("mermaid")) {
+        const ask = lines.slice(i + 1, j).map(l => l.trim()).find(l => l.startsWith(FIGURE_REQUEST));
+        if (ask !== undefined) pending.push({ section, request: ask.slice(FIGURE_REQUEST.length).trim() });
+      }
+      i = j;
+      continue;
+    }
+    const head = line.match(/^#{2,3}\s+(.+)$/);
+    if (head) { section = head[1].trim(); continue; }
+    const image = line.match(HAND_FIGURE_LINE);
+    if (image) done.push({ section, alt: image[1], src: image[2] });
+  }
+  return { pending, done };
+}
+
+/** 렌더링한 본문의 임시 그림 위에 요청 문구를 놓고, 패널이 가리킬 자리 번호를 단다 */
+function markFigures(root) {
+  let k = 0;
+  for (const code of root.querySelectorAll("pre > code.language-mermaid")) {
+    const ask = code.textContent.split("\n").map(l => l.trim()).find(l => l.startsWith(FIGURE_REQUEST));
+    if (ask === undefined) continue;
+    const box = document.createElement("div");
+    box.className = "figure-ask";
+    box.id = "figure-ask-" + k;
+    const label = document.createElement("b");
+    label.textContent = `손${++k} 손그림 요청`;
+    box.append(label, " " + ask.slice(FIGURE_REQUEST.length).trim());
+    code.parentElement.before(box);
+  }
+  root.querySelectorAll('img[src^="/images/docs/"][src$=".svg"]').forEach((img, i) => { img.id = "figure-done-" + i; });
+}
+
+function figurePanel({ pending, done }) {
+  const where = (id) => rawView
+    ? `<span class="meta">원문 보기에서는 자리로 이동하지 않습니다</span>`
+    : `<a href="#${id}">본문 자리로</a>`;
+  const waiting = pending.map((f, i) => `
+    <li class="review-card figure-card">
+      <div class="review-card-head">
+        <span class="badge orange">손${i + 1} 손그림 대기</span>
+        <span class="meta review-where">${where("figure-ask-" + i)}</span>
+      </div>
+      <p class="meta">${escapeHtml(f.section)}</p>
+      <p>${escapeHtml(f.request || "(요청 설명이 비어 있습니다)")}</p>
+    </li>`).join("");
+  const finished = done.map((f, i) => `
+    <li class="review-card figure-card">
+      <div class="review-card-head">
+        <span class="badge green">넣음</span>
+        <span class="meta review-where">${where("figure-done-" + i)}</span>
+      </div>
+      <p class="meta">${escapeHtml(f.section)}</p>
+      <p>${escapeHtml(f.alt || f.src)}</p>
+    </li>`).join("");
+  if (!waiting && !finished) return `<p class="meta">이 초안에는 손그림 요청이 없습니다.</p>`;
+  return `<p class="meta">손그림은 승인을 막지 않습니다. 대기 ${pending.length}건 · 넣음 ${done.length}건</p>
+    <ol class="review-cards">${waiting}${finished}</ol>`;
+}
+
 function norm(s) {
   return (s ?? "").replace(/[*`]/g, "").replace(/\s+/g, " ").trim();
 }
@@ -138,6 +213,7 @@ async function renderDoc(items) {
   el.innerHTML = DOMPurify.sanitize(marked.parse(md));
   wrapMarkers(el, items);
   syncAnchors(items);
+  markFigures(el);
   await renderFigures(el);
   await renderMermaid(el);
 }
@@ -221,6 +297,7 @@ async function renderFigures(root) {
       box.className = "doc-diagram doc-figure";
       box.innerHTML = DOMPurify.sanitize(await res.text(), { USE_PROFILES: { svg: true } });
       if (!box.querySelector("svg")) continue;
+      box.id = img.id;   // 손그림 탭의 「본문 자리로」가 이 번호를 가리킨다
       const p = img.parentElement;
       const alone = p && p.tagName === "P" && p.childElementCount === 1 && p.textContent.trim() === "";
       (alone ? p : img).replaceWith(box);
@@ -318,15 +395,18 @@ function renderPanel(items) {
     : tab === "reader"
       ? (draft.readerFindings == null ? "독자 점검을 안 돌린 초안입니다." : "남은 독자 점검 지적이 없습니다.")
       : "처리한 지적이 없습니다.";
+  const figures = collectFigures(draft.contentMd);
   const panel = document.getElementById("rvPanel");
   panel.innerHTML = `
     <div class="review-tabs" role="tablist">
       ${tabButton("fact", `사실 검수 ${openFacts.length}`)}
       ${tabButton("reader", `독자 점검 ${openReaders.length}`)}
+      ${tabButton("figure", `손그림 ${figures.pending.length}`)}
       ${tabButton("done", `처리함 ${done.length}`)}
     </div>
+    ${tab === "figure" ? figurePanel(figures) : `
     <p class="meta review-legend"><mark class="hl hl-fact">사실 검수</mark> <mark class="hl hl-block">독자 막힘</mark> <mark class="hl hl-repeat">독자 되풀이</mark></p>
-    ${shown.length ? `<ol class="review-cards">${shown.map(cardOf).join("")}</ol>` : `<p class="meta">${empty}</p>`}`;
+    ${shown.length ? `<ol class="review-cards">${shown.map(cardOf).join("")}</ol>` : `<p class="meta">${empty}</p>`}`}`;
   panel.querySelectorAll("[data-tab]").forEach(b => { b.onclick = () => { tab = b.dataset.tab; render(); }; });
   panel.querySelectorAll("[data-act]").forEach(b => { b.onclick = () => onCardAction(b); });
 }
