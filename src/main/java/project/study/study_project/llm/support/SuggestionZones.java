@@ -1,5 +1,7 @@
 package project.study.study_project.llm.support;
 
+import project.study.study_project.llm.client.ReaderFinding;
+
 /**
  * 독자 점검 제안으로 고치면 안 되는 자리 — 윤문 프롬프트의 「건드리지 않는 것」과 같다.
  * 제목·코드·그림·인용 상자·표·용어 정의 줄 앞부분은 형식이나 사람이 쓴 글이라, 제안 수락으로 바꾸면
@@ -14,6 +16,20 @@ public final class SuggestionZones {
 
     /** {@code [start, end)}가 금지 자리에 걸치거나 강조·코드 표시를 반만 걸치면 true. */
     public static boolean forbidden(String contentMd, int start, int end) {
+        return forbidden(contentMd, start, end, false);
+    }
+
+    /**
+     * 제안 종류까지 보고 판정한다. 「글의 주제」 같은 일반 인용 줄은 검수자가 비교를 보고 누르므로 한 줄 바꾸기만 받는다.
+     * 지우거나 여러 줄로 바꾸면 빈 {@code >} 줄이나 상자 밖 글이 생기고, 결론 상자({@code > **})는 강조가 풀려 계속 막는다.
+     */
+    public static boolean forbidden(String contentMd, int start, int end, ReaderFinding.Op op, String text) {
+        boolean oneLineReplace = op == ReaderFinding.Op.REPLACE && text != null && !text.isBlank()
+                && text.strip().indexOf('\n') < 0;
+        return forbidden(contentMd, start, end, oneLineReplace);
+    }
+
+    private static boolean forbidden(String contentMd, int start, int end, boolean quoteEditable) {
         if (halfMarkup(contentMd.substring(start, end))) {
             return true;
         }
@@ -26,7 +42,9 @@ public final class SuggestionZones {
             String trimmed = line.stripLeading();
             boolean fenceLine = trimmed.startsWith("```");
             boolean overlaps = start < lineEnd + 1 && end > lineStart;
-            if (overlaps && (inFence || fenceLine || lockedLine(trimmed)
+            boolean editableQuote = quoteEditable && !inFence
+                    && insidePlainQuote(line, lineStart, lineEnd, start, end);
+            if (overlaps && !editableQuote && (inFence || fenceLine || lockedLine(trimmed)
                     || overlapsDefinitionHead(line, lineStart, start))) {
                 return true;
             }
@@ -49,6 +67,16 @@ public final class SuggestionZones {
         int bold = (span.length() - span.replace("**", "").length()) / 2;
         int ticks = span.length() - span.replace("`", "").length();
         return bold % 2 == 1 || ticks % 2 == 1;
+    }
+
+    /** 자리가 {@code > } 표시 뒤, 한 줄 안에 있고 그 줄이 결론 상자가 아니면 true. */
+    private static boolean insidePlainQuote(String line, int lineStart, int lineEnd, int start, int end) {
+        String trimmed = line.stripLeading();
+        if (!trimmed.startsWith("> ") || trimmed.startsWith("> **")) {
+            return false;
+        }
+        int textStart = lineStart + (line.length() - trimmed.length()) + 2;
+        return start >= textStart && end <= lineEnd;
     }
 
     private static boolean lockedLine(String trimmed) {

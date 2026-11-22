@@ -332,7 +332,7 @@ public class LlmDocumentService {
         ReaderFinding.Op op = s == null || s.op() == null ? ReaderFinding.Op.NEED_HUMAN : s.op();
         boolean acceptable = stored.status() == DraftReaderFinding.Status.OPEN && op != ReaderFinding.Op.NEED_HUMAN
                 && TextSpans.locateOnce(content, s.target())
-                .filter(at -> !SuggestionZones.forbidden(content, at[0], at[1])).isPresent();
+                .filter(at -> !SuggestionZones.forbidden(content, at[0], at[1], s.op(), s.text())).isPresent();
         return new LlmDocumentDraftResponse.ReaderFindingView(
                 f.kind() == null ? null : f.kind().name(), f.kind() == ReaderFinding.Kind.REPEAT ? "되풀이" : "막힘",
                 f.type() == null ? null : f.type().name(), readerTypeLabel(f.type()),
@@ -385,8 +385,8 @@ public class LlmDocumentService {
         String before = draft.getContentMd();
         int[] at = TextSpans.locateOnce(before, s.target())
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_001, "제안한 문장이 본문에서 바뀌었습니다."));
-        if (SuggestionZones.forbidden(before, at[0], at[1])) {
-            throw new BusinessException(ErrorCode.COMMON_001, "제목·코드·그림·표·인용 상자는 제안으로 고치지 않습니다.");
+        if (SuggestionZones.forbidden(before, at[0], at[1], s.op(), s.text())) {
+            throw new BusinessException(ErrorCode.COMMON_001, "제목·코드·그림·표·결론 상자는 제안으로 고치지 않습니다.");
         }
         String old = before.substring(at[0], at[1]);
         String text = s.text() == null ? "" : s.text().strip();

@@ -2,6 +2,7 @@ package project.study.study_project.llm.support;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import project.study.study_project.llm.client.ReaderFinding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -74,6 +75,21 @@ class SuggestionZonesTest {
         assertThat(SuggestionZones.forbidden(md, half[0], half[1])).isTrue();
         assertThat(SuggestionZones.forbidden(md, whole[0], whole[1])).isFalse();
         assertThat(SuggestionZones.forbidden(md, halfTick[0], halfTick[1])).isFalse();
+    }
+
+    @Test
+    @DisplayName("글의 주제 같은 일반 인용 줄은 한 줄 바꾸기만 받고, 결론 상자와 지우기·여러 줄은 막는다")
+    void plainQuoteAcceptsOneLineReplaceOnly() {
+        String md = "> 주제 상자 문장이다.\n\n> **결론 상자 문장이다.**\n";
+        int[] box = TextSpans.locateOnce(md, "주제 상자 문장이다.").orElseThrow();
+        int[] conclusion = TextSpans.locateOnce(md, "결론 상자 문장이다.").orElseThrow();
+
+        assertThat(SuggestionZones.forbidden(md, box[0], box[1], ReaderFinding.Op.REPLACE, "고친 문장이다.")).isFalse();
+        assertThat(SuggestionZones.forbidden(md, box[0], box[1], ReaderFinding.Op.REPLACE, "첫 줄\n둘째 줄")).isTrue();
+        assertThat(SuggestionZones.forbidden(md, box[0], box[1], ReaderFinding.Op.REPLACE, " ")).isTrue();
+        assertThat(SuggestionZones.forbidden(md, box[0], box[1], ReaderFinding.Op.DELETE, "")).isTrue();
+        assertThat(SuggestionZones.forbidden(md, box[0], box[1], ReaderFinding.Op.INSERT_AFTER, "덧붙임")).isTrue();
+        assertThat(SuggestionZones.forbidden(md, conclusion[0], conclusion[1], ReaderFinding.Op.REPLACE, "고침")).isTrue();
     }
 
     @Test
