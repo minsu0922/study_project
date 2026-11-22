@@ -51,12 +51,13 @@ public record LlmDocumentDraftResponse(
      * @param quote      문서에서 그대로 옮긴 문장
      * @param sourceUrl  확인한 공식 문서 주소. 없으면 빈 문자열
      * @param paragraph  지적된 문장이 든 문단(마크다운 원문). 고치기 칸에 채운다. 처리했거나 본문에서 사라졌으면 {@code null}
+     * @param acceptable 지적 문장 자리에 바로잡은 문장을 그대로 넣을 수 있으면 true
      * @param resolution 검수자가 처리한 기록. 아직 안 봤으면 {@code null}
      */
     /** @param status OPEN(미처리)·FIXED(고침)·FALSE_ALARM(헛경보). 미처리가 남으면 승인되지 않는다 */
     public record FactFinding(String kind, String label, boolean confident, String quote, String reason,
-                              String correction, String sourceUrl, String paragraph, String resolution,
-                              String status) {
+                              String correction, String sourceUrl, String paragraph, boolean acceptable,
+                              String resolution, String status) {
     }
 
     /**

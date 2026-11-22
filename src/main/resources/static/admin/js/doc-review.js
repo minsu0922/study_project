@@ -2,6 +2,7 @@
  * (docs/superpowers/specs/2026-11-20-document-reader-check-design.md §5).
  *   GET  /api/admin/llm-documents/{id}
  *   POST /api/admin/llm-documents/{id}/fact-findings/{i}/resolve   {"text"} 고침 · {"note"} 헛경보
+ *   POST /api/admin/llm-documents/{id}/fact-findings/{i}/accept    바로잡은 문장으로 바꾸기
  *   POST /api/admin/llm-documents/{id}/reader-findings/{i}/accept
  *   POST /api/admin/llm-documents/{id}/reader-findings/{i}/edit    {"text"} 문단 직접 수정
  *   POST /api/admin/llm-documents/{id}/reader-findings/{i}/dismiss {"note"(선택)}
@@ -351,12 +352,13 @@ function factCard(it) {
       </div>
       <p class="review-quote">「${escapeHtml(f.quote ?? "")}」</p>
       ${f.reason ? `<p>이유: ${escapeHtml(f.reason)}</p>` : ""}
-      ${f.correction ? `<p>바로잡으면: ${escapeHtml(f.correction)}</p>` : ""}
+      ${f.correction ? factSuggestionBox(f) : ""}
       ${/^https?:\/\//.test(f.sourceUrl ?? "") ? `<p class="meta">출처: <a href="${escapeHtml(f.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.sourceUrl)}</a></p>` : ""}
       ${f.resolution ? `<p class="meta"><span class="badge ${f.status === "FIXED" ? "green" : "gray"}">${f.status === "FIXED" ? "고침" : "헛경보"}</span> ${escapeHtml(f.resolution)}</p>` : ""}
       ${pending ? `
       <div class="row-actions">
-        ${f.paragraph != null ? `<button class="btn-outline" data-act="fact-fix-open" data-i="${it.index}">고침 — 문단 고치기</button>` : `<span class="meta">지적된 문장이 본문에 없습니다</span>`}
+        ${f.acceptable ? `<button data-act="fact-accept" data-i="${it.index}">제안 수락</button>` : ""}
+        ${f.paragraph != null ? `<button class="btn-outline" data-act="fact-fix-open" data-i="${it.index}">직접 고치기</button>` : `<span class="meta">지적된 문장이 본문에 없습니다</span>`}
         <button class="btn-outline" data-act="fact-false-open" data-i="${it.index}">헛경보</button>
       </div>
       <div id="factFix-${it.index}" hidden>
@@ -368,6 +370,15 @@ function factCard(it) {
         <div class="row-actions"><button data-act="fact-false" data-i="${it.index}">헛경보로 처리</button></div>
       </div>` : ""}
     </li>`;
+}
+
+function factSuggestionBox(f) {
+  const [a, b] = diffMark(f.quote, f.correction);
+  const why = !f.acceptable && f.status === "OPEN"
+    ? `<p class="meta">지금 본문에는 바로 넣을 수 없습니다. 문단을 직접 고치세요.</p>` : "";
+  return `<div class="review-sug">
+      <div class="review-sug-op">제안 · 바꾸기</div>
+      <div><span class="review-lab">지금</span>${a}</div><div><span class="review-lab">제안</span>${b}</div>${why}</div>`;
 }
 
 const OP_NAMES = { REPLACE: "바꾸기", INSERT_AFTER: "뒤에 넣기", DELETE: "지우기", NEED_HUMAN: "사람 확인 필요" };
@@ -456,6 +467,8 @@ async function onCardAction(btn) {
     case "reader-edit-open": toggle(`readerEdit-${i}`); return;
     case "reader-edit":
       return act(btn, `/reader-findings/${i}/edit`, { text: document.getElementById(`readerEditText-${i}`).value });
+    case "fact-accept":
+      return act(btn, `/fact-findings/${i}/accept`, null);
     case "fact-fix":
       return act(btn, `/fact-findings/${i}/resolve`, { text: document.getElementById(`factFixText-${i}`).value });
     case "fact-false":

@@ -498,12 +498,55 @@ public class LlmDocumentService {
                             f.confidence() == FactCheckFinding.Confidence.HIGH,
                             f.quote(), f.reason(), f.correction(), f.sourceUrl() == null ? "" : f.sourceUrl(),
                             f.resolution() == null ? paragraphOf(d.getContentMd(), f.quote()) : null,
-                            f.resolution(), f.status().name()))
+                            factAcceptable(d.getContentMd(), f), f.resolution(), f.status().name()))
                     .toList();
         } catch (JsonProcessingException | RuntimeException e) {
             log.warn("문서 초안 #{}의 사실 검수 지적을 읽지 못함: {}", d.getId(), e.getMessage());
             return null;
         }
+    }
+
+    /** 미처리이고, 바로잡은 문장이 있고, 지적 문장을 한 곳으로 찾았고, 금지 자리가 아니면 수락할 수 있다. */
+    private static boolean factAcceptable(String content, DraftFactFinding f) {
+        if (f.status() != DraftFactFinding.Status.OPEN || Texts.trimToNull(f.correction()) == null
+                || ClaudeDocumentFactChecker.normalize(f.correction())
+                .contains(ClaudeDocumentFactChecker.normalize(f.quote()))) {
+            return false;
+        }
+        return TextSpans.locateOnce(content, f.quote())
+                .filter(at -> !SuggestionZones.forbidden(content, at[0], at[1], ReaderFinding.Op.REPLACE, f.correction()))
+                .isPresent();
+    }
+
+    /** 사실 검수 지적의 바로잡은 문장을 수락한다. 지적된 문장 자리만 바꾸고 배치 파일도 함께 고친다. */
+    @Transactional
+    public LlmDocumentDraftResponse acceptFactFinding(Long draftId, int findingIndex) {
+        GeneratedDocumentDraft draft = findDraft(draftId);
+        if (draft.getStatus() != DraftStatus.PENDING) {
+            throw new BusinessException(ErrorCode.LLM_002);
+        }
+        List<DraftFactFinding> findings = FindingList.read(objectMapper, draft.getFactFindingsJson(),
+                new TypeReference<>() {
+                }, "사실 검수 지적");
+        DraftFactFinding finding = FindingList.requireOpen(findings, findingIndex, DraftFactFinding::resolution);
+        String before = draft.getContentMd();
+        if (!factAcceptable(before, finding)) {
+            throw new BusinessException(ErrorCode.COMMON_001, "이 제안은 본문에 바로 넣을 수 없습니다. 문단을 직접 고치세요.");
+        }
+        int[] at = TextSpans.locateOnce(before, finding.quote()).orElseThrow();
+        String text = finding.correction().strip();
+        String after = before.substring(0, at[0]) + text + before.substring(at[1]);
+        if (blockingCount(draft, after) > blockingCount(draft, before)) {
+            throw new BusinessException(ErrorCode.COMMON_001, "제안을 넣으면 문서 검증에 걸립니다.");
+        }
+        String synced = documentFileSync.replaceContent(draft.getSlug(), before, after)
+                .map(name -> "배치 파일 " + name + "도 고침")
+                .orElse("배치 파일은 못 찾아 그대로");
+        String resolution = "제안 수락(%s): 「%s」 → 「%s」".formatted(synced, oneLine(before.substring(at[0], at[1])), oneLine(text));
+        draft.resolveFactFinding(after,
+                FindingList.write(objectMapper, FindingList.resolve(findings, findingIndex, resolution)));
+        log.info("문서 초안 #{}: 사실 검수 제안 수락", draft.getId());
+        return toResponse(draft);
     }
 
     /** 미처리 지적 수. 검수를 안 돌렸으면 0이다. 저장된 목록을 못 읽으면 막지 않고 0으로 본다. */

@@ -328,6 +328,42 @@ class LlmDocumentFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("사실 지적 제안을 수락하면 그 문장만 바뀌고 같은 문단의 앞뒤 문장과 목록 표시는 남는다")
+    void acceptFactFindingChangesOnlyQuote() {
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(),
+                validContent("캐시 전략", "- **캐시** — 앞 문장이다. 캐시는 항상 빠르다. 뒤 문장이다."));
+        draft.recordFactFindings("""
+                [{"quote":"캐시는 항상 빠르다.","kind":"FACT_ERROR","reason":"틀림","correction":"캐시는 대개 빠르다.",
+                  "sourceUrl":"","confidence":"HIGH"}]
+                """);
+        draftRepository.flush();
+
+        var after = llmDocumentService.acceptFactFinding(draft.getId(), 0);
+
+        assertThat(after.contentMd()).contains("- **캐시** — 앞 문장이다. 캐시는 대개 빠르다. 뒤 문장이다.");
+        assertThat(after.factFindings().get(0).status()).isEqualTo("FIXED");
+        assertThat(after.factFindings().get(0).resolution()).startsWith("제안 수락(");
+        assertThat(after.factFindings().get(0).acceptable()).isFalse();
+    }
+
+    @Test
+    @DisplayName("바로잡은 문장이 없는 사실 지적은 수락할 수 없고 본문도 그대로다")
+    void acceptFactFindingWithoutCorrectionIsRejected() {
+        GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(), validContent("캐시 전략", "캐시는 항상 빠르다."));
+        draft.recordFactFindings("""
+                [{"quote":"캐시는 항상 빠르다.","kind":"FACT_ERROR","reason":"틀림","correction":"",
+                  "sourceUrl":"","confidence":"HIGH"}]
+                """);
+        draftRepository.flush();
+        String before = draft.getContentMd();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> llmDocumentService.acceptFactFinding(draft.getId(), 0))
+                .isInstanceOf(project.study.study_project.global.exception.BusinessException.class)
+                .hasMessageContaining("직접 고치세요");
+        assertThat(draftRepository.findById(draft.getId()).orElseThrow().getContentMd()).isEqualTo(before);
+    }
+
+    @Test
     @DisplayName("빈 글이나 승인한 초안의 사실 지적은 고칠 수 없다")
     void rejectsBlankOrApprovedFactFix() {
         GeneratedDocumentDraft draft = saveDraft("캐시 전략", uniqueSlug(), validContent("캐시 전략", "캐시는 항상 빠르다."));

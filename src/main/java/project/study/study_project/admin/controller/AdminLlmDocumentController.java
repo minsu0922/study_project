@@ -121,7 +121,13 @@ public class AdminLlmDocumentController {
         return ApiResponse.ok(llmDocumentService.resolveFactFinding(id, index, text, note));
     }
 
-    /** 독자 점검 제안 수락 — 본문의 그 문장만 제안대로 고친다. 사람 확인 지적·바뀐 문장·금지 자리는 400. */
+    /** 사실 검수 제안 수락 — 지적된 문장 자리만 바로잡은 문장으로 바꾼다. 넣을 수 없는 제안은 400. */
+    @PostMapping("/{id}/fact-findings/{index}/accept")
+    public ApiResponse<LlmDocumentDraftResponse> acceptFactFinding(@PathVariable Long id, @PathVariable int index) {
+        return ApiResponse.ok(llmDocumentService.acceptFactFinding(id, index));
+    }
+
+    /** 독자 점검 제안 수락 —본문의 그 문장만 제안대로 고친다. 사람 확인 지적·바뀐 문장·금지 자리는 400. */
     @PostMapping("/{id}/reader-findings/{index}/accept")
     public ApiResponse<LlmDocumentDraftResponse> acceptReaderFinding(@PathVariable Long id, @PathVariable int index) {
         return ApiResponse.ok(llmDocumentService.acceptReaderFinding(id, index));
