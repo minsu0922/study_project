@@ -1,0 +1,92 @@
+{
+  "formatVersion" : 1,
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-11-22",
+  "generatedAt" : "2026-11-21T22:29:40.946870945Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "BEGINNER",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행한 결과로 알맞은 것을 고른다.",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: int는 32비트라 최댓값 2147483647에 1을 더하면 범위를 넘고, 자바는 예외 없이 값을 돌려 최솟값으로 넘어가게 한다. 이를 오버플로라 한다.\n3행 int a = Integer.MAX_VALUE: a는 2147483647이다.\n4행 int b = a + 1: int끼리 더해 결과도 int라 2147483648을 담지 못하고 b는 -2147483648이 된다.\n5행 println(b): -2147483648을 출력한다.\n6행 b == Integer.MIN_VALUE: b가 -2147483648이라 true를 출력한다.\n그래서 출력은 -2147483648 / true다.",
+    "choices" : [ {
+      "text" : "-2147483648 / true",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "2147483648 / false",
+      "correct" : false,
+      "rationale" : "int 덧셈 결과가 저절로 더 큰 타입으로 넓혀진다고 오해한 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "2147483647 / false",
+      "correct" : false,
+      "rationale" : "범위를 넘으면 최댓값에서 멈춘다고 오해한 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "-2147483647 / false",
+      "correct" : false,
+      "rationale" : "넘친 값이 최솟값보다 하나 큰 값으로 간다고 잘못 센 답이다",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "int 최댓값에 1을 더한 결과",
+    "questionKind" : null,
+    "skipReason" : ""
+  }, {
+    "question" : "다음 코드가 컴파일되는지, 안 된다면 어느 줄에서 오류가 나는지 고른다.",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: byte끼리 산술 연산을 하면 피연산자가 먼저 int로 바뀌어(정수 승격) 결과가 int가 되고, int를 byte 변수에 담으려면 명시적 형 변환이 필요하다. 다만 += 같은 복합 대입은 형 변환을 스스로 넣어 준다.\n3행 byte a = 10: 10은 byte 범위 안의 상수라 그대로 담긴다.\n4행 byte b = 20: 같은 이유로 문제없다.\n5행 a += 5: a = (byte)(a + 5)처럼 처리되어 컴파일된다.\n6행 byte c = a + b: a + b는 int이고 a, b가 상수가 아니라 값의 범위를 보장할 수 없어 손실 가능 변환 컴파일 오류가 난다.\n그래서 6행에서 컴파일 오류가 난다는 보기가 정답이다.",
+    "choices" : [ {
+      "text" : "3행에서 컴파일 오류가 난다",
+      "correct" : false,
+      "rationale" : "10이 상수라 byte 범위 안에서 그대로 담긴다는 점을 놓친 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "5행에서 컴파일 오류가 난다",
+      "correct" : false,
+      "rationale" : "복합 대입 연산자가 형 변환을 스스로 넣어 준다는 점을 놓친 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "6행에서 컴파일 오류가 난다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "컴파일된다",
+      "correct" : false,
+      "rationale" : "byte끼리 더하면 결과도 byte라고 오해한 답이다",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "byte 변수끼리의 연산과 대입",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ ],
+  "codeTopic" : "정수 오버플로와 형 변환",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_OUTPUT",
+    "language" : "java",
+    "code" : "public class Main {\n    public static void main(String[] args) {\n        int a = Integer.MAX_VALUE;\n        int b = a + 1;\n        System.out.println(b);\n        System.out.println(b == Integer.MIN_VALUE);\n    }\n}",
+    "expectedOutput" : "-2147483648\ntrue",
+    "targetLine" : 0,
+    "errorType" : ""
+  }, {
+    "problemIndex" : 1,
+    "kind" : "CODE_COMPILE",
+    "language" : "java",
+    "code" : "public class Main {\n    public static void main(String[] args) {\n        byte a = 10;\n        byte b = 20;\n        a += 5;\n        byte c = a + b;\n        System.out.println(c);\n    }\n}",
+    "expectedOutput" : "",
+    "targetLine" : 6,
+    "errorType" : ""
+  } ]
+}

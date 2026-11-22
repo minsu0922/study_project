@@ -1,0 +1,54 @@
+{
+  "formatVersion" : 1,
+  "note" : "GitHub Actions가 자동 생성한 자바 코드 문제 초안입니다. 코드는 배치가 실제로 컴파일하고 실행해 정답과 대조했습니다. 로컬 앱이 기동할 때 검수 대기함으로 들여옵니다.",
+  "date" : "2026-11-22",
+  "generatedAt" : "2026-11-21T22:29:41.006856595Z",
+  "domain" : "LANGUAGE_RUNTIME",
+  "difficulty" : "ADVANCED",
+  "type" : "MULTIPLE_CHOICE",
+  "model" : "claude-opus-5-5",
+  "documentSlug" : null,
+  "problems" : [ {
+    "question" : "다음 코드를 실행하면 어떻게 되는지 알맞은 것을 고른다.",
+    "exhibit" : "",
+    "answer" : "",
+    "explanation" : "규칙: 일반 정수 연산과 형 변환은 넘쳐도 예외를 던지지 않는다. double을 int로 바꿀 때 범위를 넘으면 int 최댓값으로 고정되고, Math.abs(Integer.MIN_VALUE)는 양수로 표현할 수 없어 MIN_VALUE를 그대로 돌려준다. 이름이 Exact로 끝나는 Math 메서드만 넘칠 때 ArithmeticException을 던진다.\n3행 double d = 1e20: d는 1.0E20이다.\n4행 int a = (int) d: int 범위를 넘으므로 예외 없이 a는 2147483647이 된다.\n5행 int b = a + 1: 오버플로로 b는 -2147483648이 되고 예외는 없다.\n6행 int c = Math.abs(b): 2147483648은 int에 담을 수 없어 c는 -2147483648 그대로이고 예외는 없다.\n7행 Math.negateExact(c): -2147483648의 부호를 바꾼 값이 int 범위를 넘으므로 ArithmeticException이 나고 main 밖으로 나간다.\n그래서 7행에서 ArithmeticException이 난다는 보기가 정답이다.",
+    "choices" : [ {
+      "text" : "4행에서 ArithmeticException이 난다",
+      "correct" : false,
+      "rationale" : "double을 int로 바꿀 때 범위를 넘으면 예외가 난다고 오해한 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "6행에서 ArithmeticException이 난다",
+      "correct" : false,
+      "rationale" : "Math.abs가 양수로 못 바꾸는 값을 만나면 예외를 던진다고 오해한 답이다",
+      "matchText" : ""
+    }, {
+      "text" : "7행에서 ArithmeticException이 난다",
+      "correct" : true,
+      "rationale" : "",
+      "matchText" : ""
+    }, {
+      "text" : "예외 없이 끝난다",
+      "correct" : false,
+      "rationale" : "Exact 메서드도 일반 연산처럼 조용히 넘친다고 오해한 답이다",
+      "matchText" : ""
+    } ],
+    "sourceQuote" : "",
+    "title" : "넘치는 값과 Exact 메서드의 예외",
+    "questionKind" : null,
+    "skipReason" : ""
+  } ],
+  "shortfallReasons" : null,
+  "reviewFindings" : [ ],
+  "codeTopic" : "정수 오버플로와 형 변환",
+  "codeParts" : [ {
+    "problemIndex" : 0,
+    "kind" : "CODE_ERROR",
+    "language" : "java",
+    "code" : "public class Main {\n    public static void main(String[] args) {\n        double d = 1e20;\n        int a = (int) d;\n        int b = a + 1;\n        int c = Math.abs(b);\n        int e = Math.negateExact(c);\n        System.out.println(e);\n    }\n}",
+    "expectedOutput" : "",
+    "targetLine" : 7,
+    "errorType" : "ArithmeticException"
+  } ]
+}
