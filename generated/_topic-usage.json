@@ -217,5 +217,11 @@
     "topic" : "방화벽과 포트 열기 — 서버에 앱을 띄웠는데 내 브라우저로는 접속이 안 되는 이유",
     "lastUsedAt" : "2026-10-11",
     "usedCount" : 1
+  }, {
+    "id" : 1137,
+    "domain" : "BACKEND_FRAMEWORK",
+    "topic" : "컨트롤러·서비스·리포지토리 — 코드를 세 층으로 나누고 DTO와 엔티티를 따로 두는 이유",
+    "lastUsedAt" : "2026-11-21",
+    "usedCount" : 1
   } ]
 }
