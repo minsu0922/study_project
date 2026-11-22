@@ -163,7 +163,7 @@ public final class DocumentDraftValidator {
             checkDesignRationaleHeading(structure, checks);
         } else {
             checkFailureScenes(body, structure, checks);
-            // 입문편은 '## 용어 한눈에'가 필수 절이라 checkRequiredSections가 이미 차단으로 잡는다.
+            // 입문편은 용어 표가 필수 절이라 checkRequiredSections가 이미 차단으로 잡는다.
             // 여기서 또 세면 한 결함에 메시지가 둘 뜬다.
             checkGlossaryTable(structure, checks);
         }
@@ -365,9 +365,9 @@ public final class DocumentDraftValidator {
     private static void checkGlossaryTable(String structure, List<DraftCheck> checks) {
         if (!GLOSSARY_HEADING.matcher(structure).find()) {
             checks.add(DraftCheck.warning(
-                    "'## 용어 한눈에' 표가 없습니다. "
-                            + "본론 뒤, '## 실무에서 어디에 나타나는가' 바로 앞에 두는 절입니다 — "
-                            + "독자가 아래 절에서 막혔을 때 돌아오는 자리입니다."));
+                    "'### 용어 한눈에' 표가 없습니다. "
+                            + "'## 심화편 정리' 아래에 두는 표입니다 — "
+                            + "독자가 읽다 막혔을 때 돌아오는 자리입니다."));
         }
     }
 
@@ -470,7 +470,7 @@ public final class DocumentDraftValidator {
     private static final List<String> BEGINNER_BEFORE_MAIN = List.of("무엇이고 왜 필요한가", "왜 필요한가");
     private static final List<String> ADVANCED_BEFORE_MAIN = List.of("이 글을 읽기 전에");
     private static final List<String> FIXED_SECTIONS = List.of(
-            "무엇이고 왜 필요한가", "정리",
+            "무엇이고 왜 필요한가", "정리", "심화편 정리",
             "용어 한눈에", "참고 자료", "실무에서는 이렇게 쓴다", "실무에서 어디에 나타나는가",
             "어떤 때 통하지 않는가", "자주 하는 오해", "한 줄로 정리하면", "면접에서 이렇게 물어본다",
             "면접 한 줄 요약", "핵심 요약", "바탕이 되는 개념", "무엇인가", "실제로는 어디에서 만나는가",

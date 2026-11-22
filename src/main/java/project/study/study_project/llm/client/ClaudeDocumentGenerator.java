@@ -531,6 +531,15 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      * {@code DraftGeneratorCli.hasMaterialFor}가 엉뚱한 편을 근거로 삼는다(위 문단).
      */
     public static final List<String> ADVANCED_REQUIRED_SECTIONS = List.of(
+            "## 이 글을 읽기 전에",
+            "## 실무에서 어디에 나타나는가",
+            "## 어떤 때 통하지 않는가",
+            "## 면접에서 이렇게 물어본다",
+            "## 심화편 정리"
+    );
+
+    /** 절을 합치기 전 심화편의 필수 절. 이미 나간 문서와 대기 중인 초안을 막지 않으려고 남긴다. */
+    public static final List<String> LEGACY_ADVANCED_REQUIRED_SECTIONS = List.of(
             "## 핵심 요약",
             "## 이 글을 읽기 전에",
             "## 실무에서 어디에 나타나는가",
@@ -538,6 +547,9 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
             "## 면접에서 이렇게 물어본다",
             "## 면접 한 줄 요약"
     );
+
+    /** 옛 심화편을 가르는 절. 새 구조에는 이 제목이 없다. */
+    private static final Pattern LEGACY_ADVANCED_HEADING = Pattern.compile("(?m)^## 면접 한 줄 요약");
 
     /**
      * 같은 두 절의 <b>옛 이름</b> — 2026-09-16 이전에 나간 문서가 쓰던 것.
@@ -570,10 +582,13 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
         return edition == DocumentEdition.ADVANCED ? ADVANCED_REQUIRED_SECTIONS : BEGINNER_REQUIRED_SECTIONS;
     }
 
-    /** 본문이 옛 입문편 구조면 옛 필수 절을, 아니면 지금 필수 절을 돌려준다. */
+    /** 본문이 그 편의 옛 구조면 옛 필수 절을, 아니면 지금 필수 절을 돌려준다. */
     public static List<String> requiredSections(DocumentEdition edition, String structure) {
         if (edition == DocumentEdition.BEGINNER && LEGACY_BEGINNER_HEADING.matcher(structure).find()) {
             return LEGACY_BEGINNER_REQUIRED_SECTIONS;
+        }
+        if (edition == DocumentEdition.ADVANCED && LEGACY_ADVANCED_HEADING.matcher(structure).find()) {
+            return LEGACY_ADVANCED_REQUIRED_SECTIONS;
         }
         return requiredSections(edition);
     }

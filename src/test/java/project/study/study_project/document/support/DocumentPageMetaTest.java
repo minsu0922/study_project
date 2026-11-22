@@ -28,6 +28,8 @@ class DocumentPageMetaTest {
                 + "- **첫 결론** — 설명.\n\n### 용어 한눈에\n\n| 용어 | 뜻 |\n";
 
         assertThat(DocumentPageMeta.descriptionOf(md)).isEqualTo("세 층이 나눠 처리한다.");
+        assertThat(DocumentPageMeta.descriptionOf(md.replace("## 정리", "## 심화편 정리")))
+                .as("심화편도 같은 자리에서 뽑는다").isEqualTo("세 층이 나눠 처리한다.");
     }
 
     private static DocumentDetailResponse doc(String title, String contentMd, String edition) {

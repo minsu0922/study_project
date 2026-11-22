@@ -44,8 +44,8 @@ public class NextReadService {
 
     static final int LIMIT = 2;
 
-    /** 「핵심 요약」(입문편은 「정리」) 절의 첫 항목 "- **제목** — 결론"에서 제목만 */
-    private static final Pattern SUMMARY_HEAD = Pattern.compile("(?m)^## (?:핵심 요약|정리)\\s*$");
+    /** 「핵심 요약」(새 구조는 「정리」·「심화편 정리」) 절의 첫 항목 "- **제목** — 결론"에서 제목만 */
+    private static final Pattern SUMMARY_HEAD = Pattern.compile("(?m)^## (?:핵심 요약|정리|심화편 정리)\\s*$");
     private static final Pattern FIRST_BOLD_ITEM = Pattern.compile("(?m)^-\\s+\\*\\*([^*\\n]+)\\*\\*");
 
     private final CourseCatalog courseCatalog;

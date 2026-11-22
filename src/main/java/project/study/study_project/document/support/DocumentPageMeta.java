@@ -35,7 +35,7 @@ public final class DocumentPageMeta {
      * 검색 결과에 띄울 설명으로 가장 맞다. 그 절이 없는 옛 문서는 핵심 요약의 첫 줄을 쓴다.
      */
     private static final List<String> SUMMARY_SECTIONS =
-            List.of("## 정리", "## 한 줄로 정리하면", "## 면접 한 줄 요약", "## 핵심 요약");
+            List.of("## 정리", "## 심화편 정리", "## 한 줄로 정리하면", "## 면접 한 줄 요약", "## 핵심 요약");
 
     private static final Pattern FENCED_CODE = Pattern.compile("(?s)```.*?```");
     private static final Pattern HEADING_LINE = Pattern.compile("(?m)^#{1,6}\\s.*$");

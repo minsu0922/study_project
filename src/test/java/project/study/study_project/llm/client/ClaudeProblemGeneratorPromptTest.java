@@ -1060,7 +1060,7 @@ class ClaudeProblemGeneratorPromptTest {
         // 「용어 한눈에」는 두 편의 프롬프트가 모두 요구하는 절이라 여기에 함께 넣는다.
         List<String> available = new ArrayList<>(ClaudeDocumentGenerator.ADVANCED_REQUIRED_SECTIONS);
         available.addAll(DocumentEditionRule.BEGINNER_SECTIONS_FOR_INTERMEDIATE);
-        available.add("## 용어 한눈에");
+        available.add("### 용어 한눈에");
 
         assertThat(cited)
                 .as("네 형태(b~e)가 각각 캘 곳을 갖는다 — 하나라도 비면 그 형태는 안 나온다")

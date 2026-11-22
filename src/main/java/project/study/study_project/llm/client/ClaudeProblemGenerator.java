@@ -654,7 +654,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             // 아무 데나 캔다 — 8/15에 겪은 사고 그대로다(SOURCE_SECTIONS 주석).
             case ADVANCED -> "[이번 난이도에서 쓸 부분] 문서의 '%s' 절(옛 문서에서는 '%s')과 "
                     .formatted(sections.get(0), sections.get(2))
-                    + "'%s' 절을 쓴다. 앞 절은 통하지 않게 되는 조건과 흔한 오해를 담고 있다. "
+                    + "'%s' 절을 쓴다. 앞 절은 통하지 않게 되는 조건을, 뒤 절은 면접 질문과 흔한 오해를 담고 있다. "
                     .formatted(sections.get(1))
                     + "그 질문들이 다루는 트레이드오프와 "
                     + "엣지 케이스를 문제로 바꿔라. 다만 질문을 그대로 옮기지 말고 객관식으로 재구성한다.";

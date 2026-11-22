@@ -152,6 +152,8 @@ class NextReadServiceTest {
         assertThat(NextReadService.summaryOf("# 요약 절 없음")).isNull();
         assertThat(NextReadService.summaryOf("# 제목\n\n## 정리\n\n\"답.\"\n\n- **합친 입문편의 결론** — 설명."))
                 .as("입문편은 결론 목록이 「정리」에 있다").isEqualTo("합친 입문편의 결론");
+        assertThat(NextReadService.summaryOf("# 제목\n\n## 심화편 정리\n\n\"답.\"\n\n- **합친 심화편의 결론** — 설명."))
+                .as("심화편은 결론 목록이 「심화편 정리」에 있다").isEqualTo("합친 심화편의 결론");
     }
 
     @Test

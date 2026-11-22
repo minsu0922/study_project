@@ -315,32 +315,31 @@ class ClaudeDocumentGeneratorTest {
     }
 
     /**
-     * <b>심화편 「용어 한눈에」가 최상위 절이고, 입문편과 같이 본론 뒤에 있는지</b>(2026-11-08).
+     * <b>심화편 요약·용어 표·오해가 합쳐진 자리에 있는지</b>(2026-11-22).
      *
-     * <p>소제목({@code ###})으로 두면 <b>마지막 본론 섹션에 딸린 표</b>로 읽혀 그 섹션의 용어만
-     * 올라온다. 그래서 최상위 절로 두는 것은 그대로다. 자리는 글 앞머리에서 본론 뒤로 옮겼다 —
-     * 앞머리에 두면 독자가 본론보다 표를 먼저 읽어야 했다. 실패 조건 절이 쓸 용어를 받는 자리라
-     * 그 절보다는 여전히 앞이어야 한다.
-     *
-     * <p>증상이 조용한 종류다. 표는 있고 검증도 통과하는데, 문서를 읽는 사람만 뒤쪽 절에서 막힌다.
+     * <p>글 끝 복습 자리를 「심화편 정리」 하나로 모았고, 오해는 면접 절로 옮겼다.
+     * 고급 재료인 「어떤 때 통하지 않는가」에는 장면만 남는다.
      */
     @Test
-    @DisplayName("심화편 용어 표가 본론 뒤, 실무 절 앞에 있다 — 입문편과 같은 자리다")
-    void advancedGlossarySitsAfterBody() {
+    @DisplayName("심화편은 오해를 면접 절에, 요약과 용어 표를 「심화편 정리」에 둔다")
+    void advancedMergedSectionsSitInOrder() {
         String prompt = ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT;
 
         assertThat(prompt)
-                .as("### 로 두면 그 섹션에 딸린 표로 읽혀 그 섹션 용어만 올라온다")
-                .contains("\n## 용어 한눈에\n")
-                .as("자리를 못 박지 않으면 표가 옛 자리(앞머리)로 돌아간다")
-                .contains("\"## 실무에서 어디에 나타나는가\" 바로 앞에 독립된 절로 둔다")
-                .as("뒤쪽 절이 쓸 용어를 미리 받는 자리라는 성격은 그대로다")
-                .contains("아래 절에서 막히면 여기로 돌아온다");
+                .doesNotContain("\n## 핵심 요약\n")
+                .doesNotContain("\n## 용어 한눈에\n")
+                .doesNotContain("\n## 면접 한 줄 요약\n")
+                .contains("\n## 심화편 정리\n");
 
-        assertThat(prompt.indexOf("\n## 용어 한눈에\n"))
-                .as("프롬프트의 절 순서가 곧 문서 순서다 — 본론 뒤, 중급 재료 절 앞")
-                .isGreaterThan(prompt.indexOf("\n## (본론 1~2개 섹션)\n"))
-                .isLessThan(prompt.indexOf("\n## 실무에서 어디에 나타나는가\n"));
+        int failure = prompt.indexOf("\n## 어떤 때 통하지 않는가\n");
+        int interview = prompt.indexOf("\n## 면접에서 이렇게 물어본다\n");
+        int misconception = prompt.indexOf("\"### 흔한 오해\"");
+        int summary = prompt.indexOf("\n## 심화편 정리\n");
+        int glossary = prompt.indexOf("\"### 용어 한눈에\"를 둔다");
+
+        assertThat(failure).isPositive().isLessThan(interview);
+        assertThat(misconception).as("오해는 면접 질문 뒤").isGreaterThan(interview).isLessThan(summary);
+        assertThat(glossary).as("용어 표는 정리 아래").isGreaterThan(summary);
     }
 
     /**
@@ -665,7 +664,7 @@ class ClaudeDocumentGeneratorTest {
     @DisplayName("핵심 용어는 하이픈 목록으로 요구한다 — 줄만 바꾸면 화면에서 한 문단으로 붙는다")
     void requiresBulletedTermList() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
-                .contains("핵심 용어와 구성 요소의 역할 3~5개를 하이픈 목록으로 정의한다")
+                .contains("핵심 용어 3~5개를 하이픈 목록으로 정의한다")
                 .as("왜 하이픈이어야 하는지를 함께 적어야 모델이 규칙을 지킨다")
                 .contains("줄만 바꾸면 마크다운이 한 문단으로 붙여 버린다");
     }
@@ -713,7 +712,7 @@ class ClaudeDocumentGeneratorTest {
                 .contains("비교·대조는 마크다운 표로 쓴다")
                 .contains("ASCII로 칸을 맞추지 마라")
                 .as("순서 있는 흐름의 대체 수단까지 줘야 ASCII로 돌아가지 않는다")
-                .contains("그림이나 코드로 보여 주지 못하는 순서만 번호 목록으로 쓴다")
+                .contains("순서가 있는 흐름은 번호 목록으로 쓴다")
                 .as("굵은 글씨 한 줄은 마크다운에서 그냥 문단이라 위계를 못 만든다")
                 .contains("### 왜 이렇게 설계됐는가");
     }
@@ -1101,9 +1100,9 @@ class ClaudeDocumentGeneratorTest {
                 .isPositive()
                 .isLessThan(beginner.indexOf("\n## 바탕이 되는 개념"));
         assertThat(advanced.indexOf("> **글의 주제**"))
-                .as("심화편: 제목 아래, 핵심 요약보다 먼저")
+                .as("심화편: 제목 아래, 이 글을 읽기 전에보다 먼저")
                 .isPositive()
-                .isLessThan(advanced.indexOf("\n## 핵심 요약"));
+                .isLessThan(advanced.indexOf("\n## 이 글을 읽기 전에"));
 
         assertThat(beginner)
                 .as("입문편 상자는 일상 장면으로 흥미를 끈다")
@@ -1117,7 +1116,7 @@ class ClaudeDocumentGeneratorTest {
                 .as("심화편 상자는 입문편보다 구체적으로 쓴다")
                 .contains("입문편 상자보다 <구체적으로> 쓴다")
                 .doesNotContain("> 이 글이 답하는 질문:")
-                .contains("## 면접 한 줄 요약")
+                .contains("\n## 심화편 정리\n")
                 .contains("「글의 주제」가 던진 질문에 그대로 답이 되어야 한다");
     }
 

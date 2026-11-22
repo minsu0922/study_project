@@ -198,6 +198,22 @@ class DocumentDraftValidatorTest {
     }
 
     @Test
+    @DisplayName("합친 심화편은 새 필수 절만 보고, 옛 심화편은 옛 필수 절로 본다")
+    void checksMergedAdvancedSections() {
+        String merged = "# " + TITLE + "\n\n## 이 글을 읽기 전에\n- 확인\n\n## 실무에서 어디에 나타나는가\n내용\n\n"
+                + "## 어떤 때 통하지 않는가\n내용\n\n## 면접에서 이렇게 물어본다\n내용\n\n"
+                + "## 심화편 정리\n\"답\"\n\n### 용어 한눈에\n| 용어 | 뜻 |\n";
+        String legacyMissingSummary = merged.replace("## 심화편 정리", "## 면접 한 줄 요약");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy-advanced", merged))
+                .extracting(DraftCheck::message)
+                .noneMatch(m -> m.contains("필수 절"));
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy-advanced", legacyMissingSummary))
+                .extracting(DraftCheck::message)
+                .anyMatch(m -> m.contains("필수 절이 없습니다: ## 핵심 요약"));
+    }
+
+    @Test
     @DisplayName("합친 입문편은 새 필수 절만 보고, 빠지면 새 절 이름으로 알려 준다")
     void checksMergedBeginnerSections() {
         String complete = "# " + TITLE + "\n\n## 바탕이 되는 개념\n내용\n\n## 무엇이고 왜 필요한가\n내용\n\n"
