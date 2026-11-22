@@ -350,6 +350,11 @@ final class BatchOptions {
         return Boolean.TRUE.equals(generation.get("polish-enabled"));
     }
 
+    /** 중복 제거 단계를 켤지({@code llm.generation.dedup-enabled}). 본문이 바뀌는 단계라 키가 없으면 끈다. */
+    static boolean dedupEnabled(Map<String, Object> generation) {
+        return Boolean.TRUE.equals(generation.get("dedup-enabled"));
+    }
+
     /** 독자 점검 단계를 켤지({@code llm.generation.reader-check-enabled}). 윤문과 같이 키가 없으면 끈다. */
     static boolean readerCheckEnabled(Map<String, Object> generation) {
         return Boolean.TRUE.equals(generation.get("reader-check-enabled"));

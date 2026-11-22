@@ -46,6 +46,8 @@ class BatchOptionsModelTest {
     @Test
     @DisplayName("독자 점검 설정이 없으면 꺼진 것으로 보고, true면 켠다")
     void readerCheckOffWhenMissingOnWhenTrue() {
+        assertThat(BatchOptions.dedupEnabled(Map.of())).isFalse();
+        assertThat(BatchOptions.dedupEnabled(Map.of("dedup-enabled", true))).isTrue();
         assertThat(BatchOptions.readerCheckEnabled(Map.of())).isFalse();
         assertThat(BatchOptions.readerCheckEnabled(Map.of("reader-check-enabled", true))).isTrue();
     }
