@@ -3716,6 +3716,8 @@ a.hl-num { display: inline-block; min-width: 26px; margin-right: 3px; padding: 0
   vertical-align: 1px; scroll-margin-top: calc(var(--shell-top-h) + 40px); }
 a.hl-num:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .review-card:target, a.hl-num:target { outline: 2px solid var(--hl-color); outline-offset: 2px; }
+/* 검수 칸은 사이트 본문보다 좁다. 그림 전체를 한눈에 봐야 해서 폭 하한을 풀고 칸에 맞춘다 */
+.review-doc .doc-figure svg { min-width: 0; width: 100%; }
 .figure-card { --hl-color: var(--review-block); }
 .figure-ask { margin: 14px 0 6px; padding: 8px 12px; border: 1px dashed var(--review-block); border-radius: 6px;
   background: var(--fill); font-size: .88rem; line-height: 1.6; scroll-margin-top: calc(var(--shell-top-h) + 40px); }
