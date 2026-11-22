@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 366" role="img" aria-label="세 단계 그림. 첫째 상태는 장부와 접시 이름표가 nickname이고 앱에 닉네임이 보인다. 칸 이름 변경을 배포한 둘째 상태는 장부가 display_name, 접시 이름표가 displayName이고 서버 오류는 0건이다. 다음 날 앱을 실행한 셋째 상태는 앱이 nickname 이름표를 찾지 못해 빈 접시를 본다. from 한 줄로 nickname 키를 복구하면 첫째 상태로 돌아간다">
+<defs><marker id="spring-adv-key-rename-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="209" y="26" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">칸 이름 변경 배포</text>
+<text x="423" y="26" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">다음 날 앱 실행</text>
+<rect x="12" y="38" width="178" height="232" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="26" y="64" class="f-t" fill="#0f172a" font-size="14" font-weight="700">① 배포 전</text>
+<text x="26" y="92" class="f-sm" fill="#556274" font-size="12">창고 장부 품목</text>
+<text x="26" y="112" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">nickname</text>
+<text x="26" y="142" class="f-sm" fill="#556274" font-size="12">접시 이름표</text>
+<text x="26" y="162" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">nickname</text>
+<text x="26" y="192" class="f-sm" fill="#556274" font-size="12">앱 화면</text>
+<rect x="22" y="200" width="158" height="56" rx="6" class="f-hl" fill="#eef2ff"/>
+<text x="101" y="233" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle">닉네임 길동이</text>
+<rect x="226" y="38" width="178" height="232" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="240" y="64" class="f-t" fill="#0f172a" font-size="14" font-weight="700">② 배포 직후</text>
+<text x="240" y="92" class="f-sm" fill="#556274" font-size="12">창고 장부 품목</text>
+<text x="240" y="112" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">display_name</text>
+<text x="240" y="142" class="f-sm" fill="#556274" font-size="12">접시 이름표</text>
+<text x="240" y="162" class="f-new" fill="#4f46e5" font-size="13" font-weight="700" font-family="ui-monospace, Consolas, monospace">displayName</text>
+<text x="240" y="192" class="f-sm" fill="#556274" font-size="12">서버</text>
+<rect x="236" y="200" width="158" height="56" rx="6" class="f-hl" fill="#eef2ff"/>
+<text x="315" y="233" class="f-acc" fill="#4f46e5" font-size="13" text-anchor="middle" font-weight="700">서버 오류 0건</text>
+<rect x="440" y="38" width="178" height="232" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="454" y="64" class="f-t" fill="#0f172a" font-size="14" font-weight="700">③ 앱 실행</text>
+<text x="454" y="92" class="f-sm" fill="#556274" font-size="12">창고 장부 품목</text>
+<text x="454" y="112" class="f-mono" fill="#0f172a" font-size="13" font-family="ui-monospace, Consolas, monospace">display_name</text>
+<text x="454" y="142" class="f-sm" fill="#556274" font-size="12">접시 이름표</text>
+<text x="454" y="162" class="f-new" fill="#4f46e5" font-size="13" font-weight="700" font-family="ui-monospace, Consolas, monospace">displayName</text>
+<text x="454" y="192" class="f-sm" fill="#556274" font-size="12">앱 화면</text>
+<rect x="450" y="200" width="158" height="56" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="529" y="224" class="f-bad" fill="#dc2626" font-size="13" text-anchor="middle" font-weight="700">nickname 키를</text>
+<text x="529" y="244" class="f-bad" fill="#dc2626" font-size="13" text-anchor="middle" font-weight="700">못 찾아 빈칸</text>
+<path d="M192 52 H224" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#spring-adv-key-rename-head)"/>
+<path d="M406 52 H438" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#spring-adv-key-rename-head)"/>
+<path d="M529 272 V314 H101 V274" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#spring-adv-key-rename-head)"/>
+<text x="315" y="306" class="f-acc" fill="#4f46e5" font-size="13" text-anchor="middle" font-weight="700">from 한 줄로 nickname 키 복구</text>
+<text x="320" y="350" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">②에서 서버는 멀쩡했고, 고장은 ③의 앱 화면에서만 드러났다</text>
+</svg>

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 392" role="img" aria-label="홀 직원(컨트롤러)이 OrderDetailResponse 접시를 손님에게 낸다. 첫째 줄은 orderId 1024와 totalPrice 39000이다. 접시 위에는 Member 재료 상자가 통째로 얹혀 있어 buyer.name, buyer.email, buyer.password, buyer.memo가 함께 나가고, 손님이 buyer.password 칸을 가리킨다">
+<defs><marker id="spring-adv-entity-on-plate-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<rect x="120" y="14" width="400" height="334" rx="16" class="f-panel" fill="#f1f5f9"/>
+<text x="320" y="40" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">접시 · OrderDetailResponse</text>
+<rect x="140" y="54" width="174" height="42" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="227" y="80" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">orderId: 1024</text>
+<rect x="326" y="54" width="174" height="42" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="413" y="80" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">totalPrice: 39000</text>
+<rect x="134" y="110" width="372" height="226" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="320" y="134" class="f-acc" fill="#4f46e5" font-size="13" text-anchor="middle" font-weight="700">재료 상자 Member가 통째로 얹힘</text>
+<rect x="146" y="148" width="168" height="80" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="230" y="182" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">buyer.name</text>
+<text x="230" y="206" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">홍길동</text>
+<rect x="326" y="148" width="168" height="80" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="410" y="182" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">buyer.email</text>
+<text x="410" y="206" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">이메일</text>
+<rect x="146" y="240" width="168" height="80" rx="6" class="f-hl" fill="#eef2ff"/>
+<rect x="146" y="240" width="168" height="80" rx="6" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2"/>
+<text x="230" y="274" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">buyer.password</text>
+<text x="230" y="298" class="f-bad" fill="#dc2626" font-size="13" text-anchor="middle" font-weight="700">암호화된 문자열</text>
+<rect x="326" y="240" width="168" height="80" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="410" y="274" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">buyer.memo</text>
+<text x="410" y="298" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">상담 메모</text>
+<circle cx="52" cy="226" r="12" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<path d="M34 272 V258 a18 18 0 0 1 36 0 V272 z" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="52" y="296" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle" font-weight="700">손님(앱)</text>
+<text x="52" y="194" class="f-bad" fill="#dc2626" font-size="13" text-anchor="middle" font-weight="700">비밀번호</text>
+<text x="52" y="208" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">칸이 보인다</text>
+<path d="M76 262 H142" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#spring-adv-entity-on-plate-head)"/>
+<circle cx="584" cy="130" r="12" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<path d="M566 176 V162 a18 18 0 0 1 36 0 V176 z" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="584" y="198" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle" font-weight="700">홀 직원</text>
+<text x="584" y="216" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">(컨트롤러)</text>
+<path d="M560 150 H524" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#spring-adv-entity-on-plate-head)"/>
+<text x="320" y="378" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">둘째 줄부터는 응답에 적은 적 없는 칸이다</text>
+</svg>

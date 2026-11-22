@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 412" role="img" aria-label="식당 그림. 요청은 손님(앱)에서 홀 직원(컨트롤러), 주방(서비스), 창고 담당(리포지토리)을 지나 창고(DB)까지 내려간다. 결과는 이름·이메일·비밀번호·탈퇴여부가 적힌 재료 상자(Member 엔티티)로 올라오고, 주방에서 이름·이메일만 접시(MemberResponse DTO)로 옮겨 담아 홀 직원을 지나 손님에게 간다. 비밀번호·탈퇴여부는 주방 옆 쓰레기통으로 점선을 따라 떨어진다">
+<defs><marker id="spring-layer-plate-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker></defs>
+<text x="16" y="22" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">요청이 내려가는 길 · 7번 회원</text>
+<path d="M36 36 H606" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#spring-layer-plate-head)"/>
+<rect x="8" y="48" width="104" height="62" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="60" y="74" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">손님</text>
+<text x="60" y="96" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">앱 화면</text>
+<rect x="138" y="48" width="104" height="62" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="190" y="74" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">홀 직원</text>
+<text x="190" y="96" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">컨트롤러</text>
+<rect x="268" y="48" width="104" height="62" rx="6" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="320" y="74" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">주방</text>
+<text x="320" y="96" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">서비스</text>
+<rect x="398" y="48" width="104" height="62" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="450" y="74" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">창고 담당</text>
+<text x="450" y="96" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">리포지토리</text>
+<rect x="528" y="48" width="104" height="62" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="580" y="74" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">창고</text>
+<text x="580" y="96" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">DB 회원 테이블</text>
+<path d="M606 122 H36" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#spring-layer-plate-head)"/>
+<text x="624" y="144" class="f-acc" fill="#4f46e5" font-size="14" text-anchor="end" font-weight="700">결과가 올라오는 길</text>
+<rect x="398" y="158" width="234" height="136" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="412" y="180" class="f-t" fill="#0f172a" font-size="13" font-weight="700">재료 상자 · Member 엔티티</text>
+<text x="426" y="206" class="f-t" fill="#0f172a" font-size="13">이름</text>
+<text x="426" y="230" class="f-t" fill="#0f172a" font-size="13">이메일</text>
+<text x="426" y="254" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">비밀번호</text>
+<text x="426" y="278" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">탈퇴여부</text>
+<ellipse cx="125" cy="226" rx="117" ry="66" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<ellipse cx="125" cy="226" rx="105" ry="57" class="f-screen" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+<text x="125" y="150" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle" font-weight="700">접시 · MemberResponse DTO</text>
+<text x="125" y="220" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle">이름</text>
+<text x="125" y="244" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle">이메일</text>
+<path d="M396 214 H246" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#spring-layer-plate-head)"/>
+<text x="320" y="204" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">주방(서비스)이 옮겨 담음</text>
+<path d="M396 266 H320 V312" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#spring-layer-plate-head)"/>
+<path d="M296 322 H344" class="f-line" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
+<path d="M300 326 L304 372 H336 L340 326 z" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="354" y="344" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">비밀번호·탈퇴여부는</text>
+<text x="354" y="364" class="f-sm" fill="#556274" font-size="12">여기서 떨어진다</text>
+<text x="320" y="402" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">서비스에서 컨트롤러로 가는 접시에는 비밀번호가 없다</text>
+</svg>
