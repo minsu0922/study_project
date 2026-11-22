@@ -343,6 +343,26 @@ tasks.register('evalPolish', JavaExec) {
     }
 }
 
+// 문서 중복 제거 전후 비교(설계 2026-11-22) — 기본은 최근 3개 파일 × 2편으로 API 6회. 실제 요금이 든다.
+//   .\gradlew.bat evalDedup -PevalArgs="--label=first --batch-api=true"
+tasks.register('evalDedup', JavaExec) {
+    group = 'llm'
+    description = '최근 문서의 중복 문장을 지워 분량·경고·문제 재료를 전후로 비교하고 eval/에 보고서를 남긴다'
+    mainClass = 'project.study.study_project.llm.cli.DedupEvalCli'
+    classpath = sourceSets.main.runtimeClasspath
+
+    String dedupApiKey = project.findProperty('anthropicApiKey') ?: System.getenv('ANTHROPIC_API_KEY')
+    if (dedupApiKey) {
+        environment 'ANTHROPIC_API_KEY', dedupApiKey
+    }
+    if (project.hasProperty('evalArgs')) {
+        String raw = project.property('evalArgs').toString().trim()
+        if (!raw.isEmpty()) {
+            args raw.split(/\s+/)
+        }
+    }
+}
+
 // 사실 검수 적발률 측정(docs/22 §4) — 오류를 심은 표본으로 검수기를 채점한다.
 //   .\gradlew.bat evalReview -PevalArgs="--label=opus"
 // evalPrompt와 같은 이유로 check/build에 엮지 않는다. 표본 5편이면 API 5회다.
