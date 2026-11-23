@@ -900,7 +900,7 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
                        다만 그 문서의 각도를 되풀이하지 말고 위 질문들을 따른다.
                     """);
             if (brief.diagram() != null) {
-                sb.append("8. \"그림\"에 적힌 그림은 반드시 mermaid로 그린다. 필요하면 다른 그림을 더 그려도 된다.\n");
+                sb.append("8. \"그림\"에 적힌 그림은 반드시 손그림 자리로 남긴다. 필요하면 다른 손그림 자리를 더 넣어도 된다.\n");
             }
         } else if (hasTopic) {
             // 이 값은 대개 "Spring", "JVM 메모리" 같은 <범위>다(주제 범위 목록에서 온다).

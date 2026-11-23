@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import project.study.study_project.TestDomains;
 import project.study.study_project.document.support.DocumentEditions;
+import project.study.study_project.document.support.FigureRequests;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 import project.study.study_project.llm.support.TopicBrief;
@@ -689,7 +690,7 @@ class ClaudeDocumentGeneratorTest {
                 .as("장면 하나를 처음부터 끝까지 — 이게 이 절의 알맹이다")
                 .contains("장면 하나를 골라 처음부터 끝까지")
                 .as("방치하면 본론 요약이 된다")
-                .contains("원리를 다시 설명하지 마라")
+                .contains("앞 절에 나온 원리·동작 순서·코드·그림을 다시 설명하지 마라")
                 .as("설정값 목록으로 흐르는 것은 금지 항목이 막는다")
                 .contains("제품별 설정 기본값");
     }
@@ -719,11 +720,11 @@ class ClaudeDocumentGeneratorTest {
 
     /**
      * 2026-10-10까지 나온 문서 30편에 그림이 한 장도 없었다. "예외로 허용한다"는 말로는
-     * 나오지 않았다 — 코드 예제 금지를 풀었을 때와 같다. 개수를 박고, 화면이 그릴 수 있는
-     * 문법(mermaid)과 종류를 정해 준다. 종류는 검증기의 {@code MERMAID_HEADER}와 같아야 한다.
+     * 나오지 않았다 — 코드 예제 금지를 풀었을 때와 같다. 자리는 그대로 요구하되, 그림은 사람이
+     * 그리므로 모델은 관리 콘솔이 찾을 수 있는 손그림 자리표만 남긴다.
      */
     @Test
-    @DisplayName("두 편 모두 절마다 그림을 하나씩 mermaid로 쓰고, 뺄 때는 중복 기준을 따른다(2026-11-15)")
+    @DisplayName("두 편 모두 절마다 손그림 자리를 남기고, 뺄 때는 중복 기준을 따른다")
     void asksForDiagramPerSection() {
         for (String prompt : List.of(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT,
                 ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)) {
@@ -732,10 +733,13 @@ class ClaudeDocumentGeneratorTest {
                     .contains("본론의 ## 절마다 하나")
                     .as("빼는 자리는 정한 이유가 있을 때만 — 목록 옆이라고 다 빼면 그림이 다시 사라진다")
                     .contains("그림이 바로 옆 번호 목록의 단계를 상자로 한 줄 늘어놓은 것뿐이다")
-                    .as("화면이 그리는 것은 이 펜스뿐이다")
-                    .contains("```mermaid 펜스 안에 쓴다")
-                    .as("검증기가 첫 줄로 통과시키는 일곱 종류와 같아야 한다")
-                    .contains("flowchart TD(또는 LR) / sequenceDiagram / stateDiagram-v2 / gantt / xychart-beta / block-beta / packet-beta")
+                    .as("관리 콘솔의 손그림 대기는 mermaid 펜스 안의 표지만 찾는다")
+                    .contains("손그림 자리는 ```mermaid 펜스 안에 쓴다")
+                    .contains("너는 그림을 그리지 말고 손그림 자리만 남긴다")
+                    .contains("A[\"손그림 자리: (그림 이름)\"]")
+                    .as("그림이 그려지기 전에도 글만으로 읽혀야 한다")
+                    .contains("그림에만 있는 사실을 두지 마라")
+                    .doesNotContain("sequenceDiagram")
                     .contains("같은 종류를 연달아 쓰지 마라")
                     .as("ASCII 그림으로 돌아가면 한글 폭 때문에 다시 어긋난다")
                     .contains("ASCII 그림은 쓰지 마라")
@@ -748,7 +752,37 @@ class ClaudeDocumentGeneratorTest {
     }
 
     @Test
-    @DisplayName("메모의 '그림:' 칸은 입문편에 실리고, 지정한 그림은 꼭 그리라고 시킨다")
+    @DisplayName("손그림 자리는 대기 목록에 잡히고 그림 형식 경고를 내지 않는다")
+    void figurePlaceholderPassesChecks() {
+        String placeholder = """
+                ```mermaid
+                flowchart LR
+                  %% 손그림: 장면. 두 스레드가 서로의 열쇠를 기다린다
+                  A["손그림 자리: 서로를 기다리는 두 스레드"]
+                ```
+                """;
+        String body = "# 제목\n\n## 바탕이 되는 개념\n\n설명.\n\n## 무엇이고 왜 필요한가\n\n설명.\n\n## 본론\n\n그림을 본다.\n\n"
+                + placeholder + "\n## 다음 본론\n\n그림을 본다.\n\n" + placeholder.replace("두 스레드\"", "세 스레드\"");
+
+        assertThat(FigureRequests.extract(body)).hasSize(2).allMatch(r -> r.startsWith("장면."));
+        assertThat(DocumentDraftValidator.validate("제목", "title-slug", body))
+                .map(Object::toString)
+                .noneMatch(c -> c.contains("번째 그림") || c.contains("손그림 요청") || c.contains("그림이 없"));
+    }
+
+    @Test
+    @DisplayName("입문편 실무 절은 소제목 없이 한 흐름으로 쓰고 앞 절을 결과로 되짚지 않는다")
+    void beginnerPracticeDoesNotRepeatEarlierSections() {
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .contains("이 절의 소제목은 맨 끝의 \"### 헷갈리기 쉬운 점\" 하나뿐이다")
+                .contains("앞 절에 없는 결과만 1~2문장으로 적는다")
+                .contains("앞 절에 나온 원리·동작 순서·코드·그림을 다시 설명하지 마라")
+                .contains("앞 절의 그림과 다른 장면을 보여 줄 때만 하나")
+                .doesNotContain("그래서 무엇이 달라지는가");
+    }
+
+    @Test
+    @DisplayName("메모의 '그림:' 칸은 입문편에 실리고, 지정한 그림은 손그림 자리로 남기라고 시킨다")
     void beginnerPromptHonorsRequestedDiagram() {
         TopicBrief brief = TopicBrief.parse("""
                 핵심 개념: 서버
@@ -759,7 +793,7 @@ class ClaudeDocumentGeneratorTest {
         String prompt = generator.buildPrompt(TestDomains.CLOUD_INFRA, "서버와 클라이언트", brief, List.of(), List.of());
 
         assertThat(prompt).contains("그림: 휴대폰·공유기·라우터·서버·DB 배치도");
-        assertThat(prompt).contains("\"그림\"에 적힌 그림은 반드시 mermaid로 그린다");
+        assertThat(prompt).contains("\"그림\"에 적힌 그림은 반드시 손그림 자리로 남긴다");
     }
 
     /**
