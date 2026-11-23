@@ -156,6 +156,12 @@ public final class DedupEvalCli {
             sb.append("버린 제안이 없습니다.\n");
         } else {
             reasons.forEach((why, n) -> sb.append("- %s: %d건\n".formatted(why, n)));
+            sb.append("\n사유별 개수만으로는 검사가 너무 엄격한지 알 수 없어 문장을 함께 적는다.\n\n");
+            for (Row r : rows) {
+                for (DedupGuard.Rejected x : r.rejected()) {
+                    sb.append("- 제안(%s · %s · %s): %s\n".formatted(r.file(), r.edition(), x.why(), oneLine(x.target())));
+                }
+            }
         }
         return sb.toString();
     }

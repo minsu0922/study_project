@@ -38,7 +38,8 @@ class DedupEvalCliTest {
                 .contains("**달라짐**")
                 .contains("채택 1/2편, 지운 문장 1건")
                 .contains("- 지움: " + DUP).contains("- 남김: " + KEPT)
-                .contains("- 다른 후보와 겹침: 1건");
+                .contains("- 다른 후보와 겹침: 1건")
+                .contains("- 제안(2026-11-21.json · 입문편 · 다른 후보와 겹침): x");
     }
 
     @Test

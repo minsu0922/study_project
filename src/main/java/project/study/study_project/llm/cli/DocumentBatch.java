@@ -191,8 +191,10 @@ final class DocumentBatch {
             BothEditions.Pair<DedupOutcome> outcomes = DedupStep.dedupBoth(
                     new ClaudeDocumentDeduplicator(model), document, advanced, brief);
             BatchReports.announce(DedupStep.summaryLine("입문편", outcomes.beginner()));
+            DedupStep.rejectedDetails("입문편", outcomes.beginner()).forEach(System.out::println);
             if (outcomes.advanced() != null) {
                 BatchReports.announce(DedupStep.summaryLine("심화편", outcomes.advanced()));
+                DedupStep.rejectedDetails("심화편", outcomes.advanced()).forEach(System.out::println);
             }
             file = applyDedup(outFile, file, outcomes);
             document = file.document();

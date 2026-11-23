@@ -74,6 +74,14 @@ final class DedupStep {
                 : "↩️ %s 중복 제거 안 함 — %s%s".formatted(edition, outcome.reason(), rejected);
     }
 
+    /** 코드가 버린 제안의 문장. 검사가 너무 엄격한지는 사유 개수만으로 판단할 수 없어 로그에 남긴다. */
+    static List<String> rejectedDetails(String edition, DedupOutcome outcome) {
+        return outcome.rejected().stream()
+                .map(r -> "   버린 제안(%s · %s): %s".formatted(edition, r.why(),
+                        r.target() == null ? "" : r.target().replaceAll("\\s+", " ").strip()))
+                .toList();
+    }
+
     private static String rejectedSummary(List<DedupGuard.Rejected> rejected) {
         if (rejected.isEmpty()) {
             return "";

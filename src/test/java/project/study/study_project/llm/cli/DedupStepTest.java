@@ -67,6 +67,8 @@ class DedupStepTest {
 
         assertThat(outcome.applied()).isFalse();
         assertThat(DedupStep.summaryLine("심화편", outcome)).contains("버린 제안 1건").contains("찾지 못함");
+        assertThat(DedupStep.rejectedDetails("심화편", outcome)).singleElement().asString()
+                .contains("심화편").contains("찾지 못함").contains("없는 문장이다.");
     }
 
     @Test
