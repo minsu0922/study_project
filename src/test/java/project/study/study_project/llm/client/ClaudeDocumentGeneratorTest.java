@@ -782,6 +782,25 @@ class ClaudeDocumentGeneratorTest {
     }
 
     @Test
+    @DisplayName("심화편은 사례 하나를 한 자리에서만 풀고, 다른 절에서 되풀이하지 않는다")
+    void advancedTellsEachCaseOnce() {
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("본론이 장면을 미리 말하면 같은 사례가 두 번 나온다")
+                .contains("장면을 미리 소개하거나 장면끼리 견주는 표를 넣지 마라")
+                .as("실무는 중급 재료라 남기되 장면의 대처와 겹치지 않게 한다")
+                .contains("여기에는 고르는 기준만, 장면에는 깨진 모습과 대처만 쓴다")
+                .contains("장면을 \"첫째, 둘째\"로 미리 소개하지 마라")
+                .contains("같은 판단을 묻는 질문을 둘 만들지 마라")
+                .contains("장면의 결론을 뒤집어 적은 것뿐이면 쓰지 마라")
+                .as("다음 글 추천 카드가 첫 항목을 쓰므로 목록은 없애지 않는다")
+                .contains("결론 2~4개")
+                .contains("대본 문장을 항목으로 쪼개 다시 적지 마라")
+                .contains("사례 하나는 한 자리에서만 풀어 쓴다")
+                .doesNotContain("\"첫째, ~해서 깨진다\"")
+                .doesNotContain("두껍게 써라");
+    }
+
+    @Test
     @DisplayName("메모의 '그림:' 칸은 입문편에 실리고, 지정한 그림은 손그림 자리로 남기라고 시킨다")
     void beginnerPromptHonorsRequestedDiagram() {
         TopicBrief brief = TopicBrief.parse("""
