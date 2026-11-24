@@ -816,7 +816,12 @@ class ClaudeDocumentGeneratorTest {
                 .contains("목록 마지막 줄은 입문편이 세운 무대를 한 문장으로 짚는다")
                 .contains("장면은 무대가 깨지는 서로 다른 순간으로 짓는다")
                 .as("면접 질문이 무대에 묶이면 다른 서비스 질문에 못 쓴다")
-                .contains("질문은 무대 없이도 성립하게 묻는다");
+                .contains("질문은 무대 없이도 성립하게 묻는다")
+                .as("확인 방법을 절마다 다시 풀면 같은 문장이 네 번 나온다(2026-11-24 생성본)")
+                .contains("처음 푼 절에서만 풀고, 장면·면접·정리에서는 이름만 부른다");
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT + ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("지시서 용어가 본문에 '무대는 …'으로 새어 나왔다(2026-11-24 생성본)")
+                .contains("\"무대\"는 이 지시서에서만 쓰는 말이다. 본문에는 쓰지 말고");
     }
 
     @Test
