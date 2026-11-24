@@ -145,7 +145,7 @@ class DomainRenameIntegrationTest {
     void documentBeginnerPromptUsesRenamedDomain() {
         rename(TestDomains.DATABASE, "데이터베이스 기초");
 
-        String prompt = documentGenerator.buildPrompt(TestDomains.DATABASE, null, List.of(), List.of());
+        String prompt = documentGenerator.buildPrompt(TestDomains.DATABASE, "인덱스", List.of(), List.of());
 
         assertThat(prompt).contains("분야: 데이터베이스 기초").doesNotContain("분야: 데이터베이스\n");
     }

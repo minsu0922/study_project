@@ -12,6 +12,7 @@ import project.study.study_project.llm.support.TopicBrief;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 문서 생성 프롬프트 조립 테스트 — docs/15.
@@ -96,40 +97,14 @@ class ClaudeDocumentGeneratorTest {
         assertThat(prompt).contains("뒤 편이 다룰 주제는 이름만 꺼내고 설명하지 마라");
     }
 
+    /** 2026-11-24 모델 자동 선택을 없앴다. 주제 없이 부르면 글의 주제도 없는 문서가 나온다 */
     @Test
-    @DisplayName("범위를 비우면 분야 안에서 모델이 직접 고르도록 지시한다")
-    void asksModelToPickWhenTopicOmitted() {
-        String prompt = generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of());
-
-        assertThat(prompt).contains("주제를 하나 골라");
-        assertThat(prompt).doesNotContain("주제 범위:");
-    }
-
-    @Test
-    @DisplayName("공백만 있는 범위는 지정하지 않은 것으로 본다 — 워크플로 입력이 비면 그렇게 온다")
-    void treatsBlankTopicAsUnspecified() {
-        String prompt = generator.buildPrompt(TestDomains.NETWORK, "   ", List.of(), List.of());
-
-        assertThat(prompt).contains("주제를 하나 골라");
-        assertThat(prompt).doesNotContain("주제 범위:");
-    }
-
-    /**
-     * 2026-08-19에 사용자가 지적한 결함이다. 분야만 주면 모델은 <b>분야 이름에 가장 가까운
-     * 가장 큰 주제</b>를 고른다("스프링·백엔드" → "스프링 트랜잭션"). 그러면 6,800자를 개괄에
-     * 다 쓰고 {@code ## 언제 깨지는가}가 얕아져 사흘 뒤 고급 날에 재료가 마른다.
-     *
-     * <p>규칙 문장이 아니라 (X)/(O) 예시로 지시한 것을 함께 못 박는다 — 이 저장소는
-     * "예시가 규칙을 이긴다"를 두 번 확인했다(8/15 하이픈 사고, 8/18 절 형식 흔들림).
-     */
-    @Test
-    @DisplayName("주제를 비우면 '분야만큼 넓게 고르지 마라'가 예시와 함께 실린다 — 분야 이름만 한 주제가 나왔다")
-    void asksToNarrowTopicWhenModelPicks() {
-        String prompt = generator.buildPrompt(TestDomains.BACKEND_FRAMEWORK, null, List.of(), List.of());
-
-        assertThat(prompt).contains("분야 전체를 개괄하지 마라");
-        assertThat(prompt).as("크기 지시는 예시로 줘야 지켜진다").contains("(X)").contains("(O)");
-        assertThat(prompt).as("예시 주제를 그대로 쓰는 것은 막아야 한다").contains("가져다 쓰지 마라");
+    @DisplayName("주제가 비면 프롬프트를 만들지 않는다 — 모델이 주제를 고르는 길은 없앴다")
+    void rejectsMissingTopic() {
+        assertThatThrownBy(() -> generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> generator.buildPrompt(TestDomains.NETWORK, "   ", List.of(), List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
@@ -147,8 +122,8 @@ class ClaudeDocumentGeneratorTest {
                 .contains("그 문서가 다룬 메커니즘과 겹치는 것도 고르지 않는다");
         assertThat(prompt).as("'한 편 크기'를 감이 아니라 판정 가능한 절차로 준다")
                 .contains("물음표 하나로 끝나지 않으면 아직 넓다");
-        assertThat(prompt).as("좁게 잡는 실패에도 판정이 있어야 한다 — 없으면 부연으로 분량을 메운다")
-                .contains("채우지 못하면 너무 좁게 잡은 것이다");
+        assertThat(prompt).as("시스템 프롬프트가 분량을 정하지 않으므로 글자 수로 좁음을 재지 않는다")
+                .doesNotContain("11,000~14,000자");
         assertThat(prompt).as("예시 주제를 그대로 쓰는 것은 막아야 한다")
                 .contains("주제(캐시)는 가져다 쓰지 마라");
     }
@@ -192,7 +167,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("기존 문서 제목이 중복 회피 목록으로 실린다 — 없으면 있는 주제를 또 쓴다")
     void includesAvoidTitles() {
-        String prompt = generator.buildPrompt(TestDomains.NETWORK, null,
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, "TCP 혼잡 제어",
                 List.of("TCP 3-way 핸드셰이크와 연결 종료", "HTTP와 HTTPS — 무엇이 다른가"), List.of());
 
         assertThat(prompt).contains("이미 문서가 있는 주제");
@@ -203,7 +178,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("기존 태그가 실린다 — 없으면 tcp/TCP/tcp-handshake처럼 비슷한 태그가 계속 늘어난다")
     void includesPreferredTags() {
-        String prompt = generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of("tcp", "http"));
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, "TCP 혼잡 제어", List.of(), List.of("tcp", "http"));
 
         assertThat(prompt).contains("기존 태그: tcp, http");
     }
@@ -211,7 +186,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("태그 목록을 줄 때는 '새 태그 남발 금지'가 함께 실린다 — 1차 실물이 태그 3개를 전부 새로 만들었다")
     void limitsNewTagsWhenPreferredTagsGiven() {
-        String prompt = generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of("tcp", "http"));
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, "TCP 혼잡 제어", List.of(), List.of("tcp", "http"));
 
         assertThat(prompt).contains("[태그 부여 규칙]");
         assertThat(prompt).contains("새로 만들되 1개까지다");
@@ -222,7 +197,7 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("목록이 비어 있으면 그 블록 자체를 넣지 않는다 — 빈 제목만 남으면 토큰 낭비다")
     void omitsEmptyBlocks() {
-        String prompt = generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of());
+        String prompt = generator.buildPrompt(TestDomains.NETWORK, "TCP 혼잡 제어", List.of(), List.of());
 
         assertThat(prompt).doesNotContain("이미 문서가 있는 주제");
         assertThat(prompt).doesNotContain("[태그 부여 규칙]");
@@ -231,11 +206,11 @@ class ClaudeDocumentGeneratorTest {
     @Test
     @DisplayName("스프링·백엔드와 언어·런타임은 경계 힌트가 붙는다 — 둘 다 'Java 관련'이라 헷갈린다")
     void addsDomainHintForConfusablePair() {
-        assertThat(generator.buildPrompt(TestDomains.BACKEND_FRAMEWORK, null, List.of(), List.of()))
+        assertThat(generator.buildPrompt(TestDomains.BACKEND_FRAMEWORK, "TCP 혼잡 제어", List.of(), List.of()))
                 .contains("순수 JVM/GC 주제는 제외");
-        assertThat(generator.buildPrompt(TestDomains.LANGUAGE_RUNTIME, null, List.of(), List.of()))
+        assertThat(generator.buildPrompt(TestDomains.LANGUAGE_RUNTIME, "TCP 혼잡 제어", List.of(), List.of()))
                 .contains("프레임워크 주제는 제외");
-        assertThat(generator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of()))
+        assertThat(generator.buildPrompt(TestDomains.NETWORK, "TCP 혼잡 제어", List.of(), List.of()))
                 .as("경계가 헷갈리지 않는 분야에는 군더더기를 붙이지 않는다")
                 .doesNotContain("제외)");
     }
@@ -1182,16 +1157,24 @@ class ClaudeDocumentGeneratorTest {
                 .isLessThan(advanced.indexOf("\n## 이 글을 읽기 전에"));
 
         assertThat(beginner)
-                .as("입문편 상자는 일상 장면으로 흥미를 끈다")
-                .contains("독자가 매일 겪는 장면 하나로 시작해")
+                .as("글의 주제는 사람이 쓰므로 모델은 옮겨 적기만 한다")
+                .contains("[글의 주제 — 사람이 쓴 글]을 그대로 옮긴다")
+                .doesNotContain("독자가 매일 겪는 장면 하나로 시작해")
+                .as("사람이 쓴 글은 코드가 다시 끼우므로 모델에게 고치라고 하지 않는다")
+                .doesNotContain("상자와 이 문장 중 하나가 틀린 것이니 고쳐라")
                 .as("옛 질문 줄을 다시 시키면 질문이 두 군데가 된다")
                 .doesNotContain("> 이 글이 답하는 질문:")
                 .contains("\n## 정리\n")
                 .contains("「글의 주제」가 던진 궁금증에 그대로 답이 되어야 한다");
 
         assertThat(advanced)
-                .as("심화편 상자는 입문편보다 구체적으로 쓴다")
-                .contains("입문편 상자보다 <구체적으로> 쓴다")
+                .contains("[글의 주제 — 사람이 쓴 글]을 그대로 옮긴다")
+                .as("글의 주제에 나온 새 이름은 본문에서 푼다 — 11-23 독자 점검이 'DB 연결' 미정의를 짚었다")
+                .contains("본문에서 그 이름이 처음 나오는 자리에서 무엇을 가리키는지 푼다")
+                .as("장면 수는 사람이 쓴 글이 정한다")
+                .contains("장면은 「글의 주제」가 약속한 만큼만 쓰고")
+                .doesNotContain("장면은 2~3개로 나누고")
+                .doesNotContain("상자와 이 대본 중 하나가 틀린 것이니 고쳐라")
                 .doesNotContain("> 이 글이 답하는 질문:")
                 .contains("\n## 심화편 정리\n")
                 .contains("「글의 주제」가 던진 질문에 그대로 답이 되어야 한다");

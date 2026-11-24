@@ -18,8 +18,7 @@ public interface DocumentGenerator {
      * <b>입문편</b> 한 편을 생성한다 — 이 주제를 오늘 처음 보는 사람이 읽는 글.
      *
      * @param domain        분야 (필수)
-     * @param topic         주제. {@code null}이면 모델이 {@code avoidTitles}를 피해 알아서 고른다.
-     *                      관리자가 직접 지정하면 그 주제로 쓴다(배치는 자동, 수동은 지정 — docs/15)
+     * @param topic         주제. 대기열이나 {@code --topic}에서 온다. 비어 있으면 안 된다(2026-11-24 자동 선택 폐지)
      * @param avoidTitles   이미 문서가 있는 주제 제목들. 중복 생성을 막는다
      * @param preferredTags 기존 태그 목록. 비슷한 태그가 무한히 늘어나는 것을 막으려고 재사용을 유도한다
      * @return 생성된 문서(검증 전 원본)

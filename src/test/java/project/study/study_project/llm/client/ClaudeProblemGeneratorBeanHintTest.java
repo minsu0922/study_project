@@ -79,7 +79,7 @@ class ClaudeProblemGeneratorBeanHintTest {
     void documentGeneratorBeanReadsHintAtUseTime() {
         editHint(TestDomains.NETWORK, "빈경로-표지 문서");
 
-        String prompt = documentGenerator.buildPrompt(TestDomains.NETWORK, null, List.of(), List.of());
+        String prompt = documentGenerator.buildPrompt(TestDomains.NETWORK, "TCP 혼잡 제어", List.of(), List.of());
 
         assertThat(prompt).contains("(빈경로-표지 문서)");
     }

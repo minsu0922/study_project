@@ -61,10 +61,8 @@ final class DocumentBatch {
      *   <li><b>난이도가 없다.</b> 문서는 한 편 안에 초급·중급·고급 재료를 모두 담는 것이 목표라
      *       (프롬프트의 [난이도 재료] 절) 날짜 순환의 난이도 축은 쓰지 않는다. 분야만 쓴다.
      *   <li><b>주제를 지정할 수 있다.</b> 우선순위는 <b>수동({@code --topic}) &gt; 주제 대기열
-     *       ({@link TopicQueue}) &gt; 모델 자동 선택</b>이다. 대기열은 사람이 미리 적어 둔
-     *       세부 주제를 위에서부터 꺼내 쓰는 자리로, 분야만 던져서는 문서가 너무 광범위해지는
-     *       문제를 푼다(2026-08-19). 셋 다 없어도 동작한다는 점이 중요하다 — 대기열을 비워 둬도
-     *       파이프라인은 예전 그대로 돈다.
+     *       ({@link TopicQueue})</b>이다. 대기열은 사람이 미리 적어 둔 세부 주제와 「글의 주제」를
+     *       꺼내 쓰는 자리다. 둘 다 없으면 그날 문서를 만들지 않는다(2026-11-24, 모델 자동 선택 폐지).
      *   <li><b>하위 디렉터리에 저장한다.</b> 문제 파일과 형식이 달라 같은 폴더에 섞이면
      *       기존 흡수 코드가 파싱에 실패한다({@code GeneratedDocumentFile} 주석 참고).
      * </ul>
@@ -126,9 +124,18 @@ final class DocumentBatch {
                         관리 콘솔 → 주제 상세 → 「글의 주제 쓰기」에서 두 편을 쓰고 `%s`을 커밋하세요."""
                         .formatted(queue.boxlessCount(), TopicQueue.FILE_NAME));
                 return;
+            } else {
+                // 대기열이 비는 일은 평소 없다(다 쓴 주제도 다시 돈다). 비었다면 파일이 없거나 깨진 것이라,
+                // 모델 자동 선택으로 흘리지 않고 그날은 만들지 않는다 — 글의 주제 없는 문서는 승인도 막힌다
+                BatchReports.announce("""
+                        ⏭️ **아무것도 만들지 않았습니다 — 주제 대기열이 비었습니다**
+
+                        `%s`에 개념 주제가 없거나 파일을 읽지 못했습니다. 관리 콘솔 → 주제 대기열을 확인하세요."""
+                        .formatted(TopicQueue.FILE_NAME));
+                return;
             }
         }
-        reportTopicQueue(queue, picked, topic);
+        reportTopicQueue(queue, picked);
         if (picked != null && queue.boxlessCount() > 0) {
             System.out.printf("글의 주제를 아직 안 써서 건너뛴 주제: %d개%n", queue.boxlessCount());
         }
@@ -144,7 +151,7 @@ final class DocumentBatch {
         List<String> tags = snapshot.tags();
 
         System.out.printf("문서 생성 시작: %s / 주제 %s (모델 %s, 기존 문서 %d편, 태그 %d개)%n",
-                domain, topic == null ? "자동 선택" : topic, model, avoidTitles.size(), tags.size());
+                domain, topic, model, avoidTitles.size(), tags.size());
 
         ClaudeDocumentGenerator generator = new ClaudeDocumentGenerator(model, settings);
         GeneratedDocumentItem document = generator.generate(domain, topic, brief, avoidTitles, tags);
@@ -397,22 +404,14 @@ final class DocumentBatch {
     /**
      * 대기열 상태를 로그와 <b>Actions 요약 화면</b>에 남긴다.
      *
-     * <p><b>왜 요약 화면까지 쓰나.</b> 이 기능의 실패는 조용하다 — 대기열을 채워 놓고 커밋을
-     * 잊었거나 분야 상수명을 잘못 적었으면, 배치는 아무 오류 없이 예전처럼 모델이 고른 주제로
-     * 문서를 만든다. 초록불로 끝나므로 <b>대기열이 안 쓰이고 있다는 사실 자체를 모른다</b>.
+     * <p><b>왜 요약 화면까지 쓰나.</b> 분야 상수명을 잘못 적은 항목은 오류 없이 건너뛰어진다.
+     * 초록불로 끝나므로 <b>그 주제가 안 쓰이고 있다는 사실 자체를 모른다</b>.
      * 스냅샷 낡음 경고를 여기에 둔 것과 같은 판단이다(그 함수 주석 참고).
      */
-    static void reportTopicQueue(TopicQueue queue, TopicQueue.Picked picked, String topic) {
+    static void reportTopicQueue(TopicQueue queue, TopicQueue.Picked picked) {
         if (picked != null) {
             String message = "📌 오늘의 주제 범위: **%s** (%s) — 등록된 범위 %d개 중 차례%n"
                     .formatted(picked.topic(), picked.domain(), queue.size());
-            BatchReports.announce(message);
-        } else if (topic == null) {
-            // 수동 지정도 범위 목록도 없는 평소 경로. 오류가 아니므로 아이콘도 정보(ℹ️)로 둔다 —
-            // 매일 경고가 뜨면 사람이 경고 전체를 무시하게 된다.
-            String message = ("ℹ️ 주제 범위 목록이 비어 모델이 주제를 자동으로 고릅니다. "
-                    + "관리자 화면에서 범위를 넣고 `generated/%s`를 커밋하면 다음 문서일부터 그 안에서 고릅니다.%n")
-                    .formatted(TopicQueue.FILE_NAME);
             BatchReports.announce(message);
         }
 
