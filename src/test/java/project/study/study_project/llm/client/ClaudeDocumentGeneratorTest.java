@@ -688,7 +688,7 @@ class ClaudeDocumentGeneratorTest {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .contains("## 실무에서는 이렇게 쓴다")
                 .as("장면 하나를 처음부터 끝까지 — 이게 이 절의 알맹이다")
-                .contains("장면 하나를 골라 처음부터 끝까지")
+                .contains("순간 하나를 골라 처음부터 끝까지")
                 .as("방치하면 본론 요약이 된다")
                 .contains("앞 절에 나온 원리·동작 순서·코드·그림을 다시 설명하지 마라")
                 .as("설정값 목록으로 흐르는 것은 금지 항목이 막는다")
@@ -798,6 +798,25 @@ class ClaudeDocumentGeneratorTest {
                 .contains("사례 하나는 한 자리에서만 풀어 쓴다")
                 .doesNotContain("\"첫째, ~해서 깨진다\"")
                 .doesNotContain("두껍게 써라");
+    }
+
+    @Test
+    @DisplayName("입문편은 무대 하나를 세워 절마다 잇고, 심화편은 그 무대를 이어받는다")
+    void bothEditionsShareOneStage() {
+        assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
+                .as("무대는 한 곳에서 한 번만 세워야 절마다 다시 소개하지 않는다")
+                .contains("[무대] — 실제 서비스 한 곳을 세워 절마다 이어 붙인다")
+                .contains("무대는 「무엇이고 왜 필요한가」에서 한 번만 세운다")
+                .contains("다른 서비스로 옮겨 새 예시를 세우지 마라")
+                .contains("앞에서 세운 무대에서 이 개념을 쓰는 순간 하나를 골라");
+        assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
+                .as("심화편이 새 무대를 세우면 사례가 흩어진다")
+                .contains("[무대] — 입문편의 무대를 이어받는다")
+                .contains("새 무대를 세우지 마라")
+                .contains("목록 마지막 줄은 입문편이 세운 무대를 한 문장으로 짚는다")
+                .contains("장면은 무대가 깨지는 서로 다른 순간으로 짓는다")
+                .as("면접 질문이 무대에 묶이면 다른 서비스 질문에 못 쓴다")
+                .contains("질문은 무대 없이도 성립하게 묻는다");
     }
 
     @Test
