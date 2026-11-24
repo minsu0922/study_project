@@ -44,6 +44,12 @@
     "lastUsedAt" : "2026-10-09",
     "usedCount" : 1
   }, {
+    "id" : 25,
+    "domain" : "OS",
+    "topic" : "데드락의 네 조건 — 실무에서 실제로 깨는 것은 어느 조건인가",
+    "lastUsedAt" : "2026-11-23",
+    "usedCount" : 1
+  }, {
     "id" : 47,
     "domain" : "LANGUAGE_RUNTIME",
     "topic" : "스택과 힙 — OutOfMemory와 StackOverflow가 갈리는 자리",
