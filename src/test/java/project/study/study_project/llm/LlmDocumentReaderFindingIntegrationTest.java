@@ -67,21 +67,6 @@ class LlmDocumentReaderFindingIntegrationTest {
                 new ReaderFinding.Suggestion(op, target, text, "본문에서"));
     }
 
-    @Test
-    @DisplayName("중복 제거 기록을 검수 응답에 싣고, 깨진 기록이어도 화면은 열린다")
-    void responseCarriesDedupRemovals() throws Exception {
-        GeneratedDocumentDraft draft = draftWith(BODY);
-        var removal = new project.study.study_project.llm.dto.DedupRemoval("지운 문장.", "남긴 문장.", "본론", "같은 말");
-        draft.recordDedupRemovals(objectMapper.writeValueAsString(List.of(removal)));
-        draftRepository.flush();
-
-        assertThat(llmDocumentService.getDraft(draft.getId()).dedupRemovals()).containsExactly(removal);
-
-        draft.recordDedupRemovals("{깨진 JSON");
-        draftRepository.flush();
-        assertThat(llmDocumentService.getDraft(draft.getId()).dedupRemovals()).isNull();
-    }
-
     private GeneratedDocumentDraft draftWith(String body, ReaderFinding... findings) throws Exception {
         GeneratedDocumentDraft draft = llmDocumentService.saveDraft(TestDomains.SYSTEM_DESIGN,
                 new GeneratedDocumentItem("캐시 전략", "reader-test-" + UUID.randomUUID().toString().substring(0, 8),

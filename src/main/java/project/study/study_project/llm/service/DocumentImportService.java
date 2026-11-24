@@ -169,22 +169,12 @@ public class DocumentImportService {
         return mine == null ? null : objectMapper.writeValueAsString(mine.stream().map(DraftReaderFinding::of).toList());
     }
 
-    /** 중복 제거 기록도 편별이다. 칸이 없거나 그 편을 원본으로 두었으면 {@code null} */
-    private String dedupRemovalsJsonOf(GeneratedDocumentFile parsed, boolean advanced) throws IOException {
-        if (parsed.dedupRemovals() == null) {
-            return null;
-        }
-        var mine = advanced ? parsed.dedupRemovals().advanced() : parsed.dedupRemovals().beginner();
-        return mine == null ? null : objectMapper.writeValueAsString(mine);
-    }
-
     /** 한 편을 초안으로 저장하고 로그를 남긴다 — 두 편의 처리가 갈리지 않도록 한 곳에 둔다. */
     private int saveOne(GeneratedDocumentFile parsed, GeneratedDocumentItem item, boolean advanced,
                         String model, String key) throws IOException {
         GeneratedDocumentDraft draft = llmDocumentService.saveDraft(parsed.domain(), item, model);
         draft.recordFactFindings(factFindingsJsonOf(parsed, item));
         draft.recordReaderFindings(readerFindingsJsonOf(parsed, advanced));
-        draft.recordDedupRemovals(dedupRemovalsJsonOf(parsed, advanced));
         log.info("문서 초안 흡수: {} — \"{}\" ({}, {}, 본문 {}자)",
                 key, draft.getTitle(), parsed.domain(),
                 ClaudeDocumentGenerator.editionOf(draft.getContentMd()).getDisplayName(),

@@ -301,22 +301,7 @@ public class LlmDocumentService {
                 d.getContentMd() == null ? 0 : d.getContentMd().length(),
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedDocumentId(),
                 d.getCreatedAt(), d.getReviewedAt(),
-                checks, DocumentDraftValidator.hasBlocking(checks), readFactFindings(d), readReaderFindings(d),
-                readDedupRemovals(d));
-    }
-
-    /** 저장된 중복 제거 기록을 읽는다. 읽다 실패해도 {@code null}로 넘겨 검수 화면은 열리게 한다. */
-    private List<project.study.study_project.llm.dto.DedupRemoval> readDedupRemovals(GeneratedDocumentDraft d) {
-        if (d.getDedupRemovalsJson() == null) {
-            return null;
-        }
-        try {
-            return objectMapper.readValue(d.getDedupRemovalsJson(), new TypeReference<>() {
-            });
-        } catch (JsonProcessingException | RuntimeException e) {
-            log.warn("문서 초안 #{}의 중복 제거 기록을 읽지 못함: {}", d.getId(), e.getMessage());
-            return null;
-        }
+                checks, DocumentDraftValidator.hasBlocking(checks), readFactFindings(d), readReaderFindings(d));
     }
 
     /** 검수 화면(나란히 검수)이 초안 하나를 받는다. */

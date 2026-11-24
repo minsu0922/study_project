@@ -22,7 +22,6 @@ import java.util.List;
  * @param blocked       {@code checks}에 BLOCKING이 하나라도 있어 승인이 막힌 상태인지
  * @param factFindings  AI 사실 검수 지적. 검수를 안 돌렸으면 {@code null}, 돌렸는데 없으면 빈 목록
  * @param readerFindings 독자 점검 지적(V49). 안 돌렸으면 {@code null}. 승인을 막지 않는다
- * @param dedupRemovals 중복 제거로 지운 문장(V50). 적용하지 않았으면 {@code null}. 승인을 막지 않는다
  */
 public record LlmDocumentDraftResponse(
         Long id,
@@ -42,8 +41,7 @@ public record LlmDocumentDraftResponse(
         List<DraftCheck> checks,
         boolean blocked,
         List<FactFinding> factFindings,
-        List<ReaderFindingView> readerFindings,
-        List<DedupRemoval> dedupRemovals
+        List<ReaderFindingView> readerFindings
 ) {
 
     /**

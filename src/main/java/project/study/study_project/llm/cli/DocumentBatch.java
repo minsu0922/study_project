@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.support.FileFormats;
-import project.study.study_project.llm.client.ClaudeDocumentDeduplicator;
 import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.ClaudeDocumentGenerator;
 import project.study.study_project.llm.client.ClaudeDocumentPolisher;
@@ -13,7 +12,6 @@ import project.study.study_project.llm.client.DocumentEdition;
 import project.study.study_project.llm.client.DocumentFactChecker;
 import project.study.study_project.llm.client.DocumentReaderCheck;
 import project.study.study_project.llm.client.ReaderFinding;
-import project.study.study_project.llm.dto.DedupRemovals;
 import project.study.study_project.llm.dto.ReaderFindings;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
@@ -73,8 +71,7 @@ final class DocumentBatch {
      */
     static void generateDocument(Map<String, String> opts, String model, DomainSettings settings,
                                          List<DomainCode> batchDomains, LocalDate cycleAnchor,
-                                         boolean dedupEnabled, boolean polishEnabled,
-                                         boolean readerCheckEnabled) throws Exception {
+                                         boolean polishEnabled, boolean readerCheckEnabled) throws Exception {
         LocalDate date = BatchOptions.resolveDate(opts);
         // main()이 이미 같은 opts로 outDir을 정해 뒀지만, 이 메서드는 main()의 지역 변수를
         // 볼 수 없어 resolveOutDir로 다시 구한다 — opts가 같으므로 값은 항상 같다.
@@ -186,21 +183,6 @@ final class DocumentBatch {
                         advanced == null ? "없음" : "%,d자".formatted(advanced.contentMd().length()),
                         advanced == null ? "— 고급 날은 입문편으로 폴백합니다" : advanced.title()));
 
-        // 중복 제거(설계 2026-11-22). 윤문이 문장을 바꾸기 전에 지워야 같은 문장을 찾고 삭제만 따로 검사할 수 있다
-        if (dedupEnabled) {
-            BothEditions.Pair<DedupOutcome> outcomes = DedupStep.dedupBoth(
-                    new ClaudeDocumentDeduplicator(model), document, advanced, brief);
-            BatchReports.announce(DedupStep.summaryLine("입문편", outcomes.beginner()));
-            DedupStep.rejectedDetails("입문편", outcomes.beginner()).forEach(System.out::println);
-            if (outcomes.advanced() != null) {
-                BatchReports.announce(DedupStep.summaryLine("심화편", outcomes.advanced()));
-                DedupStep.rejectedDetails("심화편", outcomes.advanced()).forEach(System.out::println);
-            }
-            file = applyDedup(outFile, file, outcomes);
-            document = file.document();
-            advanced = file.advancedDocument();
-        }
-
         // 윤문(설계 2026-11-18). 원본을 먼저 저장해 두었으므로 여기서 job이 죽어도 생성 요금은 남는다
         if (polishEnabled) {
             BothEditions.Pair<PolishOutcome> outcomes = PolishStep.polishBoth(
@@ -310,37 +292,7 @@ final class DocumentBatch {
     }
 
     /**
-     * 채택된 중복 제거본으로 문서 파일을 바꿔 쓴다. 원본 칸에는 처음 생성한 글을 넣는다.
-     * 둘 다 원본 유지면 쓰지 않는다. 쓰기에 실패하면 알리고 원고 파일을 그대로 쓴다.
-     *
-     * @return 이후 단계가 이어 쓸 파일 내용
-     */
-    static GeneratedDocumentFile applyDedup(Path outFile, GeneratedDocumentFile file,
-                                            BothEditions.Pair<DedupOutcome> outcomes) {
-        DedupOutcome b = outcomes.beginner();
-        DedupOutcome a = outcomes.advanced();
-        boolean beginnerApplied = b != null && b.applied();
-        boolean advancedApplied = a != null && a.applied();
-        if (!beginnerApplied && !advancedApplied) {
-            return file;
-        }
-        GeneratedDocumentFile deduped = file.withDeduped(
-                beginnerApplied ? b.chosen() : file.document(),
-                advancedApplied ? a.chosen() : file.advancedDocument(),
-                beginnerApplied ? file.document() : file.originalDocument(),
-                advancedApplied ? file.advancedDocument() : file.originalAdvancedDocument(),
-                new DedupRemovals(beginnerApplied ? b.removals() : null, advancedApplied ? a.removals() : null));
-        String error = replaceFile(outFile, deduped);
-        if (error != null) {
-            BatchReports.announce("⚠️ 중복 제거본을 파일에 싣지 못해 원고를 그대로 씁니다 (%s)".formatted(error));
-            return file;
-        }
-        return deduped;
-    }
-
-    /**
      * 채택된 윤문본으로 문서 파일을 바꿔 쓴다. 원본 칸에는 채택된 편의 원고만 넣는다.
-     * 중복 제거가 먼저 원본 칸을 채웠으면 처음 생성한 글을 그대로 둔다.
      * 둘 다 원본 유지면 쓰지 않는다. 쓰기에 실패하면 알리고 원고 파일을 그대로 쓴다 — 문제 배치가 그 파일을 읽는다.
      *
      * @return 이후 단계가 이어 쓸 파일 내용(사실 검수 지적이 이 위에 붙는다)
@@ -357,9 +309,8 @@ final class DocumentBatch {
         GeneratedDocumentFile polished = file.withPolished(
                 beginnerApplied ? b.chosen() : file.document(),
                 advancedApplied ? a.chosen() : file.advancedDocument(),
-                file.originalDocument() != null ? file.originalDocument() : beginnerApplied ? file.document() : null,
-                file.originalAdvancedDocument() != null ? file.originalAdvancedDocument()
-                        : advancedApplied ? file.advancedDocument() : null);
+                beginnerApplied ? file.document() : null,
+                advancedApplied ? file.advancedDocument() : null);
         String error = replaceFile(outFile, polished);
         if (error != null) {
             BatchReports.announce("⚠️ 윤문본을 파일에 싣지 못해 원고를 그대로 씁니다 (%s)".formatted(error));

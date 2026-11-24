@@ -102,11 +102,6 @@ public class GeneratedDocumentDraft {
     @Column(name = "reader_findings_json")
     private String readerFindingsJson;
 
-    /** 중복 제거로 지운 문장 {@code DedupRemoval} 목록 JSON(V50). 적용하지 않았으면 {@code null}. */
-    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
-    @Column(name = "dedup_removals_json")
-    private String dedupRemovalsJson;
-
     private GeneratedDocumentDraft(DomainCode domain, String title, String slug,
                                    String contentMd, String tagsJson, String model) {
         this.domain = domain;
@@ -132,11 +127,6 @@ public class GeneratedDocumentDraft {
     /** 흡수할 때 배치 파일의 그 편 독자 점검 지적을 담는다. */
     public void recordReaderFindings(String readerFindingsJson) {
         this.readerFindingsJson = readerFindingsJson;
-    }
-
-    /** 흡수할 때 배치 파일의 그 편 중복 제거 기록을 담는다. */
-    public void recordDedupRemovals(String dedupRemovalsJson) {
-        this.dedupRemovalsJson = dedupRemovalsJson;
     }
 
     /**

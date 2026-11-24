@@ -161,8 +161,7 @@ public final class DraftGeneratorCli {
             // 이름은 여전히 DefaultDomains 고정값을 쓰게 되어, 관리 화면에서 고친 이름이
             // 배치 프롬프트에는 반영되지 않는다(Task 4, 스펙 6절 버그의 배치 쪽 절반).
             DocumentBatch.generateDocument(opts, model, settings, batchDomains, cycleAnchor,
-                    BatchOptions.dedupEnabled(generation), BatchOptions.polishEnabled(generation),
-                    BatchOptions.readerCheckEnabled(generation));
+                    BatchOptions.polishEnabled(generation), BatchOptions.readerCheckEnabled(generation));
             return;
         }
         if (action == BatchOptions.BatchAction.SKIP) {
