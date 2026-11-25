@@ -17,7 +17,7 @@
 <path d="M202 100 H436" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#deadlock-adv-notifier-scope-head)"/>
 <text x="262" y="90" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">기다림 · send()</text>
 <path d="M438 230 H204" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#deadlock-adv-notifier-scope-head)"/>
-<text x="404" y="254" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">기다림 · getBalance()</text>
+<text x="392" y="272" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">기다림 · getBalance()</text>
 <circle cx="320" cy="100" r="9" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2"/>
 <circle cx="320" cy="230" r="9" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2"/>
 <text x="320" y="312" class="f-bad" fill="#dc2626" font-size="13" text-anchor="middle" font-weight="700">화살표가 검토 범위 경계를 두 번 넘는다</text>
