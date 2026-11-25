@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="점선 상자는 TransferService 코드 검토 범위다. 상자 안에 transfer-7 스레드와 2002번 계좌 락이, 상자 밖에 notifier-flush 스레드와 Notifier 락이 있다. transfer-7은 2002번 락을 쥐고 Notifier 락을 기다리고, notifier-flush는 Notifier 락을 쥐고 2002번 락을 기다린다. 원의 절반이 상자 밖에 걸쳐 있고 화살표가 상자 경계를 두 번 넘는다">
+<defs><marker id="deadlock-adv-notifier-scope-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker><marker id="deadlock-adv-notifier-scope-bad" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-bad" fill="#dc2626"/></marker></defs>
+<rect x="20" y="36" width="300" height="250" rx="10" class="f-cloud" fill="#ffffff" stroke="#556274" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="36" y="58" class="f-sm" fill="#556274" font-size="12" font-weight="700">TransferService 코드 검토 범위</text>
+<rect x="50" y="80" width="150" height="40" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="125" y="106" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">transfer-7</text>
+<rect x="50" y="210" width="150" height="40" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="125" y="236" class="f-new" fill="#4f46e5" font-size="13" text-anchor="middle" font-weight="700">2002번 계좌 락</text>
+<rect x="440" y="80" width="170" height="40" rx="6" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="525" y="106" class="f-new" fill="#4f46e5" font-size="13" text-anchor="middle" font-weight="700">Notifier 락</text>
+<rect x="440" y="210" width="170" height="40" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="525" y="236" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">notifier-flush</text>
+<path d="M125 122 V208" class="f-line" fill="none" stroke="#0f172a" stroke-width="4" stroke-linecap="round"/>
+<text x="136" y="170" class="f-t" fill="#0f172a" font-size="12">쥐고 있음</text>
+<path d="M525 122 V208" class="f-line" fill="none" stroke="#0f172a" stroke-width="4" stroke-linecap="round"/>
+<text x="514" y="170" class="f-t" fill="#0f172a" font-size="12" text-anchor="end">쥐고 있음</text>
+<path d="M202 100 H436" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#deadlock-adv-notifier-scope-head)"/>
+<text x="262" y="90" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">기다림 · send()</text>
+<path d="M438 230 H204" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#deadlock-adv-notifier-scope-head)"/>
+<text x="404" y="254" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">기다림 · getBalance()</text>
+<circle cx="320" cy="100" r="9" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2"/>
+<circle cx="320" cy="230" r="9" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2"/>
+<text x="320" y="312" class="f-bad" fill="#dc2626" font-size="13" text-anchor="middle" font-weight="700">화살표가 검토 범위 경계를 두 번 넘는다</text>
+</svg>

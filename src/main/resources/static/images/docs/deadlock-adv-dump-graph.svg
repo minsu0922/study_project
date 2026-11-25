@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 330" role="img" aria-label="왼쪽에 덤프 칸 transfer-1과 transfer-2가 있다. transfer-1의 waiting to lock 2002 줄과 transfer-2의 locked 2002 줄을 파란 테두리로 잇고, transfer-2의 waiting to lock 1001 줄과 transfer-1의 locked 1001 줄을 빨간 테두리로 잇는다. 오른쪽 대기 그래프에서 파란 화살표는 transfer-1에서 transfer-2로, 빨간 화살표는 transfer-2에서 transfer-1로 가 원을 만든다">
+<defs><marker id="deadlock-adv-dump-graph-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker><marker id="deadlock-adv-dump-graph-bad" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-bad" fill="#dc2626"/></marker></defs>
+<text x="36" y="24" class="f-t" fill="#0f172a" font-size="13" font-weight="700">스레드 덤프 두 칸</text>
+<rect x="36" y="36" width="300" height="110" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="50" y="62" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">"transfer-1" BLOCKED</text>
+<text x="50" y="96" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">- waiting to lock &lt;0x…2002&gt;</text>
+<text x="50" y="126" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">- locked &lt;0x…1001&gt;</text>
+<rect x="36" y="176" width="300" height="110" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<text x="50" y="202" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">"transfer-2" BLOCKED</text>
+<text x="50" y="236" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">- waiting to lock &lt;0x…1001&gt;</text>
+<text x="50" y="266" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">- locked &lt;0x…2002&gt;</text>
+<rect x="44" y="80" width="284" height="26" rx="8" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2"/>
+<rect x="44" y="250" width="284" height="26" rx="8" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2"/>
+<path d="M328 93 H344 V263 H328" class="f-line" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+<rect x="44" y="220" width="284" height="26" rx="8" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2"/>
+<rect x="44" y="110" width="284" height="26" rx="8" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2"/>
+<path d="M44 123 H24 V233 H44" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+<text x="500" y="24" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle" font-weight="700">대기 그래프</text>
+<rect x="440" y="60" width="120" height="40" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="500" y="86" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">transfer-1</text>
+<rect x="440" y="220" width="120" height="40" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="500" y="246" class="f-mono" fill="#0f172a" font-size="13" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">transfer-2</text>
+<path d="M540 102 C594 140 594 180 540 216" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#deadlock-adv-dump-graph-head)"/>
+<path d="M460 218 C406 180 406 140 460 104" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2.5" marker-end="url(#deadlock-adv-dump-graph-bad)"/>
+<text x="320" y="304" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">파란 줄 두 개 → 파란 화살표(2002번을 기다림)</text>
+<text x="320" y="322" class="f-bad" fill="#dc2626" font-size="12" text-anchor="middle" font-weight="700">빨간 줄 두 개 → 빨간 화살표(1001번을 기다림)</text>
+</svg>

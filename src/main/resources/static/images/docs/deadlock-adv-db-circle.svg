@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 392" role="img" aria-label="위쪽에 송금 서버 세 대가 있고 그 위에 지워진 안내문 '번호가 작은 계좌부터'가 회색으로 남아 있다. 서버 1은 1001 다음 2002, 서버 2는 2002 다음 1001 순서로 DB에 쿼리를 보낸다. 아래 DB 안에서 세션 A는 행 1001을 쥐고 행 2002를, 세션 B는 행 2002를 쥐고 행 1001을 기다려 원이 닫히고, DB가 한 세션을 Deadlock found when trying to get lock 오류로 롤백한다">
+<defs><marker id="deadlock-adv-db-circle-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-dot" fill="#4f46e5"/></marker><marker id="deadlock-adv-db-circle-bad" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-bad" fill="#dc2626"/></marker></defs>
+<rect x="40" y="12" width="560" height="30" rx="6" class="f-house" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="320" y="32" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">옛 안내문: 번호가 작은 계좌부터 (코드에서 지워짐)</text>
+<rect x="40" y="58" width="140" height="44" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="110" y="86" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">서버 1</text>
+<rect x="250" y="58" width="140" height="44" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="320" y="86" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">서버 2</text>
+<rect x="460" y="58" width="140" height="44" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="530" y="86" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">서버 3</text>
+<path d="M110 104 V150" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#deadlock-adv-db-circle-head)"/>
+<text x="122" y="132" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">1001 → 2002</text>
+<path d="M320 104 V150" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#deadlock-adv-db-circle-head)"/>
+<text x="332" y="132" class="f-mono" fill="#0f172a" font-size="12" font-family="ui-monospace, Consolas, monospace">2002 → 1001</text>
+<text x="530" y="132" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">다른 송금</text>
+<rect x="40" y="154" width="560" height="198" rx="10" class="f-ledger" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+<text x="56" y="176" class="f-acc" fill="#4f46e5" font-size="14" font-weight="700">DB</text>
+<rect x="120" y="210" width="140" height="40" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="190" y="236" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">행 1001</text>
+<rect x="380" y="210" width="140" height="40" rx="6" class="f-dev" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<text x="450" y="236" class="f-t" fill="#0f172a" font-size="14" text-anchor="middle" font-weight="700">행 2002</text>
+<text x="190" y="268" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">세션 A가 쥠</text>
+<text x="450" y="268" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">세션 B가 쥠</text>
+<path d="M230 208 C270 172 360 172 400 206" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#deadlock-adv-db-circle-head)"/>
+<text x="315" y="176" class="f-acc" fill="#4f46e5" font-size="12" text-anchor="middle" font-weight="700">A가 기다림</text>
+<path d="M420 276 C380 300 260 300 220 278" class="f-strike" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#deadlock-adv-db-circle-bad)"/>
+<text x="320" y="312" class="f-bad" fill="#dc2626" font-size="12" text-anchor="middle" font-weight="700">B가 기다림 → 원이 닫힘</text>
+<rect x="310" y="318" width="280" height="28" rx="6" class="f-panel" fill="#f1f5f9"/>
+<text x="450" y="337" class="f-bad" fill="#dc2626" font-size="11" text-anchor="middle" font-weight="700" font-family="ui-monospace, Consolas, monospace">Deadlock found when trying to get lock</text>
+<text x="56" y="340" class="f-bad" fill="#dc2626" font-size="12" font-weight="700">DB가 한 세션을 롤백</text>
+<text x="320" y="380" class="f-sm" fill="#556274" font-size="13" text-anchor="middle">안내문은 서버 위에 있고, 원은 DB 안에서 닫힌다</text>
+</svg>
