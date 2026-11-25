@@ -13,7 +13,7 @@
 <text x="310" y="218" class="f-sm" fill="#556274" font-size="12" text-anchor="middle">권한 70개를 담은 서명 쿠키</text>
 <rect x="92" y="228" width="178" height="42" rx="6" class="f-paper" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="5 4"/>
 <text x="104" y="246" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">4,096바이트 넘음</text>
-<text x="104" y="264" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">→ 조용히 버린다</text>
+<text x="104" y="264" class="f-bad" fill="#dc2626" font-size="13" font-weight="700">→ 알리지 않고 버린다</text>
 <path d="M80 300 H540" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#cookie-adv-size-loop-head)"/>
 <text x="310" y="292" class="f-t" fill="#0f172a" font-size="13" text-anchor="middle">③ 다음 요청 · Cookie 없음</text>
 <path d="M540 340 H80" class="f-arrow" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#cookie-adv-size-loop-head)"/>
