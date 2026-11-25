@@ -188,13 +188,14 @@ class DocumentDraftValidatorTest {
     @Test
     @DisplayName("영어 꾸밈말을 글자대로 옮긴 말은 경고로 알린다 — 같은 말은 한 번만 적는다")
     void warnsLiteralAdjectives() {
-        String content = body(TITLE, "풀은 10분 넘게 쉰 연결을 들고 있었다. 쉰 연결로 보낸 요청은 조용한 실패로 끝난다.");
+        String content = body(TITLE, "풀은 10분 넘게 쉰 연결을 들고 있었다. 쉰 연결로 보낸 요청은 조용한 실패로 끝난다. "
+                + "방화벽은 패킷을 조용히 버린다. 연결이 2시간 조용하면 확인을 보낸다.");
 
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content))
                 .singleElement()
                 .satisfies(c -> {
                     assertThat(c.isBlocking()).isFalse();
-                    assertThat(c.message()).contains("'쉰 연결', '조용한 실패'");
+                    assertThat(c.message()).contains("'쉰 연결', '조용한 실패', '조용히', '조용하면'");
                 });
     }
 
