@@ -152,6 +152,7 @@ public final class DocumentDraftValidator {
         checkDuplicateDiagrams(body, checks);
         checkFigureRequests(body, checks);
         checkHtmlTags(body, checks);
+        checkLiteralAdjectives(body, checks);
         checkSectionOpeners(structure, checks);
         checkReferences(body, structure, checks);
         checkTopicBoxPresent(body, checks);
@@ -847,6 +848,31 @@ public final class DocumentDraftValidator {
         if (m.find()) {
             checks.add(DraftCheck.blocking(
                     "코드블록 밖에 HTML 태그가 있습니다(문서 화면에서 그대로 실행됩니다): " + m.group()));
+        }
+    }
+
+    /**
+     * 영어 꾸밈말을 글자대로 옮긴 말(idle → 쉰·조용한, silent → 조용한, hot → 뜨거운, stale → 상한).
+     * 뒤에 오는 명사까지 묶어 찾는다. "쉰"만 찾으면 "쉰 개" 같은 수까지 걸린다.
+     */
+    private static final Pattern LITERAL_ADJECTIVE = Pattern.compile(
+            "(?<![가-힣])(?:(?:쉰|쉬는|조용한)\\s+(?:연결|커넥션|소켓|세션|줄|흐름)"
+                    + "|조용한\\s+(?:실패|오류|미스|손실|훼손)"
+                    + "|뜨거운\\s+(?:키|데이터|행|파티션)"
+                    + "|상한\\s+(?:데이터|값|캐시|읽기))");
+
+    /** 윤문이 놓친 직역 꾸밈말을 검수자에게 알린다(2026-11-25). 코드 속 문자열은 보지 않는다. */
+    private static void checkLiteralAdjectives(String body, List<DraftCheck> checks) {
+        String prose = INLINE_CODE.matcher(FENCED_CODE.matcher(body).replaceAll("")).replaceAll("");
+        Matcher m = LITERAL_ADJECTIVE.matcher(prose);
+        java.util.Set<String> found = new java.util.LinkedHashSet<>();
+        while (m.find()) {
+            found.add(m.group().replaceAll("\\s+", " "));
+        }
+        if (!found.isEmpty()) {
+            checks.add(DraftCheck.warning(
+                    "영어 꾸밈말을 글자대로 옮긴 말이 있습니다: %s. 상태를 풀어 쓰세요 — 예: '쉰 연결' → '오래 쓰지 않은 연결'."
+                            .formatted(String.join(", ", found.stream().map(s -> "'" + s + "'").toList()))));
         }
     }
 

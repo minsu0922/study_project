@@ -183,6 +183,35 @@ class DocumentDraftValidatorTest {
         assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content)).isEmpty();
     }
 
+    /* ── 직역 꾸밈말 ─────────────────────────────────────────── */
+
+    @Test
+    @DisplayName("영어 꾸밈말을 글자대로 옮긴 말은 경고로 알린다 — 같은 말은 한 번만 적는다")
+    void warnsLiteralAdjectives() {
+        String content = body(TITLE, "풀은 10분 넘게 쉰 연결을 들고 있었다. 쉰 연결로 보낸 요청은 조용한 실패로 끝난다.");
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content))
+                .singleElement()
+                .satisfies(c -> {
+                    assertThat(c.isBlocking()).isFalse();
+                    assertThat(c.message()).contains("'쉰 연결', '조용한 실패'");
+                });
+    }
+
+    @Test
+    @DisplayName("수를 세는 '쉰'과 코드 속 문자열, 사람에 쓴 '조용한'은 걸지 않는다")
+    void ignoresLiteralAdjectiveLookalikes() {
+        String content = body(TITLE, """
+                연결 쉰 개를 미리 열어 둔다. 조용한 사무실에서도 같다.
+
+                ```
+                log("조용한 연결")
+                ```
+                """);
+
+        assertThat(DocumentDraftValidator.validate(TITLE, "cache-strategy", content)).isEmpty();
+    }
+
     /* ── 필수 절 ─────────────────────────────────────────────── */
 
     @Test
