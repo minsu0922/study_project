@@ -148,7 +148,8 @@ sequenceDiagram
     R->>R: git commit · push
 ```
 
-1. `_topics.json`(주제 대기열)과 `_topic-usage.json`(사용 기록)을 합쳐 차례가 된 주제를 꺼낸다. 비었으면 모델이 주제를 고른다.
+1. `_topics.json`(주제 대기열)과 `_topic-usage.json`(사용 기록)을 합쳐 차례가 된 주제를 꺼낸다. 입문편·심화편 「글의 주제」를 다 쓴 주제만 꺼낸다.
+   그런 주제가 없거나 대기열이 비었으면 그날은 문서를 만들지 않는다(2026-11-24부터. 전에는 모델이 주제를 골랐다).
 2. `_existing-documents.json`을 읽어 이미 있는 제목을 피하게 한다.
 3. 입문편을 만들고 그 전문을 넘겨 심화편을 만든다. 심화편이 실패해도 입문편은 저장한다.
 4. 두 편을 `generated/documents/<날짜>.json`에 쓴다.
