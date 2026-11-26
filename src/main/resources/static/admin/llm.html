@@ -1367,8 +1367,9 @@ async function loadDocDrafts() {
           <a class="btn" href="/admin/doc-review.html?id=${d.id}" target="_blank" rel="noopener">본문과 지적을 나란히 보며 검수 ↗</a>
           ${factStatusOf(d)}
           <span class="meta">독자 점검 ${d.readerFindings == null ? "안 돌림" : d.readerFindings.filter(f => f.status === "OPEN").length + "건"}</span>
+          ${polishBadgeOf(d)}
         </div>
-        ${blockingBox}${warningBox}
+        ${blockingBox}${warningBox}${polishBoxOf(d)}
         ${sectionOutlineOf(d.contentMd)}
         <div class="draft-diagrams" id="diag-${d.id}"></div>
         <div class="doc-preview-bar">
@@ -1399,6 +1400,31 @@ async function loadDocDrafts() {
 
   renderPager("dd", data);
   syncDocBulkBar();   // 다시 그리면 체크가 풀린다. 이유는 loadDrafts 끝 주석과 같다
+}
+
+/* 윤문 결과(V50). 원고 그대로 나간 곳은 번역투·「무대」가 남아 있을 수 있어 검수할 때 알아야 한다.
+ * 윤문을 안 돌린 초안(polishResult == null)은 아무것도 그리지 않는다. */
+function polishBadgeOf(d) {
+  const p = d.polishResult;
+  if (p == null) return "";
+  if (!p.applied) return `<span class="badge orange">윤문 안 됨</span>`;
+  const kept = p.kept ?? [];
+  return kept.length ? `<span class="badge orange">윤문 일부 적용</span>` : `<span class="badge green">윤문 적용</span>`;
+}
+
+function polishBoxOf(d) {
+  const p = d.polishResult;
+  if (p == null) return "";
+  if (!p.applied) {
+    return `<div class="meta" style="margin:8px 0">${icon("alert")} 원고 그대로입니다 — ${escapeHtml(p.reason ?? "")}</div>`;
+  }
+  const kept = p.kept ?? [];
+  if (!kept.length) return "";
+  return `
+      <div class="meta" style="margin:8px 0">
+        ${icon("alert")} 원고로 둔 곳 ${kept.length}곳
+        <ul style="margin:4px 0 0 18px">${kept.map(k => `<li>${escapeHtml(k)}</li>`).join("")}</ul>
+      </div>`;
 }
 
 /** 검수함 카드에는 오류가 있는지만 적는다. 내용 확인과 수정은 나란히 검수 화면에서 한다 */

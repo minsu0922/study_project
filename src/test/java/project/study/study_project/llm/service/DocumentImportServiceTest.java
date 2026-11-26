@@ -424,6 +424,38 @@ class DocumentImportServiceTest {
         assertThat(capturedDraft().getReaderFindingsJson()).isNull();
     }
 
+    @Test
+    @DisplayName("윤문 결과는 그 편 초안에 담기고, 칸이 없는 옛 파일은 null이다")
+    void importStoresPolishResultPerEdition() throws Exception {
+        GeneratedDocumentItem beginner = itemWith("캐시 전략", "cache-strategy", "입문 문장이다.");
+        GeneratedDocumentItem advanced = itemWith("캐시 심화", "cache-strategy-advanced", "심화 문장이다.");
+        var results = new project.study.study_project.llm.dto.PolishResults(
+                new project.study.study_project.llm.dto.PolishResults.Edition(true, null,
+                        List.of("보존 대조 실패: 수치가 다릅니다 (「## 무엇인가」 아래)")),
+                new project.study.study_project.llm.dto.PolishResults.Edition(false, "윤문 호출 실패: 시간 초과", List.of()));
+        GeneratedDocumentFile file = new GeneratedDocumentFile("테스트용", "2026-11-26", "2026-11-26T00:00:00Z",
+                TestDomains.SYSTEM_DESIGN, "claude-opus-5", beginner, advanced)
+                .withPolished(beginner, advanced, null, null, results);
+        Path path = tempDir.resolve("2026-11-26.json");
+        objectMapper.writeValue(path.toFile(), file);
+
+        service.importFile(path);
+
+        ArgumentCaptor<GeneratedDocumentDraft> captor = ArgumentCaptor.forClass(GeneratedDocumentDraft.class);
+        verify(draftRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(objectMapper.readValue(captor.getAllValues().get(0).getPolishResultJson(),
+                project.study.study_project.llm.dto.PolishResults.Edition.class)).isEqualTo(results.beginner());
+        assertThat(captor.getAllValues().get(1).getPolishResultJson()).contains("윤문 호출 실패");
+    }
+
+    @Test
+    @DisplayName("파일에 윤문 결과 칸이 없으면 초안의 윤문 결과는 null이다")
+    void importWithoutPolishResultLeavesNull() throws Exception {
+        service.importFile(writeDocumentFile("2026-08-12.json", "claude-opus-5",
+                item("캐시 전략", "cache-strategy", List.of())));
+        assertThat(capturedDraft().getPolishResultJson()).isNull();
+    }
+
     private Path writeFileWithFacts(String filename, GeneratedDocumentItem document, GeneratedDocumentItem advanced,
                                     List<project.study.study_project.llm.client.FactCheckFinding> facts) throws Exception {
         GeneratedDocumentFile file = new GeneratedDocumentFile(

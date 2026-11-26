@@ -27,6 +27,7 @@ import project.study.study_project.llm.client.ClaudeDocumentFactChecker;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.dto.DraftFactFinding;
 import project.study.study_project.llm.dto.DraftReaderFinding;
+import project.study.study_project.llm.dto.PolishResults;
 import project.study.study_project.llm.client.ReaderFinding;
 import project.study.study_project.llm.support.SuggestionZones;
 import project.study.study_project.llm.support.TextSpans;
@@ -301,7 +302,21 @@ public class LlmDocumentService {
                 d.getContentMd() == null ? 0 : d.getContentMd().length(),
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedDocumentId(),
                 d.getCreatedAt(), d.getReviewedAt(),
-                checks, DocumentDraftValidator.hasBlocking(checks), readFactFindings(d), readReaderFindings(d));
+                checks, DocumentDraftValidator.hasBlocking(checks), readFactFindings(d), readReaderFindings(d),
+                readPolishResult(d));
+    }
+
+    /** 저장된 윤문 결과를 읽는다. 안 돌렸으면 {@code null}. 읽다 실패해도 {@code null} — 검수 화면은 열려야 한다 */
+    private PolishResults.Edition readPolishResult(GeneratedDocumentDraft d) {
+        if (d.getPolishResultJson() == null) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(d.getPolishResultJson(), PolishResults.Edition.class);
+        } catch (JsonProcessingException e) {
+            log.warn("문서 초안 #{}의 윤문 결과를 읽지 못함: {}", d.getId(), e.getMessage());
+            return null;
+        }
     }
 
     /** 검수 화면(나란히 검수)이 초안 하나를 받는다. */

@@ -102,6 +102,11 @@ public class GeneratedDocumentDraft {
     @Column(name = "reader_findings_json")
     private String readerFindingsJson;
 
+    /** 그 편의 윤문 결과 {@code PolishResults.Edition} JSON(V50). 윤문을 안 돌렸으면 {@code null}. 승인을 막지 않는다. */
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    @Column(name = "polish_result_json")
+    private String polishResultJson;
+
     private GeneratedDocumentDraft(DomainCode domain, String title, String slug,
                                    String contentMd, String tagsJson, String model) {
         this.domain = domain;
@@ -127,6 +132,11 @@ public class GeneratedDocumentDraft {
     /** 흡수할 때 배치 파일의 그 편 독자 점검 지적을 담는다. */
     public void recordReaderFindings(String readerFindingsJson) {
         this.readerFindingsJson = readerFindingsJson;
+    }
+
+    /** 흡수할 때 배치 파일의 그 편 윤문 결과를 담는다. */
+    public void recordPolishResult(String polishResultJson) {
+        this.polishResultJson = polishResultJson;
     }
 
     /**

@@ -11,6 +11,7 @@ import project.study.study_project.llm.client.FactCheckFinding.Confidence;
 import project.study.study_project.llm.client.FactCheckFinding.Kind;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
 import project.study.study_project.llm.dto.GeneratedDocumentFile;
+import project.study.study_project.llm.dto.PolishResults;
 import project.study.study_project.TestDomains;
 
 import java.nio.file.Files;
@@ -81,7 +82,7 @@ class DocumentFactFindingsTest {
     void polishedFileRoundTripsStrictly(@TempDir Path tmp) throws Exception {
         GeneratedDocumentFile polished = file().withPolished(
                 item("test-slug", "# 입문편\n\n## 무엇인가\n고친 정의.\n"), null,
-                item("test-slug", "# 입문편\n\n## 무엇인가\n정의.\n"), null);
+                item("test-slug", "# 입문편\n\n## 무엇인가\n정의.\n"), null, null);
         Path out = tmp.resolve("x.json");
         Files.writeString(out, project.study.study_project.llm.support.FileFormats.toJson(
                 project.study.study_project.llm.support.JsonMappers.STRICT,
@@ -116,7 +117,7 @@ class DocumentFactFindingsTest {
     @DisplayName("윤문한 파일에 사실 검수 지적을 붙여도 원본 칸이 남는다")
     void findingsKeepOriginals() {
         GeneratedDocumentFile polished = file().withPolished(
-                item("test-slug", "고친 본문"), null, item("test-slug", "원고"), null);
+                item("test-slug", "고친 본문"), null, item("test-slug", "원고"), null, null);
 
         GeneratedDocumentFile withFindings = polished.withFactFindings(List.of(FINDING));
 
@@ -150,7 +151,7 @@ class DocumentFactFindingsTest {
 
         assertThat(readStrict(write(tmp, file)).readerFindings()).isEqualTo(reader);
         assertThat(file.withFactFindings(List.of(FINDING)).readerFindings()).isEqualTo(reader);
-        assertThat(file.withPolished(item("test-slug", "고친 본문"), null, item("test-slug", "원고"), null)
+        assertThat(file.withPolished(item("test-slug", "고친 본문"), null, item("test-slug", "원고"), null, null)
                 .readerFindings()).isEqualTo(reader);
     }
 
@@ -190,15 +191,42 @@ class DocumentFactFindingsTest {
     }
 
     @Test
-    @DisplayName("두 편 다 원본 유지면 파일을 다시 쓰지 않는다")
-    void nothingAppliedLeavesFile(@TempDir Path tmp) throws Exception {
+    @DisplayName("두 편 다 원본 유지면 본문·원본 칸은 그대로 두고 윤문 결과만 싣는다 — 검수함이 사유를 보여 준다")
+    void nothingAppliedWritesOnlyResults(@TempDir Path tmp) throws Exception {
         Path out = write(tmp, twoEditions());
-        String before = Files.readString(out);
 
-        GeneratedDocumentFile result = DocumentBatch.applyPolish(out, twoEditions(), outcomes(false, false));
+        DocumentBatch.applyPolish(out, twoEditions(), outcomes(false, false));
 
-        assertThat(Files.readString(out)).isEqualTo(before);
-        assertThat(result).isEqualTo(twoEditions());
+        GeneratedDocumentFile read = readStrict(out);
+        assertThat(read.document()).isEqualTo(twoEditions().document());
+        assertThat(read.originalDocument()).isNull();
+        assertThat(read.polishResults().beginner())
+                .isEqualTo(new PolishResults.Edition(false, "수치가 다릅니다", List.of()));
+    }
+
+    @Test
+    @DisplayName("원고로 둔 곳이 있는 윤문 결과가 엄격한 읽기로 왕복하고, 사실 검수를 붙여도 남는다")
+    void polishResultsRoundTripAndSurviveFindings(@TempDir Path tmp) throws Exception {
+        Path out = write(tmp, twoEditions());
+        var outcomes = new BothEditions.Pair<>(
+                new PolishOutcome(item("test-slug", "입문 윤문"), true, null, List.of("수치가 다릅니다 (「## 무엇인가」 아래)")),
+                (PolishOutcome) null);
+
+        GeneratedDocumentFile polished = DocumentBatch.applyPolish(out, twoEditions(), outcomes);
+        DocumentBatch.attachFactFindings(out, polished, List.of(FINDING));
+
+        PolishResults results = readStrict(out).polishResults();
+        assertThat(results.beginner().kept()).containsExactly("수치가 다릅니다 (「## 무엇인가」 아래)");
+        assertThat(results.advanced()).isNull();
+    }
+
+    @Test
+    @DisplayName("윤문 결과 칸이 없는 옛 문서 파일도 엄격한 읽기로 읽히고, 그 칸은 null이다")
+    void oldFileWithoutPolishResultsStillReads(@TempDir Path tmp) throws Exception {
+        Path out = write(tmp, file());
+
+        assertThat(MAPPER.readTree(out.toFile()).has("polishResults")).isFalse();
+        assertThat(readStrict(out).polishResults()).isNull();
     }
 
     @Test

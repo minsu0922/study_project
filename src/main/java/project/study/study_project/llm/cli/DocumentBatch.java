@@ -12,6 +12,7 @@ import project.study.study_project.llm.client.DocumentEdition;
 import project.study.study_project.llm.client.DocumentFactChecker;
 import project.study.study_project.llm.client.DocumentReaderCheck;
 import project.study.study_project.llm.client.ReaderFinding;
+import project.study.study_project.llm.dto.PolishResults;
 import project.study.study_project.llm.dto.ReaderFindings;
 import project.study.study_project.llm.client.FactCheckFinding;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
@@ -299,8 +300,9 @@ final class DocumentBatch {
     }
 
     /**
-     * 채택된 윤문본으로 문서 파일을 바꿔 쓴다. 원본 칸에는 채택된 편의 원고만 넣는다.
-     * 둘 다 원본 유지면 쓰지 않는다. 쓰기에 실패하면 알리고 원고 파일을 그대로 쓴다 — 문제 배치가 그 파일을 읽는다.
+     * 윤문 결과로 문서 파일을 바꿔 쓴다. 원본 칸에는 채택된 편의 원고만 넣는다.
+     * 두 편 다 원고로 둬도 결과 칸({@code polishResults})은 싣는다 — 검수함이 "윤문 안 됨"과 사유를 보여 준다.
+     * 쓰기에 실패하면 알리고 원고 파일을 그대로 쓴다 — 문제 배치가 그 파일을 읽는다.
      *
      * @return 이후 단계가 이어 쓸 파일 내용(사실 검수 지적이 이 위에 붙는다)
      */
@@ -310,20 +312,22 @@ final class DocumentBatch {
         PolishOutcome a = outcomes.advanced();
         boolean beginnerApplied = b != null && b.applied();
         boolean advancedApplied = a != null && a.applied();
-        if (!beginnerApplied && !advancedApplied) {
-            return file;
-        }
         GeneratedDocumentFile polished = file.withPolished(
                 beginnerApplied ? b.chosen() : file.document(),
                 advancedApplied ? a.chosen() : file.advancedDocument(),
                 beginnerApplied ? file.document() : null,
-                advancedApplied ? file.advancedDocument() : null);
+                advancedApplied ? file.advancedDocument() : null,
+                new PolishResults(resultOf(b), resultOf(a)));
         String error = replaceFile(outFile, polished);
         if (error != null) {
             BatchReports.announce("⚠️ 윤문본을 파일에 싣지 못해 원고를 그대로 씁니다 (%s)".formatted(error));
             return file;
         }
         return polished;
+    }
+
+    private static PolishResults.Edition resultOf(PolishOutcome outcome) {
+        return outcome == null ? null : new PolishResults.Edition(outcome.applied(), outcome.reason(), outcome.kept());
     }
 
     /**
