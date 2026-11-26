@@ -466,9 +466,22 @@ class ClaudeDocumentGeneratorTest {
     void analogySentenceStartsWithMarker() {
         assertThat(ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT)
                 .as("2026-11-19 TCP·HTTP 시험 윤문: \"수도관 앞에서는…\"이 실제 장면처럼 읽혔다")
-                .contains("비유 문장은 비유임을 드러낸다").contains("문장 앞에 와도, 끝에 와도 된다");
+                .contains("비유 문장은 비유임을 드러낸다")
+                .as("알림말 고르기·횟수는 윤문이 맡는다. 생성은 \"되풀이 금지\", 윤문은 \"두 번까지\"로 어긋났었다(2026-11-26)")
+                .contains("다음 단계의 윤문이 맡는다").doesNotContain("같은 알림말을 되풀이하지 마라");
         assertThat(ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT)
-                .contains("비유 문장은 비유임을 드러낸다").contains("문장 앞에 와도, 끝에 와도 된다");
+                .contains("비유 문장은 비유임을 드러낸다")
+                .contains("다음 단계의 윤문이 맡는다").doesNotContain("같은 알림말을 되풀이하지 마라");
+    }
+
+    @Test
+    @DisplayName("빈말·예고 지우기는 윤문만 맡는다 — 두 프롬프트에 같은 규칙을 두지 않는다")
+    void fillerAndPreviewBelongToPolish() {
+        for (String prompt : new String[] {ClaudeDocumentGenerator.BEGINNER_SYSTEM_PROMPT, ClaudeDocumentGenerator.ADVANCED_SYSTEM_PROMPT}) {
+            assertThat(prompt)
+                    .contains("번역투·빈말·예고·문장 길이·줄바꿈 같은 문장 다듬기는 다음 단계의 윤문이 맡는다")
+                    .doesNotContain("신기할 일도 아니다").doesNotContain("이제 ~를 살펴보자");
+        }
     }
 
     /**
