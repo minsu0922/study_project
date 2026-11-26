@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 /**
  * 윤문 전후에 내용이 그대로인지 코드로 대조한다(설계 docs/superpowers/specs/2026-11-18-document-polish-design.md).
  *
- * <p>윤문은 문장만 고치는 단계라, 여기 항목이 하나라도 달라지면 배치는 그 편의 원본을 쓴다.
+ * <p>윤문은 문장만 고치는 단계라, 여기 항목이 달라진 본문 덩어리는 원고로 둔다({@link PolishMerge}).
  * 사실 검수는 "틀린 말"만 잡고 "빠진 말"은 못 잡아서 이 대조가 따로 있다.
  */
 public final class PolishPreservation {
@@ -49,9 +49,20 @@ public final class PolishPreservation {
         String after = polished == null ? "" : polished;
 
         // 소제목 목록만으로는 앞에 붙은 안내문을 못 잡는다
-        if (!firstLine(before).equals(firstLine(after))) {
+        if (!sameFirstLine(before, after)) {
             out.add("첫 줄이 다릅니다: " + firstLine(after));
         }
+        out.addAll(contentDifferences(before, after));
+        return out;
+    }
+
+    public static boolean sameFirstLine(String original, String polished) {
+        return firstLine(original == null ? "" : original).equals(firstLine(polished == null ? "" : polished));
+    }
+
+    /** 첫 줄을 뺀 대조. 본문 덩어리마다 대조할 때도 쓴다({@link PolishMerge#proseDifferences}) */
+    static List<String> contentDifferences(String before, String after) {
+        List<String> out = new ArrayList<>();
         compareList(out, "코드 블록", all(FENCE, before), all(FENCE, after));
         String proseBefore = FENCE.matcher(before).replaceAll("");
         String proseAfter = FENCE.matcher(after).replaceAll("");

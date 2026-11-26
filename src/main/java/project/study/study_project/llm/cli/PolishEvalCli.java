@@ -88,7 +88,11 @@ public final class PolishEvalCli {
             // 원본을 유지했으면 같은 본문을 두 번 검수할 이유가 없다
             factsAfter = outcome.applied() ? checker.check(doc.title(), after, edition).size() : factsBefore;
         }
-        return new Row(file, edition.getDisplayName(), outcome.applied(), outcome.reason(),
+        // 채택했는데 원고로 둔 곳이 있으면 그 사유를 같은 칸에 싣는다
+        String reason = outcome.applied()
+                ? (outcome.kept().isEmpty() ? null : PolishStep.keptSummary(outcome))
+                : outcome.reason();
+        return new Row(file, edition.getDisplayName(), outcome.applied(), reason,
                 warningsBefore, warningsAfter, factsBefore, factsAfter);
     }
 
@@ -98,7 +102,9 @@ public final class PolishEvalCli {
                 .append("|---|---|---|---|---|---|---|\n");
         for (Row r : rows) {
             sb.append("| %s | %s | %s | %d | %d | %s | %s |\n".formatted(r.file(), r.edition(),
-                    r.applied() ? "채택" : "원본 유지 — " + r.reason(), r.warningsBefore(), r.warningsAfter(),
+                    !r.applied() ? "원본 유지 — " + r.reason()
+                            : r.reason() == null ? "채택" : "채택 — 원고로 둔 곳: " + r.reason(),
+                    r.warningsBefore(), r.warningsAfter(),
                     dash(r.factsBefore()), dash(r.factsAfter())));
         }
         long applied = rows.stream().filter(Row::applied).count();

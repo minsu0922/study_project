@@ -97,6 +97,68 @@ class PolishStepTest {
         assertThat(outcome.reason()).startsWith("새 형식 경고");
     }
 
+    private static final String TWO_SECTIONS = """
+            # 이름 풀이
+
+            ## 무엇인가
+
+            리졸버에 대해 설명하는 것이다. 리졸버는 300초 동안 답을 저장한다.
+
+            ## 왜 필요한가
+
+            대부분의 이름은 하루에 한 번도 바뀌지 않는 것이다.
+            """;
+
+    private static final GeneratedDocumentItem TWO =
+            new GeneratedDocumentItem("이름 풀이", "name-resolution", TWO_SECTIONS, List.of("network"));
+
+    @Test
+    @DisplayName("조건어가 빠진 덩어리만 원고로 두고 나머지 윤문은 받는다 — 전에는 한 곳 때문에 편 전체를 버렸다")
+    void keepsOnlyFailingProseBlock() {
+        String polished = TWO_SECTIONS.replace("리졸버에 대해 설명하는 것이다.", "리졸버를 설명한다.")
+                .replace("대부분의 이름은 하루에 한 번도 바뀌지 않는 것이다.", "이름은 하루에 한 번도 바뀌지 않는다.");
+
+        PolishOutcome outcome = PolishStep.decide(returning(polished), TWO, null);
+
+        assertThat(outcome.applied()).isTrue();
+        assertThat(outcome.chosen().contentMd())
+                .contains("리졸버를 설명한다.")
+                .contains("대부분의 이름은 하루에 한 번도 바뀌지 않는 것이다.");
+        assertThat(outcome.kept()).singleElement().asString()
+                .startsWith("보존 대조 실패").contains("대부분").contains("「## 왜 필요한가」 아래");
+    }
+
+    @Test
+    @DisplayName("새 형식 경고를 낸 덩어리만 원고로 둔다")
+    void keepsOnlyBlockWithNewWarning() {
+        String polished = TWO_SECTIONS.replace("리졸버에 대해 설명하는 것이다.", "<mark>리졸버</mark>를 설명한다.")
+                .replace("바뀌지 않는 것이다.", "바뀌지 않는다.");
+
+        PolishOutcome outcome = PolishStep.decide(returning(polished), TWO, null);
+
+        assertThat(outcome.applied()).isTrue();
+        assertThat(outcome.chosen().contentMd())
+                .contains("리졸버에 대해 설명하는 것이다.").contains("바뀌지 않는다.").doesNotContain("<mark>");
+        assertThat(outcome.kept()).singleElement().asString().startsWith("새 형식 경고").contains("「## 무엇인가」 아래");
+    }
+
+    @Test
+    @DisplayName("앞에 안내문을 붙인 응답은 편 전체를 원본으로 둔다 — 첫 덩어리로 받아들이면 안내문이 본문에 남는다")
+    void keepsOriginalWhenResponseIsPrefaced() {
+        PolishOutcome outcome = PolishStep.decide(returning("다음은 윤문본입니다.\n\n" + TWO_SECTIONS), TWO, null);
+
+        assertThat(outcome.applied()).isFalse();
+        assertThat(outcome.reason()).startsWith("보존 대조 실패").contains("첫 줄");
+    }
+
+    @Test
+    @DisplayName("요약 줄은 원고로 둔 곳을 세 곳까지 적는다")
+    void summaryLineListsKeptBlocks() {
+        PolishOutcome partial = new PolishOutcome(ORIGINAL, true, null, List.of("a", "b", "c", "d"));
+
+        assertThat(PolishStep.summaryLine("입문편", partial)).isEqualTo("✨ 입문편 윤문 적용 — 원고로 둔 곳 4곳: a; b; c 외 1곳");
+    }
+
     @Test
     @DisplayName("원본에도 있던 경고는 숫자만 달라도 새 경고가 아니다")
     void sameWarningWithDifferentNumberIsNotNew() {
