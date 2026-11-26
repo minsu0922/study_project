@@ -5,6 +5,7 @@ import com.anthropic.core.ObjectMappers;
 import com.anthropic.core.http.StreamResponse;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.OutputConfig;
 import com.anthropic.models.messages.StopReason;
 import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.anthropic.models.messages.batches.BatchCreateParams;
@@ -138,6 +139,19 @@ public final class ClaudeCalls {
      *
      * @param label 비용 요약에 찍힐 이름("문서 생성", "사실 검수" 등)
      */
+    /**
+     * 구조화 출력 요청에 사고 수준(effort)을 더한다. SDK 빌더는 outputConfig를 두 번 부르면 예외를 던지고,
+     * 클래스로 출력 형식을 정하는 쪽에는 effort 자리가 없다. 그래서 완성된 요청의 output_config를 고쳐 다시 감싼다.
+     */
+    public static <T> StructuredMessageCreateParams<T> withEffort(StructuredMessageCreateParams<T> params,
+                                                                  OutputConfig.Effort effort) {
+        MessageCreateParams raw = params.rawParams();
+        OutputConfig config = raw.outputConfig().map(OutputConfig::toBuilder).orElseGet(OutputConfig::builder)
+                .effort(effort)
+                .build();
+        return new StructuredMessageCreateParams<>(params.outputType(), raw.toBuilder().outputConfig(config).build());
+    }
+
     public static <T> Result<T> create(String label, StructuredMessageCreateParams<T> params) {
         MessageCreateParams raw = params.rawParams();
         boolean batched = batchMode;

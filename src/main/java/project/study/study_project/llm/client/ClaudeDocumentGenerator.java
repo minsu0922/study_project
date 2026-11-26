@@ -3,6 +3,7 @@ package project.study.study_project.llm.client;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.OutputConfig;
 import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.anthropic.models.messages.ThinkingConfigAdaptive;
 import lombok.extern.slf4j.Slf4j;
@@ -746,8 +747,14 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
      * {@code ClaudeProblemGenerator}가 업로드 경로를 갈랐을 때 내린 것과 같은 판단이다
      * (양식에 묶인 곳만 가른다).
      */
+    /**
+     * 문서를 쓸 때의 사고 수준. Opus 5.5는 정하지 않으면 medium이다(Opus 5는 high였다).
+     * 두 프롬프트는 high일 때 맞춘 것이라 명시한다. 사고 토큰만큼 출력 요금이 는다.
+     */
+    static final OutputConfig.Effort EFFORT = OutputConfig.Effort.HIGH;
+
     private GeneratedDocumentItem call(String systemPrompt, String userMessage, DocumentEdition edition) {
-        StructuredMessageCreateParams<GeneratedDocumentItem> params = MessageCreateParams.builder()
+        StructuredMessageCreateParams<GeneratedDocumentItem> params = ClaudeCalls.withEffort(MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(MAX_TOKENS)
                 // 개념 문서 쓰기는 "무엇을 넣고 무엇을 뺄지"를 계속 저울질하는 작업이라 사고가 도움이 된다.
@@ -756,7 +763,7 @@ public class ClaudeDocumentGenerator implements DocumentGenerator {
                 .system(systemPrompt)
                 .outputConfig(GeneratedDocumentItem.class)
                 .addUserMessage(userMessage)
-                .build();
+                .build(), EFFORT);
 
         try {
             return java.util.Optional.ofNullable(ClaudeCalls.create(
