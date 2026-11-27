@@ -45,10 +45,13 @@ class TypeMixBatchTest {
     }
 
     @Test
-    @DisplayName("지목 없는 초급에 근거 문서가 있을 때만 섞는다")
+    @DisplayName("지목 없는 초급·중급에 근거 문서가 있을 때만 섞는다")
     void mixOnlyForUnpinnedBeginnerWithSource() {
         assertThat(DraftGeneratorCli.mixFor(Difficulty.BEGINNER, false, DOC, 7).isMixed()).isTrue();
-        assertThat(DraftGeneratorCli.mixFor(Difficulty.INTERMEDIATE, false, DOC, 5)).isNull();
+        assertThat(DraftGeneratorCli.mixFor(Difficulty.INTERMEDIATE, false, DOC, 5).summary())
+                .isEqualTo("객관식 4 · 순서 배열 1");
+        assertThat(DraftGeneratorCli.mixFor(Difficulty.ADVANCED, false, DOC, 3)).isNull();
+        assertThat(DraftGeneratorCli.mixFor(Difficulty.INTERMEDIATE, true, DOC, 5)).isNull();
         assertThat(DraftGeneratorCli.mixFor(Difficulty.BEGINNER, true, DOC, 7)).isNull();
         assertThat(DraftGeneratorCli.mixFor(Difficulty.BEGINNER, false, null, 7)).isNull();
     }

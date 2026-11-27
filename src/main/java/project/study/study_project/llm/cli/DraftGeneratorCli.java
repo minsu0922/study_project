@@ -254,7 +254,7 @@ public final class DraftGeneratorCli {
         // displayName()·hints() 둘 다 파일이 비어 있으면 DefaultDomains로 떨어진다(DomainSettings
         // Javadoc) — 관리 화면을 아직 안 썼거나 파일이 깨졌을 때도 2026-09-21 이전과 같은
         // 프롬프트가 나가야 하므로, 여기서 따로 null 방어를 하지 않는다.
-        // 초급은 한 세트에 유형을 섞는다(2026-11-27). 사람이 유형을 지목했거나 근거가 없으면 지금처럼 하나로 낸다
+        // 초급(11-27)·중급(11-28)은 한 세트에 유형을 섞는다. 사람이 유형을 지목했거나 근거가 없으면 지금처럼 하나로 낸다
         TypeMix mix = mixFor(difficulty, opts.containsKey(BatchOptions.PROBLEM_TYPE_OPT), source, count);
         if (mix != null && mix.isMixed()) {
             System.out.println("유형 구성: " + mix.summary());
@@ -327,12 +327,16 @@ public final class DraftGeneratorCli {
         }
     }
 
-    /** 초급이고, 사람이 유형을 지목하지 않았고, 근거 문서가 있을 때만 유형 구성을 만든다. 아니면 null */
+    /** 초급·중급이고, 사람이 유형을 지목하지 않았고, 근거 문서가 있을 때만 유형 구성을 만든다. 아니면 null */
     static TypeMix mixFor(Difficulty difficulty, boolean typePinned, SourceDocument source, int count) {
-        if (difficulty != Difficulty.BEGINNER || typePinned || source == null) {
+        if (typePinned || source == null) {
             return null;
         }
-        return TypeMix.forBeginner(count, source.contentMd());
+        return switch (difficulty) {
+            case BEGINNER -> TypeMix.forBeginner(count, source.contentMd());
+            case INTERMEDIATE -> TypeMix.forIntermediate(count, source.contentMd());
+            default -> null;
+        };
     }
 
     /** "객관식 4 · OX 1 · 짝짓기 1" — 파일에 실제로 든 유형별 개수 */

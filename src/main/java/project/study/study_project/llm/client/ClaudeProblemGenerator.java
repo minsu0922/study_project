@@ -479,6 +479,11 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         sb.append("- 난이도: ").append(difficultyRule(difficulty)).append('\n');
         if (mix != null && mix.isMixed()) {
             sb.append(typeMixRule(mix));
+            if (difficulty == Difficulty.INTERMEDIATE && mix.counts().containsKey(ProblemType.ORDERING)) {
+                // 시스템 프롬프트의 형태 배분(비교 2·인과 1·판정 1·순서 1)과 맞물리게 한다. 안 적으면 객관식에도 순서형을 또 낸다
+                sb.append("  순서 배열 문제의 questionKind는 SEQUENCE다. 형태 배분의 순서 1개를 이 문제가 맡으므로, ")
+                        .append("객관식은 비교 2·인과 1·판정 1로 낸다.\n");
+            }
         } else {
             sb.append("- 유형: ").append(typeRule(type)).append('\n');
         }

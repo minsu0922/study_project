@@ -66,6 +66,52 @@ public record TypeMix(Map<ProblemType, Integer> counts, Map<ProblemType, List<St
         return new TypeMix(counts, found);
     }
 
+    /**
+     * 중급 세트의 구성. 순서 배열 재료가 있으면 순서 배열 1, 나머지는 객관식이다(사용자 결정, 2026-11-28).
+     * 짝짓기·OX는 넣지 않는다. 심화편 용어 표는 같은 주기 초급의 짝짓기와, 「흔한 오해」는 고급 절과 겹친다.
+     *
+     * @param contentMd 중급 근거 본문(심화편)
+     */
+    public static TypeMix forIntermediate(int count, String contentMd) {
+        Map<ProblemType, Integer> counts = new EnumMap<>(ProblemType.class);
+        Map<ProblemType, List<String>> found = new EnumMap<>(ProblemType.class);
+        if (count >= 2) {
+            // 고급 절은 소제목째 지운 뒤 센다. 힌트의 절 이름은 바로 위 소제목이라 이름만으로는 못 거른다
+            String own = withoutSections(contentMd, ClaudeProblemGenerator.SOURCE_SECTIONS.get(Difficulty.ADVANCED));
+            ProblemTypeHints.of(own).stream()
+                    .filter(h -> ProblemType.ORDERING.name().equals(h.type()))
+                    .findFirst()
+                    .ifPresent(h -> found.put(ProblemType.ORDERING, h.sections()));
+        }
+        counts.put(ProblemType.MULTIPLE_CHOICE, count - found.size());
+        found.keySet().forEach(t -> counts.put(t, 1));
+        return new TypeMix(counts, found);
+    }
+
+    /** headings(예 "## 어떤 때 통하지 않는가")로 시작하는 절을 같거나 높은 수준의 다음 소제목 전까지 지운다 */
+    static String withoutSections(String contentMd, List<String> headings) {
+        if (contentMd == null) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder();
+        int skipLevel = 0;
+        for (String line : contentMd.lines().toList()) {
+            String s = line.strip();
+            int level = s.startsWith("#") ? s.indexOf(' ') : -1;
+            boolean heading = level > 0 && s.substring(0, level).chars().allMatch(c -> c == '#');
+            if (heading && skipLevel > 0 && level <= skipLevel) {
+                skipLevel = 0;
+            }
+            if (heading && skipLevel == 0 && headings.contains(s)) {
+                skipLevel = level;
+            }
+            if (skipLevel == 0) {
+                out.append(line).append('\n');
+            }
+        }
+        return out.toString();
+    }
+
     /** 객관식 밖 유형이 하나라도 있으면 true. false면 지금까지처럼 객관식만 낸다. */
     public boolean isMixed() {
         return counts.keySet().stream().anyMatch(t -> t != ProblemType.MULTIPLE_CHOICE);

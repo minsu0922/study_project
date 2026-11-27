@@ -76,6 +76,43 @@ class TypeMixTest {
     }
 
     @Test
+    @DisplayName("중급은 순서 배열 1 + 나머지 객관식이고, 짝짓기·OX 재료는 쓰지 않는다")
+    void intermediateOrderingOnly() {
+        TypeMix mix = TypeMix.forIntermediate(5, STEPS + GLOSSARY + MYTHS);
+
+        assertThat(mix.summary()).isEqualTo("객관식 4 · 순서 배열 1");
+        assertThat(mix.sections().get(ProblemType.ORDERING)).containsExactly("요금을 멈추는 방법");
+        assertThat(mix.sections()).doesNotContainKeys(ProblemType.MATCHING, ProblemType.OX);
+    }
+
+    @Test
+    @DisplayName("중급은 고급 절 아래(소제목 안 포함)의 번호 목록을 쓰지 않는다")
+    void intermediateSkipsAdvancedSections() {
+        String md = """
+                ## 어떤 때 통하지 않는가
+
+                ### 이 런타임 밖에서만 만나는 것
+
+                1. 가
+                2. 나
+                3. 다
+                4. 라
+
+                ## 면접에서 이렇게 물어본다
+                """;
+
+        assertThat(TypeMix.forIntermediate(5, md).isMixed()).isFalse();
+        assertThat(TypeMix.forIntermediate(5, md + STEPS).sections().get(ProblemType.ORDERING))
+                .containsExactly("요금을 멈추는 방법");
+    }
+
+    @Test
+    @DisplayName("중급도 객관식 하나는 남긴다")
+    void intermediateSmallCount() {
+        assertThat(TypeMix.forIntermediate(1, STEPS).summary()).isEqualTo("객관식 1");
+    }
+
+    @Test
     @DisplayName("재료가 없으면 섞지 않는다")
     void nothing() {
         TypeMix mix = TypeMix.forBeginner(7, "## 절\n\n문단만 있다.");

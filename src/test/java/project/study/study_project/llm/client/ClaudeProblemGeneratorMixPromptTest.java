@@ -54,6 +54,20 @@ class ClaudeProblemGeneratorMixPromptTest {
         assertThat(prompt).contains("「자주 하는 오해」").contains("정답 X").contains("정답 O");
     }
 
+    @Test
+    @DisplayName("중급 섞은 날은 순서 배열이 형태 배분의 순서 몫을 맡는다고 적고, 초급에는 그 줄이 없다")
+    void intermediateOrderingTakesSequenceSlot() {
+        TypeMix mix = new TypeMix(Map.of(ProblemType.MULTIPLE_CHOICE, 4, ProblemType.ORDERING, 1),
+                Map.of(ProblemType.ORDERING, List.of("요금을 멈추는 방법")));
+        String intermediate = generator.buildPrompt(DomainCode.of("CLOUD_INFRA"), Difficulty.INTERMEDIATE,
+                ProblemType.MULTIPLE_CHOICE, 5, List.of(), List.of(), DOC, null, mix);
+
+        assertThat(intermediate).contains("- 유형 구성: 객관식 4 · 순서 배열 1")
+                .contains("순서 배열 문제의 questionKind는 SEQUENCE")
+                .contains("객관식은 비교 2·인과 1·판정 1");
+        assertThat(prompt(MIX)).doesNotContain("questionKind는 SEQUENCE");
+    }
+
     private static GeneratedProblemItem typed(ProblemType t) {
         return new GeneratedProblemItem("q", "", "", "e", List.of(), "", "t", null, "").withType(t);
     }
