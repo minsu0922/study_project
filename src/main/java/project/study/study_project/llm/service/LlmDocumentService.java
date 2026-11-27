@@ -29,6 +29,7 @@ import project.study.study_project.llm.dto.DraftFactFinding;
 import project.study.study_project.llm.dto.DraftReaderFinding;
 import project.study.study_project.llm.dto.PolishResults;
 import project.study.study_project.llm.client.ReaderFinding;
+import project.study.study_project.llm.support.ProblemTypeHints;
 import project.study.study_project.llm.support.SuggestionZones;
 import project.study.study_project.llm.support.TextSpans;
 import project.study.study_project.llm.client.GeneratedDocumentItem;
@@ -303,7 +304,7 @@ public class LlmDocumentService {
                 d.getStatus(), d.getModel(), d.getRejectReason(), d.getApprovedDocumentId(),
                 d.getCreatedAt(), d.getReviewedAt(),
                 checks, DocumentDraftValidator.hasBlocking(checks), readFactFindings(d), readReaderFindings(d),
-                readPolishResult(d));
+                readPolishResult(d), ProblemTypeHints.of(d.getContentMd()));
     }
 
     /** 저장된 윤문 결과를 읽는다. 안 돌렸으면 {@code null}. 읽다 실패해도 {@code null} — 검수 화면은 열려야 한다 */

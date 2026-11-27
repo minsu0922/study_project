@@ -3,6 +3,7 @@ package project.study.study_project.llm.dto;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.support.DraftCheck;
+import project.study.study_project.llm.support.ProblemTypeHints;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.List;
  * @param factFindings  AI 사실 검수 지적. 검수를 안 돌렸으면 {@code null}, 돌렸는데 없으면 빈 목록
  * @param readerFindings 독자 점검 지적(V49). 안 돌렸으면 {@code null}. 승인을 막지 않는다
  * @param polishResult  그 편의 윤문 결과(V50). 윤문을 안 돌렸으면 {@code null}. 승인을 막지 않는다
+ * @param problemTypeHints 이 본문으로 낼 수 있는 객관식 밖의 유형과 재료 절. 없으면 빈 목록
  */
 public record LlmDocumentDraftResponse(
         Long id,
@@ -43,7 +45,8 @@ public record LlmDocumentDraftResponse(
         boolean blocked,
         List<FactFinding> factFindings,
         List<ReaderFindingView> readerFindings,
-        PolishResults.Edition polishResult
+        PolishResults.Edition polishResult,
+        List<ProblemTypeHints.Hint> problemTypeHints
 ) {
 
     /**

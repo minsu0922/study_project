@@ -1369,7 +1369,7 @@ async function loadDocDrafts() {
           <span class="meta">독자 점검 ${d.readerFindings == null ? "안 돌림" : d.readerFindings.filter(f => f.status === "OPEN").length + "건"}</span>
           ${polishBadgeOf(d)}
         </div>
-        ${blockingBox}${warningBox}${polishBoxOf(d)}
+        ${blockingBox}${warningBox}${polishBoxOf(d)}${problemTypeHintsOf(d)}
         ${sectionOutlineOf(d.contentMd)}
         <div class="draft-diagrams" id="diag-${d.id}"></div>
         <div class="doc-preview-bar">
@@ -1424,6 +1424,24 @@ function polishBoxOf(d) {
       <div class="meta" style="margin:8px 0">
         ${icon("alert")} 원고로 둔 곳 ${kept.length}곳
         <ul style="margin:4px 0 0 18px">${kept.map(k => `<li>${escapeHtml(k)}</li>`).join("")}</ul>
+      </div>`;
+}
+
+/* 이 본문으로 낼 수 있는 객관식 밖의 유형(서버의 ProblemTypeHints가 글 형식으로 판단).
+ * 재료가 하나도 없으면 "객관식만"이라고 적는다. 빈칸으로 두면 계산을 안 한 것과 구분이 안 된다. */
+const HINT_UNIT = { ORDERING: "곳", MATCHING: "쌍", OX: "개" };
+function problemTypeHintsOf(d) {
+  const hints = d.problemTypeHints ?? [];
+  if (!hints.length) {
+    return `<div class="meta" style="margin:8px 0">낼 수 있는 문제 유형: 객관식만</div>`;
+  }
+  const items = hints.map(h =>
+    `<li><span class="badge source">${escapeHtml(h.label)} ${h.count}${HINT_UNIT[h.type] ?? ""}</span> `
+    + (h.sections ?? []).map(s => `「${escapeHtml(s)}」`).join(" ") + `</li>`).join("");
+  return `
+      <div class="meta" style="margin:8px 0">
+        낼 수 있는 문제 유형: 객관식과 아래 ${hints.length}가지
+        <ul style="margin:4px 0 0 18px">${items}</ul>
       </div>`;
 }
 

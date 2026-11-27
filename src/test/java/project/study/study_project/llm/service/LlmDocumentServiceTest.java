@@ -270,6 +270,20 @@ class LlmDocumentServiceTest {
         assertThat(response.blocked()).isFalse();
     }
 
+    @Test
+    @DisplayName("문서 초안 응답에 본문으로 낼 수 있는 문제 유형이 실린다")
+    void draftCarriesProblemTypeHints() {
+        givenDraftPage(DraftStatus.PENDING, pendingDraft("순서", "order-doc",
+                "# 순서\n\n## 만드는 순서\n\n1. 가\n2. 나\n3. 다\n4. 라\n"));
+
+        LlmDocumentDraftResponse response =
+                service.getDrafts(DraftStatus.PENDING, Pageable.unpaged()).content().get(0);
+
+        assertThat(response.problemTypeHints())
+                .extracting(h -> h.type() + ":" + h.count() + ":" + h.sections())
+                .containsExactly("ORDERING:1:[만드는 순서]");
+    }
+
     /* ── 짝 편 제목 대조 ─────────────────────────────────────── */
 
     /**
