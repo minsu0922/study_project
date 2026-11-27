@@ -54,6 +54,26 @@ class ClaudeProblemGeneratorMixPromptTest {
         assertThat(prompt).contains("「자주 하는 오해」").contains("정답 X").contains("정답 O");
     }
 
+    private static GeneratedProblemItem typed(ProblemType t) {
+        return new GeneratedProblemItem("q", "", "", "e", List.of(), "", "t", null, "").withType(t);
+    }
+
+    @Test
+    @DisplayName("안 섞은 날은 모델이 적은 유형을 비운다 — 요청한 유형보다 모델 말이 이기면 안 된다")
+    void unmixedDropsModelType() {
+        assertThat(ClaudeProblemGenerator.normalizeTypes(List.of(typed(ProblemType.OX)), null))
+                .extracting(GeneratedProblemItem::type).containsOnlyNulls();
+    }
+
+    @Test
+    @DisplayName("섞은 날은 구성에 있는 유형만 남기고 나머지는 비운다")
+    void mixedKeepsOnlyPlannedTypes() {
+        assertThat(ClaudeProblemGenerator.normalizeTypes(
+                List.of(typed(ProblemType.OX), typed(ProblemType.ESSAY), typed(ProblemType.MATCHING)), MIX))
+                .extracting(GeneratedProblemItem::type)
+                .containsExactly(ProblemType.OX, null, ProblemType.MATCHING);
+    }
+
     @Test
     @DisplayName("안 섞은 날(구성 없음·객관식만)은 지금 프롬프트와 글자까지 같다")
     void unmixedPromptUnchanged() {

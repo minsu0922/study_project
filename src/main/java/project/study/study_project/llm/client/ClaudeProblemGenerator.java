@@ -179,7 +179,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                     .map(GeneratedProblemItem.Batch::problems)
                     .orElseThrow(() -> new BusinessException(ErrorCode.LLM_003, "모델 응답에 문제 목록이 없습니다."));
             logThinkingWhenShort(problems, count, result.thinking());
-            return problems;
+            return normalizeTypes(problems, mix);
         } catch (AnthropicServiceException e) {
             // API 쪽 오류(429 한도 초과, 529 과부하 등) — 우리 코드 문제가 아니므로 502로 안내
             log.warn("Claude API 호출 실패: status={}, message={}", e.statusCode(), e.getMessage());
@@ -189,6 +189,18 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             log.warn("Claude API 네트워크 오류: {}", e.getMessage());
             throw new BusinessException(ErrorCode.LLM_003, "네트워크 오류로 생성에 실패했습니다.");
         }
+    }
+
+    /**
+     * 모델이 적은 유형 중 믿을 것만 남긴다(2026-11-27). 들여오기는 문제의 유형을 파일 유형보다 앞세우므로,
+     * 안 섞은 날 모델이 엉뚱한 유형을 적으면 요청과 다른 유형으로 저장된다. 그래서 안 섞은 날은 비우고,
+     * 섞은 날은 구성에 있는 유형만 남긴다. 비운 문제는 요청 유형(섞은 날은 객관식)으로 취급된다.
+     */
+    static List<GeneratedProblemItem> normalizeTypes(List<GeneratedProblemItem> problems, TypeMix mix) {
+        boolean mixed = mix != null && mix.isMixed();
+        return problems.stream()
+                .map(p -> p.type() != null && mixed && mix.counts().containsKey(p.type()) ? p : p.withType(null))
+                .toList();
     }
 
     /**
