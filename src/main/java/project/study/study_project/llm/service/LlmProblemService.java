@@ -443,7 +443,8 @@ public class LlmProblemService {
             // 인용이 짝 편에서만 발견되면 그 편을 적는다(SourceEditionRule).
             String slug = SourceEditionRule.slugFor(documentSlug, bodies.counterpartSlug(),
                     item.sourceQuote(), bodies.baseBody(), bodies.counterpartBody());
-            toDraft(item, domain, difficulty, type, model, slug, source).ifPresent(drafts::add);
+            // 섞은 날은 문제마다 유형이 다르다(2026-11-27). 적혀 있지 않은 옛 파일은 파일의 유형이다
+            toDraft(item, domain, difficulty, item.typeOr(type), model, slug, source).ifPresent(drafts::add);
         }
         return draftRepository.saveAll(drafts);
     }

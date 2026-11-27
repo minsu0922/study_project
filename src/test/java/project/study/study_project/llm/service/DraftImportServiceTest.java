@@ -347,6 +347,52 @@ class DraftImportServiceTest {
 
     /* ── 도우미 ──────────────────────────────────────────────── */
 
+    /* ── 초급 유형 섞기(2026-11-27) ── */
+
+    private static GeneratedProblemItem.GeneratedChoice pair(String left, String right) {
+        return new GeneratedProblemItem.GeneratedChoice(left, false, "", right);
+    }
+
+    private static GeneratedProblemItem.GeneratedChoice step(String text) {
+        return new GeneratedProblemItem.GeneratedChoice(text, false, "", "");
+    }
+
+    @Test
+    @DisplayName("문제마다 유형이 다른 파일은 문제에 적힌 유형으로 초안을 만든다")
+    void importMixedFileStoresTypePerProblem() throws Exception {
+        GeneratedProblemItem ox = new GeneratedProblemItem("중지하면 요금이 0원이 된다.", "", "X", "스토리지 요금은 남는다.",
+                List.of(), "", "중지와 요금", null, "").withType(ProblemType.OX);
+        GeneratedProblemItem matching = new GeneratedProblemItem("부품과 비유를 짝지어라.", "", "", "부품마다 하는 일을 맞춘다.",
+                List.of(pair("CPU", "요리사"), pair("메모리", "조리대"), pair("디스크", "냉장고"), pair("네트워크 장치", "창구")),
+                "", "부품과 비유", null, "").withType(ProblemType.MATCHING);
+        GeneratedProblemItem ordering = new GeneratedProblemItem("인스턴스가 만들어지는 순서대로 놓아라.", "", "4|2|1|3",
+                "요청 다음에 컴퓨터를 고르고 몫을 뗀 뒤 운영체제를 켠다.",
+                List.of(step("몫을 떼어 배정한다"), step("컴퓨터를 고른다"), step("운영체제가 켜진다"), step("사양을 골라 요청한다")),
+                "", "인스턴스 생성 순서", null, "").withType(ProblemType.ORDERING);
+        Path file = writeBatchFile("2026-11-27.json", "claude-opus-5",
+                validItem("하이퍼바이저가 하는 일로 옳은 것은?").withType(ProblemType.MULTIPLE_CHOICE), ox, matching, ordering);
+
+        service.importFile(file);
+
+        assertThat(capturedDrafts()).extracting(GeneratedProblemDraft::getType)
+                .containsExactly(ProblemType.MULTIPLE_CHOICE, ProblemType.OX, ProblemType.MATCHING, ProblemType.ORDERING);
+    }
+
+    @Test
+    @DisplayName("문제에 유형 칸이 없는 옛 파일은 파일의 유형으로 저장한다")
+    void importOldFileUsesFileType() throws Exception {
+        GeneratedProblemItem ox = new GeneratedProblemItem("UDP는 순서를 보장한다.", "", "X", "UDP는 순서를 보장하지 않는다.",
+                List.of(), "", "UDP 순서", null, "");
+        GeneratedBatchFile batch = new GeneratedBatchFile("테스트용", "2026-08-20", "2026-08-20T21:17:00Z",
+                TestDomains.NETWORK, Difficulty.BEGINNER, ProblemType.OX, "claude-opus-5", null, List.of(ox));
+        Path file = tempDir.resolve("2026-08-20.json");
+        objectMapper.writeValue(file.toFile(), batch);
+
+        service.importFile(file);
+
+        assertThat(capturedDrafts()).extracting(GeneratedProblemDraft::getType).containsExactly(ProblemType.OX);
+    }
+
     private Path writeBatchFileWithFindings(String filename, List<ProblemReview.Finding> findings,
                                             GeneratedProblemItem... items) throws Exception {
         Path file = writeBatchFile(filename, "claude-opus-5", items);
