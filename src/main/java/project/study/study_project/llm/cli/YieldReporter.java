@@ -79,7 +79,9 @@ final class YieldReporter {
 
         for (int i = 0; i < problems.size(); i++) {
             GeneratedProblemItem item = problems.get(i);
-            String defect = ProblemItemRule.defectOf(item, type);
+            // 섞은 날은 문제마다 유형이 다르다(2026-11-27). 적혀 있지 않으면 파일 유형이다
+            ProblemType itemType = item.typeOr(type);
+            String defect = ProblemItemRule.defectOf(item, itemType);
             if (defect != null) {
                 // 빈 껍데기면 지문 조각 대신 모델이 남긴 이유를 싣는다(2026-09-19). 지문이 없으니
                 // snippet은 늘 "(지문 없음)"이라 아무것도 말해 주지 않았다 — 네 주기 동안 그랬다.
@@ -93,7 +95,7 @@ final class YieldReporter {
             // 여기서 usable에서 빼면 경고가 말하는 개수와 실제 검수함 개수가 어긋난다.
             // source가 있으면 해설이 "다시 읽을 절"을 가리켜야 한다(2026-08-25) — 폴백으로
             // 근거 없이 만든 날은 가리킬 곳이 없으므로 그 검사를 켜지 않는다.
-            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty, source != null, type)) {
+            for (String warning : ProblemItemRule.qualityWarningsOf(item, difficulty, source != null, itemType)) {
                 warnings.add("%d번 [%s] — %s".formatted(i + 1, warning, ProblemItemRule.snippet(item)));
             }
             // 인용 검사는 문서를 들고 있어야 해서 규칙이 따로 산다(SourceQuoteRule 클래스 주석).
@@ -107,7 +109,11 @@ final class YieldReporter {
         // 배치 전체를 봐야 알 수 있는 것 — 형태 쏠림(2026-08-25)과 OX 참·거짓 쏠림(2026-08-31).
         // 한 문제만 봐서는 알 수 없어 항목 루프 밖에 둔다. 번호를 붙이지 않는 것도 그래서다:
         // 특정 문제의 잘못이 아니다.
-        warnings.addAll(ProblemItemRule.batchWarningsOf(problems, difficulty, type));
+        // 유형마다 따로 본다 — OX 참·거짓 쏠림을 객관식까지 섞어 세면 뜻이 없다
+        problems.stream()
+                .collect(java.util.stream.Collectors.groupingBy(p -> p.typeOr(type),
+                        java.util.LinkedHashMap::new, java.util.stream.Collectors.toList()))
+                .forEach((t, group) -> warnings.addAll(ProblemItemRule.batchWarningsOf(group, difficulty, t)));
 
         return new YieldCheck(requested, problems.size(), usable, defects, warnings);
     }

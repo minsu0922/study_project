@@ -17,6 +17,7 @@ import project.study.study_project.llm.dto.GeneratedBatchFile;
 import project.study.study_project.llm.review.ProblemReviewPipeline;
 import project.study.study_project.llm.support.DomainSettings;
 import project.study.study_project.llm.support.GenerationSchedule;
+import project.study.study_project.llm.support.TypeMix;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -253,8 +254,13 @@ public final class DraftGeneratorCli {
         // displayName()·hints() 둘 다 파일이 비어 있으면 DefaultDomains로 떨어진다(DomainSettings
         // Javadoc) — 관리 화면을 아직 안 썼거나 파일이 깨졌을 때도 2026-09-21 이전과 같은
         // 프롬프트가 나가야 하므로, 여기서 따로 null 방어를 하지 않는다.
+        // 초급은 한 세트에 유형을 섞는다(2026-11-27). 사람이 유형을 지목했거나 근거가 없으면 지금처럼 하나로 낸다
+        TypeMix mix = mixFor(difficulty, opts.containsKey(BatchOptions.PROBLEM_TYPE_OPT), source, count);
+        if (mix != null && mix.isMixed()) {
+            System.out.println("유형 구성: " + mix.summary());
+        }
         List<GeneratedProblemItem> problems = new ClaudeProblemGenerator(model, settings)
-                .generate(domain, difficulty, type, count, avoid, rejectionNotes, source);
+                .generate(domain, difficulty, type, count, avoid, rejectionNotes, source, null, mix);
 
         // 빈 응답은 성공이 아니다 — 조용히 빈 파일을 커밋하면 "돌긴 돌았는데 왜 문제가 없지"가 된다.
         // 예외를 던져 job을 실패시키고 메일을 받는 쪽이 낫다.
@@ -296,19 +302,89 @@ public final class DraftGeneratorCli {
         BatchReports.announce("✅ **%s 문제 초안 %d건** — %s × %s, 근거 문서 %s → `%s`"
                 .formatted(date, kept.size(), domain, difficulty,
                         source == null ? "없음(폴백)" : source.slug(), outFile));
+        if (mix != null && mix.isMixed()) {
+            BatchReports.announce("유형: " + typeCountsOf(kept, type));
+            String mismatch = mixMismatchOf(mix, kept);
+            if (mismatch != null) {
+                BatchReports.announce("⚠️ " + mismatch);
+            }
+        }
 
-        // 문제 검수(docs/22 §3.2~3.4). 객관식이고 근거 문서가 있을 때만 — 근거 대조에 문서가 필요하다
-        if (type == ProblemType.MULTIPLE_CHOICE && source != null) {
+        // 문제 검수(docs/22 §3.2~3.4). 근거 문서가 있을 때 객관식만 — 검수기는 4지선다를 푸는 구조다.
+        // 섞은 날은 객관식만 골라 보내고 고친 결과를 제자리에 되돌린다(2026-11-27)
+        ReviewSplit split = splitForReview(kept, type);
+        if (source != null && !split.choices().isEmpty()) {
             ProblemReviewer.Reviewed reviewed = BatchReports.reportProblemReview(
-                    new ProblemReviewPipeline(model), kept, source, resolved.factFindings(), date).reviewed();
+                    new ProblemReviewPipeline(model), split.choices(), source, resolved.factFindings(), date).reviewed();
             // 검수가 실패한 날은 파일을 다시 쓰지 않는다. 지적 목록이 있으면 검수함이
             // "AI 검수를 돌렸다"로 읽는다(null과 빈 목록의 구별, docs/22 §6)
             if (reviewed != null) {
-                BatchReports.reportFlaggedSources(kept, reviewed.findings().stream()
+                BatchReports.reportFlaggedSources(split.choices(), reviewed.findings().stream()
                         .filter(f -> f.type() == ProblemReview.FindingType.SOURCE_FLAGGED).toList(), date);
-                attachReviewFindings(outFile, batch.withProblemsAndFindings(reviewed.problems(), reviewed.findings()));
+                attachReviewFindings(outFile, batch.withProblemsAndFindings(
+                        mergeReviewed(kept, split, reviewed.problems()), reviewed.findings()));
             }
         }
+    }
+
+    /** 초급이고, 사람이 유형을 지목하지 않았고, 근거 문서가 있을 때만 유형 구성을 만든다. 아니면 null */
+    static TypeMix mixFor(Difficulty difficulty, boolean typePinned, SourceDocument source, int count) {
+        if (difficulty != Difficulty.BEGINNER || typePinned || source == null) {
+            return null;
+        }
+        return TypeMix.forBeginner(count, source.contentMd());
+    }
+
+    /** "객관식 4 · OX 1 · 짝짓기 1" — 파일에 실제로 든 유형별 개수 */
+    static String typeCountsOf(List<GeneratedProblemItem> kept, ProblemType fileType) {
+        java.util.Map<ProblemType, Long> counts = new java.util.EnumMap<>(ProblemType.class);
+        kept.forEach(p -> counts.merge(p.typeOr(fileType), 1L, Long::sum));
+        return counts.entrySet().stream().map(e -> e.getKey().getDisplayName() + " " + e.getValue())
+                .collect(java.util.stream.Collectors.joining(" · "));
+    }
+
+    /**
+     * 구성에서 객관식 밖 유형의 요청 수와 받은 수가 다르면 한 줄, 같으면 null.
+     * 실패시키지 않는다 — 재료가 얇으면 덜 내라고 시켰고, 받은 문제는 쓸 수 있다.
+     */
+    static String mixMismatchOf(TypeMix mix, List<GeneratedProblemItem> kept) {
+        List<String> diffs = new ArrayList<>();
+        mix.counts().forEach((t, requested) -> {
+            if (t == ProblemType.MULTIPLE_CHOICE) {
+                return;
+            }
+            long got = kept.stream().filter(p -> p.typeOr(ProblemType.MULTIPLE_CHOICE) == t).count();
+            if (got != requested) {
+                diffs.add("%s 요청 %d → %d".formatted(t.getDisplayName(), requested, got));
+            }
+        });
+        return diffs.isEmpty() ? null : "유형 구성과 다름: " + String.join(", ", diffs);
+    }
+
+    /** 검수에 보낼 객관식과 그 원래 자리 */
+    record ReviewSplit(List<Integer> indexes, List<GeneratedProblemItem> choices) {
+    }
+
+    static ReviewSplit splitForReview(List<GeneratedProblemItem> kept, ProblemType fileType) {
+        List<Integer> indexes = new ArrayList<>();
+        List<GeneratedProblemItem> choices = new ArrayList<>();
+        for (int i = 0; i < kept.size(); i++) {
+            if (kept.get(i).typeOr(fileType) == ProblemType.MULTIPLE_CHOICE) {
+                indexes.add(i);
+                choices.add(kept.get(i));
+            }
+        }
+        return new ReviewSplit(List.copyOf(indexes), List.copyOf(choices));
+    }
+
+    /** 검수가 돌려준 객관식을 원래 자리에 넣는다. 다른 유형 문제는 그대로 둔다 */
+    static List<GeneratedProblemItem> mergeReviewed(List<GeneratedProblemItem> kept, ReviewSplit split,
+                                                    List<GeneratedProblemItem> reviewed) {
+        List<GeneratedProblemItem> out = new ArrayList<>(kept);
+        for (int i = 0; i < split.indexes().size() && i < reviewed.size(); i++) {
+            out.set(split.indexes().get(i), reviewed.get(i));
+        }
+        return out;
     }
 
     /**
