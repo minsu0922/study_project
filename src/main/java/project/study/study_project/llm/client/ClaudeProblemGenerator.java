@@ -17,6 +17,7 @@ import project.study.study_project.global.exception.BusinessException;
 import project.study.study_project.global.exception.ErrorCode;
 import project.study.study_project.domainsetting.support.DomainCatalog;
 import project.study.study_project.llm.support.ProblemItemRule;
+import project.study.study_project.llm.support.TypeMix;
 
 import java.util.List;
 import java.util.Map;
@@ -156,7 +157,8 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                                                int count, List<String> avoidQuestions,
                                                List<RejectionNote> rejectionNotes,
                                                SourceDocument sourceDocument,
-                                               QuestionKind requestedKind) {
+                                               QuestionKind requestedKind,
+                                               TypeMix mix) {
         // 구조화 출력: Batch record가 응답 스키마. create() 결과의 text()가 이미 Batch 타입으로
         // 파싱되어 있다(수동 JSON 파싱 없음 — 이 한 줄이 구조화 출력을 쓰는 이유다).
         StructuredMessageCreateParams<GeneratedProblemItem.Batch> params = MessageCreateParams.builder()
@@ -168,7 +170,7 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                 .system(SYSTEM_PROMPT)
                 .outputConfig(GeneratedProblemItem.Batch.class)
                 .addUserMessage(buildPrompt(domain, difficulty, type, count, avoidQuestions,
-                        rejectionNotes, sourceDocument, requestedKind))
+                        rejectionNotes, sourceDocument, requestedKind, mix))
                 .build();
 
         try {
@@ -447,6 +449,14 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
                        int count, List<String> avoidQuestions,
                        List<RejectionNote> rejectionNotes, SourceDocument sourceDocument,
                        QuestionKind requestedKind) {
+        return buildPrompt(domain, difficulty, type, count, avoidQuestions, rejectionNotes, sourceDocument,
+                requestedKind, null);
+    }
+
+    String buildPrompt(DomainCode domain, Difficulty difficulty, ProblemType type,
+                       int count, List<String> avoidQuestions,
+                       List<RejectionNote> rejectionNotes, SourceDocument sourceDocument,
+                       QuestionKind requestedKind, TypeMix mix) {
         StringBuilder sb = new StringBuilder();
         sb.append("다음 조건으로 문제 ").append(count).append("개를 만들어라.\n\n");
         // 이름·힌트는 <지금> 읽는다 — 필드에 굳혀 두면 화면에서 고친 값이 재시작 전까지 안 나간다
@@ -455,7 +465,11 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
         sb.append("- 분야: ").append(domainCatalog.displayName(domain))
                 .append(domainCatalog.hints().hintFor(domain)).append('\n');
         sb.append("- 난이도: ").append(difficultyRule(difficulty)).append('\n');
-        sb.append("- 유형: ").append(typeRule(type)).append('\n');
+        if (mix != null && mix.isMixed()) {
+            sb.append(typeMixRule(mix));
+        } else {
+            sb.append("- 유형: ").append(typeRule(type)).append('\n');
+        }
 
         // 사람이 형태를 지목한 경우 — 2026-08-25.
         //
@@ -773,6 +787,33 @@ public class ClaudeProblemGenerator implements ProblemGenerator {
             case INTERMEDIATE -> INTERMEDIATE_EXAMPLE;
             case ADVANCED -> ADVANCED_EXAMPLE;
         };
+    }
+
+    /**
+     * 섞은 날의 유형 줄(2026-11-27). 유형마다 형식 규칙과 재료 절을 함께 준다 — 절을 지목하지 않으면
+     * 모델은 재료가 얇은 유형을 문서 밖 지식으로 채운다(TypeMaterialRule 주석의 짝짓기 사고).
+     * 시스템 프롬프트가 아니라 여기에 두는 이유: 날마다 구성이 달라 시스템에 넣으면 캐시가 깨진다.
+     */
+    private String typeMixRule(TypeMix mix) {
+        StringBuilder sb = new StringBuilder("- 유형 구성: ").append(mix.summary())
+                .append(". 문제마다 type에 그 유형을 적는다.\n");
+        for (ProblemType t : mix.counts().keySet()) {
+            sb.append("  - ").append(t.getDisplayName()).append(": ").append(typeRule(t));
+            List<String> sections = mix.sections().get(t);
+            if (sections != null && !sections.isEmpty()) {
+                sb.append(". 재료: 문서의 ")
+                        .append(sections.stream().map(s -> "「" + s + "」").collect(java.util.stream.Collectors.joining("·")))
+                        .append(" 절");
+            }
+            if (t == ProblemType.OX) {
+                // 오해 절은 전부 틀린 말이라 그대로 내면 정답이 늘 X다 — 찍어도 맞힌다
+                sb.append(". 오해를 그대로 적은 문장(정답 X)과 문서가 바로잡은 사실을 적은 문장(정답 O) 가운데 하나로 낸다");
+            }
+            sb.append('\n');
+        }
+        sb.append("  재료 절이 정해진 유형은 그 절에서만 낸다. 재료가 얇아 못 만들겠으면 객관식으로 바꾸지 말고 ")
+                .append("덜 낸다([개수를 채우지 못할 때]).\n");
+        return sb.toString();
     }
 
     /** 유형별 형식 규칙 — 스키마가 형태는 강제하지만 "빈 값 규약"(docs/01)은 프롬프트로 알려야 한다. */

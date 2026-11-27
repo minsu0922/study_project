@@ -3,6 +3,7 @@ package project.study.study_project.llm.client;
 import project.study.study_project.global.common.Difficulty;
 import project.study.study_project.global.common.DomainCode;
 import project.study.study_project.global.common.ProblemType;
+import project.study.study_project.llm.support.TypeMix;
 
 import java.util.List;
 
@@ -71,9 +72,24 @@ public interface ProblemGenerator {
      *
      * @param requestedKind 지목할 형태. {@code null}이면 모델이 고른다(배치의 기본 동작)
      */
+    default List<GeneratedProblemItem> generate(DomainCode domain, Difficulty difficulty, ProblemType type,
+                                                int count, List<String> avoidQuestions,
+                                                List<RejectionNote> rejectionNotes,
+                                                SourceDocument sourceDocument,
+                                                QuestionKind requestedKind) {
+        return generate(domain, difficulty, type, count, avoidQuestions, rejectionNotes, sourceDocument,
+                requestedKind, null);
+    }
+
+    /**
+     * 한 세트에 여러 유형을 섞어 생성한다 — 2026-11-27 초급 유형 섞기.
+     *
+     * @param mix 유형 구성. {@code null}이거나 객관식만이면 {@code type} 하나로 낸다(지금까지의 동작)
+     */
     List<GeneratedProblemItem> generate(DomainCode domain, Difficulty difficulty, ProblemType type,
                                         int count, List<String> avoidQuestions,
                                         List<RejectionNote> rejectionNotes,
                                         SourceDocument sourceDocument,
-                                        QuestionKind requestedKind);
+                                        QuestionKind requestedKind,
+                                        TypeMix mix);
 }

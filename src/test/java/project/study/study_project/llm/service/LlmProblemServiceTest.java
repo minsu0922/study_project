@@ -117,7 +117,8 @@ class LlmProblemServiceTest {
                                                    int count, List<String> avoidQuestions,
                                                    List<RejectionNote> rejectionNotes,
                                                    project.study.study_project.llm.client.SourceDocument sourceDocument,
-                                                   QuestionKind requestedKind) {
+                                                   QuestionKind requestedKind,
+                                                   project.study.study_project.llm.support.TypeMix mix) {
             this.calledDomain = domain;
             this.calledDifficulty = difficulty;
             this.calledType = type;

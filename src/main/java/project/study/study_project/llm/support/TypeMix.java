@@ -27,8 +27,13 @@ public record TypeMix(Map<ProblemType, Integer> counts, Map<ProblemType, List<St
     private static final List<ProblemType> DROP_ORDER = List.of(ProblemType.ORDERING, ProblemType.MATCHING, ProblemType.OX);
 
     public TypeMix {
-        counts = Collections.unmodifiableMap(new EnumMap<>(counts));
-        sections = Collections.unmodifiableMap(new EnumMap<>(sections));
+        // new EnumMap<>(map)은 빈 일반 Map을 받으면 예외를 던진다 — 빈 EnumMap에 옮겨 담는다
+        Map<ProblemType, Integer> c = new EnumMap<>(ProblemType.class);
+        c.putAll(counts);
+        Map<ProblemType, List<String>> s = new EnumMap<>(ProblemType.class);
+        s.putAll(sections);
+        counts = Collections.unmodifiableMap(c);
+        sections = Collections.unmodifiableMap(s);
     }
 
     /**
