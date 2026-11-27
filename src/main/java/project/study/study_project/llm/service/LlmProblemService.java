@@ -1067,7 +1067,7 @@ public class LlmProblemService {
                         c.text(), c.correct(), c.rationale(), c.matchText()))
                 .toList();
         String exhibit = d.exhibitOrNull();
-        return new GeneratedProblemItem(d.getQuestion(), exhibit == null ? "" : exhibit, d.getAnswer(),
+        return new GeneratedProblemItem(d.getType(), d.getQuestion(), exhibit == null ? "" : exhibit, d.getAnswer(),
                 d.getExplanation(), items, "", d.getTitle(), d.getQuestionKind(), "");
     }
 }

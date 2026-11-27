@@ -142,8 +142,7 @@ public class ProblemReviewPipeline implements ProblemReviewer {
                 GeneratedChoice c = choices.get(s.choiceIndex());
                 choices.set(s.choiceIndex(), new GeneratedChoice(c.text(), c.correct(), s.text(), c.matchText()));
             }
-            out.set(f.problemIndex(), new GeneratedProblemItem(p.question(), p.exhibit(), p.answer(), explanation,
-                    choices, p.sourceQuote(), p.title(), p.questionKind(), p.skipReason()));
+            out.set(f.problemIndex(), p.withExplanationAndChoices(explanation, choices));
         }
         return out;
     }

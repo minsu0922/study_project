@@ -3,6 +3,7 @@ package project.study.study_project.llm.client;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import project.study.study_project.document.support.FigureRequests;
+import project.study.study_project.global.common.ProblemType;
 
 import java.util.List;
 
@@ -24,6 +25,14 @@ import java.util.List;
  */
 @JsonClassDescription("CS 학습 퀴즈 문제 목록")
 public record GeneratedProblemItem(
+
+        // 2026-11-27 초급 유형 섞기. 다른 칸과 달리 맨 앞이다 — 유형이 answer·choices의 모양을 정하므로
+        // 모델이 먼저 적어야 한다. "형태를 먼저 정하면 재료를 지어낸다"(questionKind 주석)는 걱정은
+        // 여기 해당하지 않는다. 유형과 재료 절은 코드가 문서 형식을 보고 미리 정해 준다(TypeMix).
+        // 옛 파일·단일 유형 실행에서는 null이고, 그때는 파일의 유형을 쓴다(typeOr).
+        @JsonPropertyDescription("이 문제의 유형. 요청의 '유형 구성'에 적힌 것 중 하나. "
+                + "유형 구성이 없으면 요청의 '유형'과 같은 값")
+        ProblemType type,
 
         @JsonPropertyDescription("문제 지문. 한국어. 여러 줄짜리 로그·표·명령 출력은 지문에 넣지 말고 exhibit에 적는다")
         String question,
@@ -111,6 +120,35 @@ public record GeneratedProblemItem(
 
     public boolean hasDiagramExhibit() {
         return EXHIBIT_DIAGRAM_LANGUAGE.equals(exhibitLanguage());
+    }
+
+    /** 유형 없이 만드는 편의 생성자 — 유형 칸(2026-11-27)을 붙이기 전의 전체 생성자다. */
+    public GeneratedProblemItem(String question, String exhibit, String answer, String explanation,
+                                List<GeneratedChoice> choices, String sourceQuote, String title,
+                                QuestionKind questionKind, String skipReason) {
+        this(null, question, exhibit, answer, explanation, choices, sourceQuote, title, questionKind, skipReason);
+    }
+
+    /** 이 문제의 유형. 적혀 있지 않으면(옛 파일·단일 유형 실행) {@code fallback} — 보통 파일의 유형이다. */
+    public ProblemType typeOr(ProblemType fallback) {
+        return type != null ? type : fallback;
+    }
+
+    public GeneratedProblemItem withType(ProblemType newType) {
+        return new GeneratedProblemItem(newType, question, exhibit, answer, explanation, choices, sourceQuote,
+                title, questionKind, skipReason);
+    }
+
+    /** 지문만 바꾼 사본. 검수 편집이 쓴다 — 생성자를 직접 부르면 유형을 빠뜨리기 쉽다. */
+    public GeneratedProblemItem withQuestion(String newQuestion) {
+        return new GeneratedProblemItem(type, newQuestion, exhibit, answer, explanation, choices, sourceQuote,
+                title, questionKind, skipReason);
+    }
+
+    /** 해설과 보기만 바꾼 사본. 검수가 고친 해설·오답 설명을 넣을 때 쓴다. */
+    public GeneratedProblemItem withExplanationAndChoices(String newExplanation, List<GeneratedChoice> newChoices) {
+        return new GeneratedProblemItem(type, question, exhibit, answer, newExplanation, newChoices, sourceQuote,
+                title, questionKind, skipReason);
     }
 
     /** 자료 없이 만드는 편의 생성자 — 자료 칸을 붙이기 전의 전체 생성자다. */

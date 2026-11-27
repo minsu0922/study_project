@@ -300,13 +300,11 @@ public final class ProblemEditor {
 
     private static GeneratedProblemItem withExplanationAndChoices(GeneratedProblemItem p, String explanation,
                                                                   List<GeneratedChoice> choices) {
-        return new GeneratedProblemItem(p.question(), p.exhibit(), p.answer(), explanation, choices, p.sourceQuote(),
-                p.title(), p.questionKind(), p.skipReason());
+        return p.withExplanationAndChoices(explanation, choices);
     }
 
     private static GeneratedProblemItem withQuestion(GeneratedProblemItem p, String question) {
-        return new GeneratedProblemItem(question, p.exhibit(), p.answer(), p.explanation(), p.choices(), p.sourceQuote(),
-                p.title(), p.questionKind(), p.skipReason());
+        return p.withQuestion(question);
     }
 
     private static String joinDetail(List<String> lines, String tail) {
