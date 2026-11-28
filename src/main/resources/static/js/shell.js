@@ -168,6 +168,9 @@ const MENUS = [
   // 학습 로드맵(2026-10-20, docs/26). 코스와 단계는 비로그인에게도 보인다.
   // 탭 없음: 다섯 칸이 차 있다. 폰에서는 상단 바 아이콘으로 가고, 홈의 "이어서 하기" 카드가 입구를 겸한다
   { key: "paths", label: "로드맵", href: "/paths.html", need: "public", icon: "route" },
+  // 백엔드 기술 지도(2026-11-28). 주제마다 점 하나, 내 진도로 칠한다. 비로그인에게도 보인다.
+  // 아이콘이 route가 아닌 이유: 로드맵이 이미 쓴다. 바로 옆 두 메뉴가 같은 그림이면 안 갈린다
+  { key: "map", label: "기술 지도", href: "/map.html", need: "public", icon: "target" },
   // 배지는 "오늘 복습할 게 남았다"를 어느 화면에서든 보이게 하는 장치(loadReviewBadge)
   { key: "review", label: "복습", href: "/review.html", need: "user", badge: "reviewBadge", tab: true, icon: "repeat" },
   { key: "docs", label: "개념 문서", href: "/documents.html", need: "public", tab: true, icon: "book" },

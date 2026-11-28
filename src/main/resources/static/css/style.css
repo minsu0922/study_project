@@ -3766,3 +3766,85 @@ a.hl-num:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2
 
 .review-open-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0 4px; }
 .review-open-row .btn { font-weight: 600; }
+
+/* ── 기술 지도 (map.html) ────────────────────────────────────────────
+ * 넓으면 SVG 지도 + 옆 칸, 좁으면(767px 이하) 분야별 접는 목록 + 그 아래 칸.
+ * 점 색은 상태 클래스 하나가 정하고(--dot-fill/--dot-stroke), SVG 점과 목록의 작은 점이
+ * 같은 변수를 읽는다. 한쪽만 고쳐 두 화면 색이 어긋나는 일을 막는다.
+ * 분야 원은 분야 알약(.list-row-domain)과 같은 --primary-soft/--primary-dark를 쓴다. */
+.container.map-page { max-width: 1120px; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 12px; font-size: var(--fs-2); color: var(--text-2); }
+.map-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+
+.map-dot--done     { --dot-fill: var(--lv1-solid); --dot-stroke: var(--lv1-solid); }
+.map-dot--partial  { --dot-fill: var(--lv2-solid); --dot-stroke: var(--lv2-solid); }
+.map-dot--unsolved { --dot-fill: var(--card);      --dot-stroke: var(--control-border); }
+.map-dot--open     { --dot-fill: var(--primary-border); --dot-stroke: var(--primary); }
+/* 준비 중은 속이 빈 점선 — 색을 못 가리는 사람에게도 "아직 없다"가 모양으로 읽힌다 */
+.map-dot--none     { --dot-fill: transparent;      --dot-stroke: var(--border-strong); }
+
+.map-swatch {
+  display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--dot-fill); border: 2px solid var(--dot-stroke);
+}
+.map-swatch.map-dot--none { border-style: dashed; }
+
+.map-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.map-board { position: relative; display: none; }
+.map-svg { display: block; width: 100%; height: auto; max-height: calc(100vh - var(--shell-top-h) - 40px); margin: 0 auto; }
+.map-sector { fill: var(--primary-soft); opacity: .55; }
+.map-spoke { stroke: var(--border-strong); stroke-width: 1.5; }
+.map-spoke--fan { stroke-dasharray: 3 4; }
+.map-center circle { fill: var(--primary); }
+.map-center text { fill: var(--on-primary); font-size: 16px; font-weight: 800; text-anchor: middle; }
+.map-domain-node circle { fill: var(--card); stroke: var(--primary-border); stroke-width: 2; }
+.map-domain-label { fill: var(--primary-dark); font-weight: 700; text-anchor: middle; }
+.map-domain-count { fill: var(--muted); font-size: 11px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+
+.map-dot { fill: var(--dot-fill); stroke: var(--dot-stroke); stroke-width: 2; cursor: pointer; transition: stroke-width .12s; }
+.map-dot.map-dot--none { stroke-dasharray: 3 2.4; }
+.map-dot:hover { stroke-width: 4; }
+.map-dot:focus { outline: none; }
+.map-dot:focus-visible, .map-dot.is-selected { stroke: var(--text); stroke-width: 3.5; }
+
+.map-tip {
+  position: absolute; transform: translate(-50%, -100%); pointer-events: none; z-index: 2;
+  max-width: 240px; padding: 4px 10px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: var(--text); color: var(--bg); font-size: var(--fs-1); font-weight: 600; box-shadow: var(--overlay-shadow);
+}
+
+.map-panel { margin: 0; }
+.map-panel-domain { margin-bottom: 6px; }
+.map-panel-title { font-size: 1.1rem; margin: 0 0 8px; overflow-wrap: anywhere; }
+.map-panel-state { display: flex; align-items: center; gap: 6px; font-size: var(--fs-2); color: var(--text-2); margin-bottom: 10px; }
+.map-panel-num { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; }
+.map-panel-num .num { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.map-panel-hint { margin-top: 0; }
+.map-docs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.map-docs a {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius);
+  border: 1px solid var(--border); color: var(--text); text-decoration: none;
+}
+.map-docs a:hover { border-color: var(--border-strong); background: var(--fill); }
+.map-docs .badge { flex: none; margin: 0; }
+
+.map-domain { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); margin-bottom: 8px; }
+.map-domain summary {
+  display: flex; align-items: center; gap: 8px; padding: 12px 14px; cursor: pointer; list-style-position: inside;
+}
+.map-domain-name { flex: 1; font-weight: 700; }
+.map-domain ul { list-style: none; margin: 0; padding: 0 6px 8px; }
+.map-topic {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 6px 8px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--text); text-align: left; font: inherit; cursor: pointer;
+}
+.map-topic:hover { background: var(--fill); }
+.map-topic[aria-pressed="true"] { background: var(--primary-soft); }
+.map-topic-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+@media (min-width: 768px) {
+  .map-layout { grid-template-columns: minmax(0, 1fr) clamp(220px, 28%, 300px); }
+  .map-board { display: block; }
+  .map-list { display: none; }
+  .map-panel { position: sticky; top: calc(var(--shell-top-h) + 16px); }
+}

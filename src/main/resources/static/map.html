@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>기술 지도 — csquiz</title>
+<script>
+/* 저장된 테마를 CSS가 오기 전에 <html>에 붙인다(이유는 review.html의 같은 자리 주석). */
+try {
+  var t = localStorage.getItem("csquiz_theme");
+  if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="shell"></div>
+
+<main class="container map-page">
+  <h1>기술 지도</h1>
+  <p class="meta">백엔드에서 다루는 주제를 분야별로 한 장에 모았어요. 점 하나가 주제 하나예요.
+    점을 누르면 그 주제의 문서로 갈 수 있어요.</p>
+
+  <div id="message"></div>
+  <div id="mapLegend" class="map-legend" hidden></div>
+
+  <div class="map-layout">
+    <!-- 넓은 화면은 SVG 지도, 좁은 화면은 분야별 접는 목록. 둘 다 그려 두고 CSS가 하나만 보인다 -->
+    <div id="mapBoard" class="map-board"></div>
+    <div id="mapList" class="map-list"></div>
+    <aside id="mapPanel" class="card map-panel" aria-live="polite" hidden></aside>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+/* 셸은 화면마다 HTML에서 부른다(StaticPageStructureTest가 지킨다). 지도 그리기는 map.js */
+renderShell({ active: "map", title: "기술 지도" });
+</script>
+<script src="/js/map.js"></script>
+</body>
+</html>

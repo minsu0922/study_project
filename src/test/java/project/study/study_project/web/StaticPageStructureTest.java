@@ -81,6 +81,7 @@ class StaticPageStructureTest {
             "documents.html",
             "history.html",
             "login.html",
+            "map.html",
             "me.html",
             "mypage.html",
             "notifications.html",
