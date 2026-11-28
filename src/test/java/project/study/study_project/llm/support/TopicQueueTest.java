@@ -77,6 +77,26 @@ class TopicQueueTest {
     }
 
     @Test
+    @DisplayName("고른 주제에 대기열 줄의 id가 실린다 — 문서 파일이 어느 주제에서 나왔는지 적는 데 쓴다")
+    void pickedCarriesEntryId() throws Exception {
+        write("""
+                { "topics": [ { "id": 1137, "domain": "OS", "topic": "컨텍스트 스위칭" } ] }
+                """);
+
+        assertThat(TopicQueue.read(dir).next().id()).isEqualTo(1137L);
+    }
+
+    @Test
+    @DisplayName("id 없는 손으로 적은 줄은 id가 null이다")
+    void pickedIdIsNullForHandWrittenRow() throws Exception {
+        write("""
+                { "topics": [ { "domain": "OS", "topic": "컨텍스트 스위칭" } ] }
+                """);
+
+        assertThat(TopicQueue.read(dir).next().id()).isNull();
+    }
+
+    @Test
     @DisplayName("고른 주제 뒤로 이어지는 같은 분야 주제의 이름을 준다 — 분야가 바뀌면 멈춘다")
     void laterTopicsInBlockStopAtDomainChange() throws Exception {
         write("""

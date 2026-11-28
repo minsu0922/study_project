@@ -115,9 +115,16 @@ public final class TopicQueue {
     /**
      * 꺼내 온 주제 한 건. {@code index}는 되쓸 때 어느 줄에 도장을 찍을지 가리킨다.
      * {@code memo}는 작성 지시 후보다({@link TopicBrief#parse}가 형식을 판정한다).
+     * {@code id}는 대기열 줄의 id로, 손으로 적은 줄은 null이다.
      */
     public record Picked(int index, DomainCode domain, String topic, String memo,
-                         String beginnerTopicBox, String advancedTopicBox) {
+                         String beginnerTopicBox, String advancedTopicBox, Long id) {
+
+        /** id를 모르는 줄 — 테스트와 코드 문제 주제가 쓴다 */
+        public Picked(int index, DomainCode domain, String topic, String memo,
+                      String beginnerTopicBox, String advancedTopicBox) {
+            this(index, domain, topic, memo, beginnerTopicBox, advancedTopicBox, null);
+        }
 
         /** 메모가 없는 주제 — 코드 문제 주제가 이 모양이다. */
         public Picked(int index, DomainCode domain, String topic) {
@@ -220,7 +227,7 @@ public final class TopicQueue {
         }
         TopicQueueFile.Entry picked = topics.get(best);
         return new Picked(best, parseDomain(picked.domain()), picked.topic().trim(), picked.memo(),
-                picked.beginnerTopicBox(), picked.advancedTopicBox());
+                picked.beginnerTopicBox(), picked.advancedTopicBox(), picked.id());
     }
 
     /**

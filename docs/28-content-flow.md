@@ -309,6 +309,7 @@ flowchart LR
 
 - 관리 화면 두 경로는 로컬 API 키(`<GRADLE_USER_HOME>\gradle.properties`)를 쓴다.
 - 손으로 채울 때는 결과 파일 이름에 `--suffix`를 붙인다. 날짜 이름을 쓰면 그날 예약 실행이 "이미 있음"으로 멈춘다.
+- 문서 파일을 손으로 쓸 때는 `topicId`로 `_topics.json`의 주제 id를 넣는다. 빠뜨리면 지도에서 그 주제가 회색으로 남는다.
 
 ---
 

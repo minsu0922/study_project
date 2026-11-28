@@ -179,9 +179,7 @@ final class DocumentBatch {
             advanced = null;
         }
 
-        GeneratedDocumentFile file = new GeneratedDocumentFile(
-                "GitHub Actions가 자동 생성한 개념 문서 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/15). 승인 전까지는 정식 문서가 아닙니다.",
-                date.toString(), Instant.now().toString(), domain, model, document, advanced);
+        GeneratedDocumentFile file = documentFile(date, domain, model, document, advanced, picked);
 
         Files.createDirectories(docDir);
         Files.writeString(outFile, FileFormats.toJson(MAPPER, FileFormats.Kind.DOCUMENTS, file));
@@ -225,6 +223,16 @@ final class DocumentBatch {
             BatchReports.appendToStepSummary("⚠️ `%s`에 사용 기록을 못 남겼습니다 — \"%s\" 범위가 다음 문서일에 또 걸릴 수 있습니다.%n"
                     .formatted(TopicQueue.FILE_NAME, picked.topic()));
         }
+    }
+
+    /** 파일 머리. 대기열에서 고른 주제면 그 id를 싣는다(--topic은 id가 없어 칸을 비운다) */
+    static GeneratedDocumentFile documentFile(LocalDate date, DomainCode domain, String model,
+                                              GeneratedDocumentItem document, GeneratedDocumentItem advanced,
+                                              TopicQueue.Picked picked) {
+        return new GeneratedDocumentFile(
+                "GitHub Actions가 자동 생성한 개념 문서 초안입니다. 로컬 앱이 기동할 때 검수 대기함으로 흡수합니다(docs/15). 승인 전까지는 정식 문서가 아닙니다.",
+                date.toString(), Instant.now().toString(), domain, model, document, advanced)
+                .withTopicId(picked == null ? null : picked.id());
     }
 
     /**
