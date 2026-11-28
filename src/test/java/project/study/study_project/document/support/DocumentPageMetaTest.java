@@ -34,7 +34,7 @@ class DocumentPageMetaTest {
 
     private static DocumentDetailResponse doc(String title, String contentMd, String edition) {
         return new DocumentDetailResponse(1L, TestDomains.DATABASE, "데이터베이스", title, "slug",
-                contentMd, null, List.of(), null, null, edition, edition == null ? null : "slug-pair");
+                contentMd, null, List.of(), null, null, edition, edition == null ? null : "slug-pair", null);
     }
 
     @Test

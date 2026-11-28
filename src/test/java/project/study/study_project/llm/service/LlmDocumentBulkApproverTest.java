@@ -34,7 +34,7 @@ class LlmDocumentBulkApproverTest {
 
     private DocumentDetailResponse doc(long id, String slug) {
         return new DocumentDetailResponse(id, TestDomains.NETWORK, "네트워크", "제목", slug, "본문",
-                null, List.of(), null, null, null, null);
+                null, List.of(), null, null, null, null, null);
     }
 
     @Test

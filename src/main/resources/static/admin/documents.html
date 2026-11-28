@@ -64,6 +64,12 @@ try {
       <div id="dParagraphs" hidden></div>
       <!-- 수정 이력(V36) — 수정으로 들어왔고 이력이 있을 때만 그린다. -->
       <div id="dRevisions"></div>
+      <!-- 백엔드 기술 지도의 주제와 잇는다. 문서 저장 버튼과 묶지 않고 바꾸면 바로 저장한다. -->
+      <div class="field" id="dTopicField" hidden>
+        <label for="dTopic">지도 주제</label>
+        <select id="dTopic"></select>
+        <div id="dTopicMessage"></div>
+      </div>
     </details>
 
     <!-- 수정 중에는 목록을 통째로 숨겨 수정 화면만 남긴다(editDocument). 폼이 목록 위에
@@ -231,6 +237,7 @@ function resetDocumentForm() {
   document.getElementById("dParagraphs").hidden = true;
   document.getElementById("dParagraphs").innerHTML = "";
   document.getElementById("dRevisions").innerHTML = "";
+  document.getElementById("dTopicField").hidden = true;
   loadedDocument = null;
 }
 
@@ -349,7 +356,55 @@ async function editDocument(id) {
   loadedDocument = d;
   renderParagraphs();
   renderRevisions("#dRevisions", "/api/admin/documents/" + id, () => { editDocument(id); loadDocuments(); });
+  renderTopicSelect(id, d.topicId);
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ═══════════ 지도 주제 ═══════════ */
+
+let conceptTopics = null;
+
+/** 개념 주제 전부(쪽마다 100개까지라 끝까지 돈다). 한 번 받으면 다시 받지 않는다. */
+async function loadConceptTopics() {
+  if (conceptTopics) return conceptTopics;
+  const all = [];
+  for (let page = 0; ; page++) {
+    const data = await api(`/api/admin/topic-queue?kind=CONCEPT&page=${page}&size=100`);
+    all.push(...data.content);
+    if (!data.hasNext) break;
+  }
+  conceptTopics = all;
+  return all;
+}
+
+async function renderTopicSelect(documentId, topicId) {
+  const box = document.getElementById("dTopicField");
+  const select = document.getElementById("dTopic");
+  const msg = document.getElementById("dTopicMessage");
+  msg.innerHTML = "";
+  try {
+    const topics = await loadConceptTopics();
+    if (editingDocumentId !== documentId) return;   // 받는 사이 다른 문서로 옮겼다
+    const known = topics.some(t => t.id === topicId);
+    select.innerHTML = `<option value="">(잇지 않음)</option>`
+      + (topicId && !known ? `<option value="${topicId}">주제 #${topicId} (개념 대기열에 없음)</option>` : "")
+      + topics.map(t => `<option value="${t.id}">${escapeHtml(t.domainLabel)} · ${escapeHtml(t.topic)}</option>`).join("");
+    select.value = topicId ? String(topicId) : "";
+    select.onchange = async () => {
+      try {
+        await api(`/api/admin/documents/${documentId}/topic`, {
+          method: "PUT", body: JSON.stringify({ topicId: select.value ? Number(select.value) : null }),
+        });
+        showOk(msg, select.value ? "주제에 이었습니다" : "연결을 풀었습니다");
+      } catch (e) {
+        showError(msg, e);
+      }
+    };
+    box.hidden = false;
+  } catch (e) {
+    box.hidden = false;
+    showError(msg, e);
+  }
 }
 
 /* ═══════════ 절 고치기 ═══════════

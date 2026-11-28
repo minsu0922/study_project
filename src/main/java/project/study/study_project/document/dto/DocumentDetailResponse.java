@@ -15,6 +15,7 @@ import java.util.List;
  *                        짝이 없는 한 편짜리 문서에 편 이름을 달면 읽는 사람이 없는 글을 찾아 나선다.
  * @param counterpartSlug 짝이 되는 편의 slug. 없으면 {@code null} — 화면은 이 값으로
  *                        배지와 링크를 함께 켜고 끈다(둘이 따로 놀면 링크만 남는 화면이 나온다)
+ * @param topicId         이 문서가 이어진 주제 id(topic_queue). 이어지지 않았으면 {@code null}
  */
 public record DocumentDetailResponse(
         Long id,
@@ -28,7 +29,8 @@ public record DocumentDetailResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         String edition,
-        String counterpartSlug
+        String counterpartSlug,
+        Long topicId
 ) {
     /**
      * 짝을 모르는 자리에서 쓴다(관리자 등록·수정 응답). 편 정보는 비운다.
@@ -62,7 +64,8 @@ public record DocumentDetailResponse(
                 d.getCreatedAt(),
                 d.getUpdatedAt(),
                 counterpartSlug == null ? null : DocumentEditions.labelOf(d.getSlug()),
-                counterpartSlug
+                counterpartSlug,
+                d.getTopicId()
         );
     }
 }

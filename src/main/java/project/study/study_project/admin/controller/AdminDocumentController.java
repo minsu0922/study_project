@@ -1,6 +1,9 @@
 package project.study.study_project.admin.controller;
 
 import project.study.study_project.admin.audit.AdminAuditInterceptor;
+import project.study.study_project.admin.dto.AdminDocumentTopicRequest;
+import project.study.study_project.admin.dto.DocumentTopicBackfillResult;
+import project.study.study_project.admin.service.DocumentTopicBackfillService;
 import project.study.study_project.revision.RevisionItem;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +39,7 @@ import project.study.study_project.global.response.ApiResponse;
 public class AdminDocumentController {
 
     private final AdminDocumentService adminDocumentService;
+    private final DocumentTopicBackfillService topicBackfillService;
 
     /** 목록 — 내려 둔 문서 포함. 최신 등록 순. */
     @GetMapping
@@ -101,6 +105,19 @@ public class AdminDocumentController {
     public ApiResponse<DocumentDetailResponse> update(@PathVariable Long id,
                                                       @Valid @RequestBody AdminDocumentRequest request) {
         return ApiResponse.ok(adminDocumentService.update(id, request));
+    }
+
+    /** 주제 id를 적기 전에 나간 문서를 사용 기록과 문서 파일로 주제에 잇는다. 몇 번 불러도 결과가 같다. */
+    @PostMapping("/topic-backfill")
+    public ApiResponse<DocumentTopicBackfillResult> backfillTopics() {
+        return ApiResponse.ok(topicBackfillService.backfill());
+    }
+
+    /** 문서를 주제에 손으로 잇는다. topicId가 null이면 푼다. 없는 주제면 404(TOPIC_001). */
+    @PutMapping("/{id}/topic")
+    public ApiResponse<Void> linkTopic(@PathVariable Long id, @RequestBody AdminDocumentTopicRequest request) {
+        topicBackfillService.linkTopic(id, request.topicId());
+        return ApiResponse.ok();
     }
 
     /** 삭제. 태그 연결은 DB CASCADE로 함께 정리된다. */
