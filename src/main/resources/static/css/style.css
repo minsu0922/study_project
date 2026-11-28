@@ -775,7 +775,10 @@ body {
    간격을 줄이고, 관리 문은 🛠만 남기고, 360px 밑에서는 화면 이름을 뺀다(본문 제목과 탭바가 같은 말을 한다) */
 @media (max-width: 420px) {
   .shell-top { gap: 6px; padding: 0 10px; }
-  .shell-top .shell-icon { width: 36px; }
+  .shell-top .shell-icon { width: 32px; }
+  /* 아이콘이 늘어 관리자 바가 넘쳤다. 마이페이지는 아이콘이 따로 있어 아이디는 뺀다.
+     위의 .shell-top a:not(...)가 선택자 무게로 이겨서 !important */
+  .shell-top .user-email { display: none !important; }
   .shell-top .shell-icon + .shell-icon { margin-left: -6px; }
   .shell-top .shell-door { padding: 4px 8px; }
   .shell-top .shell-door .door-text { display: none; }
