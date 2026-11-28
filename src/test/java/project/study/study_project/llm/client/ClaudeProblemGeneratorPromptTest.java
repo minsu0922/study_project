@@ -326,8 +326,22 @@ class ClaudeProblemGeneratorPromptTest {
         assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
                 .contains("1. 규칙:", "2. 예시로 따라가기:", "3. 정답 확인:")
                 .contains("\"무슨 일이 일어난다: 그때의 상태 → 결과\"")
-                .as("예시의 한 줄 대비를 허용해도 오답별 이유는 여전히 rationale 몫이다")
                 .contains("오답 하나하나가 왜 틀렸는지는 각 보기의 rationale에 적으므로");
+    }
+
+    /**
+     * 승인된 해설 580개 중 571개가 "…따라가 보자" 줄로 시작했다. 프롬프트 예시에 그 줄이 있었기 때문이다.
+     * 예시는 규칙보다 세게 따라 하므로, 금지 문구와 함께 예시에서도 그 줄이 빠져 있어야 한다.
+     */
+    @Test
+    @DisplayName("해설은 규칙 한 문장, 소개 줄 없이 첫 걸음부터, 오답과 견주는 줄 없이 쓴다")
+    void keepsExplanationLean() {
+        assertThat(ClaudeProblemGenerator.SYSTEM_PROMPT)
+                .contains("<한 문장>으로, 60자 안팎으로")
+                .contains("장면을 소개하는 줄(\"…라고 하고 따라가 보자\")은 쓰지 않는다")
+                .contains("견주는 한 줄도 쓰지 않는다")
+                .as("예시가 금지한 줄을 그대로 보여 주면 모델은 예시를 따른다")
+                .doesNotContain("라고 하고 따라가 보자.\n", "같은 장면에서 FIFO라면");
     }
 
     /**
