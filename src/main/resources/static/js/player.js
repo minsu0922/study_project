@@ -157,7 +157,7 @@ function startPlayer(mountEl, problems, opts = {}) {
 
       <div class="card player-card fade-in">
         <div class="q-text">${escapeHtml(p.question)}</div>
-        ${codeBlockHtml(p.code, p.codeFocusLine)}
+        ${codeBlockHtml(p.code, p.codeFocusLine, p.codeLanguage)}
         <div id="optArea">${renderInput(p)}</div>
         <div id="feedback"></div>
         <!-- 모든 유형이 [제출]을 거친다(2026-10-18). 객관식·OX도 보기를 누르면 고르기만 한다(selectOption).
@@ -633,10 +633,33 @@ function startPlayer(mountEl, problems, opts = {}) {
    *
    * 새 탭(target=_blank)으로 여는 이유: 퀴즈는 여러 문제를 이어서 푸는 흐름이라, 같은 탭에서
    * 문서로 이동하면 풀던 세트가 통째로 날아간다(점수·진행 상태가 화면 메모리에만 있다). */
-  function docLink(r) {
+  function docLink(r, reread) {
     if (!r.documentSlug) return "";
     const href = `/document.html?slug=${encodeURIComponent(r.documentSlug)}`;
-    return `<a class="fb-doc" href="${href}" target="_blank" rel="noopener">${icon("book")} 개념 문서 읽기</a>`;
+    // 해설 끝의 "(…절을 다시 읽어 보라)"를 링크 곁으로 옮겼다. 본문에 두면 바로 아래 링크와 같은 말을 두 번 한다
+    const where = reread ? ` <span class="fb-doc-where">${escapeHtml(reread)}</span>` : "";
+    return `<a class="fb-doc" href="${href}" target="_blank" rel="noopener">${icon("book")} 개념 문서 읽기${where}</a>`;
+  }
+
+  /**
+   * 해설을 규칙 / 따라가기 / 결론 / 다시 읽을 곳으로 가른다(2026-11-28). 배치 해설은 이 형식으로 쓴다
+   * (docs: 해설 형식 예시로 따라가기). 형식이 다른 옛 해설은 줄마다 문단으로 그대로 나온다.
+   */
+  const REREAD_LINE = /^\((.+?)\s*[을를]\s*다시 읽어 보라\)$/;
+  function explanationParts(text) {
+    if (!text) return { html: "", reread: null };
+    const lines = String(text).replaceAll("\r\n", "\n").split("\n").map(l => l.trim());
+    while (lines.length && !lines[lines.length - 1]) lines.pop();
+    const m = (lines[lines.length - 1] || "").match(REREAD_LINE);
+    if (m) lines.pop();
+    const html = lines.filter(Boolean).map(l => {
+      if (/^규칙\s*:/.test(l)) {
+        return `<div class="exp-rule"><span class="exp-label">규칙</span>${escapeHtml(l.replace(/^규칙\s*:\s*/, ""))}</div>`;
+      }
+      if (/^그래서\s/.test(l)) return `<p class="exp-conclusion">${escapeHtml(l)}</p>`;
+      return `<p>${escapeHtml(l)}</p>`;
+    }).join("");
+    return { html, reread: m ? m[1].replace(/^(입문편|심화편)의\s/, "$1 ") : null };
   }
 
   /* 오답 분석 — 오답 보기마다 왜 틀렸는지를 <이 화면의 번호>와 함께 늘어놓는다(V15).
@@ -719,6 +742,7 @@ function startPlayer(mountEl, problems, opts = {}) {
      * 예전에는 여섯 가지가 한 초록(빨강) 판 위에 세로로 쌓여, 긴 해설까지 색 판 위에서 읽어야 했고
      * 북마크·제보·토론방이 제각각 다른 모양으로 한 줄씩 차지했다.
      * 색은 판정 띠에만 둔다 — "맞았나"는 한눈에, 해설은 흰 바탕에서 읽힌다. */
+    const explain = explanationParts(r.explanation);
     mountEl.querySelector("#feedback").innerHTML = `
       <div class="feedback ${r.correct ? "correct" : "wrong"} fade-in">
         <div class="fb-head">
@@ -728,7 +752,8 @@ function startPlayer(mountEl, problems, opts = {}) {
           ${r.correct || !r.correctAnswer ? "" : `<div class="answer-line">정답: <b>${escapeHtml(r.correctAnswer)}</b></div>`}
         </div>
         <div class="fb-body">
-          ${r.explanation ? `<div class="explain">${escapeHtml(r.explanation)}</div>` : ""}
+          ${explain.html ? `<div class="explain">${explain.html}</div>` : ""}
+          ${explain.reread && !r.documentSlug ? `<div class="fb-note">다시 읽을 곳: ${escapeHtml(explain.reread)}</div>` : ""}
           ${wrongAnalysis(p, r)}
           ${anonNote()}
           ${opts.reviewMode ? `<div class="fb-note">${
@@ -738,7 +763,7 @@ function startPlayer(mountEl, problems, opts = {}) {
         <!-- 북마크(V33)·토론방은 채점 뒤에만 낸다 — "다시 봐야겠다"는 판단은 해설을 읽은 직후에 서고,
              토론에는 정답 이야기가 나온다. 제보는 맨 끝에 붙여 곁문으로 둔다. -->
         <div class="fb-tools">
-          ${docLink(r)}
+          ${docLink(r, explain.reread)}
           ${bookmarkButton("PROBLEM", pidOf(p))}
           ${roomLink(pidOf(p))}
           ${reportBlock(p.id)}

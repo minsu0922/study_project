@@ -1776,6 +1776,9 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
 /* OX는 두 개의 큰 정사각 버튼 — 나란히 */
 .ox-row { display: flex; gap: 12px; }
 .ox-row .opt { justify-content: center; font-size: 1.5rem; font-weight: 800; padding: 20px 0; }
+/* 채점 뒤 "✓ 정답" 표시가 margin-left:auto로 O·X를 왼쪽 끝으로 밀었다. 글자 아래로 내린다 */
+.ox-row .opt { flex-direction: column; gap: 4px; }
+.ox-row .opt .mark { margin-left: 0; }
 
 /* 짝짓기 — 왼쪽(용어)과 오른쪽(설명) 두 열.
    좁은 화면에서는 아래 미디어 쿼리가 한 줄로 눕힌다. 두 열을 억지로 유지하면
@@ -1842,7 +1845,23 @@ button:disabled { background: var(--border-strong); cursor: default; transform: 
   display: inline-block; padding: 10px 0;   /* 세로 여백이 탭 영역을 만든다 */
   font-size: .82rem; font-weight: 600; color: var(--primary-dark);
 }
+.fb-doc-where { font-weight: 500; color: var(--text-2); }
 .feedback .fb-tools a.room-link { color: var(--muted); }
+
+/* 해설 — 규칙은 상자, 결론은 굵게. 따라가기 줄은 보통 문단이다 */
+.feedback .explain p { margin: 0 0 6px; }
+.exp-rule {
+  margin: 4px 0 10px; padding: 10px 12px; border-left: 3px solid var(--primary);
+  background: var(--fill); border-radius: 6px; color: var(--text);
+}
+.exp-label { display: block; font-size: .78rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 2px; }
+.feedback .explain p.exp-conclusion { margin-top: 10px; font-weight: 700; color: var(--text); }
+
+/* 글 자료 — 코드가 아니라 본문 글꼴로, 줄 번호 없이 */
+.q-exhibit {
+  margin: 12px 0 16px; padding: 12px 14px; background: var(--fill); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px; line-height: 1.6;
+}
 @media (hover: hover) { .feedback .fb-tools a.room-link:hover { color: var(--text-2); } }
 .fb-tools .report { margin: 0 0 0 auto; }
 .fb-tools .report:has(.report-form:not([hidden])) { flex-basis: 100%; margin-left: 0; }

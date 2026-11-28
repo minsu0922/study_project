@@ -666,8 +666,13 @@ function showRecoveryCode(box, code) {
  * 색칠 라이브러리를 쓰지 않는다. 문제의 코드는 5~15줄이라 고정폭과 줄 번호면 읽히고,
  * 해설이 "3행"처럼 줄을 가리키므로 번호가 색보다 먼저다.
  */
-function codeBlockHtml(code, focusLine) {
+function codeBlockHtml(code, focusLine, language) {
   if (!code) return "";
+  // 글 자료(text)는 코드가 아니다. 줄 번호·고정폭이 붙으면 한글이 띄엄띄엄 읽힌다(2026-11-28)
+  if (language === "text") {
+    return `<div class="q-exhibit">${String(code).replaceAll("\r\n", "\n").split("\n")
+      .map(line => `<div>${escapeHtml(line) || " "}</div>`).join("")}</div>`;
+  }
   // 손그림 자료는 <img>로 먼저 두고 drawProblemDiagrams가 SVG 원문으로 펼친다(사이트 색을 따르게)
   const figure = problemFigureOf(code);
   if (figure) {
