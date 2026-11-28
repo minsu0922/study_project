@@ -37,6 +37,7 @@ import project.study.study_project.llm.domain.DraftStatus;
 import project.study.study_project.llm.domain.GeneratedDocumentDraft;
 import project.study.study_project.llm.dto.LlmDocumentDraftResponse;
 import project.study.study_project.llm.repository.GeneratedDocumentDraftRepository;
+import project.study.study_project.llm.repository.TopicQueueItemRepository;
 import project.study.study_project.llm.support.DraftCheck;
 import project.study.study_project.llm.support.DocumentDraftValidator;
 
@@ -80,6 +81,8 @@ public class LlmDocumentService {
     private final DomainCatalog domainCatalog;
     /** 검수함에서 고친 본문을 배치 파일에도 옮긴다. 문제 배치는 DB가 아니라 그 파일을 읽는다. */
     private final DocumentFileSync documentFileSync;
+    /** 승인할 때 초안의 주제가 아직 있는지 본다. 없는 id를 문서에 옮기면 외래키에서 막힌다. */
+    private final TopicQueueItemRepository topicQueueItemRepository;
 
     /* ── 흡수(저장) ───────────────────────────────────────────── */
 
@@ -190,6 +193,11 @@ public class LlmDocumentService {
                 // 때문에 애초에 생성 스키마에 넣지 않았다(GeneratedDocumentItem 주석).
                 null,
                 readTags(draft.getTagsJson())));
+
+        Long topicId = draft.getTopicId();
+        if (topicId != null && topicQueueItemRepository.existsById(topicId)) {
+            documentRepository.findById(created.id()).ifPresent(doc -> doc.linkTopic(topicId));
+        }
 
         draft.approve(created.id()); // 엔티티도 같은 규칙을 방어(이중 안전장치)
         log.info("문서 초안 승인: \"{}\" → document#{}", draft.getTitle(), created.id());

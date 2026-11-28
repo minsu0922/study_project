@@ -132,7 +132,7 @@ public class DocumentFileSync {
                     beginner != null ? beginner : parsed.document(),
                     advanced != null ? advanced : parsed.advancedDocument(), parsed.factFindings(),
                     parsed.originalDocument(), parsed.originalAdvancedDocument(), parsed.readerFindings(),
-                    parsed.polishResults());
+                    parsed.polishResults(), parsed.topicId());
             write(file, rewritten(raw, parsed, target));
             return Optional.of(file.getFileName().toString());
         } catch (IOException | IllegalArgumentException e) {

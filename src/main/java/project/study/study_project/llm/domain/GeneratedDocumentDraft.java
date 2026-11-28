@@ -107,6 +107,10 @@ public class GeneratedDocumentDraft {
     @Column(name = "polish_result_json")
     private String polishResultJson;
 
+    /** 글의 주제 id(V51). 외래키는 없다. 승인 전에 주제가 지워져도 초안 흡수가 깨지지 않게 한다. */
+    @Column(name = "topic_id")
+    private Long topicId;
+
     private GeneratedDocumentDraft(DomainCode domain, String title, String slug,
                                    String contentMd, String tagsJson, String model) {
         this.domain = domain;
@@ -132,6 +136,11 @@ public class GeneratedDocumentDraft {
     /** 흡수할 때 배치 파일의 그 편 독자 점검 지적을 담는다. */
     public void recordReaderFindings(String readerFindingsJson) {
         this.readerFindingsJson = readerFindingsJson;
+    }
+
+    /** 흡수할 때 배치 파일의 주제 id를 담는다. 승인하면 문서로 옮긴다. */
+    public void recordTopic(Long topicId) {
+        this.topicId = topicId;
     }
 
     /** 흡수할 때 배치 파일의 그 편 윤문 결과를 담는다. */

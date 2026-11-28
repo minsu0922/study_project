@@ -55,6 +55,8 @@ class DocumentImportServiceTest {
     private DocumentRepository documentRepository;
     @Mock
     private AdminDocumentService adminDocumentService;
+    @Mock
+    private project.study.study_project.llm.repository.TopicQueueItemRepository topicQueueItemRepository;
 
     @TempDir
     Path tempDir;
@@ -68,7 +70,7 @@ class DocumentImportServiceTest {
                 new LlmDocumentService(
                         draftRepository, documentRepository, adminDocumentService,
                         objectMapper, event -> { }, DefaultDomains.catalog(),
-                        new DocumentFileSync(tempDir.toString()));
+                        new DocumentFileSync(tempDir.toString()), topicQueueItemRepository);
         // domainCatalog는 실물(DefaultDomains.catalog())을 쓴다 — 11개 기본 분야만 "등록됨"으로
         // 본다. 이 파일들이 쓰는 TestDomains.SYSTEM_DESIGN은 그 안에 있으므로 기존 테스트는
         // 그대로 통과하고, 아래 rejectsUnregisteredDomain은 그 밖의 코드로 거부를 확인한다.
@@ -279,6 +281,33 @@ class DocumentImportServiceTest {
         Path path = tempDir.resolve(filename);
         objectMapper.writeValue(path.toFile(), file);
         return path;
+    }
+
+    @Test
+    @DisplayName("문서 파일의 topicId가 입문편·심화편 초안 둘 다에 실린다")
+    void importCarriesTopicIdToBothEditions() throws Exception {
+        GeneratedDocumentFile file = new GeneratedDocumentFile("테스트용", "2026-11-28", "2026-11-28T00:00:00Z",
+                TestDomains.SYSTEM_DESIGN, "claude-opus-5",
+                itemWith("캐시 전략", "cache-strategy", "입문 문장이다."),
+                itemWith("캐시 심화", "cache-strategy-advanced", "심화 문장이다."))
+                .withTopicId(77L);
+        Path path = tempDir.resolve("2026-11-28.json");
+        objectMapper.writeValue(path.toFile(), file);
+
+        service.importFile(path);
+
+        ArgumentCaptor<GeneratedDocumentDraft> captor = ArgumentCaptor.forClass(GeneratedDocumentDraft.class);
+        verify(draftRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(GeneratedDocumentDraft::getTopicId)
+                .containsExactly(77L, 77L);
+    }
+
+    @Test
+    @DisplayName("topicId 칸이 없는 옛 파일은 null로 들어온다")
+    void oldFileWithoutTopicIdImportsAsNull() throws Exception {
+        service.importFile(writeDocumentFile("2026-08-12.json", "claude-opus-5",
+                item("캐시 전략", "cache-strategy", List.of())));
+        assertThat(capturedDraft().getTopicId()).isNull();
     }
 
     /* ── 2026-09-03: 파일 하나에 두 편 ───────────────────────────── */

@@ -80,6 +80,10 @@ public class Document {
     @Column(nullable = false)
     private boolean hidden;
 
+    /** 이 글이 다루는 주제(V51). 주제가 지워지면 DB가 null로 돌린다. 수정 폼이 모르는 칸이라 update()는 건드리지 않는다. */
+    @Column(name = "topic_id")
+    private Long topicId;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -96,6 +100,10 @@ public class Document {
         this.contentMd = contentMd;
         this.source = source;
         this.tags = new LinkedHashSet<>(tags);
+    }
+
+    public void linkTopic(Long topicId) {
+        this.topicId = topicId;
     }
 
     /** 관리자 등록용 팩터리. slug 중복 검사는 서비스 책임(DOC_002). */

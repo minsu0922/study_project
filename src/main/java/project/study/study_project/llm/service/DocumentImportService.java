@@ -186,6 +186,7 @@ public class DocumentImportService {
         draft.recordFactFindings(factFindingsJsonOf(parsed, item));
         draft.recordReaderFindings(readerFindingsJsonOf(parsed, advanced));
         draft.recordPolishResult(polishResultJsonOf(parsed, advanced));
+        draft.recordTopic(parsed.topicId());
         log.info("문서 초안 흡수: {} — \"{}\" ({}, {}, 본문 {}자)",
                 key, draft.getTitle(), parsed.domain(),
                 ClaudeDocumentGenerator.editionOf(draft.getContentMd()).getDisplayName(),

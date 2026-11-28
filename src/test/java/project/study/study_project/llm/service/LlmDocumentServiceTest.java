@@ -60,6 +60,8 @@ class LlmDocumentServiceTest {
     private DocumentRepository documentRepository;
     @Mock
     private AdminDocumentService adminDocumentService;
+    @Mock
+    private project.study.study_project.llm.repository.TopicQueueItemRepository topicQueueItemRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private LlmDocumentService service;
@@ -68,7 +70,7 @@ class LlmDocumentServiceTest {
     void setUp() {
         service = new LlmDocumentService(
                 draftRepository, documentRepository, adminDocumentService, objectMapper, event -> { },
-                DefaultDomains.catalog(), new DocumentFileSync("build/no-such-generated-dir"));
+                DefaultDomains.catalog(), new DocumentFileSync("build/no-such-generated-dir"), topicQueueItemRepository);
         lenient().when(draftRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         // 기본값은 "짝이 없다". 2026-09-03 이전 문서는 한 편짜리이므로 이쪽이 보통이고,
         // 짝을 보는 테스트만 아래에서 덮어쓴다. 안 두면 목록을 훑는 다른 테스트가
