@@ -36,6 +36,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DocumentTopicBackfillService {
 
+    private static final int ALREADY_LINKED = -1;
+
     private final TopicQueueItemRepository topicRepository;
     private final DocumentRepository documentRepository;
     private final ObjectMapper objectMapper;
@@ -70,8 +72,19 @@ public class DocumentTopicBackfillService {
                 unlinked.add(problem);
                 continue;
             }
-            int count = link(topic.getId(), file.document()) + link(topic.getId(), file.advancedDocument());
-            if (count == 0) {
+            int[] results = {link(topic.getId(), file.document()), link(topic.getId(), file.advancedDocument())};
+            int count = 0;
+            boolean alreadyLinked = false;
+            for (int result : results) {
+                if (result == ALREADY_LINKED) {
+                    alreadyLinked = true;
+                } else {
+                    count += result;
+                }
+            }
+            if (alreadyLinked) {
+                unlinked.add(unlinked(usage, "ALREADY_LINKED"));
+            } else if (count == 0) {
                 unlinked.add(unlinked(usage, "DOCUMENT_MISSING"));
             }
             linked += count;
@@ -96,11 +109,15 @@ public class DocumentTopicBackfillService {
         return file.domain() != null && file.domain().value().equals(expected);
     }
 
+    /** 이은 문서는 1, 못 찾으면 0, 이미 다른 주제에 이어져 있으면 ALREADY_LINKED. 손으로 이은 것을 덮지 않는다 */
     private int link(Long topicId, GeneratedDocumentItem item) {
         if (item == null || item.slug() == null) {
             return 0;
         }
         return documentRepository.findBySlug(item.slug()).map(document -> {
+            if (document.getTopicId() != null && !document.getTopicId().equals(topicId)) {
+                return ALREADY_LINKED;
+            }
             document.linkTopic(topicId);
             return 1;
         }).orElse(0);
@@ -119,6 +136,7 @@ public class DocumentTopicBackfillService {
             TopicUsageFile usage = FileFormats.read(objectMapper, file, FileFormats.Kind.TOPIC_USAGE, TopicUsageFile.class);
             return usage.usage() == null ? List.of() : usage.usage();
         } catch (IOException e) {
+            log.error("주제 사용 기록 파일을 읽지 못했습니다: {}", file, e);
             throw new BusinessException(ErrorCode.COMMON_500);
         }
     }

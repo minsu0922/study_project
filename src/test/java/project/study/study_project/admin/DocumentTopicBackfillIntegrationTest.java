@@ -160,6 +160,25 @@ class DocumentTopicBackfillIntegrationTest {
     }
 
     @Test
+    @DisplayName("이미 다른 주제에 이은 문서는 덮지 않고 ALREADY_LINKED로 보고한다")
+    void keepsExistingDifferentLink() throws IOException {
+        TopicQueueItem topicA = topic(TestDomains.NETWORK);
+        TopicQueueItem topicB = topic(TestDomains.NETWORK);
+        writeUsage(usage(topicA.getId(), "NETWORK", "2026-10-05"));
+        writeDocumentFile("2026-10-05", "NETWORK", "bf-a-" + suffix, null);
+        Document a = document("bf-a-" + suffix);
+        a.linkTopic(topicB.getId());
+
+        DocumentTopicBackfillResult result = backfillService.backfill();
+
+        assertThat(a.getTopicId()).isEqualTo(topicB.getId());
+        assertThat(result.linked()).isZero();
+        assertThat(result.unlinked())
+                .extracting(DocumentTopicBackfillResult.Unlinked::topicId, DocumentTopicBackfillResult.Unlinked::reason)
+                .containsExactly(Tuple.tuple(topicA.getId(), "ALREADY_LINKED"));
+    }
+
+    @Test
     @DisplayName("손으로 잇고 풀고, 없는 주제 id는 404")
     void manualLinkAndUnlink() throws Exception {
         TopicQueueItem topic = topic(TestDomains.NETWORK);
