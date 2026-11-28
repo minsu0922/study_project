@@ -49,6 +49,8 @@ class DocumentTopicLinkIntegrationTest {
         draft.recordTopic(topicId);
 
         DocumentDetailResponse created = llmDocumentService.approve(draft.getId());
+        em.flush();
+        em.clear();
 
         assertThat(documentRepository.findById(created.id()).orElseThrow().getTopicId()).isEqualTo(topicId);
     }

@@ -108,6 +108,25 @@ class MapApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("공백 없는 줄표로도 점 이름을 자른다")
+    void shortenCutsAtDashWithoutSpaces() throws Exception {
+        TopicQueueItem t = topic(TestDomains.NETWORK, "TCP 흐름 제어—윈도우로 속도를 맞추는 방식", 1000);
+
+        mockMvc.perform(get("/api/map")).andExpect(status().isOk())
+                .andExpect(jsonPath(node(t, "title"), hasItem("TCP 흐름 제어")));
+    }
+
+    @Test
+    @DisplayName("구분자가 없어도 24자를 넘으면 24자와 줄임표로 줄인다")
+    void shortenTruncatesLongTitle() throws Exception {
+        String longText = "가".repeat(30);
+        TopicQueueItem t = topic(TestDomains.NETWORK, longText, 1000);
+
+        mockMvc.perform(get("/api/map")).andExpect(status().isOk())
+                .andExpect(jsonPath(node(t, "title"), hasItem("가".repeat(24) + "…")));
+    }
+
+    @Test
     @DisplayName("점 이름은 입문편 제목이다. 심화편이 먼저 이어져 있어도 그렇다")
     void titleUsesBeginnerDocumentTitle() throws Exception {
         TopicQueueItem t = topic(TestDomains.NETWORK, "TCP 연결", 1000);
