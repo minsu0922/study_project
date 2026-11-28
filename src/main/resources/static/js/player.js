@@ -90,10 +90,9 @@ function startPlayer(mountEl, problems, opts = {}) {
       const options = p.type === "OX" ? ["O", "X"] : (p.choices || []).map(c => String(c.id));
       const i = Number(e.key) - 1;
       if (i >= options.length) return;
-      // 순서 배열은 "고르기"가 아니라 "순서대로 쌓기"다 — 같은 숫자키가 다른 일을 한다.
-      // 짝짓기는 두 열이라 숫자 하나로 무엇을 가리키는지 정할 수 없어 단축키를 두지 않는다.
-      if (p.type === "ORDERING") toggleOrder(options[i]);
-      else if (p.type !== "MATCHING") selectOption(options[i]);
+      // 순서 배열은 항목이 빈칸으로 옮겨 다녀 번호가 화면에 없고, 짝짓기는 두 열이라
+      // 숫자 하나로 무엇을 가리키는지 정할 수 없다. 둘 다 숫자 단축키를 두지 않는다.
+      if (p.type !== "ORDERING" && p.type !== "MATCHING") selectOption(options[i]);
     } else if (e.key === "Enter") {
       primaryAction();
     }
@@ -203,13 +202,13 @@ function startPlayer(mountEl, problems, opts = {}) {
    * ({@link #renderInput} 주석), <b>단답형</b>에서는 숫자가 답 입력으로 들어간다.
    * 두 유형에서 안내대로 눌러 보면 아무 일도 안 일어난다 — 화면이 <없는 기능>을 안내하는 셈이다.
    *
-   * <p>객관식·OX·순서 배열에서는 숫자가 실제로 동작한다(OX는 1=O, 2=X).
+   * <p>객관식·OX에서만 숫자가 실제로 동작한다(OX는 1=O, 2=X). 순서 배열은 2026-11-28에 뺐다.
    */
   function shortcutHint(type) {
     // 서술형은 Enter가 줄바꿈이라 단축키가 없다. 없는 기능을 안내하지 않는다.
     if (type === "ESSAY") return `답을 적고 모범 답안과 견줘 스스로 채점합니다`;
     const enter = `<kbd>Enter</kbd> 제출/다음`;
-    if (type === "MATCHING" || type === "SHORT_ANSWER") return enter;
+    if (type === "MATCHING" || type === "SHORT_ANSWER" || type === "ORDERING") return enter;
     return `<kbd>1</kbd>~<kbd>9</kbd> 보기 선택 · ${enter}`;
   }
 
@@ -291,19 +290,28 @@ function startPlayer(mountEl, problems, opts = {}) {
     return `<input type="text" id="shortInput" placeholder="답을 입력하세요" autocomplete="off">`;
   }
 
-  /** 순서 배열 — 고른 항목에는 누른 순서를, 안 고른 항목에는 점을 찍는다. */
+  /**
+   * 순서 배열 — 위에 빈칸 1~N, 아래에 남은 항목. 누른 항목이 다음 빈칸으로 올라간다(2026-11-28).
+   * 전에는 고른 항목이 제자리에 남아 번호만 붙어서, 2번이 1번 위에 보이는 등 만든 순서가 한눈에 안 보였다.
+   */
   function renderOrdering(p) {
-    const rows = p.choices.map(c => {
-      const at = state.order.indexOf(String(c.id));
-      const picked = at >= 0;
-      return `<button class="opt${picked ? " selected" : ""}" data-order="${c.id}"
-        aria-pressed="${picked}">
-        <span class="key">${picked ? at + 1 : "·"}</span><span>${escapeHtml(c.text)}</span>
-      </button>`;
+    const textOf = id => escapeHtml(p.choices.find(c => String(c.id) === id)?.text ?? "");
+    const slots = p.choices.map((_, i) => {
+      const id = state.order[i];
+      if (id === undefined) {
+        const next = i === state.order.length;
+        return `<li class="order-slot${next ? " next" : ""}"><span class="key">${i + 1}</span>
+          <span>${next ? "아래에서 고르세요" : ""}</span></li>`;
+      }
+      return `<li><button class="opt selected" data-order="${id}" aria-label="${i + 1}번째 ${textOf(id)}, 누르면 뺍니다">
+        <span class="key">${i + 1}</span><span>${textOf(id)}</span><span class="order-undo">빼기</span>
+      </button></li>`;
     }).join("");
-    // 고른 것에는 몇 번째인지가 .key에 들어가 이름의 일부로 읽힌다("3 파일을 연다").
-    return `<div role="group" aria-label="보기 ${p.choices.length}개, 순서대로 고르기">${rows}</div>
-      <div class="kbd-hint">순서대로 누르세요. 다시 누르면 취소됩니다.</div>`;
+    const pool = p.choices.filter(c => !state.order.includes(String(c.id))).map(c => `
+      <button class="opt" data-order="${c.id}"><span class="key">+</span><span>${escapeHtml(c.text)}</span></button>`).join("");
+    return `<div class="play-guide">먼저 하는 것부터 차례로 누르세요.</div>
+      <ol class="order-slots" aria-label="내가 놓은 순서">${slots}</ol>
+      ${pool ? `<div class="order-pool" role="group" aria-label="남은 항목">${pool}</div>` : ""}`;
   }
 
   /**
@@ -333,11 +341,16 @@ function startPlayer(mountEl, problems, opts = {}) {
       </button>`;
     }).join("");
 
-    return `<div class="match-grid">
-        <div class="match-col" role="group" aria-label="왼쪽 항목">${left}</div>
-        <div class="match-col" role="group" aria-label="오른쪽 항목">${right}</div>
+    // 좁은 화면에서는 두 열이 위아래로 쌓인다. 열 제목이 없으면 여섯 줄이 한 목록처럼 보인다(2026-11-28)
+    const guide = state.matchLeft ? "이제 ②에서 짝을 누르세요." : "①에서 하나를 누르고, ②에서 그 짝을 누르세요.";
+    return `<div class="play-guide">${guide}</div>
+      <div class="match-grid">
+        <div class="match-col" role="group" aria-labelledby="matchLeftTitle">
+          <div class="match-title" id="matchLeftTitle">① 하나 고르기</div>${left}</div>
+        <div class="match-col match-right" role="group" aria-labelledby="matchRightTitle">
+          <div class="match-title" id="matchRightTitle">② 짝 고르기</div>${right}</div>
       </div>
-      <div class="kbd-hint">왼쪽을 누른 뒤 오른쪽을 누르면 이어집니다. 이어진 것을 누르면 풀립니다.</div>`;
+      <div class="kbd-hint">이어진 것을 다시 누르면 풀립니다.</div>`;
   }
 
   /** 보기 선택(채점 전) — 선택 표시를 바꾸고 제출 버튼을 활성화한다. */
